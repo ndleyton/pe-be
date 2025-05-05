@@ -1,17 +1,54 @@
-from sqlalchemy import (
-    Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, Table, UniqueConstraint
-)
-from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
+from typing import List, Optional
 
-Base = declarative_base()
+from sqlalchemy import (
+    Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, Table, UniqueConstraint, MetaData, Index # Added Index back
+)
+# Use DeclarativeBase and explicit MetaData (keep these changes)
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 
-# Association tables (no primary key)
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable, SQLAlchemyBaseOAuthAccountTable
+
+# Explicitly create MetaData
+metadata_obj = MetaData()
+
+# Pass metadata to DeclarativeBase
+class Base(DeclarativeBase):
+    metadata = metadata_obj
+
+# Association tables (no primary key) - Use the explicit metadata object
 exercise_types_muscles = Table(
-    "exercise_types_muscles", Base.metadata,
+    "exercise_types_muscles", metadata_obj,
     Column("exercise_type_id", Integer, ForeignKey("exercise_types.id"), primary_key=True),
     Column("muscle_id", Integer, ForeignKey("muscles.id"), primary_key=True)
 )
+
+# --- OAuthAccount Model (WORKAROUND: Explicit PKs) ---
+class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):
+    __tablename__ = "oauth_accounts"
+
+    # --- Explicitly define PK columns (WORKAROUND) ---
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="cascade"), primary_key=True, nullable=False
+    )
+    oauth_name: Mapped[str] = mapped_column(
+        String(length=100), index=True, primary_key=True, nullable=False
+    )
+
+    # Relationship back to the User (Keep this)
+    user: Mapped["User"] = relationship("User", back_populates="oauth_accounts")
+
+    # Note: Other columns like access_token, account_id, etc., are still inherited.
+
+# --- User Model (Unchanged) ---
+class User(SQLAlchemyBaseUserTable[int], Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    oauth_accounts: Mapped[List[OAuthAccount]] = relationship("OAuthAccount", lazy="joined", back_populates="user")
+
 
 class ExerciseMuscle(Base):
     __tablename__ = "exercise_muscles"
@@ -103,20 +140,6 @@ class SetTemplate(Base):
     intensity = Column(Float)
     intensity_unit_id = Column(Integer, ForeignKey("intensity_units.id"), nullable=False)
     exercise_template_id = Column(Integer, ForeignKey("exercise_templates.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    email = Column(String, unique=True)
-    encrypted_password = Column(String, default="", nullable=False)
-    reset_password_token = Column(String, unique=True)
-    reset_password_sent_at = Column(DateTime)
-    remember_created_at = Column(DateTime)
-    provider = Column(String)
-    uid = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
