@@ -1,2 +1,10 @@
 .env
+__pycache__/
+*.py[cod]
 /backend/.env
+.DS_Store
+.env
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
