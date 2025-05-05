@@ -98,7 +98,7 @@ current_active_user = fastapi_users.current_user(active=True)
 
 # --- Routers ---
 router = APIRouter()
-
+print(fastapi_users.get_oauth_router.__dict__)
 # associate_by_email=True,        # Optional: Uncomment to link accounts by email
 # is_verified_by_default=True,    # Optional: Uncomment if Google login implies verified email
 # Google OAuth2 login/callback endpoints
@@ -106,7 +106,6 @@ router.include_router(
     fastapi_users.get_oauth_router(
         oauth_client=google_oauth_client, # The specific OAuth client
         backend=jwt_backend,              # Backend to use AFTER callback (will issue JWT)
-        user_manager_dependency=get_user_manager, # Dependency to get UserManager
         state_secret=SECRET,              # Secret for signing the OAuth state token
         redirect_url=GOOGLE_REDIRECT_URI, # Optional but recommended for clarity
     ),
