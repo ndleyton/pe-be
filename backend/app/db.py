@@ -7,7 +7,7 @@ from fastapi_users.db import (
     SQLAlchemyUserDatabase,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from app.models import User, OAuthAccount, Base
+from app.models import User, OAuthAccount, Base, Workout
 
 from dotenv import load_dotenv
 load_dotenv()
