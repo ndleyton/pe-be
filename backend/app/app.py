@@ -1,15 +1,16 @@
-from fastapi import Depends, FastAPI
+import os # Import os
+from fastapi import Depends, FastAPI, APIRouter # Import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import User
 from app.schemas import UserCreate, UserRead, UserUpdate
 from app.users import (
     SECRET,
-    GOOGLE_REDIRECT_URI,
     auth_backend,
     current_active_user,
     fastapi_users,
     google_oauth_client,
+    get_user_manager, 
 )
 
 
@@ -17,7 +18,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # or ["*"] for all, but more secure to specify
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(
     fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
 )
+
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
@@ -46,14 +48,19 @@ app.include_router(
     prefix="/users",
     tags=["users"],
 )
+
+# --- Google OAuth Routes ---
+
+# Use get_oauth_router which sets up both /authorize and /callback
+# It uses the backend and user_manager internally in its callback handler
+google_oauth_router = fastapi_users.get_oauth_router(
+    oauth_client=google_oauth_client,
+    backend=auth_backend, # Provide the auth backend (now cookie-based)
+    state_secret=SECRET, # Secret for the state token
+    # redirect_url=GOOGLE_REDIRECT_URI # Optional: Can specify backend callback URL here, but often inferred
+)
 app.include_router(
-    fastapi_users.get_oauth_router(
-        oauth_client=google_oauth_client, 
-        backend=auth_backend, 
-        state_secret=SECRET,
-        redirect_url=GOOGLE_REDIRECT_URI),
-    prefix="/auth/google",
-    tags=["auth"],
+    google_oauth_router, prefix="/auth/google", tags=["auth"]
 )
 
 @app.get("/")
