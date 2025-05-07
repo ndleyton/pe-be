@@ -1,8 +1,16 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function GoogleSignInButton() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+interface GoogleSignInButtonProps {}
+
+interface GoogleSignInButtonState {
+  loading: boolean;
+  error: string | null;
+}
+
+export default function GoogleSignInButton(props: GoogleSignInButtonProps) {
+  const [loading, setLoading] = useState<GoogleSignInButtonState["loading"]>(false);
+  const [error, setError] = useState<GoogleSignInButtonState["error"]>(null);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -12,12 +20,17 @@ export default function GoogleSignInButton() {
       if (!resp.ok) throw new Error("Failed to get authorization URL");
       const data = await resp.json();
       if (data.authorization_url) {
+        // User will be redirected to Google's OAuth page, then back to /oauth/callback
         window.location.href = data.authorization_url;
       } else {
         throw new Error("No authorization_url in response");
       }
     } catch (err) {
-      setError(err.message);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
       setLoading(false);
     }
   };

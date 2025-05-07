@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // Or use fetch
+import axios from 'axios'; 
+
+type Workout = {
+  id: number;
+  name: string | null;
+  notes: string | null;
+  start_time: string;
+  end_time: string | null;
+}
 
 const MyWorkoutsPage = () => {
-    const [workouts, setWorkouts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchWorkouts = async () => {
@@ -17,9 +25,15 @@ const MyWorkoutsPage = () => {
                 setError(null);
             } catch (err) {
                 console.error("Error fetching workouts:", err);
-                if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-                    setError("Please log in to view your workouts.");
-                    // Optionally, redirect to login: window.location.href = '/';
+                if (axios.isAxiosError(err)) {
+                    if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                        setError("Please log in to view your workouts.");
+                        // Optionally, redirect to login: window.location.href = '/';
+                    } else {
+                        setError("Failed to load workouts.");
+                    }
+                } else if (err instanceof Error) {
+                    setError(err.message);
                 } else {
                     setError("Failed to load workouts.");
                 }

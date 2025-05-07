@@ -1,7 +1,8 @@
+import React from 'react';
 import GoogleSignInButton from "./GoogleSignInButton";
-import './App.css'
+import './App.css';
 
-export default function App() {
+const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-base-200">
       <div className="w-full max-w-xs p-8 bg-base-100 rounded-xl shadow-lg flex flex-col items-center gap-6">
@@ -10,4 +11,6 @@ export default function App() {
       </div>
     </div>
   );
-}
+};
+
+export default App;
