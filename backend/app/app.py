@@ -1,12 +1,12 @@
 import os # Import os
 from typing import List # Import List
-from fastapi import Depends, FastAPI, APIRouter # Import APIRouter
+from fastapi import Depends, FastAPI, APIRouter, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.db import User, Workout, get_async_session # Import Workout model and get_async_session
-from app.schemas import UserCreate, UserRead, UserUpdate, WorkoutRead # Import WorkoutRead schema
+from app.db import User, Workout, get_async_session
+from app.schemas import UserCreate, UserRead, UserUpdate, WorkoutRead, WorkoutBase
 from app.users import (
     SECRET,
     auth_backend,
@@ -75,7 +75,24 @@ async def authenticated_route(user: User = Depends(current_active_user)):
     return {"message": f"Hello {user.email}!"}
 
 # --- Workout Endpoints ---
-workouts_router = APIRouter(prefix="/api/workouts", tags=["workouts"])
+workouts_router = APIRouter(prefix="/api/workouts", tags=["workouts"]) 
+
+@workouts_router.post("/", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
+async def create_workout(
+    workout_in: WorkoutBase,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    # Create a new Workout instance
+    workout = Workout(
+        **workout_in.dict(),
+        owner_id=user.id
+    )
+    session.add(workout)
+    await session.commit()
+    await session.refresh(workout)
+    return workout
+
 
 @workouts_router.get("/mine", response_model=List[WorkoutRead])
 async def get_my_workouts(
