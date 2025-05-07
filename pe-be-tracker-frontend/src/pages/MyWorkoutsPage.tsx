@@ -53,7 +53,7 @@ const MyWorkoutsPage = () => {
     return (
         <div>
             <h1>My Workouts</h1>
-            <WorkoutForm onWorkoutCreated={() => setRefreshFlag(f => f + 1)} />
+            <WorkoutForm onWorkoutCreated={() => {}} />
             {workouts.length === 0 ? (
                 <p>You haven't logged any workouts yet.</p>
             ) : (
