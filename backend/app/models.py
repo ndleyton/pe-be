@@ -47,6 +47,10 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationship to Workouts
+    workouts: Mapped[List["Workout"]] = relationship(back_populates="owner")
+    
     oauth_accounts: Mapped[List[OAuthAccount]] = relationship("OAuthAccount", lazy="joined", back_populates="user")
 
 
@@ -160,5 +164,8 @@ class Workout(Base):
     notes = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Relationship to User
+    owner: Mapped["User"] = relationship("User", back_populates="workouts")
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
