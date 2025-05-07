@@ -96,7 +96,7 @@ class ExerciseType(Base):
 class Exercise(Base):
     __tablename__ = "exercises"
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime)
+    timestamp = Column(DateTime(timezone=True))
     notes = Column(Text)
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
@@ -158,8 +158,8 @@ class WorkoutType(Base):
 class Workout(Base):
     __tablename__ = "workouts"
     id = Column(Integer, primary_key=True)
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
+    start_time = Column(DateTime(timezone=True))
+    end_time = Column(DateTime(timezone=True))
     name = Column(String)
     notes = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
