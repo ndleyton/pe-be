@@ -10,7 +10,7 @@ const routes: RouteObject[] = [
     element: <App />,
   },
   {
-    path: '/my-workouts',
+    path: '/dashboard',
     element: <MyWorkoutsPage />,
   },
   {

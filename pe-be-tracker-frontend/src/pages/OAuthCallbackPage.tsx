@@ -6,9 +6,9 @@ const OAuthCallbackPage: React.FC = () => {
 
   useEffect(() => {
     // Here you would typically handle the OAuth callback, e.g. exchanging code for a token
-    // For now, just redirect to /my-workouts after successful auth
+    // For now, just redirect to /dashboard after successful auth
     // You can add more sophisticated logic here as needed
-    navigate('/my-workouts', { replace: true });
+    navigate('/dashboard', { replace: true });
   }, [navigate]);
 
   return <div>Signing you in...</div>;

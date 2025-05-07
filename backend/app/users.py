@@ -21,7 +21,8 @@ SECRET = os.getenv("SECRET", "DEFAULT_SECRET_CHANGE_ME_IN_ENV")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173") # Get frontend URL
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_POST_LOGIN_PATH = os.getenv("FRONTEND_POST_LOGIN_PATH", "/dashboard")
 
 print(GOOGLE_CLIENT_ID)
 print(GOOGLE_CLIENT_SECRET)
@@ -59,9 +60,11 @@ class CookieTransportWithRedirect(CookieTransport):
     async def get_login_response(self, token: str) -> Response:
         """
         Called by the backend after successful login to get the response.
-        We want to set the cookie and redirect to the frontend.
+        We want to set the cookie and redirect to the frontend's dashboard/workouts page.
         """
-        response = RedirectResponse(FRONTEND_URL, status_code=status.HTTP_302_FOUND)
+        # Ensures no double slashes if FRONTEND_URL ends with / and FRONTEND_POST_LOGIN_PATH starts with /
+        redirect_url = f"{FRONTEND_URL.rstrip('/')}{FRONTEND_POST_LOGIN_PATH}"
+        response = RedirectResponse(redirect_url, status_code=status.HTTP_302_FOUND)
         self._set_login_cookie(response, token) # Use the parent's method to set the cookie
         return response
 
@@ -71,7 +74,12 @@ def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:
 
 auth_backend = AuthenticationBackend(
     name="jwt",
-    transport=CookieTransportWithRedirect(cookie_name="fitnessapp", cookie_max_age=3600), 
+    transport=CookieTransportWithRedirect(
+        cookie_name="fitnessapp", 
+        cookie_max_age=3600*24*7, # 7 days
+        cookie_secure=False, # Should be True in production
+        cookie_samesite="lax"
+        ), 
     get_strategy=get_jwt_strategy,
 )
 
