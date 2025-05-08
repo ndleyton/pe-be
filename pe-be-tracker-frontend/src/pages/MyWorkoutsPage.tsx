@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios'; 
+import WorkoutForm from '../components/WorkoutForm';
 
 type Workout = {
   id: number;
@@ -10,6 +11,7 @@ type Workout = {
 }
 
 const MyWorkoutsPage = () => {
+  const [refreshFlag, setRefreshFlag] = useState(0);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ const MyWorkoutsPage = () => {
         };
 
         fetchWorkouts();
-    }, []);
+    }, [refreshFlag]);
 
     if (loading) return <p>Loading workouts...</p>;
     if (error) return <p style={{ color: 'red' }}>{error}</p>;
@@ -51,6 +53,7 @@ const MyWorkoutsPage = () => {
     return (
         <div>
             <h1>My Workouts</h1>
+            <WorkoutForm onWorkoutCreated={() => {}} />
             {workouts.length === 0 ? (
                 <p>You haven't logged any workouts yet.</p>
             ) : (

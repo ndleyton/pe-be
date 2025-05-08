@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -45,8 +45,8 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     # Relationship to Workouts
     workouts: Mapped[List["Workout"]] = relationship(back_populates="owner")
@@ -59,8 +59,8 @@ class ExerciseMuscle(Base):
     id = Column(Integer, primary_key=True)
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     muscle_id = Column(Integer, ForeignKey("muscles.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     __table_args__ = (UniqueConstraint('exercise_type_id', 'muscle_id'),)
 
 class ExerciseSet(Base):
@@ -72,16 +72,16 @@ class ExerciseSet(Base):
     exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
     rest_time_seconds = Column(Integer)
     done = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class ExerciseTemplate(Base):
     __tablename__ = "exercise_templates"
     id = Column(Integer, primary_key=True)
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     recipe_id = Column(Integer, ForeignKey("recipes.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class ExerciseType(Base):
     __tablename__ = "exercise_types"
@@ -89,42 +89,42 @@ class ExerciseType(Base):
     name = Column(String)
     description = Column(String)
     default_intensity_unit = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     muscles = relationship("Muscle", secondary=exercise_types_muscles, back_populates="exercise_types")
 
 class Exercise(Base):
     __tablename__ = "exercises"
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime)
+    timestamp = Column(DateTime(timezone=True))
     notes = Column(Text)
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class IntensityUnit(Base):
     __tablename__ = "intensity_units"
     id = Column(Integer, primary_key=True)
     name = Column(String)
     abbreviation = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class MuscleGroup(Base):
     __tablename__ = "muscle_groups"
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class Muscle(Base):
     __tablename__ = "muscles"
     id = Column(Integer, primary_key=True)
     name = Column(String)
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     exercise_types = relationship("ExerciseType", secondary=exercise_types_muscles, back_populates="muscles")
 
 class Recipe(Base):
@@ -134,8 +134,8 @@ class Recipe(Base):
     description = Column(String)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class SetTemplate(Base):
     __tablename__ = "set_templates"
@@ -144,22 +144,22 @@ class SetTemplate(Base):
     intensity = Column(Float)
     intensity_unit_id = Column(Integer, ForeignKey("intensity_units.id"), nullable=False)
     exercise_template_id = Column(Integer, ForeignKey("exercise_templates.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class WorkoutType(Base):
     __tablename__ = "workout_types"
     id = Column(Integer, primary_key=True)
     name = Column(String)
     description = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class Workout(Base):
     __tablename__ = "workouts"
     id = Column(Integer, primary_key=True)
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
+    start_time = Column(DateTime(timezone=True))
+    end_time = Column(DateTime(timezone=True))
     name = Column(String)
     notes = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
@@ -167,5 +167,5 @@ class Workout(Base):
     # Relationship to User
     owner: Mapped["User"] = relationship("User", back_populates="workouts")
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
