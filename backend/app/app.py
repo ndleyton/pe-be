@@ -18,6 +18,7 @@ from app.users import (
     get_user_manager, 
     FRONTEND_URL,
 )
+from .router import workouts, exercises
 
 
 app = FastAPI()
@@ -54,7 +55,16 @@ app.include_router(
     prefix="/users",
     tags=["users"],
 )
-
+app.include_router(
+    workouts.workouts_router, 
+    prefix="/api/workouts", 
+    tags=["workouts"]
+    )
+app.include_router(
+    exercises.exercises_router, 
+    prefix="/api/exercises", 
+    tags=["exercises"]
+) 
 # --- Google OAuth Routes ---
 
 async def oauth_exception_handler(request: Request, exc: OAuth2Error) -> Response:
@@ -92,56 +102,5 @@ def read_root():
 async def authenticated_route(user: User = Depends(current_active_user)):
     return {"message": f"Hello {user.email}!"}
 
-# --- Workout Endpoints ---
-workouts_router = APIRouter(prefix="/api/workouts", tags=["workouts"]) 
-
-# --- Exercise Endpoints ---
-from .models import Exercise
-from .schemas import ExerciseCreate, ExerciseRead
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends, APIRouter, status
-from .users import current_active_user, User
-from .db import get_async_session
-
-exercises_router = APIRouter(prefix="/api/exercises", tags=["exercises"])
-
-@exercises_router.post("/", response_model=ExerciseRead, status_code=status.HTTP_201_CREATED)
-async def create_exercise(
-    exercise_in: ExerciseCreate,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
-):
-    exercise = Exercise(**exercise_in.dict())
-    session.add(exercise)
-    await session.commit()
-    await session.refresh(exercise)
-    return exercise
 
 
-@workouts_router.post("/", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
-async def create_workout(
-    workout_in: WorkoutBase,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
-):
-    # Create a new Workout instance
-    workout = Workout(
-        **workout_in.dict(),
-        owner_id=user.id
-    )
-    session.add(workout)
-    await session.commit()
-    await session.refresh(workout)
-    return workout
-
-
-@workouts_router.get("/mine", response_model=List[WorkoutRead])
-async def get_my_workouts(
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
-):
-    result = await session.execute(select(Workout).where(Workout.owner_id == user.id).order_by(Workout.start_time.desc()))
-    workouts = result.scalars().all()
-    return workouts
-
-app.include_router(workouts_router)

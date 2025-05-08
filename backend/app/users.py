@@ -13,16 +13,17 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from httpx_oauth.clients.google import GoogleOAuth2
 
 from app.db import User, get_user_db
+from app.config import settings
 
 from dotenv import load_dotenv
 load_dotenv()
 
-SECRET = os.getenv("SECRET", "DEFAULT_SECRET_CHANGE_ME_IN_ENV")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-FRONTEND_POST_LOGIN_PATH = os.getenv("FRONTEND_POST_LOGIN_PATH", "/dashboard")
+SECRET = settings.SECRET
+GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
+FRONTEND_URL = settings.FRONTEND_URL
+FRONTEND_POST_LOGIN_PATH = settings.FRONTEND_POST_LOGIN_PATH
 
 print(GOOGLE_CLIENT_ID)
 print(GOOGLE_CLIENT_SECRET)
