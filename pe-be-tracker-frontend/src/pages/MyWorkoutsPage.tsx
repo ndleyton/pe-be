@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios'; 
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import WorkoutForm from '../components/WorkoutForm';
 
 type Workout = {
@@ -10,66 +11,58 @@ type Workout = {
   end_time: string | null;
 }
 
+const fetchWorkouts = async (): Promise<Workout[]> => {
+  const response = await axios.get('http://localhost:8000/api/workouts/mine', {
+    withCredentials: true,
+  });
+  return response.data;
+};
+
 const MyWorkoutsPage = () => {
-  const [refreshFlag, setRefreshFlag] = useState(0);
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: workouts = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['workouts'],
+    queryFn: fetchWorkouts,
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
 
-    useEffect(() => {
-        const fetchWorkouts = async () => {
-            try {
-                // Ensure axios sends cookies with the request
-                const response = await axios.get('http://localhost:8000/api/workouts/mine', {
-                    withCredentials: true, // IMPORTANT for sending session cookies
-                });
-                setWorkouts(response.data);
-                setError(null);
-            } catch (err) {
-                console.error("Error fetching workouts:", err);
-                if (axios.isAxiosError(err)) {
-                    if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-                        setError("Please log in to view your workouts.");
-                        // Optionally, redirect to login: window.location.href = '/';
-                    } else {
-                        setError("Failed to load workouts.");
-                    }
-                } else if (err instanceof Error) {
-                    setError(err.message);
-                } else {
-                    setError("Failed to load workouts.");
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
+  const getErrorMessage = (error: any) => {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return "Please log in to view your workouts.";
+      }
+      return "Failed to load workouts.";
+    }
+    return error instanceof Error ? error.message : "Failed to load workouts.";
+  };
 
-        fetchWorkouts();
-    }, [refreshFlag]);
+  if (isLoading) return <p>Loading workouts...</p>;
+  if (error) return <p style={{ color: 'red' }}>{getErrorMessage(error)}</p>;
 
-    if (loading) return <p>Loading workouts...</p>;
-    if (error) return <p style={{ color: 'red' }}>{error}</p>;
-
-    return (
-        <div>
-            <h1>My Workouts</h1>
-            <WorkoutForm onWorkoutCreated={() => {}} />
-            {workouts.length === 0 ? (
-                <p>You haven't logged any workouts yet.</p>
-            ) : (
-                <ul>
-                    {workouts.map(workout => (
-                        <li key={workout.id}>
-                            <h2>{workout.name || 'Unnamed Workout'}</h2>
-                            <p>Notes: {workout.notes || 'N/A'}</p>
-                            <p>Started: {new Date(workout.start_time).toLocaleString()}</p>
-                            {workout.end_time && <p>Ended: {new Date(workout.end_time).toLocaleString()}</p>}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
+  return (
+    <div>
+      <h1>My Workouts</h1>
+      <WorkoutForm onWorkoutCreated={() => refetch()} />
+      {workouts.length === 0 ? (
+        <p>You haven't logged any workouts yet.</p>
+      ) : (
+        <ul>
+          {workouts.map(workout => (
+            <li key={workout.id}>
+              <h2>{workout.name || 'Unnamed Workout'}</h2>
+              <p>Notes: {workout.notes || 'N/A'}</p>
+              <p>Started: {new Date(workout.start_time).toLocaleString()}</p>
+              {workout.end_time && <p>Ended: {new Date(workout.end_time).toLocaleString()}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 };
 
 export default MyWorkoutsPage;
