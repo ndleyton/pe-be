@@ -40,7 +40,11 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<WorkoutFormData>();
+  } = useForm<WorkoutFormData>({
+    defaultValues: {
+      start_time: new Date().toISOString().slice(0, 16)
+    }
+  });
 
   const mutation = useMutation({
     mutationFn: createWorkout,
@@ -89,15 +93,6 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
           />
         </label>
         {errors.start_time && <div className="text-red-400 text-sm">{errors.start_time.message}</div>}
-      </div>
-      <div className="mb-4">
-        <label className="block mb-1 text-gray-200 font-medium">End Time:
-          <input
-            type="datetime-local"
-            {...register('end_time')}
-            className="mt-1 mb-2 w-full bg-gray-800 text-gray-100 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </label>
       </div>
       <div className="mb-4">
         <label className="block mb-1 text-gray-200 font-medium">Workout Type ID:

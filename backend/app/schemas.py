@@ -63,6 +63,24 @@ class WorkoutBase(schemas.BaseModel):
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
 
+class WorkoutUpdate(schemas.BaseModel):
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    workout_type_id: Optional[int] = None
+
+    @validator('start_time', 'end_time', pre=True, always=True)
+    def ensure_utc(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            # Parse ISO string, handle 'Z' as UTC
+            v = datetime.fromisoformat(v.replace('Z', '+00:00'))
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v.astimezone(timezone.utc)
+
 class WorkoutRead(WorkoutBase):
     id: int
     owner_id: int
