@@ -176,8 +176,10 @@ describe('WorkoutForm', () => {
     await waitFor(() => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
-      expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Default value
+      expect(startTimeInput.value).toBe('2024-01-01T10:00'); // Default value
       expect(workoutTypeInput.value).toBe('');
     });
+
+    vi.useRealTimers();
   });
 });
