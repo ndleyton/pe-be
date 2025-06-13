@@ -76,6 +76,10 @@ jobs:
     - name: Run database migrations
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
+        SECRET_KEY: test-secret-key-for-ci
+        ENVIRONMENT: test
+        GOOGLE_CLIENT_ID: test-google-client-id-ci
+        GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
       run: |
         poetry run alembic upgrade head
         
@@ -84,6 +88,8 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
         SECRET_KEY: test-secret-key-for-ci
         ENVIRONMENT: test
+        GOOGLE_CLIENT_ID: test-google-client-id-ci
+        GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
       run: poetry run pytest -v --cov=app --cov-report=xml
       
     - name: Upload coverage reports
