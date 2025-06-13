@@ -6,7 +6,7 @@ import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
 
 vi.mock('axios');
-const mockedAxios = vi.mocked(axios);
+const mockedAxios = vi.mocked(axios, true);
 
 describe('ExerciseForm', () => {
   const mockOnExerciseCreated = vi.fn();
