@@ -1,11 +1,107 @@
-.env
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-/backend/.env
-.DS_Store
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 *.sublime-workspace
 *.sublime-project
-node_modules/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build outputs
+/pe-be-tracker-frontend/dist/
+/pe-be-tracker-frontend/build/
+/backend/dist/
+
+# Coverage reports
+coverage/
+*.coverage
+.coverage.*
+htmlcov/
+.nyc_output
+coverage.xml
+
+# Test artifacts
+.pytest_cache/
+.vitest/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+/backend/.env
+
+# Docker
+Dockerfile.dev
+docker-compose.override.yml
+
+# Security
+*.key
+*.pem
+*.crt
+*.p12
+secrets/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# CI/CD artifacts
+*.tar.gz
