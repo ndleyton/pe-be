@@ -20,7 +20,6 @@ jobs:
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
-      
     - name: Check for changes
       uses: dorny/paths-filter@v3
       id: changes
@@ -145,7 +144,22 @@ jobs:
       run: |
         poetry run alembic upgrade head
         poetry run uvicorn app.app:app --host 0.0.0.0 --port 8000 &
-        sleep 10
+        echo "Waiting for backend to be ready..."
+        timeout=60
+        elapsed=0
+        while [ $elapsed -lt $timeout ]; do
+          if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+            echo "Backend is ready!"
+            break
+          fi
+          echo "Backend not ready yet, waiting..."
+          sleep 2
+          elapsed=$((elapsed + 2))
+        done
+        if [ $elapsed -ge $timeout ]; then
+          echo "Timeout waiting for backend to be ready"
+          exit 1
+        fi
         
     - name: Build frontend
       working-directory: ./pe-be-tracker-frontend

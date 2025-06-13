@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import WorkoutForm from '../components/WorkoutForm';
 import HomeLogo from '../components/HomeLogo';
@@ -20,6 +21,7 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 };
 
 const MyWorkoutsPage = () => {
+  const navigate = useNavigate();
   const { data: workouts = [], isLoading, error, refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
@@ -39,6 +41,35 @@ const MyWorkoutsPage = () => {
       return "Failed to load workouts.";
     }
     return error instanceof Error ? error.message : "Failed to load workouts.";
+  };
+
+  const formatDuration = (startTime: string, endTime: string | null) => {
+    if (!endTime) return "In Progress";
+    
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const durationMs = end.getTime() - start.getTime();
+    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}`;
+    }
+    return `0:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'numeric', 
+      day: 'numeric', 
+      year: '2-digit' 
+    });
+  };
+
+  const handleWorkoutClick = (workoutId: number) => {
+    navigate(`/workout/${workoutId}`);
   };
 
   if (isLoading) return <p>Loading workouts...</p>;
@@ -71,23 +102,58 @@ const MyWorkoutsPage = () => {
   }
 
   return (
-    <div>
-      <h1>My Workouts</h1>
-      <WorkoutForm onWorkoutCreated={() => refetch()} />
-      {workouts.length === 0 ? (
-        <p>You haven't logged any workouts yet.</p>
-      ) : (
-        <ul>
-          {workouts.map(workout => (
-            <li key={workout.id}>
-              <h2>{workout.name || 'Unnamed Workout'}</h2>
-              <p>Notes: {workout.notes || 'N/A'}</p>
-              <p>Started: {new Date(workout.start_time).toLocaleString()}</p>
-              {workout.end_time && <p>Ended: {new Date(workout.end_time).toLocaleString()}</p>}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="min-h-screen bg-base-200">
+      <div className="p-4">
+        <HomeLogo />
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Workouts</h1>
+            <button className="text-primary hover:text-primary-focus">Show More</button>
+          </div>
+          
+          <WorkoutForm onWorkoutCreated={() => refetch()} />
+          
+          {workouts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">You haven't logged any workouts yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 mt-6">
+              {workouts.map(workout => (
+                <div
+                  key={workout.id}
+                  onClick={() => handleWorkoutClick(workout.id)}
+                  className="bg-gray-800 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">💪</span>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-medium">
+                        {workout.name || 'Traditional Strength Training'}
+                      </h3>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-green-400 font-mono text-lg">
+                          {formatDuration(workout.start_time, workout.end_time)}
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          {formatDate(workout.start_time)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
