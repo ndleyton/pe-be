@@ -57,7 +57,15 @@ jobs:
           ci
           chore
           revert
+          add
+          update
+          improve
         requireScope: false
+        disallowScopes: ~
+        validateSingleCommit: false
+        ignoreLabels: |
+          ignore-semantic-pull-request
+      continue-on-error: true
         
     - name: Check for sensitive files
       run: |
