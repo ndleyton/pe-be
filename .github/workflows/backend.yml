@@ -12,6 +12,10 @@ on:
       - 'backend/**'
       - '.github/workflows/backend.yml'
 
+permissions:
+  contents: read
+  actions: read
+
 defaults:
   run:
     working-directory: ./backend

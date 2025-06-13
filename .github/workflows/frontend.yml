@@ -12,6 +12,10 @@ on:
       - 'pe-be-tracker-frontend/**'
       - '.github/workflows/frontend.yml'
 
+permissions:
+  contents: read
+  actions: read
+
 defaults:
   run:
     working-directory: ./pe-be-tracker-frontend
