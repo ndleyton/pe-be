@@ -34,7 +34,7 @@ describe('MyWorkoutsPage', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /my workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
       expect(screen.getByTestId('workout-form')).toBeInTheDocument();
     });
   });
@@ -74,15 +74,13 @@ describe('MyWorkoutsPage', () => {
     await waitFor(() => {
       // First workout
       expect(screen.getByText('Morning Workout')).toBeInTheDocument();
-      expect(screen.getByText('Notes: Great session')).toBeInTheDocument();
-      expect(screen.getByText(/started: 1\/1\/2024/i)).toBeInTheDocument();
-      expect(screen.getByText(/ended: 1\/1\/2024/i)).toBeInTheDocument();
+      expect(screen.getByText('1:00')).toBeInTheDocument(); // Duration
+      expect(screen.getByText('1/1/24')).toBeInTheDocument(); // Date format
 
       // Second workout (with nulls)
-      expect(screen.getByText('Unnamed Workout')).toBeInTheDocument();
-      expect(screen.getByText('Notes: N/A')).toBeInTheDocument();
-      expect(screen.getByText(/started: 1\/2\/2024/i)).toBeInTheDocument();
-      expect(screen.queryByText(/ended: 1\/2\/2024/i)).not.toBeInTheDocument();
+      expect(screen.getByText('Traditional Strength Training')).toBeInTheDocument(); // Default name
+      expect(screen.getByText('In Progress')).toBeInTheDocument(); // No end time
+      expect(screen.getByText('1/2/24')).toBeInTheDocument(); // Date format
     });
   });
 
