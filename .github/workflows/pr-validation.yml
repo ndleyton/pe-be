@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -13,11 +17,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
       
     - name: Check for changes
       uses: dorny/paths-filter@v3
       id: changes
       with:
+        token: ${{ secrets.GITHUB_TOKEN }}
         filters: |
           frontend:
             - 'pe-be-tracker-frontend/**'
