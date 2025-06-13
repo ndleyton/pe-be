@@ -6,7 +6,7 @@ import { render } from '../test/utils';
 import WorkoutForm from './WorkoutForm';
 
 vi.mock('axios');
-const mockedAxios = vi.mocked(axios);
+const mockedAxios = vi.mocked(axios, true);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -31,14 +31,20 @@ describe('WorkoutForm', () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/end time/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/workout type id/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create workout/i })).toBeInTheDocument();
+    
+    // Verify end time field is NOT present (removed as per requirements)
+    expect(screen.queryByLabelText(/end time/i)).not.toBeInTheDocument();
   });
 
   it('shows validation errors for required fields', async () => {
     const user = userEvent.setup();
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
+
+    // Clear the start time field (it has a default value)
+    const startTimeInput = screen.getByLabelText(/start time/i);
+    await user.clear(startTimeInput);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -75,8 +81,8 @@ describe('WorkoutForm', () => {
     // Fill out the form
     await user.type(screen.getByLabelText(/name/i), 'Test Workout');
     await user.type(screen.getByLabelText(/notes/i), 'Test notes');
+    await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    await user.type(screen.getByLabelText(/end time/i), '2024-01-01T11:00');
     await user.type(screen.getByLabelText(/workout type id/i), '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
@@ -90,7 +96,7 @@ describe('WorkoutForm', () => {
           notes: 'Test notes',
           workout_type_id: 1,
           start_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
-          end_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
+          end_time: null, // End time is no longer sent from the form
         }),
         { withCredentials: true }
       );
@@ -113,6 +119,7 @@ describe('WorkoutForm', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Fill required fields
+    await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     await user.type(screen.getByLabelText(/workout type id/i), '1');
 
@@ -154,14 +161,13 @@ describe('WorkoutForm', () => {
     const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
     const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
     const startTimeInput = screen.getByLabelText(/start time/i) as HTMLInputElement;
-    const endTimeInput = screen.getByLabelText(/end time/i) as HTMLInputElement;
     const workoutTypeInput = screen.getByLabelText(/workout type id/i) as HTMLInputElement;
 
     // Fill out the form
     await user.type(nameInput, 'Test Workout');
     await user.type(notesInput, 'Test notes');
+    await user.clear(startTimeInput);
     await user.type(startTimeInput, '2024-01-01T10:00');
-    await user.type(endTimeInput, '2024-01-01T11:00');
     await user.type(workoutTypeInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
@@ -170,8 +176,7 @@ describe('WorkoutForm', () => {
     await waitFor(() => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
-      expect(startTimeInput.value).toBe('');
-      expect(endTimeInput.value).toBe('');
+      expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Default value
       expect(workoutTypeInput.value).toBe('');
     });
   });

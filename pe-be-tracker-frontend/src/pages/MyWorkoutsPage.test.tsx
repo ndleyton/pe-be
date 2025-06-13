@@ -5,7 +5,7 @@ import { render } from '../test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
 
 vi.mock('axios');
-const mockedAxios = vi.mocked(axios);
+const mockedAxios = vi.mocked(axios, true);
 
 vi.mock('../components/WorkoutForm', () => ({
   default: ({ onWorkoutCreated }: { onWorkoutCreated: () => void }) => (

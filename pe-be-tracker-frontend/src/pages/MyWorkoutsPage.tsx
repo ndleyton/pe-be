@@ -23,7 +23,7 @@ const MyWorkoutsPage = () => {
   const { data: workouts = [], isLoading, error, refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
-    retry: (failureCount, error) => {
+    retry: (failureCount, error: unknown) => {
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
         return false;
       }
@@ -31,7 +31,7 @@ const MyWorkoutsPage = () => {
     },
   });
 
-  const getErrorMessage = (error: any) => {
+  const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         return "Please log in to view your workouts.";
