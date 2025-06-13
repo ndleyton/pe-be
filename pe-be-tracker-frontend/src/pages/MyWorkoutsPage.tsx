@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import WorkoutForm from '../components/WorkoutForm';
+import HomeLogo from '../components/HomeLogo';
 
 type Workout = {
   id: number;
@@ -41,7 +42,33 @@ const MyWorkoutsPage = () => {
   };
 
   if (isLoading) return <p>Loading workouts...</p>;
-  if (error) return <p style={{ color: 'red' }}>{getErrorMessage(error)}</p>;
+  
+  if (error) {
+    const errorMessage = getErrorMessage(error);
+    const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
+    
+    if (isAuthError) {
+      return (
+        <div className="min-h-screen flex flex-col bg-base-200">
+          <div className="p-4">
+            <HomeLogo />
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-red-600 text-2xl">⚠</span>
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
+              <p className="text-gray-600 mb-4">{errorMessage}</p>
+              <p className="text-sm text-gray-500">Click the logo above to return to login</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    return <p style={{ color: 'red' }}>{errorMessage}</p>;
+  }
 
   return (
     <div>

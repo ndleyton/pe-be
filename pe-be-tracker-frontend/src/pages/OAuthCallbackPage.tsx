@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import HomeLogo from '../components/HomeLogo';
 
 const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +12,19 @@ const OAuthCallbackPage: React.FC = () => {
     navigate('/dashboard', { replace: true });
   }, [navigate]);
 
-  return <div>Signing you in...</div>;
+  return (
+    <div className="min-h-screen flex flex-col bg-base-200">
+      <div className="p-4">
+        <HomeLogo />
+      </div>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="loading loading-spinner loading-lg"></div>
+          <p className="mt-4 text-lg">Signing you in...</p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default OAuthCallbackPage;
