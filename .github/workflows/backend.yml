@@ -171,17 +171,18 @@ jobs:
         poetry check
         
     - name: Build Docker image
+      working-directory: ./backend
       run: |
         echo "FROM python:3.11-slim
         WORKDIR /app
-        COPY backend/pyproject.toml backend/poetry.lock ./
+        COPY pyproject.toml poetry.lock ./
         RUN pip install poetry && poetry config virtualenvs.create false && poetry install --only=main
-        COPY backend/app ./app
-        COPY backend/alembic.ini ./
-        COPY backend/alembic ./alembic
-        COPY backend/main.py ./
+        COPY app ./app
+        COPY alembic.ini ./
+        COPY alembic ./alembic
+        COPY main.py ./
         EXPOSE 8000
-        CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
+        CMD [\"uvicorn\", \"app.app:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
         
         docker build -t pe-be-backend:latest .
         

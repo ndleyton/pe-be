@@ -108,7 +108,7 @@ jobs:
         COPY backend/alembic ./alembic
         COPY backend/main.py ./
         EXPOSE 8000
-        CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
+        CMD [\"uvicorn\", \"app.app:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
         
         docker build -t pe-be-backend:${{ needs.create-release.outputs.version }} .
         docker save pe-be-backend:${{ needs.create-release.outputs.version }} | gzip > backend-${{ needs.create-release.outputs.version }}.tar.gz
