@@ -14,7 +14,8 @@ load_dotenv()
 
 def get_database_url():
     """Get the database URL and ensure it's compatible with async operations."""
-    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://ndleyton@localhost:5432/gym_tracker_development")
+    # Fallback URL for local development only - configure DATABASE_URL environment variable in production
+    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db")
     
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
     if db_url.startswith("postgresql://"):

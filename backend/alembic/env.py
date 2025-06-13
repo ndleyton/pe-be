@@ -97,6 +97,8 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         do_run_migrations(connection)
+    
+    connectable.dispose()
 
 async def run_migrations_online_async() -> None:
     """Run migrations in 'online' mode using an async engine."""

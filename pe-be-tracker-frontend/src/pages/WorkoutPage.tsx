@@ -8,7 +8,7 @@ import FinishWorkoutModal from '../components/FinishWorkoutModal';
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
   const response = await axios.patch(
-    `http://localhost:8000/api/workouts/${workoutId}/`,
+    `http://localhost:8000/api/workouts/${workoutId}`,
     {
       end_time: new Date().toISOString(),
     },
@@ -21,7 +21,7 @@ const updateWorkoutEndTime = async (workoutId: string) => {
 };
 
 const WorkoutPage: React.FC = () => {
-  const { workoutId } = useParams<{ workoutId: string }>();
+  const { workoutId } = useParams();
   const navigate = useNavigate();
   const [showFinishModal, setShowFinishModal] = useState(false);
 

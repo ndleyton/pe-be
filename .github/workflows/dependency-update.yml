@@ -13,78 +13,78 @@ permissions:
 jobs:
   update-frontend-deps:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        
-    - name: Update npm dependencies
-      working-directory: ./pe-be-tracker-frontend
-      run: |
-        npm update
-        npm audit fix || true
-        
-    - name: Create Pull Request for Frontend
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: 'chore(frontend): update npm dependencies'
-        title: 'chore(frontend): update npm dependencies'
-        body: |
-          ## 🔄 Automated dependency update
-          
-          This PR updates npm dependencies in the frontend.
-          
-          ### Changes
-          - Updated npm packages to latest compatible versions
-          - Applied security fixes where available
-          
-          Please review the changes before merging.
-        branch: chore/update-frontend-deps
-        path: ./pe-be-tracker-frontend
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update npm dependencies
+        working-directory: ./pe-be-tracker-frontend
+        run: |
+          npm update
+          npm audit fix || true
+
+      - name: Create Pull Request for Frontend
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(frontend): update npm dependencies'
+          title: 'chore(frontend): update npm dependencies'
+          body: |
+            ## 🔄 Automated dependency update
+
+            This PR updates npm dependencies in the frontend.
+
+            ### Changes
+            - Updated npm packages to latest compatible versions
+            - Applied security fixes where available
+
+            Please review the changes before merging.
+          branch: chore/update-frontend-deps
+          add-paths: ./pe-be-tracker-frontend
 
   update-backend-deps:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        
-    - name: Update Poetry dependencies
-      working-directory: ./backend
-      run: |
-        poetry update
-        
-    - name: Create Pull Request for Backend
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: 'chore(backend): update poetry dependencies'
-        title: 'chore(backend): update poetry dependencies'
-        body: |
-          ## 🔄 Automated dependency update
-          
-          This PR updates Poetry dependencies in the backend.
-          
-          ### Changes
-          - Updated Python packages to latest compatible versions
-          - Applied security fixes where available
-          
-          Please review the changes before merging.
-        branch: chore/update-backend-deps
-        path: ./backend
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+
+      - name: Update Poetry dependencies
+        working-directory: ./backend
+        run: |
+          poetry update
+
+      - name: Create Pull Request for Backend
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(backend): update poetry dependencies'
+          title: 'chore(backend): update poetry dependencies'
+          body: |
+            ## 🔄 Automated dependency update
+
+            This PR updates Poetry dependencies in the backend.
+
+            ### Changes
+            - Updated Python packages to latest compatible versions
+            - Applied security fixes where available
+
+            Please review the changes before merging.
+          branch: chore/update-backend-deps
+          add-paths: ./backend
