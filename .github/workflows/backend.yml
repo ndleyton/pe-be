@@ -154,6 +154,12 @@ jobs:
       uses: snok/install-poetry@v1
       with:
         version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: Install dependencies
+      working-directory: ./backend
+      run: poetry install --no-interaction
         
     - name: Validate application
       working-directory: ./backend
