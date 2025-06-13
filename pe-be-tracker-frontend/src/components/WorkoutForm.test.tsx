@@ -139,6 +139,7 @@ describe('WorkoutForm', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Fill required fields
+    await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     await user.type(screen.getByLabelText(/workout type id/i), '1');
 
@@ -176,7 +177,7 @@ describe('WorkoutForm', () => {
     await waitFor(() => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
-      expect(startTimeInput.value).toBe('2024-01-01T10:00'); // Default value
+      expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
       expect(workoutTypeInput.value).toBe('');
     });
 

@@ -69,6 +69,10 @@ jobs:
     - name: Install project
       run: poetry install --no-interaction
       
+    - name: Create test database
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pe_be_test;" || echo "Database might already exist"
+        
     - name: Run database migrations
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
