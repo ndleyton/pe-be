@@ -3,7 +3,7 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, create_engine
 from sqlalchemy.engine import Connection  # Import Connection for type hint
 from sqlalchemy.ext.asyncio import create_async_engine  # Use async engine
 
@@ -42,6 +42,16 @@ def get_url():
         raise ValueError("DATABASE_URL environment variable is not set or empty.")
     return db_url
 
+def get_async_url():
+    """Retrieves the async database URL for async operations."""
+    db_url = get_url()
+    # Convert postgresql:// to postgresql+asyncpg:// for async operations
+    if db_url.startswith("postgresql://"):
+        return db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif db_url.startswith("postgres://"):
+        return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return db_url
+
 # --- Offline Mode ---
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -67,17 +77,33 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-# --- Online Mode (Async) ---
+# --- Online Mode ---
 def do_run_migrations(connection: Connection) -> None:
     """Helper function to run migrations within a transaction."""
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
 
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode using a synchronous engine."""
+    # Use the regular URL for sync operations
+    db_url = get_url()
+    
+    connectable = create_engine(
+        db_url,
+        poolclass=pool.NullPool,
+        future=True,
+    )
+
+    with connectable.connect() as connection:
+        do_run_migrations(connection)
+    
+    connectable.dispose()
+
 async def run_migrations_online_async() -> None:
     """Run migrations in 'online' mode using an async engine."""
     connectable = create_async_engine(
-        get_url(),
+        get_async_url(),
         poolclass=pool.NullPool,
         future=True, # Recommended for SQLAlchemy 2.0 style
     )
@@ -95,7 +121,15 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     print("Running migrations online...")
-    # Use asyncio.run to execute the async online migration function
-    asyncio.run(run_migrations_online_async())
+    # Use sync migrations by default for better CI compatibility
+    # Set ALEMBIC_ASYNC=true environment variable to use async
+    use_async = os.getenv("ALEMBIC_ASYNC", "false").lower() == "true"
+    
+    if use_async:
+        print("Using async migrations...")
+        asyncio.run(run_migrations_online_async())
+    else:
+        print("Using sync migrations...")
+        run_migrations_online()
 
 print("Migration script finished.")

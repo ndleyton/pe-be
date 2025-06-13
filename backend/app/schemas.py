@@ -63,6 +63,9 @@ class WorkoutBase(schemas.BaseModel):
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
 
+class WorkoutUpdate(WorkoutBase):
+    workout_type_id: Optional[int] = None
+
 class WorkoutRead(WorkoutBase):
     id: int
     owner_id: int
