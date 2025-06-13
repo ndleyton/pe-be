@@ -170,8 +170,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['intensity_unit_id'], ['intensity_units.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.drop_table('schema_migrations')
-    op.drop_table('ar_internal_metadata')
+    # Note: Removed drop statements for 'schema_migrations' and 'ar_internal_metadata'
+    # These were legacy tables from a previous migration system that may not exist in fresh databases
     # ### end Alembic commands ###
 
 
