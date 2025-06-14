@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 interface ExerciseFormData {
   exercise_type_id: number;
@@ -16,7 +17,7 @@ interface ExerciseFormProps {
 
 const createExercise = async (data: ExerciseFormData & { workout_id: number }) => {
   const response = await axios.post(
-    'http://localhost:8000/api/exercises/',
+    `${API_BASE_URL}/api/exercises/`,
     {
       exercise_type_id: data.exercise_type_id,
       workout_id: data.workout_id,

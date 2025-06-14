@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import WorkoutForm from '../components/WorkoutForm';
 import HomeLogo from '../components/HomeLogo';
+import { API_BASE_URL } from '../config';
 
 type Workout = {
   id: number;
@@ -14,7 +15,7 @@ type Workout = {
 }
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  const response = await axios.get('http://localhost:8000/api/workouts/mine', {
+  const response = await axios.get(`${API_BASE_URL}/api/workouts/mine`, {
     withCredentials: true,
   });
   return response.data;

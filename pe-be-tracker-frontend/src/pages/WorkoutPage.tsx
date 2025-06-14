@@ -4,11 +4,12 @@ import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import ExerciseForm from '../components/ExerciseForm';
 import FinishWorkoutModal from '../components/FinishWorkoutModal';
+import { API_BASE_URL } from '../config';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
   const response = await axios.patch(
-    `http://localhost:8000/api/workouts/${workoutId}`,
+    `${API_BASE_URL}/api/workouts/${workoutId}`,
     {
       end_time: new Date().toISOString(),
     },
