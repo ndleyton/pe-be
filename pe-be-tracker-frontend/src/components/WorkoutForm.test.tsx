@@ -1,9 +1,11 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { render } from '../test/utils';
 import WorkoutForm from './WorkoutForm';
+import { API_BASE_URL } from '../config';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
@@ -16,6 +18,29 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+// Mock the WorkoutTypeModal to automatically select a workout type when opened
+vi.mock('./WorkoutTypeModal', () => ({
+  default: ({ isOpen, onSelect, onClose }: any) => {
+    if (!isOpen) return null;
+    
+    // Auto-select a workout type when modal opens
+    React.useEffect(() => {
+      if (isOpen) {
+        onSelect({ id: 1, name: 'Test Workout Type', description: 'Test' });
+      }
+    }, [isOpen, onSelect]);
+    
+    return (
+      <div data-testid="workout-type-modal">
+        <button onClick={() => onSelect({ id: 1, name: 'Test Workout Type', description: 'Test' })}>
+          Select Test Workout Type
+        </button>
+        <button onClick={onClose}>Close</button>
+      </div>
+    );
+  },
+}));
 
 describe('WorkoutForm', () => {
   const mockOnWorkoutCreated = vi.fn();
@@ -82,22 +107,23 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Mock the workout type selection by setting value and dispatching input event
-    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    hiddenInput.value = '1';
-    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+    // Click the select workout type button to open the modal
+    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
+    await user.click(selectWorkoutTypeButton);
+    
+    // The mocked modal will automatically select a workout type
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/workouts/',
+        `${API_BASE_URL}/api/workouts/`,
         expect.objectContaining({
           name: 'Test Workout',
           notes: 'Test notes',
           workout_type_id: 1,
-          start_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
+          start_time: '2024-01-01T10:00:00.000Z',
           end_time: null, // End time is no longer sent from the form
         }),
         { withCredentials: true }
@@ -124,9 +150,9 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Mock the workout type selection
-    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    await user.type(hiddenInput, '1');
+    // Click the select workout type button to open the modal
+    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
+    await user.click(selectWorkoutTypeButton);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -147,9 +173,9 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Mock the workout type selection
-    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    await user.type(hiddenInput, '1');
+    // Click the select workout type button to open the modal
+    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
+    await user.click(selectWorkoutTypeButton);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -177,9 +203,9 @@ describe('WorkoutForm', () => {
     await user.clear(startTimeInput);
     await user.type(startTimeInput, '2024-01-01T10:00');
     
-    // Mock the workout type selection
-    const workoutTypeInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    await user.type(workoutTypeInput, '1');
+    // Click the select workout type button to open the modal
+    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
+    await user.click(selectWorkoutTypeButton);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -188,6 +214,9 @@ describe('WorkoutForm', () => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
       expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
+      
+      // Check that workout type was reset
+      const workoutTypeInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
       expect(workoutTypeInput.value).toBe('');
     });
 

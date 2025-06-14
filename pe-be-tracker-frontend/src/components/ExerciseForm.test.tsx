@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
+import { API_BASE_URL } from '../config';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
@@ -72,7 +73,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+        `${API_BASE_URL}/api/exercises/`,
         {
           exercise_type_id: 1,
           workout_id: 123,
@@ -106,7 +107,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+        `${API_BASE_URL}/api/exercises/`,
         expect.objectContaining({
           exercise_type_id: 2,
           workout_id: 123,
@@ -199,7 +200,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+        `${API_BASE_URL}/api/exercises/`,
         expect.objectContaining({
           workout_id: 999, // Should be converted to number
         }),
