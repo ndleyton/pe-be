@@ -45,6 +45,11 @@ vi.mock('./WorkoutTypeModal', () => ({
 describe('WorkoutForm', () => {
   const mockOnWorkoutCreated = vi.fn();
 
+  const selectWorkoutType = async (user: ReturnType<typeof userEvent.setup>) => {
+    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
+    await user.click(selectWorkoutTypeButton);
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -107,11 +112,8 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Click the select workout type button to open the modal
-    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
-    await user.click(selectWorkoutTypeButton);
-    
-    // The mocked modal will automatically select a workout type
+    // Select a workout type
+    await selectWorkoutType(user);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -150,9 +152,8 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Click the select workout type button to open the modal
-    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
-    await user.click(selectWorkoutTypeButton);
+    // Select a workout type
+    await selectWorkoutType(user);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -173,9 +174,8 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Click the select workout type button to open the modal
-    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
-    await user.click(selectWorkoutTypeButton);
+    // Select a workout type
+    await selectWorkoutType(user);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -203,9 +203,8 @@ describe('WorkoutForm', () => {
     await user.clear(startTimeInput);
     await user.type(startTimeInput, '2024-01-01T10:00');
     
-    // Click the select workout type button to open the modal
-    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
-    await user.click(selectWorkoutTypeButton);
+    // Select a workout type
+    await selectWorkoutType(user);
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
