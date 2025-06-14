@@ -4,13 +4,14 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import WorkoutTypeModal, { WorkoutType } from './WorkoutTypeModal';
+import { API_BASE_URL } from '../config';
 
 interface WorkoutFormData {
   name?: string;
   notes?: string;
   start_time: string;
   end_time?: string;
-  workout_type_id: number;
+  workout_type_id: string | number;
 }
 
 interface WorkoutFormProps {
@@ -18,14 +19,28 @@ interface WorkoutFormProps {
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
+  // Helper to transform the `datetime-local` string (which has no timezone
+  // information) into an ISO-8601 string **without** applying the host
+  // machine's timezone offset. The backend expects the incoming value to be
+  // treated as UTC already — e.g. the literal `2024-01-01T10:00` should be
+  // sent as `2024-01-01T10:00:00.000Z`.
+  const toUtcIso = (value?: string) => {
+    if (!value) return null;
+    // `datetime-local` values never include seconds, milliseconds or a
+    // timezone designator. We can therefore safely append them.
+    return `${value}:00.000Z`;
+  };
+
   const response = await axios.post(
-    'http://localhost:8000/api/workouts/',
+    `${API_BASE_URL}/api/workouts/`,
     {
       name: data.name || null,
       notes: data.notes || null,
-      start_time: data.start_time ? new Date(data.start_time).toISOString() : null,
-      end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-      workout_type_id: data.workout_type_id,
+      start_time: toUtcIso(data.start_time),
+      end_time: toUtcIso(data.end_time),
+      // Hidden inputs return their value as a string which react-hook-form
+      // will then pass through. Ensure we always send a numeric id to the API.
+      workout_type_id: Number(data.workout_type_id),
     },
     {
       withCredentials: true,
@@ -149,7 +164,6 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
           type="hidden"
           {...register('workout_type_id', { 
             required: 'Workout type is required',
-            valueAsNumber: true,
           })}
         />
         {errors.workout_type_id && <div className="text-red-400 text-sm mt-2">{errors.workout_type_id.message}</div>}

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import { render } from '../test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
+import { API_BASE_URL } from '../config';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
@@ -91,7 +92,7 @@ describe('MyWorkoutsPage', () => {
 
     await waitFor(() => {
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        'http://localhost:8000/api/workouts/mine',
+        `${API_BASE_URL}/api/workouts/mine`,
         { withCredentials: true }
       );
     });
