@@ -31,7 +31,7 @@ describe('WorkoutForm', () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
-    expect(screen.getByText(/workout type/i)).toBeInTheDocument();
+    expect(screen.getByText('Workout Type:')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /select workout type/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create workout/i })).toBeInTheDocument();
     
@@ -76,19 +76,15 @@ describe('WorkoutForm', () => {
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Mock the workout type selection by directly setting the form value
-    // In a real scenario, this would be done through the WorkoutTypeModal
-    const form = screen.getByRole('form') || document.querySelector('form');
-    const hiddenInput = form?.querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    if (hiddenInput) {
-      hiddenInput.value = '1';
-    }
-
     // Fill out the form
     await user.type(screen.getByLabelText(/name/i), 'Test Workout');
     await user.type(screen.getByLabelText(/notes/i), 'Test notes');
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
+    
+    // Mock the workout type selection by firing change event on hidden input
+    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
+    await user.type(hiddenInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -123,16 +119,13 @@ describe('WorkoutForm', () => {
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Mock the workout type selection
-    const form = screen.getByRole('form') || document.querySelector('form');
-    const hiddenInput = form?.querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    if (hiddenInput) {
-      hiddenInput.value = '1';
-    }
-
     // Fill required fields
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
+    
+    // Mock the workout type selection
+    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
+    await user.type(hiddenInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -149,16 +142,13 @@ describe('WorkoutForm', () => {
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Mock the workout type selection
-    const form = screen.getByRole('form') || document.querySelector('form');
-    const hiddenInput = form?.querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    if (hiddenInput) {
-      hiddenInput.value = '1';
-    }
-
     // Fill required fields
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
+    
+    // Mock the workout type selection
+    const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
+    await user.type(hiddenInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -179,19 +169,16 @@ describe('WorkoutForm', () => {
     const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
     const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
     const startTimeInput = screen.getByLabelText(/start time/i) as HTMLInputElement;
-    
-    // Mock the workout type selection
-    const form = screen.getByRole('form') || document.querySelector('form');
-    const workoutTypeInput = form?.querySelector('input[name="workout_type_id"]') as HTMLInputElement;
 
     // Fill out the form
     await user.type(nameInput, 'Test Workout');
     await user.type(notesInput, 'Test notes');
     await user.clear(startTimeInput);
     await user.type(startTimeInput, '2024-01-01T10:00');
-    if (workoutTypeInput) {
-      workoutTypeInput.value = '1';
-    }
+    
+    // Mock the workout type selection
+    const workoutTypeInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
+    await user.type(workoutTypeInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -200,9 +187,7 @@ describe('WorkoutForm', () => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
       expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
-      if (workoutTypeInput) {
-        expect(workoutTypeInput.value).toBe('');
-      }
+      expect(workoutTypeInput.value).toBe('');
     });
 
     vi.useRealTimers();
