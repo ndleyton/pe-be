@@ -82,9 +82,10 @@ describe('WorkoutForm', () => {
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
     
-    // Mock the workout type selection by firing change event on hidden input
+    // Mock the workout type selection by setting value and dispatching input event
     const hiddenInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
-    await user.type(hiddenInput, '1');
+    hiddenInput.value = '1';
+    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
