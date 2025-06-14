@@ -82,7 +82,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
 
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-gray-700 p-6 rounded-lg bg-gray-900 text-gray-100 shadow-lg w-full max-w-md mx-auto">
+    <form role="form" onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-gray-700 p-6 rounded-lg bg-gray-900 text-gray-100 shadow-lg w-full max-w-md mx-auto">
       <h3 className="text-lg font-semibold mb-4 text-gray-100">Create Workout</h3>
       <div className="mb-4">
         <label className="block mb-1 text-gray-200 font-medium">Name:
