@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@host:port/db"
     
+    # Base API prefix (e.g., "/api" or "/api/v1") so front-end and docs remain in sync.
+    API_PREFIX: str = Field("/api/v1", env="API_PREFIX")
+    
     # Environment indicator
     ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
 
