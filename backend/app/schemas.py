@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi_users import schemas
-from pydantic import validator
+from pydantic import validator, BaseModel
 
 class UserRead(schemas.BaseUser[int]):
     pass
@@ -69,6 +69,18 @@ class WorkoutUpdate(WorkoutBase):
 class WorkoutRead(WorkoutBase):
     id: int
     owner_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True # For SQLAlchemy model conversion
+
+# --- Workout Type Schemas ---
+
+class WorkoutTypeRead(BaseModel):
+    id: int
+    name: str
+    description: str
     created_at: datetime
     updated_at: datetime
 
