@@ -174,7 +174,8 @@ describe('WorkoutForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(nameInput.value).toBe('');
+      const expectedNameDefault = new Date().toISOString().slice(0, 10);
+      expect(nameInput.value).toBe(expectedNameDefault);
       expect(notesInput.value).toBe('');
       expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
       expect(workoutTypeInput.value).toBe('');
