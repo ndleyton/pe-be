@@ -19,6 +19,7 @@ from app.users import (
     FRONTEND_URL,
 )
 from .router import workouts, exercises, workout_types
+from app.config import settings
 
 
 app = FastAPI()
@@ -57,17 +58,17 @@ app.include_router(
 )
 app.include_router(
     workouts.workouts_router, 
-    prefix="/api/workouts", 
+    prefix=f"{settings.API_PREFIX}/workouts", 
     tags=["workouts"]
     )
 app.include_router(
     exercises.exercises_router, 
-    prefix="/api/exercises", 
+    prefix=f"{settings.API_PREFIX}/exercises", 
     tags=["exercises"]
 )
 app.include_router(
     workout_types.workout_types_router, 
-    prefix="/api/workout-types", 
+    prefix=f"{settings.API_PREFIX}/workout-types", 
     tags=["workout_types"]
 ) 
 # --- Google OAuth Routes ---
