@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import axios from 'axios';
+import api from '../api/client';
 import { render } from '../test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
-import { API_BASE_URL } from '../config';
 
-vi.mock('axios');
-const mockedAxios = vi.mocked(axios, true);
+vi.mock('../api/client');
+const mockedApi = vi.mocked(api, true);
 
 vi.mock('../components/WorkoutForm', () => ({
   default: ({ onWorkoutCreated }: { onWorkoutCreated: () => void }) => (
@@ -22,7 +21,7 @@ describe('MyWorkoutsPage', () => {
   });
 
   it('shows loading state initially', () => {
-    mockedAxios.get.mockImplementation(() => new Promise(() => {})); // Never resolves
+    mockedApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
     
     render(<MyWorkoutsPage />);
 
@@ -30,7 +29,7 @@ describe('MyWorkoutsPage', () => {
   });
 
   it('renders page title and workout form', async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+    mockedApi.get.mockResolvedValueOnce({ data: [] });
 
     render(<MyWorkoutsPage />);
 
@@ -41,7 +40,7 @@ describe('MyWorkoutsPage', () => {
   });
 
   it('shows message when no workouts exist', async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+    mockedApi.get.mockResolvedValueOnce({ data: [] });
 
     render(<MyWorkoutsPage />);
 
@@ -68,7 +67,7 @@ describe('MyWorkoutsPage', () => {
       },
     ];
 
-    mockedAxios.get.mockResolvedValueOnce({ data: mockWorkouts });
+    mockedApi.get.mockResolvedValueOnce({ data: mockWorkouts });
 
     render(<MyWorkoutsPage />);
 
@@ -86,15 +85,12 @@ describe('MyWorkoutsPage', () => {
   });
 
   it('makes API call with correct parameters', async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+    mockedApi.get.mockResolvedValueOnce({ data: [] });
 
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/workouts/mine`,
-        { withCredentials: true }
-      );
+      expect(mockedApi.get).toHaveBeenCalledWith('/workouts/mine');
     });
   });
 });

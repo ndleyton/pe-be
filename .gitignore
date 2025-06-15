@@ -79,12 +79,11 @@ coverage.xml
 .vitest/
 
 # Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+*.env
+*.env.*
 /backend/.env
+# Frontend environment files
+pe-be-tracker-frontend/.env*
 
 # Docker
 Dockerfile.dev

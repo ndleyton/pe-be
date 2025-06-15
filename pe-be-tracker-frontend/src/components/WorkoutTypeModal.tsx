@@ -1,7 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import api from '../api/client';
 
 interface WorkoutType {
   id: number;
@@ -16,9 +15,7 @@ interface WorkoutTypeModalProps {
 }
 
 const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
-  const response = await axios.get(`${API_BASE_URL}/api/workout-types/`, {
-    withCredentials: true,
-  });
+  const response = await api.get('/workout-types/');
   return response.data;
 };
 
