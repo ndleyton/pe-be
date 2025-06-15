@@ -8,7 +8,7 @@ import FinishWorkoutModal from '../components/FinishWorkoutModal';
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
   const response = await api.patch(
-    `/api/workouts/${workoutId}`,
+    `/workouts/${workoutId}`,
     {
       end_time: new Date().toISOString(),
     },
