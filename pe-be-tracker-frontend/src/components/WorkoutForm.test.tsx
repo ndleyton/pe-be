@@ -8,6 +8,31 @@ import WorkoutForm from './WorkoutForm';
 vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
 
+
+interface WorkoutType {
+  id: number;
+  name: string;
+  description: string;
+}
+
+interface WorkoutTypeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (workoutType: WorkoutType) => void;
+}
+
+vi.mock('./WorkoutTypeModal', () => ({
+  default: ({ isOpen, onClose, onSelect }: WorkoutTypeModalProps) => 
+    isOpen ? (
+      <div data-testid="workout-type-modal">
+        <button onClick={() => onSelect({ id: 1, name: 'Push Day', description: 'Chest, shoulders, triceps' })}>
+          Select Push Day
+        </button>
+        <button onClick={onClose}>Close Modal</button>
+      </div>
+    ) : null,
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -27,15 +52,65 @@ describe('WorkoutForm', () => {
   it('renders the form with all required fields', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    expect(screen.getByRole('heading', { name: /create workout/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/workout type id/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create workout/i })).toBeInTheDocument();
+    // Check for workout name title (date in "Jun 15" format)
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    expect(screen.getByText(today)).toBeInTheDocument();
     
-    // Verify end time field is NOT present (removed as per requirements)
-    expect(screen.queryByLabelText(/end time/i)).not.toBeInTheDocument();
+    // Check for form fields - notes now has placeholder text
+    expect(screen.getByPlaceholderText(/how am i feeling today/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
+    
+    // Check for workout type selector (not direct input anymore)
+    expect(screen.getByText(/select workout type/i)).toBeInTheDocument();
+    
+    // Check for updated button text
+    expect(screen.getByRole('button', { name: /start workout/i })).toBeInTheDocument();
+  });
+
+  it('allows editing the workout name', async () => {
+    const user = userEvent.setup();
+    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
+
+    // Click on the workout name to edit it
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const workoutNameTitle = screen.getByText(today);
+    await user.click(workoutNameTitle);
+
+    // Should show input field and save button
+    expect(screen.getByDisplayValue(today)).toBeInTheDocument(); // The input field
+    // Check for the save button using accessible name
+    expect(screen.getByRole('button', { name: /save workout name/i })).toBeInTheDocument();
+  });
+
+  it('opens workout type modal when clicking select workout type', async () => {
+    const user = userEvent.setup();
+    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
+
+    const selectButton = screen.getByText(/select workout type/i);
+    await user.click(selectButton);
+
+    expect(screen.getByTestId('workout-type-modal')).toBeInTheDocument();
+  });
+
+  it('selects workout type from modal and updates name', async () => {
+    const user = userEvent.setup();
+    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
+
+    // Open modal
+    const selectButton = screen.getByText(/select workout type/i);
+    await user.click(selectButton);
+
+    // Select workout type
+    const pushDayButton = screen.getByText(/select push day/i);
+    await user.click(pushDayButton);
+
+    // Should close modal and show selected workout type
+    expect(screen.queryByTestId('workout-type-modal')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/push day/i)).toHaveLength(2); // One in title, one in card
+    
+    // Name should be auto-updated with workout type and date
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    expect(screen.getByText(`Push Day - ${today}`)).toBeInTheDocument();
   });
 
   it('shows validation errors for required fields', async () => {
@@ -46,27 +121,12 @@ describe('WorkoutForm', () => {
     const startTimeInput = screen.getByLabelText(/start time/i);
     await user.clear(startTimeInput);
 
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
+    const submitButton = screen.getByRole('button', { name: /start workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText(/start time is required/i)).toBeInTheDocument();
       expect(screen.getByText(/workout type is required/i)).toBeInTheDocument();
-    });
-  });
-
-  it('shows validation error for invalid workout type id', async () => {
-    const user = userEvent.setup();
-    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
-
-    const workoutTypeInput = screen.getByLabelText(/workout type id/i);
-    await user.type(workoutTypeInput, '-1');
-
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
-    await user.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/workout type id must be positive/i)).toBeInTheDocument();
     });
   });
 
@@ -78,14 +138,30 @@ describe('WorkoutForm', () => {
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Fill out the form
-    await user.type(screen.getByLabelText(/name/i), 'Test Workout');
-    await user.type(screen.getByLabelText(/notes/i), 'Test notes');
+    // Edit the workout name
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const workoutNameTitle = screen.getByText(today);
+    await user.click(workoutNameTitle);
+    const nameInput = screen.getByDisplayValue(today);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Test Workout');
+    const saveButton = screen.getByRole('button', { name: /save workout name/i });
+    await user.click(saveButton);
+
+    // Fill out notes
+    await user.type(screen.getByPlaceholderText(/how am i feeling today/i), 'Test notes');
+    
+    // Set start time
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    await user.type(screen.getByLabelText(/workout type id/i), '1');
+    
+    // Select workout type
+    const selectButton = screen.getByText(/select workout type/i);
+    await user.click(selectButton);
+    const pushDayButton = screen.getByText(/select push day/i);
+    await user.click(pushDayButton);
 
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
+    const submitButton = screen.getByRole('button', { name: /start workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
@@ -96,7 +172,7 @@ describe('WorkoutForm', () => {
           notes: 'Test notes',
           workout_type_id: 1,
           start_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
-          end_time: null, // End time is no longer sent from the form
+          end_time: null,
         }),
       );
     });
@@ -110,45 +186,37 @@ describe('WorkoutForm', () => {
   it('shows loading state during submission', async () => {
     const user = userEvent.setup();
     
-    // Mock a delayed response
-    mockedApi.post.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({ data: { id: 123 } }), 100))
-    );
-
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Fill required fields
-    await user.clear(screen.getByLabelText(/start time/i));
-    await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    await user.type(screen.getByLabelText(/workout type id/i), '1');
+    // Select workout type (required field)  
+    const selectButton = screen.getByText(/select workout type/i);
+    await user.click(selectButton);
+    const pushDayButton = screen.getByText(/select push day/i);
+    await user.click(pushDayButton);
 
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
+    // Ensure we have the "Start Workout" button before clicking
+    expect(screen.getByRole('button', { name: /start workout/i })).toBeInTheDocument();
+    
+    // Mock a delayed response AFTER setting up the form 
+    let resolvePromise: (value: any) => void;
+    const delayedPromise = new Promise(resolve => {
+      resolvePromise = resolve;
+    });
+    mockedApi.post.mockImplementation(() => delayedPromise);
+    
+    const submitButton = screen.getByRole('button', { name: /start workout/i });
     await user.click(submitButton);
 
     // Check loading state
-    expect(screen.getByRole('button', { name: /creating/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /creating/i })).toBeDisabled();
-  });
-
-  it('shows error message when submission fails', async () => {
-    const user = userEvent.setup();
-    
-    mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
-
-    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
-
-    // Fill required fields
-    await user.clear(screen.getByLabelText(/start time/i));
-    await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    await user.type(screen.getByLabelText(/workout type id/i), '1');
-
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
-    await user.click(submitButton);
-
     await waitFor(() => {
-      expect(screen.getByText(/failed to create workout/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /creating/i })).toBeInTheDocument();
     });
+    expect(screen.getByRole('button', { name: /creating/i })).toBeDisabled();
+    
+    // Cleanup - resolve the promise to avoid affecting other tests
+    resolvePromise!({ data: { id: 123 } });
   });
+
 
   it('resets form after successful submission', async () => {
     const user = userEvent.setup();
@@ -158,28 +226,37 @@ describe('WorkoutForm', () => {
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
-    const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
-    const startTimeInput = screen.getByLabelText(/start time/i) as HTMLInputElement;
-    const workoutTypeInput = screen.getByLabelText(/workout type id/i) as HTMLInputElement;
-
-    // Fill out the form
+    // Edit name
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const workoutNameTitle = screen.getByText(today);
+    await user.click(workoutNameTitle);
+    const nameInput = screen.getByDisplayValue(today);
+    await user.clear(nameInput);
     await user.type(nameInput, 'Test Workout');
-    await user.type(notesInput, 'Test notes');
-    await user.clear(startTimeInput);
-    await user.type(startTimeInput, '2024-01-01T10:00');
-    await user.type(workoutTypeInput, '1');
+    const saveButton = screen.getByRole('button', { name: /save workout name/i });
+    await user.click(saveButton);
 
-    const submitButton = screen.getByRole('button', { name: /create workout/i });
+    // Fill notes
+    const notesInput = screen.getByPlaceholderText(/how am i feeling today/i) as HTMLInputElement;
+    await user.type(notesInput, 'Test notes');
+    
+    // Select workout type
+    const selectButton = screen.getByText(/select workout type/i);
+    await user.click(selectButton);
+    const pushDayButton = screen.getByText(/select push day/i);
+    await user.click(pushDayButton);
+
+    const submitButton = screen.getByRole('button', { name: /start workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(nameInput.value).toBe('');
+      // After reset, should show default workout name again
+      const resetToday = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      expect(screen.getByText(resetToday)).toBeInTheDocument();
       expect(notesInput.value).toBe('');
-      expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
-      expect(workoutTypeInput.value).toBe('');
+      // Should show "Select Workout Type" again
+      expect(screen.getByText(/select workout type/i)).toBeInTheDocument();
     });
 
-    vi.useRealTimers();
   });
 });

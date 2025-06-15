@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
 
+from app.config import settings
+
 
 class TestWorkoutsAPI:
     """Test workout endpoints."""
@@ -13,12 +15,12 @@ class TestWorkoutsAPI:
             "start_time": datetime.now().isoformat(),
             "workout_type_id": 1
         }
-        response = client.post("/api/workouts/", json=workout_data)
+        response = client.post(f"{settings.API_PREFIX}/workouts/", json=workout_data)
         assert response.status_code == 401
     
     def test_get_workouts_unauthorized(self, client: TestClient):
         """Test getting workouts without authentication."""
-        response = client.get("/api/workouts/mine")
+        response = client.get(f"{settings.API_PREFIX}/workouts/mine")
         assert response.status_code == 401
     
     def test_update_workout_unauthorized(self, client: TestClient):
@@ -26,7 +28,7 @@ class TestWorkoutsAPI:
         update_data = {
             "end_time": datetime.now().isoformat()
         }
-        response = client.patch("/api/workouts/1", json=update_data)
+        response = client.patch(f"{settings.API_PREFIX}/workouts/1", json=update_data)
         assert response.status_code == 401
     
     # Note: Add authenticated tests once you have test user fixtures

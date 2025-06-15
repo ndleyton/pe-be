@@ -7,11 +7,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field("test-google-client-id", env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field("test-google-client-secret", env="GOOGLE_CLIENT_SECRET")
     
-    # Optional settings with defaults
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
     FRONTEND_URL: str = "http://localhost:5173"
     FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@host:port/db"
+    
+    API_PREFIX: str = Field("/api/v1", env="API_PREFIX")
     
     # Environment indicator
     ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
