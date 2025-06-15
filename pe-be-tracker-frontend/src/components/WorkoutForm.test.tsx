@@ -9,8 +9,20 @@ vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
 
 
+interface WorkoutType {
+  id: number;
+  name: string;
+  description: string;
+}
+
+interface WorkoutTypeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (workoutType: WorkoutType) => void;
+}
+
 vi.mock('./WorkoutTypeModal', () => ({
-  default: ({ isOpen, onClose, onSelect }: any) => 
+  default: ({ isOpen, onClose, onSelect }: WorkoutTypeModalProps) => 
     isOpen ? (
       <div data-testid="workout-type-modal">
         <button onClick={() => onSelect({ id: 1, name: 'Push Day', description: 'Chest, shoulders, triceps' })}>
@@ -19,7 +31,6 @@ vi.mock('./WorkoutTypeModal', () => ({
         <button onClick={onClose}>Close Modal</button>
       </div>
     ) : null,
-  WorkoutType: {}
 }));
 
 const mockNavigate = vi.fn();
@@ -41,8 +52,8 @@ describe('WorkoutForm', () => {
   it('renders the form with all required fields', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    // Check for workout name title (either date or fallback text)
-    const today = new Date().toISOString().slice(0, 10);
+    // Check for workout name title (date in "Jun 15" format)
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     expect(screen.getByText(today)).toBeInTheDocument();
     
     // Check for form fields - notes now has placeholder text
@@ -61,17 +72,14 @@ describe('WorkoutForm', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Click on the workout name to edit it
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const workoutNameTitle = screen.getByText(today);
     await user.click(workoutNameTitle);
 
     // Should show input field and save button
     expect(screen.getByDisplayValue(today)).toBeInTheDocument(); // The input field
-    // Check for the green save button (by class)
-    const saveButton = screen.getAllByRole('button').find(btn => 
-      btn.className.includes('bg-green-600')
-    );
-    expect(saveButton).toBeInTheDocument(); // Save button (checkmark)
+    // Check for the save button using accessible name
+    expect(screen.getByRole('button', { name: /save workout name/i })).toBeInTheDocument();
   });
 
   it('opens workout type modal when clicking select workout type', async () => {
@@ -131,16 +139,14 @@ describe('WorkoutForm', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Edit the workout name
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const workoutNameTitle = screen.getByText(today);
     await user.click(workoutNameTitle);
     const nameInput = screen.getByDisplayValue(today);
     await user.clear(nameInput);
     await user.type(nameInput, 'Test Workout');
-    const saveButton = screen.getAllByRole('button').find(btn => 
-      btn.className.includes('bg-green-600')
-    );
-    await user.click(saveButton!);
+    const saveButton = screen.getByRole('button', { name: /save workout name/i });
+    await user.click(saveButton);
 
     // Fill out notes
     await user.type(screen.getByPlaceholderText(/how am i feeling today/i), 'Test notes');
@@ -221,16 +227,14 @@ describe('WorkoutForm', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Edit name
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const workoutNameTitle = screen.getByText(today);
     await user.click(workoutNameTitle);
     const nameInput = screen.getByDisplayValue(today);
     await user.clear(nameInput);
     await user.type(nameInput, 'Test Workout');
-    const saveButton = screen.getAllByRole('button').find(btn => 
-      btn.className.includes('bg-green-600')
-    );
-    await user.click(saveButton!);
+    const saveButton = screen.getByRole('button', { name: /save workout name/i });
+    await user.click(saveButton);
 
     // Fill notes
     const notesInput = screen.getByPlaceholderText(/how am i feeling today/i) as HTMLInputElement;
@@ -247,7 +251,7 @@ describe('WorkoutForm', () => {
 
     await waitFor(() => {
       // After reset, should show default workout name again
-      const resetToday = new Date().toISOString().slice(0, 10);
+      const resetToday = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       expect(screen.getByText(resetToday)).toBeInTheDocument();
       expect(notesInput.value).toBe('');
       // Should show "Select Workout Type" again
