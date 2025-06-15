@@ -101,6 +101,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             <button
               type="button"
               onClick={() => setIsEditingName(false)}
+              aria-label="save workout name"
               className="bg-green-600 hover:bg-green-700 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
