@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../api/client';
 import ExerciseForm from '../components/ExerciseForm';
 import FinishWorkoutModal from '../components/FinishWorkoutModal';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
-  const response = await axios.patch(
-    `http://localhost:8000/api/workouts/${workoutId}`,
+  const response = await api.patch(
+    `/api/workouts/${workoutId}`,
     {
       end_time: new Date().toISOString(),
     },
-    {
-      withCredentials: true,
-    }
   );
   console.log('Workout updated successfully:', response.data);
   return response.data;

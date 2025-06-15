@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/client';
 
 interface WorkoutFormData {
   name?: string;
@@ -17,8 +17,8 @@ interface WorkoutFormProps {
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
-  const response = await axios.post(
-    'http://localhost:8000/api/workouts/',
+  const response = await api.post(
+    '/api/workouts/',
     {
       name: data.name || null,
       notes: data.notes || null,
@@ -26,9 +26,6 @@ const createWorkout = async (data: WorkoutFormData) => {
       end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
       workout_type_id: data.workout_type_id,
     },
-    {
-      withCredentials: true,
-    }
   );
   return response.data;
 };

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axios from 'axios';
+import api from '../api/client';
 import { render } from '../test/utils';
 import WorkoutForm from './WorkoutForm';
 
-vi.mock('axios');
-const mockedAxios = vi.mocked(axios, true);
+vi.mock('../api/client');
+const mockedApi = vi.mocked(api, true);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -74,7 +74,7 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     const mockWorkout = { id: 123, name: 'Test Workout' };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockWorkout });
+    mockedApi.post.mockResolvedValueOnce({ data: mockWorkout });
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
@@ -89,8 +89,8 @@ describe('WorkoutForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/workouts/',
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/workouts/',
         expect.objectContaining({
           name: 'Test Workout',
           notes: 'Test notes',
@@ -98,7 +98,6 @@ describe('WorkoutForm', () => {
           start_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
           end_time: null, // End time is no longer sent from the form
         }),
-        { withCredentials: true }
       );
     });
 
@@ -112,7 +111,7 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     
     // Mock a delayed response
-    mockedAxios.post.mockImplementation(() => 
+    mockedApi.post.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({ data: { id: 123 } }), 100))
     );
 
@@ -134,7 +133,7 @@ describe('WorkoutForm', () => {
   it('shows error message when submission fails', async () => {
     const user = userEvent.setup();
     
-    mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
+    mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
@@ -155,7 +154,7 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     const mockWorkout = { id: 123 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockWorkout });
+    mockedApi.post.mockResolvedValueOnce({ data: mockWorkout });
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 

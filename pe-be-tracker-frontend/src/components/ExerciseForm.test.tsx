@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axios from 'axios';
+import api from '../api/client';
 import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
 
-vi.mock('axios');
-const mockedAxios = vi.mocked(axios, true);
+vi.mock('../api/client');
+const mockedApi = vi.mocked(api, true);
 
 describe('ExerciseForm', () => {
   const mockOnExerciseCreated = vi.fn();
@@ -60,7 +60,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456, exercise_type_id: 1 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -71,15 +71,14 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/exercises/',
         {
           exercise_type_id: 1,
           workout_id: 123,
           timestamp: null,
           notes: null,
         },
-        { withCredentials: true }
       );
     });
 
@@ -92,7 +91,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -105,15 +104,14 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/exercises/',
         expect.objectContaining({
           exercise_type_id: 2,
           workout_id: 123,
           timestamp: expect.stringMatching(/2024-01-01T\d{2}:30:00\.000Z/),
           notes: 'Great set!',
         }),
-        { withCredentials: true }
       );
     });
   });
@@ -122,7 +120,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     
     // Mock a delayed response
-    mockedAxios.post.mockImplementation(() => 
+    mockedApi.post.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({ data: { id: 456 } }), 100))
     );
 
@@ -142,7 +140,7 @@ describe('ExerciseForm', () => {
   it('shows error message when submission fails', async () => {
     const user = userEvent.setup();
     
-    mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
+    mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -161,7 +159,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -188,7 +186,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm workoutId="999" onExerciseCreated={mockOnExerciseCreated} />);
 
@@ -198,12 +196,11 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/exercises/',
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/exercises/',
         expect.objectContaining({
           workout_id: 999, // Should be converted to number
         }),
-        { withCredentials: true }
       );
     });
   });
