@@ -118,11 +118,14 @@ describe('ExerciseForm', () => {
   });
 
   it('shows loading state during submission', async () => {
+    // Use fake timers to control the async delay deterministically
+    vi.useFakeTimers();
+
     const user = userEvent.setup();
-    
-    // Mock a delayed response
-    mockedApi.post.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({ data: { id: 456 } }), 100))
+
+    // Mock a delayed response (100 ms) that resolves via setTimeout
+    mockedApi.post.mockImplementation(() =>
+      new Promise((resolve) => setTimeout(() => resolve({ data: { id: 456 } }), 100))
     );
 
     render(<ExerciseForm {...defaultProps} />);
@@ -133,9 +136,19 @@ describe('ExerciseForm', () => {
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
 
-    // Check loading state
+    // The button should enter a loading/disabled state immediately
     expect(screen.getByRole('button', { name: /adding/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /adding/i })).toBeDisabled();
+
+    // Advance fake timers so the mocked API call resolves
+    await vi.advanceTimersByTimeAsync(100);
+
+    // Wait for UI to update after the promise resolves
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /add exercise/i })).toBeEnabled();
+    });
+
+    vi.useRealTimers();
   });
 
   it('shows error message when submission fails', async () => {
