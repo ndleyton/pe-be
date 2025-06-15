@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import { toUTCISOString } from '../utils/date';
 
 interface WorkoutFormData {
   name?: string;
@@ -22,8 +23,8 @@ const createWorkout = async (data: WorkoutFormData) => {
     {
       name: data.name || null,
       notes: data.notes || null,
-      start_time: data.start_time ? new Date(data.start_time).toISOString() : null,
-      end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
+      start_time: data.start_time ? toUTCISOString(data.start_time) : null,
+      end_time: data.end_time ? toUTCISOString(data.end_time) : null,
       workout_type_id: data.workout_type_id,
     },
   );
