@@ -1,9 +1,15 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
+// Validate required environment variables early to fail fast.
+const baseURL = import.meta.env.VITE_API_BASE_URL;
+if (!baseURL) {
+  throw new Error('[API CLIENT] Missing required environment variable: VITE_API_BASE_URL');
+}
+
 // Centralized Axios configuration leveraging Vite environment variables.
 // NOTE: Only variables prefixed with `VITE_` are exposed to the browser bundle.
 const config: AxiosRequestConfig = {
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: baseURL,
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT ?? '10000', 10),
   headers: {
     'Content-Type': 'application/json',
