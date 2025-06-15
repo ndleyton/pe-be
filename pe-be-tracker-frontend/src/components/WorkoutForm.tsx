@@ -18,7 +18,7 @@ interface WorkoutFormProps {
 
 const createWorkout = async (data: WorkoutFormData) => {
   const response = await api.post(
-    '/api/workouts/',
+    '/workouts/',
     {
       name: data.name || null,
       notes: data.notes || null,

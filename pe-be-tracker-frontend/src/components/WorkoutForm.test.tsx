@@ -90,7 +90,7 @@ describe('WorkoutForm', () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
-        '/api/workouts/',
+        '/workouts/',
         expect.objectContaining({
           name: 'Test Workout',
           notes: 'Test notes',

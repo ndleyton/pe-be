@@ -90,7 +90,7 @@ describe('MyWorkoutsPage', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith('/api/workouts/mine');
+      expect(mockedApi.get).toHaveBeenCalledWith('/workouts/mine');
     });
   });
 });

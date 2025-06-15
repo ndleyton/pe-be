@@ -15,7 +15,7 @@ type Workout = {
 }
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  const response = await api.get('/api/workouts/mine');
+  const response = await api.get('/workouts/mine');
   return response.data;
 };
 

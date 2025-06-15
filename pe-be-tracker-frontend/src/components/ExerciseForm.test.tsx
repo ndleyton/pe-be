@@ -72,7 +72,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
-        '/api/exercises/',
+        '/exercises/',
         {
           exercise_type_id: 1,
           workout_id: 123,
@@ -105,7 +105,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
-        '/api/exercises/',
+        '/exercises/',
         expect.objectContaining({
           exercise_type_id: 2,
           workout_id: 123,
@@ -197,7 +197,7 @@ describe('ExerciseForm', () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
-        '/api/exercises/',
+        '/exercises/',
         expect.objectContaining({
           workout_id: 999, // Should be converted to number
         }),
