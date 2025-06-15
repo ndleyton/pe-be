@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import api from '../api/client';
+import { toUTCISOString } from '../utils/date';
 
 interface ExerciseFormData {
   exercise_type_id: number;
@@ -20,7 +21,7 @@ const createExercise = async (data: ExerciseFormData & { workout_id: number }) =
     {
       exercise_type_id: data.exercise_type_id,
       workout_id: data.workout_id,
-      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : null,
+      timestamp: data.timestamp ? toUTCISOString(data.timestamp) : null,
       notes: data.notes || null,
     },
   );

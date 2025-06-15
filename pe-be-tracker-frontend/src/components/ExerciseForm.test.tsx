@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import api from '../api/client';
 import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
-import { API_BASE_URL } from '../config';
 
 vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
@@ -118,15 +117,16 @@ describe('ExerciseForm', () => {
   });
 
   it('shows loading state during submission', async () => {
-    // Use fake timers to control the async delay deterministically
-    vi.useFakeTimers();
-
     const user = userEvent.setup();
-
-    // Mock a delayed response (100 ms) that resolves via setTimeout
-    mockedApi.post.mockImplementation(() =>
-      new Promise((resolve) => setTimeout(() => resolve({ data: { id: 456 } }), 100))
-    );
+    const mockExercise = { id: 456 };
+    
+    // Create a promise that we can control
+    let resolvePromise: (value: any) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    
+    mockedApi.post.mockReturnValueOnce(pendingPromise);
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -140,15 +140,13 @@ describe('ExerciseForm', () => {
     expect(screen.getByRole('button', { name: /adding/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /adding/i })).toBeDisabled();
 
-    // Advance fake timers so the mocked API call resolves
-    await vi.advanceTimersByTimeAsync(100);
+    // Resolve the promise
+    resolvePromise!({ data: mockExercise });
 
     // Wait for UI to update after the promise resolves
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /add exercise/i })).toBeEnabled();
     });
-
-    vi.useRealTimers();
   });
 
   it('shows error message when submission fails', async () => {
