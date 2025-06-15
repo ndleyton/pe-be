@@ -1,8 +1,8 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import api from '../api/client';
+import { toUTCISOString } from '../utils/date';
 
 interface ExerciseFormData {
   exercise_type_id: number;
@@ -16,15 +16,14 @@ interface ExerciseFormProps {
 }
 
 const createExercise = async (data: ExerciseFormData & { workout_id: number }) => {
-  const response = await axios.post(
-    `${API_BASE_URL}/api/exercises/`,
+  const response = await api.post(
+    '/exercises/',
     {
       exercise_type_id: data.exercise_type_id,
       workout_id: data.workout_id,
-      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : null,
+      timestamp: data.timestamp ? toUTCISOString(data.timestamp) : null,
       notes: data.notes || null,
     },
-    { withCredentials: true }
   );
   return response.data;
 };

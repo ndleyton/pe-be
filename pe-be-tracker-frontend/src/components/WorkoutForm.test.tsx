@@ -1,14 +1,12 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axios from 'axios';
+import api from '../api/client';
 import { render } from '../test/utils';
 import WorkoutForm from './WorkoutForm';
-import { API_BASE_URL } from '../config';
 
-vi.mock('axios');
-const mockedAxios = vi.mocked(axios, true);
+vi.mock('../api/client');
+const mockedApi = vi.mocked(api, true);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -19,36 +17,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock the WorkoutTypeModal to automatically select a workout type when opened
-vi.mock('./WorkoutTypeModal', () => ({
-  default: ({ isOpen, onSelect, onClose }: any) => {
-    if (!isOpen) return null;
-    
-    // Auto-select a workout type when modal opens
-    React.useEffect(() => {
-      if (isOpen) {
-        onSelect({ id: 1, name: 'Test Workout Type', description: 'Test' });
-      }
-    }, [isOpen, onSelect]);
-    
-    return (
-      <div data-testid="workout-type-modal">
-        <button onClick={() => onSelect({ id: 1, name: 'Test Workout Type', description: 'Test' })}>
-          Select Test Workout Type
-        </button>
-        <button onClick={onClose}>Close</button>
-      </div>
-    );
-  },
-}));
-
 describe('WorkoutForm', () => {
   const mockOnWorkoutCreated = vi.fn();
-
-  const selectWorkoutType = async (user: ReturnType<typeof userEvent.setup>) => {
-    const selectWorkoutTypeButton = screen.getByRole('button', { name: /select workout type/i });
-    await user.click(selectWorkoutTypeButton);
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,8 +31,7 @@ describe('WorkoutForm', () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
-    expect(screen.getByText('Workout Type:')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /select workout type/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/workout type id/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create workout/i })).toBeInTheDocument();
     
     // Verify end time field is NOT present (removed as per requirements)
@@ -86,15 +55,18 @@ describe('WorkoutForm', () => {
     });
   });
 
-  it('shows validation error when no workout type is selected', async () => {
+  it('shows validation error for invalid workout type id', async () => {
     const user = userEvent.setup();
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
+
+    const workoutTypeInput = screen.getByLabelText(/workout type id/i);
+    await user.type(workoutTypeInput, '-1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/workout type is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/workout type id must be positive/i)).toBeInTheDocument();
     });
   });
 
@@ -102,7 +74,7 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     const mockWorkout = { id: 123, name: 'Test Workout' };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockWorkout });
+    mockedApi.post.mockResolvedValueOnce({ data: mockWorkout });
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
@@ -111,24 +83,21 @@ describe('WorkoutForm', () => {
     await user.type(screen.getByLabelText(/notes/i), 'Test notes');
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    
-    // Select a workout type
-    await selectWorkoutType(user);
+    await user.type(screen.getByLabelText(/workout type id/i), '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/workouts/`,
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/workouts/',
         expect.objectContaining({
           name: 'Test Workout',
           notes: 'Test notes',
           workout_type_id: 1,
-          start_time: '2024-01-01T10:00:00.000Z',
+          start_time: expect.stringMatching(/2024-01-01T\d{2}:00:00\.000Z/),
           end_time: null, // End time is no longer sent from the form
         }),
-        { withCredentials: true }
       );
     });
 
@@ -142,7 +111,7 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     
     // Mock a delayed response
-    mockedAxios.post.mockImplementation(() => 
+    mockedApi.post.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({ data: { id: 123 } }), 100))
     );
 
@@ -151,9 +120,7 @@ describe('WorkoutForm', () => {
     // Fill required fields
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    
-    // Select a workout type
-    await selectWorkoutType(user);
+    await user.type(screen.getByLabelText(/workout type id/i), '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -166,16 +133,14 @@ describe('WorkoutForm', () => {
   it('shows error message when submission fails', async () => {
     const user = userEvent.setup();
     
-    mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
+    mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     // Fill required fields
     await user.clear(screen.getByLabelText(/start time/i));
     await user.type(screen.getByLabelText(/start time/i), '2024-01-01T10:00');
-    
-    // Select a workout type
-    await selectWorkoutType(user);
+    await user.type(screen.getByLabelText(/workout type id/i), '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -189,22 +154,21 @@ describe('WorkoutForm', () => {
     const user = userEvent.setup();
     const mockWorkout = { id: 123 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockWorkout });
+    mockedApi.post.mockResolvedValueOnce({ data: mockWorkout });
 
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
     const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
     const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
     const startTimeInput = screen.getByLabelText(/start time/i) as HTMLInputElement;
+    const workoutTypeInput = screen.getByLabelText(/workout type id/i) as HTMLInputElement;
 
     // Fill out the form
     await user.type(nameInput, 'Test Workout');
     await user.type(notesInput, 'Test notes');
     await user.clear(startTimeInput);
     await user.type(startTimeInput, '2024-01-01T10:00');
-    
-    // Select a workout type
-    await selectWorkoutType(user);
+    await user.type(workoutTypeInput, '1');
 
     const submitButton = screen.getByRole('button', { name: /create workout/i });
     await user.click(submitButton);
@@ -213,9 +177,6 @@ describe('WorkoutForm', () => {
       expect(nameInput.value).toBe('');
       expect(notesInput.value).toBe('');
       expect(startTimeInput.value).toBe(new Date().toISOString().slice(0, 16)); // Should reset to current time default
-      
-      // Check that workout type was reset
-      const workoutTypeInput = screen.getByRole('form').querySelector('input[name="workout_type_id"]') as HTMLInputElement;
       expect(workoutTypeInput.value).toBe('');
     });
 

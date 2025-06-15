@@ -1,12 +1,11 @@
-// This file augments Vite's built-in `ImportMetaEnv` typings with app-specific
-// environment variables. Any variable added here must also be exposed by
-// Vite via the `VITE_` prefix.
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
-  // add more custom env vars here...
-  readonly [key: string]: string | boolean | undefined;
+  readonly VITE_API_TIMEOUT: string;
+  readonly VITE_ENABLE_LOGGING: string;
+  // Add any additional custom env vars below
+  // readonly VITE_APP_TITLE: string;
 }
 
 interface ImportMeta {

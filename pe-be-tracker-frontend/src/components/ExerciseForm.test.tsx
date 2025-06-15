@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axios from 'axios';
+import api from '../api/client';
 import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
-import { API_BASE_URL } from '../config';
 
-vi.mock('axios');
-const mockedAxios = vi.mocked(axios, true);
+vi.mock('../api/client');
+const mockedApi = vi.mocked(api, true);
 
 describe('ExerciseForm', () => {
   const mockOnExerciseCreated = vi.fn();
@@ -61,7 +60,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456, exercise_type_id: 1 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -72,15 +71,14 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/exercises/`,
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/exercises/',
         {
           exercise_type_id: 1,
           workout_id: 123,
           timestamp: null,
           notes: null,
         },
-        { withCredentials: true }
       );
     });
 
@@ -93,7 +91,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -106,26 +104,29 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/exercises/`,
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/exercises/',
         expect.objectContaining({
           exercise_type_id: 2,
           workout_id: 123,
           timestamp: expect.stringMatching(/2024-01-01T\d{2}:30:00\.000Z/),
           notes: 'Great set!',
         }),
-        { withCredentials: true }
       );
     });
   });
 
   it('shows loading state during submission', async () => {
     const user = userEvent.setup();
+    const mockExercise = { id: 456 };
     
-    // Mock a delayed response
-    mockedAxios.post.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({ data: { id: 456 } }), 100))
-    );
+    // Create a promise that we can control
+    let resolvePromise: (value: any) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    
+    mockedApi.post.mockReturnValueOnce(pendingPromise);
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -135,15 +136,23 @@ describe('ExerciseForm', () => {
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
 
-    // Check loading state
+    // The button should enter a loading/disabled state immediately
     expect(screen.getByRole('button', { name: /adding/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /adding/i })).toBeDisabled();
+
+    // Resolve the promise
+    resolvePromise!({ data: mockExercise });
+
+    // Wait for UI to update after the promise resolves
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /add exercise/i })).toBeEnabled();
+    });
   });
 
   it('shows error message when submission fails', async () => {
     const user = userEvent.setup();
     
-    mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
+    mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -162,7 +171,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm {...defaultProps} />);
 
@@ -189,7 +198,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456 };
     
-    mockedAxios.post.mockResolvedValueOnce({ data: mockExercise });
+    mockedApi.post.mockResolvedValueOnce({ data: mockExercise });
 
     render(<ExerciseForm workoutId="999" onExerciseCreated={mockOnExerciseCreated} />);
 
@@ -199,12 +208,11 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/exercises/`,
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/exercises/',
         expect.objectContaining({
           workout_id: 999, // Should be converted to number
         }),
-        { withCredentials: true }
       );
     });
   });

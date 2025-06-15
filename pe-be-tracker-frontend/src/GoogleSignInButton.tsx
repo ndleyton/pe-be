@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from './config';
+import api from './api/client';
 
 interface GoogleSignInButtonProps {}
 
@@ -17,9 +16,7 @@ export default function GoogleSignInButton(props: GoogleSignInButtonProps) {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`${API_BASE_URL}/auth/google/authorize`);
-      if (!resp.ok) throw new Error("Failed to get authorization URL");
-      const data = await resp.json();
+      const { data } = await api.get('/auth/google/authorize');
       if (data.authorization_url) {
         // User will be redirected to Google's OAuth page, then back to /oauth/callback
         window.location.href = data.authorization_url;
