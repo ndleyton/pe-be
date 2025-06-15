@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import api from '../api/client';
 import { render } from '../test/utils';
 import ExerciseForm from './ExerciseForm';
+import { API_BASE_URL } from '../config';
 
 vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
