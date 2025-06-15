@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import api from '../api/client';
 import WorkoutForm from '../components/WorkoutForm';
 import HomeLogo from '../components/HomeLogo';
 
@@ -14,9 +15,7 @@ type Workout = {
 }
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  const response = await axios.get('http://localhost:8000/api/workouts/mine', {
-    withCredentials: true,
-  });
+  const response = await api.get('/api/workouts/mine');
   return response.data;
 };
 
