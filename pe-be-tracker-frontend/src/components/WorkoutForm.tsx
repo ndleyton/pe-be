@@ -47,14 +47,12 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
     watch,
   } = useForm<WorkoutFormData>({
     defaultValues: {
-      name: new Date().toISOString().slice(0, 10),
+      name: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       start_time: new Date().toISOString().slice(0, 16),
     },
   });
 
-  const workoutTypeId = watch('workout_type_id');
   const nameField = watch('name');
-
   const datePrefix = useMemo(() => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), []);
 
   useEffect(() => {
