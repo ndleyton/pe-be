@@ -6,9 +6,8 @@ from app.users import (
     fastapi_users,
     auth_backend,
     google_oauth_client,
-    SECRET,
-    FRONTEND_URL,
 )
+from app.config import settings
 from app.schemas import UserRead, UserCreate, UserUpdate
 from app.router import workouts, exercises, workout_types
 
@@ -45,14 +44,14 @@ api_router.include_router(
 google_oauth_router = fastapi_users.get_oauth_router(
     oauth_client=google_oauth_client,
     backend=auth_backend,
-    state_secret=SECRET,
+    state_secret=settings.SECRET,
 )
 api_router.include_router(google_oauth_router, prefix="/auth/google", tags=["auth"])
 
 # OAuth error handler to be registered on main app
 async def oauth_exception_handler(request: Request, exc: OAuth2Error) -> Response:
     error_code = exc.error or "oauth_error"
-    redirect_url = f"{FRONTEND_URL.rstrip('/')}/?error={error_code}"
+    redirect_url = f"{settings.FRONTEND_URL.rstrip('/')}/?error={error_code}"
     return RedirectResponse(redirect_url)
 
 # --- Health Endpoint ---
