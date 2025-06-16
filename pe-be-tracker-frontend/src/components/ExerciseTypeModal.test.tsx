@@ -227,4 +227,306 @@ describe('ExerciseTypeModal', () => {
     const benchIcon = screen.getByText('B').parentElement;
     expect(benchIcon).toHaveClass('bg-green-600');
   });
+
+  describe('Search functionality', () => {
+    it('filters exercise types based on search term', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'bench');
+
+      expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      expect(screen.queryByText('Squat')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deadlift')).not.toBeInTheDocument();
+    });
+
+    it('filters exercise types based on description', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'leg');
+
+      expect(screen.getByText('Squat')).toBeInTheDocument();
+      expect(screen.queryByText('Bench Press')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deadlift')).not.toBeInTheDocument();
+    });
+
+    it('shows no results state when search has no matches', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'nonexistent');
+
+      expect(screen.getByText('No results found')).toBeInTheDocument();
+      expect(screen.getByText('Try a different search term or create a new exercise type')).toBeInTheDocument();
+    });
+
+    it('shows create button when search has no results', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'Pull Up');
+
+      const createButton = screen.getByTitle('Create "Pull Up"');
+      expect(createButton).toBeInTheDocument();
+    });
+
+    it('shows clear button when search has text', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'bench');
+
+      const clearButton = screen.getByTitle('Clear search');
+      expect(clearButton).toBeInTheDocument();
+
+      await user.click(clearButton);
+      expect(searchInput).toHaveValue('');
+    });
+
+    it('selects first result when Enter is pressed', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'bench');
+      await user.keyboard('{Enter}');
+
+      expect(mockOnSelect).toHaveBeenCalledWith(exerciseTypes[0]);
+    });
+
+    it('clears search when Escape is pressed', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'bench');
+      await user.keyboard('{Escape}');
+
+      expect(searchInput).toHaveValue('');
+    });
+  });
+
+  describe('Create functionality', () => {
+    it('creates new exercise type when create button is clicked', async () => {
+      const user = userEvent.setup();
+      const newExerciseType = { id: 4, name: 'Pull Up', description: 'Custom exercise', default_intensity_unit: 1 };
+      
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+      mockedApi.post.mockResolvedValueOnce({ data: newExerciseType });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'Pull Up');
+
+      const createButton = screen.getByTitle('Create "Pull Up"');
+      await user.click(createButton);
+
+      expect(mockedApi.post).toHaveBeenCalledWith('/exercise-types/', {
+        name: 'Pull Up',
+        description: 'Custom exercise',
+        default_intensity_unit: 1,
+      });
+
+      await waitFor(() => {
+        expect(mockOnSelect).toHaveBeenCalledWith(newExerciseType);
+      });
+    });
+
+    it('shows loading state while creating exercise type', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+      mockedApi.post.mockReturnValue(new Promise(() => {})); // Never resolves
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'Pull Up');
+
+      const createButton = screen.getByTitle('Create "Pull Up"');
+      await user.click(createButton);
+
+      // Should show loading spinner
+      expect(screen.getByRole('button', { name: /create/i })).toBeDisabled();
+      expect(searchInput).toBeDisabled();
+    });
+
+    it('shows error message when create fails', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+      mockedApi.post.mockRejectedValueOnce(new Error('Create failed'));
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'Pull Up');
+
+      const createButton = screen.getByTitle('Create "Pull Up"');
+      await user.click(createButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to create exercise type. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('does not show create button when search is empty', async () => {
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTitle(/create/i)).not.toBeInTheDocument();
+    });
+
+    it('does not show create button when search has results', async () => {
+      const user = userEvent.setup();
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search exercise types...');
+      await user.type(searchInput, 'bench');
+
+      expect(screen.queryByTitle(/create/i)).not.toBeInTheDocument();
+    });
+  });
 });
