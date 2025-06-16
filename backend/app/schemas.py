@@ -86,3 +86,16 @@ class WorkoutTypeRead(BaseModel):
 
     class Config:
         orm_mode = True # For SQLAlchemy model conversion
+
+# --- Exercise Type Schemas ---
+
+class ExerciseTypeRead(BaseModel):
+    id: int
+    name: str
+    description: str
+    default_intensity_unit: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True  # For SQLAlchemy model conversion
