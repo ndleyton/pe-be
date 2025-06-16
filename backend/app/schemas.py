@@ -89,12 +89,18 @@ class WorkoutTypeRead(BaseModel):
 
 # --- Exercise Type Schemas ---
 
-class ExerciseTypeCreate(BaseModel):
+class ExerciseTypeCreate(schemas.BaseModel):
     name: str
     description: str = "Custom exercise"
     default_intensity_unit: int = 1
 
-class ExerciseTypeRead(BaseModel):
+    @validator('name')
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v.strip()
+
+class ExerciseTypeRead(schemas.BaseModel):
     id: int
     name: str
     description: str
