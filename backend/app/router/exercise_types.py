@@ -4,7 +4,7 @@ from app.schemas import ExerciseTypeRead, ExerciseTypeCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, status
 from app.db import get_async_session
 
 exercise_types_router = APIRouter(tags=["exercise_types"])
@@ -18,7 +18,7 @@ async def get_exercise_types(
     exercise_types = result.scalars().all()
     return exercise_types
 
-@exercise_types_router.post("/", response_model=ExerciseTypeRead)
+@exercise_types_router.post("/", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,
     session: AsyncSession = Depends(get_async_session)
@@ -36,12 +36,12 @@ async def create_exercise_type(
         return db_exercise_type
     except IntegrityError as e:
         await session.rollback()
-        if "duplicate key value violates unique constraint" in str(e):
+        if hasattr(e.orig, 'pgcode') and e.orig.pgcode == '23505':
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Exercise type with name '{exercise_type.name}' already exists"
-            )
+            ) from e
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create exercise type due to database constraint"
-        )
+        ) from e
