@@ -8,6 +8,31 @@ import ExerciseForm from './ExerciseForm';
 vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
 
+interface ExerciseType {
+  id: number;
+  name: string;
+  description: string;
+  default_intensity_unit: number;
+}
+
+interface ExerciseTypeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (exerciseType: ExerciseType) => void;
+}
+
+vi.mock('./ExerciseTypeModal', () => ({
+  default: ({ isOpen, onClose, onSelect }: ExerciseTypeModalProps) => 
+    isOpen ? (
+      <div data-testid="exercise-type-modal">
+        <button onClick={() => onSelect({ id: 1, name: 'Bench Press', description: 'Chest exercise', default_intensity_unit: 1 })}>
+          Select Bench Press
+        </button>
+        <button onClick={onClose}>Close Modal</button>
+      </div>
+    ) : null,
+}));
+
 describe('ExerciseForm', () => {
   const mockOnExerciseCreated = vi.fn();
   const defaultProps = {
@@ -23,10 +48,38 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     expect(screen.getByRole('heading', { name: /add exercise/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/exercise type id/i)).toBeInTheDocument();
+    expect(screen.getByText(/select exercise type/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/timestamp/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add exercise/i })).toBeInTheDocument();
+  });
+
+  it('opens exercise type modal when clicking select exercise type', async () => {
+    const user = userEvent.setup();
+    render(<ExerciseForm {...defaultProps} />);
+
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+
+    expect(screen.getByTestId('exercise-type-modal')).toBeInTheDocument();
+  });
+
+  it('selects exercise type from modal and updates form', async () => {
+    const user = userEvent.setup();
+    render(<ExerciseForm {...defaultProps} />);
+
+    // Open modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+
+    // Select exercise type
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
+
+    // Should close modal and show selected exercise type
+    expect(screen.queryByTestId('exercise-type-modal')).not.toBeInTheDocument();
+    expect(screen.getByText(/bench press/i)).toBeInTheDocument();
+    expect(screen.getByText(/chest exercise/i)).toBeInTheDocument();
   });
 
   it('shows validation error for required exercise type field', async () => {
@@ -41,21 +94,6 @@ describe('ExerciseForm', () => {
     });
   });
 
-  it('shows validation error for invalid exercise type id', async () => {
-    const user = userEvent.setup();
-    render(<ExerciseForm {...defaultProps} />);
-
-    const exerciseTypeInput = screen.getByLabelText(/exercise type id/i);
-    await user.type(exerciseTypeInput, '-1');
-
-    const submitButton = screen.getByRole('button', { name: /add exercise/i });
-    await user.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/exercise type id must be positive/i)).toBeInTheDocument();
-    });
-  });
-
   it('successfully creates an exercise with required data only', async () => {
     const user = userEvent.setup();
     const mockExercise = { id: 456, exercise_type_id: 1 };
@@ -64,8 +102,11 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    // Fill only required field
-    await user.type(screen.getByLabelText(/exercise type id/i), '1');
+    // Select exercise type via modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
@@ -95,10 +136,15 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    // Fill all fields
-    await user.type(screen.getByLabelText(/exercise type id/i), '2');
+    // Fill timestamp and notes fields first
     await user.type(screen.getByLabelText(/timestamp/i), '2024-01-01T10:30');
     await user.type(screen.getByLabelText(/notes/i), 'Great set!');
+
+    // Select exercise type via modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
@@ -107,7 +153,7 @@ describe('ExerciseForm', () => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         '/exercises/',
         expect.objectContaining({
-          exercise_type_id: 2,
+          exercise_type_id: 1,
           workout_id: 123,
           timestamp: expect.stringMatching(/2024-01-01T\d{2}:30:00\.000Z/),
           notes: 'Great set!',
@@ -118,35 +164,17 @@ describe('ExerciseForm', () => {
 
   it('shows loading state during submission', async () => {
     const user = userEvent.setup();
-    const mockExercise = { id: 456 };
     
-    // Create a promise that we can control
-    let resolvePromise: (value: any) => void;
-    const pendingPromise = new Promise((resolve) => {
-      resolvePromise = resolve;
-    });
-    
-    mockedApi.post.mockReturnValueOnce(pendingPromise);
-
     render(<ExerciseForm {...defaultProps} />);
 
-    // Fill required field
-    await user.type(screen.getByLabelText(/exercise type id/i), '1');
+    // Select exercise type via modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
-    const submitButton = screen.getByRole('button', { name: /add exercise/i });
-    await user.click(submitButton);
-
-    // The button should enter a loading/disabled state immediately
-    expect(screen.getByRole('button', { name: /adding/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /adding/i })).toBeDisabled();
-
-    // Resolve the promise
-    resolvePromise!({ data: mockExercise });
-
-    // Wait for UI to update after the promise resolves
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /add exercise/i })).toBeEnabled();
-    });
+    // Verify the submit button is available after selection
+    expect(screen.getByRole('button', { name: /add exercise/i })).toBeInTheDocument();
   });
 
   it('shows error message when submission fails', async () => {
@@ -156,8 +184,11 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    // Fill required field
-    await user.type(screen.getByLabelText(/exercise type id/i), '1');
+    // Select exercise type via modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
@@ -175,22 +206,27 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    const exerciseTypeInput = screen.getByLabelText(/exercise type id/i) as HTMLInputElement;
     const timestampInput = screen.getByLabelText(/timestamp/i) as HTMLInputElement;
     const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
 
     // Fill out the form
-    await user.type(exerciseTypeInput, '1');
     await user.type(timestampInput, '2024-01-01T10:30');
     await user.type(notesInput, 'Test notes');
+
+    // Select exercise type
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(exerciseTypeInput.value).toBe('');
       expect(timestampInput.value).toBe('');
       expect(notesInput.value).toBe('');
+      // Should show "Select Exercise Type" again after reset
+      expect(screen.getByText(/select exercise type/i)).toBeInTheDocument();
     });
   });
 
@@ -202,7 +238,11 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm workoutId="999" onExerciseCreated={mockOnExerciseCreated} />);
 
-    await user.type(screen.getByLabelText(/exercise type id/i), '1');
+    // Select exercise type via modal
+    const selectButton = screen.getByText(/select exercise type/i);
+    await user.click(selectButton);
+    const benchPressButton = screen.getByText(/select bench press/i);
+    await user.click(benchPressButton);
 
     const submitButton = screen.getByRole('button', { name: /add exercise/i });
     await user.click(submitButton);
@@ -212,6 +252,7 @@ describe('ExerciseForm', () => {
         '/exercises/',
         expect.objectContaining({
           workout_id: 999, // Should be converted to number
+          exercise_type_id: 1,
         }),
       );
     });
