@@ -89,6 +89,11 @@ class WorkoutTypeRead(BaseModel):
 
 # --- Exercise Type Schemas ---
 
+class ExerciseTypeCreate(BaseModel):
+    name: str
+    description: str = "Custom exercise"
+    default_intensity_unit: int = 1
+
 class ExerciseTypeRead(BaseModel):
     id: int
     name: str

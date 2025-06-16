@@ -85,7 +85,7 @@ class ExerciseTemplate(Base):
 
 class ExerciseType(Base):
     __tablename__ = "exercise_types"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     description = Column(String)
     default_intensity_unit = Column(Integer, default=0, nullable=False)
