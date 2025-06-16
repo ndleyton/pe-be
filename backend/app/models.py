@@ -85,10 +85,10 @@ class ExerciseTemplate(Base):
 
 class ExerciseType(Base):
     __tablename__ = "exercise_types"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     description = Column(String)
-    default_intensity_unit = Column(Integer, default=0, nullable=False)
+    default_intensity_unit = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     muscles = relationship("Muscle", secondary=exercise_types_muscles, back_populates="exercise_types")
