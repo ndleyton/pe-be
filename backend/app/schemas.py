@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi_users import schemas
-from pydantic import validator, BaseModel
+from pydantic import validator, BaseModel, Field
 
 class UserRead(schemas.BaseUser[int]):
     pass
@@ -17,7 +17,7 @@ class UserUpdate(schemas.BaseUserUpdate):
 
 # --- Workout Schemas ---
 
-class ExerciseBase(schemas.BaseModel):
+class ExerciseBase(BaseModel):
     timestamp: Optional[datetime] = None
     notes: Optional[str] = None
     exercise_type_id: int
@@ -45,7 +45,7 @@ class ExerciseRead(ExerciseBase):
     class Config:
         orm_mode = True # For SQLAlchemy model conversion
 
-class WorkoutBase(schemas.BaseModel):
+class WorkoutBase(BaseModel):
     name: Optional[str] = None
     notes: Optional[str] = None
     start_time: Optional[datetime] = None
@@ -89,18 +89,21 @@ class WorkoutTypeRead(BaseModel):
 
 # --- Exercise Type Schemas ---
 
-class ExerciseTypeCreate(schemas.BaseModel):
-    name: str
+class ExerciseTypeCreate(BaseModel):
+    name: str = Field(..., min_length=1, description="Human-readable exercise type name")
     description: str = "Custom exercise"
     default_intensity_unit: int = 1
 
-    @validator('name')
-    def validate_name(cls, v):
-        if not v or not v.strip():
+    @validator('name', pre=True)
+    def validate_and_strip_name(cls, v):
+        if v is None:
             raise ValueError('Name cannot be empty')
-        return v.strip()
+        v = v.strip()
+        if not v:
+            raise ValueError('Name cannot be empty')
+        return v
 
-class ExerciseTypeRead(schemas.BaseModel):
+class ExerciseTypeRead(BaseModel):
     id: int
     name: str
     description: str
