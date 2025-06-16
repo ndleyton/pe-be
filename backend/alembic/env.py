@@ -89,6 +89,13 @@ def run_migrations_online() -> None:
     # Use the regular URL for sync operations
     db_url = get_url()
     
+    # If the URL is using the asyncpg driver, convert it to the synchronous
+    # equivalent so that create_engine() receives a compatible dialect.
+    if db_url.startswith("postgresql+asyncpg://"):
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    elif db_url.startswith("postgres+asyncpg://"):
+        db_url = db_url.replace("postgres+asyncpg://", "postgres://", 1)
+    
     connectable = create_engine(
         db_url,
         poolclass=pool.NullPool,
@@ -122,8 +129,13 @@ if context.is_offline_mode():
 else:
     print("Running migrations online...")
     # Use sync migrations by default for better CI compatibility
-    # Set ALEMBIC_ASYNC=true environment variable to use async
-    use_async = os.getenv("ALEMBIC_ASYNC", "false").lower() == "true"
+    # Determine whether to run migrations asynchronously:
+    #   1. If the caller explicitly sets ALEMBIC_ASYNC=true
+    #   2. If the DATABASE_URL already uses an async-only driver (e.g. postgresql+asyncpg)
+    _async_env_flag = os.getenv("ALEMBIC_ASYNC", "false").lower() == "true"
+    _db_url_raw = get_url()
+    _async_driver = "+asyncpg" in _db_url_raw
+    use_async = _async_env_flag or _async_driver
     
     if use_async:
         print("Using async migrations...")
