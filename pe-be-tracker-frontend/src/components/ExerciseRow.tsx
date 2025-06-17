@@ -7,7 +7,7 @@ interface ExerciseRowProps {
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise }) => {
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-700 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-3">
