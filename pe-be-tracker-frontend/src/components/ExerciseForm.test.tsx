@@ -48,17 +48,16 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     expect(screen.getByRole('heading', { name: /add exercise/i })).toBeInTheDocument();
-    expect(screen.getByText(/select exercise type/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/timestamp/i)).toBeInTheDocument();
+    expect(screen.getByText(/select exercise/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add exercise/i })).toBeInTheDocument();
   });
 
-  it('opens exercise type modal when clicking select exercise type', async () => {
+  it('opens exercise type modal when clicking select exercise', async () => {
     const user = userEvent.setup();
     render(<ExerciseForm {...defaultProps} />);
 
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
 
     expect(screen.getByTestId('exercise-type-modal')).toBeInTheDocument();
@@ -69,7 +68,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     // Open modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
 
     // Select exercise type
@@ -90,7 +89,7 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/exercise type is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/exercise is required/i)).toBeInTheDocument();
     });
   });
 
@@ -103,7 +102,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     // Select exercise type via modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);
@@ -114,12 +113,12 @@ describe('ExerciseForm', () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         '/exercises/',
-        {
+        expect.objectContaining({
           exercise_type_id: 1,
           workout_id: 123,
-          timestamp: null,
+          timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
           notes: null,
-        },
+        }),
       );
     });
 
@@ -136,12 +135,11 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    // Fill timestamp and notes fields first
-    await user.type(screen.getByLabelText(/timestamp/i), '2024-01-01T10:30');
+    // Fill notes field
     await user.type(screen.getByLabelText(/notes/i), 'Great set!');
 
     // Select exercise type via modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);
@@ -155,7 +153,7 @@ describe('ExerciseForm', () => {
         expect.objectContaining({
           exercise_type_id: 1,
           workout_id: 123,
-          timestamp: expect.stringMatching(/2024-01-01T\d{2}:30:00\.000Z/),
+          timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
           notes: 'Great set!',
         }),
       );
@@ -168,7 +166,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     // Select exercise type via modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);
@@ -185,7 +183,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm {...defaultProps} />);
 
     // Select exercise type via modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);
@@ -206,15 +204,13 @@ describe('ExerciseForm', () => {
 
     render(<ExerciseForm {...defaultProps} />);
 
-    const timestampInput = screen.getByLabelText(/timestamp/i) as HTMLInputElement;
     const notesInput = screen.getByLabelText(/notes/i) as HTMLInputElement;
 
     // Fill out the form
-    await user.type(timestampInput, '2024-01-01T10:30');
     await user.type(notesInput, 'Test notes');
 
     // Select exercise type
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);
@@ -223,10 +219,9 @@ describe('ExerciseForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(timestampInput.value).toBe('');
       expect(notesInput.value).toBe('');
-      // Should show "Select Exercise Type" again after reset
-      expect(screen.getByText(/select exercise type/i)).toBeInTheDocument();
+      // Should show "Select Exercise" again after reset
+      expect(screen.getByText(/select exercise/i)).toBeInTheDocument();
     });
   });
 
@@ -239,7 +234,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm workoutId="999" onExerciseCreated={mockOnExerciseCreated} />);
 
     // Select exercise type via modal
-    const selectButton = screen.getByText(/select exercise type/i);
+    const selectButton = screen.getByText(/select exercise/i);
     await user.click(selectButton);
     const benchPressButton = screen.getByText(/select bench press/i);
     await user.click(benchPressButton);

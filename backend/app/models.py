@@ -102,6 +102,9 @@ class Exercise(Base):
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationship to ExerciseType
+    exercise_type = relationship("ExerciseType")
 
 class IntensityUnit(Base):
     __tablename__ = "intensity_units"

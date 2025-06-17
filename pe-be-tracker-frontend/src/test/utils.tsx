@@ -1,7 +1,7 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -23,9 +23,9 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <MemoryRouter>
         {children}
-      </BrowserRouter>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 };
