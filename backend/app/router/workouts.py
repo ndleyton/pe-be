@@ -77,24 +77,28 @@ async def get_exercises_in_workout(
 ):
     """Return exercises for the requested workout
 
-    We join ``Exercise`` with its parent ``Workout`` and filter on both the
-    requested *workout_id* **and** the current user's ownership. If the
-    combination does not exist (i.e. the workout does not belong to the user
-    or does not exist at all) the query returns an empty list – eliminating
-    the need for a prior ownership lookup or an explicit *404* branch.
+    First verify the workout exists and belongs to the user. Then return
+    its exercises (even if empty list) to handle new workouts properly.
     """
 
-    result = await session.execute(
-        select(Exercise)
-        .join(Workout, Exercise.workout_id == Workout.id)
-        .options(selectinload(Exercise.exercise_type))
-        .where(Workout.id == workout_id, Workout.owner_id == user.id)
-        .order_by(Exercise.id.asc())
+    # First verify workout exists and belongs to user
+    workout_result = await session.execute(
+        select(Workout).where(
+            Workout.id == workout_id,
+            Workout.owner_id == user.id
+        )
     )
-
-    exercises = result.scalars().all()
-
-    if not exercises:  # Empty list implies workout not found or not owned
+    workout = workout_result.scalar_one_or_none()
+    
+    if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
 
-    return exercises
+    # Get exercises for this workout
+    result = await session.execute(
+        select(Exercise)
+        .options(selectinload(Exercise.exercise_type))
+        .where(Exercise.workout_id == workout_id)
+        .order_by(Exercise.id.asc())
+    )
+    
+    return result.scalars().all()
