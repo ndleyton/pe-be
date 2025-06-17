@@ -89,7 +89,7 @@ async def get_exercises_in_workout(
         .join(Workout, Exercise.workout_id == Workout.id)
         .options(selectinload(Exercise.exercise_type))
         .where(Workout.id == workout_id, Workout.owner_id == user.id)
-        .order_by(Exercise.created_at.asc())
+        .order_by(Exercise.id.asc())
     )
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Workout not found")
