@@ -6,6 +6,7 @@ import { getExercisesInWorkout } from '../api/exercises';
 import ExerciseForm from '../components/ExerciseForm';
 import ExerciseList from '../components/ExerciseList';
 import FinishWorkoutModal from '../components/FinishWorkoutModal';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
@@ -87,14 +88,8 @@ const WorkoutPage: React.FC = () => {
   return (
     <>
       <div className="max-w-2xl mx-auto p-6 bg-gray-900 text-gray-100 rounded-lg shadow-lg mt-8">
-        <div className="flex justify-between items-center mb-6">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold">Log Exercises for Workout #{workoutId}</h1>
-          <button
-            onClick={() => setShowFinishModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded px-4 py-2 transition-colors duration-200"
-          >
-            Finish Workout
-          </button>
         </div>
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
@@ -103,6 +98,13 @@ const WorkoutPage: React.FC = () => {
           error={exercisesError} 
         />
       </div>
+      
+      <FloatingActionButton
+        onClick={() => setShowFinishModal(true)}
+        disabled={finishWorkoutMutation.isPending}
+      >
+        <span className="text-lg">✓</span>
+      </FloatingActionButton>
       
       <FinishWorkoutModal
         isOpen={showFinishModal}
