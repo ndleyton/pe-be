@@ -51,7 +51,12 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   });
 
   const onSubmit = (data: ExerciseFormData) => {
-    mutation.mutate(data);
+    // Automatically set the current timestamp
+    const dataWithTimestamp = {
+      ...data,
+      timestamp: new Date().toISOString(),
+    };
+    mutation.mutate(dataWithTimestamp);
   };
 
   const handleExerciseTypeSelect = (exerciseType: ExerciseType) => {
@@ -92,26 +97,17 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
             onClick={() => setShowModal(true)}
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2 text-left hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            Select Exercise Type
+            Select Exercise
           </button>
         )}
         <input
           type="hidden"
           {...register('exercise_type_id', {
-            required: 'Exercise type is required',
+            required: 'Exercise is required',
             valueAsNumber: true,
           })}
         />
         {errors.exercise_type_id && <div className="text-red-400 text-sm mt-2">{errors.exercise_type_id.message}</div>}
-      </div>
-      <div className="mb-4">
-        <label className="block mb-1 text-gray-200 font-medium">Timestamp:
-          <input
-            type="datetime-local"
-            {...register('timestamp')}
-            className="mt-1 mb-2 w-full bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </label>
       </div>
       <div className="mb-4">
         <label className="block mb-1 text-gray-200 font-medium">Notes:
