@@ -91,7 +91,10 @@ async def get_exercises_in_workout(
         .where(Workout.id == workout_id, Workout.owner_id == user.id)
         .order_by(Exercise.id.asc())
     )
-    if result.rowcount == 0:
+
+    exercises = result.scalars().all()
+
+    if not exercises:  # Empty list implies workout not found or not owned
         raise HTTPException(status_code=404, detail="Workout not found")
-    
-    return result.scalars().all()
+
+    return exercises
