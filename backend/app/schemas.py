@@ -41,6 +41,7 @@ class ExerciseRead(ExerciseBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    exercise_type: 'ExerciseTypeRead'
 
     class Config:
         orm_mode = True # For SQLAlchemy model conversion

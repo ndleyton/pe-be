@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
+import { getExercisesInWorkout } from '../api/exercises';
 import ExerciseForm from '../components/ExerciseForm';
+import ExerciseList from '../components/ExerciseList';
 import FinishWorkoutModal from '../components/FinishWorkoutModal';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
@@ -20,7 +22,15 @@ const updateWorkoutEndTime = async (workoutId: string) => {
 const WorkoutPage: React.FC = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showFinishModal, setShowFinishModal] = useState(false);
+
+  // Fetch exercises for this workout
+  const { data: exercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
+    queryKey: ['exercises', workoutId],
+    queryFn: () => getExercisesInWorkout(workoutId as string),
+    enabled: !!workoutId,
+  });
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
@@ -54,9 +64,9 @@ const WorkoutPage: React.FC = () => {
     };
   }, []);
 
-  // Placeholder: implement exercise list and refresh logic in the future
+  // Invalidate exercises query when a new exercise is created
   const handleExerciseCreated = () => {
-    // TODO: Fetch and display exercises for this workout
+    queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
   };
 
   const handleFinishWorkout = () => {
@@ -87,8 +97,11 @@ const WorkoutPage: React.FC = () => {
           </button>
         </div>
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
-        {/* TODO: Render list of exercises and ExerciseSet logging UI here */}
-        <p>This is where you can add exercises and sets for this workout.</p>
+        <ExerciseList 
+          exercises={exercises} 
+          isLoading={exercisesLoading} 
+          error={exercisesError} 
+        />
       </div>
       
       <FinishWorkoutModal

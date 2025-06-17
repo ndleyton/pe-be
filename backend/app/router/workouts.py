@@ -1,8 +1,9 @@
 from typing import List 
-from app.models import Workout
-from app.schemas import WorkoutRead, WorkoutBase, WorkoutUpdate
+from app.models import Workout, Exercise
+from app.schemas import WorkoutRead, WorkoutBase, WorkoutUpdate, ExerciseRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from fastapi import Depends, APIRouter, status, HTTPException
 from app.users import current_active_user, User
 from app.db import get_async_session
@@ -64,3 +65,40 @@ async def update_workout(
     await session.commit()
     await session.refresh(workout)
     return workout
+
+# --- Exercises in Workout ---
+
+# Expose nested resource following REST convention: /workouts/{id}/exercises
+@workouts_router.get("/{workout_id}/exercises", response_model=List[ExerciseRead])
+async def get_exercises_in_workout(
+    workout_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Return exercises for the requested workout
+
+    First verify the workout exists and belongs to the user. Then return
+    its exercises (even if empty list) to handle new workouts properly.
+    """
+
+    # First verify workout exists and belongs to user
+    workout_result = await session.execute(
+        select(Workout).where(
+            Workout.id == workout_id,
+            Workout.owner_id == user.id
+        )
+    )
+    workout = workout_result.scalar_one_or_none()
+    
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    # Get exercises for this workout
+    result = await session.execute(
+        select(Exercise)
+        .options(selectinload(Exercise.exercise_type))
+        .where(Exercise.workout_id == workout_id)
+        .order_by(Exercise.id.asc())
+    )
+    
+    return result.scalars().all()
