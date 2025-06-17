@@ -123,7 +123,7 @@ describe('WorkoutPage', () => {
 
     // Wait for exercises to load
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith(`/exercises/workouts/${mockWorkoutId}`);
+      expect(mockedApi.get).toHaveBeenCalledWith(`/workouts/${mockWorkoutId}/exercises`);
     });
 
     await waitFor(() => {
@@ -195,7 +195,7 @@ describe('WorkoutPage', () => {
 
     // Should refetch exercises
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith(`/exercises/workouts/${mockWorkoutId}`);
+      expect(mockedApi.get).toHaveBeenCalledWith(`/workouts/${mockWorkoutId}/exercises`);
     });
 
     await waitFor(() => {

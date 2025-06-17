@@ -51,12 +51,10 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   });
 
   const onSubmit = (data: ExerciseFormData) => {
-    // Automatically set the current timestamp
-    const dataWithTimestamp = {
+    mutation.mutate({
       ...data,
       timestamp: new Date().toISOString(),
-    };
-    mutation.mutate(dataWithTimestamp);
+    });
   };
 
   const handleExerciseTypeSelect = (exerciseType: ExerciseType) => {

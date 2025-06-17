@@ -3,7 +3,7 @@ import api from './client';
 export interface ExerciseType {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
   default_intensity_unit: number;
   created_at: string;
   updated_at: string;
@@ -22,6 +22,6 @@ export interface Exercise {
 
 // Get exercises for a specific workout
 export const getExercisesInWorkout = async (workoutId: string): Promise<Exercise[]> => {
-  const response = await api.get(`/exercises/workouts/${workoutId}`);
+  const response = await api.get(`/workouts/${workoutId}/exercises`);
   return response.data;
 };
