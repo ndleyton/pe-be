@@ -96,7 +96,10 @@ async def get_exercises_in_workout(
     # Get exercises for this workout
     result = await session.execute(
         select(Exercise)
-        .options(selectinload(Exercise.exercise_type))
+        .options(
+            selectinload(Exercise.exercise_type),
+            selectinload(Exercise.exercise_sets)
+        )
         .where(Exercise.workout_id == workout_id)
         .order_by(Exercise.id.asc())
     )
