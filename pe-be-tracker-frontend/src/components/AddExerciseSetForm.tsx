@@ -47,10 +47,11 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="flex space-x-3">
           <div className="flex-1">
-            <label className="block text-gray-400 text-sm mb-1">Reps</label>
+            <label htmlFor="reps" className="block text-gray-400 text-sm mb-1">Reps</label>
             <input
               type="number"
               min="0"
+              id="reps"
               value={formData.reps || ''}
               onChange={(e) => setFormData({ ...formData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
               className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
@@ -58,11 +59,12 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
             />
           </div>
           <div className="flex-1">
-            <label className="block text-gray-400 text-sm mb-1">Weight</label>
+            <label htmlFor="intensity" className="block text-gray-400 text-sm mb-1">Weight</label>
             <input
               type="number"
               step="0.1"
               min="0"
+              id="intensity"
               value={formData.intensity || ''}
               onChange={(e) => setFormData({ ...formData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
               className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
@@ -70,10 +72,11 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
             />
           </div>
           <div className="flex-1">
-            <label className="block text-gray-400 text-sm mb-1">Rest (seconds)</label>
+            <label htmlFor="rest-time" className="block text-gray-400 text-sm mb-1">Rest (seconds)</label>
             <input
               type="number"
               min="0"
+              id="rest-time"
               value={formData.rest_time_seconds || ''}
               onChange={(e) => setFormData({ ...formData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
               className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
