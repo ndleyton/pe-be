@@ -10,7 +10,7 @@ class TestExercisesAPI:
     
     def test_get_exercises_in_workout_unauthorized(self, client: TestClient):
         """Test getting exercises in workout without authentication."""
-        response = client.get(f"{settings.API_PREFIX}/exercises/workouts/1")
+        response = client.get(f"{settings.API_PREFIX}/workouts/1/exercises")
         assert response.status_code == 401
     
     def test_create_exercise_unauthorized(self, client: TestClient):
@@ -41,7 +41,7 @@ class TestExercisesAPI:
     #     
     #     # Get exercises for the workout
     #     response = client.get(
-    #         f"{settings.API_PREFIX}/exercises/workouts/{test_workout.id}",
+    #         f"{settings.API_PREFIX}/workouts/{test_workout.id}/exercises",
     #         headers={"Authorization": f"Bearer {test_user.token}"}
     #     )
     #     assert response.status_code == 200
@@ -53,7 +53,7 @@ class TestExercisesAPI:
     # def test_get_exercises_in_workout_not_owner(self, client: TestClient, test_user, other_user_workout):
     #     """Test getting exercises in workout that doesn't belong to user."""
     #     response = client.get(
-    #         f"{settings.API_PREFIX}/exercises/workouts/{other_user_workout.id}",
+    #         f"{settings.API_PREFIX}/workouts/{other_user_workout.id}/exercises",
     #         headers={"Authorization": f"Bearer {test_user.token}"}
     #     )
     #     assert response.status_code == 404
@@ -62,7 +62,7 @@ class TestExercisesAPI:
     # def test_get_exercises_in_nonexistent_workout(self, client: TestClient, test_user):
     #     """Test getting exercises in nonexistent workout."""
     #     response = client.get(
-    #         f"{settings.API_PREFIX}/exercises/workouts/99999",
+    #         f"{settings.API_PREFIX}/workouts/99999/exercises",
     #         headers={"Authorization": f"Bearer {test_user.token}"}
     #     )
     #     assert response.status_code == 404

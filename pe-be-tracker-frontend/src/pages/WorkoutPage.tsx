@@ -28,7 +28,7 @@ const WorkoutPage: React.FC = () => {
   // Fetch exercises for this workout
   const { data: exercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
     queryKey: ['exercises', workoutId],
-    queryFn: () => getExercisesInWorkout(workoutId!),
+    queryFn: () => getExercisesInWorkout(workoutId as string),
     enabled: !!workoutId,
   });
 
