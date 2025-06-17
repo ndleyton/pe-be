@@ -92,6 +92,9 @@ class ExerciseType(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     muscles = relationship("Muscle", secondary=exercise_types_muscles, back_populates="exercise_types")
+    
+    # Inverse relationship to Exercise
+    exercises: Mapped[List["Exercise"]] = relationship("Exercise", back_populates="exercise_type")
 
 class Exercise(Base):
     __tablename__ = "exercises"
@@ -102,6 +105,9 @@ class Exercise(Base):
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationship to ExerciseType
+    exercise_type: Mapped["ExerciseType"] = relationship("ExerciseType", back_populates="exercises", lazy="joined")
 
 class IntensityUnit(Base):
     __tablename__ = "intensity_units"
