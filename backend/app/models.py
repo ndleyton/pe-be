@@ -74,6 +74,9 @@ class ExerciseSet(Base):
     done = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationship to Exercise
+    exercise: Mapped["Exercise"] = relationship("Exercise", back_populates="exercise_sets")
 
 class ExerciseTemplate(Base):
     __tablename__ = "exercise_templates"
@@ -106,8 +109,10 @@ class Exercise(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
-    # Relationship to ExerciseType
+    # Relationships
     exercise_type: Mapped["ExerciseType"] = relationship("ExerciseType", back_populates="exercises", lazy="joined")
+    workout: Mapped["Workout"] = relationship("Workout", back_populates="exercises")
+    exercise_sets: Mapped[List["ExerciseSet"]] = relationship("ExerciseSet", back_populates="exercise")
 
 class IntensityUnit(Base):
     __tablename__ = "intensity_units"
@@ -170,8 +175,9 @@ class Workout(Base):
     notes = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # Relationship to User
+    # Relationships
     owner: Mapped["User"] = relationship("User", back_populates="workouts")
+    exercises: Mapped[List["Exercise"]] = relationship("Exercise", back_populates="workout")
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

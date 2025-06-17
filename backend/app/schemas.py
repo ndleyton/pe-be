@@ -42,9 +42,38 @@ class ExerciseRead(ExerciseBase):
     created_at: datetime
     updated_at: datetime
     exercise_type: 'ExerciseTypeRead'
+    exercise_sets: List['ExerciseSetRead'] = []
 
     class Config:
-        orm_mode = True # For SQLAlchemy model conversion
+        from_attributes = True # For SQLAlchemy model conversion
+
+# --- Exercise Set Schemas ---
+
+class ExerciseSetBase(BaseModel):
+    reps: Optional[int] = None
+    intensity: Optional[float] = None
+    intensity_unit_id: int
+    exercise_id: int
+    rest_time_seconds: Optional[int] = None
+    done: bool = False
+
+class ExerciseSetCreate(ExerciseSetBase):
+    pass
+
+class ExerciseSetUpdate(BaseModel):
+    reps: Optional[int] = None
+    intensity: Optional[float] = None
+    intensity_unit_id: Optional[int] = None
+    rest_time_seconds: Optional[int] = None
+    done: Optional[bool] = None
+
+class ExerciseSetRead(ExerciseSetBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True # For SQLAlchemy model conversion
 
 class WorkoutBase(BaseModel):
     name: Optional[str] = None
@@ -74,7 +103,7 @@ class WorkoutRead(WorkoutBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True # For SQLAlchemy model conversion
+        from_attributes = True # For SQLAlchemy model conversion
 
 # --- Workout Type Schemas ---
 
@@ -86,7 +115,7 @@ class WorkoutTypeRead(BaseModel):
     updated_at: datetime
 
     class Config:
-        orm_mode = True # For SQLAlchemy model conversion
+        from_attributes = True # For SQLAlchemy model conversion
 
 # --- Exercise Type Schemas ---
 
@@ -113,4 +142,4 @@ class ExerciseTypeRead(BaseModel):
     updated_at: datetime
 
     class Config:
-        orm_mode = True  # For SQLAlchemy model conversion
+        from_attributes = True  # For SQLAlchemy model conversion
