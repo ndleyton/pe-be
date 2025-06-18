@@ -20,19 +20,13 @@ const config: AxiosRequestConfig = {
 
 export const apiClient: AxiosInstance = axios.create(config);
 
-// Attach the auth token (if present) to every outgoing request.
+// Log outgoing requests in development
 apiClient.interceptors.request.use(
   (request) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      request.headers.Authorization = `Bearer ${token}`;
-    }
-
     if (import.meta.env.VITE_ENABLE_LOGGING === 'true') {
       // eslint-disable-next-line no-console
       console.log('[API REQUEST]', request);
     }
-
     return request;
   },
   (error) => Promise.reject(error),
@@ -49,10 +43,8 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error?.response?.status === 401) {
-      // Invalid / expired credentials – log the user out.
-      localStorage.removeItem('authToken');
-      // Redirect to login page
-      window.location.href = '/login';
+      // 401 means user is not authenticated; we just let components handle guest mode.
+      // Avoid redirect loops by NOT forcing navigation here.
     }
     return Promise.reject(error);
   },

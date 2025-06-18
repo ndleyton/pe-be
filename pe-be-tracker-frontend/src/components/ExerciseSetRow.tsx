@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '../api/exercises';
+import { useGuestData, GuestExerciseSet } from '../contexts/GuestDataContext';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
   onUpdate: (updatedSet: ExerciseSet) => void;
-  onDelete: (setId: number) => void;
+  onDelete: (setId: number | string) => void;
 }
 
 const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, onDelete }) => {
+  const { isAuthenticated, actions: guestActions } = useGuestData();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<UpdateExerciseSetData>({
     reps: exerciseSet.reps || undefined,
@@ -18,8 +20,29 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   const handleSave = async () => {
     try {
-      const updatedSet = await updateExerciseSet(exerciseSet.id, editData);
-      onUpdate(updatedSet);
+      if (isAuthenticated()) {
+        const updatedSet = await updateExerciseSet(exerciseSet.id as number, editData);
+        onUpdate(updatedSet);
+      } else {
+        // Handle guest mode update
+        guestActions.updateExerciseSet(exerciseSet.id as string, {
+          reps: editData.reps ?? null,
+          intensity: editData.intensity ?? null,
+          rest_time_seconds: editData.rest_time_seconds ?? null,
+          done: editData.done ?? false,
+        });
+        
+        // Create updated set for callback
+        const updatedSet: ExerciseSet = {
+          ...exerciseSet,
+          reps: editData.reps ?? null,
+          intensity: editData.intensity ?? null,
+          rest_time_seconds: editData.rest_time_seconds ?? null,
+          done: editData.done ?? false,
+          updated_at: new Date().toISOString(),
+        };
+        onUpdate(updatedSet);
+      }
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating exercise set:', error);
@@ -29,7 +52,12 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this set?')) {
       try {
-        await deleteExerciseSet(exerciseSet.id);
+        if (isAuthenticated()) {
+          await deleteExerciseSet(exerciseSet.id as number);
+        } else {
+          // Handle guest mode delete
+          guestActions.deleteExerciseSet(exerciseSet.id as string);
+        }
         onDelete(exerciseSet.id);
       } catch (error) {
         console.error('Error deleting exercise set:', error);
@@ -39,8 +67,23 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   const toggleDone = async () => {
     try {
-      const updatedSet = await updateExerciseSet(exerciseSet.id, { done: !exerciseSet.done });
-      onUpdate(updatedSet);
+      if (isAuthenticated()) {
+        const updatedSet = await updateExerciseSet(exerciseSet.id as number, { done: !exerciseSet.done });
+        onUpdate(updatedSet);
+      } else {
+        // Handle guest mode toggle
+        guestActions.updateExerciseSet(exerciseSet.id as string, {
+          done: !exerciseSet.done,
+        });
+        
+        // Create updated set for callback
+        const updatedSet: ExerciseSet = {
+          ...exerciseSet,
+          done: !exerciseSet.done,
+          updated_at: new Date().toISOString(),
+        };
+        onUpdate(updatedSet);
+      }
     } catch (error) {
       console.error('Error toggling done status:', error);
     }

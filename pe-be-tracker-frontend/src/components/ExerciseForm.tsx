@@ -4,9 +4,10 @@ import { useMutation } from '@tanstack/react-query';
 import api from '../api/client';
 import { toUTCISOString } from '../utils/date';
 import ExerciseTypeModal, { ExerciseType } from './ExerciseTypeModal';
+import { useGuestData, GuestExerciseType } from '../contexts/GuestDataContext';
 
 interface ExerciseFormData {
-  exercise_type_id: number;
+  exercise_type_id: number | string; // Can be number (server) or string (guest)
   timestamp?: string;
   notes?: string;
 }
@@ -30,8 +31,9 @@ const createExercise = async (data: ExerciseFormData & { workout_id: number }) =
 };
 
 const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
+  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showModal, setShowModal] = useState(false);
-  const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | null>(null);
+  const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
   
   const {
     register,
@@ -51,13 +53,35 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   });
 
   const onSubmit = (data: ExerciseFormData) => {
-    mutation.mutate({
-      ...data,
-      timestamp: new Date().toISOString(),
-    });
+    if (isAuthenticated()) {
+      // Use API for authenticated users
+      mutation.mutate({
+        ...data,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      // Use guest context for unauthenticated users
+      const exerciseType = guestData.exerciseTypes.find(et => et.id === data.exercise_type_id);
+      if (!exerciseType) {
+        console.error('Exercise type not found:', data.exercise_type_id);
+        return;
+      }
+
+      guestActions.addExercise({
+        exercise_type_id: data.exercise_type_id as string,
+        workout_id: workoutId,
+        timestamp: new Date().toISOString(),
+        notes: data.notes || null,
+        exercise_type: exerciseType,
+      });
+
+      reset();
+      setSelectedExerciseType(null);
+      onExerciseCreated();
+    }
   };
 
-  const handleExerciseTypeSelect = (exerciseType: ExerciseType) => {
+  const handleExerciseTypeSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     setSelectedExerciseType(exerciseType);
     setValue('exercise_type_id', exerciseType.id);
     setShowModal(false);
@@ -102,7 +126,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
           type="hidden"
           {...register('exercise_type_id', {
             required: 'Exercise is required',
-            valueAsNumber: true,
+            valueAsNumber: isAuthenticated(), // Only convert to number if authenticated
           })}
         />
         {errors.exercise_type_id && <div className="text-red-400 text-sm mt-2">{errors.exercise_type_id.message}</div>}
@@ -118,12 +142,12 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
       </div>
       <button
         type="submit"
-        disabled={mutation.isPending}
+        disabled={isAuthenticated() && mutation.isPending}
         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded px-6 py-2 mt-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {mutation.isPending ? 'Adding...' : 'Add Exercise'}
+        {(isAuthenticated() && mutation.isPending) ? 'Adding...' : 'Add Exercise'}
       </button>
-      {mutation.error && <div className="text-red-400 mt-3">Failed to create exercise.</div>}
+      {isAuthenticated() && mutation.error && <div className="text-red-400 mt-3">Failed to create exercise.</div>}
 
       <ExerciseTypeModal
         isOpen={showModal}

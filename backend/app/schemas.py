@@ -117,6 +117,21 @@ class WorkoutTypeRead(BaseModel):
     class Config:
         from_attributes = True # For SQLAlchemy model conversion
 
+# --- Workout Type Create Schema ---
+
+class WorkoutTypeCreate(BaseModel):
+    name: str = Field(..., min_length=1, description="Human-readable workout type name")
+    description: str = "Custom workout type"
+
+    @validator('name', pre=True)
+    def validate_and_strip_name(cls, v):
+        if v is None:
+            raise ValueError('Name cannot be empty')
+        v = v.strip()
+        if not v:
+            raise ValueError('Name cannot be empty')
+        return v
+
 # --- Intensity Unit Schemas ---
 
 class IntensityUnitRead(BaseModel):
