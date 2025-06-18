@@ -303,12 +303,9 @@ describe('AddExerciseSetForm', () => {
 
     render(<AddExerciseSetForm {...defaultProps} />);
 
-    // Wait for intensity units to load, then check initial state
-    let unitButton: HTMLElement;
-    await waitFor(() => {
-      unitButton = screen.getByLabelText(/Current unit: Kilograms/);
-      expect(unitButton).toHaveTextContent('kg');
-    });
+    // Wait for intensity units to load and get the unit button
+    const unitButton = await screen.findByLabelText(/Current unit: Kilograms/);
+    expect(unitButton).toHaveTextContent('kg');
 
     // Click the unit button to open selector
     fireEvent.click(unitButton);
@@ -356,11 +353,8 @@ describe('AddExerciseSetForm', () => {
   it('cancels unit selection when cancel button is clicked', async () => {
     render(<AddExerciseSetForm {...defaultProps} />);
 
-    // Wait for intensity units to load
-    let unitButton: HTMLElement;
-    await waitFor(() => {
-      unitButton = screen.getByLabelText(/Current unit: Kilograms/);
-    });
+    // Wait for intensity units to load and get the unit button
+    const unitButton = await screen.findByLabelText(/Current unit: Kilograms/);
     
     // Click to open selector
     fireEvent.click(unitButton);
@@ -400,11 +394,8 @@ describe('AddExerciseSetForm', () => {
 
     render(<AddExerciseSetForm {...defaultProps} />);
 
-    // Wait for intensity units to load
-    let unitButton: HTMLElement;
-    await waitFor(() => {
-      unitButton = screen.getByLabelText(/Current unit: Kilograms/);
-    });
+    // Wait for intensity units to load and get the unit button
+    const unitButton = await screen.findByLabelText(/Current unit: Kilograms/);
     
     // Click to change unit to lbs
     fireEvent.click(unitButton);
