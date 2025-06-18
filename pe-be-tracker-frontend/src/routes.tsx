@@ -1,6 +1,7 @@
 import React from 'react';
 import { RouteObject } from 'react-router-dom';
 import App from './App';
+import AppLayout from './layouts/AppLayout';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import WorkoutPage from './pages/WorkoutPage';
@@ -11,20 +12,30 @@ const routes: RouteObject[] = [
     element: <App />,
   },
   {
-    path: '/dashboard',
-    element: <MyWorkoutsPage />,
-  },
-  {
     path: '/oauth/callback',
     element: <OAuthCallbackPage />,
   },
   {
-    path: '/workouts',
-    element: <MyWorkoutsPage />,
-  },
-  {
-    path: '/workout/:workoutId',
-    element: <WorkoutPage />,
+    path: '/',
+    element: <AppLayout />,
+    children: [
+      {
+        path: 'dashboard',
+        element: <MyWorkoutsPage />,
+      },
+      {
+        path: 'workouts',
+        element: <MyWorkoutsPage />,
+      },
+      {
+        path: 'workout/:workoutId',
+        element: <WorkoutPage />,
+      },
+      {
+        path: 'profile',
+        element: <div className="p-4"><h1 className="text-2xl font-bold">Profile Page</h1><p>Coming soon...</p></div>,
+      }
+    ]
   }
 ];
 

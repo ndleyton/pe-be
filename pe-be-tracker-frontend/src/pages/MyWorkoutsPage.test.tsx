@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import api from '../api/client';
 import { render } from '../test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
@@ -28,15 +29,25 @@ describe('MyWorkoutsPage', () => {
     expect(screen.getByText(/loading workouts/i)).toBeInTheDocument();
   });
 
-  it('renders page title and workout form', async () => {
+  it('renders page title and shows workout form when FAB is clicked', async () => {
+    const user = userEvent.setup();
     mockedApi.get.mockResolvedValueOnce({ data: [] });
 
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
-      expect(screen.getByTestId('workout-form')).toBeInTheDocument();
     });
+
+    // Initially, form should not be visible
+    expect(screen.queryByTestId('workout-form')).not.toBeInTheDocument();
+
+    // Click the FAB to show the form
+    const fab = screen.getByRole('button', { name: /floating action button/i });
+    await user.click(fab);
+
+    // Now the form should be visible
+    expect(screen.getByTestId('workout-form')).toBeInTheDocument();
   });
 
   it('shows message when no workouts exist', async () => {

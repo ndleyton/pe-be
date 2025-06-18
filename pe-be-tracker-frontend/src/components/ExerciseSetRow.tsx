@@ -103,6 +103,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       <div className="flex items-center space-x-4">
         <button
           onClick={toggleDone}
+          aria-label={exerciseSet.done ? "Mark as incomplete" : "Mark as complete"}
           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
             exerciseSet.done
               ? 'bg-green-600 border-green-600 text-white'

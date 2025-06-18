@@ -113,7 +113,7 @@ describe('WorkoutPage', () => {
     render(<WorkoutPage />);
 
     expect(screen.getByText(`Log Exercises for Workout #${mockWorkoutId}`)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /finish workout/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /floating action button/i })).toBeInTheDocument();
   });
 
   it('fetches and renders exercises on mount', async () => {
@@ -220,7 +220,7 @@ describe('WorkoutPage', () => {
 
     render(<WorkoutPage />);
 
-    const finishButton = screen.getByRole('button', { name: /finish workout/i });
+    const finishButton = screen.getByRole('button', { name: /floating action button/i });
     await user.click(finishButton);
 
     expect(screen.getByTestId('finish-workout-modal')).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe('WorkoutPage', () => {
     render(<WorkoutPage />);
 
     // Open modal
-    const finishButton = screen.getByRole('button', { name: /finish workout/i });
+    const finishButton = screen.getByRole('button', { name: /floating action button/i });
     await user.click(finishButton);
 
     // Confirm finish
