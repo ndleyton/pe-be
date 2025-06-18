@@ -13,7 +13,7 @@ const Breadcrumbs: React.FC = () => {
   }
 
   return (
-    <div className="hidden md:flex">
+    <nav aria-label="Breadcrumb" className="hidden md:flex">
       <div className="breadcrumbs text-sm">
         <ul>
           {breadcrumbs.map((crumb, index) => (
@@ -26,13 +26,13 @@ const Breadcrumbs: React.FC = () => {
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-base-content/70">{crumb.label}</span>
+                <span className="text-base-content/70" aria-current="page">{crumb.label}</span>
               )}
             </li>
           ))}
         </ul>
       </div>
-    </div>
+    </nav>
   );
 };
 
