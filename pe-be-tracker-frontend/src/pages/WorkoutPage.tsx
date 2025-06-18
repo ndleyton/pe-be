@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
-import { getExercisesInWorkout } from '../api/exercises';
+import { getExercisesInWorkout, Exercise } from '../api/exercises';
 import ExerciseForm from '../components/ExerciseForm';
 import ExerciseList from '../components/ExerciseList';
 import FinishWorkoutModal from '../components/FinishWorkoutModal';
 import FloatingActionButton from '../components/FloatingActionButton';
+import { useGuestData, GuestExercise } from '../contexts/GuestDataContext';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
@@ -24,14 +25,46 @@ const WorkoutPage: React.FC = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showFinishModal, setShowFinishModal] = useState(false);
 
-  // Fetch exercises for this workout
-  const { data: exercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
+  // Fetch exercises for this workout (only when authenticated)
+  const { data: serverExercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
     queryKey: ['exercises', workoutId],
     queryFn: () => getExercisesInWorkout(workoutId as string),
-    enabled: !!workoutId,
+    enabled: !!workoutId && isAuthenticated(), // Only fetch when authenticated
   });
+
+  // Use guest data if not authenticated, server data if authenticated
+  const exercises: Exercise[] = isAuthenticated() 
+    ? serverExercises 
+    : (guestData.workouts.find(w => w.id === workoutId)?.exercises || []).map((guestExercise: GuestExercise): Exercise => ({
+        id: guestExercise.id,
+        timestamp: guestExercise.timestamp,
+        notes: guestExercise.notes,
+        exercise_type_id: guestExercise.exercise_type_id,
+        workout_id: guestExercise.workout_id,
+        created_at: guestExercise.created_at,
+        updated_at: guestExercise.updated_at,
+        exercise_type: {
+          id: guestExercise.exercise_type.id,
+          name: guestExercise.exercise_type.name,
+          description: guestExercise.exercise_type.description,
+          default_intensity_unit: guestExercise.exercise_type.default_intensity_unit,
+          times_used: guestExercise.exercise_type.times_used,
+        },
+        exercise_sets: guestExercise.exercise_sets.map(guestSet => ({
+          id: guestSet.id,
+          reps: guestSet.reps,
+          intensity: guestSet.intensity,
+          intensity_unit_id: guestSet.intensity_unit_id,
+          exercise_id: guestSet.exercise_id,
+          rest_time_seconds: guestSet.rest_time_seconds,
+          done: guestSet.done,
+          created_at: guestSet.created_at,
+          updated_at: guestSet.updated_at,
+        })),
+      }));
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
@@ -65,15 +98,27 @@ const WorkoutPage: React.FC = () => {
     };
   }, []);
 
-  // Invalidate exercises query when a new exercise is created
+  // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+    if (isAuthenticated()) {
+      queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+    }
+    // For guest mode, the data is already updated via the context
   };
 
   const handleFinishWorkout = () => {
     console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
-      finishWorkoutMutation.mutate(workoutId);
+      if (isAuthenticated()) {
+        finishWorkoutMutation.mutate(workoutId);
+      } else {
+        // For guest mode, update the workout end time
+        guestActions.updateWorkout(workoutId, {
+          end_time: new Date().toISOString(),
+        });
+        setShowFinishModal(false);
+        navigate('/workouts');
+      }
     } else {
       console.error('No workoutId available');
     }
@@ -94,14 +139,14 @@ const WorkoutPage: React.FC = () => {
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
           exercises={exercises} 
-          isLoading={exercisesLoading} 
-          error={exercisesError} 
+          isLoading={isAuthenticated() && exercisesLoading} 
+          error={isAuthenticated() ? exercisesError : null} 
         />
       </div>
       
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
-        disabled={finishWorkoutMutation.isPending}
+        disabled={isAuthenticated() && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>
@@ -110,7 +155,7 @@ const WorkoutPage: React.FC = () => {
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
-        isLoading={finishWorkoutMutation.isPending}
+        isLoading={isAuthenticated() && finishWorkoutMutation.isPending}
       />
     </>
   );

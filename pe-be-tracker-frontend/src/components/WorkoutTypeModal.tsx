@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api/client';
+import { useGuestData, GuestWorkoutType } from '../contexts/GuestDataContext';
 
 interface WorkoutType {
   id: number;
@@ -11,7 +12,7 @@ interface WorkoutType {
 interface WorkoutTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (workoutType: WorkoutType) => void;
+  onSelect: (workoutType: WorkoutType | GuestWorkoutType) => void;
 }
 
 const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
@@ -20,12 +21,17 @@ const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
 };
 
 const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
-  const { data: workoutTypes = [], isLoading, error } = useQuery({
+  const { data: guestData, isAuthenticated } = useGuestData();
+  const { data: serverWorkoutTypes = [], isLoading, error } = useQuery({
     queryKey: ['workoutTypes'],
     queryFn: fetchWorkoutTypes,
+    enabled: isAuthenticated(), // Only fetch when authenticated
   });
 
-  const handleSelect = (workoutType: WorkoutType) => {
+  // Use guest data if not authenticated, server data if authenticated
+  const workoutTypes = isAuthenticated() ? serverWorkoutTypes : guestData.workoutTypes;
+
+  const handleSelect = (workoutType: WorkoutType | GuestWorkoutType) => {
     onSelect(workoutType);
   };
 
@@ -48,7 +54,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
   );
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isAuthenticated() && isLoading) {
       return (
         <div className="grid gap-3">
           {Array.from({ length: 5 }).map((_, index) => (
@@ -58,7 +64,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
       );
     }
 
-    if (error) {
+    if (isAuthenticated() && error) {
       return (
         <div className="text-center py-8">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -77,7 +83,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
             <span className="text-gray-400 text-2xl">📋</span>
           </div>
           <h4 className="text-white font-medium mb-2">No workout types available</h4>
-          <p className="text-gray-400 text-sm">Contact support if this persists</p>
+          <p className="text-gray-400 text-sm">{isAuthenticated() ? 'Contact support if this persists' : 'Guest workout types will be created automatically'}</p>
         </div>
       );
     }

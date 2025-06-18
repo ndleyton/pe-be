@@ -1,15 +1,111 @@
-# React + Vite
+# PE-BE Tracker Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript fitness tracking application with local-first guest mode and Google OAuth authentication.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Local-First Guest Mode**: Use the app without signing in - all data is stored locally and synced when you authenticate
+- **Google OAuth Integration**: Secure authentication with automatic data sync
+- **Workout Tracking**: Create workouts, add exercises, and track sets with detailed metrics
+- **Exercise Type Management**: Built-in exercise library with the ability to create custom exercises
+- **Responsive Design**: Works on desktop and mobile devices
+- **Data Persistence**: localStorage for guest mode, secure cloud storage for authenticated users
 
-## Expanding the ESLint configuration
+## 🏃‍♂️ Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables** (see section below)
+
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Visit the app**: Open your browser to `http://localhost:5173`
+
+## 📱 Guest Mode
+
+The app includes a local-first guest mode that allows users to start tracking workouts immediately without signing in:
+
+### How It Works
+
+- **No Authentication Required**: Click "Try as Guest" on the welcome page
+- **Local Storage**: All workout data is stored in your browser's localStorage
+- **Survives Browser Restarts**: Data persists across browser sessions
+- **Automatic Sync**: When you sign in, all local data is automatically uploaded to your account
+- **Clean Transition**: After sync, only authenticated data is shown
+
+### What's Stored Locally
+
+- Workouts with start/end times, notes, and workout types
+- Exercises with timestamps, notes, and exercise types
+- Exercise sets with reps, intensity, rest time, and completion status
+- Custom exercise types created while in guest mode
+
+### Data Sync Process
+
+1. User creates workouts/exercises while unauthenticated
+2. Data is stored in localStorage under the key `pe-guest-data`
+3. User signs in with Google OAuth
+4. App automatically uploads all local data via REST APIs
+5. Local cache is cleared after successful sync
+6. User now sees their data in their authenticated account
+
+### Guest Mode Banner
+
+When using guest mode, a helpful banner appears at the top of the app:
+- Explains that data is stored locally
+- Shows count of saved workouts
+- Encourages signing in for cross-device sync
+
+## 🔐 Authentication
+
+The app supports Google OAuth for secure authentication:
+
+1. **Sign In**: Click "Sign in with Google" on the welcome page
+2. **OAuth Flow**: Redirected to Google for authentication
+3. **Data Sync**: Upon return, any guest data is automatically synced
+4. **Secure Storage**: All future data is stored securely in the cloud
+
+## 🧪 Testing
+
+### Run Tests
+```bash
+npm test
+```
+
+### Test Coverage
+The app includes comprehensive tests for:
+- Guest data context and localStorage persistence
+- Data sync functionality with mocked API calls
+- Component rendering with guest/authenticated states
+- Form submissions in both modes
+
+## 🏗️ Architecture
+
+### Key Components
+
+- **GuestDataContext**: React context managing local data and sync operations
+- **Forms**: WorkoutForm, ExerciseForm, AddExerciseSetForm with dual-mode support
+- **Pages**: MyWorkoutsPage and WorkoutPage showing appropriate data based on auth state
+- **Sync Utilities**: Functions to upload guest data to server APIs
+
+### Data Flow
+
+```
+Guest Mode:
+User Input → Forms → GuestDataContext → localStorage
+
+Authenticated Mode:
+User Input → Forms → API Client → Server Database
+
+Sync Process:
+localStorage → syncGuestDataToServer() → API Client → Server Database
+```
 
 ## Environment Variables 🛠️
 
