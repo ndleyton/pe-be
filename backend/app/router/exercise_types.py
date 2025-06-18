@@ -1,20 +1,33 @@
-from typing import List
+from typing import List, Optional
 from app.models import ExerciseType
 from app.schemas import ExerciseTypeRead, ExerciseTypeCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.exc import IntegrityError
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, Query
 from app.db import get_async_session
 
 exercise_types_router = APIRouter(tags=["exercise_types"])
 
 @exercise_types_router.get("/", response_model=List[ExerciseTypeRead])
 async def get_exercise_types(
+    order_by: Optional[str] = Query(default="usage", description="Sort order: 'usage' for usage-based sort, 'name' for alphabetical"),
     session: AsyncSession = Depends(get_async_session)
 ):
     """Get all exercise types from the database."""
-    result = await session.execute(select(ExerciseType).order_by(ExerciseType.name))
+    query = select(ExerciseType)
+    
+    if order_by == "usage":
+        # Order by times_used DESC (most used first), then by name ASC (alphabetical)
+        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+    elif order_by == "name":
+        # Order alphabetically by name
+        query = query.order_by(ExerciseType.name)
+    else:
+        # Default to usage-based ordering
+        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+    
+    result = await session.execute(query)
     exercise_types = result.scalars().all()
     return exercise_types
 
