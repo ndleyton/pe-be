@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import api from '../api/client';
 import { render } from '../test/utils';
@@ -214,7 +214,9 @@ describe('WorkoutForm', () => {
     expect(screen.getByRole('button', { name: /creating/i })).toBeDisabled();
     
     // Cleanup - resolve the promise to avoid affecting other tests
-    resolvePromise!({ data: { id: 123 } });
+    await act(async () => {
+      resolvePromise!({ data: { id: 123 } });
+    });
   });
 
 

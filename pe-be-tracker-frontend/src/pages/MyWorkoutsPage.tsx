@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import api from '../api/client';
 import WorkoutForm from '../components/WorkoutForm';
-import HomeLogo from '../components/HomeLogo';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 type Workout = {
   id: number;
@@ -21,6 +21,7 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
+  const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   const { data: workouts = [], isLoading, error, refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
@@ -79,19 +80,14 @@ const MyWorkoutsPage = () => {
     
     if (isAuthError) {
       return (
-        <div className="min-h-screen flex flex-col bg-base-200">
-          <div className="p-4">
-            <HomeLogo />
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-red-600 text-2xl">⚠</span>
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
-              <p className="text-gray-600 mb-4">{errorMessage}</p>
-              <p className="text-sm text-gray-500">Click the logo above to return to login</p>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-600 text-2xl">⚠</span>
             </div>
+            <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
+            <p className="text-gray-600 mb-4">{errorMessage}</p>
+            <p className="text-sm text-gray-500">Click the logo above to return to login</p>
           </div>
         </div>
       );
@@ -101,23 +97,37 @@ const MyWorkoutsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <>
       <div className="p-4">
-        <HomeLogo />
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Workouts</h1>
             <button className="text-primary hover:text-primary-focus">Show More</button>
           </div>
           
-          <WorkoutForm onWorkoutCreated={() => refetch()} />
+          {showWorkoutForm && (
+            <div className="mb-6">
+              <WorkoutForm 
+                onWorkoutCreated={() => {
+                  refetch();
+                  setShowWorkoutForm(false);
+                }} 
+              />
+              <button 
+                onClick={() => setShowWorkoutForm(false)}
+                className="btn btn-ghost btn-sm mt-2"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           
           {workouts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">You haven't logged any workouts yet.</p>
             </div>
           ) : (
-            <div className="space-y-3 mt-6">
+            <div className="space-y-3">
               {workouts.map(workout => (
                 <div
                   key={workout.id}
@@ -153,7 +163,15 @@ const MyWorkoutsPage = () => {
           )}
         </div>
       </div>
-    </div>
+      
+      {!showWorkoutForm && (
+        <FloatingActionButton
+          onClick={() => setShowWorkoutForm(true)}
+        >
+          <span className="text-lg">+</span>
+        </FloatingActionButton>
+      )}
+    </>
   );
 };
 
