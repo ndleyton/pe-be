@@ -5,6 +5,7 @@ export interface ExerciseType {
   name: string;
   description: string | null;
   default_intensity_unit: number;
+  times_used: number;
   created_at: string;
   updated_at: string;
 }
@@ -79,4 +80,24 @@ export const updateExerciseSet = async (exerciseSetId: number, updateData: Updat
 // Delete an exercise set
 export const deleteExerciseSet = async (exerciseSetId: number): Promise<void> => {
   await api.delete(`/exercise-sets/${exerciseSetId}`);
+};
+
+// Exercise Type API functions
+
+export interface CreateExerciseTypeData {
+  name: string;
+  description?: string;
+  default_intensity_unit?: number;
+}
+
+// Get all exercise types (ordered by usage by default)
+export const getExerciseTypes = async (orderBy: 'usage' | 'name' = 'usage'): Promise<ExerciseType[]> => {
+  const response = await api.get(`/exercise-types/?order_by=${orderBy}`);
+  return response.data;
+};
+
+// Create a new exercise type
+export const createExerciseType = async (exerciseTypeData: CreateExerciseTypeData): Promise<ExerciseType> => {
+  const response = await api.post('/exercise-types/', exerciseTypeData);
+  return response.data;
 };
