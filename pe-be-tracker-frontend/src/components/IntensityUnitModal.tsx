@@ -31,7 +31,7 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
       <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full max-h-96 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Select Intensity Unit</h3>
+          <h3 className="text-lg font-semibold text-white">Select Unit:</h3>
           <button
             onClick={onClose}
             aria-label="Close modal"
@@ -58,17 +58,28 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
           )}
 
           {!isLoading && !error && (
-            <div className="grid grid-cols-2 gap-2">
-              {intensityUnits.map((unit) => (
-                <button
-                  key={unit.id}
-                  onClick={() => onSelect(unit)}
-                  className="w-full text-left px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
-                >
-                  {unit.abbreviation} - {unit.name}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {intensityUnits.map((unit) => (
+                  <button
+                    key={unit.id}
+                    onClick={() => onSelect(unit)}
+                    className="w-full text-left px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                    aria-label={`Select ${unit.name} (${unit.abbreviation})`}
+                  >
+                    {unit.abbreviation} - {unit.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-4 w-full px-4 py-2 text-sm text-gray-400 hover:text-white"
+                aria-label="Cancel unit selection"
+              >
+                Cancel
+              </button>
+            </>
           )}
         </div>
       </div>
