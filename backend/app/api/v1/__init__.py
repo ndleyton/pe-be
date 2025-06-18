@@ -9,7 +9,7 @@ from app.users import (
 )
 from app.config import settings
 from app.schemas import UserRead, UserCreate, UserUpdate
-from app.router import workouts, exercises, workout_types, exercise_types, exercise_sets
+from app.router import workouts, exercises, workout_types, exercise_types, exercise_sets, intensity_units
 
 __all__ = ["api_router", "oauth_exception_handler"]
 
@@ -43,6 +43,9 @@ api_router.include_router(
 )  # Exercise types endpoint
 api_router.include_router(
     exercise_sets.exercise_sets_router, prefix="/exercise-sets", tags=["exercise_sets"]
+)
+api_router.include_router(
+    intensity_units.intensity_units_router, prefix="/intensity-units", tags=["intensity_units"]
 )
 
 # --- Google OAuth Routes ---
