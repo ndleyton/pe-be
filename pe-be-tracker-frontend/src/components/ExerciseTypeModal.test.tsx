@@ -10,9 +10,9 @@ vi.mock('../api/client');
 const mockedApi = vi.mocked(api, true);
 
 const exerciseTypes = [
-  { id: 1, name: 'Bench Press', description: 'Chest exercise', default_intensity_unit: 1 },
-  { id: 2, name: 'Squat', description: 'Leg exercise', default_intensity_unit: 1 },
-  { id: 3, name: 'Deadlift', description: 'Full body exercise', default_intensity_unit: 1 },
+  { id: 1, name: 'Bench Press', description: 'Chest exercise', default_intensity_unit: 1, times_used: 5, created_at: '2024-01-01', updated_at: '2024-01-01' },
+  { id: 2, name: 'Squat', description: 'Leg exercise', default_intensity_unit: 1, times_used: 3, created_at: '2024-01-01', updated_at: '2024-01-01' },
+  { id: 3, name: 'Deadlift', description: 'Full body exercise', default_intensity_unit: 1, times_used: 2, created_at: '2024-01-01', updated_at: '2024-01-01' },
 ];
 
 const renderWithQueryClient = (component: React.ReactElement) => {
@@ -86,7 +86,7 @@ describe('ExerciseTypeModal', () => {
       expect(screen.getByText('Full body exercise')).toBeInTheDocument();
     });
 
-    expect(mockedApi.get).toHaveBeenCalledWith('/exercise-types/');
+    expect(mockedApi.get).toHaveBeenCalledWith('/exercise-types/?order_by=usage');
   });
 
   it('shows loading state while fetching', () => {
@@ -399,7 +399,7 @@ describe('ExerciseTypeModal', () => {
   describe('Create functionality', () => {
     it('creates new exercise type when create button is clicked', async () => {
       const user = userEvent.setup();
-      const newExerciseType = { id: 4, name: 'Pull Up', description: 'Custom exercise', default_intensity_unit: 1 };
+      const newExerciseType = { id: 4, name: 'Pull Up', description: 'Custom exercise', default_intensity_unit: 1, times_used: 0, created_at: '2024-01-01', updated_at: '2024-01-01' };
       
       mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
       mockedApi.post.mockResolvedValueOnce({ data: newExerciseType });
@@ -527,6 +527,105 @@ describe('ExerciseTypeModal', () => {
       await user.type(searchInput, 'bench');
 
       expect(screen.queryByTitle(/create/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Usage tracking functionality', () => {
+    it('displays usage counts for exercise types', async () => {
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('5 times')).toBeInTheDocument(); // Bench Press
+        expect(screen.getByText('3 times')).toBeInTheDocument(); // Squat
+        expect(screen.getByText('2 times')).toBeInTheDocument(); // Deadlift
+      });
+    });
+
+    it('does not display usage count for exercise types with 0 uses', async () => {
+      const exerciseTypesWithZero = [
+        { id: 1, name: 'New Exercise', description: 'Never used', default_intensity_unit: 1, times_used: 0, created_at: '2024-01-01', updated_at: '2024-01-01' },
+        { id: 2, name: 'Used Exercise', description: 'Used once', default_intensity_unit: 1, times_used: 1, created_at: '2024-01-01', updated_at: '2024-01-01' },
+      ];
+      
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypesWithZero });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('New Exercise')).toBeInTheDocument();
+        expect(screen.getByText('1 time')).toBeInTheDocument(); // Used Exercise (singular)
+      });
+
+      // Should not show usage count for 0 times
+      expect(screen.queryByText('0 times')).not.toBeInTheDocument();
+    });
+
+    it('displays correct singular/plural form for usage counts', async () => {
+      const exerciseTypesVariedUsage = [
+        { id: 1, name: 'Once Used', description: 'Used once', default_intensity_unit: 1, times_used: 1, created_at: '2024-01-01', updated_at: '2024-01-01' },
+        { id: 2, name: 'Multi Used', description: 'Used multiple times', default_intensity_unit: 1, times_used: 5, created_at: '2024-01-01', updated_at: '2024-01-01' },
+      ];
+      
+      mockedApi.get.mockResolvedValueOnce({ data: exerciseTypesVariedUsage });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('1 time')).toBeInTheDocument(); // Singular
+        expect(screen.getByText('5 times')).toBeInTheDocument(); // Plural
+      });
+    });
+
+    it('exercise types are ordered by usage (most used first)', async () => {
+      // Exercise types already sorted by backend (API returns sorted data)
+      const sortedExerciseTypes = [
+        { id: 1, name: 'High Usage', description: 'Used most', default_intensity_unit: 1, times_used: 10, created_at: '2024-01-01', updated_at: '2024-01-01' },
+        { id: 2, name: 'Medium Usage', description: 'Used middle', default_intensity_unit: 1, times_used: 5, created_at: '2024-01-01', updated_at: '2024-01-01' },
+        { id: 3, name: 'Low Usage', description: 'Used least', default_intensity_unit: 1, times_used: 1, created_at: '2024-01-01', updated_at: '2024-01-01' },
+      ];
+
+      mockedApi.get.mockResolvedValueOnce({ data: sortedExerciseTypes });
+
+      renderWithQueryClient(
+        <ExerciseTypeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSelect={mockOnSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('High Usage')).toBeInTheDocument();
+      });
+
+      // Verify that all exercise types are rendered in the correct order
+      const exerciseHeaders = screen.getAllByRole('heading', { level: 4 });
+      
+      // Should be ordered by usage DESC: High Usage (10), Medium Usage (5), Low Usage (1)
+      expect(exerciseHeaders).toHaveLength(3);
+      expect(exerciseHeaders[0]).toHaveTextContent('High Usage');
+      expect(exerciseHeaders[1]).toHaveTextContent('Medium Usage');
+      expect(exerciseHeaders[2]).toHaveTextContent('Low Usage');
     });
   });
 });

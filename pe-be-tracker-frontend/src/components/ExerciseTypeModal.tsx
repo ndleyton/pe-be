@@ -1,19 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api/client';
-
-interface ExerciseType {
-  id: number;
-  name: string;
-  description: string;
-  default_intensity_unit: number;
-}
-
-interface ExerciseTypeCreate {
-  name: string;
-  description?: string;
-  default_intensity_unit?: number;
-}
+import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '../api/exercises';
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -21,24 +8,13 @@ interface ExerciseTypeModalProps {
   onSelect: (exerciseType: ExerciseType) => void;
 }
 
-const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
-  const response = await api.get('/exercise-types/');
-  return response.data;
-};
-
-// TODO: Fix Exercise type is required on new exercise type created
-const createExerciseType = async (exerciseType: ExerciseTypeCreate): Promise<ExerciseType> => {
-  const response = await api.post('/exercise-types/', exerciseType);
-  return response.data;
-};
-
 const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   
   const { data: exerciseTypes = [], isLoading, error } = useQuery({
     queryKey: ['exerciseTypes'],
-    queryFn: fetchExerciseTypes,
+    queryFn: () => getExerciseTypes('usage'), // Use usage-based ordering by default
   });
   
   const createMutation = useMutation({
@@ -61,6 +37,25 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   const showCreateButton = searchTerm.trim() && filteredExerciseTypes.length === 0;
 
   const handleSelect = (exerciseType: ExerciseType) => {
+    // Optimistically update the times_used count in the cache
+    queryClient.setQueryData(['exerciseTypes'], (oldData: ExerciseType[] | undefined) => {
+      if (!oldData) return oldData;
+      
+      const updatedTypes = oldData.map(type => 
+        type.id === exerciseType.id 
+          ? { ...type, times_used: type.times_used + 1 }
+          : type
+      );
+      
+      // Re-sort by times_used DESC, then by name ASC to maintain the expected order
+      return updatedTypes.sort((a, b) => {
+        if (a.times_used !== b.times_used) {
+          return b.times_used - a.times_used; // DESC
+        }
+        return a.name.localeCompare(b.name); // ASC
+      });
+    });
+    
     onSelect(exerciseType);
   };
   
@@ -161,7 +156,14 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
                 </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-white font-medium">{exerciseType.name}</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-white font-medium">{exerciseType.name}</h4>
+                  {exerciseType.times_used > 0 && (
+                    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">
+                      {exerciseType.times_used} time{exerciseType.times_used !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-400 text-sm mt-1">{exerciseType.description}</p>
               </div>
             </div>
