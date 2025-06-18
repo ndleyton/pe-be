@@ -68,6 +68,7 @@ describe('ExerciseRow', () => {
       name: 'Bench Press',
       description: 'Chest exercise',
       default_intensity_unit: 1,
+      times_used: 5,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     },
