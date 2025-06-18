@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { createExerciseSet, CreateExerciseSetData, ExerciseSet } from '../api/exercises';
+import { useQuery } from '@tanstack/react-query';
+import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '../api/exercises';
+import IntensityUnitModal from './IntensityUnitModal';
 
 interface AddExerciseSetFormProps {
   exerciseId: number;
@@ -17,6 +19,18 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
     done: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
+
+  const { data: intensityUnits = [], isLoading: isLoadingUnits } = useQuery({
+    queryKey: ['intensityUnits'],
+    queryFn: getIntensityUnits,
+  });
+
+  const currentUnit = intensityUnits.find(unit => unit.id === formData.intensity_unit_id) || intensityUnits[0];
+
+  const handleUnitButtonClick = () => {
+    setIsUnitModalOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +48,21 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
         rest_time_seconds: undefined,
         done: false,
       });
+      setIsUnitModalOpen(false);
     } catch (error) {
       console.error('Error creating exercise set:', error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleUnitSelect = (unit: IntensityUnit) => {
+    setFormData({ ...formData, intensity_unit_id: unit.id });
+    setIsUnitModalOpen(false);
+  };
+
+  const handleCloseModal = () => {
+    setIsUnitModalOpen(false);
   };
 
   return (
@@ -58,18 +82,29 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
               placeholder="e.g., 10"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <label htmlFor="intensity" className="block text-gray-400 text-sm mb-1">Weight</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              id="intensity"
-              value={formData.intensity || ''}
-              onChange={(e) => setFormData({ ...formData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-              className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
-              placeholder="e.g., 50.5"
-            />
+            <div className="flex">
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                id="intensity"
+                value={formData.intensity || ''}
+                onChange={(e) => setFormData({ ...formData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
+                className="flex-1 p-2 bg-gray-800 border border-gray-600 rounded-l text-white"
+                placeholder="e.g., 50.5"
+              />
+              <button
+                type="button"
+                onClick={handleUnitButtonClick}
+                className="px-3 py-2 bg-gray-600 border border-l-0 border-gray-600 rounded-r text-white text-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 select-none"
+                aria-label={currentUnit ? `Current unit: ${currentUnit.name}. Click to change unit` : 'Loading units...'}
+                disabled={isLoadingUnits || !currentUnit}
+              >
+                {isLoadingUnits ? '...' : (currentUnit?.abbreviation || 'kg')}
+              </button>
+            </div>
           </div>
           <div className="flex-1">
             <label htmlFor="rest-time" className="block text-gray-400 text-sm mb-1">Rest (seconds)</label>
@@ -113,6 +148,11 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
           </button>
         </div>
       </form>
+      <IntensityUnitModal
+        isOpen={isUnitModalOpen}
+        onClose={handleCloseModal}
+        onSelect={handleUnitSelect}
+      />
     </div>
   );
 };

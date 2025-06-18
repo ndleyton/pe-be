@@ -117,6 +117,18 @@ class WorkoutTypeRead(BaseModel):
     class Config:
         from_attributes = True # For SQLAlchemy model conversion
 
+# --- Intensity Unit Schemas ---
+
+class IntensityUnitRead(BaseModel):
+    id: int
+    name: str
+    abbreviation: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True # For SQLAlchemy model conversion
+
 # --- Exercise Type Schemas ---
 
 class ExerciseTypeCreate(BaseModel):
