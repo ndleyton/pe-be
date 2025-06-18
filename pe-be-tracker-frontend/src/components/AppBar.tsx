@@ -27,7 +27,7 @@ const AppBar: React.FC = () => {
         <button
           type="button"
           onClick={handleLogoClick}
-          className="btn btn-ghost text-xl"
+          className="btn btn-ghost text-xl hover:text-blue-400 transition-colors duration-200"
           aria-label="Go to home"
         >
           <HomeLogo />

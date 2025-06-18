@@ -68,7 +68,7 @@ describe('ExerciseSetRow', () => {
     render(<ExerciseSetRow {...defaultProps} exerciseSet={incompleteSet} />);
 
     expect(screen.getByText('Reps:')).toBeInTheDocument();
-    expect(screen.getByText('-')).toBeInTheDocument();
+    expect(screen.getAllByText('-')).toHaveLength(2); // One for reps, one for weight
     expect(screen.getByText('Weight:')).toBeInTheDocument();
     expect(screen.queryByText('Rest:')).not.toBeInTheDocument();
   });
@@ -81,7 +81,7 @@ describe('ExerciseSetRow', () => {
 
     render(<ExerciseSetRow {...defaultProps} exerciseSet={completedSet} />);
 
-    const checkbox = screen.getByRole('button');
+    const checkbox = screen.getByRole('button', { name: 'Mark as incomplete' });
     expect(checkbox).toHaveClass('bg-green-600');
     expect(screen.getByText('✓')).toBeInTheDocument();
   });
@@ -93,7 +93,7 @@ describe('ExerciseSetRow', () => {
 
     render(<ExerciseSetRow {...defaultProps} />);
 
-    const checkbox = screen.getByRole('button');
+    const checkbox = screen.getByRole('button', { name: 'Mark as complete' });
     await user.click(checkbox);
 
     await waitFor(() => {
@@ -216,7 +216,8 @@ describe('ExerciseSetRow', () => {
 
     render(<ExerciseSetRow {...defaultProps} />);
 
-    const checkbox = screen.getByRole('button');
+    // Find the checkbox button using its aria-label
+    const checkbox = screen.getByRole('button', { name: 'Mark as complete' });
     await user.click(checkbox);
 
     await waitFor(() => {
