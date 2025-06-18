@@ -138,6 +138,7 @@ class ExerciseTypeRead(BaseModel):
     name: str
     description: str
     default_intensity_unit: int
+    times_used: int
     created_at: datetime
     updated_at: datetime
 
