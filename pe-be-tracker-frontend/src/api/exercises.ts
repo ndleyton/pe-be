@@ -10,6 +10,14 @@ export interface ExerciseType {
   updated_at: string;
 }
 
+export interface IntensityUnit {
+  id: number;
+  name: string;
+  abbreviation: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExerciseSet {
   id: number;
   reps: number | null;
@@ -99,5 +107,11 @@ export const getExerciseTypes = async (orderBy: 'usage' | 'name' = 'usage'): Pro
 // Create a new exercise type
 export const createExerciseType = async (exerciseTypeData: CreateExerciseTypeData): Promise<ExerciseType> => {
   const response = await api.post('/exercise-types/', exerciseTypeData);
+  return response.data;
+};
+
+// Get all intensity units
+export const getIntensityUnits = async (): Promise<IntensityUnit[]> => {
+  const response = await api.get('/intensity-units/');
   return response.data;
 };
