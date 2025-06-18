@@ -30,7 +30,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
     const term = searchTerm.toLowerCase().trim();
     return exerciseTypes.filter(type => 
       type.name.toLowerCase().includes(term) || 
-      type.description.toLowerCase().includes(term)
+      (type.description && type.description.toLowerCase().includes(term))
     );
   }, [exerciseTypes, searchTerm]);
   
