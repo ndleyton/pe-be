@@ -137,7 +137,7 @@ describe('AppBar', () => {
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
     });
 
-    it('should render breadcrumbs and desktop nav in the center section', () => {
+    it('should render breadcrumbs in the center section', () => {
       render(
         <TestWrapper>
           <AppBar />
@@ -146,8 +146,7 @@ describe('AppBar', () => {
 
       const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
       expect(centerSection).toBeInTheDocument();
-      expect(screen.getAllByTestId('breadcrumbs')).toHaveLength(2); // One in center, one in end
-      expect(screen.getByTestId('desktop-nav')).toBeInTheDocument();
+      expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument();
     });
   });
 
@@ -286,7 +285,7 @@ describe('AppBar', () => {
 
       // Check that mocked child components are rendered
       expect(screen.getByTestId('home-logo')).toHaveTextContent('PE Logo');
-      expect(screen.getAllByTestId('breadcrumbs')[0]).toHaveTextContent('Home / Dashboard');
+      expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Home / Dashboard');
     });
   });
 
