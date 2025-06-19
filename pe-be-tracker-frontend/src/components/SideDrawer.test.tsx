@@ -94,7 +94,7 @@ describe('SideDrawer', () => {
       expect(screen.getByRole('navigation')).toHaveAttribute('aria-label', 'Secondary navigation');
     });
 
-    it('should have md:hidden class for desktop hiding', () => {
+    it('should have lg:hidden class for large desktop hiding', () => {
       render(
         <TestWrapper>
           <SideDrawer />
@@ -102,7 +102,7 @@ describe('SideDrawer', () => {
       );
       
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('md:hidden');
+      expect(dialog).toHaveClass('lg:hidden');
     });
   });
 
@@ -342,8 +342,8 @@ describe('SideDrawer', () => {
       
       const drawer = screen.getByRole('dialog');
       
-      // Should be hidden on desktop (md:hidden)
-      expect(drawer).toHaveClass('md:hidden');
+      // Should be hidden on large desktop (lg:hidden)
+      expect(drawer).toHaveClass('lg:hidden');
       
       // Should be positioned for mobile
       expect(drawer).toHaveClass('fixed', 'inset-0', 'z-50');
