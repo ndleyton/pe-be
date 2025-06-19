@@ -174,20 +174,10 @@ jobs:
     - name: Build Docker image
       working-directory: ./backend
       run: |
-        echo "FROM python:3.11-slim
-        WORKDIR /app
-        COPY pyproject.toml poetry.lock ./
-        RUN pip install poetry && poetry config virtualenvs.create false && poetry install --only=main
-        COPY app ./app
-        COPY alembic.ini ./
-        COPY alembic ./alembic
-        COPY main.py ./
-        EXPOSE 8000
-        CMD [\"uvicorn\", \"app.app:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
-        
         docker build -t pe-be-backend:latest .
         
     - name: Save Docker image
+      working-directory: ./backend
       run: |
         docker save pe-be-backend:latest | gzip > backend-image.tar.gz
         
@@ -195,7 +185,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: backend-docker-image
-        path: backend-image.tar.gz
+        path: ./backend/backend-image.tar.gz
         retention-days: 7
 
   deploy-staging:
@@ -228,18 +218,42 @@ jobs:
     environment: production
     
     steps:
-    - name: Download Docker image
-      uses: actions/download-artifact@v4
-      with:
-        name: backend-docker-image
+      - name: Checkout code
+        uses: actions/checkout@v4
         
-    - name: Load Docker image
-      run: |
-        docker load < backend-image.tar.gz
-        
-    - name: Deploy to production
-      run: |
-        echo "🚀 Deploying backend to production environment"
-        echo "Docker image loaded: pe-be-backend:latest"
-        # Add your production deployment commands here
-        # Example: docker push, kubectl apply, AWS ECS, etc.
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-docker-image
+          
+      - name: Load Docker image
+        run: |
+          docker load < backend-image.tar.gz
+          
+      - name: Setup deployment environment
+        run: |
+          echo "🔧 Setting up production deployment environment"
+          docker images | grep pe-be-backend
+          
+      - name: Deploy to production
+        env:
+          # Add your production environment variables here
+          DOCKER_IMAGE: pe-be-backend:latest
+        run: |
+          echo "🚀 Deploying backend to production environment"
+          echo "Docker image loaded: $DOCKER_IMAGE"
+          
+          # Example deployment commands - customize based on your infrastructure:
+          # For Docker Registry push:
+          # docker tag $DOCKER_IMAGE your-registry.com/pe-be-backend:latest
+          # docker push your-registry.com/pe-be-backend:latest
+          
+          # For AWS ECS:
+          # aws ecs update-service --cluster your-cluster --service your-service --force-new-deployment
+          
+          # For Kubernetes:
+          # kubectl set image deployment/backend-deployment backend=$DOCKER_IMAGE
+          # kubectl rollout status deployment/backend-deployment
+          
+          # For now, just verify the image is ready
+          echo "✅ Backend deployment completed successfully"

@@ -98,19 +98,8 @@ jobs:
         poetry build
         
     - name: Build Docker image
-      run: |
-        echo "FROM python:3.11-slim
-        WORKDIR /app
-        COPY backend/pyproject.toml backend/poetry.lock ./
-        RUN pip install poetry && poetry config virtualenvs.create false && poetry install --only=main
-        COPY backend/app ./app
-        COPY backend/alembic.ini ./
-        COPY backend/alembic ./alembic
-        COPY backend/main.py ./
-        EXPOSE 8000
-        CMD [\"uvicorn\", \"app.app:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]" > Dockerfile
-        
-        docker build -t pe-be-backend:${{ needs.create-release.outputs.version }} .
+      run: |        
+        docker build -t pe-be-backend:${{ needs.create-release.outputs.version }} ./backend
         docker save pe-be-backend:${{ needs.create-release.outputs.version }} | gzip > backend-${{ needs.create-release.outputs.version }}.tar.gz
         
     # Upload Release Assets

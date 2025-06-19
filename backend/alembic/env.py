@@ -13,9 +13,15 @@ from alembic import context
 # Assuming alembic directory is at the same level as the 'app' directory
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- Import Base from your models ---
+# --- Import Base and all models from domain slices ---
 # This is crucial for autogenerate
-from app.models import Base
+from src.core.database import Base
+
+# Import all models to ensure they're registered with SQLAlchemy
+from src.users.models import User, OAuthAccount
+from src.workouts.models import Workout, WorkoutType
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup, ExerciseMuscle
+from src.exercise_sets.models import ExerciseSet
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv
