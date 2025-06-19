@@ -3,13 +3,14 @@ import { Outlet } from 'react-router-dom';
 import { DrawerProvider } from '../contexts/DrawerContext';
 import AppBar from '../components/AppBar';
 import SideDrawer from '../components/SideDrawer';
+import DesktopSidebar from '../components/DesktopSidebar';
 import BottomNav from '../components/BottomNav';
 import GuestModeBanner from '../components/GuestModeBanner';
 
 const AppLayout: React.FC = () => {
   return (
     <DrawerProvider>
-      <div className="min-h-screen bg-base-200 flex flex-col">
+      <div className="min-h-screen bg-base-200 flex">
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
@@ -18,26 +19,32 @@ const AppLayout: React.FC = () => {
           Skip to content
         </a>
         
-        {/* Top App Bar */}
-        <AppBar />
+        {/* Desktop Sidebar */}
+        <DesktopSidebar />
         
-        {/* Guest Mode Banner */}
-        <GuestModeBanner />
-        
-        {/* Side Drawer */}
-        <SideDrawer />
-        
-        {/* Main Content */}
-        <main 
-          id="main-content" 
-          className="flex-1 pb-16 md:pb-0"
-          role="main"
-        >
-          <Outlet />
-        </main>
-        
-        {/* Bottom Navigation (mobile only) */}
-        <BottomNav />
+        {/* Main Content Area */}
+        <div className="flex flex-col flex-1 lg:ml-64">
+          {/* Top App Bar */}
+          <AppBar />
+          
+          {/* Guest Mode Banner */}
+          <GuestModeBanner />
+          
+          {/* Side Drawer (mobile/tablet) */}
+          <SideDrawer />
+          
+          {/* Main Content */}
+          <main 
+            id="main-content" 
+            className="flex-1 pb-16 md:pb-0"
+            role="main"
+          >
+            <Outlet />
+          </main>
+          
+          {/* Bottom Navigation (mobile only) */}
+          <BottomNav />
+        </div>
       </div>
     </DrawerProvider>
   );
