@@ -12,12 +12,6 @@ const SideDrawer: React.FC = () => {
   const drawerRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLAnchorElement>(null);
 
-  const handleOutsideClick = (e: React.MouseEvent) => {
-    // Close drawer if clicking outside of it
-    if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-      closeDrawer();
-    }
-  };
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
