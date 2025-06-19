@@ -52,7 +52,7 @@ const SideDrawer: React.FC = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 md:hidden"
+      className="fixed inset-0 z-50 lg:hidden"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
