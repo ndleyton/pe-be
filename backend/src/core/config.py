@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -10,14 +10,35 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
     FRONTEND_URL: str = "http://localhost:5173"
     FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
-    DATABASE_URL: str = "postgresql+asyncpg://user:pass@host:port/db"
+    DATABASE_URL: str = Field(
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
+        env="DATABASE_URL",
+        description="PostgreSQL database connection URL"
+    )
     
     API_PREFIX: str = Field("/api/v1", env="API_PREFIX")
+    
+    # Cookie security settings
+    COOKIE_SECURE: bool = Field(False, env="COOKIE_SECURE", description="Enable secure cookies for HTTPS")
     
     # Environment indicator
     ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore', env_prefix="", case_sensitive=True)
+    
+    @field_validator('DATABASE_URL')
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate that DATABASE_URL is properly formatted"""
+        if not v.startswith(('postgresql://', 'postgresql+asyncpg://')):
+            raise ValueError('DATABASE_URL must start with postgresql:// or postgresql+asyncpg://')
+        
+        # Check for placeholder values
+        placeholder_indicators = ['user:pass@host:port', 'localhost:5432/pe_be']
+        if any(placeholder in v for placeholder in ['user:pass@host:port']):
+            raise ValueError('DATABASE_URL contains placeholder values. Please set a valid DATABASE_URL environment variable.')
+        
+        return v
 
 # Global settings instance
 settings = Settings() 

@@ -3,6 +3,7 @@ from fastapi_users import FastAPIUsers
 
 from src.users.models import User, OAuthAccount
 from src.users.schemas import UserRead, UserCreate, UserUpdate
+from src.core.config import settings
 from src.core.security import (
     auth_backend,
     get_user_manager,
@@ -51,7 +52,7 @@ router.include_router(
 )
 
 router.include_router(
-    fastapi_users.get_oauth_router(google_oauth_client, auth_backend, "SECRET_KEY"),
+    fastapi_users.get_oauth_router(google_oauth_client, auth_backend, settings.SECRET),
     prefix="/auth/google",
     tags=["auth"],
 )
