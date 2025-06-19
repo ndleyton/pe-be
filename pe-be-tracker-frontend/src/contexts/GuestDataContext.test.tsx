@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { GuestDataProvider, useGuestData } from './GuestDataContext';
+import { AuthProvider } from './AuthContext';
 
 // Mock localStorage
 const localStorageMock = {
@@ -56,9 +57,11 @@ describe('GuestDataContext', () => {
 
   it('provides initial data with default exercise and workout types', () => {
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByTestId('workout-count')).toHaveTextContent('0');
@@ -67,9 +70,11 @@ describe('GuestDataContext', () => {
 
   it('adds a workout and persists to localStorage', () => {
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     act(() => {
@@ -108,9 +113,11 @@ describe('GuestDataContext', () => {
     localStorageMock.getItem.mockReturnValue(JSON.stringify(mockData));
 
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByTestId('workout-count')).toHaveTextContent('1');
@@ -118,9 +125,11 @@ describe('GuestDataContext', () => {
 
   it('clears data and removes from localStorage', () => {
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     // Add a workout first
@@ -146,9 +155,11 @@ describe('GuestDataContext', () => {
     });
 
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
@@ -159,9 +170,11 @@ describe('GuestDataContext', () => {
 
     // Should not throw and should use default data
     render(
-      <GuestDataProvider>
-        <TestComponent />
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <TestComponent />
+        </GuestDataProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByTestId('workout-count')).toHaveTextContent('0');

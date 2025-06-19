@@ -1,26 +1,34 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import AppLayout from './AppLayout';
+import { AuthProvider } from '../contexts/AuthContext';
+import { GuestDataProvider } from '../contexts/GuestDataContext';
 
 const MockComponent = () => <div>Mock Content</div>;
 
-const AppLayoutWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>
-    <AppLayout />
-    {children}
-  </BrowserRouter>
-);
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <GuestDataProvider>
+          {ui}
+        </GuestDataProvider>
+      </AuthProvider>
+    </MemoryRouter>
+  );
+};
 
 describe('AppLayout', () => {
   it('should have skip to content link as first focusable element', async () => {
     const user = userEvent.setup();
     
-    render(
-      <AppLayoutWrapper>
+    renderWithProviders(
+      <>
+        <AppLayout />
         <MockComponent />
-      </AppLayoutWrapper>
+      </>
     );
 
     // Tab to the first focusable element
@@ -34,10 +42,11 @@ describe('AppLayout', () => {
   it('should open and close drawer with keyboard', async () => {
     const user = userEvent.setup();
     
-    render(
-      <AppLayoutWrapper>
+    renderWithProviders(
+      <>
+        <AppLayout />
         <MockComponent />
-      </AppLayoutWrapper>
+      </>
     );
 
     // Find and click the hamburger menu button
@@ -56,10 +65,11 @@ describe('AppLayout', () => {
   });
 
   it('should have proper ARIA labels on navigation elements', () => {
-    render(
-      <AppLayoutWrapper>
+    renderWithProviders(
+      <>
+        <AppLayout />
         <MockComponent />
-      </AppLayoutWrapper>
+      </>
     );
 
     // Check AppBar has proper role and aria-label
