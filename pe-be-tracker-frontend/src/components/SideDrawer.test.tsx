@@ -27,14 +27,15 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
-// Mock the DrawerContext
+// Mock the DrawerContext - default to open for most tests
 const mockCloseDrawer = vi.fn();
 const mockOpenDrawer = vi.fn();
 const mockToggleDrawer = vi.fn();
+let mockIsOpen = true;
 
 vi.mock('../contexts/DrawerContext', () => ({
   useDrawer: () => ({
-    isOpen: true,
+    isOpen: mockIsOpen,
     openDrawer: mockOpenDrawer,
     closeDrawer: mockCloseDrawer,
     toggleDrawer: mockToggleDrawer,
@@ -60,6 +61,7 @@ describe('SideDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocation.href = '';
+    mockIsOpen = true; // Default to open for most tests
     // Mock API to not be authenticated by default
     mockApi.get.mockRejectedValue(new Error('Unauthorized'));
   });
@@ -69,15 +71,50 @@ describe('SideDrawer', () => {
   });
 
   describe('Rendering and Basic Structure', () => {
-    it('should render when drawer is open', () => {
+    it('should always render drawer elements', () => {
       render(
         <TestWrapper>
           <SideDrawer />
         </TestWrapper>
       );
       
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      // Drawer content should always be in DOM
       expect(screen.getByText('Navigation')).toBeInTheDocument();
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+    });
+
+    it('should show drawer when open', () => {
+      mockIsOpen = true;
+      
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      const drawer = screen.getByRole('dialog');
+      expect(drawer).toBeInTheDocument();
+      
+      // Check drawer is translated in (visible)
+      expect(drawer).toHaveClass('translate-x-0');
+      expect(drawer).not.toHaveClass('-translate-x-full');
+    });
+
+    it('should hide drawer when closed', () => {
+      mockIsOpen = false;
+      
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      const drawer = screen.getByRole('dialog');
+      expect(drawer).toBeInTheDocument();
+      
+      // Check drawer is translated out (hidden)
+      expect(drawer).toHaveClass('-translate-x-full');
+      expect(drawer).not.toHaveClass('translate-x-0');
     });
 
     it('should have proper ARIA attributes for accessibility', () => {
@@ -101,9 +138,22 @@ describe('SideDrawer', () => {
         </TestWrapper>
       );
       
-      const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('lg:hidden');
+      const drawer = screen.getByRole('dialog');
+      expect(drawer).toHaveClass('lg:hidden');
     });
+
+    it('should have smooth animation classes', () => {
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      const drawer = screen.getByRole('dialog');
+      expect(drawer).toHaveClass('transition-transform', 'duration-300', 'ease-in-out');
+    });
+
+
   });
 
   describe('Navigation Links', () => {
@@ -139,7 +189,7 @@ describe('SideDrawer', () => {
       );
       
       const workoutsLink = screen.getByRole('link', { name: /workouts/i });
-      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-content');
+      expect(workoutsLink).toHaveClass('bg-blue-600', 'text-white');
     });
 
     it('should close drawer when navigation link is clicked', async () => {
@@ -154,6 +204,38 @@ describe('SideDrawer', () => {
       await user.click(screen.getByRole('link', { name: /home/i }));
       
       expect(mockCloseDrawer).toHaveBeenCalled();
+    });
+  });
+
+  describe('Click Outside Interaction', () => {
+    it('should close drawer when clicking outside drawer area', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      // Click outside the drawer (on document body)
+      await user.click(document.body);
+      
+      expect(mockCloseDrawer).toHaveBeenCalled();
+    });
+
+    it('should not close drawer when clicking on drawer content', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      const drawerContent = screen.getByText('Navigation');
+      await user.click(drawerContent);
+      
+      expect(mockCloseDrawer).not.toHaveBeenCalled();
     });
   });
 
@@ -283,7 +365,7 @@ describe('SideDrawer', () => {
         </TestWrapper>
       );
       
-      fireEvent.keyDown(document, { key: 'Escape' });
+      fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
       
       expect(mockCloseDrawer).toHaveBeenCalled();
     });
@@ -298,77 +380,70 @@ describe('SideDrawer', () => {
       const firstLink = screen.getByRole('link', { name: /home/i });
       expect(firstLink).toHaveFocus();
     });
-  });
 
-  describe('Overlay Interaction', () => {
-    it('should close drawer when clicking on overlay', async () => {
-      const user = userEvent.setup();
-      
+    it('should not close drawer when other keys are pressed', () => {
       render(
         <TestWrapper>
           <SideDrawer />
         </TestWrapper>
       );
       
-      const overlay = screen.getByRole('dialog');
-      await user.click(overlay);
-      
-      expect(mockCloseDrawer).toHaveBeenCalled();
-    });
-
-    it('should not close drawer when clicking on drawer content', async () => {
-      const user = userEvent.setup();
-      
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>
-      );
-      
-      const drawerContent = screen.getByText('Navigation');
-      await user.click(drawerContent);
+      fireEvent.keyDown(document, { key: 'Enter', code: 'Enter' });
+      fireEvent.keyDown(document, { key: 'Space', code: 'Space' });
       
       expect(mockCloseDrawer).not.toHaveBeenCalled();
     });
   });
 
-  describe('Responsive Design', () => {
-    it('should have mobile-first design classes', () => {
+  describe('Body Scroll Management', () => {
+    it('should prevent body scroll when drawer is open', () => {
+      mockIsOpen = true;
+      
       render(
         <TestWrapper>
           <SideDrawer />
         </TestWrapper>
       );
       
-      const drawer = screen.getByRole('dialog');
-      
-      // Should be hidden on large desktop (lg:hidden)
-      expect(drawer).toHaveClass('lg:hidden');
-      
-      // Should be positioned for mobile
-      expect(drawer).toHaveClass('fixed', 'inset-0', 'z-50');
+      expect(document.body.style.overflow).toBe('hidden');
     });
 
-    it('should have proper drawer positioning and styling', () => {
+    it('should restore body scroll when drawer is closed', () => {
+      mockIsOpen = false;
+      
       render(
         <TestWrapper>
           <SideDrawer />
         </TestWrapper>
       );
       
-      // Find the drawer container (not the content inside)
-      const drawer = screen.getByRole('dialog');
-      const drawerContainer = drawer.children[1]; // Skip the overlay, get the actual drawer
-      
-      expect(drawerContainer).toHaveClass(
-        'absolute',
-        'left-0',
-        'top-0',
-        'h-full',
-        'w-64',
-        'bg-base-100',
-        'shadow-xl'
+      expect(document.body.style.overflow).toBe('unset');
+    });
+  });
+
+  describe('Responsive Design', () => {
+    it('should be hidden on large desktop screens', () => {
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
       );
+      
+      const drawer = screen.getByRole('dialog');
+      
+      expect(drawer).toHaveClass('lg:hidden');
+    });
+
+    it('should have proper z-index stacking', () => {
+      render(
+        <TestWrapper>
+          <SideDrawer />
+        </TestWrapper>
+      );
+      
+      const drawer = screen.getByRole('dialog');
+      
+      expect(drawer).toHaveClass('z-50');
     });
   });
 });

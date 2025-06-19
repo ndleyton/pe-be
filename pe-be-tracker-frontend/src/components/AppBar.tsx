@@ -5,7 +5,6 @@ import { useDrawer } from '../contexts/DrawerContext';
 import { useAuth } from '../contexts/AuthContext';
 import HomeLogo from './HomeLogo';
 import Breadcrumbs from './Breadcrumbs';
-import DesktopNav from './DesktopNav';
 import api from '../api/client';
 
 const AppBar: React.FC = () => {
@@ -43,7 +42,7 @@ const AppBar: React.FC = () => {
         <button
           type="button"
           onClick={handleLogoClick}
-          className="btn btn-ghost text-xl hover:text-blue-400 transition-colors duration-200"
+          className="btn btn-ghost text-xl hover:text-blue-400 transition-colors duration-200 lg:hidden"
           aria-label="Go to home"
         >
           <HomeLogo />
@@ -51,18 +50,15 @@ const AppBar: React.FC = () => {
       </div>
       
       <div className="navbar-center">
-        {/* Mobile/Tablet: Show breadcrumbs */}
-        <div className="hidden md:flex lg:hidden">
+        {/* Show breadcrumbs on tablet and desktop */}
+        <div className="hidden md:flex">
           <Breadcrumbs />
         </div>
-        
-        {/* Desktop: Show main navigation */}
-        <DesktopNav />
       </div>
       
       <div className="navbar-end">
-        {/* Desktop: User account actions */}
-        <div className="hidden lg:flex items-center space-x-2">
+        {/* Desktop: User account actions (only for mobile/tablet since desktop has sidebar) */}
+        <div className="flex lg:hidden items-center space-x-2">
           {isAuthenticated() ? (
             <div className="dropdown dropdown-end">
               <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
@@ -94,11 +90,6 @@ const AppBar: React.FC = () => {
               Sign In
             </button>
           )}
-        </div>
-        
-        {/* Tablet: Show breadcrumbs */}
-        <div className="hidden md:flex lg:hidden">
-          <Breadcrumbs />
         </div>
       </div>
     </div>

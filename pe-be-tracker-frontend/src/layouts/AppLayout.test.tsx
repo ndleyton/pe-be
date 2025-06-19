@@ -53,15 +53,18 @@ describe('AppLayout', () => {
     const hamburgerButton = screen.getByRole('button', { name: /open navigation menu/i });
     await user.click(hamburgerButton);
 
-    // Drawer should be visible
+    // Drawer should be visible (translated in)
     const drawer = screen.getByRole('dialog');
     expect(drawer).toBeInTheDocument();
+    expect(drawer).toHaveClass('translate-x-0');
+    expect(drawer).not.toHaveClass('-translate-x-full');
 
     // Press Escape to close
     await user.keyboard('{Escape}');
 
-    // Drawer should be gone
-    expect(drawer).not.toBeInTheDocument();
+    // Drawer should be hidden (translated out)
+    expect(drawer).toHaveClass('-translate-x-full');
+    expect(drawer).not.toHaveClass('translate-x-0');
   });
 
   it('should have proper ARIA labels on navigation elements', () => {
