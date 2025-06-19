@@ -15,7 +15,8 @@ vi.mock('../api/client', () => ({
   },
 }));
 
-const mockApi = vi.mocked(api);
+// Use deep mock so nested functions like `get` & `post` have jest-style helpers (mockRejectedValue, etc.)
+const mockApi = vi.mocked(api, { deep: true });
 
 // Mock window.location.href
 const mockLocation = {
