@@ -147,7 +147,6 @@ describe('IntensityUnitModal', () => {
       });
     });
 
-
     it('should not make API call in guest mode', () => {
       render(
         <TestWrapper>
@@ -333,7 +332,6 @@ describe('IntensityUnitModal', () => {
       expect(screen.getByRole('button', { name: /select kilograms \(kg\)/i })).toHaveAttribute('aria-label', 'Select Kilograms (kg)');
       expect(screen.getByRole('button', { name: /select pounds \(lbs\)/i })).toHaveAttribute('aria-label', 'Select Pounds (lbs)');
     });
-
 
     it('should be keyboard navigable', () => {
       render(
