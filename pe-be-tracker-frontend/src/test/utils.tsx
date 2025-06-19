@@ -3,6 +3,18 @@ import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { GuestDataProvider } from '../contexts/GuestDataContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import { vi } from 'vitest';
+
+// Mock API client for all tests
+vi.mock('../api/client', () => ({
+  default: {
+    get: vi.fn().mockRejectedValue(new Error('Unauthorized')),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -24,11 +36,13 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <GuestDataProvider>
-        <MemoryRouter>
-          {children}
-        </MemoryRouter>
-      </GuestDataProvider>
+      <AuthProvider>
+        <GuestDataProvider>
+          <MemoryRouter>
+            {children}
+          </MemoryRouter>
+        </GuestDataProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

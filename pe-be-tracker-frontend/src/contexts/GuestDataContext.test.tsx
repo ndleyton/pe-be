@@ -2,6 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { GuestDataProvider, useGuestData } from './GuestDataContext';
 import { AuthProvider } from './AuthContext';
+import api from '../api/client';
+
+// Mock API client
+vi.mock('../api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+}));
+
+const mockApi = vi.mocked(api);
 
 // Mock localStorage
 const localStorageMock = {
@@ -53,6 +64,8 @@ describe('GuestDataContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
+    // Mock API to return no user by default (cast to any for proper typing)
+    (mockApi.get as any).mockRejectedValue(new Error('Unauthorized'));
   });
 
   it('provides initial data with default exercise and workout types', () => {
@@ -148,10 +161,10 @@ describe('GuestDataContext', () => {
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('pe-guest-data');
   });
 
-  it('returns true for isAuthenticated when authToken exists in localStorage', () => {
-    localStorageMock.getItem.mockImplementation((key) => {
-      if (key === 'authToken') return 'mock-token';
-      return null;
+  it('returns true for isAuthenticated when user is logged in', async () => {
+    // Mock API to return a user
+    (mockApi.get as any).mockResolvedValue({
+      data: { id: 1, email: 'test@example.com', name: 'Test User' }
     });
 
     render(
@@ -162,6 +175,8 @@ describe('GuestDataContext', () => {
       </AuthProvider>
     );
 
+    // Wait for the API call to complete
+    await screen.findByTestId('is-authenticated');
     expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
   });
 
