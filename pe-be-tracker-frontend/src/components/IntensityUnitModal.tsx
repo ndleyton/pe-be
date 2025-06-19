@@ -49,17 +49,8 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
     >
       <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full max-h-96 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4">
           <h3 className="text-lg font-semibold text-white">Select Unit:</h3>
-          <button
-            onClick={onClose}
-            aria-label="Close modal"
-            className="text-gray-400 hover:text-white"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* Content */}
@@ -77,28 +68,18 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
           )}
 
           {((!isAuthenticated()) || (!isLoading && !error)) && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                {intensityUnits.map((unit) => (
-                  <button
-                    key={unit.id}
-                    onClick={() => onSelect(unit)}
-                    className="w-full text-left px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
-                    aria-label={`Select ${unit.name} (${unit.abbreviation})`}
-                  >
-                    {unit.abbreviation} - {unit.name}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-4 w-full px-4 py-2 text-sm text-gray-400 hover:text-white"
-                aria-label="Cancel unit selection"
-              >
-                Cancel
-              </button>
-            </>
+            <div className="grid grid-cols-2 gap-2">
+              {intensityUnits.map((unit) => (
+                <button
+                  key={unit.id}
+                  onClick={() => onSelect(unit)}
+                  className="w-full text-left px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                  aria-label={`Select ${unit.name} (${unit.abbreviation})`}
+                >
+                  {unit.abbreviation} - {unit.name}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
