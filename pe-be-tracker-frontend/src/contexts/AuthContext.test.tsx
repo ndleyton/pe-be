@@ -11,7 +11,8 @@ vi.mock('../api/client', () => ({
   },
 }));
 
-const mockApi = vi.mocked(api);
+// Use deep mock so that `get` & `post` have Vitest MockInstance helpers
+const mockApi = vi.mocked(api, { deep: true });
 
 // Mock window.location.href
 const mockLocation = {
