@@ -21,7 +21,7 @@ async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]
 
 async def create_user(session: AsyncSession, user_create: UserCreate) -> User:
     """Create a new user"""
-    user = User(**user_create.dict())
+    user = User(**user_create.model_dump())
     session.add(user)
     await session.commit()
     await session.refresh(user)
@@ -34,7 +34,7 @@ async def update_user(session: AsyncSession, user_id: int, user_update: UserUpda
     if not user:
         return None
     
-    for field, value in user_update.dict(exclude_unset=True).items():
+    for field, value in user_update.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
     
     await session.commit()
