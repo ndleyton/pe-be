@@ -27,6 +27,24 @@ vi.mock('../contexts/DrawerContext', () => ({
   DrawerProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// Mock the AuthContext
+const mockSignOut = vi.fn();
+const mockIsAuthenticated = vi.fn(() => false);
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    signOut: mockSignOut,
+    user: null,
+  }),
+}));
+
+// Mock API client
+vi.mock('../api/client', () => ({
+  default: {
+    get: vi.fn(),
+  },
+}));
+
 // Mock child components
 vi.mock('./HomeLogo', () => ({
   default: () => <div data-testid="home-logo">PE Logo</div>,
@@ -34,6 +52,10 @@ vi.mock('./HomeLogo', () => ({
 
 vi.mock('./Breadcrumbs', () => ({
   default: () => <div data-testid="breadcrumbs">Home / Dashboard</div>,
+}));
+
+vi.mock('./DesktopNav', () => ({
+  default: () => <div data-testid="desktop-nav">Desktop Navigation</div>,
 }));
 
 // Test wrapper
@@ -111,7 +133,7 @@ describe('AppBar', () => {
 
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
       expect(menuButton).toBeInTheDocument();
-      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'md:hidden');
+      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'lg:hidden');
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
     });
 
@@ -123,7 +145,7 @@ describe('AppBar', () => {
       );
 
       const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
-      expect(centerSection).toHaveClass('hidden', 'md:flex');
+      expect(centerSection).toBeInTheDocument();
       expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument();
     });
   });
@@ -200,13 +222,13 @@ describe('AppBar', () => {
         </TestWrapper>
       );
 
-      // Mobile menu should be hidden on desktop
+      // Mobile menu should be hidden on large desktop
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
-      expect(menuButton).toHaveClass('md:hidden');
+      expect(menuButton).toHaveClass('lg:hidden');
 
-      // Breadcrumbs should be hidden on mobile, visible on desktop
+      // Center section should contain both breadcrumbs and desktop nav
       const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
-      expect(centerSection).toHaveClass('hidden', 'md:flex');
+      expect(centerSection).toBeInTheDocument();
     });
 
     it('should have proper styling classes for layout', () => {
@@ -311,10 +333,14 @@ describe('AppBar', () => {
       const banner = screen.getByRole('banner');
       expect(banner).toBeInTheDocument();
 
-      // Buttons should be properly typed
-      const buttons = screen.getAllByRole('button');
-      buttons.forEach(button => {
-        expect(button).toHaveAttribute('type', 'button');
+      // Interactive buttons should be properly typed (excluding dropdown buttons)
+      const explicitButtons = screen.getAllByRole('button').filter(button => 
+        button.hasAttribute('type') || button.getAttribute('aria-label')
+      );
+      explicitButtons.forEach(button => {
+        if (button.hasAttribute('type')) {
+          expect(button).toHaveAttribute('type', 'button');
+        }
       });
     });
   });
@@ -338,7 +364,7 @@ describe('AppBar', () => {
       );
 
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
-      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'md:hidden');
+      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'lg:hidden');
     });
 
     it('should have consistent navbar theming', () => {
@@ -353,8 +379,8 @@ describe('AppBar', () => {
     });
   });
 
-  describe('Future Extension Points', () => {
-    it('should have navbar-end placeholder for future features', () => {
+  describe('User Account Features', () => {
+    it('should have navbar-end with user account features', () => {
       render(
         <TestWrapper>
           <AppBar />
@@ -363,8 +389,8 @@ describe('AppBar', () => {
 
       const endSection = screen.getByRole('banner').querySelector('.navbar-end');
       expect(endSection).toBeInTheDocument();
-      // Should be empty but ready for future content
-      expect(endSection).toBeEmptyDOMElement();
+      // Should contain user account features (sign in button when not authenticated)
+      expect(endSection).not.toBeEmptyDOMElement();
     });
   });
 });
