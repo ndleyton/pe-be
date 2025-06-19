@@ -4,6 +4,7 @@ import { DrawerProvider } from '../contexts/DrawerContext';
 import AppBar from '../components/AppBar';
 import SideDrawer from '../components/SideDrawer';
 import BottomNav from '../components/BottomNav';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 const AppLayout: React.FC = () => {
   return (
@@ -19,6 +20,9 @@ const AppLayout: React.FC = () => {
         
         {/* Top App Bar */}
         <AppBar />
+        
+        {/* Guest Mode Banner */}
+        <GuestModeBanner />
         
         {/* Side Drawer */}
         <SideDrawer />

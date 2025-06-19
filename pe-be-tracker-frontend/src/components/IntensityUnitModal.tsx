@@ -1,18 +1,37 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getIntensityUnits, IntensityUnit } from '../api/exercises';
+import { useGuestData } from '../contexts/GuestDataContext';
+
+// Guest intensity unit type (simplified)
+interface GuestIntensityUnit {
+  id: number;
+  name: string;
+  abbreviation: string;
+}
 
 interface IntensityUnitModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (unit: IntensityUnit) => void;
+  onSelect: (unit: IntensityUnit | GuestIntensityUnit) => void;
 }
 
 const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose, onSelect }) => {
-  const { data: intensityUnits = [], isLoading, error } = useQuery({
+  const { isAuthenticated } = useGuestData();
+  const { data: serverIntensityUnits = [], isLoading, error } = useQuery({
     queryKey: ['intensityUnits'],
     queryFn: getIntensityUnits,
+    enabled: isAuthenticated(), // Only fetch when authenticated
   });
+
+  // For guest mode, use hardcoded intensity units
+  const guestIntensityUnits: GuestIntensityUnit[] = [
+    { id: 1, name: 'Bodyweight', abbreviation: 'bw' },
+    { id: 2, name: 'Kilograms', abbreviation: 'kg' },
+    { id: 3, name: 'Pounds', abbreviation: 'lbs' },
+  ];
+
+  const intensityUnits = isAuthenticated() ? serverIntensityUnits : guestIntensityUnits;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -45,7 +64,7 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {isLoading && (
+          {isAuthenticated() && isLoading && (
             <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, idx) => (
                 <div key={idx} className="h-10 bg-gray-800 rounded-lg animate-pulse" />
@@ -53,11 +72,11 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
             </div>
           )}
 
-          {error && (
+          {isAuthenticated() && error && (
             <p className="text-center text-red-400">Failed to load intensity units.</p>
           )}
 
-          {!isLoading && !error && (
+          {((!isAuthenticated()) || (!isLoading && !error)) && (
             <>
               <div className="grid grid-cols-2 gap-2">
                 {intensityUnits.map((unit) => (

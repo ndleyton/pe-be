@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '../api/exercises';
 import IntensityUnitModal from './IntensityUnitModal';
+import { useGuestData, GuestExerciseSet } from '../contexts/GuestDataContext';
 
 interface AddExerciseSetFormProps {
-  exerciseId: number;
-  onSetAdded: (newSet: ExerciseSet) => void;
+  exerciseId: number | string; // Can be number (server) or string (guest)
+  onSetAdded: (newSet: ExerciseSet | GuestExerciseSet) => void;
   onCancel: () => void;
 }
 
 const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onSetAdded, onCancel }) => {
+  const { isAuthenticated, actions: guestActions } = useGuestData();
   const [formData, setFormData] = useState<CreateExerciseSetData>({
     exercise_id: exerciseId,
     intensity_unit_id: 1, // Default to first intensity unit (kg)
@@ -24,9 +26,19 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
   const { data: intensityUnits = [], isLoading: isLoadingUnits } = useQuery({
     queryKey: ['intensityUnits'],
     queryFn: getIntensityUnits,
+    enabled: isAuthenticated(), // Only fetch when authenticated
   });
 
-  const currentUnit = intensityUnits.find(unit => unit.id === formData.intensity_unit_id) || intensityUnits[0];
+  // For guest mode, use hardcoded intensity units
+  const guestIntensityUnits = [
+    { id: 1, name: 'Bodyweight', abbreviation: 'bw' },
+    { id: 2, name: 'Kilograms', abbreviation: 'kg' },
+    { id: 3, name: 'Pounds', abbreviation: 'lbs' },
+  ];
+
+  const currentIntensityUnits = isAuthenticated() ? intensityUnits : guestIntensityUnits;
+
+  const currentUnit = currentIntensityUnits.find(unit => unit.id === formData.intensity_unit_id) || currentIntensityUnits[0];
 
   const handleUnitButtonClick = () => {
     setIsUnitModalOpen(true);
@@ -37,8 +49,37 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
     setIsSubmitting(true);
 
     try {
-      const newSet = await createExerciseSet(formData);
-      onSetAdded(newSet);
+      if (isAuthenticated()) {
+        // Use API for authenticated users
+        const newSet = await createExerciseSet(formData);
+        onSetAdded(newSet);
+      } else {
+        // Use guest context for unauthenticated users
+        const newSetId = guestActions.addExerciseSet({
+          reps: formData.reps ?? null,
+          intensity: formData.intensity ?? null,
+          intensity_unit_id: formData.intensity_unit_id,
+          exercise_id: exerciseId as string,
+          rest_time_seconds: formData.rest_time_seconds ?? null,
+          done: formData.done ?? false,
+        });
+
+        // Create a mock guest exercise set for the callback
+        const newGuestSet: GuestExerciseSet = {
+          id: newSetId,
+          reps: formData.reps ?? null,
+          intensity: formData.intensity ?? null,
+          intensity_unit_id: formData.intensity_unit_id,
+          exercise_id: exerciseId as string,
+          rest_time_seconds: formData.rest_time_seconds ?? null,
+          done: formData.done ?? false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        onSetAdded(newGuestSet);
+      }
+
       // Reset form
       setFormData({
         exercise_id: exerciseId,
@@ -56,7 +97,7 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
     }
   };
 
-  const handleUnitSelect = (unit: IntensityUnit) => {
+  const handleUnitSelect = (unit: IntensityUnit | any) => {
     setFormData({ ...formData, intensity_unit_id: unit.id });
     setIsUnitModalOpen(false);
   };
@@ -100,9 +141,9 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
                 onClick={handleUnitButtonClick}
                 className="px-3 py-2 bg-gray-600 border border-l-0 border-gray-600 rounded-r text-white text-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 select-none"
                 aria-label={currentUnit ? `Current unit: ${currentUnit.name}. Click to change unit` : 'Loading units...'}
-                disabled={isLoadingUnits || !currentUnit}
+                disabled={(isAuthenticated() && isLoadingUnits) || !currentUnit}
               >
-                {isLoadingUnits ? '...' : (currentUnit?.abbreviation || 'kg')}
+                {(isAuthenticated() && isLoadingUnits) ? '...' : (currentUnit?.abbreviation || 'kg')}
               </button>
             </div>
           </div>
