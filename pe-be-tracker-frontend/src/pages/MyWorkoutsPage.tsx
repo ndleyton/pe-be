@@ -5,9 +5,10 @@ import axios from 'axios';
 import api from '../api/client';
 import WorkoutForm from '../components/WorkoutForm';
 import FloatingActionButton from '../components/FloatingActionButton';
+import { useGuestData, GuestWorkout } from '../contexts/GuestDataContext';
 
 type Workout = {
-  id: number;
+  id: number | string; // Can be number (server) or string (guest)
   name: string | null;
   notes: string | null;
   start_time: string;
@@ -21,10 +22,13 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
+  const { data: guestData, isAuthenticated } = useGuestData();
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
-  const { data: workouts = [], isLoading, error, refetch } = useQuery({
+  
+  const { data: serverWorkouts = [], isLoading, error, refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
+    enabled: isAuthenticated(), // Only fetch when authenticated
     retry: (failureCount, error: unknown) => {
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
         return false;
@@ -32,6 +36,17 @@ const MyWorkoutsPage = () => {
       return failureCount < 3;
     },
   });
+
+  // Use guest data if not authenticated, server data if authenticated
+  const workouts: Workout[] = isAuthenticated() 
+    ? serverWorkouts 
+    : guestData.workouts.map(gw => ({
+        id: gw.id,
+        name: gw.name,
+        notes: gw.notes,
+        start_time: gw.start_time,
+        end_time: gw.end_time,
+      }));
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -68,13 +83,13 @@ const MyWorkoutsPage = () => {
     });
   };
 
-  const handleWorkoutClick = (workoutId: number) => {
+  const handleWorkoutClick = (workoutId: number | string) => {
     navigate(`/workout/${workoutId}`);
   };
 
-  if (isLoading) return <p>Loading workouts...</p>;
+  if (isAuthenticated() && isLoading) return <p>Loading workouts...</p>;
   
-  if (error) {
+  if (isAuthenticated() && error) {
     const errorMessage = getErrorMessage(error);
     const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
     
@@ -109,7 +124,9 @@ const MyWorkoutsPage = () => {
             <div className="mb-6">
               <WorkoutForm 
                 onWorkoutCreated={() => {
-                  refetch();
+                  if (isAuthenticated()) {
+                    refetch();
+                  }
                   setShowWorkoutForm(false);
                 }} 
               />

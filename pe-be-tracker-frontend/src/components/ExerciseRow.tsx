@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Exercise, ExerciseSet } from '../api/exercises';
+import { GuestExerciseSet } from '../contexts/GuestDataContext';
 import ExerciseSetRow from './ExerciseSetRow';
 import AddExerciseSetForm from './AddExerciseSetForm';
 
@@ -13,7 +14,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
   const [showAddForm, setShowAddForm] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleSetAdded = (newSet: ExerciseSet) => {
+  const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
     setExerciseSets(updatedSets);
     setShowAddForm(false);
@@ -42,7 +43,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
     }
   };
 
-  const handleSetDelete = (setId: number) => {
+  const handleSetDelete = (setId: number | string) => {
     const updatedSets = exerciseSets.filter(set => set.id !== setId);
     setExerciseSets(updatedSets);
     

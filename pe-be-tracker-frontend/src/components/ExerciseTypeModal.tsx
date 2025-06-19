@@ -1,21 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '../api/exercises';
+import { useGuestData, GuestExerciseType } from '../contexts/GuestDataContext';
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (exerciseType: ExerciseType) => void;
+  onSelect: (exerciseType: ExerciseType | GuestExerciseType) => void;
 }
 
 const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   
-  const { data: exerciseTypes = [], isLoading, error } = useQuery({
+  const { data: serverExerciseTypes = [], isLoading, error } = useQuery({
     queryKey: ['exerciseTypes'],
     queryFn: () => getExerciseTypes('usage'), // Use usage-based ordering by default
+    enabled: isAuthenticated(), // Only fetch when authenticated
   });
+
+  // Use guest data if not authenticated, server data if authenticated
+  const exerciseTypes = isAuthenticated() ? serverExerciseTypes : guestData.exerciseTypes;
   
   const createMutation = useMutation({
     mutationFn: createExerciseType,
@@ -36,36 +42,59 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   
   const showCreateButton = searchTerm.trim() && filteredExerciseTypes.length === 0;
 
-  const handleSelect = (exerciseType: ExerciseType) => {
-    // Optimistically update the times_used count in the cache
-    queryClient.setQueryData(['exerciseTypes'], (oldData: ExerciseType[] | undefined) => {
-      if (!oldData) return oldData;
-      
-      const updatedTypes = oldData.map(type => 
-        type.id === exerciseType.id 
-          ? { ...type, times_used: type.times_used + 1 }
-          : type
-      );
-      
-      // Re-sort by times_used DESC, then by name ASC to maintain the expected order
-      return updatedTypes.sort((a, b) => {
-        if (a.times_used !== b.times_used) {
-          return b.times_used - a.times_used; // DESC
-        }
-        return a.name.localeCompare(b.name); // ASC
+  const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
+    if (isAuthenticated()) {
+      // Optimistically update the times_used count in the cache for server data
+      queryClient.setQueryData(['exerciseTypes'], (oldData: ExerciseType[] | undefined) => {
+        if (!oldData) return oldData;
+        
+        const updatedTypes = oldData.map(type => 
+          type.id === exerciseType.id 
+            ? { ...type, times_used: type.times_used + 1 }
+            : type
+        );
+        
+        // Re-sort by times_used DESC, then by name ASC to maintain the expected order
+        return updatedTypes.sort((a, b) => {
+          if (a.times_used !== b.times_used) {
+            return b.times_used - a.times_used; // DESC
+          }
+          return a.name.localeCompare(b.name); // ASC
+        });
       });
-    });
+    } else {
+      // Update guest data times_used count
+      guestActions.updateExerciseType(exerciseType.id as string, {
+        times_used: exerciseType.times_used + 1
+      });
+    }
     
     onSelect(exerciseType);
   };
   
   const handleCreateExerciseType = () => {
     if (!searchTerm.trim()) return;
-    createMutation.mutate({
-      name: searchTerm.trim(),
-      description: 'Custom exercise',
-      default_intensity_unit: 1,
-    });
+    
+    if (isAuthenticated()) {
+      // Create via API for authenticated users
+      createMutation.mutate({
+        name: searchTerm.trim(),
+        description: 'Custom exercise',
+        default_intensity_unit: 1,
+      });
+    } else {
+      // Create via guest context for unauthenticated users
+      const newExerciseTypeId = guestActions.addExerciseType({
+        name: searchTerm.trim(),
+        description: 'Custom exercise',
+        default_intensity_unit: 1,
+      });
+      
+      const newExerciseType = guestData.exerciseTypes.find(et => et.id === newExerciseTypeId);
+      if (newExerciseType) {
+        handleSelect(newExerciseType);
+      }
+    }
   };
   
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
@@ -95,7 +124,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   );
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isAuthenticated() && isLoading) {
       return (
         <div className="grid gap-3">
           {Array.from({ length: 5 }).map((_, index) => (
@@ -105,7 +134,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
       );
     }
 
-    if (error) {
+    if (isAuthenticated() && error) {
       return (
         <div className="text-center py-8">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -124,7 +153,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
             <span className="text-gray-400 text-2xl">💪</span>
           </div>
           <h4 className="text-white font-medium mb-2">No exercise types available</h4>
-          <p className="text-gray-400 text-sm">Contact support if this persists</p>
+          <p className="text-gray-400 text-sm">{isAuthenticated() ? 'Contact support if this persists' : 'Default exercise types will be created automatically'}</p>
         </div>
       );
     }
@@ -207,17 +236,17 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder="Search exercise types..."
-              disabled={createMutation.isPending}
+              disabled={isAuthenticated() && createMutation.isPending}
               className="block w-full pl-10 pr-12 py-2 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50"
             />
             {showCreateButton && (
               <button
                 onClick={handleCreateExerciseType}
-                disabled={createMutation.isPending}
+                disabled={isAuthenticated() && createMutation.isPending}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-green-500 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Create "${searchTerm.trim()}"`}
               >
-                {createMutation.isPending ? (
+                {(isAuthenticated() && createMutation.isPending) ? (
                   <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -241,7 +270,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
               </button>
             )}
           </div>
-          {createMutation.error && (
+          {isAuthenticated() && createMutation.error && (
             <p className="mt-2 text-sm text-red-400">
               Failed to create exercise type. Please try again.
             </p>

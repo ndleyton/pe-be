@@ -1,29 +1,29 @@
 import api from './client';
 
 export interface ExerciseType {
-  id: number;
+  id: number | string;
   name: string;
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface IntensityUnit {
   id: number;
   name: string;
   abbreviation: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ExerciseSet {
-  id: number;
+  id: number | string;
   reps: number | null;
   intensity: number | null;
   intensity_unit_id: number;
-  exercise_id: number;
+  exercise_id: number | string;
   rest_time_seconds: number | null;
   done: boolean;
   created_at: string;
@@ -31,11 +31,11 @@ export interface ExerciseSet {
 }
 
 export interface Exercise {
-  id: number;
+  id: number | string;
   timestamp: string | null;
   notes: string | null;
-  exercise_type_id: number;
-  workout_id: number;
+  exercise_type_id: number | string;
+  workout_id: string | number;
   created_at: string;
   updated_at: string;
   exercise_type: ExerciseType;
@@ -54,7 +54,7 @@ export interface CreateExerciseSetData {
   reps?: number;
   intensity?: number;
   intensity_unit_id: number;
-  exercise_id: number;
+  exercise_id: string | number;
   rest_time_seconds?: number;
   done?: boolean;
 }
@@ -74,19 +74,19 @@ export const createExerciseSet = async (exerciseSetData: CreateExerciseSetData):
 };
 
 // Get all exercise sets for an exercise
-export const getExerciseSets = async (exerciseId: number): Promise<ExerciseSet[]> => {
+export const getExerciseSets = async (exerciseId: number | string): Promise<ExerciseSet[]> => {
   const response = await api.get(`/exercise-sets/exercise/${exerciseId}`);
   return response.data;
 };
 
 // Update an exercise set
-export const updateExerciseSet = async (exerciseSetId: number, updateData: UpdateExerciseSetData): Promise<ExerciseSet> => {
+export const updateExerciseSet = async (exerciseSetId: number | string, updateData: UpdateExerciseSetData): Promise<ExerciseSet> => {
   const response = await api.put(`/exercise-sets/${exerciseSetId}`, updateData);
   return response.data;
 };
 
 // Delete an exercise set
-export const deleteExerciseSet = async (exerciseSetId: number): Promise<void> => {
+export const deleteExerciseSet = async (exerciseSetId: number | string): Promise<void> => {
   await api.delete(`/exercise-sets/${exerciseSetId}`);
 };
 

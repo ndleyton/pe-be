@@ -5,17 +5,18 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { toUTCISOString } from '../utils/date';
 import WorkoutTypeModal, { WorkoutType } from './WorkoutTypeModal';
+import { useGuestData, GuestWorkoutType } from '../contexts/GuestDataContext';
 
 interface WorkoutFormData {
   name?: string;
   notes?: string;
   start_time: string;
   end_time?: string;
-  workout_type_id: number;
+  workout_type_id: number | string; // Can be number (server) or string (guest)
 }
 
 interface WorkoutFormProps {
-  onWorkoutCreated: (newWorkoutId: number) => void;
+  onWorkoutCreated: (newWorkoutId: number | string) => void; // Can be number (server) or string (guest)
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
@@ -34,8 +35,9 @@ const createWorkout = async (data: WorkoutFormData) => {
 
 const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
   const navigate = useNavigate();
+  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showModal, setShowModal] = useState(false);
-  const [selectedWorkoutType, setSelectedWorkoutType] = useState<WorkoutType | null>(null);
+  const [selectedWorkoutType, setSelectedWorkoutType] = useState<WorkoutType | GuestWorkoutType | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   
   const {
@@ -72,10 +74,33 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
   });
 
   const onSubmit = (data: WorkoutFormData) => {
-    mutation.mutate(data);
+    if (isAuthenticated()) {
+      // Use API for authenticated users
+      mutation.mutate(data);
+    } else {
+      // Use guest context for unauthenticated users
+      const workoutType = guestData.workoutTypes.find(wt => wt.id === data.workout_type_id);
+      if (!workoutType) {
+        console.error('Workout type not found:', data.workout_type_id);
+        return;
+      }
+
+      const newWorkoutId = guestActions.addWorkout({
+        name: data.name || null,
+        notes: data.notes || null,
+        start_time: data.start_time || new Date().toISOString(),
+        end_time: data.end_time || null,
+        workout_type_id: data.workout_type_id as string,
+        workout_type: workoutType,
+      });
+
+      resetForm();
+      onWorkoutCreated(newWorkoutId);
+      navigate(`/workout/${newWorkoutId}`);
+    }
   };
 
-  const handleWorkoutTypeSelect = (workoutType: WorkoutType) => {
+  const handleWorkoutTypeSelect = (workoutType: WorkoutType | GuestWorkoutType) => {
     setSelectedWorkoutType(workoutType);
     setValue('workout_type_id', workoutType.id);
     setShowModal(false);
@@ -177,19 +202,19 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
           type="hidden"
           {...register('workout_type_id', {
             required: 'Workout type is required',
-            valueAsNumber: true,
+            valueAsNumber: isAuthenticated(), // Only convert to number if authenticated
           })}
         />
         {formState.errors.workout_type_id && <div className="text-red-400 text-sm mt-2">{formState.errors.workout_type_id.message}</div>}
       </div>
       <button
         type="submit"
-        disabled={mutation.isPending}
+        disabled={isAuthenticated() && mutation.isPending}
         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded px-6 py-2 mt-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {mutation.isPending ? 'Creating...' : 'Start Workout'}
+        {(isAuthenticated() && mutation.isPending) ? 'Creating...' : 'Start Workout'}
       </button>
-      {mutation.error && <div className="text-red-400 mt-3">Failed to create workout.</div>}
+      {isAuthenticated() && mutation.error && <div className="text-red-400 mt-3">Failed to create workout.</div>}
 
       <WorkoutTypeModal
         isOpen={showModal}
