@@ -3,7 +3,7 @@ import { syncGuestDataToServer } from './syncGuestData';
 import type { GuestData } from '../contexts/GuestDataContext';
 
 // Mock the API client
-vi.mock('../api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
