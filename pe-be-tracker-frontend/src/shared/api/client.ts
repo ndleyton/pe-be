@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { config } from '@/app/config/env';
-import { legacyEndpoints, warnLegacyEndpoint, endpoints } from './endpoints';
 
 // Centralized Axios configuration leveraging Vite environment variables.
 // NOTE: Only variables prefixed with `VITE_` are exposed to the browser bundle.
@@ -16,23 +15,13 @@ const apiConfig: AxiosRequestConfig = {
 
 export const apiClient: AxiosInstance = axios.create(apiConfig);
 
-// Request interceptor for auth token injection and legacy endpoint warnings
+// Request interceptor for auth token injection
 apiClient.interceptors.request.use(
   (request) => {
     // Inject auth token if available
     const authToken = localStorage.getItem('authToken');
     if (authToken) {
       request.headers.Authorization = `Bearer ${authToken}`;
-    }
-
-    // Check for legacy endpoint usage and warn
-    const url = request.url || '';
-    if (url === legacyEndpoints.exerciseTypes || url.startsWith(legacyEndpoints.exerciseTypes + '?')) {
-      warnLegacyEndpoint(legacyEndpoints.exerciseTypes, endpoints.exerciseTypes);
-    } else if (url === legacyEndpoints.intensityUnits || url.startsWith(legacyEndpoints.intensityUnits + '?')) {
-      warnLegacyEndpoint(legacyEndpoints.intensityUnits, endpoints.intensityUnits);
-    } else if (url === legacyEndpoints.workoutTypes || url.startsWith(legacyEndpoints.workoutTypes + '?')) {
-      warnLegacyEndpoint(legacyEndpoints.workoutTypes, endpoints.workoutTypes);
     }
 
     // Log outgoing requests in development
