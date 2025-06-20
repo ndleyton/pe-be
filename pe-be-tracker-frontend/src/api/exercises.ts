@@ -1,4 +1,5 @@
 import api from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 
 export interface ExerciseType {
   id: number | string;
@@ -100,18 +101,18 @@ export interface CreateExerciseTypeData {
 
 // Get all exercise types (ordered by usage by default)
 export const getExerciseTypes = async (orderBy: 'usage' | 'name' = 'usage'): Promise<ExerciseType[]> => {
-  const response = await api.get(`/exercise-types/?order_by=${orderBy}`);
+  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}`);
   return response.data;
 };
 
 // Create a new exercise type
 export const createExerciseType = async (exerciseTypeData: CreateExerciseTypeData): Promise<ExerciseType> => {
-  const response = await api.post('/exercise-types/', exerciseTypeData);
+  const response = await api.post(endpoints.exerciseTypes, exerciseTypeData);
   return response.data;
 };
 
 // Get all intensity units
 export const getIntensityUnits = async (): Promise<IntensityUnit[]> => {
-  const response = await api.get('/intensity-units/');
+  const response = await api.get(endpoints.intensityUnits);
   return response.data;
 };
