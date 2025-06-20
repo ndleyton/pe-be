@@ -7,7 +7,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { vi } from 'vitest';
 
 // Mock API client for all tests
-vi.mock('../api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn().mockRejectedValue(new Error('Unauthorized')),
     post: vi.fn(),

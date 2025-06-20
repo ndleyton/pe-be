@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../api/client';
+import api from '@/shared/api/client';
 import { getExercisesInWorkout, Exercise } from '../api/exercises';
-import ExerciseForm from '../components/ExerciseForm';
-import ExerciseList from '../components/ExerciseList';
-import FinishWorkoutModal from '../components/FinishWorkoutModal';
-import FloatingActionButton from '../components/FloatingActionButton';
-import { useGuestData, GuestExercise } from '../contexts/GuestDataContext';
+import { ExerciseForm, ExerciseList } from '../features/exercises/components';
+import { FinishWorkoutModal } from '../features/workouts/components';
+import { FloatingActionButton } from '../shared/components/ui';
+import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);

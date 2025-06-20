@@ -3,8 +3,8 @@ import { screen } from '@testing-library/react';
 import { render } from '../test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
 
-vi.mock('../components/WorkoutForm', () => ({
-  default: () => <div data-testid="workout-form">Mock Workout Form</div>,
+vi.mock('../features/workouts/components', () => ({
+  WorkoutForm: () => <div data-testid="workout-form">Mock Workout Form</div>,
 }));
 
 describe('MyWorkoutsPage', () => {

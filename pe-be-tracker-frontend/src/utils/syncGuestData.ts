@@ -1,5 +1,5 @@
 import { GuestData, GuestDataActions } from '../contexts/GuestDataContext';
-import api from '../api/client';
+import api from '@/shared/api/client';
 import { toUTCISOString } from './date';
 
 export interface SyncResult {

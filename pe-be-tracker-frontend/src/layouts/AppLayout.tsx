@@ -1,11 +1,8 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { DrawerProvider } from '../contexts/DrawerContext';
-import AppBar from '../components/AppBar';
-import SideDrawer from '../components/SideDrawer';
-import DesktopSidebar from '../components/DesktopSidebar';
-import BottomNav from '../components/BottomNav';
-import GuestModeBanner from '../components/GuestModeBanner';
+import { DrawerProvider } from '@/contexts/DrawerContext';
+import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
+import { GuestModeBanner } from '../shared/components/feedback';
 
 const AppLayout: React.FC = () => {
   return (

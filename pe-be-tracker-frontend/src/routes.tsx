@@ -3,7 +3,7 @@ import { RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
-import OAuthCallbackPage from './pages/OAuthCallbackPage';
+import { OAuthCallbackPage } from './features/auth/pages';
 import WorkoutPage from './pages/WorkoutPage';
 
 const routes: RouteObject[] = [

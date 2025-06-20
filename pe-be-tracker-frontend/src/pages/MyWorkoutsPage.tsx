@@ -2,10 +2,10 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import api from '../api/client';
-import WorkoutForm from '../components/WorkoutForm';
-import FloatingActionButton from '../components/FloatingActionButton';
-import { useGuestData, GuestWorkout } from '../contexts/GuestDataContext';
+import api from '@/shared/api/client';
+import { WorkoutForm } from '../features/workouts/components';
+import { FloatingActionButton } from '../shared/components/ui';
+import { useGuestData, GuestWorkout } from '@/contexts/GuestDataContext';
 
 type Workout = {
   id: number | string; // Can be number (server) or string (guest)
