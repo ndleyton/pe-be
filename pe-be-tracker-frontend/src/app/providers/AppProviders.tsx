@@ -1,7 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { DrawerProvider } from '../../contexts/DrawerContext';
 import { GuestDataProvider } from '../../contexts/GuestDataContext';
@@ -24,15 +23,13 @@ const queryClient = new QueryClient({
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <GuestDataProvider>
-            <DrawerProvider>
-              {children}
-            </DrawerProvider>
-          </GuestDataProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <AuthProvider>
+        <GuestDataProvider>
+          <DrawerProvider>
+            {children}
+          </DrawerProvider>
+        </GuestDataProvider>
+      </AuthProvider>
       {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
