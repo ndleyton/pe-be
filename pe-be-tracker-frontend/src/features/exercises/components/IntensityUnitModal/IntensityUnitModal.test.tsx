@@ -3,18 +3,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import IntensityUnitModal from './IntensityUnitModal';
-import * as exerciseApi from '../api/exercises';
+import * as exerciseApi from '@/api/exercises';
 
 // Mock the GuestDataContext
 const mockIsAuthenticated = vi.fn();
-vi.mock('../contexts/GuestDataContext', () => ({
+vi.mock('@/contexts/GuestDataContext', () => ({
   useGuestData: () => ({
     isAuthenticated: mockIsAuthenticated,
   }),
 }));
 
 // Mock the exercises API
-vi.mock('../api/exercises', () => ({
+vi.mock('@/api/exercises', () => ({
   getIntensityUnits: vi.fn(),
 }));
 

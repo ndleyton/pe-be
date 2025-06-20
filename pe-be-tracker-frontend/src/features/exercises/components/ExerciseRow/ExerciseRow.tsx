@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Exercise, ExerciseSet } from '../../../../api/exercises';
-import { GuestExerciseSet } from '../../../../contexts/GuestDataContext';
-import { ExerciseSetRow, AddExerciseSetForm } from '../../../exercise-sets/components';
+import { Exercise, ExerciseSet } from '@/api/exercises';
+import { GuestExerciseSet } from '@/contexts/GuestDataContext';
+import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
 
 interface ExerciseRowProps {
   exercise: Exercise;

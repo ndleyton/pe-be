@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getIntensityUnits, IntensityUnit } from '../../../../api/exercises';
-import { useGuestData } from '../../../../contexts/GuestDataContext';
+import { getIntensityUnits, IntensityUnit } from '@/api/exercises';
+import { useGuestData } from '@/contexts/GuestDataContext';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {

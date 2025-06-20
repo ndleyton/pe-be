@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { render } from '../../../../test/utils';
+import { render } from '@/test/utils';
 import ExerciseSetRow from './ExerciseSetRow';
-import { ExerciseSet } from '../../../../api/exercises';
+import { ExerciseSet } from '@/api/exercises';
 
 describe('ExerciseSetRow', () => {
   const mockExerciseSet: ExerciseSet = {

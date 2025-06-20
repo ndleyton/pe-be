@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
-import { toUTCISOString } from '../../../../utils/date';
+import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-import { useGuestData, GuestWorkoutType } from '../../../../contexts/GuestDataContext';
+import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
 
 interface WorkoutFormData {
   name?: string;

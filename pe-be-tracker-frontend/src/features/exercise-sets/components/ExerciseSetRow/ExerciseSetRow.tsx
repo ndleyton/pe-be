@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '../../../../api/exercises';
-import { useGuestData, GuestExerciseSet } from '../../../../contexts/GuestDataContext';
+import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/api/exercises';
+import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;

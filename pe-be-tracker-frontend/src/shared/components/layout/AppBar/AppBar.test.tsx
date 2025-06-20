@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppBar from './AppBar';
-import { DrawerProvider } from '../../../../contexts/DrawerContext';
+import { DrawerProvider } from '@/contexts/DrawerContext';
 
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 
 // Mock the DrawerContext
 const mockToggleDrawer = vi.fn();
-vi.mock('../../../../contexts/DrawerContext', () => ({
+vi.mock('@/contexts/DrawerContext', () => ({
   useDrawer: () => ({
     isOpen: false,
     openDrawer: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('../../../../contexts/DrawerContext', () => ({
 // Mock the AuthContext
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('../../../../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     signOut: mockSignOut,
@@ -39,7 +39,7 @@ vi.mock('../../../../contexts/AuthContext', () => ({
 }));
 
 // Mock API client
-vi.mock('../../../../api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn(),
   },

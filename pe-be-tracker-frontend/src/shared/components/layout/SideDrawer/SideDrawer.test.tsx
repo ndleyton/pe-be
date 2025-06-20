@@ -4,11 +4,11 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SideDrawer from './SideDrawer';
-import { AuthProvider } from '../contexts/AuthContext';
-import api from '../api/client';
+import { AuthProvider } from '@/contexts/AuthContext';
+import api from '@/shared/api/client';
 
 // Mock the API client
-vi.mock('../api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
@@ -33,7 +33,7 @@ const mockOpenDrawer = vi.fn();
 const mockToggleDrawer = vi.fn();
 let mockIsOpen = true;
 
-vi.mock('../contexts/DrawerContext', () => ({
+vi.mock('@/contexts/DrawerContext', () => ({
   useDrawer: () => ({
     isOpen: mockIsOpen,
     openDrawer: mockOpenDrawer,

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { HomeLogo } from '../../../shared/components/layout';
-import { useGuestData } from '../../../contexts/GuestDataContext';
-import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '../../../utils/syncGuestData';
+import { HomeLogo } from '@/shared/components/layout';
+import { useGuestData } from '@/contexts/GuestDataContext';
+import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 import api from '@/shared/api/client';
 
 const OAuthCallbackPage: React.FC = () => {

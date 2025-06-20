@@ -7,7 +7,7 @@ import DesktopSidebar from './DesktopSidebar';
 // Mock the AuthContext
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     signOut: mockSignOut,
@@ -16,7 +16,7 @@ vi.mock('../contexts/AuthContext', () => ({
 }));
 
 // Mock API client
-vi.mock('../api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn(),
   },

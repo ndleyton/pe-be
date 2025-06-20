@@ -6,7 +6,7 @@ import { getExercisesInWorkout, Exercise } from '../api/exercises';
 import { ExerciseForm, ExerciseList } from '../features/exercises/components';
 import { FinishWorkoutModal } from '../features/workouts/components';
 import { FloatingActionButton } from '../shared/components/ui';
-import { useGuestData, GuestExercise } from '../contexts/GuestDataContext';
+import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);

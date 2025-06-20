@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import api from '@/shared/api/client';
-import { toUTCISOString } from '../../../../utils/date';
-import ExerciseTypeModal, { ExerciseType } from '../ExerciseTypeModal';
-import { useGuestData, GuestExerciseType } from '../../../../contexts/GuestDataContext';
+import { toUTCISOString } from '@/utils/date';
+import ExerciseTypeModal from '../ExerciseTypeModal';
+import { ExerciseType } from '@/api/exercises';
+import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
 
 interface ExerciseFormData {
   exercise_type_id: number | string; // Can be number (server) or string (guest)

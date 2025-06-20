@@ -1,5 +1,5 @@
 export const config = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
   apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT ?? '10000', 10),
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
   environment: import.meta.env.VITE_ENVIRONMENT || 'development',
