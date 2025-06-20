@@ -86,3 +86,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.exercise_sets.schemas import ExerciseSetRead 
+
+# Runtime import to ensure forward refs are available when model_rebuild is executed
+from src.exercise_sets.schemas import ExerciseSetRead  # noqa: E402,F401
+
+# After all class definitions, resolve forward references
+ExerciseRead.model_rebuild() 

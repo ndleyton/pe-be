@@ -1,5 +1,6 @@
 import { GuestData, GuestDataActions } from '../contexts/GuestDataContext';
 import api from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 import { toUTCISOString } from './date';
 
 export interface SyncResult {
@@ -14,7 +15,7 @@ export interface SyncResult {
 const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number> => {
   try {
     // First try to find existing exercise type by name
-    const { data: existingTypes } = await api.get('/exercise-types/?order_by=name');
+    const { data: existingTypes } = await api.get(`${endpoints.exerciseTypes}?order_by=name`);
     const existing = existingTypes.find((type: any) => 
       type.name.toLowerCase() === guestExerciseType.name.toLowerCase()
     );
@@ -25,7 +26,7 @@ const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number>
 
     // Create new exercise type if not found
     try {
-      const { data: newType } = await api.post('/exercise-types/', {
+      const { data: newType } = await api.post(endpoints.exerciseTypes, {
         name: guestExerciseType.name,
         description: guestExerciseType.description ?? '',
         default_intensity_unit: guestExerciseType.default_intensity_unit,
@@ -34,7 +35,7 @@ const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number>
     } catch (err: any) {
       // If duplicate (400) occurred between GET and POST, fetch again
       if (err?.response?.status === 400) {
-        const { data: existingTypesAfter } = await api.get('/exercise-types/?order_by=name');
+        const { data: existingTypesAfter } = await api.get(`${endpoints.exerciseTypes}?order_by=name`);
         const existingAfter = existingTypesAfter.find((type: any) => type.name.toLowerCase() === guestExerciseType.name.toLowerCase());
         if (existingAfter) return existingAfter.id;
       }
@@ -50,7 +51,7 @@ const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number>
 const findOrCreateWorkoutType = async (guestWorkoutType: any): Promise<number> => {
   try {
     // First try to find existing workout type by name
-    const { data: existingTypes } = await api.get('/workout-types/');
+    const { data: existingTypes } = await api.get(endpoints.workoutTypes);
     const existing = existingTypes.find((type: any) => 
       type.name.toLowerCase() === guestWorkoutType.name.toLowerCase()
     );
@@ -61,14 +62,14 @@ const findOrCreateWorkoutType = async (guestWorkoutType: any): Promise<number> =
 
     // Create new workout type if not found
     try {
-      const { data: newType } = await api.post('/workout-types/', {
+      const { data: newType } = await api.post(endpoints.workoutTypes, {
         name: guestWorkoutType.name,
         description: guestWorkoutType.description ?? '',
       });
       return newType.id;
     } catch (err: any) {
       if (err?.response?.status === 400) {
-        const { data: existingAfter } = await api.get('/workout-types/');
+        const { data: existingAfter } = await api.get(endpoints.workoutTypes);
         const existingAfterMatch = existingAfter.find((type: any) => type.name.toLowerCase() === guestWorkoutType.name.toLowerCase());
         if (existingAfterMatch) return existingAfterMatch.id;
       }

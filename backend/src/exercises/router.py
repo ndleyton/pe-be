@@ -29,7 +29,7 @@ async def create_exercise(
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
 
-@exercise_types_router.get("/", response_model=List[ExerciseTypeRead])
+@exercise_types_router.get("", response_model=List[ExerciseTypeRead])
 async def get_exercise_types(
     order_by: Optional[str] = Query(
         default="usage", 
@@ -40,7 +40,7 @@ async def get_exercise_types(
     """Get all exercise types from the database."""
     return await ExerciseTypeService.get_all_exercise_types(session, order_by)
 
-@exercise_types_router.post("/", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
+@exercise_types_router.post("", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,
     session: AsyncSession = Depends(get_async_session)
@@ -51,7 +51,7 @@ async def create_exercise_type(
 # Intensity Units endpoints
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
-@intensity_units_router.get("/", response_model=List[IntensityUnitRead])
+@intensity_units_router.get("", response_model=List[IntensityUnitRead])
 async def get_intensity_units(
     session: AsyncSession = Depends(get_async_session)
 ):

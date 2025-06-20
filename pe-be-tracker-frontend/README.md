@@ -107,6 +107,35 @@ Sync Process:
 localStorage → syncGuestDataToServer() → API Client → Server Database
 ```
 
+## 🔗 API Endpoints
+
+The frontend uses **nested API endpoints** that follow logical groupings:
+
+### Current Endpoints Structure
+
+```bash
+# Exercise-related endpoints
+/exercises/exercise-types/     # List and create exercise types
+/exercises/intensity-units/    # List and create intensity units
+
+# Workout-related endpoints  
+/workouts/workout-types/       # List and create workout types
+
+# Other core endpoints
+/workouts/                     # CRUD operations for workouts
+/exercises/                    # CRUD operations for exercises
+/exercise-sets/                # CRUD operations for exercise sets
+```
+
+### Legacy Endpoints (Deprecated)
+
+The following flat endpoints are **deprecated** and will be removed:
+- `/exercise-types/` → use `/exercises/exercise-types/`
+- `/intensity-units/` → use `/exercises/intensity-units/`
+- `/workout-types/` → use `/workouts/workout-types/`
+
+> **Note**: The frontend will emit console warnings in development when legacy endpoints are detected. All new code should use the nested endpoints defined in `src/shared/api/endpoints.ts`.
+
 ## Environment Variables 🛠️
 
 This project relies on Vite's built-in environment system. **Only variables prefixed with `VITE_` are exposed to the browser bundle.**
