@@ -16,6 +16,15 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/contexts/*": ["./src/contexts/*"]
+    },
     "types": [
       "vite/client"
     ]
