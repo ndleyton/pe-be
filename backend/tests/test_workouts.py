@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
 
-from app.config import settings
+from src.core.config import settings
 
 
 class TestWorkoutsAPI:

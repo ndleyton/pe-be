@@ -6,9 +6,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.app import app
-from app.db import get_async_session
-from app.models import Base
+from src.main import app
+from src.core.database import get_async_session, Base
+
+# Ensure domain models are imported so metadata includes all tables
+import src.exercises.models  # noqa: F401
+import src.workouts.models  # noqa: F401
+import src.exercise_sets.models  # noqa: F401
+import src.users.models  # noqa: F401
 
 
 def get_test_database_url():

@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.config import settings
+from src.core.config import settings
 
 
 class TestExerciseSetsAPI:
