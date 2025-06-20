@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GoogleSignInButton from './GoogleSignInButton';
-import api from './api/client';
+import api from '@/shared/api/client';
 
 // Mock the API client with proper typing
-vi.mock('./api/client', () => ({
+vi.mock('@/shared/api/client', () => ({
   default: {
     get: vi.fn(),
   },

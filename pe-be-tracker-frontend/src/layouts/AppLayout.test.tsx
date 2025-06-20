@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppLayout from './AppLayout';
-import { AuthProvider } from '../contexts/AuthContext';
-import { GuestDataProvider } from '../contexts/GuestDataContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { GuestDataProvider } from '@/contexts/GuestDataContext';
 
 const MockComponent = () => <div>Mock Content</div>;
 

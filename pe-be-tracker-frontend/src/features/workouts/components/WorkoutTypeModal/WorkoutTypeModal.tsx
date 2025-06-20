@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/shared/api/client';
-import { useGuestData, GuestWorkoutType } from '../../../../contexts/GuestDataContext';
+import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
 
 interface WorkoutType {
   id: number;

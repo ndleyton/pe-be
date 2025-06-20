@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGuestData } from '../../../../contexts/GuestDataContext';
+import { useGuestData } from '@/contexts/GuestDataContext';
 
 const GuestModeBanner: React.FC = () => {
   const { isAuthenticated, data: guestData } = useGuestData();

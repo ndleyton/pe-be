@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiChevronRight } from 'react-icons/hi2';
-import { generateBreadcrumbs } from '../../../../utils/breadcrumbs';
+import { generateBreadcrumbs } from '@/utils/breadcrumbs';
 
 const Breadcrumbs: React.FC = () => {
   const location = useLocation();

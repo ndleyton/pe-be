@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncGuestDataToServer } from './syncGuestData';
-import type { GuestData } from '../contexts/GuestDataContext';
+import type { GuestData } from '@/contexts/GuestDataContext';
 
 // Mock the API client
 vi.mock('@/shared/api/client', () => ({
@@ -11,11 +11,11 @@ vi.mock('@/shared/api/client', () => ({
 }));
 
 // Mock the date utility
-vi.mock('./date', () => ({
+vi.mock('@/utils/date', () => ({
   toUTCISOString: vi.fn((date) => date),
 }));
 
-import api from '../api/client';
+import api from '@/shared/api/client';
 
 describe('syncGuestDataToServer', () => {
   const mockClearGuestData = vi.fn();

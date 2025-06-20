@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '../utils/syncGuestData';
+import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 
 // Guest data interfaces that mirror the server-side structures but with local IDs
 export interface GuestExerciseType {

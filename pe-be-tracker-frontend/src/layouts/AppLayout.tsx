@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { DrawerProvider } from '../contexts/DrawerContext';
+import { DrawerProvider } from '@/contexts/DrawerContext';
 import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
 import { GuestModeBanner } from '../shared/components/feedback';
 

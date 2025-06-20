@@ -5,7 +5,7 @@ import axios from 'axios';
 import api from '@/shared/api/client';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton } from '../shared/components/ui';
-import { useGuestData, GuestWorkout } from '../contexts/GuestDataContext';
+import { useGuestData, GuestWorkout } from '@/contexts/GuestDataContext';
 
 type Workout = {
   id: number | string; // Can be number (server) or string (guest)

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineBars3, HiOutlineUser } from 'react-icons/hi2';
-import { useDrawer } from '../../../../contexts/DrawerContext';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { useDrawer } from '@/contexts/DrawerContext';
+import { useAuth } from '@/contexts/AuthContext';
 import HomeLogo from '../HomeLogo';
 import Breadcrumbs from '../Breadcrumbs';
 import api from '@/shared/api/client';

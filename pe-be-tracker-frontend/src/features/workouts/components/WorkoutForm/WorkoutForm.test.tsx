@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { render } from '../../../../test/utils';
+import { render } from '@/test/utils';
 import WorkoutForm from './WorkoutForm';
 
 interface WorkoutType {
@@ -16,7 +16,7 @@ interface WorkoutTypeModalProps {
   onSelect: (workoutType: WorkoutType) => void;
 }
 
-vi.mock('./WorkoutTypeModal', () => ({
+vi.mock('../WorkoutTypeModal', () => ({
   default: ({ isOpen, onClose }: WorkoutTypeModalProps) => 
     isOpen ? (
       <div data-testid="workout-type-modal">

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '../../../../api/exercises';
-import { useGuestData, GuestExerciseType } from '../../../../contexts/GuestDataContext';
+import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/api/exercises';
+import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -286,4 +286,3 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
 };
 
 export default ExerciseTypeModal;
-export type { ExerciseType };

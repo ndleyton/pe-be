@@ -21,7 +21,9 @@
       "@/*": ["./src/*"],
       "@/shared/*": ["./src/shared/*"],
       "@/features/*": ["./src/features/*"],
-      "@/app/*": ["./src/app/*"]
+      "@/app/*": ["./src/app/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/contexts/*": ["./src/contexts/*"]
     },
     "types": [
       "vite/client"

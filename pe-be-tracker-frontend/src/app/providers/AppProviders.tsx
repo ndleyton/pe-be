@@ -1,9 +1,9 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { AuthProvider } from '../../contexts/AuthContext';
-import { DrawerProvider } from '../../contexts/DrawerContext';
-import { GuestDataProvider } from '../../contexts/GuestDataContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { DrawerProvider } from '@/contexts/DrawerContext';
+import { GuestDataProvider } from '@/contexts/GuestDataContext';
 import { config } from '@/app/config/env';
 
 // Configure React Query client

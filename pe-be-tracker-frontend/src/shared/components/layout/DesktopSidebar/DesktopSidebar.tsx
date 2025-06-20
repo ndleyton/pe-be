@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
 import { IoFitnessOutline } from 'react-icons/io5';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import api from '@/shared/api/client';
 
 interface NavItem {
