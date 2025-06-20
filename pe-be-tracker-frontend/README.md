@@ -111,8 +111,6 @@ localStorage → syncGuestDataToServer() → API Client → Server Database
 
 The frontend uses **nested API endpoints** that follow logical groupings:
 
-### Current Endpoints Structure
-
 ```bash
 # Exercise-related endpoints
 /exercises/exercise-types/     # List and create exercise types
@@ -127,14 +125,7 @@ The frontend uses **nested API endpoints** that follow logical groupings:
 /exercise-sets/                # CRUD operations for exercise sets
 ```
 
-### Legacy Endpoints (Deprecated)
-
-The following flat endpoints are **deprecated** and will be removed:
-- `/exercise-types/` → use `/exercises/exercise-types/`
-- `/intensity-units/` → use `/exercises/intensity-units/`
-- `/workout-types/` → use `/workouts/workout-types/`
-
-> **Note**: The frontend will emit console warnings in development when legacy endpoints are detected. All new code should use the nested endpoints defined in `src/shared/api/endpoints.ts`.
+> **Note**: All endpoints are defined in `src/shared/api/endpoints.ts` for type safety and consistency.
 
 ## Environment Variables 🛠️
 

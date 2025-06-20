@@ -6,9 +6,8 @@ from httpx_oauth.oauth2 import OAuth2Error
 from src.core.config import settings
 from src.users.router import router as users_router
 from src.workouts.router import router as workouts_router
-from src.exercises.router import router as exercises_router, exercise_types_router, intensity_units_router
+from src.exercises.router import router as exercises_router
 from src.exercise_sets.router import router as exercise_sets_router
-from src.workouts.router import workout_types_router
 
 
 def create_app() -> FastAPI:

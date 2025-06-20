@@ -41,29 +41,5 @@ export const endpoints = {
   },
 } as const;
 
-/**
- * Legacy endpoints - DEPRECATED
- * These will be removed in the future, use nested endpoints above
- */
-export const legacyEndpoints = {
-  exerciseTypes: '/exercise-types',
-  intensityUnits: '/intensity-units', 
-  workoutTypes: '/workout-types',
-} as const;
-
-/**
- * Console warning for legacy endpoint usage
- * @param legacyPath - The legacy path being used
- * @param newPath - The new nested path that should be used
- */
-export const warnLegacyEndpoint = (legacyPath: string, newPath: string) => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn(
-      `[API] Legacy endpoint detected: ${legacyPath}. Please migrate to: ${newPath}. Legacy endpoints will be removed in a future release.`
-    );
-  }
-};
-
 // Type helpers for endpoints
 export type EndpointKey = keyof typeof endpoints;
-export type LegacyEndpointKey = keyof typeof legacyEndpoints;
