@@ -17,8 +17,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock the ExerciseForm component
-vi.mock('../components/ExerciseForm', () => ({
-  default: () => <div data-testid="exercise-form">Mock Exercise Form</div>,
+vi.mock('../features/exercises/components', () => ({
+  ExerciseForm: () => <div data-testid="exercise-form">Mock Exercise Form</div>,
+  ExerciseList: () => <div data-testid="exercise-list">Mock Exercise List</div>,
 }));
 
 describe('WorkoutPage', () => {
