@@ -4,8 +4,8 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.config import settings
-from app.models import ExerciseType
+from src.core.config import settings
+from src.exercises.models import ExerciseType
 
 
 class TestExercisesAPI:
@@ -91,7 +91,7 @@ class TestExerciseTypesUsage:
     
     def test_exercise_types_router_function_signature(self):
         """Test that the get_exercise_types function accepts order_by parameter."""
-        from app.router.exercise_types import get_exercise_types
+        from src.exercises.router import get_exercise_types
         import inspect
         
         # Get the function signature
@@ -106,7 +106,7 @@ class TestExerciseTypesUsage:
     
     def test_exercise_type_schema_includes_times_used(self):
         """Test that ExerciseTypeRead schema includes times_used field."""
-        from app.schemas import ExerciseTypeRead
+        from src.exercises.schemas import ExerciseTypeRead
         import inspect
         
         # Get the schema annotations
