@@ -143,7 +143,7 @@ jobs:
         ENVIRONMENT: test
       run: |
         poetry run alembic upgrade head
-        poetry run uvicorn app.app:app --host 0.0.0.0 --port 8000 &
+        poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
         echo "Waiting for backend to be ready..."
         timeout=60
         elapsed=0
