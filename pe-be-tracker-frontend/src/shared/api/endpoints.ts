@@ -3,8 +3,6 @@
  * Centralizes all API routes to prevent drift and enable easy updates
  */
 
-const API_VERSION = 'v1';
-
 export const endpoints = {
   // Exercise endpoints
   exercises: '/exercises',
