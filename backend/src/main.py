@@ -16,7 +16,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="PE Tracker API",
         description="Personal Exercise Tracker API with domain-driven architecture",
-        version="2.0.0"
+        version=f"2.0.0-{settings.API_VERSION}"
     )
 
     # Add CORS middleware
