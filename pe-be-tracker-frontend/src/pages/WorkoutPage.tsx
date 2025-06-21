@@ -20,12 +20,25 @@ const updateWorkoutEndTime = async (workoutId: string) => {
   return response.data;
 };
 
+// Fetch a single workout by ID (for authenticated users)
+const fetchWorkout = async (workoutId: string) => {
+  const response = await api.get(`/workouts/${workoutId}`);
+  return response.data as { id: string | number; name: string | null };
+};
+
 const WorkoutPage: React.FC = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showFinishModal, setShowFinishModal] = useState(false);
+
+  // Fetch workout details (only when authenticated)
+  const { data: serverWorkout } = useQuery({
+    queryKey: ['workout', workoutId],
+    queryFn: () => fetchWorkout(workoutId as string),
+    enabled: !!workoutId && isAuthenticated(),
+  });
 
   // Fetch exercises for this workout (only when authenticated)
   const { data: serverExercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
@@ -129,11 +142,18 @@ const WorkoutPage: React.FC = () => {
     window.history.pushState(null, '', window.location.pathname);
   };
 
+  // Determine workout name based on authentication state
+  const workoutName = isAuthenticated()
+    ? serverWorkout?.name ?? null
+    : guestData.workouts.find(w => w.id === workoutId)?.name ?? null;
+
   return (
     <>
       <div className="max-w-2xl mx-auto p-6 bg-gray-900 text-gray-100 rounded-lg shadow-lg mt-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Log Exercises for Workout #{workoutId}</h1>
+          <h2 className="text-2xl font-bold">
+            {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
+          </h2>
         </div>
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
