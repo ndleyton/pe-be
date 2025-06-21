@@ -148,7 +148,7 @@ jobs:
         timeout=60
         elapsed=0
         while [ $elapsed -lt $timeout ]; do
-          if curl -f http://localhost:8000/ > /dev/null 2>&1; then
+          if curl -f http://localhost:8000/health > /dev/null 2>&1; then
             echo "Backend is ready!"
             break
           fi
