@@ -115,9 +115,8 @@ const MyWorkoutsPage = () => {
     <>
       <div className="p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6">
             <h1 className="text-2xl font-bold">Workouts</h1>
-            <button className="text-primary hover:text-primary-focus">Show More</button>
           </div>
           
           {showWorkoutForm && (

@@ -50,9 +50,6 @@ vi.mock('../HomeLogo', () => ({
   default: () => <div data-testid="home-logo">PE Logo</div>,
 }));
 
-vi.mock('../Breadcrumbs', () => ({
-  default: () => <div data-testid="breadcrumbs">Home / Dashboard</div>,
-}));
 
 vi.mock('./DesktopNav', () => ({
   default: () => <div data-testid="desktop-nav">Desktop Navigation</div>,
@@ -99,15 +96,12 @@ describe('AppBar', () => {
         </TestWrapper>
       );
 
-      // Check for navbar sections
+      // Check for primary flex containers in the navbar
       expect(screen.getByRole('banner')).toContainElement(
-        screen.getByRole('banner').querySelector('.navbar-start')
+        screen.getByRole('banner').querySelector('.flex-1')
       );
       expect(screen.getByRole('banner')).toContainElement(
-        screen.getByRole('banner').querySelector('.navbar-center')
-      );
-      expect(screen.getByRole('banner')).toContainElement(
-        screen.getByRole('banner').querySelector('.navbar-end')
+        screen.getByRole('banner').querySelector('.flex-none')
       );
     });
 
@@ -137,17 +131,6 @@ describe('AppBar', () => {
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
     });
 
-    it('should render breadcrumbs in the center section', () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>
-      );
-
-      const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
-      expect(centerSection).toBeInTheDocument();
-      expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument();
-    });
   });
 
   describe('Navigation Interactions', () => {
@@ -226,9 +209,9 @@ describe('AppBar', () => {
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
       expect(menuButton).toHaveClass('lg:hidden');
 
-      // Center section should contain both breadcrumbs and desktop nav
-      const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
-      expect(centerSection).toBeInTheDocument();
+      // Navbar still has left flex container
+      const leftSection = screen.getByRole('banner').querySelector('.flex-1');
+      expect(leftSection).toBeInTheDocument();
     });
 
     it('should have proper styling classes for layout', () => {
@@ -241,12 +224,10 @@ describe('AppBar', () => {
       const navbar = screen.getByRole('banner');
       expect(navbar).toHaveClass('navbar', 'bg-base-100', 'shadow-sm');
 
-      const startSection = navbar.querySelector('.navbar-start');
-      const centerSection = navbar.querySelector('.navbar-center');
-      const endSection = navbar.querySelector('.navbar-end');
+      const startSection = navbar.querySelector('.flex-1');
+      const endSection = navbar.querySelector('.flex-none');
 
       expect(startSection).toBeInTheDocument();
-      expect(centerSection).toBeInTheDocument();
       expect(endSection).toBeInTheDocument();
     });
   });
@@ -285,7 +266,6 @@ describe('AppBar', () => {
 
       // Check that mocked child components are rendered
       expect(screen.getByTestId('home-logo')).toHaveTextContent('PE Logo');
-      expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Home / Dashboard');
     });
   });
 
@@ -387,7 +367,7 @@ describe('AppBar', () => {
         </TestWrapper>
       );
 
-      const endSection = screen.getByRole('banner').querySelector('.navbar-end');
+      const endSection = screen.getByRole('banner').querySelector('.flex-none');
       expect(endSection).toBeInTheDocument();
       // Should contain user account features (sign in button when not authenticated)
       expect(endSection).not.toBeEmptyDOMElement();
