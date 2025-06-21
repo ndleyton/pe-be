@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
 
 interface WorkoutType {
@@ -16,7 +17,7 @@ interface WorkoutTypeModalProps {
 }
 
 const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
-  const response = await api.get('/workout-types/');
+  const response = await api.get(endpoints.workoutTypes);
   return response.data;
 };
 
