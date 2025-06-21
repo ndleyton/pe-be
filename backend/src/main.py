@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from httpx_oauth.oauth2 import OAuth2Error
 
 from src.core.config import settings
 from src.users.router import router as users_router
@@ -14,7 +16,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="PE Tracker API",
         description="Personal Exercise Tracker API with domain-driven architecture",
-        version="2.0.0"
+        version=f"2.0.0-{settings.API_VERSION}"
     )
 
     # Add CORS middleware
@@ -29,19 +31,29 @@ def create_app() -> FastAPI:
     # Include domain routers with API prefix
     api_prefix = settings.API_PREFIX
 
-    # Users and Auth routes (no additional prefix as they include their own)
-    app.include_router(users_router)
+    # Users & Auth routes – keep the API prefix so endpoints remain backward-compatible
+    app.include_router(users_router, prefix=api_prefix)
     
     # Domain-specific routes with API prefix
     app.include_router(workouts_router, prefix=f"{api_prefix}/workouts", tags=["workouts"])
     app.include_router(exercises_router, prefix=f"{api_prefix}/exercises", tags=["exercises"])
     app.include_router(exercise_sets_router, prefix=f"{api_prefix}/exercise-sets", tags=["exercise-sets"])
 
+
     # Health check endpoint
     @app.get("/health")
     async def health_check():
         """Health check endpoint"""
         return {"status": "healthy", "message": "PE Tracker API is running"}
+
+    # Register OAuth2 error handler so Google sign-in redirects work as before
+    async def oauth_exception_handler(request: Request, exc: OAuth2Error):
+        """Return a redirect to the frontend with an error query parameter."""
+        error_code = exc.error or "oauth_error"
+        redirect_url = f"{settings.FRONTEND_URL.rstrip('/')}/?error={error_code}"
+        return RedirectResponse(redirect_url)
+
+    app.add_exception_handler(OAuth2Error, oauth_exception_handler)
 
     return app
 

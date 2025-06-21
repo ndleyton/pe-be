@@ -166,7 +166,7 @@ jobs:
       working-directory: ./backend
       run: |
         # Validate that the application can start
-        poetry run python -c "from app.app import app; print('✅ App imports successfully')"
+        poetry run python -c "from src.main import app; print('✅ App imports successfully')"
         
         # Validate that all dependencies are satisfied
         poetry check

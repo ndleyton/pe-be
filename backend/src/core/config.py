@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -16,7 +16,12 @@ class Settings(BaseSettings):
         description="PostgreSQL database connection URL"
     )
     
-    API_PREFIX: str = Field("/api/v1", env="API_PREFIX")
+    API_VERSION: str = Field("v1", env="API_VERSION")
+    
+    @computed_field
+    @property
+    def API_PREFIX(self) -> str:
+        return f"/api/{self.API_VERSION}"
     
     # Cookie security settings
     COOKIE_SECURE: bool = Field(False, env="COOKIE_SECURE", description="Enable secure cookies for HTTPS")

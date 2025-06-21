@@ -61,7 +61,7 @@ async def delete_workout(
 workout_types_router = APIRouter(prefix="/workout-types", tags=["workout-types"])
 
 
-@workout_types_router.get("/", response_model=List[WorkoutTypeRead])
+@workout_types_router.get("", response_model=List[WorkoutTypeRead])
 async def get_workout_types(
     session: AsyncSession = Depends(get_async_session)
 ):
@@ -69,7 +69,7 @@ async def get_workout_types(
     return await WorkoutTypeService.get_all_workout_types(session)
 
 
-@workout_types_router.post("/", response_model=WorkoutTypeRead, status_code=status.HTTP_201_CREATED)
+@workout_types_router.post("", response_model=WorkoutTypeRead, status_code=status.HTTP_201_CREATED)
 async def create_workout_type(
     workout_type_in: WorkoutTypeCreate,
     user: User = Depends(current_active_user),

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncGuestDataToServer } from './syncGuestData';
+import { endpoints } from '@/shared/api/endpoints';
 import type { GuestData } from '@/contexts/GuestDataContext';
 
 // Mock the API client
@@ -120,13 +121,13 @@ describe('syncGuestDataToServer', () => {
     expect(mockClearGuestData).toHaveBeenCalled();
 
     // Verify API calls
-    expect(api.post).toHaveBeenCalledWith('/exercise-types/', {
+    expect(api.post).toHaveBeenCalledWith(endpoints.exerciseTypes, {
       name: 'Push-ups',
       description: 'Upper body exercise',
       default_intensity_unit: 1,
     });
 
-    expect(api.post).toHaveBeenCalledWith('/workout-types/', {
+    expect(api.post).toHaveBeenCalledWith(endpoints.workoutTypes, {
       name: 'Strength Training',
       description: 'Traditional strength training',
     });
