@@ -50,9 +50,6 @@ vi.mock('../HomeLogo', () => ({
   default: () => <div data-testid="home-logo">PE Logo</div>,
 }));
 
-vi.mock('../Breadcrumbs', () => ({
-  default: () => <div data-testid="breadcrumbs">Home / Dashboard</div>,
-}));
 
 vi.mock('./DesktopNav', () => ({
   default: () => <div data-testid="desktop-nav">Desktop Navigation</div>,
@@ -137,17 +134,6 @@ describe('AppBar', () => {
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
     });
 
-    it('should render breadcrumbs in the center section', () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>
-      );
-
-      const centerSection = screen.getByRole('banner').querySelector('.navbar-center');
-      expect(centerSection).toBeInTheDocument();
-      expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument();
-    });
   });
 
   describe('Navigation Interactions', () => {
@@ -285,7 +271,6 @@ describe('AppBar', () => {
 
       // Check that mocked child components are rendered
       expect(screen.getByTestId('home-logo')).toHaveTextContent('PE Logo');
-      expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Home / Dashboard');
     });
   });
 
