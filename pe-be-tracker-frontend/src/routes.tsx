@@ -6,6 +6,7 @@ import MyWorkoutsPage from './pages/MyWorkoutsPage';
 import { OAuthCallbackPage } from './features/auth/pages';
 import WorkoutPage from './pages/WorkoutPage';
 import ChatPage from './pages/ChatPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 const routes: RouteObject[] = [
   {
@@ -41,6 +42,10 @@ const routes: RouteObject[] = [
         element: <div className="p-4"><h1 className="text-2xl font-bold">Profile Page</h1><p>Coming soon...</p></div>,
       }
     ]
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   }
 ];
 
