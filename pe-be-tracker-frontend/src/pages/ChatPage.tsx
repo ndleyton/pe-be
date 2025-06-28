@@ -332,7 +332,7 @@ const ChatPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto h-screen flex flex-col bg-base-100">
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-live="polite">
         {messages.map((message) => (
           <div
             key={message.id}
