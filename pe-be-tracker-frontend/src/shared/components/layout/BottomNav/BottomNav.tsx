@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
+import { HiOutlineHome, HiOutlineUser, HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { IoFitnessOutline } from 'react-icons/io5';
 
 const BottomNav: React.FC = () => {
@@ -24,6 +24,16 @@ const BottomNav: React.FC = () => {
       >
         <IoFitnessOutline className="w-5 h-5" />
         <span className="btm-nav-label">Workouts</span>
+      </NavLink>
+      
+      <NavLink
+        to="/chat"
+        className={({ isActive }) =>
+          `${isActive ? 'active text-primary' : 'text-base-content/70'}`
+        }
+      >
+        <HiOutlineChatBubbleLeftRight className="w-5 h-5" />
+        <span className="btm-nav-label">Chat</span>
       </NavLink>
       
       <NavLink

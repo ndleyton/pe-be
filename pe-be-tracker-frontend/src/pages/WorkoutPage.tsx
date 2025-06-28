@@ -175,6 +175,7 @@ const WorkoutPage: React.FC = () => {
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
         isLoading={isAuthenticated() && finishWorkoutMutation.isPending}
+        exercises={exercises}
       />
     </>
   );

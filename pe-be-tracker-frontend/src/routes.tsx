@@ -5,6 +5,7 @@ import AppLayout from './layouts/AppLayout';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
 import { OAuthCallbackPage } from './features/auth/pages';
 import WorkoutPage from './pages/WorkoutPage';
+import ChatPage from './pages/ChatPage';
 
 const routes: RouteObject[] = [
   {
@@ -30,6 +31,10 @@ const routes: RouteObject[] = [
       {
         path: 'workout/:workoutId',
         element: <WorkoutPage />,
+      },
+      {
+        path: 'chat',
+        element: <ChatPage />,
       },
       {
         path: 'profile',

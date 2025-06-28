@@ -61,6 +61,9 @@ class MuscleGroup(Base):
     __tablename__ = "muscle_groups"
     
     name = Column(String)
+    
+    # Relationships
+    muscles: Mapped[List["Muscle"]] = relationship("Muscle", back_populates="muscle_group")
 
 
 class Muscle(Base):
@@ -72,6 +75,7 @@ class Muscle(Base):
     
     # Relationships
     exercise_types = relationship("ExerciseType", secondary=exercise_types_muscles, back_populates="muscles")
+    muscle_group: Mapped["MuscleGroup"] = relationship("MuscleGroup", back_populates="muscles")
 
 
 class ExerciseMuscle(Base):

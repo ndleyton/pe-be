@@ -3,8 +3,8 @@ from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.workouts.models import Workout
-from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate
-from src.workouts.service import WorkoutService, WorkoutTypeService
+from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse
+from src.workouts.service import WorkoutService, WorkoutTypeService, WorkoutParsingService
 from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User
@@ -31,6 +31,21 @@ async def create_workout(
 ):
     """Create a new workout"""
     return await WorkoutService.create_new_workout(session, workout_in, user.id)
+
+
+@router.post("/parse", response_model=WorkoutParseResponse)
+async def parse_workout_text(
+    parse_request: WorkoutParseRequest,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Parse raw workout text using LLM"""
+    try:
+        return await WorkoutParsingService.parse_workout_text(parse_request.workout_text)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error while parsing workout")
 
 
 # ----- Item routes -----

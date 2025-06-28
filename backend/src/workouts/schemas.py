@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import validator, BaseModel, Field
 
@@ -68,4 +68,33 @@ class WorkoutTypeCreate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError('Name cannot be empty')
-        return v 
+        return v
+
+
+# Workout parsing schemas
+class WorkoutParseRequest(BaseModel):
+    """Schema for workout text parsing request"""
+    workout_text: str = Field(..., min_length=1, description="Raw workout text to parse")
+
+
+class ParsedExerciseSet(BaseModel):
+    """Schema for a parsed exercise set"""
+    reps: Optional[int] = None
+    intensity: Optional[float] = None
+    intensity_unit: str
+    rest_time_seconds: Optional[int] = None
+
+
+class ParsedExercise(BaseModel):
+    """Schema for a parsed exercise"""
+    exercise_type_name: str
+    notes: Optional[str] = None
+    sets: List[ParsedExerciseSet]
+
+
+class WorkoutParseResponse(BaseModel):
+    """Schema for workout parsing response"""
+    name: str
+    notes: Optional[str] = None
+    workout_type_id: int
+    exercises: List[ParsedExercise]
