@@ -181,12 +181,12 @@ jobs:
       run: |
         docker save pe-be-backend:latest | gzip > backend-image.tar.gz
         
-    - name: Upload Docker image
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-docker-image
-        path: ./backend/backend-image.tar.gz
-        retention-days: 7
+    #    - name: Upload Docker image
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: backend-docker-image
+#        path: ./backend/backend-image.tar.gz
+#        retention-days: 7
 
   deploy-staging:
     runs-on: ubuntu-latest
@@ -195,14 +195,14 @@ jobs:
     environment: staging
     
     steps:
-    - name: Download Docker image
-      uses: actions/download-artifact@v4
-      with:
-        name: backend-docker-image
+    #    - name: Download Docker image
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: backend-docker-image
         
-    - name: Load Docker image
-      run: |
-        docker load < backend-image.tar.gz
+    #    - name: Load Docker image
+#      run: |
+#        docker load < backend-image.tar.gz
         
     - name: Deploy to staging
       run: |
@@ -221,14 +221,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-docker-image
+      #      - name: Download Docker image
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: backend-docker-image
           
-      - name: Load Docker image
-        run: |
-          docker load < backend-image.tar.gz
+      #      - name: Load Docker image
+#        run: |
+#          docker load < backend-image.tar.gz
           
       - name: Setup deployment environment
         run: |

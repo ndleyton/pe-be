@@ -1,21 +1,8 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import type { MuscleGroup, Muscle } from '@/shared/types';
 
-export interface MuscleGroup {
-  id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Muscle {
-  id: number;
-  name: string;
-  muscle_group_id: number;
-  muscle_group: MuscleGroup;
-  created_at: string;
-  updated_at: string;
-}
+export type { MuscleGroup, Muscle };
 
 export interface ExerciseType {
   id: number | string;

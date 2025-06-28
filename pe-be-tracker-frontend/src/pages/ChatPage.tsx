@@ -49,6 +49,11 @@ interface IntensityUnit {
   abbreviation: string;
 }
 
+interface WorkoutType {
+  id: number;
+  name: string;
+}
+
 // Parse workout text using LLM
 const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => {
   const response = await api.post('/workouts/parse', { workout_text: workoutText });
@@ -134,7 +139,7 @@ const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch reference data
-  const { data: workoutTypes = [] } = useQuery({
+  const { data: workoutTypes = [] } = useQuery<WorkoutType[]>({
     queryKey: ['workout-types'],
     queryFn: fetchWorkoutTypes,
     enabled: isAuthenticated(),
