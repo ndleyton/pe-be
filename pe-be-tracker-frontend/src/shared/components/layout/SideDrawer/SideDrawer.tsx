@@ -1,10 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineUser, HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
-import { IoFitnessOutline } from 'react-icons/io5';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/shared/api/client';
+import { navItems } from '@/shared/navigation/navItems';
 
 const SideDrawer: React.FC = () => {
   const { isOpen, closeDrawer } = useDrawer();
@@ -75,71 +74,28 @@ const SideDrawer: React.FC = () => {
           
           <nav role="navigation" aria-label="Secondary navigation">
             <ul className="space-y-2">
-              <li>
-                <NavLink
-                  ref={firstFocusableRef}
-                  to="/dashboard"
-                  onClick={closeDrawer}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`
-                  }
-                >
-                  <HiOutlineHome className="w-5 h-5" />
-                  <span>Home</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/workouts"
-                  onClick={closeDrawer}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`
-                  }
-                >
-                  <IoFitnessOutline className="w-5 h-5" />
-                  <span>Workouts</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/chat"
-                  onClick={closeDrawer}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`
-                  }
-                >
-                  <HiOutlineChatBubbleLeftRight className="w-5 h-5" />
-                  <span>Chat</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/profile"
-                  onClick={closeDrawer}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`
-                  }
-                >
-                  <HiOutlineUser className="w-5 h-5" />
-                  <span>Profile</span>
-                </NavLink>
-              </li>
+              {navItems.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.to}>
+                    <NavLink
+                      ref={index === 0 ? firstFocusableRef : undefined}
+                      to={item.to}
+                      onClick={closeDrawer}
+                      className={({ isActive }) =>
+                        `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                          isActive 
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`
+                      }
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
           
