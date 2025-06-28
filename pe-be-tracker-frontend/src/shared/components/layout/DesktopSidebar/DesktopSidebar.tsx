@@ -1,41 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineUser, HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
-import { IoFitnessOutline } from 'react-icons/io5';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/shared/api/client';
-
-interface NavItem {
-  to: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}
+import { navItems } from '@/shared/navigation/navItems';
+import { HiOutlineUser } from 'react-icons/hi2';
 
 const DesktopSidebar: React.FC = () => {
   const { isAuthenticated, signOut } = useAuth();
-
-  const navItems: NavItem[] = [
-    {
-      to: '/dashboard',
-      icon: HiOutlineHome,
-      label: 'Home'
-    },
-    {
-      to: '/workouts',
-      icon: IoFitnessOutline,
-      label: 'Workouts'
-    },
-    {
-      to: '/chat',
-      icon: HiOutlineChatBubbleLeftRight,
-      label: 'Chat'
-    },
-    {
-      to: '/profile',
-      icon: HiOutlineUser,
-      label: 'Profile'
-    }
-  ];
 
   const handleGoogleSignIn = async () => {
     try {
