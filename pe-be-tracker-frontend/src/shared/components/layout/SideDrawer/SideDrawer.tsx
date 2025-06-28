@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
+import { HiOutlineHome, HiOutlineUser, HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { IoFitnessOutline } from 'react-icons/io5';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,6 +110,22 @@ const SideDrawer: React.FC = () => {
               </li>
               <li>
                 <NavLink
+                  to="/chat"
+                  onClick={closeDrawer}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                      isActive 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`
+                  }
+                >
+                  <HiOutlineChatBubbleLeftRight className="w-5 h-5" />
+                  <span>Chat</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
                   to="/profile"
                   onClick={closeDrawer}
                   className={({ isActive }) =>
@@ -157,6 +173,7 @@ const SideDrawer: React.FC = () => {
           </div>
         </div>
       </div>
+
     </>
   );
 };

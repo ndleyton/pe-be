@@ -1,12 +1,29 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 
+export interface MuscleGroup {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Muscle {
+  id: number;
+  name: string;
+  muscle_group_id: number;
+  muscle_group: MuscleGroup;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExerciseType {
   id: number | string;
   name: string;
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
+  muscles?: Muscle[];
   created_at?: string;
   updated_at?: string;
 }

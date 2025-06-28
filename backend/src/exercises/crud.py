@@ -4,7 +4,7 @@ from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 
 
@@ -13,7 +13,7 @@ async def get_exercise_by_id(session: AsyncSession, exercise_id: int) -> Optiona
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type),
+            selectinload(Exercise.exercise_type).selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets)
         )
         .where(Exercise.id == exercise_id)
@@ -26,7 +26,7 @@ async def get_exercises_for_workout(session: AsyncSession, workout_id: int) -> L
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type),
+            selectinload(Exercise.exercise_type).selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets)
         )
         .where(Exercise.workout_id == workout_id)
@@ -54,7 +54,7 @@ async def create_exercise(session: AsyncSession, exercise_create: ExerciseCreate
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type),
+            selectinload(Exercise.exercise_type).selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets)
         )
         .where(Exercise.id == exercise.id)
@@ -65,7 +65,9 @@ async def create_exercise(session: AsyncSession, exercise_create: ExerciseCreate
 # Exercise Type CRUD operations
 async def get_exercise_types(session: AsyncSession, order_by: str = "usage") -> List[ExerciseType]:
     """Get all exercise types with optional ordering"""
-    query = select(ExerciseType)
+    query = select(ExerciseType).options(
+        selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
+    )
     
     if order_by == "usage":
         # Order by times_used DESC (most used first), then by name ASC (alphabetical)
