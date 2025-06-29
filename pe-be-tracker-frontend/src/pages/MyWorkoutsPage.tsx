@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import api from '@/shared/api/client';
 import { WorkoutForm } from '../features/workouts/components';
-import { FloatingActionButton } from '../shared/components/ui';
+import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
 import { useGuestData, GuestWorkout } from '@/contexts/GuestDataContext';
 
 type Workout = {
@@ -118,6 +118,9 @@ const MyWorkoutsPage = () => {
           <div className="mb-6">
             <h1 className="text-2xl font-bold">Workouts</h1>
           </div>
+          
+          {/* Week Tracking Component */}
+          <WeekTracking workouts={workouts} className="mb-6" />
           
           {showWorkoutForm && (
             <div className="mb-6">
