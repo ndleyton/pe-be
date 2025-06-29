@@ -89,7 +89,6 @@ const ProfilePage: React.FC = () => {
           <p className="text-base-content/70 mt-1">Track your fitness journey</p>
         </div>
         
-        {/* Week Tracking Component */}
         <WeekTracking workouts={workouts} className="mb-6" />
         
         {/* Stats Cards */}
