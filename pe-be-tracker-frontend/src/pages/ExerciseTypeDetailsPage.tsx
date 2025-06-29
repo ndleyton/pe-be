@@ -18,10 +18,11 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     enabled: !!exerciseTypeId,
   });
 
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats, error: statsError } = useQuery({
     queryKey: ['exerciseTypeStats', exerciseTypeId],
     queryFn: () => getExerciseTypeStats(exerciseTypeId!),
     enabled: !!exerciseTypeId && !!exerciseType,
+    retry: 1,
   });
 
   const addMutation = useMutation({
@@ -86,6 +87,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           {addMutation.isPending ? 'Adding...' : 'Add to Current Workout'}
         </button>
       </div>
+
+      {statsError && (
+        <div className="alert alert-error mb-6">
+          <span>Error loading exercise statistics. Please try again later.</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column - Image and Description */}
