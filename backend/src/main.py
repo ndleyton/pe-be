@@ -19,10 +19,30 @@ def create_app() -> FastAPI:
         version=f"2.0.0-{settings.API_VERSION}"
     )
 
+    base_frontend = settings.FRONTEND_URL.rstrip('/')
+    # Derive a 127.0.0.1 variant if the base contains 'localhost'
+    localhost_variant = base_frontend.replace("localhost", "127.0.0.1") if "localhost" in base_frontend else None
+
+    # Common dev hosts to allow
+    allowed_origins = {
+        base_frontend,
+        localhost_variant,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
+    # Remove any None entries
+    allowed_origins = [origin for origin in allowed_origins if origin]
+
+    # Regex to match any localhost / 127.0.0.1 port (useful for hot-reload tools)
+    localhost_regex = r"http://(localhost|127\.0\.0\.1):\d+$"
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],
+        allow_origins=allowed_origins,
+        allow_origin_regex=localhost_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

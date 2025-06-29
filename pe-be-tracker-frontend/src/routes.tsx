@@ -3,6 +3,7 @@ import { RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
+import ProfilePage from './pages/ProfilePage';
 import { OAuthCallbackPage } from './features/auth/pages';
 import WorkoutPage from './pages/WorkoutPage';
 import ChatPage from './pages/ChatPage';
@@ -39,7 +40,7 @@ const routes: RouteObject[] = [
       },
       {
         path: 'profile',
-        element: <div className="p-4"><h1 className="text-2xl font-bold">Profile Page</h1><p>Coming soon...</p></div>,
+        element: <ProfilePage />,
       }
     ]
   },
