@@ -37,6 +37,9 @@ export const endpoints = {
     register: '/auth/register',
     me: '/auth/me',
   },
+
+  // Add exercise to current workout (or create workout if necessary)
+  addExerciseToCurrentWorkout: '/workouts/add-exercise',
 } as const;
 
 // Type helpers for endpoints
