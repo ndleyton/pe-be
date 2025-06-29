@@ -1,42 +1,28 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
-import { IoFitnessOutline } from 'react-icons/io5';
+import { navItems } from '@/shared/navigation/navItems';
 
-const BottomNav: React.FC = () => {
-  return (
-    <div className="btm-nav md:hidden" role="navigation" aria-label="Bottom navigation">
+const BottomNav: React.FC = () => (
+  <nav
+    className="fixed bottom-0 inset-x-0 z-50 flex justify-around items-center bg-base-200 bg-slate-800 text-base-100 shadow-lg py-2 md:hidden"
+    style={{ bottom: 'env(safe-area-inset-bottom)' }}
+    aria-label="Bottom navigation"
+  >
+    {navItems.map(({ to, icon: Icon, label }) => (
       <NavLink
-        to="/dashboard"
+        key={to}
+        to={to}
+        aria-label={label}
         className={({ isActive }) =>
-          `${isActive ? 'active text-primary' : 'text-base-content/70'}`
+          `flex flex-col items-center justify-center gap-0.5 ${isActive ? 'text-primary' : 'text-base-content/70'}`
         }
       >
-        <HiOutlineHome className="w-5 h-5" />
-        <span className="btm-nav-label">Home</span>
+        <Icon className="w-6 h-6" />
+        {/* Visually hidden label for accessibility */}
+        <span className="sr-only">{label}</span>
       </NavLink>
-      
-      <NavLink
-        to="/workouts"
-        className={({ isActive }) =>
-          `${isActive ? 'active text-primary' : 'text-base-content/70'}`
-        }
-      >
-        <IoFitnessOutline className="w-5 h-5" />
-        <span className="btm-nav-label">Workouts</span>
-      </NavLink>
-      
-      <NavLink
-        to="/profile"
-        className={({ isActive }) =>
-          `${isActive ? 'active text-primary' : 'text-base-content/70'}`
-        }
-      >
-        <HiOutlineUser className="w-5 h-5" />
-        <span className="btm-nav-label">Profile</span>
-      </NavLink>
-    </div>
-  );
-};
+    ))}
+  </nav>
+);
 
 export default BottomNav;
