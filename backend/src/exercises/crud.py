@@ -218,7 +218,6 @@ async def get_exercise_type_stats(session: AsyncSession, exercise_type_id: int) 
             "reps": data["totalReps"]
         })
     
-    # Get last workout info
     last_exercise = exercises[0] if exercises else None
     last_workout = None
     if last_exercise:
