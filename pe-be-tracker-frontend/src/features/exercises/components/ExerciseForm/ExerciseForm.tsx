@@ -41,6 +41,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     handleSubmit,
     reset,
     setValue,
+    clearErrors,
     formState: { errors },
   } = useForm<ExerciseFormData>();
 
@@ -84,7 +85,8 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
 
   const handleExerciseTypeSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     setSelectedExerciseType(exerciseType);
-    setValue('exercise_type_id', exerciseType.id);
+    setValue('exercise_type_id', exerciseType.id, { shouldValidate: true });
+    clearErrors('exercise_type_id');
     setShowModal(false);
   };
 

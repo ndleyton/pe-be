@@ -48,6 +48,29 @@ async def parse_workout_text(
         raise HTTPException(status_code=500, detail="Internal server error while parsing workout")
 
 
+# ----- Workout types sub-router -----
+
+workout_types_router = APIRouter(prefix="/workout-types", tags=["workout-types"])
+
+@workout_types_router.get("", response_model=List[WorkoutTypeRead])
+async def get_workout_types(
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Get all workout types"""
+    return await WorkoutTypeService.get_all_workout_types(session)
+
+@workout_types_router.post("", response_model=WorkoutTypeRead, status_code=status.HTTP_201_CREATED)
+async def create_workout_type(
+    workout_type_in: WorkoutTypeCreate,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Create a new workout type"""
+    return await WorkoutTypeService.create_new_workout_type(session, workout_type_in)
+
+# Include the sub-router early to avoid path conflicts with parameterized routes
+router.include_router(workout_types_router)
+
 # ----- Item routes -----
 
 @router.get("/{workout_id}", response_model=WorkoutRead)
@@ -111,30 +134,4 @@ async def get_exercises_in_workout(
         raise HTTPException(status_code=404, detail="Workout not found")
 
     # Get exercises for this workout
-    return await ExerciseService.get_workout_exercises(session, workout_id)
-
-
-# ----- Workout types sub-router -----
-
-workout_types_router = APIRouter(prefix="/workout-types", tags=["workout-types"])
-
-
-@workout_types_router.get("", response_model=List[WorkoutTypeRead])
-async def get_workout_types(
-    session: AsyncSession = Depends(get_async_session)
-):
-    """Get all workout types"""
-    return await WorkoutTypeService.get_all_workout_types(session)
-
-
-@workout_types_router.post("", response_model=WorkoutTypeRead, status_code=status.HTTP_201_CREATED)
-async def create_workout_type(
-    workout_type_in: WorkoutTypeCreate,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
-):
-    """Create a new workout type"""
-    return await WorkoutTypeService.create_new_workout_type(session, workout_type_in)
-
-# Register sub-router
-router.include_router(workout_types_router) 
+    return await ExerciseService.get_workout_exercises(session, workout_id) 

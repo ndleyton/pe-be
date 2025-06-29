@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/api/exercises';
 import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
+import axios from 'axios';
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -29,6 +30,24 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
       queryClient.invalidateQueries({ queryKey: ['exerciseTypes'] });
       handleSelect(newExerciseType);
     },
+    onError: (err: unknown) => {
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        typeof err.response.data?.detail === 'string' &&
+        err.response.data.detail.toLowerCase().includes('already exists')
+      ) {
+        // Backend indicates the type already exists — select it instead of showing an error
+        const existing = exerciseTypes.find(
+          (t) => t.name.toLowerCase() === searchTerm.toLowerCase(),
+        );
+        if (existing) {
+          handleSelect(existing);
+          // No need to show an error since we handled it gracefully
+          return;
+        }
+      }
+    },
   });
   
   const filteredExerciseTypes = useMemo(() => {
@@ -41,6 +60,8 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   }, [exerciseTypes, searchTerm]);
   
   const showCreateButton = searchTerm.trim() && filteredExerciseTypes.length === 0;
+
+  const createInFlight = React.useRef(false);
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated()) {
@@ -73,26 +94,46 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   };
   
   const handleCreateExerciseType = () => {
-    if (!searchTerm.trim()) return;
-    
+    if (createInFlight.current) return; // ignore duplicate clicks while pending
+    const trimmedName = searchTerm.trim();
+    if (!trimmedName) return;
+
+    createInFlight.current = true;
+
+    // Avoid creating duplicates — if a type with the same name (case-insensitive) already exists, reuse it
+    const existingType = exerciseTypes.find(
+      (type) => type.name.toLowerCase() === trimmedName.toLowerCase(),
+    );
+
+    if (existingType) {
+      handleSelect(existingType);
+      createInFlight.current = false;
+      return;
+    }
+
     if (isAuthenticated()) {
       // Create via API for authenticated users
       createMutation.mutate({
-        name: searchTerm.trim(),
+        name: trimmedName,
         description: 'Custom exercise',
         default_intensity_unit: 1,
+      }, {
+        onSettled: () => {
+          createInFlight.current = false;
+        }
       });
     } else {
       // Create via guest context for unauthenticated users
       const newExerciseTypeId = guestActions.addExerciseType({
-        name: searchTerm.trim(),
+        name: trimmedName,
         description: 'Custom exercise',
         default_intensity_unit: 1,
       });
-      
-      const newExerciseType = guestData.exerciseTypes.find(et => et.id === newExerciseTypeId);
+
+      const newExerciseType = guestData.exerciseTypes.find((et) => et.id === newExerciseTypeId);
       if (newExerciseType) {
         handleSelect(newExerciseType);
+        createInFlight.current = false;
       }
     }
   };
@@ -270,7 +311,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
               </button>
             )}
           </div>
-          {isAuthenticated() && createMutation.error && (
+          {isAuthenticated() && createMutation.isError && (
             <p className="mt-2 text-sm text-red-400">
               Failed to create exercise type. Please try again.
             </p>

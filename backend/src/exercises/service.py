@@ -59,6 +59,11 @@ class ExerciseTypeService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create exercise type due to database constraint"
             ) from e
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
 
 
 class IntensityUnitService:
