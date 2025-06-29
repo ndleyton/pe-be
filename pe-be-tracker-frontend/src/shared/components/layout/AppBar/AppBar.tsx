@@ -19,7 +19,7 @@ const AppBar: React.FC = () => {
 
   return (
     <header className="navbar bg-base-100 shadow-sm" role="banner" aria-label="Primary">
-      <div className="flex-none">
+      <div className="flex-1">
         <button
           type="button"
           className="btn btn-ghost btn-circle lg:hidden"
@@ -28,9 +28,7 @@ const AppBar: React.FC = () => {
         >
           <HiOutlineBars3 className="w-6 h-6" />
         </button>
-      </div>
-
-      <div className="flex-1 flex justify-center">
+        
         <button
           type="button"
           onClick={handleLogoClick}
