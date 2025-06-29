@@ -7,6 +7,8 @@ import ProfilePage from './pages/ProfilePage';
 import { OAuthCallbackPage } from './features/auth/pages';
 import WorkoutPage from './pages/WorkoutPage';
 import ChatPage from './pages/ChatPage';
+import ExerciseTypesPage from './pages/ExerciseTypesPage';
+import ExerciseTypeDetailsPage from './pages/ExerciseTypeDetailsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 const routes: RouteObject[] = [
@@ -33,6 +35,14 @@ const routes: RouteObject[] = [
       {
         path: 'workout/:workoutId',
         element: <WorkoutPage />,
+      },
+      {
+        path: 'exercise-types',
+        element: <ExerciseTypesPage />,
+      },
+      {
+        path: 'exercise-types/:exerciseTypeId',
+        element: <ExerciseTypeDetailsPage />,
       },
       {
         path: 'chat',
