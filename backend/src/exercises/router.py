@@ -7,7 +7,8 @@ from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeRead,
     ExerciseTypeCreate,
-    IntensityUnitRead
+    IntensityUnitRead,
+    ExerciseTypeStats
 )
 from src.exercises.service import ExerciseService, ExerciseTypeService, IntensityUnitService
 from src.core.database import get_async_session
@@ -54,11 +55,11 @@ async def get_exercise_type(
         )
     return exercise_type
 
-@exercise_types_router.get("/{exercise_type_id}/stats")
+@exercise_types_router.get("/{exercise_type_id}/stats", response_model=ExerciseTypeStats)
 async def get_exercise_type_stats(
     exercise_type_id: int,
     session: AsyncSession = Depends(get_async_session)
-) -> Dict[str, Any]:
+):
     """Get exercise type statistics including progressive overload data."""
     # First check if exercise type exists
     exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
