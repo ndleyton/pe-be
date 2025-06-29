@@ -95,7 +95,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Image and Description */}
         <div className="space-y-6">
           {/* Exercise Image Placeholder */}
           <div className="card bg-base-100 shadow-md">
@@ -109,7 +108,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Description */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h2 className="card-title">Description</h2>
@@ -119,7 +117,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Muscle Groups */}
           {exerciseType.muscles && exerciseType.muscles.length > 0 && (
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
@@ -136,9 +133,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column - Stats and Charts */}
         <div className="space-y-6">
-          {/* Progressive Overload Chart */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h2 className="card-title">Progressive Overload</h2>
@@ -156,8 +151,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Last Workout Info */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h2 className="card-title">Last Workout</h2>
@@ -175,8 +168,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Personal Best Info */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h2 className="card-title">Personal Best</h2>
@@ -194,8 +185,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Usage Stats */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h2 className="card-title">Usage Statistics</h2>
