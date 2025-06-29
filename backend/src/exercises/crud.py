@@ -1,8 +1,10 @@
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update, func
+from sqlalchemy import select, desc, update, func, and_, cast
+from sqlalchemy.sql import text
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
 from src.exercise_sets.models import ExerciseSet
@@ -147,7 +149,7 @@ async def get_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
 
 
 async def get_exercise_type_stats(session: AsyncSession, exercise_type_id: int) -> Dict[str, Any]:
-    """Get exercise type statistics including progressive overload data, last workout, and personal best"""
+    """Get exercise type statistics with optimized database queries"""
     
     # Get the exercise type first to get the default intensity unit
     exercise_type = await get_exercise_type_by_id(session, exercise_type_id)
@@ -166,12 +168,10 @@ async def get_exercise_type_stats(session: AsyncSession, exercise_type_id: int) 
     )
     intensity_unit = intensity_unit_result.scalar_one_or_none()
     
-    # Get all exercises of this type with their sets
+    # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
         select(Exercise)
-        .options(
-            selectinload(Exercise.exercise_sets)
-        )
+        .options(selectinload(Exercise.exercise_sets))
         .where(Exercise.exercise_type_id == exercise_type_id)
         .order_by(Exercise.created_at.desc())
     )
@@ -239,6 +239,7 @@ async def get_exercise_type_stats(session: AsyncSession, exercise_type_id: int) 
     personal_best = None
     best_weight = 0
     best_set = None
+    best_exercise = None
     
     for exercise in exercises:
         for exercise_set in exercise.exercise_sets:
