@@ -1,0 +1,1 @@
+export { LastWorkoutInfo } from './LastWorkoutInfo';

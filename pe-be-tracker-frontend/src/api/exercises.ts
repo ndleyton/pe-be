@@ -120,3 +120,46 @@ export const getIntensityUnits = async (): Promise<IntensityUnit[]> => {
   const response = await api.get(endpoints.intensityUnits);
   return response.data;
 };
+
+// Get exercise type by ID
+export const getExerciseTypeById = async (exerciseTypeId: string): Promise<ExerciseType> => {
+  const response = await api.get(endpoints.exerciseTypeById(exerciseTypeId));
+  return response.data;
+};
+
+// Exercise type statistics interfaces
+export interface ProgressiveOverloadDataPoint {
+  date: string;
+  maxWeight: number;
+  totalVolume: number;
+  reps: number;
+}
+
+export interface LastWorkoutInfo {
+  date: string;
+  sets: number;
+  totalReps: number;
+  maxWeight: number;
+  totalVolume: number;
+}
+
+export interface PersonalBestInfo {
+  date: string;
+  weight: number;
+  reps: number;
+  volume: number;
+}
+
+export interface ExerciseTypeStats {
+  progressiveOverload: ProgressiveOverloadDataPoint[];
+  lastWorkout: LastWorkoutInfo | null;
+  personalBest: PersonalBestInfo | null;
+  totalSets: number;
+  intensityUnit: IntensityUnit;
+}
+
+// Get exercise type statistics
+export const getExerciseTypeStats = async (exerciseTypeId: string): Promise<ExerciseTypeStats> => {
+  const response = await api.get(`${endpoints.exerciseTypeById(exerciseTypeId)}/stats`);
+  return response.data;
+};
