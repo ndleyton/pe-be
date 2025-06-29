@@ -81,4 +81,15 @@ async def create_workout_type(session: AsyncSession, workout_type_create: Workou
     session.add(workout_type)
     await session.commit()
     await session.refresh(workout_type)
-    return workout_type 
+    return workout_type
+
+
+async def get_latest_workout_for_user(session: AsyncSession, user_id: int) -> Optional[Workout]:
+    """Return the most recent workout for a user (ordered by start_time DESC)"""
+    result = await session.execute(
+        select(Workout)
+        .where(Workout.owner_id == user_id)
+        .order_by(Workout.start_time.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none() 

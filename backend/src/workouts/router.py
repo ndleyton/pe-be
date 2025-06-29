@@ -3,7 +3,7 @@ from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.workouts.models import Workout
-from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse
+from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse, AddExerciseRequest
 from src.workouts.service import WorkoutService, WorkoutTypeService, WorkoutParsingService
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -70,6 +70,21 @@ async def create_workout_type(
 
 # Include the sub-router early to avoid path conflicts with parameterized routes
 router.include_router(workout_types_router)
+
+# ----- Add Exercise to Current Workout -----
+
+@router.post("/add-exercise", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
+async def add_exercise_to_current_workout(
+    request_body: AddExerciseRequest,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Add an exercise (and optional initial set) to the user's current workout.
+
+    If the user does not yet have a workout for today, one will be created automatically.
+    """
+    workout = await WorkoutService.add_exercise_to_current_workout(session, user.id, request_body)
+    return workout
 
 # ----- Item routes -----
 

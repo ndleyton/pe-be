@@ -1,13 +1,16 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HiOutlineArrowLeft, HiOutlinePhoto } from 'react-icons/hi2';
 import { getExerciseTypeById, getExerciseTypeStats } from '@/api/exercises';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
+import { addExerciseToCurrentWorkout } from '@/api/workouts';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: exerciseType, isLoading: isLoadingExerciseType, error: exerciseTypeError } = useQuery({
     queryKey: ['exerciseType', exerciseTypeId],
@@ -19,6 +22,22 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     queryKey: ['exerciseTypeStats', exerciseTypeId],
     queryFn: () => getExerciseTypeStats(exerciseTypeId!),
     enabled: !!exerciseTypeId && !!exerciseType,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: () =>
+      addExerciseToCurrentWorkout({
+        exercise_type_id: Number(exerciseTypeId),
+      }),
+    onSuccess: (workout) => {
+      // Invalidate queries to avoid cache issues on redirect
+      queryClient.invalidateQueries({ queryKey: ['workout', workout.id.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
+      navigate(`/workout/${workout.id}`);
+    },
+    onError: (error) => {
+      alert(`An error occurred: ${error.message}`);
+    }
   });
 
   if (exerciseTypeError) {
@@ -59,6 +78,13 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <HiOutlineArrowLeft className="h-5 w-5" />
         </Link>
         <h1 className="text-3xl font-bold">{exerciseType.name}</h1>
+        <button
+          className="btn btn-primary btn-sm ml-auto"
+          onClick={() => addMutation.mutate()}
+          disabled={addMutation.isPending}
+        >
+          {addMutation.isPending ? 'Adding...' : 'Add to Current Workout'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
