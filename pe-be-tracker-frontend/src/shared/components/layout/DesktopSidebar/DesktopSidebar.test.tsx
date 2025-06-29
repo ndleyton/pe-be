@@ -175,6 +175,9 @@ describe('DesktopSidebar', () => {
       expect(screen.getByRole('link', { name: /workouts/i })).toHaveFocus();
 
       await user.tab();
+      expect(screen.getByRole('link', { name: /exercises/i })).toHaveFocus();
+
+      await user.tab();
       expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();
     });
 
