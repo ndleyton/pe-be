@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     )
     
     API_VERSION: str = Field("v1", env="API_VERSION")
+    OPENAI_API_KEY: str = Field("", env="OPENAI_API_KEY")
     
     @computed_field
     @property

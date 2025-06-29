@@ -1,5 +1,8 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import type { MuscleGroup, Muscle } from '@/shared/types';
+
+export type { MuscleGroup, Muscle };
 
 export interface ExerciseType {
   id: number | string;
@@ -7,6 +10,7 @@ export interface ExerciseType {
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
+  muscles?: Muscle[];
   created_at?: string;
   updated_at?: string;
 }

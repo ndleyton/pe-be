@@ -60,7 +60,7 @@ describe('FinishWorkoutModal', () => {
       
       const message = screen.getByText('Are you sure you want to finish this workout? This will set the end time to now.');
       expect(message).toBeInTheDocument();
-      expect(message).toHaveClass('mb-6', 'text-gray-300');
+      expect(message).toHaveClass('mb-4', 'text-gray-300');
     });
 
     it('should display correct button labels in normal state', () => {
@@ -306,6 +306,173 @@ describe('FinishWorkoutModal', () => {
       // Action elements should be buttons
       const buttons = screen.getAllByRole('button');
       expect(buttons).toHaveLength(2);
+    });
+  });
+
+  describe('Muscle Group Summary', () => {
+    const mockExercisesWithSets = [
+      {
+        exercise_type: { 
+          name: 'Bench Press',
+          muscles: [
+            {
+              id: 1,
+              name: 'Pectoralis Major',
+              muscle_group_id: 1,
+              muscle_group: { id: 1, name: 'Chest', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+              created_at: '2025-01-01T00:00:00Z',
+              updated_at: '2025-01-01T00:00:00Z'
+            }
+          ]
+        },
+        exercise_sets: [
+          { done: true },
+          { done: true },
+          { done: false }
+        ]
+      },
+      {
+        exercise_type: { 
+          name: 'Squats',
+          muscles: [
+            {
+              id: 6,
+              name: 'Quadriceps',
+              muscle_group_id: 3,
+              muscle_group: { id: 3, name: 'Legs', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+              created_at: '2025-01-01T00:00:00Z',
+              updated_at: '2025-01-01T00:00:00Z'
+            }
+          ]
+        },
+        exercise_sets: [
+          { done: true },
+          { done: true },
+          { done: true }
+        ]
+      }
+    ];
+
+    const mockExercisesNoSets = [
+      {
+        exercise_type: { name: 'Bench Press' },
+        exercise_sets: []
+      }
+    ];
+
+    it('should display muscle group summary when exercises with completed sets are provided', () => {
+      render(
+        <FinishWorkoutModal 
+          {...defaultProps} 
+          exercises={mockExercisesWithSets}
+        />
+      );
+      
+      expect(screen.getByText('🎉 Great work! You trained:')).toBeInTheDocument();
+      expect(screen.getByText('Legs')).toBeInTheDocument();
+      expect(screen.getByText('Chest')).toBeInTheDocument();
+      expect(screen.getByText('Total Sets Completed:')).toBeInTheDocument();
+      expect(screen.getByText('5')).toBeInTheDocument(); // 2 chest + 3 legs
+    });
+
+    it('should not display muscle group summary when no exercises are provided', () => {
+      render(
+        <FinishWorkoutModal 
+          {...defaultProps} 
+          exercises={[]}
+        />
+      );
+      
+      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
+    });
+
+    it('should not display muscle group summary when exercises have no completed sets', () => {
+      const exercisesWithUncompletedSets = [
+        {
+          exercise_type: { name: 'Bench Press' },
+          exercise_sets: [
+            { done: false },
+            { done: false }
+          ]
+        }
+      ];
+
+      render(
+        <FinishWorkoutModal 
+          {...defaultProps} 
+          exercises={exercisesWithUncompletedSets}
+        />
+      );
+      
+      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
+    });
+
+    it('should handle exercises prop defaulting to empty array', () => {
+      render(<FinishWorkoutModal {...defaultProps} />);
+      
+      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
+    });
+
+    it('should display correct set counts for each muscle group', () => {
+      render(
+        <FinishWorkoutModal 
+          {...defaultProps} 
+          exercises={mockExercisesWithSets}
+        />
+      );
+      
+      // Check if set counts are displayed correctly
+      const legsSets = screen.getByText('3 sets');
+      const chestSets = screen.getByText('2 sets');
+      
+      expect(legsSets).toBeInTheDocument();
+      expect(chestSets).toBeInTheDocument();
+    });
+
+    it('should handle singular vs plural sets correctly', () => {
+      const singleSetExercise = [
+        {
+          exercise_type: { 
+            name: 'Push-ups',
+            muscles: [
+              {
+                id: 1,
+                name: 'Pectoralis Major',
+                muscle_group_id: 1,
+                muscle_group: { id: 1, name: 'Chest', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+                created_at: '2025-01-01T00:00:00Z',
+                updated_at: '2025-01-01T00:00:00Z'
+              },
+              {
+                id: 9,
+                name: 'Triceps',
+                muscle_group_id: 5,
+                muscle_group: { id: 5, name: 'Arms', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+                created_at: '2025-01-01T00:00:00Z',
+                updated_at: '2025-01-01T00:00:00Z'
+              }
+            ]
+          },
+          exercise_sets: [
+            { done: true }
+          ]
+        }
+      ];
+
+      render(
+        <FinishWorkoutModal 
+          {...defaultProps} 
+          exercises={singleSetExercise}
+        />
+      );
+      
+      // Should display "1 set" not "1 sets" - Push-ups maps to both Chest and Arms, so there will be multiple "1 set" texts
+      const setSingularTexts = screen.getAllByText('1 set');
+      expect(setSingularTexts.length).toBeGreaterThan(0);
+      expect(screen.queryByText('1 sets')).not.toBeInTheDocument();
     });
   });
 });

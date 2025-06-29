@@ -55,6 +55,30 @@ class ExerciseTypeCreate(BaseModel):
         return v
 
 
+class MuscleGroupRead(BaseModel):
+    """Schema for reading muscle group data"""
+    id: int
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MuscleRead(BaseModel):
+    """Schema for reading muscle data"""
+    id: int
+    name: str
+    muscle_group_id: int
+    muscle_group: MuscleGroupRead
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ExerciseTypeRead(BaseModel):
     """Schema for reading exercise type data"""
     id: int
@@ -62,6 +86,7 @@ class ExerciseTypeRead(BaseModel):
     description: str
     default_intensity_unit: int
     times_used: int
+    muscles: List[MuscleRead] = []
     created_at: datetime
     updated_at: datetime
 

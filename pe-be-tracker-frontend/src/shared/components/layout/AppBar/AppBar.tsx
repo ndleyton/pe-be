@@ -18,8 +18,8 @@ const AppBar: React.FC = () => {
   const googleSignIn = useGoogleSignIn();
 
   return (
-    <div className="navbar bg-base-100 shadow-sm" role="banner" aria-label="Primary">
-      <div className="flex-1">
+    <header className="navbar bg-base-100 shadow-sm" role="banner" aria-label="Primary">
+      <div className="flex-none">
         <button
           type="button"
           className="btn btn-ghost btn-circle lg:hidden"
@@ -28,6 +28,9 @@ const AppBar: React.FC = () => {
         >
           <HiOutlineBars3 className="w-6 h-6" />
         </button>
+      </div>
+
+      <div className="flex-1 flex justify-center">
         <button
           type="button"
           onClick={handleLogoClick}
@@ -37,18 +40,18 @@ const AppBar: React.FC = () => {
           <HomeLogo />
         </button>
       </div>
-      
+
       <div className="flex-none">
         {!isAuthenticated() && (
           <button
             onClick={googleSignIn}
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm normal-case"
           >
-            Sign In
+            Sign&nbsp;In
           </button>
         )}
       </div>
-    </div>
+    </header>
   );
 };
 
