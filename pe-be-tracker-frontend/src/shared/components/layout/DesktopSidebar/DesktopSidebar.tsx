@@ -21,7 +21,7 @@ const DesktopSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-base-100 lg:border-r lg:border-base-300">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 lg:bg-base-100 lg:border-r lg:border-base-300">
       <div className="flex flex-col flex-1 min-h-0">
         {/* Sidebar Header */}
         <div className="flex items-center h-16 px-6 border-b border-base-300">
