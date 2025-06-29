@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import Depends, APIRouter, status, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +39,36 @@ async def get_exercise_types(
 ):
     """Get all exercise types from the database."""
     return await ExerciseTypeService.get_all_exercise_types(session, order_by)
+
+@exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
+async def get_exercise_type(
+    exercise_type_id: int,
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Get an exercise type by ID."""
+    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    if not exercise_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise type with ID {exercise_type_id} not found"
+        )
+    return exercise_type
+
+@exercise_types_router.get("/{exercise_type_id}/stats")
+async def get_exercise_type_stats(
+    exercise_type_id: int,
+    session: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """Get exercise type statistics including progressive overload data."""
+    # First check if exercise type exists
+    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    if not exercise_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise type with ID {exercise_type_id} not found"
+        )
+    
+    return await ExerciseTypeService.get_exercise_type_statistics(session, exercise_type_id)
 
 @exercise_types_router.post("", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise_type(
