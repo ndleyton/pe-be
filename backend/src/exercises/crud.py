@@ -1,10 +1,11 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update
+from sqlalchemy import select, desc, update, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
+from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 
 
@@ -83,6 +84,18 @@ async def get_exercise_types(session: AsyncSession, order_by: str = "usage") -> 
     return result.scalars().all()
 
 
+async def get_exercise_type_by_id(session: AsyncSession, exercise_type_id: int) -> Optional[ExerciseType]:
+    """Get an exercise type by ID with relationships loaded"""
+    result = await session.execute(
+        select(ExerciseType)
+        .options(
+            selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
+        )
+        .where(ExerciseType.id == exercise_type_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def create_exercise_type(session: AsyncSession, exercise_type_create: ExerciseTypeCreate) -> ExerciseType:
     """Create a new exercise type"""
     try:
@@ -130,4 +143,130 @@ async def create_exercise_type(session: AsyncSession, exercise_type_create: Exer
 async def get_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
     """Get all intensity units"""
     result = await session.execute(select(IntensityUnit))
-    return result.scalars().all() 
+    return result.scalars().all()
+
+
+async def get_exercise_type_stats(session: AsyncSession, exercise_type_id: int) -> Dict[str, Any]:
+    """Get exercise type statistics including progressive overload data, last workout, and personal best"""
+    
+    # Get the exercise type first to get the default intensity unit
+    exercise_type = await get_exercise_type_by_id(session, exercise_type_id)
+    if not exercise_type:
+        return {
+            "progressiveOverload": [],
+            "lastWorkout": None,
+            "personalBest": None,
+            "totalSets": 0,
+            "intensityUnit": None
+        }
+    
+    # Get the intensity unit
+    intensity_unit_result = await session.execute(
+        select(IntensityUnit).where(IntensityUnit.id == exercise_type.default_intensity_unit)
+    )
+    intensity_unit = intensity_unit_result.scalar_one_or_none()
+    
+    # Get all exercises of this type with their sets
+    exercises_result = await session.execute(
+        select(Exercise)
+        .options(
+            selectinload(Exercise.exercise_sets)
+        )
+        .where(Exercise.exercise_type_id == exercise_type_id)
+        .order_by(Exercise.created_at.desc())
+    )
+    exercises = exercises_result.scalars().all()
+    
+    if not exercises:
+        return {
+            "progressiveOverload": [],
+            "lastWorkout": None,
+            "personalBest": None,
+            "totalSets": 0,
+            "intensityUnit": {
+                "id": intensity_unit.id,
+                "name": intensity_unit.name,
+                "abbreviation": intensity_unit.abbreviation
+            } if intensity_unit else None
+        }
+    
+    # Calculate progressive overload data (grouped by date)
+    progressive_overload = []
+    date_groups = {}
+    
+    for exercise in exercises:
+        date = exercise.created_at.date()
+        if date not in date_groups:
+            date_groups[date] = {
+                "maxWeight": 0,
+                "totalVolume": 0,
+                "totalReps": 0
+            }
+        
+        for exercise_set in exercise.exercise_sets:
+            if exercise_set.intensity:
+                date_groups[date]["maxWeight"] = max(date_groups[date]["maxWeight"], exercise_set.intensity)
+                if exercise_set.reps:
+                    date_groups[date]["totalVolume"] += exercise_set.intensity * exercise_set.reps
+                    date_groups[date]["totalReps"] += exercise_set.reps
+    
+    for date, data in sorted(date_groups.items()):
+        progressive_overload.append({
+            "date": date.isoformat(),
+            "maxWeight": data["maxWeight"],
+            "totalVolume": data["totalVolume"],
+            "reps": data["totalReps"]
+        })
+    
+    # Get last workout info
+    last_exercise = exercises[0] if exercises else None
+    last_workout = None
+    if last_exercise:
+        sets_count = len(last_exercise.exercise_sets)
+        total_reps = sum(s.reps or 0 for s in last_exercise.exercise_sets)
+        max_weight = max((s.intensity or 0 for s in last_exercise.exercise_sets), default=0)
+        total_volume = sum((s.intensity or 0) * (s.reps or 0) for s in last_exercise.exercise_sets)
+        
+        last_workout = {
+            "date": last_exercise.created_at.isoformat(),
+            "sets": sets_count,
+            "totalReps": total_reps,
+            "maxWeight": max_weight,
+            "totalVolume": total_volume
+        }
+    
+    # Get personal best (highest weight for single rep)
+    personal_best = None
+    best_weight = 0
+    best_set = None
+    
+    for exercise in exercises:
+        for exercise_set in exercise.exercise_sets:
+            if exercise_set.intensity and exercise_set.intensity > best_weight:
+                best_weight = exercise_set.intensity
+                best_set = exercise_set
+                best_exercise = exercise
+    
+    if best_set:
+        volume = (best_set.intensity or 0) * (best_set.reps or 0)
+        personal_best = {
+            "date": best_exercise.created_at.isoformat(),
+            "weight": best_set.intensity,
+            "reps": best_set.reps or 0,
+            "volume": volume
+        }
+    
+    # Calculate total sets across all exercises
+    total_sets = sum(len(exercise.exercise_sets) for exercise in exercises)
+    
+    return {
+        "progressiveOverload": progressive_overload,
+        "lastWorkout": last_workout,
+        "personalBest": personal_best,
+        "totalSets": total_sets,
+        "intensityUnit": {
+            "id": intensity_unit.id,
+            "name": intensity_unit.name,
+            "abbreviation": intensity_unit.abbreviation
+        } if intensity_unit else None
+    } 
