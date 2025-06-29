@@ -86,15 +86,41 @@ async def get_exercise_types(session: AsyncSession, order_by: str = "usage") -> 
 async def create_exercise_type(session: AsyncSession, exercise_type_create: ExerciseTypeCreate) -> ExerciseType:
     """Create a new exercise type"""
     try:
+        # Create base ExerciseType instance
         exercise_type = ExerciseType(
             name=exercise_type_create.name,
             description=exercise_type_create.description,
-            default_intensity_unit=exercise_type_create.default_intensity_unit
+            default_intensity_unit=exercise_type_create.default_intensity_unit,
         )
+
+        # If muscle IDs were provided, fetch and associate them
+        if exercise_type_create.muscle_ids:
+            result = await session.execute(
+                select(Muscle).where(Muscle.id.in_(exercise_type_create.muscle_ids))
+            )
+            muscles = result.scalars().all()
+
+            # Validate all requested muscles exist
+            found_ids = {m.id for m in muscles}
+            missing_ids = set(exercise_type_create.muscle_ids) - found_ids
+            if missing_ids:
+                raise ValueError(f"Muscle IDs not found: {', '.join(map(str, missing_ids))}")
+
+            exercise_type.muscles = muscles
+
         session.add(exercise_type)
         await session.commit()
         await session.refresh(exercise_type)
-        return exercise_type
+
+        # Eagerly load muscles and muscle_group relationships for response serialization
+        result = await session.execute(
+            select(ExerciseType)
+            .options(
+                selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
+            )
+            .where(ExerciseType.id == exercise_type.id)
+        )
+        return result.scalar_one()
     except IntegrityError:
         await session.rollback()
         raise

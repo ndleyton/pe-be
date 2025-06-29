@@ -44,6 +44,10 @@ class ExerciseTypeCreate(BaseModel):
     name: str = Field(..., min_length=1, description="Human-readable exercise type name")
     description: str = "Custom exercise"
     default_intensity_unit: int = 1
+    muscle_ids: Optional[List[int]] = Field(
+        default=None,
+        description="List of muscle IDs to associate with this exercise type (optional)",
+    )
 
     @validator('name', pre=True)
     def validate_and_strip_name(cls, v):
