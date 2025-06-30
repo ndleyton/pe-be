@@ -98,3 +98,24 @@ class WorkoutParseResponse(BaseModel):
     notes: Optional[str] = None
     workout_type_id: int
     exercises: List[ParsedExercise]
+
+
+# Add Exercise to Current Workout
+class ExerciseSetInput(BaseModel):
+    """Input schema for a single exercise set when adding an exercise to the current workout"""
+    reps: Optional[int] = None
+    intensity: Optional[float] = None
+    intensity_unit_id: int
+    rest_time_seconds: Optional[int] = None
+
+
+class AddExerciseRequest(BaseModel):
+    """Request payload for adding an exercise to the current (today's) workout"""
+    exercise_type_id: int = Field(..., description="ID of the exercise type to add")
+    initial_set: Optional[ExerciseSetInput] = Field(
+        default=None,
+        description="Optional initial set data (reps, intensity, intensity_unit_id, rest_time_seconds)",
+    )
+
+
+# The response can reuse the existing WorkoutRead schema, so no extra response model is declared.

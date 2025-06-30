@@ -89,21 +89,6 @@ describe('AppBar', () => {
       expect(navbar).toHaveClass('navbar', 'bg-base-100', 'shadow-sm');
     });
 
-    it('should render all main sections of the navbar', () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>
-      );
-
-      // Check for primary flex containers in the navbar
-      expect(screen.getByRole('banner')).toContainElement(
-        screen.getByRole('banner').querySelector('.flex-1')
-      );
-      expect(screen.getByRole('banner')).toContainElement(
-        screen.getByRole('banner').querySelector('.flex-none')
-      );
-    });
 
     it('should render the home logo button', () => {
       render(

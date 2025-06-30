@@ -3,3 +3,7 @@ export { default as ExerciseList } from './ExerciseList';
 export { default as ExerciseRow } from './ExerciseRow';
 export { default as ExerciseTypeModal } from './ExerciseTypeModal';
 export { default as IntensityUnitModal } from './IntensityUnitModal';
+export { ExerciseTypeCard } from './ExerciseTypeCard';
+export { ProgressiveOverloadChart } from './ProgressiveOverloadChart';
+export { LastWorkoutInfo } from './LastWorkoutInfo';
+export { PersonalBestInfo } from './PersonalBestInfo';
