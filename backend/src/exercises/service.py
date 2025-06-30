@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
@@ -8,7 +8,9 @@ from src.exercises.crud import (
     get_exercises_for_workout,
     create_exercise,
     get_exercise_types,
+    get_exercise_type_by_id,
     create_exercise_type,
+    get_exercise_type_stats,
     get_intensity_units
 )
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
@@ -42,6 +44,16 @@ class ExerciseTypeService:
     async def get_all_exercise_types(session: AsyncSession, order_by: str = "usage") -> List[ExerciseType]:
         """Get all exercise types with optional ordering"""
         return await get_exercise_types(session, order_by)
+    
+    @staticmethod
+    async def get_exercise_type(session: AsyncSession, exercise_type_id: int) -> Optional[ExerciseType]:
+        """Get an exercise type by ID"""
+        return await get_exercise_type_by_id(session, exercise_type_id)
+    
+    @staticmethod
+    async def get_exercise_type_statistics(session: AsyncSession, exercise_type_id: int) -> Dict[str, Any]:
+        """Get exercise type statistics including progressive overload data"""
+        return await get_exercise_type_stats(session, exercise_type_id)
     
     @staticmethod
     async def create_new_exercise_type(session: AsyncSession, exercise_type_data: ExerciseTypeCreate) -> ExerciseType:

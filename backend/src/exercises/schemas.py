@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pydantic import validator, BaseModel, Field
 
 
@@ -120,4 +120,61 @@ if TYPE_CHECKING:
 from src.exercise_sets.schemas import ExerciseSetRead  # noqa: E402,F401
 
 # After all class definitions, resolve forward references
-ExerciseRead.model_rebuild() 
+ExerciseRead.model_rebuild()
+
+
+# Exercise Type Statistics Schemas
+class ProgressiveOverloadStat(BaseModel):
+    """Schema for progressive overload data points"""
+    date: date
+    max_weight: float = Field(..., alias='maxWeight')
+    total_volume: float = Field(..., alias='totalVolume')
+    reps: int
+
+    class Config:
+        populate_by_name = True
+
+
+class LastWorkoutStat(BaseModel):
+    """Schema for last workout statistics"""
+    date: datetime
+    sets: int
+    total_reps: int = Field(..., alias='totalReps')
+    max_weight: float = Field(..., alias='maxWeight')
+    total_volume: float = Field(..., alias='totalVolume')
+
+    class Config:
+        populate_by_name = True
+
+
+class PersonalBestStat(BaseModel):
+    """Schema for personal best statistics"""
+    date: datetime
+    weight: float
+    reps: int
+    volume: float
+
+    class Config:
+        populate_by_name = True
+
+
+class IntensityUnitSummary(BaseModel):
+    """Schema for intensity unit summary"""
+    id: int
+    name: str
+    abbreviation: str
+
+    class Config:
+        populate_by_name = True
+
+
+class ExerciseTypeStats(BaseModel):
+    """Schema for comprehensive exercise type statistics"""
+    progressive_overload: List[ProgressiveOverloadStat] = Field(..., alias='progressiveOverload')
+    last_workout: Optional[LastWorkoutStat] = Field(None, alias='lastWorkout')
+    personal_best: Optional[PersonalBestStat] = Field(None, alias='personalBest')
+    total_sets: int = Field(..., alias='totalSets')
+    intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias='intensityUnit')
+
+    class Config:
+        populate_by_name = True 

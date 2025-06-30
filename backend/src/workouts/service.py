@@ -2,6 +2,7 @@ from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
 import openai
+from datetime import datetime, timezone, date
 
 from src.workouts.crud import (
     get_workout_by_id,
@@ -10,12 +11,22 @@ from src.workouts.crud import (
     update_workout,
     delete_workout,
     get_workout_types,
-    create_workout_type
+    create_workout_type,
+    get_latest_workout_for_user,
 )
 from src.workouts.models import Workout, WorkoutType
-from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate, WorkoutParseResponse
+from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate, WorkoutParseResponse, AddExerciseRequest
 from src.core.config import settings
+from src.exercises.crud import create_exercise
+from src.exercise_sets.crud import create_exercise_set
+from src.exercises.schemas import ExerciseCreate
+from src.exercise_sets.schemas import ExerciseSetCreate
+from src.exercises.crud import get_exercises_for_workout
 
+
+# ------------------------------------------------------------------------------------
+# Seed data defines Strength Training workout type with ID = 4 (see migration 7df0abdd1d04)
+DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID = 4
 
 class WorkoutService:
     """Service layer for workout business logic"""
@@ -52,6 +63,65 @@ class WorkoutService:
         """Remove a workout with business logic validation"""
         # Add any business logic here (e.g., cascade deletion, authorization)
         return await delete_workout(session, workout_id, user_id)
+
+    @staticmethod
+    async def add_exercise_to_current_workout(
+        session: AsyncSession,
+        user_id: int,
+        payload: AddExerciseRequest,
+    ) -> Workout:
+        """Add an exercise to today's workout for the user, creating workout if necessary.
+
+        1. Fetch latest workout for user.
+        2. If not present or not from today (UTC), create new workout with default values.
+        3. Create exercise linked to that workout (if exercise not already there).
+        4. Optionally add initial set data.
+        5. Return the workout with relationships loaded (reusing get_workout).
+        """
+        # 1. Get latest workout
+        workout = await get_latest_workout_for_user(session, user_id)
+
+        today = date.today()
+        if not workout or workout.start_time is None or workout.start_time.date() != today:
+            # Need to create a new workout for today
+            workout_create = WorkoutCreate(
+                name=today.strftime("Workout %Y-%m-%d"),
+                start_time=datetime.now(timezone.utc),
+                workout_type_id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,  # Default Strength Training
+            )
+            workout = await create_workout(session, workout_create, user_id)
+
+        # 3. Check if exercise type already exists in workout
+        existing_exercises = await get_exercises_for_workout(session, workout.id)
+        exercise = next(
+            (ex for ex in existing_exercises if ex.exercise_type_id == payload.exercise_type_id),
+            None,
+        )
+        if not exercise:
+            # create new exercise
+            exercise_create = ExerciseCreate(
+                timestamp=datetime.now(timezone.utc),
+                exercise_type_id=payload.exercise_type_id,
+                workout_id=workout.id,
+            )
+            exercise = await create_exercise(session, exercise_create)
+
+        # 4. Optionally create initial exercise set
+        if payload.initial_set:
+            set_payload = payload.initial_set
+            exercise_set_create = ExerciseSetCreate(
+                reps=set_payload.reps,
+                intensity=set_payload.intensity,
+                intensity_unit_id=set_payload.intensity_unit_id,
+                exercise_id=exercise.id,
+                rest_time_seconds=set_payload.rest_time_seconds,
+                done=False,
+            )
+            # create set
+            await create_exercise_set(session, exercise_set_create)
+
+        # Refresh workout with exercises loaded
+        return await WorkoutService.get_workout(session, workout.id, user_id)
 
 
 class WorkoutTypeService:
