@@ -43,14 +43,14 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={handleBackdropClick}
       data-testid="intensity-unit-modal"
     >
-      <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full max-h-96 overflow-hidden flex flex-col">
+      <div className="bg-background rounded-lg p-6 max-w-md w-full max-h-96 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-white">Select Unit:</h3>
+          <h3 className="text-lg font-semibold text-foreground">Select Unit:</h3>
         </div>
 
         {/* Content */}
@@ -58,13 +58,13 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
           {isAuthenticated() && isLoading && (
             <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="h-10 bg-gray-800 rounded-lg animate-pulse" />
+                <div key={idx} className="h-10 bg-muted rounded-lg animate-pulse" />
               ))}
             </div>
           )}
 
           {isAuthenticated() && error && (
-            <p className="text-center text-red-400">Failed to load intensity units.</p>
+            <p className="text-center text-destructive">Failed to load intensity units.</p>
           )}
 
           {((!isAuthenticated()) || (!isLoading && !error)) && (
@@ -73,7 +73,7 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
                 <button
                   key={unit.id}
                   onClick={() => onSelect(unit)}
-                  className="w-full text-left px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                  className="w-full text-left px-4 py-2 rounded bg-muted hover:bg-accent text-muted-foreground"
                   aria-label={`Select ${unit.name} (${unit.abbreviation})`}
                 >
                   {unit.abbreviation} - {unit.name}

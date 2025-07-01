@@ -6,6 +6,7 @@ import api from '@/shared/api/client';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
 import { useGuestData, GuestWorkout } from '@/contexts/GuestDataContext';
+import { Button } from '@/components/ui/button';
 
 type Workout = {
   id: number | string; // Can be number (server) or string (guest)
@@ -87,7 +88,7 @@ const MyWorkoutsPage = () => {
     navigate(`/workout/${workoutId}`);
   };
 
-  if (isAuthenticated() && isLoading) return <p>Loading workouts...</p>;
+  if (isAuthenticated() && isLoading) return <p className="text-muted-foreground">Loading workouts...</p>;
   
   if (isAuthenticated() && error) {
     const errorMessage = getErrorMessage(error);
@@ -97,18 +98,18 @@ const MyWorkoutsPage = () => {
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-red-600 text-2xl">⚠</span>
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-destructive text-2xl">⚠</span>
             </div>
             <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
-            <p className="text-gray-600 mb-4">{errorMessage}</p>
-            <p className="text-sm text-gray-500">Click the logo above to return to login</p>
+            <p className="mb-4 text-muted-foreground">{errorMessage}</p>
+            <p className="text-sm text-muted-foreground">Click the logo above to return to login</p>
           </div>
         </div>
       );
     }
     
-    return <p style={{ color: 'red' }}>{errorMessage}</p>;
+    return <p className="text-destructive">{errorMessage}</p>;
   }
 
   return (
@@ -130,18 +131,20 @@ const MyWorkoutsPage = () => {
                   setShowWorkoutForm(false);
                 }} 
               />
-              <button 
+              <Button 
                 onClick={() => setShowWorkoutForm(false)}
-                className="btn btn-ghost btn-sm mt-2"
+                variant="ghost"
+                size="sm"
+                className="mt-2"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
           
           {workouts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">You haven't logged any workouts yet.</p>
+              <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -149,27 +152,27 @@ const MyWorkoutsPage = () => {
                 <div
                   key={workout.id}
                   onClick={() => handleWorkoutClick(workout.id)}
-                  className="bg-gray-800 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700 transition-colors"
+                  className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">💪</span>
+                      <span className="text-primary-foreground font-bold text-lg">💪</span>
                     </div>
                     <div>
-                      <h3 className="text-white font-medium">
+                      <h3 className="text-foreground font-medium">
                         {workout.name || 'Traditional Strength Training'}
                       </h3>
                       <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-green-400 font-mono text-lg">
+                        <span className="text-primary font-mono text-lg">
                           {formatDuration(workout.start_time, workout.end_time)}
                         </span>
-                        <span className="text-gray-400 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           {formatDate(workout.start_time)}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="text-gray-400">
+                  <div className="text-muted-foreground">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

@@ -6,6 +6,7 @@ import { getExerciseTypeById, getExerciseTypeStats } from '@/api/exercises';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
 import { addExerciseToCurrentWorkout } from '@/api/workouts';
+import { Button } from '@/components/ui/button';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
@@ -75,17 +76,20 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Link to="/exercise-types" className="btn btn-ghost btn-circle">
-          <HiOutlineArrowLeft className="h-5 w-5" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/exercise-types">
+            <HiOutlineArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <h1 className="text-3xl font-bold">{exerciseType.name}</h1>
-        <button
-          className="btn btn-primary btn-sm ml-auto"
+        <Button
+          size="sm"
+          className="ml-auto"
           onClick={() => addMutation.mutate()}
           disabled={addMutation.isPending}
         >
           {addMutation.isPending ? 'Adding...' : 'Add to Current Workout'}
-        </button>
+        </Button>
       </div>
 
       {statsError && (

@@ -8,7 +8,7 @@ interface ProgressiveOverloadChartProps {
 export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> = ({ data }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted-foreground">
         <p>No workout data available yet.</p>
       </div>
     );
@@ -40,13 +40,13 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
 
           return (
             <div key={index} className="space-y-1">
-              <div className="flex justify-between text-xs text-gray-600">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{date}</span>
                 <span>{point.maxWeight}kg • {point.totalVolume}kg vol</span>
               </div>
               
               {/* Weight Bar */}
-              <div className="relative h-2 bg-gray-200 rounded">
+              <div className="relative h-2 bg-muted rounded">
                 <div 
                   className="absolute left-0 top-0 h-full bg-primary rounded"
                   style={{ width: `${weightPercentage}%` }}
@@ -54,7 +54,7 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
               </div>
               
               {/* Volume Bar */}
-              <div className="relative h-1 bg-gray-200 rounded">
+              <div className="relative h-1 bg-muted rounded">
                 <div 
                   className="absolute left-0 top-0 h-full bg-secondary rounded"
                   style={{ width: `${volumePercentage}%` }}
@@ -71,13 +71,13 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
           <div className="text-lg font-semibold text-primary">
             {data[data.length - 1]?.maxWeight || 0}kg
           </div>
-          <div className="text-xs text-gray-600">Latest Max Weight</div>
+          <div className="text-xs text-muted-foreground">Latest Max Weight</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-secondary">
             {data[data.length - 1]?.totalVolume || 0}kg
           </div>
-          <div className="text-xs text-gray-600">Latest Volume</div>
+          <div className="text-xs text-muted-foreground">Latest Volume</div>
         </div>
       </div>
     </div>

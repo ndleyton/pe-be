@@ -5,6 +5,7 @@ import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
+import { Button } from '@/components/ui/button';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
@@ -18,35 +19,38 @@ const AppBar: React.FC = () => {
   const googleSignIn = useGoogleSignIn();
 
   return (
-    <header className="navbar bg-base-100 shadow-sm" role="banner" aria-label="Primary">
-      <div className="flex-1">
-        <button
-          type="button"
-          className="btn btn-ghost btn-circle lg:hidden"
+    <header className="relative flex h-16 items-center justify-center border-b bg-background px-4" role="banner" aria-label="Primary navigation">
+      {/* Left section for hamburger menu */}
+      <div className="absolute left-4 flex items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden" // Only show on mobile/tablet
           onClick={toggleDrawer}
           aria-label="Open navigation menu"
         >
-          <HiOutlineBars3 className="w-6 h-6" />
-        </button>
-        
-        <button
-          type="button"
+          <HiOutlineBars3 className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Center section for the logo */}
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
           onClick={handleLogoClick}
-          className="btn btn-ghost text-xl hover:text-blue-400 transition-colors duration-200"
+          className="text-xl" // You can adjust styling here if needed
           aria-label="Go to home"
         >
           <HomeLogo />
-        </button>
+        </Button>
       </div>
 
-      <div className="flex-none">
+      {/* Right section for auth button */}
+      <div className="absolute right-4 flex items-center">
         {!isAuthenticated() && (
-          <button
-            onClick={googleSignIn}
-            className="btn btn-primary btn-sm normal-case"
-          >
-            Sign&nbsp;In
-          </button>
+          <Button onClick={googleSignIn} size="sm">
+            Sign In
+          </Button>
         )}
       </div>
     </header>

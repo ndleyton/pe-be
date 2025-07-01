@@ -1,5 +1,6 @@
 import React from 'react';
 import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscles } from '@/utils/muscleGroups';
+import { Button } from '@/components/ui/button';
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -28,36 +29,36 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-card text-card-foreground p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" data-testid="finish-workout-modal">
         <h2 className="text-xl font-bold mb-4">Finish Workout?</h2>
-        <p className="mb-4 text-gray-300">
+        <p className="mb-4 text-muted-foreground">
           Are you sure you want to finish this workout? This will set the end time to now.
         </p>
 
         {/* Muscle Group Summary */}
         {muscleGroupSummary.length > 0 && (
-          <div className="mb-6 p-4 bg-gray-700 rounded-lg">
-            <h3 className="text-lg font-semibold mb-3 text-green-400">
+          <div className="mb-6 p-4 bg-background rounded-lg">
+            <h3 className="text-lg font-semibold mb-3 text-primary">
               🎉 Great work! You trained:
             </h3>
             <div className="space-y-2">
               {muscleGroupSummary.map((group) => (
                 <div
                   key={group.name}
-                  className="flex justify-between items-center py-2 px-3 bg-gray-600 rounded"
+                  className="flex justify-between items-center py-2 px-3 bg-muted rounded"
                 >
                   <span className="font-medium">{group.name}</span>
-                  <span className="text-blue-400 font-bold">
+                  <span className="text-primary font-bold">
                     {group.setCount} set{group.setCount !== 1 ? 's' : ''}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-gray-600">
+            <div className="mt-3 pt-3 border-t border-border">
               <div className="flex justify-between items-center font-bold">
                 <span>Total Sets Completed:</span>
-                <span className="text-green-400 text-lg">{totalSets}</span>
+                <span className="text-primary text-lg">{totalSets}</span>
               </div>
             </div>
           </div>
@@ -65,20 +66,21 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
         {/* Action Buttons */}
         <div className="flex justify-end space-x-4">
-          <button
+          <Button
             onClick={onCancel}
             disabled={isLoading}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="outline"
+            className="bg-muted hover:bg-accent border-border"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onConfirm}
             disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-primary hover:bg-primary/90"
           >
             {isLoading ? 'Finishing...' : 'Finish Workout'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
