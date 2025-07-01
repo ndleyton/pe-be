@@ -80,7 +80,7 @@ describe('IntensityUnitModal', () => {
       );
       
       const modal = screen.getByTestId('intensity-unit-modal');
-      expect(modal).toHaveClass('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'flex', 'items-center', 'justify-center', 'p-4', 'z-50');
+      expect(modal).toHaveClass('fixed', 'inset-0', 'bg-black/50', 'flex', 'items-center', 'justify-center', 'p-4', 'z-50');
     });
   });
 
@@ -95,7 +95,7 @@ describe('IntensityUnitModal', () => {
       const title = screen.getByText('Select Unit:');
       expect(title).toBeInTheDocument();
       expect(title.tagName).toBe('H3');
-      expect(title).toHaveClass('text-lg', 'font-semibold', 'text-white');
+      expect(title).toHaveClass('text-lg', 'font-semibold', 'text-foreground');
     });
   });
 
@@ -174,11 +174,11 @@ describe('IntensityUnitModal', () => {
       
       // Find skeleton elements by their data attribute or specific class combination
       const container = screen.getByTestId('intensity-unit-modal');
-      const skeletons = container.querySelectorAll('[data-testid="loading-skeleton"]');
+      const skeletons = container.querySelectorAll('.h-10.bg-muted.rounded-lg.animate-pulse');
       
       // If no test ID exists, fall back to class-based selection
       if (skeletons.length === 0) {
-        const skeletonsByClass = container.querySelectorAll('.h-10.bg-gray-800.rounded-lg.animate-pulse');
+        const skeletonsByClass = container.querySelectorAll('.h-10.bg-muted.rounded-lg.animate-pulse');
         expect(skeletonsByClass.length).toBeGreaterThan(0);
       } else {
         expect(skeletons.length).toBeGreaterThan(0);
@@ -250,7 +250,7 @@ describe('IntensityUnitModal', () => {
       });
       
       const errorMessage = screen.getByText('Failed to load intensity units.');
-      expect(errorMessage).toHaveClass('text-center', 'text-red-400');
+      expect(errorMessage).toHaveClass('text-center', 'text-destructive');
     });
 
     it('should make API call when authenticated', () => {
@@ -313,9 +313,9 @@ describe('IntensityUnitModal', () => {
         'px-4',
         'py-2',
         'rounded',
-        'bg-gray-800',
-        'hover:bg-gray-700',
-        'text-gray-200'
+        'bg-muted',
+        'hover:bg-accent',
+        'text-muted-foreground'
       );
     });
   });
@@ -365,12 +365,12 @@ describe('IntensityUnitModal', () => {
       
       // Use more stable query - find skeleton elements by class rather than DOM traversal
       const container = screen.getByTestId('intensity-unit-modal');
-      const skeletons = container.querySelectorAll('.h-10.bg-gray-800.rounded-lg.animate-pulse');
+      const skeletons = container.querySelectorAll('.h-10.bg-muted.rounded-lg.animate-pulse');
       expect(skeletons).toHaveLength(4);
       
       // Verify each skeleton has the correct classes
       skeletons.forEach(skeleton => {
-        expect(skeleton).toHaveClass('h-10', 'bg-gray-800', 'rounded-lg', 'animate-pulse');
+        expect(skeleton).toHaveClass('h-10', 'bg-muted', 'rounded-lg', 'animate-pulse');
       });
     });
 

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { HiOutlineMagnifyingGlass } from 'react-icons/hi2';
 import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
 import { ExerciseTypeCard } from '@/features/exercises/components';
+import { Button } from '@/components/ui/button';
 
 const ExerciseTypesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,12 +87,13 @@ const ExerciseTypesPage: React.FC = () => {
             {searchTerm ? 'No exercise types found matching your search.' : 'No exercise types available.'}
           </div>
           {searchTerm && (
-            <button
+            <Button
               onClick={() => setSearchTerm('')}
-              className="btn btn-outline btn-sm"
+              variant="outline"
+              size="sm"
             >
               Clear Search
-            </button>
+            </Button>
           )}
         </div>
       )}

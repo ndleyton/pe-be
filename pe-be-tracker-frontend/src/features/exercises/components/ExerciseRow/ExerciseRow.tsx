@@ -56,28 +56,28 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Exercise Header */}
-      <div className="p-4 hover:bg-gray-700 transition-colors">
+      <div className="p-4 hover:bg-accent transition-colors">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">
                   {exercise.exercise_type.name.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div>
-                <h4 className="text-white font-medium">
+                <h4 className="text-foreground font-medium">
                   {exercise.exercise_type.name}
                 </h4>
                 {exercise.exercise_type.description && (
-                  <p className="text-gray-500 text-xs mt-0.5">
+                  <p className="text-muted-foreground text-xs mt-0.5">
                     {exercise.exercise_type.description}
                   </p>
                 )}
                 {exercise.notes && (
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-muted-foreground text-sm mt-1">
                     {exercise.notes}
                   </p>
                 )}
@@ -85,7 +85,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <div className="text-right text-sm text-gray-400">
+            <div className="text-right text-sm text-muted-foreground">
               {exercise.timestamp ? (
                 <div>
                   {new Date(exercise.timestamp).toLocaleString()}
@@ -100,14 +100,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
               {exerciseSets.length > 0 && (
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-gray-400 hover:text-white text-sm"
+                  className="text-muted-foreground hover:text-foreground text-sm"
                 >
                   {isExpanded ? '▲' : `▼ ${exerciseSets.length} sets`}
                 </button>
               )}
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="w-8 h-8 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center text-white transition-colors"
+                className="w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center text-primary-foreground transition-colors"
                 title="Add set"
               >
                 +
@@ -119,10 +119,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
 
       {/* Exercise Sets Section */}
       {(isExpanded || showAddForm) && (
-        <div className="border-t border-gray-700 bg-gray-750">
+        <div className="border-t border-border bg-background/50">
           {/* Add Set Form */}
           {showAddForm && (
-            <div className="p-4 border-b border-gray-600">
+            <div className="p-4 border-b border-border">
               <AddExerciseSetForm
                 exerciseId={exercise.id}
                 onSetAdded={handleSetAdded}
@@ -134,7 +134,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
           {/* Exercise Sets List */}
           {isExpanded && exerciseSets.length > 0 && (
             <div className="p-4 space-y-2">
-              <h5 className="text-gray-400 text-sm font-medium mb-2">Sets ({exerciseSets.length})</h5>
+              <h5 className="text-muted-foreground text-sm font-medium mb-2">Sets ({exerciseSets.length})</h5>
               {exerciseSets.map((set) => (
                 <ExerciseSetRow
                   key={set.id}
@@ -148,7 +148,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
 
           {/* Empty state when expanded but no sets */}
           {isExpanded && exerciseSets.length === 0 && (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-muted-foreground">
               No sets added yet. Click the + button to add your first set.
             </div>
           )}

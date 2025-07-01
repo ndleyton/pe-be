@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { navItems } from '@/shared/navigation/navItems';
+import { Button } from '@/components/ui/button';
 
 const BottomNav: React.FC = () => (
   <nav
-    className="fixed bottom-0 inset-x-0 z-50 flex justify-around items-center bg-base-200 bg-slate-800 text-base-100 shadow-lg py-2 md:hidden"
+    className="fixed bottom-0 inset-x-0 z-50 flex justify-around items-center bg-background border-t md:hidden"
     style={{ bottom: 'env(safe-area-inset-bottom)' }}
     aria-label="Bottom navigation"
   >
@@ -14,12 +15,13 @@ const BottomNav: React.FC = () => (
         to={to}
         aria-label={label}
         className={({ isActive }) =>
-          `flex flex-col items-center justify-center gap-0.5 ${isActive ? 'text-primary' : 'text-base-content/70'}`
+          `flex flex-col items-center justify-center gap-0.5 w-full h-full py-2 ${
+            isActive ? 'text-primary' : 'text-muted-foreground'
+          }`
         }
       >
         <Icon className="w-6 h-6" />
-        {/* Visually hidden label for accessibility */}
-        <span className="sr-only">{label}</span>
+        <span className="text-xs">{label}</span>
       </NavLink>
     ))}
   </nav>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
 import { useGuestData } from '@/contexts/GuestDataContext';
+import { Button } from '@/components/ui/button';
 
 interface ChatMessage {
   id: string;
@@ -360,8 +361,9 @@ const ChatPage: React.FC = () => {
               <div className="whitespace-pre-wrap">{message.content}</div>
               {message.showSaveButton && message.workoutData && (
                 <div className="mt-3 flex gap-2">
-                  <button
-                    className="btn btn-success btn-sm"
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
                     onClick={() => handleSaveWorkout(message.workoutData!)}
                     disabled={saveWorkoutMutation.isPending}
                   >
@@ -370,9 +372,10 @@ const ChatPage: React.FC = () => {
                     ) : (
                       '💾 Save Workout'
                     )}
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setMessages(prev => prev.map(msg => 
                         msg.id === message.id 
@@ -382,7 +385,7 @@ const ChatPage: React.FC = () => {
                     }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -420,13 +423,12 @@ const ChatPage: React.FC = () => {
             rows={3}
             disabled={isLoading}
           />
-          <button
-            className="btn btn-primary"
+          <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading}
           >
             Send
-          </button>
+          </Button>
         </div>
         <div className="text-xs text-base-content/60 mt-2">
           Tip: Describe exercises with sets, reps, and weights (e.g., "Bench press 135lbs x 8 reps")

@@ -107,24 +107,24 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
   };
 
   return (
-    <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
-      <h4 className="text-white font-medium mb-3">Add New Set</h4>
+    <div className="bg-card border border-border rounded-lg p-4">
+      <h4 className="text-foreground font-medium mb-3">Add New Set</h4>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="flex space-x-3">
           <div className="flex-1">
-            <label htmlFor="reps" className="block text-gray-400 text-sm mb-1">Reps</label>
+            <label htmlFor="reps" className="block text-muted-foreground text-sm mb-1">Reps</label>
             <input
               type="number"
               min="0"
               id="reps"
               value={formData.reps || ''}
               onChange={(e) => setFormData({ ...formData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-              className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
+              className="w-full p-2 bg-background border border-border rounded text-foreground"
               placeholder="e.g., 10"
             />
           </div>
           <div className="flex-1 relative">
-            <label htmlFor="intensity" className="block text-gray-400 text-sm mb-1">Weight</label>
+            <label htmlFor="intensity" className="block text-muted-foreground text-sm mb-1">Weight</label>
             <div className="flex">
               <input
                 type="number"
@@ -133,13 +133,13 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
                 id="intensity"
                 value={formData.intensity || ''}
                 onChange={(e) => setFormData({ ...formData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="flex-1 p-2 bg-gray-800 border border-gray-600 rounded-l text-white"
+                className="flex-1 p-2 bg-background border border-border rounded-l text-foreground"
                 placeholder="e.g., 50.5"
               />
               <button
                 type="button"
                 onClick={handleUnitButtonClick}
-                className="px-3 py-2 bg-gray-600 border border-l-0 border-gray-600 rounded-r text-white text-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 select-none"
+                className="px-3 py-2 bg-muted border border-l-0 border-border rounded-r text-muted-foreground text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring select-none"
                 aria-label={currentUnit ? `Current unit: ${currentUnit.name}. Click to change unit` : 'Loading units...'}
                 disabled={(isAuthenticated() && isLoadingUnits) || !currentUnit}
               >
@@ -148,14 +148,14 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
             </div>
           </div>
           <div className="flex-1">
-            <label htmlFor="rest-time" className="block text-gray-400 text-sm mb-1">Rest (seconds)</label>
+            <label htmlFor="rest-time" className="block text-muted-foreground text-sm mb-1">Rest (seconds)</label>
             <input
               type="number"
               min="0"
               id="rest-time"
               value={formData.rest_time_seconds || ''}
               onChange={(e) => setFormData({ ...formData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
-              className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
+              className="w-full p-2 bg-background border border-border rounded text-foreground"
               placeholder="e.g., 60"
             />
           </div>
@@ -167,23 +167,23 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
             id="done"
             checked={formData.done}
             onChange={(e) => setFormData({ ...formData, done: e.target.checked })}
-            className="text-blue-500"
+            className="text-primary"
           />
-          <label htmlFor="done" className="text-white text-sm">Mark as completed</label>
+          <label htmlFor="done" className="text-foreground text-sm">Mark as completed</label>
         </div>
 
         <div className="flex space-x-2">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
           >
             {isSubmitting ? 'Adding...' : 'Add Set'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            className="px-4 py-2 bg-muted text-muted-foreground rounded hover:bg-accent"
           >
             Cancel
           </button>
