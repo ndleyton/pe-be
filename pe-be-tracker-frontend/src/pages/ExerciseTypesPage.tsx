@@ -4,6 +4,19 @@ import { HiOutlineMagnifyingGlass } from 'react-icons/hi2';
 import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
 import { ExerciseTypeCard } from '@/features/exercises/components';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 
 const ExerciseTypesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,9 +39,12 @@ const ExerciseTypesPage: React.FC = () => {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <div className="alert alert-error">
-          <span>Error loading exercise types. Please try again.</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error loading exercise types. Please try again.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -44,23 +60,27 @@ const ExerciseTypesPage: React.FC = () => {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <HiOutlineMagnifyingGlass className="h-5 w-5 text-gray-400" />
             </div>
-            <input
+            <Input
               type="text"
               placeholder="Search exercise types..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input input-bordered w-full pl-10"
+              className="w-full pl-10"
             />
           </div>
           
-          <select
+          <Select
             value={orderBy}
-            onChange={(e) => setOrderBy(e.target.value as 'usage' | 'name')}
-            className="select select-bordered w-full sm:w-auto"
+            onValueChange={(value) => setOrderBy(value as 'usage' | 'name')}
           >
-            <option value="usage">Most Used</option>
-            <option value="name">Alphabetical</option>
-          </select>
+            <SelectTrigger className="w-full sm:w-auto">
+              <SelectValue placeholder="Order By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="usage">Most Used</SelectItem>
+              <SelectItem value="name">Alphabetical</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -7,6 +7,17 @@ import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
 import { addExerciseToCurrentWorkout } from '@/api/workouts';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
@@ -45,9 +56,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
   if (exerciseTypeError) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <div className="alert alert-error">
-          <span>Error loading exercise type. Please try again.</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error loading exercise type. Please try again.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -65,9 +79,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
   if (!exerciseType) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <div className="alert alert-warning">
-          <span>Exercise type not found.</span>
-        </div>
+        <Alert variant="warning">
+          <AlertTitle>Not Found</AlertTitle>
+          <AlertDescription>
+            Exercise type not found.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -93,54 +110,63 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       </div>
 
       {statsError && (
-        <div className="alert alert-error mb-6">
-          <span>Error loading exercise statistics. Please try again later.</span>
-        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error loading exercise statistics. Please try again later.
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           {/* Exercise Image Placeholder */}
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
+          <Card className="shadow-md">
+            <CardContent className="pt-6">
               <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
                 <div className="text-center text-gray-500">
                   <HiOutlinePhoto className="h-16 w-16 mx-auto mb-2" />
                   <p>Exercise image coming soon</p>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Description</h2>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Description</CardTitle>
+            </CardHeader>
+            <CardContent>
               <p className="text-gray-700">
                 {exerciseType.description || 'No description available for this exercise type.'}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {exerciseType.muscles && exerciseType.muscles.length > 0 && (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h2 className="card-title">Target Muscles</h2>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Target Muscles</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {exerciseType.muscles.map((muscle) => (
-                    <span key={muscle.id} className="badge badge-primary">
+                    <span key={muscle.id} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80">
                       {muscle.name}
                     </span>
                   ))}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
         <div className="space-y-6">
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Progressive Overload</h2>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Progressive Overload</CardTitle>
+            </CardHeader>
+            <CardContent>
               {isLoadingStats ? (
                 <div className="flex justify-center py-8">
                   <span className="loading loading-spinner loading-md"></span>
@@ -153,11 +179,13 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                   <p className="text-sm">Start tracking workouts to see your progress!</p>
                 </div>
               )}
-            </div>
-          </div>
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Last Workout</h2>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Last Workout</CardTitle>
+            </CardHeader>
+            <CardContent>
               {isLoadingStats ? (
                 <div className="flex justify-center py-4">
                   <span className="loading loading-spinner loading-sm"></span>
@@ -170,11 +198,13 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               ) : (
                 <p className="text-gray-500">You haven't done this exercise yet.</p>
               )}
-            </div>
-          </div>
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Personal Best</h2>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Personal Best</CardTitle>
+            </CardHeader>
+            <CardContent>
               {isLoadingStats ? (
                 <div className="flex justify-center py-4">
                   <span className="loading loading-spinner loading-sm"></span>
@@ -187,25 +217,27 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               ) : (
                 <p className="text-gray-500">No personal best recorded yet.</p>
               )}
-            </div>
-          </div>
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Usage Statistics</h2>
-              <div className="stats stats-vertical lg:stats-horizontal w-full">
-                <div className="stat">
-                  <div className="stat-title">Times Used</div>
-                  <div className="stat-value text-primary">{exerciseType.times_used}</div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Usage Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm font-medium text-gray-500">Times Used</div>
+                  <div className="text-2xl font-bold text-primary">{exerciseType.times_used}</div>
                 </div>
                 {stats?.totalSets && (
-                  <div className="stat">
-                    <div className="stat-title">Total Sets</div>
-                    <div className="stat-value text-secondary">{stats.totalSets}</div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-sm font-medium text-gray-500">Total Sets</div>
+                    <div className="text-2xl font-bold text-secondary">{stats.totalSets}</div>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

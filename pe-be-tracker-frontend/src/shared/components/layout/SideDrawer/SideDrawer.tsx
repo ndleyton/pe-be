@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -22,6 +23,9 @@ const SideDrawer: React.FC = () => {
       <SheetContent side="left" className="w-64 bg-background p-4 flex flex-col">
         <SheetHeader>
           <SheetTitle className="text-lg font-semibold">Navigation</SheetTitle>
+          <SheetDescription>
+            Navigate between different sections of the application
+          </SheetDescription>
         </SheetHeader>
         <nav className="flex-1 overflow-y-auto mt-6" aria-label="Secondary navigation">
           <ul className="space-y-2">
