@@ -8,7 +8,7 @@ interface RecipesSectionProps {
 
 export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }) => {
   const { data: guestData, actions: guestActions } = useGuestData();
-  const recipes = guestData.recipes;
+  const recipes = guestData.recipes || [];
 
   if (recipes.length === 0) {
     return null;

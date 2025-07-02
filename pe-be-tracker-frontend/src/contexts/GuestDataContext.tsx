@@ -212,11 +212,27 @@ interface GuestDataProviderProps {
   children: ReactNode;
 }
 
+// Migration function to ensure recipes property exists
+const migrateGuestData = (data: any): GuestData => {
+  const migrated = { ...data };
+  
+  // Add recipes array if it doesn't exist
+  if (!migrated.recipes) {
+    migrated.recipes = [];
+  }
+  
+  return migrated as GuestData;
+};
+
 export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }) => {
   const [data, setData] = useState<GuestData>(() => {
     try {
       const stored = localStorage.getItem(GUEST_DATA_KEY);
-      return stored ? JSON.parse(stored) : getInitialGuestData();
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return migrateGuestData(parsed);
+      }
+      return getInitialGuestData();
     } catch {
       return getInitialGuestData();
     }
@@ -460,7 +476,7 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
       };
       setData(prev => ({
         ...prev,
-        recipes: [...prev.recipes, newRecipe],
+        recipes: [...(prev.recipes || []), newRecipe],
       }));
       return id;
     },
@@ -468,11 +484,14 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
     deleteRecipe: (id) => {
       setData(prev => ({
         ...prev,
-        recipes: prev.recipes.filter(recipe => recipe.id !== id),
+        recipes: (prev.recipes || []).filter(recipe => recipe.id !== id),
       }));
     },
 
     createRecipeFromWorkout: (workoutName, exercises) => {
+      const id = generateId();
+      const now = getCurrentTimestamp();
+      
       const recipeExercises: GuestRecipeExercise[] = exercises.map(exercise => ({
         id: generateId(),
         exercise_type_id: exercise.exercise_type_id,
@@ -487,12 +506,20 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
         notes: exercise.notes || undefined,
       }));
 
-      const recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'> = {
+      const newRecipe: GuestRecipe = {
+        id,
         name: workoutName || 'My Recipe',
         exercises: recipeExercises,
+        created_at: now,
+        updated_at: now,
       };
 
-      return actions.addRecipe(recipe);
+      setData(prev => ({
+        ...prev,
+        recipes: [...(prev.recipes || []), newRecipe],
+      }));
+      
+      return id;
     },
 
     // Utility actions
