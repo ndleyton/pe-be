@@ -91,13 +91,13 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   if (isEditing) {
     return (
-      <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 flex items-center space-x-2">
+      <div className="bg-card border border-border rounded-lg p-3 flex items-center space-x-2">
         <input
           type="number"
           placeholder="Reps"
           value={editData.reps || ''}
           onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="w-20 p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+          className="w-20 p-2 bg-background border border-border rounded text-foreground text-sm"
         />
         <input
           type="number"
@@ -105,33 +105,33 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Weight"
           value={editData.intensity || ''}
           onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+          className="w-24 p-2 bg-background border border-border rounded text-foreground text-sm"
         />
         <input
           type="number"
           placeholder="Rest (s)"
           value={editData.rest_time_seconds || ''}
           onChange={(e) => setEditData({ ...editData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="w-20 p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+          className="w-20 p-2 bg-background border border-border rounded text-foreground text-sm"
         />
-        <label className="flex items-center space-x-2 text-white text-sm">
+        <label className="flex items-center space-x-2 text-foreground text-sm">
           <input
             type="checkbox"
             checked={editData.done}
             onChange={(e) => setEditData({ ...editData, done: e.target.checked })}
-            className="text-blue-500"
+            className="text-primary"
           />
           <span>Done</span>
         </label>
         <button
           onClick={handleSave}
-          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
         >
           Save
         </button>
         <button
           onClick={() => setIsEditing(false)}
-          className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+          className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-accent"
         >
           Cancel
         </button>
@@ -141,7 +141,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   return (
     <div className={`border rounded-lg p-3 flex items-center justify-between ${
-      exerciseSet.done ? 'bg-green-900/20 border-green-700' : 'bg-gray-700 border-gray-600'
+      exerciseSet.done ? 'bg-green-900/20 border-green-700' : 'bg-card border-border'
     }`}>
       <div className="flex items-center space-x-4">
         <button
@@ -150,21 +150,21 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
             exerciseSet.done
               ? 'bg-green-600 border-green-600 text-white'
-              : 'border-gray-500 hover:border-green-500'
+              : 'border-border hover:border-primary'
           }`}
         >
           {exerciseSet.done && '✓'}
         </button>
         <div className="flex space-x-6 text-sm">
-          <div className="text-white">
-            <span className="text-gray-400">Reps:</span> {exerciseSet.reps || '-'}
+          <div className="text-foreground">
+            <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps || '-'}
           </div>
-          <div className="text-white">
-            <span className="text-gray-400">Weight:</span> {exerciseSet.intensity || '-'}
+          <div className="text-foreground">
+            <span className="text-muted-foreground">Weight:</span> {exerciseSet.intensity || '-'}
           </div>
           {exerciseSet.rest_time_seconds && (
-            <div className="text-white">
-              <span className="text-gray-400">Rest:</span> {exerciseSet.rest_time_seconds}s
+            <div className="text-foreground">
+              <span className="text-muted-foreground">Rest:</span> {exerciseSet.rest_time_seconds}s
             </div>
           )}
         </div>

@@ -57,8 +57,7 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByText('FT')).toBeInTheDocument();
-      expect(screen.getByText('Fitness Tracker')).toBeInTheDocument();
+      expect(screen.getByTestId('home-logo')).toBeInTheDocument();
     });
 
     it('should render all navigation items', () => {
@@ -95,7 +94,7 @@ describe('DesktopSidebar', () => {
       );
 
       const workoutsLink = screen.getByRole('link', { name: /workouts/i });
-      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-content');
+      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-foreground');
     });
 
     it('should not highlight inactive navigation items', () => {
@@ -154,8 +153,9 @@ describe('DesktopSidebar', () => {
       const sidebar = screen.getByRole('complementary');
       expect(sidebar).toBeInTheDocument();
 
-      const nav = screen.getByRole('navigation', { name: /sidebar navigation/i });
+      const nav = screen.getByRole('navigation');
       expect(nav).toBeInTheDocument();
+      expect(nav).toHaveAttribute('aria-label', 'Sidebar navigation');
     });
 
     it('should be keyboard navigable', async () => {
@@ -214,9 +214,9 @@ describe('DesktopSidebar', () => {
         'lg:w-64',
         'lg:fixed',
         'lg:inset-y-0',
-        'lg:bg-base-100',
-        'lg:border-r',
-        'lg:border-base-300'
+        'lg:left-0',
+        'lg:bg-background',
+        'lg:border-r'
       );
     });
 
@@ -253,15 +253,7 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      // Check for brand icon
-      const brandIcon = screen.getByText('FT');
-      expect(brandIcon).toBeInTheDocument();
-      expect(brandIcon).toHaveClass('text-white', 'font-bold', 'text-sm');
-
-      // Check for brand name
-      const brandName = screen.getByText('Fitness Tracker');
-      expect(brandName).toBeInTheDocument();
-      expect(brandName).toHaveClass('text-lg', 'font-semibold');
+      expect(screen.getByTestId('home-logo')).toBeInTheDocument();
     });
   });
 }); 

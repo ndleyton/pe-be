@@ -1,136 +1,84 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import api from '@/shared/api/client';
 import { navItems } from '@/shared/navigation/navItems';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const SideDrawer: React.FC = () => {
   const { isOpen, closeDrawer } = useDrawer();
   const { isAuthenticated, signOut } = useAuth();
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const firstFocusableRef = useRef<HTMLAnchorElement>(null);
-
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        closeDrawer();
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      // Close drawer if clicking outside of it when open
-      if (isOpen && drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        closeDrawer();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.addEventListener('mousedown', handleClickOutside);
-      // Focus trap: focus first element when drawer opens
-      firstFocusableRef.current?.focus();
-      // Prevent body scroll when drawer is open
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Re-enable body scroll when drawer is closed
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, closeDrawer]);
-
-  const handleGoogleSignIn = async () => {
-    try {
-      const { data } = await api.get('/auth/google/authorize');
-      if (data.authorization_url) {
-        window.location.href = data.authorization_url;
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Google sign-in failed', error);
-    }
-  };
+  const googleSignIn = useGoogleSignIn();
 
   return (
-    <>
-      {/* Drawer - with solid background */}
-      <div 
-        ref={drawerRef}
-        className={`fixed left-0 top-0 z-50 h-full w-64 bg-white dark:bg-gray-800 shadow-xl border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="drawer-title"
-      >
-        <div className="p-4 h-full overflow-y-auto text-gray-900 dark:text-gray-100">
-          <h2 id="drawer-title" className="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">Navigation</h2>
-          
-          <nav role="navigation" aria-label="Secondary navigation">
-            <ul className="space-y-2">
-              {navItems.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.to}>
-                    <NavLink
-                      ref={index === 0 ? firstFocusableRef : undefined}
-                      to={item.to}
-                      onClick={closeDrawer}
-                      className={({ isActive }) =>
-                        `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                          isActive 
-                            ? 'bg-blue-600 text-white' 
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`
-                      }
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-          
-          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Account</h3>
-            <div className="space-y-2">
-              {isAuthenticated() ? (
-                <>
-                  <button className="w-full text-left p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    Settings
-                  </button>
-                  <button
-                    onClick={() => {
-                      closeDrawer();
-                      signOut();
-                    }}
-                    className="w-full text-left p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+    <Sheet open={isOpen} onOpenChange={closeDrawer}>
+      <SheetContent side="left" className="w-64 bg-background p-4 flex flex-col">
+        <SheetHeader>
+          <SheetTitle className="text-lg font-semibold">Navigation</SheetTitle>
+          <SheetDescription>
+            Navigate between different sections of the application
+          </SheetDescription>
+        </SheetHeader>
+        <nav className="flex-1 overflow-y-auto mt-6" aria-label="Secondary navigation">
+          <ul className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    onClick={closeDrawer}
+                    className={({ isActive }) =>
+                      `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      }`
+                    }
                   >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleGoogleSignIn}
-                  className="w-full text-left p-3 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <div className="mt-auto pt-4 border-t">
+          <div className="space-y-2">
+            {isAuthenticated() ? (
+              <>
+                <Button variant="ghost" className="w-full justify-start">
+                  Settings
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    closeDrawer();
+                    signOut();
+                  }}
                 >
-                  Sign In with Google
-                </button>
-              )}
-            </div>
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button onClick={googleSignIn} className="w-full">
+                Sign In with Google
+              </Button>
+            )}
           </div>
         </div>
-      </div>
-
-    </>
+      </SheetContent>
+    </Sheet>
   );
 };
 

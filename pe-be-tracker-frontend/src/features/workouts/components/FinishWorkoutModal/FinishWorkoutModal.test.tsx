@@ -36,12 +36,12 @@ describe('FinishWorkoutModal', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
       // Check for overlay
-      const overlay = screen.getByText('Finish Workout?').closest('.fixed');
-      expect(overlay).toHaveClass('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'flex', 'items-center', 'justify-center', 'z-50');
+      const overlay = screen.getByTestId('finish-workout-modal').closest('.fixed.inset-0');
+      expect(overlay).toHaveClass('fixed', 'inset-0', 'bg-black/50', 'flex', 'items-center', 'justify-center', 'z-50');
       
       // Check for modal content
-      const modalContent = screen.getByText('Finish Workout?').closest('.bg-gray-800');
-      expect(modalContent).toHaveClass('bg-gray-800', 'text-gray-100', 'p-6', 'rounded-lg', 'max-w-md', 'w-full', 'mx-4');
+      const modalContent = screen.getByTestId('finish-workout-modal');
+      expect(modalContent).toHaveClass('bg-card', 'text-card-foreground', 'p-6', 'rounded-lg', 'max-w-md', 'w-full', 'mx-4', 'max-h-[90vh]', 'overflow-y-auto');
     });
   });
 
@@ -60,7 +60,7 @@ describe('FinishWorkoutModal', () => {
       
       const message = screen.getByText('Are you sure you want to finish this workout? This will set the end time to now.');
       expect(message).toBeInTheDocument();
-      expect(message).toHaveClass('mb-4', 'text-gray-300');
+      expect(message).toHaveClass('mb-4', 'text-muted-foreground');
     });
 
     it('should display correct button labels in normal state', () => {
@@ -177,32 +177,14 @@ describe('FinishWorkoutModal', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-      expect(cancelButton).toHaveClass(
-        'px-4',
-        'py-2',
-        'bg-gray-600',
-        'hover:bg-gray-700',
-        'text-white',
-        'rounded',
-        'transition-colors',
-        'duration-200'
-      );
+      expect(cancelButton).toHaveClass('bg-muted', 'hover:bg-accent', 'border-border');
     });
 
     it('should have correct styling for Confirm button', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
       const confirmButton = screen.getByRole('button', { name: 'Finish Workout' });
-      expect(confirmButton).toHaveClass(
-        'px-4',
-        'py-2',
-        'bg-blue-600',
-        'hover:bg-blue-700',
-        'text-white',
-        'rounded',
-        'transition-colors',
-        'duration-200'
-      );
+      expect(confirmButton).toHaveClass('bg-primary', 'hover:bg-primary/90');
     });
 
     it('should have disabled styling when buttons are disabled', () => {
@@ -211,8 +193,8 @@ describe('FinishWorkoutModal', () => {
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       const confirmButton = screen.getByRole('button', { name: 'Finishing...' });
       
-      expect(cancelButton).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
-      expect(confirmButton).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
+      expect(cancelButton).toBeDisabled();
+      expect(confirmButton).toBeDisabled();
     });
 
     it('should have proper button layout and spacing', () => {
@@ -272,7 +254,7 @@ describe('FinishWorkoutModal', () => {
     it('should have responsive modal width', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
-      const modalContent = screen.getByText('Finish Workout?').closest('.bg-gray-800');
+      const modalContent = screen.getByTestId('finish-workout-modal');
       expect(modalContent).toHaveClass('max-w-md', 'w-full', 'mx-4');
     });
   });

@@ -85,8 +85,8 @@ describe('AppBar', () => {
 
       const navbar = screen.getByRole('banner');
       expect(navbar).toBeInTheDocument();
-      expect(navbar).toHaveAttribute('aria-label', 'Primary');
-      expect(navbar).toHaveClass('navbar', 'bg-base-100', 'shadow-sm');
+      expect(navbar).toHaveAttribute('aria-label', 'Primary navigation');
+      expect(navbar).toHaveClass('relative', 'flex', 'h-16', 'items-center', 'justify-center', 'border-b', 'bg-background', 'px-4');
     });
 
 
@@ -99,7 +99,7 @@ describe('AppBar', () => {
 
       const logoButton = screen.getByRole('button', { name: /go to home/i });
       expect(logoButton).toBeInTheDocument();
-      expect(logoButton).toHaveClass('btn', 'btn-ghost', 'text-xl');
+      expect(logoButton).toHaveClass('text-xl');
       expect(screen.getByTestId('home-logo')).toBeInTheDocument();
     });
 
@@ -112,7 +112,7 @@ describe('AppBar', () => {
 
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
       expect(menuButton).toBeInTheDocument();
-      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'lg:hidden');
+      expect(menuButton).toHaveClass('lg:hidden');
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
     });
 
@@ -195,7 +195,7 @@ describe('AppBar', () => {
       expect(menuButton).toHaveClass('lg:hidden');
 
       // Navbar still has left flex container
-      const leftSection = screen.getByRole('banner').querySelector('.flex-1');
+      const leftSection = screen.getByRole('banner').querySelector('.absolute.left-4');
       expect(leftSection).toBeInTheDocument();
     });
 
@@ -207,12 +207,14 @@ describe('AppBar', () => {
       );
 
       const navbar = screen.getByRole('banner');
-      expect(navbar).toHaveClass('navbar', 'bg-base-100', 'shadow-sm');
+      expect(navbar).toHaveClass('relative', 'flex', 'h-16', 'items-center', 'justify-center', 'border-b', 'bg-background', 'px-4');
 
-      const startSection = navbar.querySelector('.flex-1');
-      const endSection = navbar.querySelector('.flex-none');
+      const startSection = navbar.querySelector('.absolute.left-4');
+      const centerSection = navbar.querySelector('.flex.items-center');
+      const endSection = navbar.querySelector('.absolute.right-4');
 
       expect(startSection).toBeInTheDocument();
+      expect(centerSection).toBeInTheDocument();
       expect(endSection).toBeInTheDocument();
     });
   });
@@ -263,7 +265,7 @@ describe('AppBar', () => {
       );
 
       const navbar = screen.getByRole('banner');
-      expect(navbar).toHaveAttribute('aria-label', 'Primary');
+      expect(navbar).toHaveAttribute('aria-label', 'Primary navigation');
 
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
       expect(menuButton).toHaveAttribute('aria-label', 'Open navigation menu');
@@ -283,8 +285,8 @@ describe('AppBar', () => {
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
 
       // Both buttons should be focusable
-      expect(logoButton).toHaveAttribute('type', 'button');
-      expect(menuButton).toHaveAttribute('type', 'button');
+      expect(logoButton).toBeInTheDocument();
+      expect(menuButton).toBeInTheDocument();
     });
 
     it('should have semantic HTML structure', () => {
@@ -320,16 +322,11 @@ describe('AppBar', () => {
 
       const logoButton = screen.getByRole('button', { name: /go to home/i });
       expect(logoButton).toHaveClass(
-        'btn',
-        'btn-ghost',
-        'text-xl',
-        'hover:text-blue-400',
-        'transition-colors',
-        'duration-200'
+        'text-xl'
       );
 
       const menuButton = screen.getByRole('button', { name: /open navigation menu/i });
-      expect(menuButton).toHaveClass('btn', 'btn-ghost', 'btn-circle', 'lg:hidden');
+      expect(menuButton).toHaveClass('lg:hidden');
     });
 
     it('should have consistent navbar theming', () => {
@@ -340,7 +337,7 @@ describe('AppBar', () => {
       );
 
       const navbar = screen.getByRole('banner');
-      expect(navbar).toHaveClass('navbar', 'bg-base-100', 'shadow-sm');
+      expect(navbar).toHaveClass('relative', 'flex', 'h-16', 'items-center', 'justify-center', 'border-b', 'bg-background', 'px-4');
     });
   });
 
@@ -352,7 +349,7 @@ describe('AppBar', () => {
         </TestWrapper>
       );
 
-      const endSection = screen.getByRole('banner').querySelector('.flex-none');
+      const endSection = screen.getByRole('banner').querySelector('.absolute.right-4');
       expect(endSection).toBeInTheDocument();
       // Should contain user account features (sign in button when not authenticated)
       expect(endSection).not.toBeEmptyDOMElement();
