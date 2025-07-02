@@ -17,6 +17,8 @@ interface WorkoutTimerContextValue {
   togglePause: () => void;
   /** Call to stop the timer and reset all state */
   stop: () => void;
+  /** Start or restart the timer at an optional time */
+  start: (at?: Date) => void;
 }
 
 const WorkoutTimerContext = createContext<WorkoutTimerContextValue | undefined>(undefined);
@@ -90,6 +92,7 @@ export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({ 
     resume,
     togglePause,
     stop,
+    start,
   };
 
   return (
