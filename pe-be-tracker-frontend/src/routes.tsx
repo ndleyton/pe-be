@@ -5,7 +5,7 @@ import AppLayout from './layouts/AppLayout';
 
 const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const OAuthCallbackPage = lazy(() => import('./features/auth/pages'));
+const OAuthCallbackPage = lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
 const WorkoutPage = lazy(() => import('./pages/WorkoutPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const ExerciseTypesPage = lazy(() => import('./pages/ExerciseTypesPage'));
