@@ -9,6 +9,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import { ModeToggle } from '@/components/mode-toggle';
 
 type Workout = {
   id: number | string;
@@ -160,6 +161,11 @@ const ProfilePage: React.FC = () => {
                 </AlertDescription>
               </Alert>
             )}
+
+            <div>
+              <label className="text-xl">Theme: </label>
+              <ModeToggle />
+            </div>
           </div>
         </div>
       </div>

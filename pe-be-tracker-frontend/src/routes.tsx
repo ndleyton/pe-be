@@ -5,6 +5,7 @@ import AppLayout from './layouts/AppLayout';
 
 const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const OAuthCallbackPage = lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
 const WorkoutPage = lazy(() => import('./pages/WorkoutPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
@@ -52,6 +53,10 @@ const routes: RouteObject[] = [
       {
         path: 'profile',
         element: <Suspense fallback={<div>Loading...</div>}><ProfilePage /></Suspense>,
+      },
+      {
+        path: 'settings',
+        element: <Suspense fallback={<div>Loading...</div>}><SettingsPage /></Suspense>,
       }
     ]
   },
