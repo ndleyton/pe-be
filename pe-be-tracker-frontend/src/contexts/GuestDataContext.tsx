@@ -60,10 +60,36 @@ export interface GuestWorkout {
   updated_at: string;
 }
 
+export interface GuestRecipeSet {
+  id: string;
+  reps: number | null;
+  intensity: number | null;
+  intensity_unit_id: number;
+  rest_time_seconds: number | null;
+}
+
+export interface GuestRecipeExercise {
+  id: string;
+  exercise_type_id: string;
+  exercise_type: GuestExerciseType;
+  sets: GuestRecipeSet[];
+  notes?: string;
+}
+
+export interface GuestRecipe {
+  id: string;
+  name: string;
+  description?: string;
+  exercises: GuestRecipeExercise[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GuestData {
   workouts: GuestWorkout[];
   exerciseTypes: GuestExerciseType[];
   workoutTypes: GuestWorkoutType[];
+  recipes: GuestRecipe[];
 }
 
 // Action types
@@ -90,6 +116,11 @@ export interface GuestDataActions {
   // Workout type actions
   addWorkoutType: (workoutType: Omit<GuestWorkoutType, 'id'>) => string;
   updateWorkoutType: (id: string, updates: Partial<GuestWorkoutType>) => void;
+  
+  // Recipe actions
+  addRecipe: (recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
+  deleteRecipe: (id: string) => void;
+  createRecipeFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
   
   // Utility actions
   clear: () => void;
@@ -166,6 +197,7 @@ const getInitialGuestData = (): GuestData => ({
       description: 'Exercises using your own body weight',
     },
   ],
+  recipes: [],
 });
 
 export const useGuestData = () => {
@@ -414,6 +446,53 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
           type.id === id ? { ...type, ...updates } : type
         ),
       }));
+    },
+
+    // Recipe actions
+    addRecipe: (recipe) => {
+      const id = generateId();
+      const now = getCurrentTimestamp();
+      const newRecipe: GuestRecipe = {
+        ...recipe,
+        id,
+        created_at: now,
+        updated_at: now,
+      };
+      setData(prev => ({
+        ...prev,
+        recipes: [...prev.recipes, newRecipe],
+      }));
+      return id;
+    },
+
+    deleteRecipe: (id) => {
+      setData(prev => ({
+        ...prev,
+        recipes: prev.recipes.filter(recipe => recipe.id !== id),
+      }));
+    },
+
+    createRecipeFromWorkout: (workoutName, exercises) => {
+      const recipeExercises: GuestRecipeExercise[] = exercises.map(exercise => ({
+        id: generateId(),
+        exercise_type_id: exercise.exercise_type_id,
+        exercise_type: exercise.exercise_type,
+        sets: exercise.exercise_sets.map(set => ({
+          id: generateId(),
+          reps: set.reps,
+          intensity: set.intensity,
+          intensity_unit_id: set.intensity_unit_id,
+          rest_time_seconds: set.rest_time_seconds,
+        })),
+        notes: exercise.notes || undefined,
+      }));
+
+      const recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'> = {
+        name: workoutName || 'My Recipe',
+        exercises: recipeExercises,
+      };
+
+      return actions.addRecipe(recipe);
     },
 
     // Utility actions

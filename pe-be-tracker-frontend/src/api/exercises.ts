@@ -47,6 +47,31 @@ export interface Exercise {
   exercise_sets: ExerciseSet[];
 }
 
+export interface Recipe {
+  id: string;
+  name: string;
+  description?: string;
+  exercises: RecipeExercise[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeExercise {
+  id: string;
+  exercise_type_id: number | string;
+  exercise_type: ExerciseType;
+  sets: RecipeSet[];
+  notes?: string;
+}
+
+export interface RecipeSet {
+  id: string;
+  reps: number | null;
+  intensity: number | null;
+  intensity_unit_id: number;
+  rest_time_seconds: number | null;
+}
+
 // Get exercises for a specific workout
 export const getExercisesInWorkout = async (workoutId: string): Promise<Exercise[]> => {
   const response = await api.get(`/workouts/${workoutId}/exercises`);
