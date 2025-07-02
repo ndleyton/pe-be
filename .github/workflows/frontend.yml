@@ -42,9 +42,7 @@ jobs:
         run: npm run lint
         
       - name: Run type checking
-        run: |
-          cd pe-be-tracker-frontend
-          npx tsc --noEmit
+        run: npx tsc --noEmit
         
       - name: Run tests
         run: npm run test -- --coverage
