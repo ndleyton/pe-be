@@ -296,7 +296,6 @@ describe('AppBar', () => {
         </TestWrapper>
       );
 
-      // Main container should have banner role
       const banner = screen.getByRole('banner');
       expect(banner).toBeInTheDocument();
 
