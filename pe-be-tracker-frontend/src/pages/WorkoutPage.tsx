@@ -7,6 +7,7 @@ import { ExerciseForm, ExerciseList } from '../features/exercises/components';
 import { FinishWorkoutModal } from '../features/workouts/components';
 import { FloatingActionButton } from '../shared/components/ui';
 import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
+import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
@@ -32,6 +33,7 @@ const WorkoutPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const { start, stop, startTime } = useWorkoutTimer();
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -90,25 +92,28 @@ const WorkoutPage: React.FC = () => {
     },
   });
 
-  // Handle page exit/navigation
+  // Start the workout timer on mount if not already started
   useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    const handlePopState = () => {
-      setShowFinishModal(true);
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
+    if (!startTime) {
+      // Try to derive the start time from workout data if available
+      if (isAuthenticated()) {
+        if (serverWorkout && (serverWorkout as any).start_time) {
+          start(new Date((serverWorkout as any).start_time));
+        } else {
+          start();
+        }
+      } else {
+        const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
+        if (guestWorkout && (guestWorkout as any).start_time) {
+          start(new Date((guestWorkout as any).start_time));
+        } else {
+          start();
+        }
+      }
+    }
+    // We purposely ignore exhaustive-deps for start to avoid resetting interval unnecessarily
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverWorkout, workoutId]);
 
   // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
@@ -122,12 +127,17 @@ const WorkoutPage: React.FC = () => {
     console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
       if (isAuthenticated()) {
-        finishWorkoutMutation.mutate(workoutId);
+        finishWorkoutMutation.mutate(workoutId, {
+          onSuccess: () => {
+            stop();
+          },
+        });
       } else {
         // For guest mode, update the workout end time
         guestActions.updateWorkout(workoutId, {
           end_time: new Date().toISOString(),
         });
+        stop();
         setShowFinishModal(false);
         navigate('/workouts');
       }
@@ -146,6 +156,26 @@ const WorkoutPage: React.FC = () => {
   const workoutName = isAuthenticated()
     ? serverWorkout?.name ?? null
     : guestData.workouts.find(w => w.id === workoutId)?.name ?? null;
+
+  // Warn user on navigation/back while workout in progress
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const handlePopState = () => {
+      setShowFinishModal(true);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   return (
     <>

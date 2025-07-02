@@ -1,11 +1,12 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineBars3 } from 'react-icons/hi2';
+import { HiOutlineBars3, HiOutlinePause, HiOutlinePlay } from 'react-icons/hi2';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 import { Button } from '@/components/ui/button';
+import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const AppBar: React.FC = () => {
   }, [navigate]);
 
   const googleSignIn = useGoogleSignIn();
+  const { startTime, formatted, paused, togglePause } = useWorkoutTimer();
 
   return (
     <header className="relative flex h-16 items-center justify-center border-b bg-background px-4" role="banner" aria-label="Primary navigation">
@@ -45,8 +47,27 @@ const AppBar: React.FC = () => {
         </Button>
       </div>
 
-      {/* Right section for auth button */}
-      <div className="absolute right-4 flex items-center">
+      {/* Right section: timer (clickable) and optional auth button */}
+      <div className="absolute right-4 flex items-center space-x-2">
+        {startTime && (
+          <button
+            type="button"
+            onClick={togglePause}
+            aria-label={paused ? 'Resume timer' : 'Pause timer'}
+            className="flex items-center space-x-1 px-2 py-1 rounded-md hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {/* Timer text always visible */}
+            <span className="font-mono text-sm" aria-label="Workout timer">
+              {formatted}
+            </span>
+            {/* Icon hidden on small screens to save space */}
+            {paused ? (
+              <HiOutlinePlay className="hidden sm:block h-5 w-5" />
+            ) : (
+              <HiOutlinePause className="hidden sm:block h-5 w-5" />
+            )}
+          </button>
+        )}
         {!isAuthenticated() && (
           <Button onClick={googleSignIn} size="sm">
             Sign In
