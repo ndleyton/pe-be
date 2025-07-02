@@ -28,9 +28,9 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
       aria-label={isInteractive ? "Go to home page" : undefined}
     >
       <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-sm">FT</span>
+        <span className="text-white font-bold text-sm">PB</span>
       </div>
-      <span>Fitness Tracker</span>
+      <span>PB Tracker</span>
     </div>
   );
 };

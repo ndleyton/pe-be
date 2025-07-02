@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { GuestDataProvider } from '../contexts/GuestDataContext';
 import { AuthProvider } from '../contexts/AuthContext';
+import { WorkoutTimerProvider } from '../contexts/WorkoutTimerContext';
 import { vi } from 'vitest';
 
 // Mock API client for all tests
@@ -36,13 +37,15 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <GuestDataProvider>
-          <MemoryRouter>
-            {children}
-          </MemoryRouter>
-        </GuestDataProvider>
-      </AuthProvider>
+      <WorkoutTimerProvider>
+        <AuthProvider>
+          <GuestDataProvider>
+            <MemoryRouter>
+              {children}
+            </MemoryRouter>
+          </GuestDataProvider>
+        </AuthProvider>
+      </WorkoutTimerProvider>
     </QueryClientProvider>
   );
 };
