@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 import { GuestDataProvider } from '@/contexts/GuestDataContext';
 import { config } from '@/app/config/env';
+import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -26,7 +27,9 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       <AuthProvider>
         <GuestDataProvider>
           <DrawerProvider>
-            {children}
+            <WorkoutTimerProvider>
+              {children}
+            </WorkoutTimerProvider>
           </DrawerProvider>
         </GuestDataProvider>
       </AuthProvider>
