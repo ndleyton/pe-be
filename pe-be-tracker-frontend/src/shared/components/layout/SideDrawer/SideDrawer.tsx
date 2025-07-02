@@ -40,7 +40,7 @@ const SideDrawer: React.FC = () => {
                       `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-accent hover:text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       }`
                     }
                   >
