@@ -6,6 +6,7 @@ import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
+import { Button } from '@/components/ui/button';
 
 interface WorkoutFormData {
   name?: string;
@@ -113,76 +114,77 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-gray-700 p-6 rounded-lg bg-gray-900 text-gray-100 shadow-lg w-full max-w-md mx-auto">
+    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-6 rounded-lg bg-card text-card-foreground shadow-lg w-full max-w-md mx-auto">
       <div className="mb-6">
         {isEditingName ? (
           <div className="flex items-center space-x-2">
             <input
               type="text"
               {...register('name')}
-              className="flex-1 bg-gray-800 text-gray-100 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
-            <button
+            <Button
               type="button"
               onClick={() => setIsEditingName(false)}
               aria-label="save workout name"
-              className="bg-green-600 hover:bg-green-700 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+              size="icon"
+              className="bg-primary hover:bg-primary/90"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-            </button>
+            </Button>
           </div>
         ) : (
           <div
             onClick={() => setIsEditingName(true)}
             className="flex items-center justify-between cursor-pointer group"
           >
-            <h2 className="text-xl font-semibold text-gray-100">{nameField || 'Workout Name'}</h2>
-            <svg className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h2 className="text-xl font-semibold text-foreground">{nameField || 'Workout Name'}</h2>
+            <svg className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
         )}
       </div>
       <div className="mb-4">
-        <label className="block mb-1 text-gray-200 font-medium">Notes:
+        <label className="block mb-1 text-foreground font-medium">Notes:
           <input
             placeholder="How am I feeling today?"
             type="text"
             {...register('notes')}
-            className="mt-1 mb-2 w-full bg-gray-800 text-gray-100 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </label>
       </div>
       <div className="mb-4">
-        <label className="block mb-1 text-gray-200 font-medium">Start Time:
+        <label className="block mb-1 text-foreground font-medium">Start Time:
           <input
             type="datetime-local"
             {...register('start_time', { required: 'Start time is required' })}
-            className="mt-1 mb-2 w-full bg-gray-800 text-gray-100 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </label>
-        {formState.errors.start_time && <div className="text-red-400 text-sm">{formState.errors.start_time.message}</div>}
+        {formState.errors.start_time && <div className="text-destructive text-sm">{formState.errors.start_time.message}</div>}
       </div>
       <div className="mb-4">
         {selectedWorkoutType ? (
           <div
             onClick={() => setShowModal(true)}
-            className="bg-gray-800 rounded-lg p-4 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors"
+            className="bg-background rounded-lg p-4 border border-border cursor-pointer hover:bg-accent transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">
                   {selectedWorkoutType.name.charAt(0)}
                 </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-white font-medium">{selectedWorkoutType.name}</h4>
-                <p className="text-gray-400 text-sm mt-1">{selectedWorkoutType.description}</p>
+                <h4 className="text-foreground font-medium">{selectedWorkoutType.name}</h4>
+                <p className="text-muted-foreground text-sm mt-1">{selectedWorkoutType.description}</p>
               </div>
-              <div className="text-gray-400">
+              <div className="text-muted-foreground">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
@@ -190,13 +192,14 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             </div>
           </div>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={() => setShowModal(true)}
-            className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded px-3 py-2 text-left hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            variant="outline"
+            className="w-full bg-background text-foreground border-border hover:bg-accent justify-start"
           >
             Select Workout Type
-          </button>
+          </Button>
         )}
         <input
           type="hidden"
@@ -205,16 +208,16 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             valueAsNumber: isAuthenticated(), // Only convert to number if authenticated
           })}
         />
-        {formState.errors.workout_type_id && <div className="text-red-400 text-sm mt-2">{formState.errors.workout_type_id.message}</div>}
+        {formState.errors.workout_type_id && <div className="text-destructive text-sm mt-2">{formState.errors.workout_type_id.message}</div>}
       </div>
-      <button
+      <Button
         type="submit"
         disabled={isAuthenticated() && mutation.isPending}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded px-6 py-2 mt-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
       >
         {(isAuthenticated() && mutation.isPending) ? 'Creating...' : 'Start Workout'}
-      </button>
-      {isAuthenticated() && mutation.error && <div className="text-red-400 mt-3">Failed to create workout.</div>}
+      </Button>
+      {isAuthenticated() && mutation.error && <div className="text-destructive mt-3">Failed to create workout.</div>}
 
       <WorkoutTypeModal
         isOpen={showModal}

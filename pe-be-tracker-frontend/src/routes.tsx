@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
-import MyWorkoutsPage from './pages/MyWorkoutsPage';
-import ProfilePage from './pages/ProfilePage';
-import { OAuthCallbackPage } from './features/auth/pages';
-import WorkoutPage from './pages/WorkoutPage';
-import ChatPage from './pages/ChatPage';
-import ExerciseTypesPage from './pages/ExerciseTypesPage';
-import ExerciseTypeDetailsPage from './pages/ExerciseTypeDetailsPage';
-import NotFoundPage from './pages/NotFoundPage';
+
+const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const OAuthCallbackPage = lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
+const WorkoutPage = lazy(() => import('./pages/WorkoutPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ExerciseTypesPage = lazy(() => import('./pages/ExerciseTypesPage'));
+const ExerciseTypeDetailsPage = lazy(() => import('./pages/ExerciseTypeDetailsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const routes: RouteObject[] = [
   {
@@ -26,37 +27,37 @@ const routes: RouteObject[] = [
     children: [
       {
         path: 'dashboard',
-        element: <MyWorkoutsPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><MyWorkoutsPage /></Suspense>,
       },
       {
         path: 'workouts',
-        element: <MyWorkoutsPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><MyWorkoutsPage /></Suspense>,
       },
       {
         path: 'workout/:workoutId',
-        element: <WorkoutPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><WorkoutPage /></Suspense>,
       },
       {
         path: 'exercise-types',
-        element: <ExerciseTypesPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><ExerciseTypesPage /></Suspense>,
       },
       {
         path: 'exercise-types/:exerciseTypeId',
-        element: <ExerciseTypeDetailsPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><ExerciseTypeDetailsPage /></Suspense>,
       },
       {
         path: 'chat',
-        element: <ChatPage />,
+        element: <Suspense fallback={<div>Loading...</div>}><ChatPage /></Suspense>,
       },
       {
         path: 'profile',
-        element: <ProfilePage />,
+        element: <Suspense fallback={<div>Loading...</div>}><ProfilePage /></Suspense>,
       }
     ]
   },
   {
     path: '*',
-    element: <NotFoundPage />,
+    element: <Suspense fallback={<div>Loading...</div>}><NotFoundPage /></Suspense>,
   }
 ];
 

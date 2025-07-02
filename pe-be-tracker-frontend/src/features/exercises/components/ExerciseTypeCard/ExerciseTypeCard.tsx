@@ -2,6 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineEye, HiOutlineFire } from 'react-icons/hi2';
 import type { ExerciseType } from '@/api/exercises';
+import {
+  Card,
+  CardContent,
+  CardTitle,
+} from '@/components/ui/card';
 
 interface ExerciseTypeCardProps {
   exerciseType: ExerciseType;
@@ -12,9 +17,9 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
 
   return (
     <Link to={`/exercise-types/${id}`} className="block">
-      <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-        <div className="card-body">
-          <h3 className="card-title text-lg font-semibold">{name}</h3>
+      <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+        <CardContent className="pt-6">
+          <CardTitle className="text-lg font-semibold">{name}</CardTitle>
           
           {description && (
             <p className="text-sm text-gray-600 line-clamp-2 mb-2">
@@ -27,13 +32,13 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
               {muscles.slice(0, 3).map((muscle) => (
                 <span
                   key={muscle.id}
-                  className="badge badge-outline badge-sm"
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   {muscle.name}
                 </span>
               ))}
               {muscles.length > 3 && (
-                <span className="badge badge-outline badge-sm">
+                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                   +{muscles.length - 3} more
                 </span>
               )}
@@ -51,8 +56,8 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
               <span>View Details</span>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 };

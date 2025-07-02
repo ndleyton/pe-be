@@ -56,15 +56,13 @@ describe('AppLayout', () => {
     // Drawer should be visible (translated in)
     const drawer = screen.getByRole('dialog');
     expect(drawer).toBeInTheDocument();
-    expect(drawer).toHaveClass('translate-x-0');
-    expect(drawer).not.toHaveClass('-translate-x-full');
+    expect(drawer).toHaveAttribute('data-state', 'open');
 
     // Press Escape to close
     await user.keyboard('{Escape}');
 
     // Drawer should be hidden (translated out)
-    expect(drawer).toHaveClass('-translate-x-full');
-    expect(drawer).not.toHaveClass('translate-x-0');
+    expect(drawer).toHaveAttribute('data-state', 'closed');
   });
 
   it('should have proper ARIA labels on navigation elements', () => {
@@ -77,7 +75,7 @@ describe('AppLayout', () => {
 
     // Check AppBar has proper role and aria-label
     const banner = screen.getByRole('banner');
-    expect(banner).toHaveAttribute('aria-label', 'Primary');
+    expect(banner).toHaveAttribute('aria-label', 'Primary navigation');
 
     // Check bottom navigation has proper role and aria-label
     const bottomNav = screen.getByRole('navigation', { name: /bottom navigation/i });

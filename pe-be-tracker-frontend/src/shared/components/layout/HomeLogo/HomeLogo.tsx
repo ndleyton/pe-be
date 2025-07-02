@@ -17,6 +17,7 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
 
   return (
     <div
+      data-testid="home-logo"
       onClick={onClick}
       onKeyDown={handleKeyDown}
       role={isInteractive ? "button" : undefined}

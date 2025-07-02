@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 interface FloatingActionButtonProps {
   onClick: () => void;
@@ -14,21 +15,20 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   disabled = false
 }) => {
   return (
-    <button
+    <Button
       onClick={onClick}
       disabled={disabled}
+      size="icon"
       className={`
-        fixed bottom-20 md:bottom-6 right-6 z-40
-        btn btn-primary btn-circle btn-lg
+        fixed bottom-20 md:bottom-6 right-6 z-40 h-12 w-12
         shadow-lg hover:shadow-xl
         transition-all duration-200
-        ${disabled ? 'btn-disabled' : ''}
         ${className}
       `}
       aria-label="Floating action button"
     >
       {children}
-    </button>
+    </Button>
   );
 };
 

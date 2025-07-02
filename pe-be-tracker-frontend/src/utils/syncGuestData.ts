@@ -242,9 +242,7 @@ export const showSyncSuccessToast = (result: SyncResult) => {
 
   const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? 's' : ''}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? 's' : ''}, and ${result.syncedSets} set${result.syncedSets !== 1 ? 's' : ''} to your account!`;
   
-  // For now, we'll use a simple alert, but this could be replaced with a proper toast library
   // TODO: Replace with proper toast notification system
-  alert(message);
   console.log('Sync success:', message);
 };
 
