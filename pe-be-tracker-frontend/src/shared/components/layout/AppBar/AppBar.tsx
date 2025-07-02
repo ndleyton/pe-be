@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineBars3, HiOutlinePause, HiOutlinePlay } from 'react-icons/hi2';
+import { Menu, Pause, Play } from 'lucide-react';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeLogo from '../HomeLogo';
@@ -31,7 +31,7 @@ const AppBar: React.FC = () => {
           onClick={toggleDrawer}
           aria-label="Open navigation menu"
         >
-          <HiOutlineBars3 className="h-6 w-6" />
+          <Menu className="h-6 w-6" />
         </Button>
       </div>
 
@@ -62,9 +62,9 @@ const AppBar: React.FC = () => {
             </span>
             {/* Icon hidden on small screens to save space */}
             {paused ? (
-              <HiOutlinePlay className="hidden sm:block h-5 w-5" />
+              <Play className="hidden sm:block h-5 w-5" />
             ) : (
-              <HiOutlinePause className="hidden sm:block h-5 w-5" />
+              <Pause className="hidden sm:block h-5 w-5" />
             )}
           </button>
         )}
