@@ -65,6 +65,15 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     }
   }, [selectedWorkoutType, datePrefix, formState.dirtyFields.name, nameField, setValue]);
 
+  useEffect(() => {
+    if (recipe) {
+      reset({
+        name: `${recipe.name} - ${datePrefix}`,
+        start_time: new Date().toISOString().slice(0, 16),
+      });
+    }
+  }, [recipe, datePrefix, reset]);
+
   const mutation = useMutation({
     mutationFn: createWorkout,
     onSuccess: (data) => {
