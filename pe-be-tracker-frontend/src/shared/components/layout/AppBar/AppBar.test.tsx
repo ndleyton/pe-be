@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppBar from './AppBar';
 import { DrawerProvider } from '@/contexts/DrawerContext';
+import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
@@ -59,9 +60,11 @@ vi.mock('./DesktopNav', () => ({
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <MemoryRouter initialEntries={['/dashboard']}>
-      <DrawerProvider>
-        {children}
-      </DrawerProvider>
+      <WorkoutTimerProvider>
+        <DrawerProvider>
+          {children}
+        </DrawerProvider>
+      </WorkoutTimerProvider>
     </MemoryRouter>
   );
 };
