@@ -123,35 +123,14 @@ const WorkoutPage: React.FC = () => {
   // Auto-create exercises from recipe when page loads
   useEffect(() => {
     if (recipe && workoutId && exercises.length === 0) {
-      recipe.exercises.forEach((recipeExercise) => {
-        // Create the exercise
-        if (isAuthenticated()) {
-          // For authenticated users, we'd need to make API calls
-          // This is simplified - would need to implement full API integration
-          console.log('Would create exercise from recipe:', recipeExercise.exercise_type.name);
-        } else {
-          // For guest users, add to guest data
-          const exerciseId = guestActions.addExercise({
-            timestamp: new Date().toISOString(),
-            notes: recipeExercise.notes || null,
-            exercise_type_id: recipeExercise.exercise_type_id,
-            workout_id: workoutId,
-            exercise_type: recipeExercise.exercise_type,
-          });
-
-          // Add all the sets from the recipe
-          recipeExercise.sets.forEach((recipeSet) => {
-            guestActions.addExerciseSet({
-              reps: recipeSet.reps,
-              intensity: recipeSet.intensity,
-              intensity_unit_id: recipeSet.intensity_unit_id,
-              exercise_id: exerciseId,
-              rest_time_seconds: recipeSet.rest_time_seconds,
-              done: false,
-            });
-          });
-        }
-      });
+      if (isAuthenticated()) {
+        // For authenticated users, we'd need to make API calls
+        // This is simplified - would need to implement full API integration
+        console.log('Would create recipe from workout for authenticated user:', recipe.name);
+      } else {
+        // For guest users, batch-create the recipe
+        guestActions.createRecipeFromWorkout(recipe, workoutId);
+      }
     }
   }, [recipe, workoutId, exercises.length, isAuthenticated, guestActions]);
 
