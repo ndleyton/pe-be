@@ -6,9 +6,10 @@ interface ExerciseListProps {
   exercises: Exercise[];
   isLoading: boolean;
   error: any;
+  workoutId?: string;
 }
 
-const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error }) => {
+const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId }) => {
   return (
     <div className="mt-8">
       <h2 className="text-xl font-semibold text-gray-100 mb-4">
@@ -34,7 +35,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error
       {exercises.length > 0 && (
         <div className="space-y-3">
           {exercises.map((exercise) => (
-            <ExerciseRow key={exercise.id} exercise={exercise} />
+            <ExerciseRow key={exercise.id} exercise={exercise} workoutId={workoutId} />
           ))}
         </div>
       )}

@@ -128,8 +128,8 @@ const WorkoutPage: React.FC = () => {
         // This is simplified - would need to implement full API integration
         console.log('Would create recipe from workout for authenticated user:', recipe.name);
       } else {
-        // For guest users, batch-create the recipe
-        guestActions.createRecipeFromWorkout(recipe, workoutId);
+        // For guest users, create exercises from the recipe
+        guestActions.createExercisesFromRecipe(recipe, workoutId);
       }
     }
   }, [recipe, workoutId, exercises.length, isAuthenticated, guestActions]);
@@ -213,6 +213,7 @@ const WorkoutPage: React.FC = () => {
           exercises={exercises} 
           isLoading={isAuthenticated() && exercisesLoading} 
           error={isAuthenticated() ? exercisesError : null} 
+          workoutId={workoutId}
         />
       </div>
       

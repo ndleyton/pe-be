@@ -30,6 +30,7 @@ describe('syncGuestDataToServer', () => {
       workouts: [],
       exerciseTypes: [],
       workoutTypes: [],
+      recipes: [],
     };
 
     const result = await syncGuestDataToServer(emptyGuestData, mockClearGuestData);
@@ -95,6 +96,7 @@ describe('syncGuestDataToServer', () => {
       ],
       exerciseTypes: [],
       workoutTypes: [],
+      recipes: [],
     };
 
     // Mock API responses
@@ -163,6 +165,7 @@ describe('syncGuestDataToServer', () => {
       ],
       exerciseTypes: [],
       workoutTypes: [],
+      recipes: [],
     };
 
     // Mock API to throw an error
@@ -221,6 +224,7 @@ describe('syncGuestDataToServer', () => {
       ],
       exerciseTypes: [],
       workoutTypes: [],
+      recipes: [],
     };
 
     // Mock API responses with existing types
