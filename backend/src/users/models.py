@@ -36,4 +36,7 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     )
     
     # Forward reference for workouts (will be imported by workouts domain)
-    workouts: Mapped[List["Workout"]] = relationship(back_populates="owner") 
+    workouts: Mapped[List["Workout"]] = relationship(back_populates="owner")
+    
+    # Forward reference for recipes (will be imported by recipes domain)
+    recipes: Mapped[List["Recipe"]] = relationship(back_populates="creator") 

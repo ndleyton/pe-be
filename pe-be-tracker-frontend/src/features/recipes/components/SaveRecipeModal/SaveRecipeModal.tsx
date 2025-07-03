@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
 import { Exercise } from '@/api/exercises';
+import { createRecipe, CreateRecipeData } from '@/api/recipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -55,14 +56,45 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
   workoutName,
   exercises,
 }) => {
-  const { actions: guestActions } = useGuestData();
+  const { isAuthenticated, actions: guestActions } = useGuestData();
   const [recipeName, setRecipeName] = useState(workoutName || 'My Recipe');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = () => {
-    const guestExercises = convertToGuestExercises(exercises);
-    guestActions.createRecipeFromWorkout(recipeName, guestExercises);
-    onClose();
-    setRecipeName('');
+  const handleSave = async () => {
+    if (!recipeName.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      if (isAuthenticated()) {
+        // For authenticated users, use the backend API
+        const recipeData: CreateRecipeData = {
+          name: recipeName,
+          workout_type_id: 1, // Default workout type - could be made configurable
+          exercise_templates: exercises.map(exercise => ({
+            exercise_type_id: exercise.exercise_type_id as number,
+            set_templates: exercise.exercise_sets.map(set => ({
+              reps: set.reps || undefined,
+              intensity: set.intensity || undefined,
+              intensity_unit_id: set.intensity_unit_id,
+            })),
+          })),
+        };
+        
+        await createRecipe(recipeData);
+      } else {
+        // For guest users, use the existing local storage approach
+        const guestExercises = convertToGuestExercises(exercises);
+        guestActions.createRecipeFromWorkout(recipeName, guestExercises);
+      }
+      
+      onClose();
+      setRecipeName('');
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      // Could add toast notification here
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -107,8 +139,8 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
           <Button variant="outline" onClick={handleCancel} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!recipeName.trim()} className="flex-1">
-            Save Recipe
+          <Button onClick={handleSave} disabled={!recipeName.trim() || isLoading} className="flex-1">
+            {isLoading ? 'Saving...' : 'Save Recipe'}
           </Button>
         </div>
       </SheetContent>
