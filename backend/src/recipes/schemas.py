@@ -3,6 +3,28 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ExerciseTypeRead(BaseModel):
+    """Schema for reading exercise types in recipes"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    default_intensity_unit: int
+    times_used: int
+    
+    class Config:
+        from_attributes = True
+
+
+class IntensityUnitRead(BaseModel):
+    """Schema for reading intensity units in recipes"""
+    id: int
+    name: str
+    abbreviation: str
+    
+    class Config:
+        from_attributes = True
+
+
 class SetTemplateBase(BaseModel):
     """Base schema for set template data"""
     reps: Optional[int] = None
@@ -20,6 +42,7 @@ class SetTemplateRead(SetTemplateBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    intensity_unit: Optional[IntensityUnitRead] = None
     
     class Config:
         from_attributes = True
@@ -40,6 +63,7 @@ class ExerciseTemplateRead(ExerciseTemplateBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    exercise_type: Optional[ExerciseTypeRead] = None
     set_templates: List[SetTemplateRead] = []
     
     class Config:

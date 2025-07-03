@@ -1,14 +1,89 @@
 import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGuestData, GuestRecipe } from '@/contexts/GuestDataContext';
+import { getRecipes, deleteRecipe, Recipe } from '@/api/recipes';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 
 interface RecipesSectionProps {
   onStartWorkout: (recipe: GuestRecipe) => void;
 }
 
+// Helper function to convert backend Recipe to GuestRecipe format
+const convertToGuestRecipe = (recipe: Recipe): GuestRecipe => ({
+  id: recipe.id.toString(),
+  name: recipe.name,
+  description: recipe.description,
+  exercises: recipe.exercise_templates.map(template => ({
+    id: template.id.toString(),
+    exercise_type_id: template.exercise_type_id.toString(),
+    exercise_type: template.exercise_type ? {
+      id: template.exercise_type.id.toString(),
+      name: template.exercise_type.name,
+      description: template.exercise_type.description || '',
+      default_intensity_unit: template.exercise_type.default_intensity_unit,
+      times_used: template.exercise_type.times_used,
+    } : {
+      id: template.exercise_type_id.toString(),
+      name: 'Unknown Exercise',
+      description: '',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    sets: template.set_templates.map(setTemplate => ({
+      id: setTemplate.id.toString(),
+      reps: setTemplate.reps,
+      intensity: setTemplate.intensity,
+      intensity_unit_id: setTemplate.intensity_unit_id,
+      rest_time_seconds: null,
+    })),
+    notes: null,
+  })),
+  created_at: recipe.created_at,
+  updated_at: recipe.updated_at,
+});
+
 export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }) => {
-  const { data: guestData, actions: guestActions } = useGuestData();
-  const recipes = guestData.recipes || [];
+  const { isAuthenticated, data: guestData, actions: guestActions } = useGuestData();
+  const queryClient = useQueryClient();
+
+  // Fetch recipes from backend for authenticated users
+  const { data: serverRecipes = [], isLoading, error } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: getRecipes,
+    enabled: isAuthenticated(), // Only fetch when authenticated
+  });
+
+  // Use backend data for authenticated users, guest data for guests
+  const recipes: GuestRecipe[] = isAuthenticated() 
+    ? serverRecipes.map(convertToGuestRecipe)
+    : guestData.recipes || [];
+
+  // Handle recipe deletion
+  const handleDeleteRecipe = async (recipeId: string) => {
+    if (isAuthenticated()) {
+      try {
+        await deleteRecipe(recipeId);
+        // Invalidate recipes query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      } catch (error) {
+        console.error('Error deleting recipe:', error);
+      }
+    } else {
+      // Use guest actions for guest users
+      guestActions.deleteRecipe(recipeId);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Quick Start Recipes</h2>
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (recipes.length === 0) {
     return null;
@@ -28,7 +103,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
             key={recipe.id}
             recipe={recipe}
             onStartWorkout={onStartWorkout}
-            onDelete={guestActions.deleteRecipe}
+            onDelete={handleDeleteRecipe}
           />
         ))}
       </div>

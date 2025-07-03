@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
 import { Exercise } from '@/api/exercises';
 import { createRecipe, CreateRecipeData } from '@/api/recipes';
@@ -57,6 +58,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
   exercises,
 }) => {
   const { isAuthenticated, actions: guestActions } = useGuestData();
+  const queryClient = useQueryClient();
   const [recipeName, setRecipeName] = useState(workoutName || 'My Recipe');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -81,6 +83,8 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
         };
         
         await createRecipe(recipeData);
+        // Invalidate recipes query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['recipes'] });
       } else {
         // For guest users, use the existing local storage approach
         const guestExercises = convertToGuestExercises(exercises);
