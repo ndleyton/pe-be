@@ -31,8 +31,8 @@ const convertToGuestRecipe = (recipe: Recipe): GuestRecipe => ({
     },
     sets: template.set_templates.map(setTemplate => ({
       id: setTemplate.id.toString(),
-      reps: setTemplate.reps,
-      intensity: setTemplate.intensity,
+      reps: setTemplate.reps ?? null,
+      intensity: setTemplate.intensity ?? null,
       intensity_unit_id: setTemplate.intensity_unit_id,
       rest_time_seconds: null,
     })),

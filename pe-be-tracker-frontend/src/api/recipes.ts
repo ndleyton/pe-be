@@ -85,5 +85,4 @@ export const deleteRecipe = async (recipeId: string | number): Promise<void> => 
   await api.delete(endpoints.recipeById(recipeId));
 };
 
-// Export types
-export type { Recipe, ExerciseTemplate, SetTemplate, CreateRecipeData };
+// Types are already exported above via individual export statements
