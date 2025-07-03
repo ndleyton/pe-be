@@ -73,7 +73,7 @@ export interface GuestRecipeExercise {
   exercise_type_id: string;
   exercise_type: GuestExerciseType;
   sets: GuestRecipeSet[];
-  notes?: string;
+  notes: string | null;
 }
 
 export interface GuestRecipe {
@@ -121,6 +121,7 @@ export interface GuestDataActions {
   addRecipe: (recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
   deleteRecipe: (id: string) => void;
   createRecipeFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
+  createExercisesFromRecipe: (recipe: GuestRecipe, workoutId: string) => string[];
   
   // Utility actions
   clear: () => void;
@@ -503,7 +504,7 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
           intensity_unit_id: set.intensity_unit_id,
           rest_time_seconds: set.rest_time_seconds,
         })),
-        notes: exercise.notes || undefined,
+        notes: exercise.notes || null,
       }));
 
       const newRecipe: GuestRecipe = {
@@ -520,6 +521,37 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
       }));
       
       return id;
+    },
+
+    createExercisesFromRecipe: (recipe, workoutId) => {
+      const exerciseIds: string[] = [];
+      
+      recipe.exercises.forEach(recipeExercise => {
+        // Create exercise from recipe
+        const exerciseId = actions.addExercise({
+          workout_id: workoutId,
+          exercise_type_id: recipeExercise.exercise_type_id,
+          exercise_type: recipeExercise.exercise_type,
+          notes: recipeExercise.notes,
+          timestamp: getCurrentTimestamp(),
+        });
+        
+        exerciseIds.push(exerciseId);
+        
+        // Create sets from recipe
+        recipeExercise.sets.forEach(recipeSet => {
+          actions.addExerciseSet({
+            exercise_id: exerciseId,
+            reps: recipeSet.reps,
+            intensity: recipeSet.intensity,
+            intensity_unit_id: recipeSet.intensity_unit_id,
+            rest_time_seconds: recipeSet.rest_time_seconds,
+            done: false,
+          });
+        });
+      });
+      
+      return exerciseIds;
     },
 
     // Utility actions
