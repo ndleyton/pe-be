@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineHome, HiOutlineArrowLeft, HiOutlineExclamationTriangle } from 'react-icons/hi2';
+import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const NotFoundPage: React.FC = () => {
@@ -23,7 +23,7 @@ const NotFoundPage: React.FC = () => {
         {/* Error Icon */}
         <div className="flex justify-center mb-6">
           <div className="rounded-full bg-destructive/10 p-6">
-            <HiOutlineExclamationTriangle className="h-16 w-16 text-destructive" />
+            <AlertTriangle className="h-16 w-16 text-destructive" />
           </div>
         </div>
 
@@ -46,7 +46,7 @@ const NotFoundPage: React.FC = () => {
             onClick={handleGoHome}
             className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
           >
-            <HiOutlineHome className="h-5 w-5" />
+            <Home className="h-5 w-5" />
             {isAuthenticated() ? 'Go to Dashboard' : 'Go to Home'}
           </button>
           
@@ -54,7 +54,7 @@ const NotFoundPage: React.FC = () => {
             onClick={handleGoBack}
             className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-accent text-muted-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
           >
-            <HiOutlineArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
             Go Back
           </button>
         </div>
