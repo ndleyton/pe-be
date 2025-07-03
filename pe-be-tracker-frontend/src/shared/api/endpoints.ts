@@ -40,6 +40,10 @@ export const endpoints = {
 
   // Add exercise to current workout (or create workout if necessary)
   addExerciseToCurrentWorkout: '/workouts/add-exercise',
+  
+  // Recipe endpoints
+  recipes: '/recipes',
+  recipeById: (id: string | number) => `/recipes/${id}`,
 } as const;
 
 // Type helpers for endpoints
