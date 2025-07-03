@@ -13,7 +13,8 @@ async def get_recipe_by_id(session: AsyncSession, recipe_id: int, user_id: int) 
         select(Recipe)
         .options(
             selectinload(Recipe.exercise_templates)
-            .selectinload(ExerciseTemplate.set_templates),
+            .selectinload(ExerciseTemplate.set_templates)
+            .selectinload(SetTemplate.intensity_unit),
             selectinload(Recipe.exercise_templates)
             .selectinload(ExerciseTemplate.exercise_type),
             selectinload(Recipe.workout_type)
@@ -29,7 +30,8 @@ async def get_user_recipes(session: AsyncSession, user_id: int) -> List[Recipe]:
         select(Recipe)
         .options(
             selectinload(Recipe.exercise_templates)
-            .selectinload(ExerciseTemplate.set_templates),
+            .selectinload(ExerciseTemplate.set_templates)
+            .selectinload(SetTemplate.intensity_unit),
             selectinload(Recipe.exercise_templates)
             .selectinload(ExerciseTemplate.exercise_type),
             selectinload(Recipe.workout_type)

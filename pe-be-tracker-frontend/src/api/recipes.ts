@@ -20,6 +20,8 @@ export interface ExerciseTemplate {
     id: number;
     name: string;
     description?: string;
+    default_intensity_unit: number;
+    times_used: number;
   };
   set_templates: SetTemplate[];
 }
