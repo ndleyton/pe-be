@@ -121,6 +121,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             <input
               type="text"
               {...register('name')}
+              data-testid="workout-name-input"
               className="flex-1 bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
@@ -154,6 +155,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             placeholder="How am I feeling today?"
             type="text"
             {...register('notes')}
+            data-testid="workout-notes-input"
             className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </label>
@@ -197,6 +199,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
             onClick={() => setShowModal(true)}
             variant="outline"
             className="w-full bg-background text-foreground border-border hover:bg-accent justify-start"
+            data-testid="open-workout-type-modal"
           >
             Select Workout Type
           </Button>
@@ -214,6 +217,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
         type="submit"
         disabled={isAuthenticated() && mutation.isPending}
         className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
+        data-testid="start-workout-button"
       >
         {(isAuthenticated() && mutation.isPending) ? 'Creating...' : 'Start Workout'}
       </Button>

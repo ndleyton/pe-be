@@ -9,26 +9,33 @@ test.describe('Guest Mode Workout Creation', () => {
     await expect(page).toHaveURL('/workouts');
 
     // 2. Click the floating action button to show the workout form
-    await page.click('button:has-text("+")');
+    await page.click('[data-testid="fab-add-workout"]');
 
     // 3. Click to edit the workout name
     await page.locator('form').getByRole('heading', { level: 2 }).click();
 
     // 4. Fill out the workout form
     const workoutName = `Test Workout ${Date.now()}`;
-    await page.fill('input[name="name"]', workoutName);
+    await page.fill('[data-testid="workout-name-input"]', workoutName);
 
-    await page.fill('input[placeholder="How am I feeling today?"]', 'E2E test notes');
+    await page.fill('[data-testid="workout-notes-input"]', 'E2E test notes');
 
     // 5. Open workout type modal and select a type
-    await page.click('button:has-text("Select Workout Type")');
+    await page.click('[data-testid="open-workout-type-modal"]');
     await expect(page.locator('div[role="dialog"], .fixed').filter({ hasText: 'Select Workout Type' })).toBeVisible();
     await page.click('text=Strength Training');
 
     // 6. Submit the form
-    await page.click('button:has-text("Start Workout")');
+    await page.click('[data-testid="start-workout-button"]');
 
     // 7. Verify the new workout appears on the workout page
     await expect(page.locator(`h3:has-text("${workoutName}")`)).toBeVisible();
+  });
+
+  test.afterEach(async ({ page }) => {
+    // Clean up guest data stored in localStorage so subsequent tests start fresh
+    await page.evaluate(() => {
+      localStorage.removeItem('pe-guest-data');
+    });
   });
 });
