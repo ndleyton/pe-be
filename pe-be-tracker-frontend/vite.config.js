@@ -28,6 +28,7 @@ export default defineConfig({
     globals: true,
     exclude: [
       'e2e/**',
+      'node_modules/**',
       'playwright-report/**',
       'test-results/**',
     ],
