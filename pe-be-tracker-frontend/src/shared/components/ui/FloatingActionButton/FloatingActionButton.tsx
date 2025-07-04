@@ -6,13 +6,16 @@ interface FloatingActionButtonProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** Optional test id for E2E selectors */
+  dataTestId?: string;
 }
 
 const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   onClick,
   children,
   className = '',
-  disabled = false
+  disabled = false,
+  dataTestId
 }) => {
   return (
     <Button
@@ -26,6 +29,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         ${className}
       `}
       aria-label="Floating action button"
+      data-testid={dataTestId}
     >
       {children}
     </Button>

@@ -205,6 +205,7 @@ const MyWorkoutsPage = () => {
       {!showWorkoutForm && (
         <FloatingActionButton
           onClick={() => setShowWorkoutForm(true)}
+          dataTestId="fab-add-workout"
         >
           <span className="text-lg">+</span>
         </FloatingActionButton>
