@@ -108,3 +108,5 @@ temp/
 
 .claude/
 *.CLAUDE.md
+
+.gemini/
