@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HiOutlineArrowLeft, HiOutlinePhoto } from 'react-icons/hi2';
+import { ArrowLeft, Image } from 'lucide-react';
 import { getExerciseTypeById, getExerciseTypeStats } from '@/api/exercises';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
@@ -95,7 +95,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/exercise-types">
-            <HiOutlineArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <h1 className="text-3xl font-bold">{exerciseType.name}</h1>
@@ -125,7 +125,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
                 <div className="text-center text-gray-500">
-                  <HiOutlinePhoto className="h-16 w-16 mx-auto mb-2" />
+                  <Image className="h-16 w-16 mx-auto mb-2" />
                   <p>Exercise image coming soon</p>
                 </div>
               </div>

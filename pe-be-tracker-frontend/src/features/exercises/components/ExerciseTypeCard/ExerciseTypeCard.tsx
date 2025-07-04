@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineEye, HiOutlineFire } from 'react-icons/hi2';
+import { Eye, Flame } from 'lucide-react';
 import type { ExerciseType } from '@/api/exercises';
 import {
   Card,
@@ -47,12 +47,12 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
           
           <div className="flex items-center justify-between text-sm text-gray-500">
             <div className="flex items-center gap-1">
-              <HiOutlineFire className="h-4 w-4" />
+              <Flame className="h-4 w-4" />
               <span>{times_used} times used</span>
             </div>
             
             <div className="flex items-center gap-1">
-              <HiOutlineEye className="h-4 w-4" />
+              <Eye className="h-4 w-4" />
               <span>View Details</span>
             </div>
           </div>

@@ -6,9 +6,10 @@ import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/com
 interface ExerciseRowProps {
   exercise: Exercise;
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  workoutId?: string;
 }
 
-const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate }) => {
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -141,6 +142,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate })
                   exerciseSet={set}
                   onUpdate={handleSetUpdate}
                   onDelete={handleSetDelete}
+                  workoutId={workoutId}
                 />
               ))}
             </div>

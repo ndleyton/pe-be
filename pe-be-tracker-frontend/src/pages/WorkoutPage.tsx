@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { getExercisesInWorkout, Exercise } from '../api/exercises';
 import { ExerciseForm, ExerciseList } from '../features/exercises/components';
 import { FinishWorkoutModal } from '../features/workouts/components';
+import { SaveRecipeModal } from '../features/recipes/components/SaveRecipeModal/SaveRecipeModal';
 import { FloatingActionButton } from '../shared/components/ui';
-import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
 import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
@@ -30,10 +31,14 @@ const fetchWorkout = async (workoutId: string) => {
 const WorkoutPage: React.FC = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
   const { start, stop, startTime } = useWorkoutTimer();
+  
+  const recipe = location.state?.recipe as GuestRecipe | undefined;
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -115,6 +120,20 @@ const WorkoutPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverWorkout, workoutId]);
 
+  // Auto-create exercises from recipe when page loads
+  useEffect(() => {
+    if (recipe && workoutId && exercises.length === 0) {
+      if (isAuthenticated()) {
+        // For authenticated users, we'd need to make API calls
+        // This is simplified - would need to implement full API integration
+        console.log('Would create recipe from workout for authenticated user:', recipe.name);
+      } else {
+        // For guest users, create exercises from the recipe
+        guestActions.createExercisesFromRecipe(recipe, workoutId);
+      }
+    }
+  }, [recipe, workoutId, exercises.length, isAuthenticated, guestActions]);
+
   // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
     if (isAuthenticated()) {
@@ -150,6 +169,10 @@ const WorkoutPage: React.FC = () => {
     setShowFinishModal(false);
     // Push the current state back to prevent navigation
     window.history.pushState(null, '', window.location.pathname);
+  };
+
+  const handleSaveRecipe = () => {
+    setShowSaveRecipeModal(true);
   };
 
   // Determine workout name based on authentication state
@@ -190,6 +213,7 @@ const WorkoutPage: React.FC = () => {
           exercises={exercises} 
           isLoading={isAuthenticated() && exercisesLoading} 
           error={isAuthenticated() ? exercisesError : null} 
+          workoutId={workoutId}
         />
       </div>
       
@@ -205,6 +229,15 @@ const WorkoutPage: React.FC = () => {
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
         isLoading={isAuthenticated() && finishWorkoutMutation.isPending}
+        exercises={exercises}
+        onSaveRecipe={handleSaveRecipe}
+        workoutName={workoutName || undefined}
+      />
+      
+      <SaveRecipeModal
+        isOpen={showSaveRecipeModal}
+        onClose={() => setShowSaveRecipeModal(false)}
+        workoutName={workoutName || 'My Recipe'}
         exercises={exercises}
       />
     </>
