@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestWorkoutType, GuestRecipe } from '@/contexts/GuestDataContext';
 import { Button } from '@/components/ui/button';
 
 interface WorkoutFormData {
@@ -18,6 +18,7 @@ interface WorkoutFormData {
 
 interface WorkoutFormProps {
   onWorkoutCreated: (newWorkoutId: number | string) => void; // Can be number (server) or string (guest)
+  recipe?: GuestRecipe | null;
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
@@ -34,7 +35,7 @@ const createWorkout = async (data: WorkoutFormData) => {
   return response.data;
 };
 
-const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
+const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) => {
   const navigate = useNavigate();
   const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   const [showModal, setShowModal] = useState(false);
@@ -50,7 +51,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
     watch,
   } = useForm<WorkoutFormData>({
     defaultValues: {
-      name: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       start_time: new Date().toISOString().slice(0, 16),
     },
   });
@@ -63,6 +64,15 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
       setValue('name', `${selectedWorkoutType.name} - ${datePrefix}`);
     }
   }, [selectedWorkoutType, datePrefix, formState.dirtyFields.name, nameField, setValue]);
+
+  useEffect(() => {
+    if (recipe) {
+      reset({
+        name: `${recipe.name} - ${datePrefix}`,
+        start_time: new Date().toISOString().slice(0, 16),
+      });
+    }
+  }, [recipe, datePrefix, reset]);
 
   const mutation = useMutation({
     mutationFn: createWorkout,
@@ -115,6 +125,16 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated }) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-6 rounded-lg bg-card text-card-foreground shadow-lg w-full max-w-md mx-auto">
+      {recipe && (
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-sm font-medium text-primary">📋 Starting from Recipe</span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {recipe.exercises.length} exercise{recipe.exercises.length !== 1 ? 's' : ''} • {recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0)} set{recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0) !== 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
       <div className="mb-6">
         {isEditingName ? (
           <div className="flex items-center space-x-2">

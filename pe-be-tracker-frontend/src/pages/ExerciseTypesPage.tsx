@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { HiOutlineMagnifyingGlass } from 'react-icons/hi2';
+import { Search } from 'lucide-react';
 import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
 import { ExerciseTypeCard } from '@/features/exercises/components';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,7 @@ const ExerciseTypesPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <HiOutlineMagnifyingGlass className="h-5 w-5 text-gray-400" />
+              <Search className="h-5 w-5 text-gray-400" />
             </div>
             <Input
               type="text"

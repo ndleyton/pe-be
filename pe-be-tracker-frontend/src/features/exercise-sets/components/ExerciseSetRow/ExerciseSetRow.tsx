@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/api/exercises';
 import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
 
@@ -6,10 +7,12 @@ interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
   onUpdate: (updatedSet: ExerciseSet) => void;
   onDelete: (setId: number | string) => void;
+  workoutId?: string;
 }
 
-const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, onDelete }) => {
+const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, onDelete, workoutId }) => {
   const { isAuthenticated, actions: guestActions } = useGuestData();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<UpdateExerciseSetData>({
     reps: exerciseSet.reps || undefined,
@@ -23,6 +26,11 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       if (isAuthenticated()) {
         const updatedSet = await updateExerciseSet(exerciseSet.id as number, editData);
         onUpdate(updatedSet);
+        
+        // Invalidate the exercises query to refresh the cache
+        if (workoutId) {
+          queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+        }
       } else {
         // Handle guest mode update
         guestActions.updateExerciseSet(exerciseSet.id as string, {
@@ -54,6 +62,10 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       try {
         if (isAuthenticated()) {
           await deleteExerciseSet(exerciseSet.id as number);
+          
+          if (workoutId) {
+            queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+          }
         } else {
           // Handle guest mode delete
           guestActions.deleteExerciseSet(exerciseSet.id as string);
@@ -70,6 +82,10 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       if (isAuthenticated()) {
         const updatedSet = await updateExerciseSet(exerciseSet.id as number, { done: !exerciseSet.done });
         onUpdate(updatedSet);
+        
+        if (workoutId) {
+          queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+        }
       } else {
         // Handle guest mode toggle
         guestActions.updateExerciseSet(exerciseSet.id as string, {

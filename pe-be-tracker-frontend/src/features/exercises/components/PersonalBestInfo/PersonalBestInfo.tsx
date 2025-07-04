@@ -1,5 +1,5 @@
 import React from 'react';
-import { HiOutlineTrophy } from 'react-icons/hi2';
+import { Trophy } from 'lucide-react';
 import type { PersonalBestInfo as PersonalBestInfoType, IntensityUnit } from '@/api/exercises';
 
 interface PersonalBestInfoProps {
@@ -13,7 +13,7 @@ export const PersonalBestInfo: React.FC<PersonalBestInfoProps> = ({ personalBest
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-amber-600">
-        <HiOutlineTrophy className="h-5 w-5" />
+        <Trophy className="h-5 w-5" />
         <span className="text-sm font-medium">Personal Record</span>
       </div>
       

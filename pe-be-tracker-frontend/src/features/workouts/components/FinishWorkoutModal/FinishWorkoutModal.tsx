@@ -13,6 +13,8 @@ interface FinishWorkoutModalProps {
   onCancel: () => void;
   isLoading?: boolean;
   exercises?: Exercise[];
+  onSaveRecipe?: () => void;
+  workoutName?: string;
 }
 
 const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
@@ -21,6 +23,8 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   onCancel,
   isLoading = false,
   exercises = [],
+  onSaveRecipe,
+  workoutName,
 }) => {
   if (!isOpen) return null;
 
@@ -61,6 +65,26 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
                 <span className="text-primary text-lg">{totalSets}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Save Recipe Option */}
+        {onSaveRecipe && exercises.length > 0 && (
+          <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-sm font-medium">📋 Save as Recipe</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Save this workout as a reusable recipe for quick starts in the future.
+            </p>
+            <Button
+              onClick={onSaveRecipe}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Save Recipe
+            </Button>
           </div>
         )}
 

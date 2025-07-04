@@ -5,7 +5,8 @@ import axios from 'axios';
 import api from '@/shared/api/client';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
-import { useGuestData, GuestWorkout } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
+import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
 
 type Workout = {
@@ -88,6 +89,13 @@ const MyWorkoutsPage = () => {
     navigate(`/workout/${workoutId}`);
   };
 
+  const [selectedRecipe, setSelectedRecipe] = React.useState<GuestRecipe | null>(null);
+
+  const handleStartWorkoutFromRecipe = (recipe: GuestRecipe) => {
+    setSelectedRecipe(recipe);
+    setShowWorkoutForm(true);
+  };
+
   if (isAuthenticated() && isLoading) return <p className="text-muted-foreground">Loading workouts...</p>;
   
   if (isAuthenticated() && error) {
@@ -121,18 +129,28 @@ const MyWorkoutsPage = () => {
           </div>
           <WeekTracking workouts={workouts} className="mb-6" />
           
+          <RecipesSection onStartWorkout={handleStartWorkoutFromRecipe} />
+          
           {showWorkoutForm && (
             <div className="mb-6">
               <WorkoutForm 
-                onWorkoutCreated={() => {
+                recipe={selectedRecipe}
+                onWorkoutCreated={(workoutId) => {
                   if (isAuthenticated()) {
                     refetch();
                   }
                   setShowWorkoutForm(false);
+                  setSelectedRecipe(null);
+                  if (selectedRecipe) {
+                    navigate(`/workout/${workoutId}`, { state: { recipe: selectedRecipe } });
+                  }
                 }} 
               />
               <Button 
-                onClick={() => setShowWorkoutForm(false)}
+                onClick={() => {
+                  setShowWorkoutForm(false);
+                  setSelectedRecipe(null);
+                }}
                 variant="ghost"
                 size="sm"
                 className="mt-2"
