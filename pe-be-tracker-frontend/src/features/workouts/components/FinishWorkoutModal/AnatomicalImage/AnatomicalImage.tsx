@@ -14,7 +14,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   useEffect(() => {
     const fetchSvg = async () => {
       try {
-        const response = await fetch('/assets/anatomy/human-body.svg');
+        const response = await fetch('/assets/anatomy/basic-human-body.svg');
         const svgText = await response.text();
         setSvgContent(svgText);
       } catch (error) {
