@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscles } from '@/utils/muscleGroups';
 import { Button } from '@/components/ui/button';
+import AnatomicalImage from './AnatomicalImage';
+import SocialShareButton from './SocialShareButton';
+import html2canvas from 'html2canvas';
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -26,11 +29,46 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   onSaveRecipe,
   workoutName,
 }) => {
+  const shareContentRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen) return null;
 
   // Calculate muscle group summary
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
+
+  const handleShare = async () => {
+    if (shareContentRef.current) {
+      try {
+        const canvas = await html2canvas(shareContentRef.current, {
+          useCORS: true, // Important for handling images loaded from different origins
+          allowTaint: true, // Allow tainting the canvas
+          backgroundColor: null, // Transparent background
+        });
+        const image = canvas.toDataURL('image/png');
+
+        if (navigator.share) {
+          await navigator.share({
+            title: workoutName ? `My workout: ${workoutName}` : 'My Workout Summary',
+            text: `Check out my workout summary! I completed ${totalSets} sets.`, 
+            files: [await (await fetch(image)).blob()],
+          });
+        } else {
+          // Fallback for browsers that do not support Web Share API
+          const link = document.createElement('a');
+          link.href = image;
+          link.download = 'workout-summary.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          alert('Image downloaded! You can share it manually.');
+        }
+      } catch (error) {
+        console.error('Error sharing workout summary:', error);
+        alert('Failed to share workout summary.');
+      }
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -42,10 +80,11 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
         {/* Muscle Group Summary */}
         {muscleGroupSummary.length > 0 && (
-          <div className="mb-6 p-4 bg-background rounded-lg">
+          <div className="mb-6 p-4 bg-background rounded-lg" ref={shareContentRef}>
             <h3 className="text-lg font-semibold mb-3 text-primary">
               🎉 Great work! You trained:
             </h3>
+            <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
             <div className="space-y-2">
               {muscleGroupSummary.map((group) => (
                 <div
@@ -65,6 +104,13 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
                 <span className="text-primary text-lg">{totalSets}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Social Share Button */}
+        {muscleGroupSummary.length > 0 && (
+          <div className="mb-4">
+            <SocialShareButton onShare={handleShare} />
           </div>
         )}
 
