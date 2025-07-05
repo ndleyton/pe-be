@@ -1,24 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MuscleGroupSummary } from '@/utils/muscleGroups';
-import { UncontrolledReactSVGPanZoom } from 'react-svg-pan-zoom';
-import { MUSCLE_GROUP_MAPPING, getMuscleGroupColor } from '@/utils/anatomicalMapping';
+// import { ReactSVGPanZoom } from 'react-svg-pan-zoom'; // Temporarily remove
+import { MUSCLE_GROUP_MAPPING, getMuscleGroupColor, DEFAULT_MUSCLE_COLOR } from '@/utils/anatomicalMapping';
 
 interface AnatomicalImageProps {
   muscleGroupSummary: MuscleGroupSummary[];
 }
 
 const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary }) => {
-  const Viewer = useRef(null);
-  const [rawSvg, setRawSvg] = useState<string | null>(null);
-  const [coloredSvg, setColoredSvg] = useState<string | null>(null);
-  const [viewBox, setViewBox] = useState<string>('0 0 500 500');
+  // const Viewer = useRef(null); // Temporarily remove
+  const [svgContent, setSvgContent] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSvg = async () => {
       try {
         const response = await fetch('/assets/anatomy/basic-human-body.svg');
         const svgText = await response.text();
-        setRawSvg(svgText);
+        setSvgContent(svgText);
       } catch (error) {
         console.error('Error fetching SVG:', error);
       }
@@ -28,13 +26,22 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   }, []);
 
   useEffect(() => {
-    if (rawSvg) {
+    if (svgContent) {
       const parser = new DOMParser();
-      const svgDoc = parser.parseFromString(rawSvg, 'image/svg+xml');
-      const svgElement = svgDoc.documentElement as unknown as SVGSVGElement;
+      const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+      const svgElement = svgDoc.documentElement;
 
       const maxSets = muscleGroupSummary.reduce((max, group) => Math.max(max, group.setCount), 0);
 
+      // Apply default color to all known muscle groups first
+      Object.values(MUSCLE_GROUP_MAPPING).flat().forEach(id => {
+        const musclePath = svgElement.getElementById(id);
+        if (musclePath) {
+          musclePath.setAttribute('fill', DEFAULT_MUSCLE_COLOR);
+        }
+      });
+
+      // Apply intensity-based color to worked-out muscle groups
       muscleGroupSummary.forEach(group => {
         const intensity = maxSets > 0 ? group.setCount / maxSets : 0;
         const color = getMuscleGroupColor(intensity);
@@ -44,43 +51,24 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
           svgMuscleIds.forEach(id => {
             const musclePath = svgElement.getElementById(id);
             if (musclePath) {
+              musclePath.removeAttribute('class'); // Remove class attribute to prevent CSS conflicts
               musclePath.setAttribute('fill', color);
             }
           });
         }
       });
-      setViewBox(svgElement.getAttribute('viewBox') || '0 0 500 500');
-      setColoredSvg(svgElement.innerHTML);
+      setSvgContent(new XMLSerializer().serializeToString(svgElement));
     }
-  }, [rawSvg, muscleGroupSummary]);
+  }, [svgContent, muscleGroupSummary]);
 
-  if (!coloredSvg) {
+  if (!svgContent) {
     return <div>Loading anatomical image...</div>;
   }
 
   return (
     <div className="anatomical-image-container w-full h-full">
-      <UncontrolledReactSVGPanZoom
-        width={500}
-        height={500}
-        ref={Viewer}
-        SVGBackground="transparent"
-        background="transparent"
-        detectAutoPan={false}
-        toolbarProps={{
-          position: 'none',
-        }}
-        miniatureProps={{
-          position: 'none'
-        }}
-      >
-        <svg
-          width={500}
-          height={500}
-          viewBox={viewBox}
-          dangerouslySetInnerHTML={{ __html: coloredSvg }}
-        />
-      </UncontrolledReactSVGPanZoom>
+      {/* Temporarily remove ReactSVGPanZoom */}
+      <svg width={500} height={500} dangerouslySetInnerHTML={{ __html: svgContent }} />
     </div>
   );
 };

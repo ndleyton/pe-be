@@ -43,21 +43,30 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         const canvas = await html2canvas(shareContentRef.current, {
           useCORS: true, // Important for handling images loaded from different origins
           allowTaint: true, // Allow tainting the canvas
-          backgroundColor: '#ffffff', // Use solid white background instead of transparent
+          backgroundColor: '#ffffff', // Use solid white background
           scale: 2, // Higher resolution for better quality
-          ignoreElements: (element) => {
-            // Skip elements that might cause OKLCH parsing issues
-            return element.tagName === 'STYLE' || element.tagName === 'SCRIPT';
-          },
         });
         const image = canvas.toDataURL('image/png');
 
-        if (navigator.share) {
-          await navigator.share({
-            title: workoutName ? `My workout: ${workoutName}` : 'My Workout Summary',
-            text: `Check out my workout summary! I completed ${totalSets} sets.`, 
-            files: [await (await fetch(image)).blob()],
-          });
+        if (navigator.share && navigator.canShare) {
+          // Create a blob from the image
+          const blob = await (await fetch(image)).blob();
+          const file = new File([blob], 'workout-summary.png', { type: 'image/png' });
+          
+          // Check if we can share files
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: workoutName ? `My workout: ${workoutName}` : 'My Workout Summary',
+              text: `Check out my workout summary! I completed ${totalSets} sets.`,
+              files: [file],
+            });
+          } else {
+            // Share without files if file sharing is not supported
+            await navigator.share({
+              title: workoutName ? `My workout: ${workoutName}` : 'My Workout Summary',
+              text: `Check out my workout summary! I completed ${totalSets} sets.`,
+            });
+          }
         } else {
           // Fallback for browsers that do not support Web Share API
           const link = document.createElement('a');
@@ -85,7 +94,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
         {/* Muscle Group Summary */}
         {muscleGroupSummary.length > 0 && (
-          <div className="mb-6 p-4 bg-background rounded-lg" ref={shareContentRef}>
+          <div className="mb-6 p-4 bg-background rounded-lg">
             <h3 className="text-lg font-semibold mb-3 text-primary">
               🎉 Great work! You trained:
             </h3>
@@ -111,6 +120,34 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
             </div>
           </div>
         )}
+
+        {/* Hidden shareable content with simple styling */}
+        <div className="hidden" ref={shareContentRef}>
+          <div className="p-6 bg-white rounded-lg max-w-md">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+              🎉 Workout Complete!
+            </h3>
+            <div className="space-y-2 mb-4">
+              {muscleGroupSummary.map((group) => (
+                <div
+                  key={group.name}
+                  className="flex justify-between items-center py-2 px-3 bg-gray-100 rounded"
+                >
+                  <span className="font-medium text-gray-700">{group.name}</span>
+                  <span className="text-blue-600 font-bold">
+                    {group.setCount} set{group.setCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-3 border-t border-gray-300">
+              <div className="flex justify-between items-center font-bold">
+                <span className="text-gray-800">Total Sets:</span>
+                <span className="text-blue-600 text-xl">{totalSets}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Social Share Button */}
         {muscleGroupSummary.length > 0 && (
