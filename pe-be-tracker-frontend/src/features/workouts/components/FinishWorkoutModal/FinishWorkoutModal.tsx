@@ -43,7 +43,12 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         const canvas = await html2canvas(shareContentRef.current, {
           useCORS: true, // Important for handling images loaded from different origins
           allowTaint: true, // Allow tainting the canvas
-          backgroundColor: null, // Transparent background
+          backgroundColor: '#ffffff', // Use solid white background instead of transparent
+          scale: 2, // Higher resolution for better quality
+          ignoreElements: (element) => {
+            // Skip elements that might cause OKLCH parsing issues
+            return element.tagName === 'STYLE' || element.tagName === 'SCRIPT';
+          },
         });
         const image = canvas.toDataURL('image/png');
 

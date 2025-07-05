@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MuscleGroupSummary } from '@/utils/muscleGroups';
-import { ReactSVGPanZoom } from 'react-svg-pan-zoom';
+import { UncontrolledReactSVGPanZoom } from 'react-svg-pan-zoom';
 import { MUSCLE_GROUP_MAPPING, getMuscleGroupColor } from '@/utils/anatomicalMapping';
 
 interface AnatomicalImageProps {
@@ -9,14 +9,16 @@ interface AnatomicalImageProps {
 
 const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary }) => {
   const Viewer = useRef(null);
-  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [rawSvg, setRawSvg] = useState<string | null>(null);
+  const [coloredSvg, setColoredSvg] = useState<string | null>(null);
+  const [viewBox, setViewBox] = useState<string>('0 0 500 500');
 
   useEffect(() => {
     const fetchSvg = async () => {
       try {
         const response = await fetch('/assets/anatomy/basic-human-body.svg');
         const svgText = await response.text();
-        setSvgContent(svgText);
+        setRawSvg(svgText);
       } catch (error) {
         console.error('Error fetching SVG:', error);
       }
@@ -26,10 +28,10 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   }, []);
 
   useEffect(() => {
-    if (svgContent) {
+    if (rawSvg) {
       const parser = new DOMParser();
-      const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
-      const svgElement = svgDoc.documentElement;
+      const svgDoc = parser.parseFromString(rawSvg, 'image/svg+xml');
+      const svgElement = svgDoc.documentElement as unknown as SVGSVGElement;
 
       const maxSets = muscleGroupSummary.reduce((max, group) => Math.max(max, group.setCount), 0);
 
@@ -47,22 +49,23 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
           });
         }
       });
-      setSvgContent(new XMLSerializer().serializeToString(svgElement));
+      setViewBox(svgElement.getAttribute('viewBox') || '0 0 500 500');
+      setColoredSvg(svgElement.innerHTML);
     }
-  }, [svgContent, muscleGroupSummary]);
+  }, [rawSvg, muscleGroupSummary]);
 
-  if (!svgContent) {
+  if (!coloredSvg) {
     return <div>Loading anatomical image...</div>;
   }
 
   return (
     <div className="anatomical-image-container w-full h-full">
-      <ReactSVGPanZoom
+      <UncontrolledReactSVGPanZoom
         width={500}
         height={500}
         ref={Viewer}
-        SVGBackground="#fff"
-        background="#fff"
+        SVGBackground="transparent"
+        background="transparent"
         detectAutoPan={false}
         toolbarProps={{
           position: 'none',
@@ -71,8 +74,13 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
           position: 'none'
         }}
       >
-        <svg width={500} height={500} dangerouslySetInnerHTML={{ __html: svgContent }} />
-      </ReactSVGPanZoom>
+        <svg
+          width={500}
+          height={500}
+          viewBox={viewBox}
+          dangerouslySetInnerHTML={{ __html: coloredSvg }}
+        />
+      </UncontrolledReactSVGPanZoom>
     </div>
   );
 };
