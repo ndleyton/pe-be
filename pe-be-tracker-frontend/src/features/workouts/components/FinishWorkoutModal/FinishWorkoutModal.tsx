@@ -53,7 +53,6 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         const image = canvas.toDataURL('image/png');
         console.log('Image Data URL generated', image.substring(0, 50) + '...');
 
-        // Always trigger download
         const link = document.createElement('a');
         link.href = image;
         link.download = 'workout-summary.png';
@@ -78,7 +77,6 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
           Are you sure you want to finish this workout?
         </p>
 
-        {/* Muscle Group Summary */}
         {muscleGroupSummary.length > 0 && (
           <div ref={downloadAreaRef} className="mb-6 p-4 bg-background rounded-lg">
             <h3 className="text-lg font-semibold mb-3 text-primary">
@@ -113,7 +111,6 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
           </div>
         )}
 
-        {/* Save Recipe Button */}
         {onSaveRecipe && exercises.length > 0 && (
           <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
             <div className="flex items-center space-x-2 mb-2">
@@ -133,7 +130,6 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
           </div>
         )}
 
-        {/* Fnishing Action Buttons */}
         <div className="flex justify-end space-x-4">
           <Button
             onClick={onCancel}
