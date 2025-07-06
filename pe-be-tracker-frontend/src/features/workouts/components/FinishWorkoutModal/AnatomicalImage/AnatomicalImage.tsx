@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MuscleGroupSummary } from '@/utils/muscleGroups';
-// import { ReactSVGPanZoom } from 'react-svg-pan-zoom'; // Temporarily remove
 import { MUSCLE_GROUP_MAPPING, getMuscleGroupColor, DEFAULT_MUSCLE_COLOR } from '@/utils/anatomicalMapping';
 
 interface AnatomicalImageProps {
@@ -8,7 +7,6 @@ interface AnatomicalImageProps {
 }
 
 const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary }) => {
-  // const Viewer = useRef(null); // Temporarily remove
   const [svgContent, setSvgContent] = useState<string | null>(null);
 
   useEffect(() => {
