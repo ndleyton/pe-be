@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import AnatomicalImage from './AnatomicalImage';
+import { vi } from 'vitest';
 
 // Mock the fetch API
-global.fetch = jest.fn(() =>
+global.fetch = vi.fn(() =>
   Promise.resolve({
     text: () => Promise.resolve('<svg><rect id="pectorals" /></svg>'),
   }) as Promise<Response>
