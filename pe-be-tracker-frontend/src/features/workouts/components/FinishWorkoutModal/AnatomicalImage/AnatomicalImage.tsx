@@ -29,7 +29,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
     if (svgContent) {
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
-      const svgElement = svgDoc.documentElement;
+      const svgElement = svgDoc.documentElement as unknown as SVGSVGElement;
 
       const maxSets = muscleGroupSummary.reduce((max, group) => Math.max(max, group.setCount), 0);
 
@@ -37,6 +37,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
       Object.values(MUSCLE_GROUP_MAPPING).flat().forEach(id => {
         const musclePath = svgElement.getElementById(id);
         if (musclePath) {
+          musclePath.removeAttribute('class'); // Ensure no CSS class interferes
           musclePath.setAttribute('fill', DEFAULT_MUSCLE_COLOR);
         }
       });
@@ -51,7 +52,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
           svgMuscleIds.forEach(id => {
             const musclePath = svgElement.getElementById(id);
             if (musclePath) {
-              musclePath.removeAttribute('class'); // Remove class attribute to prevent CSS conflicts
+              musclePath.removeAttribute('class'); // Ensure no CSS class interferes
               musclePath.setAttribute('fill', color);
             }
           });
@@ -68,7 +69,12 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   return (
     <div className="anatomical-image-container w-full h-full">
       {/* Temporarily remove ReactSVGPanZoom */}
-      <svg width={500} height={500} dangerouslySetInnerHTML={{ __html: svgContent }} />
+      <svg
+        viewBox="0 0 1064 827"
+        className="w-full max-w-full h-auto"
+        preserveAspectRatio="xMidYMid meet"
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
     </div>
   );
 };
