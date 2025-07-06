@@ -1,13 +1,13 @@
 export const DEFAULT_MUSCLE_COLOR = '#E0E0E0'; // A light grey color
 
 export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
-  'Chest': ['path55', 'path56', 'chest-upper', 'chest-lower'],
+  'Chest': ['anterior-left-pectoralis', 'anterior-right-pectoralis', 'chest-upper', 'chest-lower'],
   'Back': ['latissimus', 'trapezius', 'rhomboids'],
   'Legs': ['quadriceps', 'hamstrings', 'calves', 'glutes'],
   'Shoulders': ['anterior-left-deltoid', 'anterior-right-deltoid', 'posterior-left-deltoid', 'posterior-right-deltoid', 'lateral-left-deltoid', 'lateral-right-deltoid'],
   'Arms': ['biceps', 'triceps', 'forearms'],
   'Core': ['abdominals', 'obliques'],
-  // Add more mappings as needed based on your SVG IDs
+  // Add more mappings as needed based on SVG IDs
 };
 
 export const getMuscleGroupColor = (intensity: number): string => {
