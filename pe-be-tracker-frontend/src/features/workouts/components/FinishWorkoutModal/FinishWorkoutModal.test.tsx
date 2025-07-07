@@ -27,7 +27,7 @@ describe('FinishWorkoutModal', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
       expect(screen.getByText('Finish Workout?')).toBeInTheDocument();
-      expect(screen.getByText('Are you sure you want to finish this workout? This will set the end time to now.')).toBeInTheDocument();
+      expect(screen.getByText('Are you sure you want to finish this workout?')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Finish Workout' })).toBeInTheDocument();
     });
@@ -58,7 +58,7 @@ describe('FinishWorkoutModal', () => {
     it('should display the correct confirmation message', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
-      const message = screen.getByText('Are you sure you want to finish this workout? This will set the end time to now.');
+      const message = screen.getByText('Are you sure you want to finish this workout?');
       expect(message).toBeInTheDocument();
       expect(message).toHaveClass('mb-4', 'text-muted-foreground');
     });
