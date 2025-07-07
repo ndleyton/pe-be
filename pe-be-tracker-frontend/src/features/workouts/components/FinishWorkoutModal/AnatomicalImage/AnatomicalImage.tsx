@@ -12,7 +12,11 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   useEffect(() => {
     const fetchSvg = async () => {
       try {
-        const response = await fetch('/assets/anatomy/basic-human-body.svg');
+        const svgPath = '/assets/anatomy/basic-human-body.svg';
+        const baseUrl = typeof window !== 'undefined' && window.location ? window.location.origin : 'http://localhost:3000';
+        const fullUrl = new URL(svgPath, baseUrl).href;
+        
+        const response = await fetch(fullUrl);
         const svgText = await response.text();
         setSvgContent(svgText);
       } catch (error) {
@@ -75,6 +79,8 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
         viewBox="0 0 1064 827"
         className="w-full max-w-full h-auto"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Anatomical muscle diagram"
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
     </div>
