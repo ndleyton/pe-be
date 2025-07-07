@@ -33,7 +33,9 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
 
       // Apply default color to all known muscle groups first
       Object.values(MUSCLE_GROUP_MAPPING).flat().forEach(id => {
-        const musclePath = svgElement.getElementById(id);
+        const musclePath = svgElement.getElementById ? 
+          svgElement.getElementById(id) : 
+          svgElement.querySelector(`#${id}`);
         if (musclePath) {
           musclePath.removeAttribute('class'); // Ensure no CSS class interferes
           musclePath.setAttribute('fill', DEFAULT_MUSCLE_COLOR);
@@ -48,7 +50,9 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
         const svgMuscleIds = MUSCLE_GROUP_MAPPING[group.name];
         if (svgMuscleIds) {
           svgMuscleIds.forEach(id => {
-            const musclePath = svgElement.getElementById(id);
+            const musclePath = svgElement.getElementById ? 
+              svgElement.getElementById(id) : 
+              svgElement.querySelector(`#${id}`);
             if (musclePath) {
               musclePath.removeAttribute('class'); // Ensure no CSS class interferes
               musclePath.setAttribute('fill', color);
