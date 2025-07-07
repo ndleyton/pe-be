@@ -14,8 +14,12 @@ const AppBar: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   const handleLogoClick = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+    if (isAuthenticated()) {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
+  }, [navigate, isAuthenticated]);
 
   const googleSignIn = useGoogleSignIn();
   const { startTime, formatted, paused, togglePause } = useWorkoutTimer();
