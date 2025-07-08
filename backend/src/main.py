@@ -17,7 +17,9 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="PE Tracker API",
         description="Personal Exercise Tracker API with domain-driven architecture",
-        version=f"2.0.0-{settings.API_VERSION}"
+        version=f"2.0.0-{settings.API_VERSION}",
+        proxy_headers=True,  # Trust proxy headers from Render
+        root_path=settings.API_PREFIX, # Handle the /api/v1 prefix
     )
 
     base_frontend = settings.FRONTEND_URL.rstrip('/')
