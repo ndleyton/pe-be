@@ -14,7 +14,7 @@ from httpx_oauth.clients.google import GoogleOAuth2
 from src.core.config import settings
 from src.core.dependencies import get_user_db
 
-SECRET = settings.SECRET
+SECRET = settings.SECRET_KEY
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
