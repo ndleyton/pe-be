@@ -14,13 +14,14 @@ from src.recipes.router import router as recipes_router
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application with all domain routers"""
     
-    app = FastAPI(
-        title="PE Tracker API",
-        description="Personal Exercise Tracker API with domain-driven architecture",
-        version=f"2.0.0-{settings.API_VERSION}",
-        proxy_headers=True,  # Trust proxy headers from Render
-        root_path=settings.API_PREFIX, # Handle the /api/v1 prefix
-    )
+    fastapi_kwargs = {
+        "title": "PE Tracker API",
+        "description": "Personal Exercise Tracker API with domain-driven architecture",
+        "version": f"2.0.0-{settings.API_VERSION}",
+    }
+    if settings.ENVIRONMENT == "production":
+        fastapi_kwargs["proxy_headers"] = True
+        fastapi_kwargs["root_path"] = settings.API_PREFIX  # Handle the /api/v1 prefix in production
 
     base_frontend = settings.FRONTEND_URL.rstrip('/')
     # Derive a 127.0.0.1 variant if the base contains 'localhost'
