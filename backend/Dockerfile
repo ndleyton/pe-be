@@ -46,7 +46,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application
-COPY run.sh /app/run.sh
+COPY --chmod=0755 run.sh /app/run.sh
 
 # Command to run the application
 CMD ["/app/run.sh"]
