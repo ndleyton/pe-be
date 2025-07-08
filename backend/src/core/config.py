@@ -3,12 +3,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Required for production, but have defaults for testing
-    SECRET: str = Field("test-secret-key-for-development", env="SECRET_KEY")
+    # In a production environment, these should be set via environment variables.
+    # For local development, you can use a .env file (see .env.example).
+    # Note: The default values are for demonstration and should be replaced for production.
+    SECRET_KEY: str = Field("test-secret-key", env="SECRET_KEY")
+    ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
     GOOGLE_CLIENT_ID: str = Field("test-google-client-id", env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field("test-google-client-secret", env="GOOGLE_CLIENT_SECRET")
-    
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
-    FRONTEND_URL: str = "http://localhost:5173"
+
+    # This should point to your frontend's post-login redirect target.
+    GOOGLE_REDIRECT_URI: str = Field(..., env="GOOGLE_REDIRECT_URI")
+
+    # Frontend URL - used for CORS and post-login redirects
+    FRONTEND_URL: str = Field("http://localhost:3000", env="FRONTEND_URL")
     FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
     DATABASE_URL: str = Field(
         "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
