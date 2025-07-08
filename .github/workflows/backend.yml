@@ -84,6 +84,7 @@ jobs:
         ENVIRONMENT: test
         GOOGLE_CLIENT_ID: test-google-client-id-ci
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
+        GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
       run: |
         poetry run alembic upgrade head
         
@@ -94,6 +95,7 @@ jobs:
         ENVIRONMENT: test
         GOOGLE_CLIENT_ID: test-google-client-id-ci
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
+        GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
       run: poetry run pytest -v --cov=app --cov-report=xml
       
     - name: Upload coverage reports
@@ -164,6 +166,13 @@ jobs:
         
     - name: Validate application
       working-directory: ./backend
+      env:
+        SECRET_KEY: test-secret-key-for-ci
+        ENVIRONMENT: test
+        GOOGLE_CLIENT_ID: test-google-client-id-ci
+        GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
+        GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
       run: |
         # Validate that the application can start
         poetry run python -c "from src.main import app; print('✅ App imports successfully')"
