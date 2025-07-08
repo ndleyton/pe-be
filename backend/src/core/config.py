@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = Field(..., env="GOOGLE_REDIRECT_URI")
 
     # Frontend URL - used for CORS and post-login redirects
-    FRONTEND_URL: str = Field("http://localhost:3000", env="FRONTEND_URL")
+    FRONTEND_URL: str = Field("http://localhost:5173", env="FRONTEND_URL")
     FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
     DATABASE_URL: str = Field(
         "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
