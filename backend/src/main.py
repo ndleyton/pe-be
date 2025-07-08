@@ -23,6 +23,8 @@ def create_app() -> FastAPI:
         fastapi_kwargs["proxy_headers"] = True
         fastapi_kwargs["root_path"] = settings.API_PREFIX  # Handle the /api/v1 prefix in production
 
+    app = FastAPI(**fastapi_kwargs)
+
     base_frontend = settings.FRONTEND_URL.rstrip('/')
     # Derive a 127.0.0.1 variant if the base contains 'localhost'
     localhost_variant = base_frontend.replace("localhost", "127.0.0.1") if "localhost" in base_frontend else None
