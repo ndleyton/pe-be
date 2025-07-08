@@ -21,7 +21,6 @@ def create_app() -> FastAPI:
     }
     if settings.ENVIRONMENT == "production":
         fastapi_kwargs["proxy_headers"] = True
-        fastapi_kwargs["root_path"] = settings.API_PREFIX  # Handle the /api/v1 prefix in production
 
     app = FastAPI(**fastapi_kwargs)
 
