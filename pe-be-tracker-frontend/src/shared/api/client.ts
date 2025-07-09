@@ -20,6 +20,8 @@ apiClient.interceptors.request.use(
     const authToken = localStorage.getItem('authToken');
     if (authToken) {
       request.headers.Authorization = `Bearer ${authToken}`;
+    } else {
+      console.log('[API CLIENT] No authToken found in localStorage for request to:', request.url);
     }
 
     // Log outgoing requests in development

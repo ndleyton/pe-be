@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { HomeLogo } from '@/shared/components/layout';
 import { useGuestData } from '@/contexts/GuestDataContext';
@@ -9,8 +9,8 @@ const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: guestData, actions: guestActions } = useGuestData();
-  const [syncStatus, setSyncStatus] = useState<'processing' | 'syncing' | 'complete' | 'error'>('processing');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  
+  
 
   // Avoid double execution in React 18 StrictMode (dev) which re-mounts components
   const processedRef = React.useRef(false);
@@ -22,7 +22,7 @@ const OAuthCallbackPage: React.FC = () => {
       }
       processedRef.current = true;
       try {
-        setSyncStatus('processing');
+        
         
         // Extract access_token from query string first, then fallback to hash fragment (legacy)
         const qsToken = searchParams.get('access_token');
@@ -69,32 +69,32 @@ const OAuthCallbackPage: React.FC = () => {
         console.log('Auth token stored successfully');
   
 
-        // Check if there's guest data to sync
+        // Add a small delay to ensure localStorage and API client sync properly
+        await new Promise(resolve => setTimeout(resolve, 50));
+        navigate('/dashboard', { replace: true });
+
+        // Check if there's guest data to sync and sync in the background
         if (guestData.workouts.length > 0) {
-          setSyncStatus('syncing');
-          console.log('Syncing guest data to server...');
-          
-          const syncResult = await syncGuestDataToServer(guestData, guestActions.clear);
-          
-          if (syncResult.success) {
-            showSyncSuccessToast(syncResult);
-            setSyncStatus('complete');
-          } else {
-            throw new Error(syncResult.error || 'Failed to sync guest data');
-          }
+          console.log('Syncing guest data to server in background...');
+          syncGuestDataToServer(guestData, guestActions.clear)
+            .then(syncResult => {
+              if (syncResult.success) {
+                showSyncSuccessToast(syncResult);
+              } else {
+                showSyncErrorToast(syncResult.error || 'Failed to sync guest data');
+              }
+            })
+            .catch(error => {
+              console.error('Background guest data sync failed:', error);
+              showSyncErrorToast('Failed to sync guest data in background');
+            });
         } else {
           console.log('No guest data to sync');
-          setSyncStatus('complete');
         }
-
-        navigate('/dashboard', { replace: true });
 
       } catch (error) {
         console.error('OAuth callback error:', error);
-        const errorMsg = error instanceof Error ? error.message : 'Authentication failed';
-        setErrorMessage(errorMsg);
-        setSyncStatus('error');
-        showSyncErrorToast(errorMsg);
+        showSyncErrorToast(error instanceof Error ? error.message : 'Authentication failed');
         
         navigate('/', { replace: true });
       }
@@ -103,42 +103,11 @@ const OAuthCallbackPage: React.FC = () => {
     handleOAuthCallback();
   }, [navigate, searchParams, guestData, guestActions]);
 
-  const getStatusContent = () => {
-    switch (syncStatus) {
-      case 'processing':
-        return {
-          icon: <div className="loading loading-spinner loading-lg"></div>,
-          title: 'Signing you in...',
-          description: 'Processing your authentication'
-        };
-      case 'syncing':
-        return {
-          icon: <div className="loading loading-spinner loading-lg text-blue-500"></div>,
-          title: 'Syncing your data...',
-          description: `Uploading ${guestData.workouts.length} workout${guestData.workouts.length !== 1 ? 's' : ''} to your account`
-        };
-      case 'complete':
-        return {
-          icon: <div className="text-green-500 text-4xl">✓</div>,
-          title: 'Welcome back!',
-          description: 'Your data has been synced successfully'
-        };
-      case 'error':
-        return {
-          icon: <div className="text-red-500 text-4xl">⚠</div>,
-          title: 'Authentication failed',
-          description: errorMessage
-        };
-      default:
-        return {
-          icon: <div className="loading loading-spinner loading-lg"></div>,
-          title: 'Loading...',
-          description: ''
-        };
-    }
+  const statusContent = {
+    icon: <div className="loading loading-spinner loading-lg"></div>,
+    title: 'Signing you in...',
+    description: 'Processing your authentication'
   };
-
-  const statusContent = getStatusContent();
 
   return (
     <div className="min-h-screen flex flex-col bg-base-200">
@@ -152,9 +121,7 @@ const OAuthCallbackPage: React.FC = () => {
           {statusContent.description && (
             <p className="mt-2 text-gray-600">{statusContent.description}</p>
           )}
-          {syncStatus === 'error' && (
-            <p className="mt-2 text-sm text-gray-500">Redirecting to login...</p>
-          )}
+          
         </div>
       </div>
     </div>
