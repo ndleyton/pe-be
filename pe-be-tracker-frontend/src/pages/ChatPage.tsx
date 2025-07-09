@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
 import api from '@/shared/api/client';
 import { useGuestData } from '@/contexts/GuestDataContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ModeToggle } from '@/components/mode-toggle';
 
 interface ChatMessage {
   id: string;
@@ -124,20 +129,19 @@ const createExerciseSet = async (setData: {
 };
 
 const ChatPage: React.FC = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated } = useGuestData();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hi! I can help you convert your plaintext workout descriptions into structured workouts. Just paste or type your workout details and I\'ll parse them for you.\n\nFor example, you could paste something like:\n"Did chest and triceps today\n- Bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4\n- Incline dumbbell press: 60lbs x 10, 65lbs x 8\n- Tricep dips: bodyweight x 12, x 10, x 8"',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const examplePrompts = [
+    "I did 3 sets of bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4. Then squats: 3 sets of 185lbs x 10.",
+    "What exercises should I do to improve my bench press?",
+    "I ran 3 miles in 24 minutes today, feeling great!",
+    "Can you suggest a good leg workout based on my recent training?",
+  ];
 
   // Fetch reference data
   const { data: workoutTypes = [] } = useQuery<WorkoutType[]>({
@@ -285,14 +289,14 @@ const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim() || isLoading) return;
+  const processMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || isLoading) return;
 
     // Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue,
+      content: messageContent,
       timestamp: new Date(),
     };
 
@@ -300,11 +304,11 @@ const ChatPage: React.FC = () => {
     setIsLoading(true);
 
     // Check if this looks like a workout description
-    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(inputValue);
+    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(messageContent);
     
     if (looksLikeWorkout && isAuthenticated()) {
       // Parse the workout
-      parseWorkoutMutation.mutate(inputValue);
+      parseWorkoutMutation.mutate(messageContent);
     } else {
       // Simple response for now
       setTimeout(() => {
@@ -320,124 +324,198 @@ const ChatPage: React.FC = () => {
         setIsLoading(false);
       }, 1000);
     }
+  };
 
+  const handleSendMessage = async () => {
+    await processMessage(inputValue);
     setInputValue('');
+  };
+
+  const handleExamplePrompt = async (prompt: string) => {
+    setInputValue(prompt);
+    // Auto-submit the example prompt
+    setTimeout(async () => {
+      await processMessage(prompt);
+    }, 100);
   };
 
   const handleSaveWorkout = (workoutData: ParsedWorkout) => {
     saveWorkoutMutation.mutate(workoutData);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSendMessage();
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col bg-base-100">
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-live="polite">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`chat ${message.role === 'user' ? 'chat-end' : 'chat-start'}`}
-          >
-            <div className="chat-image avatar">
-              <div className="w-10 rounded-full bg-base-300 flex items-center justify-center">
-                {message.role === 'user' ? '👤' : message.role === 'system' ? '⚙️' : '🤖'}
-              </div>
-            </div>
-            <div 
-              className={`chat-bubble ${
-                message.role === 'user' 
-                  ? 'chat-bubble-primary' 
-                  : message.role === 'system'
-                  ? 'chat-bubble-accent'
-                  : 'chat-bubble-secondary'
-              }`}
-            >
-              <div className="whitespace-pre-wrap">{message.content}</div>
-              {message.showSaveButton && message.workoutData && (
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => handleSaveWorkout(message.workoutData!)}
-                    disabled={saveWorkoutMutation.isPending}
-                  >
-                    {saveWorkoutMutation.isPending ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      '💾 Save Workout'
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setMessages(prev => prev.map(msg => 
-                        msg.id === message.id 
-                          ? { ...msg, showSaveButton: false }
-                          : msg
-                      ));
-                    }}
-                  >
-                    Cancel
-                  </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Navigation header */}
+        <div className="flex items-center justify-between mb-4">
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="dark:text-gray-300 dark:hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+          <ModeToggle />
+        </div>
+
+        <Card className="h-[90vh] flex flex-col dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white rounded-t-lg">
+            <CardTitle className="flex items-center gap-2">
+              <Dumbbell className="h-6 w-6" />
+              Fitness Coach AI
+            </CardTitle>
+            <p className="text-blue-100 dark:text-blue-200 text-sm">
+              Log your workouts or get personalized fitness advice
+            </p>
+          </CardHeader>
+
+          <CardContent className="flex-1 flex flex-col p-0 dark:bg-gray-800">
+            <ScrollArea className="flex-1 p-4">
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <Bot className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Welcome to your Fitness Coach!
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">
+                    I can help you log workouts and provide personalized fitness advice.
+                  </p>
+                  <div className="grid gap-2 max-w-2xl mx-auto">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Try these examples:</p>
+                    {examplePrompts.map((prompt, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleExamplePrompt(prompt)}
+                        className="text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm transition-colors dark:text-gray-300"
+                      >
+                        "{prompt}"
+                      </button>
+                    ))}
+                  </div>
+                  {!isAuthenticated() && (
+                    <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                        ⚠️ You need to be signed in to parse and save workouts
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-            <div className="chat-footer opacity-50 text-xs">
-              {message.timestamp.toLocaleTimeString()}
-            </div>
-          </div>
-        ))}
-        
-        {isLoading && (
-          <div className="chat chat-start">
-            <div className="chat-image avatar">
-              <div className="w-10 rounded-full bg-base-300 flex items-center justify-center">
-                🤖
-              </div>
-            </div>
-            <div className="chat-bubble chat-bubble-secondary">
-              <span className="loading loading-dots loading-sm"></span>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-base-200 border-t">
-        <div className="flex gap-2">
-          <textarea
-            className="textarea textarea-bordered flex-1 resize-none"
-            placeholder="Describe your workout or paste your workout notes here..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            rows={3}
-            disabled={isLoading}
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-          >
-            Send
-          </Button>
-        </div>
-        <div className="text-xs text-base-content/60 mt-2">
-          Tip: Describe exercises with sets, reps, and weights (e.g., "Bench press 135lbs x 8 reps")
-        </div>
-        {!isAuthenticated() && (
-          <div className="text-xs text-warning mt-1">
-            ⚠️ You need to be signed in to parse and save workouts
-          </div>
-        )}
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`flex gap-3 max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        message.role === "user"
+                          ? "bg-blue-600 dark:bg-blue-500 text-white"
+                          : message.role === "system"
+                          ? "bg-green-600 dark:bg-green-500 text-white"
+                          : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      {message.role === "user" ? (
+                        <User className="h-4 w-4" />
+                      ) : (
+                        <Bot className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div
+                      className={`p-3 rounded-lg ${
+                        message.role === "user"
+                          ? "bg-blue-600 dark:bg-blue-500 text-white"
+                          : message.role === "system"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      {message.showSaveButton && message.workoutData && (
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white"
+                            onClick={() => handleSaveWorkout(message.workoutData!)}
+                            disabled={saveWorkoutMutation.isPending}
+                          >
+                            {saveWorkoutMutation.isPending ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Saving...
+                              </div>
+                            ) : (
+                              '💾 Save Workout'
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setMessages(prev => prev.map(msg => 
+                                msg.id === message.id 
+                                  ? { ...msg, showSaveButton: false }
+                                  : msg
+                              ));
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </ScrollArea>
+
+            <div className="border-t dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Describe your workout or ask for fitness advice..."
+                  className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                  disabled={isLoading}
+                />
+                <Button type="submit" disabled={isLoading || !inputValue.trim()}>
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
