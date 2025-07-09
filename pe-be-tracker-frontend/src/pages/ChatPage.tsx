@@ -129,7 +129,6 @@ const createExerciseSet = async (setData: {
 };
 
 const ChatPage: React.FC = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated } = useGuestData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
