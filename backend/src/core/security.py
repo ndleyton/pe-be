@@ -1,11 +1,10 @@
 from typing import Optional
 
-from fastapi.responses import RedirectResponse
-from fastapi import Depends, Request, status, Response
+from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin, models
 from fastapi_users.authentication import (
     AuthenticationBackend,
-    BearerTransport, # Changed from CookieTransport
+    BearerTransport,
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
@@ -18,8 +17,6 @@ SECRET = settings.SECRET_KEY
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
-FRONTEND_URL = settings.FRONTEND_URL
-FRONTEND_POST_LOGIN_PATH = settings.FRONTEND_POST_LOGIN_PATH
 
 # Google OAuth client
 google_oauth_client = GoogleOAuth2(
@@ -60,7 +57,7 @@ def get_jwt_strategy() -> JWTStrategy:
 # Authentication backend
 auth_backend = AuthenticationBackend(
     name="jwt",
-    transport=BearerTransport(tokenUrl="auth/jwt/login"), # Changed to BearerTransport
+    transport=BearerTransport(tokenUrl="auth/jwt/login"),
     get_strategy=get_jwt_strategy,
 )
 

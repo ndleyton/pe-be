@@ -30,11 +30,11 @@ const OAuthCallbackPage: React.FC = () => {
         }
 
         console.log('Processing OAuth callback with code:', code);
+        console.log('Full URL params:', Object.fromEntries(searchParams));
 
-        // Exchange code for token
-        const { data: tokenData } = await api.post('/auth/google/callback', {
-          code: code,
-        });
+        // Call the OAuth callback endpoint with all parameters
+        const callbackUrl = `/auth/google/callback?${searchParams.toString()}`;
+        const { data: tokenData } = await api.get(callbackUrl);
 
         if (!tokenData.access_token) {
           throw new Error('No access token received');

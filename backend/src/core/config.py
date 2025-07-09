@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field("test-google-client-id", env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field("test-google-client-secret", env="GOOGLE_CLIENT_SECRET")
 
-    # This should point to your backend's OAuth callback endpoint.
-    GOOGLE_REDIRECT_URI: str = Field("http://localhost:8000/api/v1/auth/google/callback", env="GOOGLE_REDIRECT_URI")
+    # This should point to your frontend's OAuth callback page for Bearer JWT.
+    GOOGLE_REDIRECT_URI: str = Field("http://localhost:5173/oauth/callback", env="GOOGLE_REDIRECT_URI")
 
     # Frontend URL - used for CORS and post-login redirects
     FRONTEND_URL: str = Field("http://localhost:5173", env="FRONTEND_URL")
