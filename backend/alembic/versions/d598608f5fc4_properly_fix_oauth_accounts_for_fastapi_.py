@@ -70,20 +70,29 @@ def upgrade() -> None:
     if not fk_result.fetchone():
         op.create_foreign_key("fk_oauth_accounts_user_id", "oauth_accounts", "users", ["user_id"], ["id"], ondelete="CASCADE")
     
-    # 5. Fix timestamp columns to use timezone-aware datetime (check current type first)
+    # 5. Ensure timestamp columns exist and are timezone-aware
     timestamp_result = connection.execute(sa.text("""
-        SELECT data_type FROM information_schema.columns 
-        WHERE table_name = 'oauth_accounts' AND column_name = 'created_at'
+        SELECT column_name, data_type FROM information_schema.columns 
+        WHERE table_name = 'oauth_accounts' AND column_name IN ('created_at', 'updated_at')
     """))
-    current_type = timestamp_result.fetchone()
+    existing_columns = {row[0]: row[1] for row in timestamp_result.fetchall()}
     
-    if current_type and current_type[0] == 'timestamp without time zone':
-        # Only alter if we have the wrong type
+    # Add created_at column if it doesn't exist
+    if 'created_at' not in existing_columns:
+        op.add_column('oauth_accounts', sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')))
+    elif existing_columns['created_at'] == 'timestamp without time zone':
+        # Alter if it exists but has wrong type
         op.alter_column('oauth_accounts', 'created_at',
                    existing_type=postgresql.TIMESTAMP(),
                    type_=sa.DateTime(timezone=True),
                    existing_nullable=False,
                    existing_server_default=sa.text('now()'))
+    
+    # Add updated_at column if it doesn't exist
+    if 'updated_at' not in existing_columns:
+        op.add_column('oauth_accounts', sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')))
+    elif existing_columns['updated_at'] == 'timestamp without time zone':
+        # Alter if it exists but has wrong type
         op.alter_column('oauth_accounts', 'updated_at',
                    existing_type=postgresql.TIMESTAMP(),
                    type_=sa.DateTime(timezone=True),
@@ -97,22 +106,16 @@ def downgrade() -> None:
     
     # Reverse timestamp column changes (check if needed)
     timestamp_result = connection.execute(sa.text("""
-        SELECT data_type FROM information_schema.columns 
-        WHERE table_name = 'oauth_accounts' AND column_name = 'created_at'
+        SELECT column_name, data_type FROM information_schema.columns 
+        WHERE table_name = 'oauth_accounts' AND column_name IN ('created_at', 'updated_at')
     """))
-    current_type = timestamp_result.fetchone()
+    existing_columns = {row[0]: row[1] for row in timestamp_result.fetchall()}
     
-    if current_type and current_type[0] == 'timestamp with time zone':
-        op.alter_column('oauth_accounts', 'updated_at',
-                   existing_type=sa.DateTime(timezone=True),
-                   type_=postgresql.TIMESTAMP(),
-                   existing_nullable=False,
-                   existing_server_default=sa.text('now()'))
-        op.alter_column('oauth_accounts', 'created_at',
-                   existing_type=sa.DateTime(timezone=True),
-                   type_=postgresql.TIMESTAMP(),
-                   existing_nullable=False,
-                   existing_server_default=sa.text('now()'))
+    # For downgrade, we'll just remove the timestamp columns since they weren't in the original migration
+    if 'created_at' in existing_columns:
+        op.drop_column('oauth_accounts', 'created_at')
+    if 'updated_at' in existing_columns:
+        op.drop_column('oauth_accounts', 'updated_at')
     
     # Drop our foreign key constraint if it exists
     fk_result = connection.execute(sa.text("""
