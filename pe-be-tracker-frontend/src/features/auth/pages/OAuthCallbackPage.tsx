@@ -87,10 +87,7 @@ const OAuthCallbackPage: React.FC = () => {
           setSyncStatus('complete');
         }
 
-        // Wait a moment to show success state, then redirect
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 500);
+        navigate('/dashboard', { replace: true });
 
       } catch (error) {
         console.error('OAuth callback error:', error);
@@ -99,10 +96,7 @@ const OAuthCallbackPage: React.FC = () => {
         setSyncStatus('error');
         showSyncErrorToast(errorMsg);
         
-        // Redirect back to login after error
-        setTimeout(() => {
-          navigate('/', { replace: true });
-        }, 3000);
+        navigate('/', { replace: true });
       }
     };
 
