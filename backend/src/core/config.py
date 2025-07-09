@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     API_VERSION: str = Field("v1", env="API_VERSION")
     OPENAI_API_KEY: str = Field("", env="OPENAI_API_KEY")
     
+    # Langfuse configuration
+    LANGFUSE_PUBLIC_KEY: str = Field("", env="LANGFUSE_PUBLIC_KEY")
+    LANGFUSE_SECRET_KEY: str = Field("", env="LANGFUSE_SECRET_KEY")
+    LANGFUSE_HOST: str = Field("https://us.cloud.langfuse.com", env="LANGFUSE_HOST")
+    
     @computed_field
     @property
     def API_PREFIX(self) -> str:
