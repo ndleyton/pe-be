@@ -5,7 +5,7 @@ from fastapi import Depends, Request, status, Response
 from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin, models
 from fastapi_users.authentication import (
     AuthenticationBackend,
-    CookieTransport,
+    BearerTransport, # Changed from CookieTransport
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
@@ -52,24 +52,6 @@ async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db
     yield UserManager(user_db)
 
 
-class CookieTransportWithRedirect(CookieTransport):
-    """Custom cookie transport that redirects after login"""
-    
-    async def get_login_response(self, token: str) -> Response:
-        """
-        Called by the backend after successful login to get the response.
-        We want to set the cookie and redirect to the frontend's dashboard/workouts page.
-        """
-        # Ensures no double slashes if FRONTEND_URL ends with / and FRONTEND_POST_LOGIN_PATH starts with /
-        redirect_url = f"{FRONTEND_URL.rstrip('/')}{FRONTEND_POST_LOGIN_PATH}"
-        print(f"DEBUG: FRONTEND_URL='{FRONTEND_URL}', FRONTEND_POST_LOGIN_PATH='{FRONTEND_POST_LOGIN_PATH}'")
-        print(f"DEBUG: Constructed redirect_url='{redirect_url}'")
-        print(f"DEBUG: redirect_url repr: {repr(redirect_url)}")
-        response = RedirectResponse(redirect_url, status_code=status.HTTP_302_FOUND)
-        self._set_login_cookie(response, token) # Use the parent's method to set the cookie
-        return response
-
-
 def get_jwt_strategy() -> JWTStrategy:
     """JWT strategy for authentication"""
     return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
@@ -78,12 +60,7 @@ def get_jwt_strategy() -> JWTStrategy:
 # Authentication backend
 auth_backend = AuthenticationBackend(
     name="jwt",
-    transport=CookieTransportWithRedirect(
-        cookie_name="fitnessapp", 
-        cookie_max_age=3600*24*7, # 7 days
-        cookie_secure=settings.COOKIE_SECURE, # Configurable via COOKIE_SECURE environment variable
-        cookie_samesite=settings.COOKIE_SAMESITE
-        ), 
+    transport=BearerTransport(tokenUrl="auth/jwt/login"), # Changed to BearerTransport
     get_strategy=get_jwt_strategy,
 )
 

@@ -36,7 +36,13 @@ const OAuthCallbackPage: React.FC = () => {
           code: code,
         });
 
-        // The backend's CookieTransportWithRedirect will set the cookie automatically.
+        if (!tokenData.access_token) {
+          throw new Error('No access token received');
+        }
+
+        // Store the auth token
+        localStorage.setItem('authToken', tokenData.access_token);
+        console.log('Auth token stored successfully');
   
 
         // Check if there's guest data to sync
