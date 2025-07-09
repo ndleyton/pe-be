@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     
     # Cookie security settings
     COOKIE_SECURE: bool = Field(False, env="COOKIE_SECURE", description="Enable secure cookies for HTTPS")
+    COOKIE_SAMESITE: str = Field("lax", env="COOKIE_SAMESITE")
     
     # Environment indicator
     ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
