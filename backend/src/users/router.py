@@ -52,7 +52,13 @@ router.include_router(
 )
 
 router.include_router(
-    fastapi_users.get_oauth_router(google_oauth_client, auth_backend, settings.SECRET_KEY),
+    fastapi_users.get_oauth_router(
+        oauth_client=google_oauth_client,
+        backend=auth_backend,
+        state_secret=settings.SECRET_KEY,
+        redirect_url=f"{settings.FRONTEND_URL.rstrip('/')}/oauth/callback",
+        associate_by_email=True, 
+    ),
     prefix="/auth/google",
     tags=["auth"],
 )

@@ -1,28 +1,33 @@
 from typing import Optional
 
-from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin, models
-from fastapi_users.authentication import (
-    AuthenticationBackend,
-    BearerTransport,
-    JWTStrategy,
-)
+from fastapi.responses import RedirectResponse
+from fastapi import Depends, Request, status
+from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin
+from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
 from httpx_oauth.clients.google import GoogleOAuth2
 
 from src.core.config import settings
 from src.core.dependencies import get_user_db
+from src.users.models import User # Import the User model
 
 SECRET = settings.SECRET_KEY
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
+# OAuth redirect handled entirely by FastAPI-Users; token is returned to
+# `settings.GOOGLE_REDIRECT_URI` on the frontend. No need for backend-side
+# redirect_url construction.
 GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
+print(f"DEBUG: GOOGLE_REDIRECT_URI from settings: {GOOGLE_REDIRECT_URI}")
 
-# Google OAuth client
+
 google_oauth_client = GoogleOAuth2(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
+    ["openid", "email", "profile"]
 )
+
+print(f"DEBUG: Google OAuth redirect_uri set to: {settings.GOOGLE_REDIRECT_URI}")
 
 
 class UserManager(IntegerIDMixin, BaseUserManager):
@@ -54,10 +59,15 @@ def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
 
 
-# Authentication backend
+# Authentication backend using standard Bearer transport. `tokenUrl` is only
+# used for the OpenAPI schema, so we build the absolute path once based on the
+# configured API prefix.
+
+token_url = f"{settings.API_PREFIX}/auth/jwt/login"
+
 auth_backend = AuthenticationBackend(
     name="jwt",
-    transport=BearerTransport(tokenUrl="auth/jwt/login"),
+    transport=BearerTransport(tokenUrl=token_url),
     get_strategy=get_jwt_strategy,
 )
 

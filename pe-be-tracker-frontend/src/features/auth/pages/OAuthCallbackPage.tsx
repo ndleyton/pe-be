@@ -12,36 +12,60 @@ const OAuthCallbackPage: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'processing' | 'syncing' | 'complete' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  // Avoid double execution in React 18 StrictMode (dev) which re-mounts components
+  const processedRef = React.useRef(false);
+
   useEffect(() => {
     const handleOAuthCallback = async () => {
+      if (processedRef.current) {
+        return; // already handled once
+      }
+      processedRef.current = true;
       try {
         setSyncStatus('processing');
         
-        // Extract authorization code from URL parameters
+        // Extract access_token from query string first, then fallback to hash fragment (legacy)
+        const qsToken = searchParams.get('access_token');
+        const hashToken = new URLSearchParams(window.location.hash.substring(1)).get('access_token');
+        const accessToken = qsToken || hashToken;
+
+        // Extract authorization code and state from URL parameters (for authorization code flow)
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
         const error = searchParams.get('error');
-        
+
+        // Handle any error returned by the provider immediately
         if (error) {
           throw new Error(`OAuth error: ${error}`);
         }
+
+        // Ensure we have either an access token (implicit flow) or both code and state (auth code flow)
+        if (!accessToken && (!code || !state)) {
+          throw new Error('Missing authorization data in callback URL');
+        }
         
-        if (!code) {
-          throw new Error('No authorization code received');
+        let finalAccessToken = accessToken;
+
+        // If we don’t already have the token (implicit flow), exchange code+state with the backend
+        if (!finalAccessToken) {
+          console.log('Processing OAuth callback with code:', code, 'and state:', state);
+
+          const callbackUrl = `/auth/google/callback?code=${code}&state=${state}`;
+          const { data: tokenData } = await api.get(callbackUrl);
+
+          if (!tokenData.access_token) {
+            throw new Error('No access token received from backend');
+          }
+
+          finalAccessToken = tokenData.access_token;
         }
 
-        console.log('Processing OAuth callback with code:', code);
-        console.log('Full URL params:', Object.fromEntries(searchParams));
-
-        // Call the OAuth callback endpoint with all parameters
-        const callbackUrl = `/auth/google/callback?${searchParams.toString()}`;
-        const { data: tokenData } = await api.get(callbackUrl);
-
-        if (!tokenData.access_token) {
-          throw new Error('No access token received');
+        // Ensure we have a token before storing (type narrowing for TypeScript)
+        if (!finalAccessToken) {
+          throw new Error('No access token available to store');
         }
 
-        // Store the auth token
-        localStorage.setItem('authToken', tokenData.access_token);
+        localStorage.setItem('authToken', finalAccessToken);
         console.log('Auth token stored successfully');
   
 
@@ -66,7 +90,7 @@ const OAuthCallbackPage: React.FC = () => {
         // Wait a moment to show success state, then redirect
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
-        }, 2000);
+        }, 500);
 
       } catch (error) {
         console.error('OAuth callback error:', error);

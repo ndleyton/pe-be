@@ -11,8 +11,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field("test-google-client-id", env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field("test-google-client-secret", env="GOOGLE_CLIENT_SECRET")
 
-    # This should point to your frontend's OAuth callback page for Bearer JWT.
-    GOOGLE_REDIRECT_URI: str = Field("http://localhost:5173/oauth/callback", env="GOOGLE_REDIRECT_URI")
+    # Google OAuth callback URL (BACKEND). Must be registered in Google Cloud Console.
+    GOOGLE_REDIRECT_URI: str = Field("http://localhost:8000/api/v1/auth/google/callback", env="GOOGLE_REDIRECT_URI")
+
+    # After the backend exchanges the code for a JWT, it will redirect the browser
+    # to this URL (in the SPA) with the token in the URL fragment.
+    SPA_REDIRECT_URI: str = Field("http://localhost:5173/oauth/callback", env="SPA_REDIRECT_URI")
 
     # Frontend URL - used for CORS and post-login redirects
     FRONTEND_URL: str = Field("http://localhost:5173", env="FRONTEND_URL")
