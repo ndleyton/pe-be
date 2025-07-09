@@ -289,14 +289,14 @@ const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim() || isLoading) return;
+  const processMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || isLoading) return;
 
     // Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue,
+      content: messageContent,
       timestamp: new Date(),
     };
 
@@ -304,11 +304,11 @@ const ChatPage: React.FC = () => {
     setIsLoading(true);
 
     // Check if this looks like a workout description
-    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(inputValue);
+    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(messageContent);
     
     if (looksLikeWorkout && isAuthenticated()) {
       // Parse the workout
-      parseWorkoutMutation.mutate(inputValue);
+      parseWorkoutMutation.mutate(messageContent);
     } else {
       // Simple response for now
       setTimeout(() => {
@@ -324,45 +324,18 @@ const ChatPage: React.FC = () => {
         setIsLoading(false);
       }, 1000);
     }
+  };
 
+  const handleSendMessage = async () => {
+    await processMessage(inputValue);
     setInputValue('');
   };
 
-  const handleExamplePrompt = (prompt: string) => {
+  const handleExamplePrompt = async (prompt: string) => {
     setInputValue(prompt);
     // Auto-submit the example prompt
-    setTimeout(() => {
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: prompt,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, userMessage]);
-      setIsLoading(true);
-
-      // Check if this looks like a workout description
-      const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(prompt);
-      
-      if (looksLikeWorkout && isAuthenticated()) {
-        // Parse the workout
-        parseWorkoutMutation.mutate(prompt);
-      } else {
-        // Simple response for now
-        setTimeout(() => {
-          const response: ChatMessage = {
-            id: Date.now().toString() + '-response',
-            role: 'assistant',
-            content: isAuthenticated() 
-              ? 'That doesn\'t look like a workout description. Try describing your exercises with sets, reps, and weights!'
-              : 'Please sign in to use the workout parsing feature.',
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, response]);
-          setIsLoading(false);
-        }, 1000);
-      }
+    setTimeout(async () => {
+      await processMessage(prompt);
     }, 100);
   };
 
