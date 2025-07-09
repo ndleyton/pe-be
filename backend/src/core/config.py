@@ -11,12 +11,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field("test-google-client-id", env="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field("test-google-client-secret", env="GOOGLE_CLIENT_SECRET")
 
-    # This should point to your frontend's post-login redirect target.
-    GOOGLE_REDIRECT_URI: str = Field(..., env="GOOGLE_REDIRECT_URI")
+    # This should point to your backend's OAuth callback endpoint.
+    GOOGLE_REDIRECT_URI: str = Field("http://localhost:8000/api/v1/auth/google/callback", env="GOOGLE_REDIRECT_URI")
 
     # Frontend URL - used for CORS and post-login redirects
     FRONTEND_URL: str = Field("http://localhost:5173", env="FRONTEND_URL")
-    FRONTEND_POST_LOGIN_PATH: str = "/dashboard"
+    FRONTEND_POST_LOGIN_PATH: str = Field("/dashboard", env="FRONTEND_POST_LOGIN_PATH")
     DATABASE_URL: str = Field(
         "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
         env="DATABASE_URL",
