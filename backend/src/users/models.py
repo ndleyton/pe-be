@@ -11,16 +11,13 @@ from src.core.database import Base
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):
     """OAuth account model for user authentication"""
     __tablename__ = "oauth_accounts"
-
-    # Explicitly define PK columns (WORKAROUND)
+    
+    # Add user_id foreign key that FastAPI-Users needs
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="cascade"), primary_key=True, nullable=False
+        Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False
     )
-    oauth_name: Mapped[str] = mapped_column(
-        String(length=100), index=True, primary_key=True, nullable=False
-    )
-
-    # Relationship back to the User
+    
+    # Add user relationship
     user: Mapped["User"] = relationship("User", back_populates="oauth_accounts")
 
 
