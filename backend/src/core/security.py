@@ -62,6 +62,9 @@ class CookieTransportWithRedirect(CookieTransport):
         """
         # Ensures no double slashes if FRONTEND_URL ends with / and FRONTEND_POST_LOGIN_PATH starts with /
         redirect_url = f"{FRONTEND_URL.rstrip('/')}{FRONTEND_POST_LOGIN_PATH}"
+        print(f"DEBUG: FRONTEND_URL='{FRONTEND_URL}', FRONTEND_POST_LOGIN_PATH='{FRONTEND_POST_LOGIN_PATH}'")
+        print(f"DEBUG: Constructed redirect_url='{redirect_url}'")
+        print(f"DEBUG: redirect_url repr: {repr(redirect_url)}")
         response = RedirectResponse(redirect_url, status_code=status.HTTP_302_FOUND)
         self._set_login_cookie(response, token) # Use the parent's method to set the cookie
         return response
