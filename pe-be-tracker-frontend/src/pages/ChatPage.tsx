@@ -445,9 +445,9 @@ const ChatPage: React.FC = () => {
                             size="sm"
                             className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white"
                             onClick={() => handleSaveWorkout(message.workoutData!)}
-                            disabled={saveWorkoutMutation.isLoading}
+                            disabled={saveWorkoutMutation.isPending}
                           >
-                            {saveWorkoutMutation.isLoading ? (
+                            {saveWorkoutMutation.isPending ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                 Saving...
