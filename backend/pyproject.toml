@@ -23,6 +23,7 @@ setuptools = "^69.5.1"
 httpx-oauth = "^0.16.1"
 openai = "^1.0.0"
 bcrypt = ">=4.0.0,<4.1.0"
+langfuse = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies] 
 pytest = "^8.1.1"                  

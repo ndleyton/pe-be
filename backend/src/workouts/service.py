@@ -3,6 +3,7 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 import openai
 from datetime import datetime, timezone, date
+from langfuse import Langfuse
 
 from src.workouts.crud import (
     get_workout_by_id,
@@ -106,22 +107,20 @@ class WorkoutService:
             )
             exercise = await create_exercise(session, exercise_create)
 
-        # 4. Optionally create initial exercise set
+        # 4. Add initial set if provided
         if payload.initial_set:
-            set_payload = payload.initial_set
-            exercise_set_create = ExerciseSetCreate(
-                reps=set_payload.reps,
-                intensity=set_payload.intensity,
-                intensity_unit_id=set_payload.intensity_unit_id,
+            initial_set_create = ExerciseSetCreate(
+                reps=payload.initial_set.reps,
+                intensity=payload.initial_set.intensity,
+                intensity_unit_id=payload.initial_set.intensity_unit_id,
+                rest_time_seconds=payload.initial_set.rest_time_seconds,
                 exercise_id=exercise.id,
-                rest_time_seconds=set_payload.rest_time_seconds,
-                done=False,
+                done=False,  # New set is not done by default
             )
-            # create set
-            await create_exercise_set(session, exercise_set_create)
+            await create_exercise_set(session, initial_set_create)
 
-        # Refresh workout with exercises loaded
-        return await WorkoutService.get_workout(session, workout.id, user_id)
+        # 5. Return the workout with fresh relationships
+        return await get_workout_by_id(session, workout.id, user_id)
 
 
 class WorkoutTypeService:
@@ -135,24 +134,140 @@ class WorkoutTypeService:
     @staticmethod
     async def create_new_workout_type(session: AsyncSession, workout_type_data: WorkoutTypeCreate) -> WorkoutType:
         """Create a new workout type with business logic validation"""
-        # Add any business logic here (e.g., validation, duplicate checking)
+        # Add any business logic here (e.g., validation, default values)
         return await create_workout_type(session, workout_type_data)
 
 
 class WorkoutParsingService:
-    """Service layer for workout text parsing using LLM"""
+    """Service layer for workout text parsing using LLM with Langfuse observability"""
+    
+    @staticmethod
+    def _get_langfuse_client() -> Optional[Langfuse]:
+        """Get initialized Langfuse client if configured"""
+        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+            return Langfuse(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY,
+                host=settings.LANGFUSE_HOST
+            )
+        return None
     
     @staticmethod
     async def parse_workout_text(workout_text: str) -> WorkoutParseResponse:
-        """Parse raw workout text using OpenAI LLM"""
+        """Parse raw workout text using OpenAI LLM with Langfuse observability"""
         if not settings.OPENAI_API_KEY:
             raise ValueError("OpenAI API key not configured")
         
-        # Set up OpenAI client
-        client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+        langfuse = WorkoutParsingService._get_langfuse_client()
+        trace = None
         
-        # Define the system prompt for workout parsing
-        system_prompt = """You are a fitness expert assistant that parses workout descriptions into structured data.
+        try:
+            # Initialize Langfuse trace if available
+            if langfuse:
+                trace = langfuse.trace(
+                    name="workout-parsing",
+                    metadata={"model": "gpt-3.5-turbo", "service": "parser-to-json"}
+                )
+            
+            # Get prompt from Langfuse if available, otherwise use hardcoded prompt
+            if langfuse:
+                try:
+                    prompt = langfuse.get_prompt("parser-to-json", label="production")
+                    system_prompt = prompt.prompt
+                    
+                    # Log prompt usage
+                    if trace:
+                        trace.generation(
+                            name="prompt-fetch",
+                            prompt=prompt.prompt,
+                            metadata={"prompt_name": "parser-to-json", "label": "production"}
+                        )
+                except Exception as e:
+                    # Fallback to hardcoded prompt if Langfuse fails
+                    print(f"Warning: Could not fetch prompt from Langfuse: {e}")
+                    system_prompt = WorkoutParsingService._get_fallback_prompt()
+            else:
+                system_prompt = WorkoutParsingService._get_fallback_prompt()
+            
+            # Set up OpenAI client
+            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+            
+            # Call OpenAI API
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Parse this workout:\n\n{workout_text}"}
+                ],
+                temperature=0.1,
+                max_tokens=1000
+            )
+            
+            # Parse the response
+            response_text = response.choices[0].message.content.strip()
+            
+            # Log generation to Langfuse
+            if trace:
+                trace.generation(
+                    name="workout-parsing-generation",
+                    model="gpt-3.5-turbo",
+                    input=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"Parse this workout:\n\n{workout_text}"}
+                    ],
+                    output=response_text,
+                    metadata={
+                        "temperature": 0.1,
+                        "max_tokens": 1000,
+                        "usage": {
+                            "prompt_tokens": response.usage.prompt_tokens,
+                            "completion_tokens": response.usage.completion_tokens,
+                            "total_tokens": response.usage.total_tokens
+                        }
+                    }
+                )
+            
+            # Try to extract JSON if there's extra text
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            elif response_text.startswith('```'):
+                response_text = response_text.replace('```', '').strip()
+            
+            # Parse JSON response
+            parsed_data = json.loads(response_text)
+            
+            # Validate and return as Pydantic model
+            result = WorkoutParseResponse(**parsed_data)
+            
+            # Log successful parsing
+            if trace:
+                trace.update(
+                    output=result.model_dump(),
+                    metadata={"status": "success", "workout_name": result.name}
+                )
+            
+            return result
+            
+        except json.JSONDecodeError as e:
+            error_msg = f"Failed to parse LLM response as JSON: {e}"
+            if trace:
+                trace.update(metadata={"status": "error", "error": error_msg})
+            raise ValueError(error_msg)
+        except openai.OpenAIError as e:
+            error_msg = f"OpenAI API error: {e}"
+            if trace:
+                trace.update(metadata={"status": "error", "error": error_msg})
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Error parsing workout: {e}"
+            if trace:
+                trace.update(metadata={"status": "error", "error": error_msg})
+            raise ValueError(error_msg)
+    
+    @staticmethod
+    def _get_fallback_prompt() -> str:
+        """Get fallback system prompt if Langfuse is not available"""
+        return """You are a fitness expert assistant that parses workout descriptions into structured data.
 
 Given a workout description, extract:
 1. A suitable workout name (if not provided, generate one based on the exercises)
@@ -190,37 +305,3 @@ Return ONLY valid JSON in this exact format:
     }
   ]
 }"""
-
-        try:
-            # Call OpenAI API
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Parse this workout:\n\n{workout_text}"}
-                ],
-                temperature=0.1,
-                max_tokens=1000
-            )
-            
-            # Parse the response
-            response_text = response.choices[0].message.content.strip()
-            
-            # Try to extract JSON if there's extra text
-            if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '').strip()
-            elif response_text.startswith('```'):
-                response_text = response_text.replace('```', '').strip()
-            
-            # Parse JSON response
-            parsed_data = json.loads(response_text)
-            
-            # Validate and return as Pydantic model
-            return WorkoutParseResponse(**parsed_data)
-            
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse LLM response as JSON: {e}")
-        except openai.OpenAIError as e:
-            raise ValueError(f"OpenAI API error: {e}")
-        except Exception as e:
-            raise ValueError(f"Error parsing workout: {e}")
