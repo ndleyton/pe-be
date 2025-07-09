@@ -32,7 +32,8 @@ class Settings(BaseSettings):
         return f"/api/{self.API_VERSION}"
     
     # Cookie security settings
-    COOKIE_SECURE: bool = Field(False, env="COOKIE_SECURE", description="Enable secure cookies for HTTPS")
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
     
     # Environment indicator
     ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
