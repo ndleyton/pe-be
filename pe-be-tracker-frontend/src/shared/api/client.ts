@@ -18,12 +18,6 @@ export const apiClient: AxiosInstance = axios.create(apiConfig);
 // Request interceptor for auth token injection
 apiClient.interceptors.request.use(
   (request) => {
-    // Inject auth token if available
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      request.headers.Authorization = `Bearer ${authToken}`;
-    }
-
     // Log outgoing requests in development
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
@@ -44,11 +38,8 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error?.response?.status === 401) {
-      // 401 means user is not authenticated; clear any stored auth token
-      localStorage.removeItem('authToken');
-      // Let components handle guest mode rather than forcing redirects
-    }
+    // The browser will handle cookie expiration/invalidation.
+    // Let components handle guest mode rather than forcing redirects.
     
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
