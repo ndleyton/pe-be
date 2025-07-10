@@ -27,6 +27,8 @@ class ExerciseType(Base):
     description = Column(String)
     default_intensity_unit = Column(Integer, default=1, nullable=False)
     times_used = Column(Integer, default=0, nullable=False)
+    external_id = Column(Integer, unique=True, nullable=True)
+    images_url = Column(Text, nullable=True)
     
     # Relationships
     muscles = relationship("Muscle", secondary=exercise_types_muscles, back_populates="exercise_types")
