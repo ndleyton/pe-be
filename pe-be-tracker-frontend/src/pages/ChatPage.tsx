@@ -349,7 +349,7 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 px-2 py-4 sm:p-4 pb-20">
       <div className="max-w-4xl mx-auto">
         {/* Navigation header */}
         <div className="flex items-center justify-between mb-4">
@@ -362,7 +362,7 @@ const ChatPage: React.FC = () => {
           <ModeToggle />
         </div>
 
-        <Card className="h-[90vh] flex flex-col border-border">
+        <Card className="h-[calc(90vh-5rem)] flex flex-col border-border">
           <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-6 w-6" />
@@ -374,7 +374,7 @@ const ChatPage: React.FC = () => {
           </CardHeader>
 
           <CardContent className="flex-1 flex flex-col p-0 bg-background">
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-2 sm:p-4">
               {messages.length === 0 && (
                 <div className="text-center py-8">
                   <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -412,7 +412,7 @@ const ChatPage: React.FC = () => {
                   className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`flex gap-3 max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                    className={`flex gap-3 max-w-[85%] sm:max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -500,7 +500,7 @@ const ChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </ScrollArea>
 
-            <div className="border-t border-border p-4 bg-background">
+            <div className="border-t border-border p-2 sm:p-4 bg-background">
               <form onSubmit={handleSubmit} className="flex gap-2">
                 <Input
                   value={inputValue}
