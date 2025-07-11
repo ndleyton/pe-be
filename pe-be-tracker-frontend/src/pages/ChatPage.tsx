@@ -349,12 +349,12 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 px-2 py-4 sm:p-4 pb-20">
       <div className="max-w-4xl mx-auto">
         {/* Navigation header */}
         <div className="flex items-center justify-between mb-4">
           <Link to="/">
-            <Button variant="ghost" size="sm" className="dark:text-gray-300 dark:hover:text-white">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Home
             </Button>
@@ -362,43 +362,43 @@ const ChatPage: React.FC = () => {
           <ModeToggle />
         </div>
 
-        <Card className="h-[90vh] flex flex-col dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white rounded-t-lg">
+        <Card className="h-[calc(90vh-5rem)] flex flex-col border-border">
+          <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-6 w-6" />
               Fitness Coach AI
             </CardTitle>
-            <p className="text-blue-100 dark:text-blue-200 text-sm">
+            <p className="text-primary-foreground/80 text-sm">
               Log your workouts or get personalized fitness advice
             </p>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col p-0 dark:bg-gray-800">
-            <ScrollArea className="flex-1 p-4">
+          <CardContent className="flex-1 flex flex-col p-0 bg-background">
+            <ScrollArea className="flex-1 p-2 sm:p-4">
               {messages.length === 0 && (
                 <div className="text-center py-8">
-                  <Bot className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     Welcome to your Fitness Coach!
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  <p className="text-muted-foreground mb-6">
                     I can help you log workouts and provide personalized fitness advice.
                   </p>
                   <div className="grid gap-2 max-w-2xl mx-auto">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Try these examples:</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Try these examples:</p>
                     {examplePrompts.map((prompt, index) => (
                       <button
                         key={index}
                         onClick={() => handleExamplePrompt(prompt)}
-                        className="text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm transition-colors dark:text-gray-300"
+                        className="text-left p-3 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors text-secondary-foreground"
                       >
                         "{prompt}"
                       </button>
                     ))}
                   </div>
                   {!isAuthenticated() && (
-                    <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                    <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">
                         ⚠️ You need to be signed in to parse and save workouts
                       </p>
                     </div>
@@ -412,15 +412,15 @@ const ChatPage: React.FC = () => {
                   className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`flex gap-3 max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                    className={`flex gap-3 max-w-[85%] sm:max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         message.role === "user"
-                          ? "bg-blue-600 dark:bg-blue-500 text-white"
+                          ? "bg-primary text-primary-foreground"
                           : message.role === "system"
-                          ? "bg-green-600 dark:bg-green-500 text-white"
-                          : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {message.role === "user" ? (
@@ -432,10 +432,10 @@ const ChatPage: React.FC = () => {
                     <div
                       className={`p-3 rounded-lg ${
                         message.role === "user"
-                          ? "bg-blue-600 dark:bg-blue-500 text-white"
+                          ? "bg-primary text-primary-foreground"
                           : message.role === "system"
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          ? "bg-accent/50 text-accent-foreground border border-accent"
+                          : "bg-muted text-muted-foreground"
                       }`}
                     >
                       <div className="whitespace-pre-wrap">{message.content}</div>
@@ -443,13 +443,13 @@ const ChatPage: React.FC = () => {
                         <div className="mt-3 flex gap-2">
                           <Button
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white"
+                            className="bg-accent hover:bg-accent/80 text-accent-foreground"
                             onClick={() => handleSaveWorkout(message.workoutData!)}
                             disabled={saveWorkoutMutation.isPending}
                           >
                             {saveWorkoutMutation.isPending ? (
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                 Saving...
                               </div>
                             ) : (
@@ -478,18 +478,18 @@ const ChatPage: React.FC = () => {
 
               {isLoading && (
                 <div className="flex gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                  <div className="bg-muted p-3 rounded-lg">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
                       <div
-                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
                         style={{ animationDelay: "0.1s" }}
                       ></div>
                       <div
-                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
@@ -500,13 +500,13 @@ const ChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </ScrollArea>
 
-            <div className="border-t dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
+            <div className="border-t border-border p-2 sm:p-4 bg-background">
               <form onSubmit={handleSubmit} className="flex gap-2">
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Describe your workout or ask for fitness advice..."
-                  className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                  className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
                   disabled={isLoading}
                 />
                 <Button type="submit" disabled={isLoading || !inputValue.trim()}>
