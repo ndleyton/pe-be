@@ -1,6 +1,7 @@
 
 import asyncpg
 import json
+import hashlib
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import sys
@@ -69,10 +70,18 @@ def validate_exercise_data(exercise_data: Dict[str, Any]) -> None:
         if field not in exercise_data or exercise_data[field] is None:
             raise ValidationError(field, exercise_data.get(field), f"Required field '{field}' is missing or None")
     
-    # Validate external_id is a positive integer
+    # Validate external_id - convert to integer if needed
     external_id = exercise_data["external_id"]
-    if not isinstance(external_id, int) or external_id <= 0:
-        raise ValidationError("external_id", external_id, "Must be a positive integer")
+    if external_id is not None:
+        if isinstance(external_id, str):
+            # For string IDs, create a hash-based integer ID
+            hash_obj = hashlib.md5(external_id.encode())
+            exercise_data["external_id"] = int(hash_obj.hexdigest()[:8], 16)  # Use first 8 hex chars as int
+        elif isinstance(external_id, int):
+            if external_id <= 0:
+                raise ValidationError("external_id", external_id, "Must be a positive integer")
+        else:
+            raise ValidationError("external_id", external_id, "Must be a string or integer")
     
     # Validate name is a non-empty string
     name = exercise_data["name"]
@@ -153,7 +162,7 @@ async def extract_and_transform_exercises():
                     "name": row["name"],
                     "description": description,
                     "images_url": json.dumps(row.get("images", [])),
-                    "created_at": row["created_at"],
+                    "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
                 }
                 
                 # Validate exercise data
@@ -222,135 +231,142 @@ async def extract_and_transform_exercises():
     finally:
         await conn.close()
 
+async def import_exercises_to_database(data: Dict[str, Any]):
+    """Import the extracted and validated data to the database"""
+    conn = await get_db_connection()
+    transaction = None
+    
+    try:
+        # Start transaction
+        transaction = conn.transaction()
+        await transaction.start()
+        
+        # Insert intensity units first
+        for unit_name in data["intensity_units"]:
+            await conn.execute("""
+                INSERT INTO intensity_units (name, abbreviation) 
+                VALUES ($1, $2) 
+                ON CONFLICT (name) DO NOTHING
+            """, unit_name, unit_name.lower()[:10])  # Simple abbreviation logic
+        
+        # Insert muscle groups
+        for group_name in data["muscle_groups"]:
+            await conn.execute("""
+                INSERT INTO muscle_groups (name) 
+                VALUES ($1) 
+                ON CONFLICT (name) DO NOTHING
+            """, group_name)
+        
+        # Insert muscles
+        for muscle_name in data["muscles"]:
+            # Get muscle group ID (using the default group)
+            group_id = await conn.fetchval(
+                "SELECT id FROM muscle_groups WHERE name = $1", 
+                data["muscle_groups"][0]  # Default group
+            )
+            
+            await conn.execute("""
+                INSERT INTO muscles (name, muscle_group_id) 
+                VALUES ($1, $2) 
+                ON CONFLICT (name) DO NOTHING
+            """, muscle_name, group_id)
+        
+        # Insert exercise types
+        for exercise_type in data["exercise_types"]:
+            # Get default intensity unit ID
+            unit_id = await conn.fetchval(
+                "SELECT id FROM intensity_units WHERE name = $1", 
+                data["intensity_units"][0]  # Default unit
+            )
+            
+            # Convert created_at back to datetime if it's a string
+            created_at_value = exercise_type["created_at"]
+            if isinstance(created_at_value, str):
+                from datetime import datetime
+                created_at_value = datetime.fromisoformat(created_at_value)
+            
+            await conn.execute("""
+                INSERT INTO exercise_types 
+                (external_id, name, description, images_url, default_intensity_unit, created_at) 
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (external_id) DO NOTHING
+            """, 
+                exercise_type["external_id"],
+                exercise_type["name"],
+                exercise_type["description"],
+                exercise_type["images_url"],
+                unit_id,
+                created_at_value
+            )
+        
+        # Insert exercise-muscle relationships
+        for exercise_muscle in data["exercise_muscles"]:
+            # Get exercise type ID
+            exercise_type_id = await conn.fetchval(
+                "SELECT id FROM exercise_types WHERE external_id = $1",
+                exercise_muscle["exercise_external_id"]
+            )
+            
+            # Get muscle ID
+            muscle_id = await conn.fetchval(
+                "SELECT id FROM muscles WHERE name = $1",
+                exercise_muscle["muscle_name"]
+            )
+            
+            if exercise_type_id and muscle_id:
+                await conn.execute("""
+                    INSERT INTO exercise_types_muscles (exercise_type_id, muscle_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT (exercise_type_id, muscle_id) DO NOTHING
+                """, exercise_type_id, muscle_id)
+        
+        # Commit transaction
+        await transaction.commit()
+        print("✅ All data imported successfully!")
+        
+    except Exception as e:
+        # Rollback transaction on any error
+        if transaction:
+            try:
+                await transaction.rollback()
+                print(f"❌ Transaction rolled back due to error: {e}")
+            except Exception as rollback_error:
+                print(f"⚠️ Error during rollback: {rollback_error}")
+        raise e
+    finally:
+        await conn.close()
+
+
+async def main():
+    try:
+        print("🔄 Extracting and transforming exercise data...")
+        data = await extract_and_transform_exercises()
+        
+        print(f"📊 Extracted {len(data['exercise_types'])} exercise types, {len(data['muscles'])} muscles")
+        
+        # Pretty print the output for verification
+        print("\n📋 Data preview:")
+        print(json.dumps({
+            "exercise_types_count": len(data['exercise_types']),
+            "muscles_count": len(data['muscles']),
+            "intensity_units": data['intensity_units'],
+            "muscle_groups": data['muscle_groups'],
+            "sample_exercise": data['exercise_types'][0] if data['exercise_types'] else None
+        }, indent=2))
+        
+        # Ask for confirmation before importing
+        response = input("\n🤔 Do you want to import this data to the database? (y/N): ")
+        if response.lower() in ['y', 'yes']:
+            print("\n🚀 Starting database import...")
+            await import_exercises_to_database(data)
+        else:
+            print("\n⏹️ Import cancelled.")
+            
+    except Exception as e:
+        print(f"\n💥 Error: {e}")
+        raise
+
+
 if __name__ == "__main__":
     import asyncio
-
-    async def import_exercises_to_database(data: Dict[str, Any]):
-        """Import the extracted and validated data to the database"""
-        conn = await get_db_connection()
-        transaction = None
-        
-        try:
-            # Start transaction
-            transaction = conn.transaction()
-            await transaction.start()
-            
-            # Insert intensity units first
-            for unit_name in data["intensity_units"]:
-                await conn.execute("""
-                    INSERT INTO intensity_units (name, abbreviation) 
-                    VALUES ($1, $2) 
-                    ON CONFLICT (name) DO NOTHING
-                """, unit_name, unit_name.lower()[:10])  # Simple abbreviation logic
-            
-            # Insert muscle groups
-            for group_name in data["muscle_groups"]:
-                await conn.execute("""
-                    INSERT INTO muscle_groups (name) 
-                    VALUES ($1) 
-                    ON CONFLICT (name) DO NOTHING
-                """, group_name)
-            
-            # Insert muscles
-            for muscle_name in data["muscles"]:
-                # Get muscle group ID (using the default group)
-                group_id = await conn.fetchval(
-                    "SELECT id FROM muscle_groups WHERE name = $1", 
-                    data["muscle_groups"][0]  # Default group
-                )
-                
-                await conn.execute("""
-                    INSERT INTO muscles (name, muscle_group_id) 
-                    VALUES ($1, $2) 
-                    ON CONFLICT (name) DO NOTHING
-                """, muscle_name, group_id)
-            
-            # Insert exercise types
-            for exercise_type in data["exercise_types"]:
-                # Get default intensity unit ID
-                unit_id = await conn.fetchval(
-                    "SELECT id FROM intensity_units WHERE name = $1", 
-                    data["intensity_units"][0]  # Default unit
-                )
-                
-                await conn.execute("""
-                    INSERT INTO exercise_types 
-                    (external_id, name, description, images_url, default_intensity_unit, created_at) 
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (external_id) DO NOTHING
-                """, 
-                    exercise_type["external_id"],
-                    exercise_type["name"],
-                    exercise_type["description"],
-                    exercise_type["images_url"],
-                    unit_id,
-                    exercise_type["created_at"]
-                )
-            
-            # Insert exercise-muscle relationships
-            for exercise_muscle in data["exercise_muscles"]:
-                # Get exercise type ID
-                exercise_type_id = await conn.fetchval(
-                    "SELECT id FROM exercise_types WHERE external_id = $1",
-                    exercise_muscle["exercise_external_id"]
-                )
-                
-                # Get muscle ID
-                muscle_id = await conn.fetchval(
-                    "SELECT id FROM muscles WHERE name = $1",
-                    exercise_muscle["muscle_name"]
-                )
-                
-                if exercise_type_id and muscle_id:
-                    await conn.execute("""
-                        INSERT INTO exercise_types_muscles (exercise_type_id, muscle_id)
-                        VALUES ($1, $2)
-                        ON CONFLICT (exercise_type_id, muscle_id) DO NOTHING
-                    """, exercise_type_id, muscle_id)
-            
-            # Commit transaction
-            await transaction.commit()
-            print("✅ All data imported successfully!")
-            
-        except Exception as e:
-            # Rollback transaction on any error
-            if transaction:
-                try:
-                    await transaction.rollback()
-                    print(f"❌ Transaction rolled back due to error: {e}")
-                except Exception as rollback_error:
-                    print(f"⚠️ Error during rollback: {rollback_error}")
-            raise e
-        finally:
-            await conn.close()
-
-    async def main():
-        try:
-            print("🔄 Extracting and transforming exercise data...")
-            data = await extract_and_transform_exercises()
-            
-            print(f"📊 Extracted {len(data['exercise_types'])} exercise types, {len(data['muscles'])} muscles")
-            
-            # Pretty print the output for verification
-            print("\n📋 Data preview:")
-            print(json.dumps({
-                "exercise_types_count": len(data['exercise_types']),
-                "muscles_count": len(data['muscles']),
-                "intensity_units": data['intensity_units'],
-                "muscle_groups": data['muscle_groups'],
-                "sample_exercise": data['exercise_types'][0] if data['exercise_types'] else None
-            }, indent=2))
-            
-            # Ask for confirmation before importing
-            response = input("\n🤔 Do you want to import this data to the database? (y/N): ")
-            if response.lower() in ['y', 'yes']:
-                print("\n🚀 Starting database import...")
-                await import_exercises_to_database(data)
-            else:
-                print("\n⏹️ Import cancelled.")
-                
-        except Exception as e:
-            print(f"\n💥 Error: {e}")
-            raise
-
     asyncio.run(main())
