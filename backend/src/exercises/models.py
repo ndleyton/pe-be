@@ -54,7 +54,7 @@ class IntensityUnit(Base):
     """Model for intensity units (kg, lbs, etc.)"""
     __tablename__ = "intensity_units"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     abbreviation = Column(String)
 
 
@@ -62,7 +62,7 @@ class MuscleGroup(Base):
     """Model for muscle groups"""
     __tablename__ = "muscle_groups"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     
     # Relationships
     muscles: Mapped[List["Muscle"]] = relationship("Muscle", back_populates="muscle_group")
@@ -72,7 +72,7 @@ class Muscle(Base):
     """Model for individual muscles"""
     __tablename__ = "muscles"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
     
     # Relationships
