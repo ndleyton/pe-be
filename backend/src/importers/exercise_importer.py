@@ -29,12 +29,15 @@ async def get_import_db_connection():
     """Get database connection to import source using environment variables from settings"""
     try:
         print(f"🔗 Connecting to import source database: {settings.IMPORT_DATABASE_USER}@{settings.IMPORT_DATABASE_HOST}:{settings.IMPORT_DATABASE_PORT}/{settings.IMPORT_DATABASE_NAME}")
+        print("⏳ Attempting source connection with 30s timeout...")
         return await asyncpg.connect(
             user=settings.IMPORT_DATABASE_USER,
             password=settings.IMPORT_DATABASE_PASSWORD,
             database=settings.IMPORT_DATABASE_NAME,
             host=settings.IMPORT_DATABASE_HOST,
-            port=settings.IMPORT_DATABASE_PORT
+            port=settings.IMPORT_DATABASE_PORT,
+            timeout=30,  # 30 second timeout
+            command_timeout=60  # 60 second command timeout
         )
     except Exception as e:
         print(f"❌ Failed to connect to import source database: {e}")
@@ -52,13 +55,19 @@ async def get_target_db_connection():
         from urllib.parse import urlparse
         url = urlparse(settings.DATABASE_URL)
         
-        print(f"🎯 Connecting to target database: {url.username}@{url.hostname}:{url.port}{url.path}")
+        # Use default PostgreSQL port if not specified
+        port = url.port or 5432
+        
+        print(f"🎯 Connecting to target database: {url.username}@{url.hostname}:{port}{url.path}")
+        print("⏳ Attempting connection with 30s timeout...")
         return await asyncpg.connect(
             user=url.username,
             password=url.password,
             database=url.path.lstrip('/'),
             host=url.hostname,
-            port=url.port or 5432
+            port=port,
+            timeout=30,  # 30 second timeout
+            command_timeout=60  # 60 second command timeout
         )
     except Exception as e:
         print(f"❌ Failed to connect to target database: {e}")
