@@ -100,14 +100,10 @@ def validate_exercise_data(exercise_data: Dict[str, Any]) -> None:
                 if not isinstance(parsed, list):
                     raise ValidationError("images_url", images_url, "Must be a JSON array")
 
-                # Ensure every element is a URL-like string (simple scheme check)
-                from urllib.parse import urlparse
-                for url in parsed:
-                    if not isinstance(url, str):
+                # Ensure every element is a string (no URL scheme validation)
+                for element in parsed:
+                    if not isinstance(element, str):
                         raise ValidationError("images_url", images_url, "Array elements must be strings")
-                    parts = urlparse(url)
-                    if parts.scheme not in ("http", "https"):
-                        raise ValidationError("images_url", images_url, f"Invalid URL scheme in '{url}'")
             except json.JSONDecodeError as e:
                 raise ValidationError("images_url", images_url, f"Invalid JSON: {e}")
 
