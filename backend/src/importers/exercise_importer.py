@@ -141,9 +141,11 @@ async def extract_and_transform_exercises():
         muscles = set()
         exercise_muscles = []
 
-        # Use a default muscle group for imported muscles
+        # Default names for grouping and units
         default_muscle_group = "Imported"
         muscle_groups.add(default_muscle_group)
+        # Optional default intensity unit can be None (user-defined later)
+        default_unit: Optional[str] = None
 
         for row in ext_exercises:
             try:
@@ -175,14 +177,16 @@ async def extract_and_transform_exercises():
                 print(f"Skipping invalid exercise (row {row.get('id', 'unknown')}): {e}")
                 continue
 
-            # 2. IntensityUnit Data
-            # Assign a default intensity unit
-            default_unit = "Kilograms"
-            try:
-                validate_intensity_unit_data(default_unit)
-                intensity_units.add(default_unit)
-            except ValidationError as e:
-                print(f"Warning: Invalid intensity unit: {e}")
+            # 2. IntensityUnit Data (optional)
+            if default_unit is None:
+                # Only set once, otherwise preserve previously determined value
+                tentative_unit = "Kilograms"
+                try:
+                    validate_intensity_unit_data(tentative_unit)
+                    default_unit = tentative_unit
+                    intensity_units.add(tentative_unit)
+                except ValidationError as e:
+                    print(f"Warning: Invalid intensity unit: {e}")
 
             # 3. MuscleGroup and Muscle Data
             primary_muscles = row.get("primary_muscles", []) or []
@@ -199,17 +203,29 @@ async def extract_and_transform_exercises():
                     print(f"Skipping invalid muscle '{muscle_name}': {e}")
                     continue
                 
-            # 4. exercise_types_muscles Relationship Data
-            for muscle_name in all_muscles:
+            # 4. exercise_muscles Relationship Data with primary/secondary flag
+            for muscle_name in primary_muscles:
                 try:
                     validate_muscle_data(muscle_name)
                     exercise_muscles.append({
-                        # Keep external_id as string for later lookup
                         "exercise_external_id": str(row["id"]),
-                        "muscle_name": muscle_name
+                        "muscle_name": muscle_name,
+                        "is_primary": True
                     })
                 except ValidationError as e:
-                    print(f"Skipping invalid exercise-muscle relationship for '{muscle_name}': {e}")
+                    print(f"Skipping invalid primary exercise-muscle relationship for '{muscle_name}': {e}")
+                    continue
+
+            for muscle_name in secondary_muscles:
+                try:
+                    validate_muscle_data(muscle_name)
+                    exercise_muscles.append({
+                        "exercise_external_id": str(row["id"]),
+                        "muscle_name": muscle_name,
+                        "is_primary": False
+                    })
+                except ValidationError as e:
+                    print(f"Skipping invalid secondary exercise-muscle relationship for '{muscle_name}': {e}")
                     continue
 
         # No database changes were made; nothing to commit.
@@ -258,7 +274,7 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         
         # Prepare deterministic default names to avoid relying on set → list order
         default_group_name = data.get("default_muscle_group", "Imported")
-        default_unit_name = data.get("default_intensity_unit", "Kilograms")
+        default_unit_name = data.get("default_intensity_unit")
 
         # Insert muscles
         for muscle_name in data["muscles"]:
@@ -277,10 +293,13 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         # Insert exercise types
         for exercise_type in data["exercise_types"]:
             # Get default intensity unit ID
-            unit_id = await conn.fetchval(
-                "SELECT id FROM intensity_units WHERE name = $1", 
-                default_unit_name
-            )
+            if default_unit_name:
+                unit_id = await conn.fetchval(
+                    "SELECT id FROM intensity_units WHERE name = $1", 
+                    default_unit_name
+                )
+            else:
+                unit_id = None
             
             # Convert created_at back to datetime if it's a string
             created_at_value = exercise_type["created_at"]
@@ -320,11 +339,19 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             )
             
             if exercise_type_id and muscle_id:
+                # Maintain association table for ORM relationships
                 await conn.execute("""
                     INSERT INTO exercise_types_muscles (exercise_type_id, muscle_id)
                     VALUES ($1, $2)
                     ON CONFLICT (exercise_type_id, muscle_id) DO NOTHING
                 """, exercise_type_id, muscle_id)
+
+                # Insert into detailed exercise_muscles table with primary flag
+                await conn.execute("""
+                    INSERT INTO exercise_muscles (exercise_type_id, muscle_id, is_primary)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE SET is_primary = EXCLUDED.is_primary
+                """, exercise_type_id, muscle_id, exercise_muscle["is_primary"])
         
         # Commit transaction
         await transaction.commit()

@@ -25,7 +25,7 @@ class ExerciseType(Base):
     
     name = Column(String, unique=True)
     description = Column(String)
-    default_intensity_unit = Column(Integer, default=1, nullable=False)
+    default_intensity_unit = Column(Integer, nullable=True)
     times_used = Column(Integer, default=0, nullable=False)
     external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
