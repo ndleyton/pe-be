@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     LANGFUSE_SECRET_KEY: str = Field("", env="LANGFUSE_SECRET_KEY")
     LANGFUSE_HOST: str = Field("https://us.cloud.langfuse.com", env="LANGFUSE_HOST")
     
+    # Import database configuration (for external data sources)
+    IMPORT_DATABASE_HOST: str = Field("localhost", env="IMPORT_DATABASE_HOST")
+    IMPORT_DATABASE_PORT: int = Field(5432, env="IMPORT_DATABASE_PORT")
+    IMPORT_DATABASE_NAME: str = Field("gym_tracker_development", env="IMPORT_DATABASE_NAME")
+    IMPORT_DATABASE_USER: str = Field("postgres", env="IMPORT_DATABASE_USER")
+    IMPORT_DATABASE_PASSWORD: str = Field("postgres", env="IMPORT_DATABASE_PASSWORD")
+    
     @computed_field
     @property
     def API_PREFIX(self) -> str:

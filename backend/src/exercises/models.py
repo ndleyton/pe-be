@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Table, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -25,8 +25,10 @@ class ExerciseType(Base):
     
     name = Column(String, unique=True)
     description = Column(String)
-    default_intensity_unit = Column(Integer, default=1, nullable=False)
+    default_intensity_unit = Column(Integer, nullable=True)
     times_used = Column(Integer, default=0, nullable=False)
+    external_id = Column(String, unique=True, nullable=True)
+    images_url = Column(Text, nullable=True)
     
     # Relationships
     muscles = relationship("Muscle", secondary=exercise_types_muscles, back_populates="exercise_types")
@@ -52,7 +54,7 @@ class IntensityUnit(Base):
     """Model for intensity units (kg, lbs, etc.)"""
     __tablename__ = "intensity_units"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     abbreviation = Column(String)
 
 
@@ -60,7 +62,7 @@ class MuscleGroup(Base):
     """Model for muscle groups"""
     __tablename__ = "muscle_groups"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     
     # Relationships
     muscles: Mapped[List["Muscle"]] = relationship("Muscle", back_populates="muscle_group")
@@ -70,7 +72,7 @@ class Muscle(Base):
     """Model for individual muscles"""
     __tablename__ = "muscles"
     
-    name = Column(String)
+    name = Column(String, unique=True)
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
     
     # Relationships
@@ -84,5 +86,6 @@ class ExerciseMuscle(Base):
     
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     muscle_id = Column(Integer, ForeignKey("muscles.id"), nullable=False)
+    is_primary = Column(Boolean, nullable=False, default=False, server_default="false")
     
     __table_args__ = (UniqueConstraint('exercise_type_id', 'muscle_id'),) 
