@@ -252,22 +252,38 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         transaction = conn.transaction()
         await transaction.start()
         
-        # Insert intensity units first
+        from datetime import datetime, timezone
+        now_ts = datetime.now(timezone.utc)
+
+        # Helper to ensure sequences are aligned BEFORE any new inserts
+        async def reset_sequence(table: str, seq_name: str | None = None):
+            if not seq_name:
+                seq_name = f"{table}_id_seq"
+            max_id = await conn.fetchval(f"SELECT COALESCE(MAX(id), 0) FROM {table}")
+            await conn.execute("SELECT setval($1, $2, true)", seq_name, max_id)
+
+        # Align sequences for tables that may have been seeded with explicit IDs
+        await reset_sequence("intensity_units")
+        await reset_sequence("muscle_groups")
+        await reset_sequence("muscles")
+        await reset_sequence("exercise_types")
+
+        # Insert intensity units first with timestamps
         for unit_name in data["intensity_units"]:
             await conn.execute("""
-                INSERT INTO intensity_units (name, abbreviation) 
-                VALUES ($1, $2) 
+                INSERT INTO intensity_units (name, abbreviation, created_at, updated_at) 
+                VALUES ($1, $2, $3, $3) 
                 ON CONFLICT (name) DO NOTHING
-            """, unit_name, unit_name.lower()[:10])  # Simple abbreviation logic
+            """, unit_name, unit_name.lower()[:10], now_ts)  # Simple abbreviation logic
         
         # Insert muscle groups
         for group_name in data["muscle_groups"]:
             await conn.execute("""
-                INSERT INTO muscle_groups (name) 
-                VALUES ($1) 
+                INSERT INTO muscle_groups (name, created_at, updated_at) 
+                VALUES ($1, $2, $2) 
                 ON CONFLICT (name) DO NOTHING
-            """, group_name)
-        
+            """, group_name, now_ts)
+
         # Prepare deterministic default names to avoid relying on set → list order
         default_group_name = data.get("default_muscle_group", "Imported")
         default_unit_name = data.get("default_intensity_unit")
@@ -281,10 +297,10 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             )
             
             await conn.execute("""
-                INSERT INTO muscles (name, muscle_group_id) 
-                VALUES ($1, $2) 
+                INSERT INTO muscles (name, muscle_group_id, created_at, updated_at) 
+                VALUES ($1, $2, $3, $3) 
                 ON CONFLICT (name) DO NOTHING
-            """, muscle_name, group_id)
+            """, muscle_name, group_id, now_ts)
         
         # Insert exercise types
         for exercise_type in data["exercise_types"]:
@@ -308,8 +324,8 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             
             await conn.execute("""
                 INSERT INTO exercise_types 
-                (external_id, name, description, images_url, default_intensity_unit, created_at) 
-                VALUES ($1, $2, $3, $4, $5, $6)
+                (external_id, name, description, images_url, default_intensity_unit, created_at, updated_at) 
+                VALUES ($1, $2, $3, $4, $5, $6, $6)
                 ON CONFLICT (external_id) DO NOTHING
             """, 
                 exercise_type["external_id"],
@@ -344,10 +360,12 @@ async def import_exercises_to_database(data: Dict[str, Any]):
 
                 # Insert into detailed exercise_muscles table with primary flag
                 await conn.execute("""
-                    INSERT INTO exercise_muscles (exercise_type_id, muscle_id, is_primary)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE SET is_primary = EXCLUDED.is_primary
-                """, exercise_type_id, muscle_id, exercise_muscle["is_primary"])
+                    INSERT INTO exercise_muscles (exercise_type_id, muscle_id, is_primary, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $4)
+                    ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE SET is_primary = EXCLUDED.is_primary,
+                    updated_at = EXCLUDED.updated_at,
+                    created_at = exercise_muscles.created_at
+                """, exercise_type_id, muscle_id, exercise_muscle["is_primary"], now_ts)
         
         # Commit transaction
         await transaction.commit()
