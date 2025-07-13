@@ -256,7 +256,7 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         now_ts = datetime.now(timezone.utc)
 
         # Helper to ensure sequences are aligned BEFORE any new inserts
-        async def reset_sequence(table: str, seq_name: str | None = None):
+        async def reset_sequence(table: str, seq_name: Optional[str] = None):
             if not seq_name:
                 seq_name = f"{table}_id_seq"
             max_id = await conn.fetchval(f"SELECT COALESCE(MAX(id), 0) FROM {table}")
