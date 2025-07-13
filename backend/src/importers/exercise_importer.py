@@ -362,9 +362,10 @@ async def import_exercises_to_database(data: Dict[str, Any]):
                 await conn.execute("""
                     INSERT INTO exercise_muscles (exercise_type_id, muscle_id, is_primary, created_at, updated_at)
                     VALUES ($1, $2, $3, $4, $4)
-                    ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE SET is_primary = EXCLUDED.is_primary,
-                    updated_at = EXCLUDED.updated_at,
-                    created_at = exercise_muscles.created_at
+                    ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE SET
+                        is_primary = EXCLUDED.is_primary,
+                        updated_at = EXCLUDED.updated_at,
+                        created_at = exercise_muscles.created_at
                 """, exercise_type_id, muscle_id, exercise_muscle["is_primary"], now_ts)
         
         # Commit transaction
