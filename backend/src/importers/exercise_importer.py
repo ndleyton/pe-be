@@ -25,10 +25,10 @@ except ImportError:
     settings = FallbackSettings()
     print("⚠️  Using fallback settings from environment variables")
 
-async def get_db_connection():
-    """Get database connection using environment variables from settings"""
+async def get_import_db_connection():
+    """Get database connection to import source using environment variables from settings"""
     try:
-        print(f"🔗 Connecting to import database: {settings.IMPORT_DATABASE_USER}@{settings.IMPORT_DATABASE_HOST}:{settings.IMPORT_DATABASE_PORT}/{settings.IMPORT_DATABASE_NAME}")
+        print(f"🔗 Connecting to import source database: {settings.IMPORT_DATABASE_USER}@{settings.IMPORT_DATABASE_HOST}:{settings.IMPORT_DATABASE_PORT}/{settings.IMPORT_DATABASE_NAME}")
         return await asyncpg.connect(
             user=settings.IMPORT_DATABASE_USER,
             password=settings.IMPORT_DATABASE_PASSWORD,
@@ -37,13 +37,32 @@ async def get_db_connection():
             port=settings.IMPORT_DATABASE_PORT
         )
     except Exception as e:
-        print(f"❌ Failed to connect to import database: {e}")
+        print(f"❌ Failed to connect to import source database: {e}")
         print(f"📝 Make sure the following environment variables are set:")
         print(f"   IMPORT_DATABASE_HOST={settings.IMPORT_DATABASE_HOST}")
         print(f"   IMPORT_DATABASE_PORT={settings.IMPORT_DATABASE_PORT}")
         print(f"   IMPORT_DATABASE_NAME={settings.IMPORT_DATABASE_NAME}")
         print(f"   IMPORT_DATABASE_USER={settings.IMPORT_DATABASE_USER}")
         print(f"   IMPORT_DATABASE_PASSWORD=*** (hidden)")
+        raise
+
+async def get_target_db_connection():
+    """Get database connection to target database using main DATABASE_URL"""
+    try:
+        from urllib.parse import urlparse
+        url = urlparse(settings.DATABASE_URL)
+        
+        print(f"🎯 Connecting to target database: {url.username}@{url.hostname}:{url.port}{url.path}")
+        return await asyncpg.connect(
+            user=url.username,
+            password=url.password,
+            database=url.path.lstrip('/'),
+            host=url.hostname,
+            port=url.port or 5432
+        )
+    except Exception as e:
+        print(f"❌ Failed to connect to target database: {e}")
+        print(f"📝 DATABASE_URL: {settings.DATABASE_URL}")
         raise
 
 class ValidationError(ValueError):
@@ -122,7 +141,7 @@ def validate_intensity_unit_data(unit_name: str) -> None:
 
 
 async def extract_and_transform_exercises():
-    conn = await get_db_connection()
+    conn = await get_import_db_connection()
     transaction = None
     try:
         
@@ -241,7 +260,7 @@ async def extract_and_transform_exercises():
 
 async def import_exercises_to_database(data: Dict[str, Any]):
     """Import the extracted and validated data to the database"""
-    conn = await get_db_connection()
+    conn = await get_target_db_connection()
     transaction = None
     
     try:
