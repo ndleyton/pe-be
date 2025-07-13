@@ -13,8 +13,6 @@ try:
     from src.core.config import settings
 except ImportError:
     # Fallback: try to import from environment variables directly
-    import os
-    from dataclasses import dataclass
     
     @dataclass
     class FallbackSettings:
@@ -48,8 +46,7 @@ async def get_db_connection():
         print(f"   IMPORT_DATABASE_PASSWORD=*** (hidden)")
         raise
 
-@dataclass
-class ValidationError(Exception):
+class ValidationError(ValueError):
     """Custom exception for validation errors"""
     field: str
     value: Any
