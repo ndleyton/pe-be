@@ -1,7 +1,5 @@
-
 import asyncpg
 import json
-import hashlib
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import sys
@@ -70,23 +68,20 @@ def validate_exercise_data(exercise_data: Dict[str, Any]) -> None:
         if field not in exercise_data or exercise_data[field] is None:
             raise ValidationError(field, exercise_data.get(field), f"Required field '{field}' is missing or None")
     
-    # Validate external_id - convert to integer if needed
+    # Validate external_id (can be string or integer, will be stored as string)
     external_id = exercise_data["external_id"]
     if external_id is not None:
-        if isinstance(external_id, str):
-            # For string IDs, create a hash-based integer ID
-            hash_obj = hashlib.md5(external_id.encode())
-            exercise_data["external_id"] = int(hash_obj.hexdigest()[:8], 16)  # Use first 8 hex chars as int
-        elif isinstance(external_id, int):
-            if external_id <= 0:
-                raise ValidationError("external_id", external_id, "Must be a positive integer")
-        else:
-            raise ValidationError("external_id", external_id, "Must be a string or integer")
+        # Convert to string for consistent storage
+        exercise_data["external_id"] = str(external_id)
+        if not exercise_data["external_id"].strip():
+            raise ValidationError("external_id", external_id, "Cannot be empty string")
     
     # Validate name is a non-empty string
     name = exercise_data["name"]
     if not isinstance(name, str) or not name.strip():
         raise ValidationError("name", name, "Must be a non-empty string")
+    if len(name) > 255:
+        raise ValidationError("name", name, "Name too long (max 255 characters)")
     
     # Validate description if present
     if "description" in exercise_data and exercise_data["description"] is not None:
@@ -96,7 +91,7 @@ def validate_exercise_data(exercise_data: Dict[str, Any]) -> None:
         if len(description) > 10000:  # Reasonable limit
             raise ValidationError("description", description, "Description too long (max 10000 characters)")
     
-    # Validate images_url is valid JSON if present
+    # Validate images_url is valid JSON if present and contains only URL strings
     if "images_url" in exercise_data and exercise_data["images_url"] is not None:
         images_url = exercise_data["images_url"]
         if isinstance(images_url, str):
@@ -104,6 +99,15 @@ def validate_exercise_data(exercise_data: Dict[str, Any]) -> None:
                 parsed = json.loads(images_url)
                 if not isinstance(parsed, list):
                     raise ValidationError("images_url", images_url, "Must be a JSON array")
+
+                # Ensure every element is a URL-like string (simple scheme check)
+                from urllib.parse import urlparse
+                for url in parsed:
+                    if not isinstance(url, str):
+                        raise ValidationError("images_url", images_url, "Array elements must be strings")
+                    parts = urlparse(url)
+                    if parts.scheme not in ("http", "https"):
+                        raise ValidationError("images_url", images_url, f"Invalid URL scheme in '{url}'")
             except json.JSONDecodeError as e:
                 raise ValidationError("images_url", images_url, f"Invalid JSON: {e}")
 
@@ -128,9 +132,6 @@ async def extract_and_transform_exercises():
     conn = await get_db_connection()
     transaction = None
     try:
-        # Start transaction
-        transaction = conn.transaction()
-        await transaction.start()
         
         ext_exercises = await conn.fetch("SELECT * FROM ext.exercises")
 
@@ -157,8 +158,10 @@ async def extract_and_transform_exercises():
                 ]
                 description = "\n".join(filter(None, description_parts))
                 
+                # Convert legacy numeric id to string immediately so we keep the same
+                # representation everywhere (DB column is now TEXT).
                 exercise_type = {
-                    "external_id": row["id"],
+                    "external_id": str(row["id"]) if row["id"] is not None else None,
                     "name": row["name"],
                     "description": description,
                     "images_url": json.dumps(row.get("images", [])),
@@ -201,15 +204,15 @@ async def extract_and_transform_exercises():
                 try:
                     validate_muscle_data(muscle_name)
                     exercise_muscles.append({
-                        "exercise_external_id": row["id"],
+                        # Keep external_id as string for later lookup
+                        "exercise_external_id": str(row["id"]),
                         "muscle_name": muscle_name
                     })
                 except ValidationError as e:
                     print(f"Skipping invalid exercise-muscle relationship for '{muscle_name}': {e}")
                     continue
 
-        # Commit transaction if we get here successfully
-        await transaction.commit()
+        # No database changes were made; nothing to commit.
         
         return {
             "exercise_types": exercise_types,
@@ -217,16 +220,12 @@ async def extract_and_transform_exercises():
             "muscle_groups": list(muscle_groups),
             "muscles": list(muscles),
             "exercise_muscles": exercise_muscles,
+            # Deterministic defaults for later import phase
+            "default_muscle_group": default_muscle_group,
+            "default_intensity_unit": default_unit,
         }
 
     except Exception as e:
-        # Rollback transaction on any error
-        if transaction:
-            try:
-                await transaction.rollback()
-                print(f"Transaction rolled back due to error: {e}")
-            except Exception as rollback_error:
-                print(f"Error during rollback: {rollback_error}")
         raise e
     finally:
         await conn.close()
@@ -257,12 +256,16 @@ async def import_exercises_to_database(data: Dict[str, Any]):
                 ON CONFLICT (name) DO NOTHING
             """, group_name)
         
+        # Prepare deterministic default names to avoid relying on set → list order
+        default_group_name = data.get("default_muscle_group", "Imported")
+        default_unit_name = data.get("default_intensity_unit", "Kilograms")
+
         # Insert muscles
         for muscle_name in data["muscles"]:
             # Get muscle group ID (using the default group)
             group_id = await conn.fetchval(
                 "SELECT id FROM muscle_groups WHERE name = $1", 
-                data["muscle_groups"][0]  # Default group
+                default_group_name
             )
             
             await conn.execute("""
@@ -276,7 +279,7 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             # Get default intensity unit ID
             unit_id = await conn.fetchval(
                 "SELECT id FROM intensity_units WHERE name = $1", 
-                data["intensity_units"][0]  # Default unit
+                default_unit_name
             )
             
             # Convert created_at back to datetime if it's a string
@@ -284,6 +287,9 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             if isinstance(created_at_value, str):
                 from datetime import datetime
                 created_at_value = datetime.fromisoformat(created_at_value)
+            if created_at_value is None:
+                from datetime import datetime, timezone
+                created_at_value = datetime.now(timezone.utc)
             
             await conn.execute("""
                 INSERT INTO exercise_types 
@@ -304,7 +310,7 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             # Get exercise type ID
             exercise_type_id = await conn.fetchval(
                 "SELECT id FROM exercise_types WHERE external_id = $1",
-                exercise_muscle["exercise_external_id"]
+                str(exercise_muscle["exercise_external_id"])
             )
             
             # Get muscle ID

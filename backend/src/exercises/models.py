@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Table, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -27,7 +27,7 @@ class ExerciseType(Base):
     description = Column(String)
     default_intensity_unit = Column(Integer, default=1, nullable=False)
     times_used = Column(Integer, default=0, nullable=False)
-    external_id = Column(Integer, unique=True, nullable=True)
+    external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
     
     # Relationships
@@ -86,5 +86,6 @@ class ExerciseMuscle(Base):
     
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     muscle_id = Column(Integer, ForeignKey("muscles.id"), nullable=False)
+    is_primary = Column(Boolean, nullable=False, default=False, server_default="false")
     
     __table_args__ = (UniqueConstraint('exercise_type_id', 'muscle_id'),) 
