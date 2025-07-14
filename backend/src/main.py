@@ -9,6 +9,7 @@ from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
 from src.exercise_sets.router import router as exercise_sets_router
 from src.recipes.router import router as recipes_router
+from src.admin.router import router as admin_router
 
 
 def create_app() -> FastAPI:
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(exercises_router, prefix=f"{api_prefix}/exercises", tags=["exercises"])
     app.include_router(exercise_sets_router, prefix=f"{api_prefix}/exercise-sets", tags=["exercise-sets"])
     app.include_router(recipes_router, prefix=f"{api_prefix}/recipes", tags=["recipes"])
+    app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
 
 
     # Health check endpoint
