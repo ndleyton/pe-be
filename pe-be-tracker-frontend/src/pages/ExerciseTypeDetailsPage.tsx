@@ -130,7 +130,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           {/* Exercise Images */}
           <Card className="shadow-md">
             <CardContent className="pt-6">
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                 {exerciseType.images && exerciseType.images.length > 0 ? (
                   <Carousel className="w-full h-full">
                     <CarouselContent>
@@ -157,7 +157,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                     )}
                   </Carousel>
                 ) : (
-                  <div className="text-center text-gray-500 flex flex-col items-center justify-center">
+                  <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
                     <Image className="h-16 w-16 mx-auto mb-2" />
                     <p>Exercise image coming soon</p>
                   </div>
@@ -171,7 +171,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700">
+              <p className="text-muted-foreground">
                 {exerciseType.description || 'No description available for this exercise type.'}
               </p>
             </CardContent>
@@ -208,7 +208,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               ) : stats?.progressiveOverload && stats.progressiveOverload.length > 0 ? (
                 <ProgressiveOverloadChart data={stats.progressiveOverload} />
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <p>No workout data available yet.</p>
                   <p className="text-sm">Start tracking workouts to see your progress!</p>
                 </div>
@@ -230,7 +230,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                   intensityUnit={stats.intensityUnit}
                 />
               ) : (
-                <p className="text-gray-500">You haven't done this exercise yet.</p>
+                <p className="text-muted-foreground">You haven't done this exercise yet.</p>
               )}
             </CardContent>
           </Card>
@@ -249,7 +249,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                   intensityUnit={stats.intensityUnit}
                 />
               ) : (
-                <p className="text-gray-500">No personal best recorded yet.</p>
+                <p className="text-muted-foreground">No personal best recorded yet.</p>
               )}
             </CardContent>
           </Card>
@@ -260,12 +260,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg">
-                  <div className="text-sm font-medium text-gray-500">Times Used</div>
+                  <div className="text-sm font-medium text-muted-foreground">Times Used</div>
                   <div className="text-2xl font-bold text-primary">{exerciseType.times_used}</div>
                 </div>
                 {stats?.totalSets && (
                   <div className="p-4 border rounded-lg">
-                    <div className="text-sm font-medium text-gray-500">Total Sets</div>
+                    <div className="text-sm font-medium text-muted-foreground">Total Sets</div>
                     <div className="text-2xl font-bold text-secondary">{stats.totalSets}</div>
                   </div>
                 )}
