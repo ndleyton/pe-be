@@ -3,17 +3,13 @@ Simplified Recipe CRUD unit tests focusing on core business logic.
 These tests validate the Recipe models, schemas, and basic CRUD operations.
 """
 import pytest
-from datetime import datetime
 from pydantic import ValidationError
 
 from src.recipes.schemas import (
     RecipeCreate, 
     RecipeUpdate, 
     ExerciseTemplateCreate, 
-    SetTemplateCreate,
-    RecipeRead,
-    ExerciseTemplateRead,
-    SetTemplateRead
+    SetTemplateCreate
 )
 
 

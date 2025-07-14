@@ -41,9 +41,11 @@ class ExerciseTypeService:
     """Service layer for exercise type business logic"""
     
     @staticmethod
-    async def get_all_exercise_types(session: AsyncSession, order_by: str = "usage") -> List[ExerciseType]:
+    async def get_all_exercise_types(
+        session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
+    ) -> List[ExerciseType]:
         """Get all exercise types with optional ordering"""
-        return await get_exercise_types(session, order_by)
+        return await get_exercise_types(session, order_by, offset, limit)
     
     @staticmethod
     async def get_exercise_type(session: AsyncSession, exercise_type_id: int) -> Optional[ExerciseType]:

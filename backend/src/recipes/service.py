@@ -2,7 +2,6 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.recipes import crud
-from src.recipes.models import Recipe
 from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate
 
 

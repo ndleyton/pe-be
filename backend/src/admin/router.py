@@ -59,8 +59,8 @@ async def import_status() -> Dict[str, Any]:
                     text("SELECT COUNT(*) FROM ext.exercises")
                 )
                 total_available = ext_result.scalar()
-            except:
-                total_available = "Unknown (ext.exercises not found)"
+            except Exception as e:
+                total_available = f"Unknown (ext.exercises not found: {e})"
             
             return {
                 "imported_exercises": imported_count,

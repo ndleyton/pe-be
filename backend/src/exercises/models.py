@@ -1,7 +1,6 @@
-from datetime import datetime, timezone
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Table, UniqueConstraint, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Table, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
