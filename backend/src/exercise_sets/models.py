@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey

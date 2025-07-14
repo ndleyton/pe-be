@@ -1,13 +1,10 @@
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update, func, and_, cast
-from sqlalchemy.sql import text
+from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
 
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
-from src.exercise_sets.models import ExerciseSet
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 
 
@@ -66,7 +63,9 @@ async def create_exercise(session: AsyncSession, exercise_create: ExerciseCreate
 
 
 # Exercise Type CRUD operations
-async def get_exercise_types(session: AsyncSession, order_by: str = "usage") -> List[ExerciseType]:
+async def get_exercise_types(
+    session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
+) -> List[ExerciseType]:
     """Get all exercise types with optional ordering"""
     query = select(ExerciseType).options(
         selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
@@ -82,7 +81,7 @@ async def get_exercise_types(session: AsyncSession, order_by: str = "usage") -> 
         # Default to usage-based ordering
         query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
     
-    result = await session.execute(query)
+    result = await session.execute(query.offset(offset).limit(limit))
     return result.scalars().all()
 
 

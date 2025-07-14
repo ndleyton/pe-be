@@ -60,8 +60,7 @@ class Settings(BaseSettings):
             raise ValueError('DATABASE_URL must start with postgresql:// or postgresql+asyncpg://')
         
         # Check for placeholder values
-        placeholder_indicators = ['user:pass@host:port', 'localhost:5432/pe_be']
-        if any(placeholder in v for placeholder in ['user:pass@host:port']):
+        if 'user:pass@host:port' in v:
             raise ValueError('DATABASE_URL contains placeholder values. Please set a valid DATABASE_URL environment variable.')
         
         return v

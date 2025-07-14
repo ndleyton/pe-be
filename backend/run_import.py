@@ -5,7 +5,6 @@ This script ensures proper Python path setup and environment loading.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add the backend directory to Python path

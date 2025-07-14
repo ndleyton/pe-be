@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi.responses import RedirectResponse
 from fastapi import Depends, Request, status, Response
-from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin, models
+from fastapi_users import BaseUserManager, IntegerIDMixin
 from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,

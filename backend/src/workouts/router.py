@@ -1,13 +1,14 @@
 from typing import List
-from fastapi import Depends, APIRouter, status, HTTPException
+from fastapi import Depends, APIRouter, status, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.workouts.models import Workout
 from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse, AddExerciseRequest
 from src.workouts.service import WorkoutService, WorkoutTypeService, WorkoutParsingService
 from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User
+from src.exercises.service import ExerciseService
+from src.exercises.schemas import ExerciseRead
 
 router = APIRouter(tags=["workouts"])
 
@@ -17,10 +18,12 @@ router = APIRouter(tags=["workouts"])
 @router.get("/mine", response_model=List[WorkoutRead])
 async def get_my_workouts(
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=1000),
 ):
     """Get all workouts for the current user"""
-    return await WorkoutService.get_my_workouts(session, user.id)
+    return await WorkoutService.get_my_workouts(session, user.id, offset, limit)
 
 
 @router.post("/", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
@@ -44,7 +47,7 @@ async def parse_workout_text(
         return await WorkoutParsingService.parse_workout_text(parse_request.workout_text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal server error while parsing workout")
 
 
@@ -127,10 +130,7 @@ async def delete_workout(
         raise HTTPException(status_code=404, detail="Workout not found")
 
 
-# ----- Nested resources -----
 
-from src.exercises.service import ExerciseService
-from src.exercises.schemas import ExerciseRead
 
 @router.get("/{workout_id}/exercises", response_model=List[ExerciseRead])
 async def get_exercises_in_workout(
