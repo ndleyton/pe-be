@@ -43,10 +43,10 @@ async def import_exercises() -> Dict[str, Any]:
 async def import_status() -> Dict[str, Any]:
     """Check if exercises have been imported"""
     try:
-        from src.core.database import get_async_session
+        from src.core.database import async_session_maker
         from sqlalchemy import text
         
-        async with get_async_session() as session:
+        async with async_session_maker() as session:
             # Check how many exercises with external_id exist
             result = await session.execute(
                 text("SELECT COUNT(*) FROM exercise_types WHERE external_id IS NOT NULL")
