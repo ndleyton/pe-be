@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone, date
 from pydantic import validator, BaseModel, Field
 
@@ -110,8 +110,7 @@ class IntensityUnitRead(BaseModel):
         from_attributes = True
 
 
-# Forward reference will be resolved by Pydantic
-from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from src.exercise_sets.schemas import ExerciseSetRead 

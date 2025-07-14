@@ -1,6 +1,6 @@
 import asyncpg
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 import sys
 import os
@@ -41,12 +41,12 @@ async def get_import_db_connection():
         )
     except Exception as e:
         print(f"❌ Failed to connect to import source database: {e}")
-        print(f"📝 Make sure the following environment variables are set:")
+        print("📝 Make sure the following environment variables are set:")
         print(f"   IMPORT_DATABASE_HOST={settings.IMPORT_DATABASE_HOST}")
         print(f"   IMPORT_DATABASE_PORT={settings.IMPORT_DATABASE_PORT}")
         print(f"   IMPORT_DATABASE_NAME={settings.IMPORT_DATABASE_NAME}")
         print(f"   IMPORT_DATABASE_USER={settings.IMPORT_DATABASE_USER}")
-        print(f"   IMPORT_DATABASE_PASSWORD=*** (hidden)")
+        print("   IMPORT_DATABASE_PASSWORD=*** (hidden)")
         raise
 
 async def get_target_db_connection():
@@ -151,7 +151,6 @@ def validate_intensity_unit_data(unit_name: str) -> None:
 
 async def extract_and_transform_exercises():
     conn = await get_import_db_connection()
-    transaction = None
     try:
         
         ext_exercises = await conn.fetch("SELECT * FROM ext.exercises")

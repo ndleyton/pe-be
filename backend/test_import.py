@@ -5,7 +5,6 @@ This script tests the importer without interactive prompts.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add the backend directory to Python path

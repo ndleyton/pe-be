@@ -2,9 +2,6 @@
 Unit tests for Recipe CRUD operations using mocks.
 These tests focus on the CRUD logic without requiring database setup.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime
 
 from src.recipes.crud import (
     create_recipe,
@@ -126,7 +123,7 @@ class TestRecipeCRUDLogic:
     def test_recipe_creation_data_flow(self):
         """Test the expected data flow for recipe creation."""
         # Simulate the data that would flow through create_recipe function
-        user_id = 123
+        
         recipe_create_data = RecipeCreate(
             name="Data Flow Test",
             description="Testing data transformation",
@@ -166,17 +163,14 @@ class TestRecipeCRUDLogic:
     def test_user_ownership_validation_logic(self):
         """Test the user ownership validation patterns used in CRUD operations."""
         # This test documents the expected pattern for user ownership checks
-        user_id_1 = 100
-        user_id_2 = 200
-        recipe_id = 1
         
         # Recipe creation should associate with the correct user
         recipe_data = RecipeCreate(name="Ownership Test", workout_type_id=1)
         
         # In actual CRUD operations, these patterns would be used:
-        # 1. create_recipe(session, recipe_data, user_id_1) -> recipe.creator_id = user_id_1
-        # 2. get_recipe_by_id(session, recipe_id, user_id_1) -> filters by creator_id
-        # 3. get_recipe_by_id(session, recipe_id, user_id_2) -> returns None (wrong user)
+        # 1. create_recipe(session, recipe_data, user_id) -> recipe.creator_id = user_id
+        # 2. get_recipe_by_id(session, recipe_id, user_id) -> filters by creator_id
+        # 3. get_recipe_by_id(session, recipe_id, different_user_id) -> returns None (wrong user)
         
         # This test validates the schema supports the ownership pattern
         assert recipe_data.name == "Ownership Test"

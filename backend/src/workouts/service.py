@@ -38,9 +38,11 @@ class WorkoutService:
         return await get_workout_by_id(session, workout_id, user_id)
     
     @staticmethod
-    async def get_my_workouts(session: AsyncSession, user_id: int) -> List[Workout]:
+    async def get_my_workouts(
+        session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+    ) -> List[Workout]:
         """Get all workouts for a user"""
-        return await get_user_workouts(session, user_id)
+        return await get_user_workouts(session, user_id, offset, limit)
     
     @staticmethod
     async def create_new_workout(session: AsyncSession, workout_data: WorkoutCreate, user_id: int) -> Workout:

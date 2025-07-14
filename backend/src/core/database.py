@@ -2,7 +2,6 @@ import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
-from fastapi import Depends
 from sqlalchemy import Column, Integer, DateTime, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase

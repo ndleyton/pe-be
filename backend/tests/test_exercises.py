@@ -1,8 +1,4 @@
-import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from src.core.config import settings
 from src.exercises.models import ExerciseType
@@ -107,11 +103,10 @@ class TestExerciseTypesUsage:
     def test_exercise_type_schema_includes_times_used(self):
         """Test that ExerciseTypeRead schema includes times_used field."""
         from src.exercises.schemas import ExerciseTypeRead
-        import inspect
         
         # Get the schema annotations
         annotations = ExerciseTypeRead.__annotations__
         
         # Check that times_used is in the schema
         assert 'times_used' in annotations
-        assert annotations['times_used'] == int
+        assert annotations['times_used'] is int
