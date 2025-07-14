@@ -21,7 +21,6 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     from sqlalchemy.sql import table, column
-    import sqlalchemy as sa
     import datetime
 
     now = datetime.datetime.now()

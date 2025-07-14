@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi_users import FastAPIUsers
 
 from src.users.models import User, OAuthAccount
@@ -9,7 +9,7 @@ from src.core.security import (
     get_user_manager,
     google_oauth_client
 )
-from src.core.dependencies import get_user_db, set_user_models
+from src.core.dependencies import set_user_models
 
 # Set user models for dependencies
 set_user_models(User, OAuthAccount)

@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import Depends, APIRouter, status, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,13 +33,15 @@ exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-type
 @exercise_types_router.get("", response_model=List[ExerciseTypeRead])
 async def get_exercise_types(
     order_by: Optional[str] = Query(
-        default="usage", 
-        description="Sort order: 'usage' for usage-based sort, 'name' for alphabetical"
+        default="usage",
+        description="Sort order: 'usage' for usage-based sort, 'name' for alphabetical",
     ),
-    session: AsyncSession = Depends(get_async_session)
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=1000),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database."""
-    return await ExerciseTypeService.get_all_exercise_types(session, order_by)
+    return await ExerciseTypeService.get_all_exercise_types(session, order_by, offset, limit)
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
 async def get_exercise_type(

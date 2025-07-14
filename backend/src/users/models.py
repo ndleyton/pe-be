@@ -1,7 +1,9 @@
-from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from src.workouts.models import Workout
+from src.recipes.models import Recipe
+
+from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable, SQLAlchemyBaseOAuthAccountTable
 

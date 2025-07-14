@@ -1,9 +1,8 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi_users.db import SQLAlchemyUserDatabase
 
-from src.users.models import User, OAuthAccount
+from src.users.models import User
 from src.users.schemas import UserCreate, UserUpdate
 
 
