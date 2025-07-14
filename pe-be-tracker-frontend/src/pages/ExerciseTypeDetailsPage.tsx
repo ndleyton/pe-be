@@ -18,6 +18,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
@@ -120,27 +127,41 @@ const ExerciseTypeDetailsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          {/* Exercise Image */}
+          {/* Exercise Images */}
           <Card className="shadow-md">
             <CardContent className="pt-6">
               <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                 {exerciseType.images && exerciseType.images.length > 0 ? (
-                  <img 
-                    src={exerciseType.images[0]} 
-                    alt={exerciseType.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = target.parentElement?.querySelector('.fallback') as HTMLElement;
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div className={`text-center text-gray-500 ${exerciseType.images && exerciseType.images.length > 0 ? 'fallback hidden' : ''}`} style={{ display: exerciseType.images && exerciseType.images.length > 0 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <Image className="h-16 w-16 mx-auto mb-2" />
-                  <p>Exercise image coming soon</p>
-                </div>
+                  <Carousel className="w-full h-full">
+                    <CarouselContent>
+                      {exerciseType.images.map((imageUrl, index) => (
+                        <CarouselItem key={index}>
+                          <img 
+                            src={imageUrl} 
+                            alt={`${exerciseType.name} - Image ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '';
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    {exerciseType.images.length > 1 && (
+                      <>
+                        <CarouselPrevious className="left-2" />
+                        <CarouselNext className="right-2" />
+                      </>
+                    )}
+                  </Carousel>
+                ) : (
+                  <div className="text-center text-gray-500 flex flex-col items-center justify-center">
+                    <Image className="h-16 w-16 mx-auto mb-2" />
+                    <p>Exercise image coming soon</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
