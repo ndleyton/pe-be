@@ -1,6 +1,8 @@
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone, date
-from pydantic import validator, BaseModel, Field
+from pydantic import validator, BaseModel, Field, computed_field
+import json
+from src.core.config import settings
 
 
 class ExerciseBase(BaseModel):
@@ -91,8 +93,40 @@ class ExerciseTypeRead(BaseModel):
     default_intensity_unit: int
     times_used: int
     muscles: List[MuscleRead] = []
+    images_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def images(self) -> List[str]:
+        """Process image URLs with IMAGE_URL_PREFIX for relative URLs"""
+        if not self.images_url:
+            return []
+        
+        try:
+            image_list = json.loads(self.images_url) if isinstance(self.images_url, str) else self.images_url
+            if not isinstance(image_list, list):
+                return []
+            
+            processed_images = []
+            for image_url in image_list:
+                if not image_url:
+                    continue
+                
+                # If it's already an absolute URL, use as-is
+                if image_url.startswith(('http://', 'https://')):
+                    processed_images.append(image_url)
+                else:
+                    # For relative URLs, prepend the IMAGE_URL_PREFIX
+                    if settings.IMAGE_URL_PREFIX:
+                        processed_images.append(f"{settings.IMAGE_URL_PREFIX.rstrip('/')}/{image_url.lstrip('/')}")
+                    else:
+                        processed_images.append(image_url)
+            
+            return processed_images
+        except (json.JSONDecodeError, TypeError):
+            return []
 
     class Config:
         from_attributes = True

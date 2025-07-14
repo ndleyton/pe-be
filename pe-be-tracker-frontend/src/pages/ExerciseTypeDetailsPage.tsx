@@ -120,11 +120,24 @@ const ExerciseTypeDetailsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          {/* Exercise Image Placeholder */}
+          {/* Exercise Image */}
           <Card className="shadow-md">
             <CardContent className="pt-6">
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
+              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                {exerciseType.images && exerciseType.images.length > 0 ? (
+                  <img 
+                    src={exerciseType.images[0]} 
+                    alt={exerciseType.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.parentElement?.querySelector('.fallback') as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={`text-center text-gray-500 ${exerciseType.images && exerciseType.images.length > 0 ? 'fallback hidden' : ''}`} style={{ display: exerciseType.images && exerciseType.images.length > 0 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <Image className="h-16 w-16 mx-auto mb-2" />
                   <p>Exercise image coming soon</p>
                 </div>

@@ -11,6 +11,7 @@ export interface ExerciseType {
   default_intensity_unit: number;
   times_used: number;
   muscles?: Muscle[];
+  images?: string[];
   created_at?: string;
   updated_at?: string;
 }

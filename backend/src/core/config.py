@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     IMPORT_DATABASE_USER: str = Field("postgres", env="IMPORT_DATABASE_USER")
     IMPORT_DATABASE_PASSWORD: str = Field("postgres", env="IMPORT_DATABASE_PASSWORD")
     
+    # Image configuration
+    IMAGE_URL_PREFIX: str = Field("", env="IMAGE_URL_PREFIX", description="URL prefix for exercise images")
+    
     @computed_field
     @property
     def API_PREFIX(self) -> str:
