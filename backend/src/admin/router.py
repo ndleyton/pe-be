@@ -4,6 +4,9 @@ Admin endpoints for maintenance tasks
 
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -34,10 +37,8 @@ async def import_exercises() -> Dict[str, Any]:
             }
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Import failed: {str(e)}"
-        )
+        logger.exception("Exercise import failed: %s", e)
+        raise HTTPException(status_code=500, detail="Import failed")
 
 @router.get("/import-exercises/status")
 async def import_status() -> Dict[str, Any]:
@@ -69,7 +70,5 @@ async def import_status() -> Dict[str, Any]:
                 "status": "imported" if imported_count > 0 else "pending"
             }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Status check failed: {str(e)}"
-        )
+        logger.exception("Import status check failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to retrieve import status")
