@@ -1,7 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
@@ -18,12 +17,16 @@ async def get_workout_by_id(session: AsyncSession, workout_id: int, user_id: int
     return result.scalar_one_or_none()
 
 
-async def get_user_workouts(session: AsyncSession, user_id: int) -> List[Workout]:
+async def get_user_workouts(
+    session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+) -> List[Workout]:
     """Get all workouts for a user"""
     result = await session.execute(
         select(Workout)
         .where(Workout.owner_id == user_id)
         .order_by(Workout.start_time.desc())
+        .offset(offset)
+        .limit(limit)
     )
     return result.scalars().all()
 
