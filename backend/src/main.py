@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, JSONResponse
-import logging
+from fastapi.responses import RedirectResponse
 from httpx_oauth.oauth2 import OAuth2Error
 
 from src.core.config import settings
@@ -83,15 +82,6 @@ def create_app() -> FastAPI:
         return RedirectResponse(redirect_url)
 
     app.add_exception_handler(OAuth2Error, oauth_exception_handler)
-
-    # Generic fallback exception handler to avoid leaking internals
-    logger = logging.getLogger("pe_tracker.api")
-
-    @app.exception_handler(Exception)
-    async def generic_exception_handler(request: Request, exc: Exception):
-        """Catch-all handler that logs the error and returns a generic message."""
-        logger.exception("Unhandled server error: %s", exc)
-        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     return app
 

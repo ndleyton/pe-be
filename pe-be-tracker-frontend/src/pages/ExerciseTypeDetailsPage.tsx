@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Image } from 'lucide-react';
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/carousel';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -131,37 +132,44 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <Card className="shadow-md">
             <CardContent className="pt-6">
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                {exerciseType.images && exerciseType.images.length > 0 ? (
-                  <Carousel className="w-full h-full">
-                    <CarouselContent>
-                      {exerciseType.images.map((imageUrl, index) => (
-                        <CarouselItem key={index}>
-                          <img 
-                            src={imageUrl} 
-                            alt={`${exerciseType.name} - Image ${index + 1}`}
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '';
-                              target.style.display = 'none';
-                            }}
-                          />
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    {exerciseType.images.length > 1 && (
-                      <>
-                        <CarouselPrevious className="left-2" />
-                        <CarouselNext className="right-2" />
-                      </>
-                    )}
-                  </Carousel>
-                ) : (
-                  <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
-                    <Image className="h-16 w-16 mx-auto mb-2" />
-                    <p>Exercise image coming soon</p>
-                  </div>
-                )}
+                {(() => {
+                  // Filter out failed images
+                  const validImages = exerciseType.images?.filter(img => !failedImages.has(img)) || [];
+                  
+                  if (validImages.length > 0) {
+                    return (
+                      <Carousel className="w-full h-full">
+                        <CarouselContent>
+                          {validImages.map((imageUrl, index) => (
+                            <CarouselItem key={imageUrl}>
+                              <img 
+                                src={imageUrl} 
+                                alt={`${exerciseType.name} - Image ${index + 1}`}
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={() => {
+                                  setFailedImages(prev => new Set(prev).add(imageUrl));
+                                }}
+                              />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        {validImages.length > 1 && (
+                          <>
+                            <CarouselPrevious className="left-2" />
+                            <CarouselNext className="right-2" />
+                          </>
+                        )}
+                      </Carousel>
+                    );
+                  } else {
+                    return (
+                      <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
+                        <Image className="h-16 w-16 mx-auto mb-2" />
+                        <p>Exercise image coming soon</p>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             </CardContent>
           </Card>
