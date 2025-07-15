@@ -14,17 +14,8 @@ export const getMyWorkouts = async (
   const offset = cursor || 0;
   const response = await api.get(`/workouts/mine?offset=${offset}&limit=${limit}`);
   
-  // The server response is already in the format { data: [...] }
-  const serverResponse = response.data;
-  const workouts = serverResponse.data || serverResponse; // Handle both formats
-  
-  // Calculate next cursor based on whether we got a full page
-  const next_cursor = workouts.length === limit ? offset + limit : null;
-  
-  return {
-    data: workouts,
-    next_cursor,
-  };
+  // Server returns: { data: [...], next_cursor: ... }
+  return response.data;
 };
 
 export const getWorkoutById = async (workoutId: string | number): Promise<Workout> => {

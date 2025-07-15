@@ -8,7 +8,8 @@ from src.exercises.schemas import (
     ExerciseTypeRead,
     ExerciseTypeCreate,
     IntensityUnitRead,
-    ExerciseTypeStats
+    ExerciseTypeStats,
+    PaginatedExerciseTypesResponse
 )
 from src.exercises.service import ExerciseService, ExerciseTypeService, IntensityUnitService
 from src.core.database import get_async_session
@@ -30,7 +31,7 @@ async def create_exercise(
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
 
-@exercise_types_router.get("", response_model=List[ExerciseTypeRead])
+@exercise_types_router.get("", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
     order_by: Optional[str] = Query(
         default="usage",
@@ -40,7 +41,7 @@ async def get_exercise_types(
     limit: int = Query(default=100, le=1000),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get all exercise types from the database."""
+    """Get all exercise types from the database with pagination."""
     return await ExerciseTypeService.get_all_exercise_types(session, order_by, offset, limit)
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
