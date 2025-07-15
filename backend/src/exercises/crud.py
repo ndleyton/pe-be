@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
-from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate, PaginatedExerciseTypesResponse
 
 
 async def get_exercise_by_id(session: AsyncSession, exercise_id: int) -> Optional[Exercise]:
@@ -65,8 +65,8 @@ async def create_exercise(session: AsyncSession, exercise_create: ExerciseCreate
 # Exercise Type CRUD operations
 async def get_exercise_types(
     session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
-) -> List[ExerciseType]:
-    """Get all exercise types with optional ordering"""
+) -> PaginatedExerciseTypesResponse:
+    """Get all exercise types with optional ordering and pagination"""
     query = select(ExerciseType).options(
         selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
     )
@@ -82,7 +82,15 @@ async def get_exercise_types(
         query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
     
     result = await session.execute(query.offset(offset).limit(limit))
-    return result.scalars().all()
+    exercise_types = result.scalars().all()
+    
+    # Calculate next cursor - if we got a full page, there might be more
+    next_cursor = offset + limit if len(exercise_types) == limit else None
+    
+    return PaginatedExerciseTypesResponse(
+        data=exercise_types,
+        next_cursor=next_cursor
+    )
 
 
 async def get_exercise_type_by_id(session: AsyncSession, exercise_type_id: int) -> Optional[ExerciseType]:

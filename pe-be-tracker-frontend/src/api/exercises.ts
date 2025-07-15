@@ -127,17 +127,8 @@ export const getExerciseTypes = async (
   const offset = cursor || 0;
   const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
   
-  // The server response might be in the format { data: [...] } or just [...]
-  const serverResponse = response.data;
-  const exerciseTypes = serverResponse.data || serverResponse; // Handle both formats
-  
-  // Calculate next cursor based on whether we got a full page
-  const next_cursor = exerciseTypes.length === limit ? offset + limit : null;
-  
-  return {
-    data: exerciseTypes,
-    next_cursor,
-  };
+  // Server returns: { data: [...], next_cursor: ... }
+  return response.data;
 };
 
 // Create a new exercise type
