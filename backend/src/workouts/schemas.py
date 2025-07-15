@@ -119,3 +119,7 @@ class AddExerciseRequest(BaseModel):
 
 
 # The response can reuse the existing WorkoutRead schema, so no extra response model is declared.
+
+class PaginatedWorkouts(BaseModel):
+    data: List[WorkoutRead]
+    next_cursor: Optional[int] = Field(None, description="ID to use as cursor for next page")

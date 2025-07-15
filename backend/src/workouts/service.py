@@ -7,13 +7,13 @@ from langfuse import Langfuse
 
 from src.workouts.crud import (
     get_workout_by_id,
-    get_user_workouts,
     create_workout,
     update_workout,
     delete_workout,
     get_workout_types,
     create_workout_type,
     get_latest_workout_for_user,
+    get_user_workouts,
 )
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate, WorkoutParseResponse, AddExerciseRequest
@@ -39,10 +39,13 @@ class WorkoutService:
     
     @staticmethod
     async def get_my_workouts(
-        session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+        session: AsyncSession,
+        user_id: int,
+        limit: int = 100,
+        cursor: Optional[int] = None,
     ) -> List[Workout]:
-        """Get all workouts for a user"""
-        return await get_user_workouts(session, user_id, offset, limit)
+        """Get workouts for a user using keyset pagination"""
+        return await get_user_workouts(session, user_id, limit, cursor)
     
     @staticmethod
     async def create_new_workout(session: AsyncSession, workout_data: WorkoutCreate, user_id: int) -> Workout:

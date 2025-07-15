@@ -1,20 +1,9 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import type { MuscleGroup, Muscle } from '@/shared/types';
+import { type ExerciseType } from '@/features/exercises/types';
 
-export type { MuscleGroup, Muscle };
-
-export interface ExerciseType {
-  id: number | string;
-  name: string;
-  description: string | null;
-  default_intensity_unit: number;
-  times_used: number;
-  muscles?: Muscle[];
-  images?: string[];
-  created_at?: string;
-  updated_at?: string;
-}
+export type { MuscleGroup, Muscle, ExerciseType };
 
 export interface IntensityUnit {
   id: number;
@@ -137,6 +126,25 @@ export const getExerciseTypes = async (
 ): Promise<ExerciseType[]> => {
   const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
   return response.data;
+};
+
+// Cursor-based version for infinite scroll
+export const getExerciseTypesCursor = async (
+  orderBy: 'usage' | 'name' = 'usage',
+  cursor?: number | null,
+  limit: number = 100
+): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
+  const offset = cursor || 0;
+  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
+  const exerciseTypes = response.data;
+  
+  // Calculate next cursor based on whether we got a full page
+  const next_cursor = exerciseTypes.length === limit ? offset + limit : null;
+  
+  return {
+    data: exerciseTypes,
+    next_cursor,
+  };
 };
 
 // Create a new exercise type

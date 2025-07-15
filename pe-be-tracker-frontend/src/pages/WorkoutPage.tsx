@@ -66,11 +66,16 @@ const WorkoutPage: React.FC = () => {
         created_at: guestExercise.created_at,
         updated_at: guestExercise.updated_at,
         exercise_type: {
-          id: guestExercise.exercise_type.id,
+          id: parseInt(guestExercise.exercise_type.id) || 0,
           name: guestExercise.exercise_type.name,
           description: guestExercise.exercise_type.description,
           default_intensity_unit: guestExercise.exercise_type.default_intensity_unit,
           times_used: guestExercise.exercise_type.times_used,
+          muscle_groups: [],
+          equipment: null,
+          created_at: guestExercise.created_at,
+          updated_at: guestExercise.updated_at,
+          usage_count: guestExercise.exercise_type.times_used,
         },
         exercise_sets: guestExercise.exercise_sets.map(guestSet => ({
           id: guestSet.id,

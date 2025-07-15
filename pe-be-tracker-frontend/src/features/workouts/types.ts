@@ -28,6 +28,12 @@ export interface UpdateWorkoutData {
   end_time?: string | null;
 }
 
+// Cursor-based paginated response wrapper
+export interface PaginatedWorkouts {
+  data: Workout[];
+  next_cursor?: number | null;
+}
+
 export interface AddExerciseToWorkoutPayload {
   exercise_type_id: number;
   initial_set?: {

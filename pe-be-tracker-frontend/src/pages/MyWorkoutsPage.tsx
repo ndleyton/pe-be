@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getMyWorkouts, type Workout } from '@/features/workouts';
+import { getMyWorkouts, type Workout, type PaginatedWorkouts } from '@/features/workouts';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
 import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
@@ -20,12 +20,11 @@ const MyWorkoutsPage = () => {
     data: serverWorkouts,
     isLoading,
     isFetchingNextPage,
-    hasMore,
     error,
     refetch,
   } = useInfiniteScroll<Workout>({
     queryKey: ['workouts'],
-    queryFn: (offset, limit) => getMyWorkouts(offset, limit),
+    queryFn: (cursor, limit) => getMyWorkouts(cursor ?? undefined, limit) as unknown as Promise<{ data: Workout[]; next_cursor?: number | null }>,
     limit: 100,
     enabled: isAuthenticated(),
   });
@@ -113,6 +112,8 @@ const MyWorkoutsPage = () => {
     return <p className="text-destructive">{errorMessage}</p>;
   }
 
+  const validWorkouts = workouts.filter(Boolean);
+
   return (
     <>
       <div className="p-4">
@@ -153,14 +154,14 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {workouts.length === 0 ? (
+          {validWorkouts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
           ) : (
             <>
               <div className="space-y-3">
-                {workouts.map(workout => (
+                {validWorkouts.map(workout => (
                   <div
                     key={workout.id}
                     onClick={() => handleWorkoutClick(workout.id)}

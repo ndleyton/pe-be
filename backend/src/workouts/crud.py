@@ -18,16 +18,25 @@ async def get_workout_by_id(session: AsyncSession, workout_id: int, user_id: int
 
 
 async def get_user_workouts(
-    session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+    session: AsyncSession,
+    user_id: int,
+    limit: int = 100,
+    cursor: Optional[int] = None,
 ) -> List[Workout]:
-    """Get all workouts for a user"""
-    result = await session.execute(
+    """Fetch workouts ordered by id desc using keyset pagination.
+
+    If `cursor` is provided, return workouts with id < cursor (older).
+    """
+    stmt = (
         select(Workout)
         .where(Workout.owner_id == user_id)
-        .order_by(Workout.start_time.desc())
-        .offset(offset)
+        .order_by(Workout.id.desc())
         .limit(limit)
     )
+    if cursor is not None:
+        stmt = stmt.where(Workout.id < cursor)
+
+    result = await session.execute(stmt)
     return result.scalars().all()
 
 
