@@ -44,9 +44,9 @@ export const useInfiniteScroll = <T>({
         const result = await queryFn(pageParam, limit);
         return result;
       } catch (err) {
-        console.error('Query function error:', err);
-        // Return empty response shape to keep types consistent
-        return { data: [], next_cursor: null } as CursorResponse<T>;
+        // Surface the error to React Query so calling components can handle it
+        // (e.g. show a session-expired message or retry prompt).
+        throw err;
       }
     },
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,

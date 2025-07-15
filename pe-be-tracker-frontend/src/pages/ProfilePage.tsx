@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { getMyWorkouts, type Workout } from '@/features/workouts';
+import { getMyWorkouts, type Workout, type PaginatedWorkouts } from '@/features/workouts';
 import { WeekTracking } from '@/shared/components/ui';
 import { useGuestData } from '@/contexts/GuestDataContext';
 import {
@@ -12,7 +12,8 @@ import {
 import { ModeToggle } from '@/components/mode-toggle';
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  return getMyWorkouts(0, 100);
+  const result = await getMyWorkouts(undefined, 100) as unknown as PaginatedWorkouts;
+  return result.data;
 };
 
 const ProfilePage: React.FC = () => {
