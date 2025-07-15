@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { render } from '../test/utils';
 import ExerciseTypesPage from './ExerciseTypesPage';
 import { getExerciseTypes } from '@/api/exercises';
-import type { ExerciseType } from '@/api/exercises';
+import type { ExerciseType } from '@/features/exercises/types';
 
 vi.mock('@/api/exercises');
 vi.mock('@/features/exercises/components', () => ({
@@ -27,6 +27,8 @@ const mockExerciseTypes: ExerciseType[] = [
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     usage_count: 10,
+    default_intensity_unit: 1,
+    times_used: 10,
   },
   {
     id: 2,
@@ -37,6 +39,8 @@ const mockExerciseTypes: ExerciseType[] = [
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     usage_count: 8,
+    default_intensity_unit: 1,
+    times_used: 8,
   },
   {
     id: 3,
@@ -47,6 +51,8 @@ const mockExerciseTypes: ExerciseType[] = [
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     usage_count: 6,
+    default_intensity_unit: 1,
+    times_used: 6,
   },
 ];
 
@@ -172,6 +178,8 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
       usage_count: i + 1,
+      default_intensity_unit: 1,
+      times_used: i + 1,
     }));
 
     mockGetExerciseTypes
@@ -268,6 +276,8 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
       usage_count: i + 1,
+      default_intensity_unit: 1,
+      times_used: i + 1,
     }));
 
     mockGetExerciseTypes.mockResolvedValue(manyExerciseTypes);

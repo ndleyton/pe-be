@@ -1,0 +1,14 @@
+export interface ExerciseType {
+  id: number;
+  name: string;
+  description: string | null;
+  muscle_groups: string[];
+  equipment: string | null;
+  created_at: string;
+  updated_at: string;
+  usage_count: number;
+  default_intensity_unit: any; // You might want to define a more specific type for this
+  times_used: number;
+  images?: string[]; // Optional for ExerciseTypeDetailsPage
+  muscles?: Array<{ id: number; name: string }>; // Optional for ExerciseTypeDetailsPage
+}

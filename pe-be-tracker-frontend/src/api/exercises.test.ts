@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getExerciseTypes, type ExerciseType } from './exercises';
+import { getExerciseTypes } from './exercises';
+import type { ExerciseType } from '@/features/exercises/types';
 import api from '@/shared/api/client';
 
-vi.mock('@/shared/api/client');
+vi.mock('@/shared/api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
-const mockApi = vi.mocked(api);
+const mockApi = api as any;
 
 describe('exercises API - pagination', () => {
   beforeEach(() => {
@@ -22,6 +30,8 @@ describe('exercises API - pagination', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
         usage_count: 10,
+        default_intensity_unit: 1,
+        times_used: 10,
       },
       {
         id: 2,
@@ -32,6 +42,8 @@ describe('exercises API - pagination', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
         usage_count: 8,
+        default_intensity_unit: 1,
+        times_used: 8,
       },
     ];
 

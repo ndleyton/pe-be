@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Depends, APIRouter, status, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse, AddExerciseRequest
+from src.workouts.schemas import WorkoutRead, WorkoutCreate, WorkoutUpdate, WorkoutTypeRead, WorkoutTypeCreate, WorkoutParseRequest, WorkoutParseResponse, AddExerciseRequest, PaginatedWorkouts
 from src.workouts.service import WorkoutService, WorkoutTypeService, WorkoutParsingService
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -15,15 +15,18 @@ router = APIRouter(tags=["workouts"])
 
 # ----- Collection routes -----
 
-@router.get("/mine", response_model=List[WorkoutRead])
+@router.get("/mine", response_model=PaginatedWorkouts)
 async def get_my_workouts(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
-    offset: int = Query(default=0, ge=0),
+    cursor: Optional[int] = Query(default=None, description="ID cursor for keyset pagination"),
     limit: int = Query(default=100, le=1000),
 ):
     """Get all workouts for the current user"""
-    return await WorkoutService.get_my_workouts(session, user.id, offset, limit)
+    workouts = await WorkoutService.get_my_workouts(session, user.id, limit, cursor)
+
+    next_cursor = workouts[-1].id if len(workouts) == limit else None
+    return {"data": workouts, "next_cursor": next_cursor}
 
 
 @router.post("/", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)

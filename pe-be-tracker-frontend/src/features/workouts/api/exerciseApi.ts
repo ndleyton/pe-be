@@ -1,6 +1,6 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import { AddExerciseToWorkoutPayload } from './types';
+import { AddExerciseToWorkoutPayload } from '../types';
 
 export const addExerciseToCurrentWorkout = async (
   payload: AddExerciseToWorkoutPayload,

@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+// Generic shape for cursor-based paginated responses
+interface CursorResponse<T> {
+  data: T[];
+  next_cursor?: number | null;
+}
+
 interface UseInfiniteScrollOptions<T> {
   queryKey: string[];
-  queryFn: (page: number, limit: number) => Promise<T[]>;
+  /**
+   * Fetch function that takes an optional cursor and limit, and returns
+   * the API response with `data` array and optional `next_cursor`.
+   */
+  queryFn: (cursor?: number | null, limit?: number) => Promise<CursorResponse<T>>;
   limit?: number;
   threshold?: number;
   enabled?: boolean;
@@ -17,8 +27,6 @@ export const useInfiniteScroll = <T>({
   enabled = true,
 }: UseInfiniteScrollOptions<T>) => {
   const [allData, setAllData] = useState<T[]>([]);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef(false);
 
   const {
@@ -31,34 +39,35 @@ export const useInfiniteScroll = <T>({
     refetch,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam = 0 }) => queryFn(pageParam, limit),
-    getNextPageParam: (lastPage, allPages, lastPageParam) => {
-      if (lastPage.length < limit) {
-        return undefined;
+    queryFn: async ({ pageParam }: { pageParam?: number }) => {
+      try {
+        const result = await queryFn(pageParam, limit);
+        return result;
+      } catch (err) {
+        console.error('Query function error:', err);
+        // Return empty response shape to keep types consistent
+        return { data: [], next_cursor: null } as CursorResponse<T>;
       }
-      return lastPageParam + limit;
     },
-    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    initialPageParam: undefined,
     enabled,
   });
 
   // Flatten all pages into a single array
   useEffect(() => {
     if (data?.pages) {
-      const flatData = data.pages.flat();
+      const flatData = data.pages.flatMap((page) => {
+        if (!page || !(page as CursorResponse<T>).data) return [] as T[];
+        return (page as CursorResponse<T>).data;
+      });
       setAllData(flatData);
-      setHasMore(data.pages[data.pages.length - 1]?.length === limit);
     }
-  }, [data, limit]);
+  }, [data]);
 
   // Scroll event handler
   const handleScroll = useCallback(() => {
-    if (
-      !hasNextPage ||
-      isFetchingNextPage ||
-      loadingRef.current ||
-      !enabled
-    ) {
+    if (!hasNextPage || isFetchingNextPage || loadingRef.current || !enabled) {
       return;
     }
 
@@ -88,8 +97,6 @@ export const useInfiniteScroll = <T>({
 
   const reset = useCallback(() => {
     setAllData([]);
-    setPage(0);
-    setHasMore(true);
     loadingRef.current = false;
     refetch();
   }, [refetch]);

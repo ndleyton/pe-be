@@ -2,9 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import api from '@/shared/api/client';
 
-vi.mock('@/shared/api/client');
+vi.mock('@/shared/api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
-const mockApi = vi.mocked(api);
+const mockApi = api as any;
 
 describe('workouts API - pagination', () => {
   beforeEach(() => {

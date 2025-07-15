@@ -1,12 +1,37 @@
 import api from '@/shared/api/client';
-import { Workout, CreateWorkoutData, UpdateWorkoutData } from './types';
+import { Workout, CreateWorkoutData, UpdateWorkoutData, PaginatedWorkouts } from '../types';
 
+/**
+ * Fetch the current user's workouts using cursor-based pagination.
+ *
+ * @param cursor - The ID cursor returned from the previous page (or undefined for the first page)
+ * @param limit  - Maximum number of workouts to return (default 100)
+ */
 export const getMyWorkouts = async (
-  offset: number = 0,
+  cursor?: number,
   limit: number = 100
-): Promise<Workout[]> => {
-  const response = await api.get(`/workouts/mine?offset=${offset}&limit=${limit}`);
+): Promise<PaginatedWorkouts> => {
+  const cursorQuery = cursor !== undefined ? `&cursor=${cursor}` : '';
+  const response = await api.get(`/workouts/mine?limit=${limit}${cursorQuery}`);
   return response.data;
+};
+
+// Cursor-based version for infinite scroll
+export const getMyWorkoutsCursor = async (
+  cursor?: number | null,
+  limit: number = 100
+): Promise<{ data: Workout[]; next_cursor?: number | null }> => {
+  const offset = cursor || 0;
+  const response = await api.get(`/workouts/mine?offset=${offset}&limit=${limit}`);
+  const workouts = response.data;
+  
+  // Calculate next cursor based on whether we got a full page
+  const next_cursor = workouts.length === limit ? offset + limit : null;
+  
+  return {
+    data: workouts,
+    next_cursor,
+  };
 };
 
 export const getWorkoutById = async (workoutId: string | number): Promise<Workout> => {
