@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { getExerciseTypesCursor, type ExerciseType } from '@/api/exercises';
+import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
 import { ExerciseTypeCard } from '@/features/exercises/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ const ExerciseTypesPage: React.FC = () => {
     error,
   } = useInfiniteScroll<ExerciseType>({
     queryKey: ['exerciseTypes', orderBy],
-    queryFn: (cursor, limit) => getExerciseTypesCursor(orderBy, cursor, limit) as unknown as Promise<{ data: ExerciseType[]; next_cursor?: number | null }>,
+    queryFn: (cursor, limit) => getExerciseTypes(orderBy, cursor, limit),
     limit: 100,
   });
 

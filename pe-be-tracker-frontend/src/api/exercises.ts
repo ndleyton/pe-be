@@ -118,25 +118,18 @@ export interface CreateExerciseTypeData {
   default_intensity_unit?: number;
 }
 
-// Get all exercise types (ordered by usage by default)
+// Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
-  orderBy: 'usage' | 'name' = 'usage',
-  offset: number = 0,
-  limit: number = 100
-): Promise<ExerciseType[]> => {
-  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
-  return response.data;
-};
-
-// Cursor-based version for infinite scroll
-export const getExerciseTypesCursor = async (
   orderBy: 'usage' | 'name' = 'usage',
   cursor?: number | null,
   limit: number = 100
 ): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
   const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
-  const exerciseTypes = response.data;
+  
+  // The server response might be in the format { data: [...] } or just [...]
+  const serverResponse = response.data;
+  const exerciseTypes = serverResponse.data || serverResponse; // Handle both formats
   
   // Calculate next cursor based on whether we got a full page
   const next_cursor = exerciseTypes.length === limit ? offset + limit : null;

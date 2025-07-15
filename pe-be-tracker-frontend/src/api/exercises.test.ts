@@ -53,47 +53,52 @@ describe('exercises API - pagination', () => {
       const result = await getExerciseTypes();
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=100');
-      expect(result).toEqual(mockExerciseTypes);
+      expect(result.data).toEqual(mockExerciseTypes);
     });
 
     it('should call API with custom order by parameter', async () => {
       mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
 
-      await getExerciseTypes('name');
+      const result = await getExerciseTypes('name');
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=name&offset=0&limit=100');
+      expect(result.data).toEqual(mockExerciseTypes);
     });
 
     it('should call API with custom pagination parameters', async () => {
       mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
 
-      await getExerciseTypes('usage', 20, 50);
+      const result = await getExerciseTypes('usage', 20, 50);
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=20&limit=50');
+      expect(result.data).toEqual(mockExerciseTypes);
     });
 
     it('should handle offset 0 and limit 100', async () => {
       mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
 
-      await getExerciseTypes('usage', 0, 100);
+      const result = await getExerciseTypes('usage', 0, 100);
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=100');
+      expect(result.data).toEqual(mockExerciseTypes);
     });
 
     it('should handle large offset values', async () => {
       mockApi.get.mockResolvedValue({ data: [] });
 
-      await getExerciseTypes('usage', 1000, 100);
+      const result = await getExerciseTypes('usage', 1000, 100);
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=1000&limit=100');
+      expect(result.data).toEqual([]);
     });
 
     it('should handle small limit values', async () => {
       mockApi.get.mockResolvedValue({ data: mockExerciseTypes.slice(0, 1) });
 
-      await getExerciseTypes('usage', 0, 1);
+      const result = await getExerciseTypes('usage', 0, 1);
 
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=1');
+      expect(result.data).toEqual(mockExerciseTypes.slice(0, 1));
     });
 
     it('should handle API errors', async () => {
@@ -108,7 +113,7 @@ describe('exercises API - pagination', () => {
 
       const result = await getExerciseTypes('usage', 100, 100);
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=100&limit=100');
     });
 
@@ -128,7 +133,7 @@ describe('exercises API - pagination', () => {
 
       const result = await getExerciseTypes('usage', 0, 100);
 
-      expect(result).toHaveLength(100);
+      expect(result.data).toHaveLength(100);
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=100');
     });
 
@@ -138,7 +143,7 @@ describe('exercises API - pagination', () => {
 
       const result = await getExerciseTypes('usage', 50, 100);
 
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=50&limit=100');
     });
   });

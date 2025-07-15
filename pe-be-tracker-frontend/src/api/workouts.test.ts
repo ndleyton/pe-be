@@ -13,6 +13,9 @@ vi.mock('@/shared/api/client', () => ({
 
 const mockApi = api as any;
 
+// Helper to wrap workout arrays in cursor pagination shape
+const wrap = (workouts: Workout[]) => ({ data: workouts, next_cursor: null });
+
 describe('workouts API - pagination', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,16 +44,16 @@ describe('workouts API - pagination', () => {
     ];
 
     it('should call API with default pagination parameters', async () => {
-      mockApi.get.mockResolvedValue({ data: mockWorkouts });
+      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
 
       const result = await getMyWorkouts();
 
       expect(mockApi.get).toHaveBeenCalledWith('/workouts/mine?offset=0&limit=100');
-      expect(result).toEqual(mockWorkouts);
+      expect(result.data).toEqual(mockWorkouts);
     });
 
     it('should call API with custom pagination parameters', async () => {
-      mockApi.get.mockResolvedValue({ data: mockWorkouts });
+      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
 
       await getMyWorkouts(20, 50);
 
@@ -58,7 +61,7 @@ describe('workouts API - pagination', () => {
     });
 
     it('should handle offset 0 and limit 100', async () => {
-      mockApi.get.mockResolvedValue({ data: mockWorkouts });
+      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
 
       await getMyWorkouts(0, 100);
 
@@ -66,7 +69,7 @@ describe('workouts API - pagination', () => {
     });
 
     it('should handle large offset values', async () => {
-      mockApi.get.mockResolvedValue({ data: [] });
+      mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       await getMyWorkouts(1000, 100);
 
@@ -74,7 +77,7 @@ describe('workouts API - pagination', () => {
     });
 
     it('should handle small limit values', async () => {
-      mockApi.get.mockResolvedValue({ data: mockWorkouts.slice(0, 1) });
+      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts.slice(0, 1)) });
 
       await getMyWorkouts(0, 1);
 
@@ -99,11 +102,11 @@ describe('workouts API - pagination', () => {
     });
 
     it('should handle empty response', async () => {
-      mockApi.get.mockResolvedValue({ data: [] });
+      mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       const result = await getMyWorkouts(100, 100);
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(mockApi.get).toHaveBeenCalledWith('/workouts/mine?offset=100&limit=100');
     });
 
@@ -118,21 +121,21 @@ describe('workouts API - pagination', () => {
         updated_at: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
       }));
 
-      mockApi.get.mockResolvedValue({ data: fullPageData });
+      mockApi.get.mockResolvedValue({ data: wrap(fullPageData) });
 
       const result = await getMyWorkouts(0, 100);
 
-      expect(result).toHaveLength(100);
+      expect(result.data).toHaveLength(100);
       expect(mockApi.get).toHaveBeenCalledWith('/workouts/mine?offset=0&limit=100');
     });
 
     it('should handle response with less than limit items', async () => {
       const partialPageData = mockWorkouts.slice(0, 1);
-      mockApi.get.mockResolvedValue({ data: partialPageData });
+      mockApi.get.mockResolvedValue({ data: wrap(partialPageData) });
 
       const result = await getMyWorkouts(50, 100);
 
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(mockApi.get).toHaveBeenCalledWith('/workouts/mine?offset=50&limit=100');
     });
 
@@ -149,14 +152,14 @@ describe('workouts API - pagination', () => {
         },
       ];
 
-      mockApi.get.mockResolvedValue({ data: workoutsWithNulls });
+      mockApi.get.mockResolvedValue({ data: wrap(workoutsWithNulls) });
 
       const result = await getMyWorkouts();
 
-      expect(result).toEqual(workoutsWithNulls);
-      expect(result[0].name).toBeNull();
-      expect(result[0].notes).toBeNull();
-      expect(result[0].end_time).toBeNull();
+      expect(result.data).toEqual(workoutsWithNulls);
+      expect(result.data[0].name).toBeNull();
+      expect(result.data[0].notes).toBeNull();
+      expect(result.data[0].end_time).toBeNull();
     });
 
     it('should handle string IDs', async () => {
@@ -172,12 +175,12 @@ describe('workouts API - pagination', () => {
         },
       ];
 
-      mockApi.get.mockResolvedValue({ data: workoutsWithStringIds });
+      mockApi.get.mockResolvedValue({ data: wrap(workoutsWithStringIds) });
 
       const result = await getMyWorkouts();
 
-      expect(result).toEqual(workoutsWithStringIds);
-      expect(typeof result[0].id).toBe('string');
+      expect(result.data).toEqual(workoutsWithStringIds);
+      expect(typeof result.data[0].id).toBe('string');
     });
   });
 });

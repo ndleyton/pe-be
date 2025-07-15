@@ -37,6 +37,9 @@ vi.mock('@/features/recipes/components/RecipesSection/RecipesSection', () => ({
 
 const mockGetMyWorkouts = vi.mocked(getMyWorkouts);
 
+// Helper to wrap workout arrays in cursor pagination shape
+const wrap = (workouts: Workout[]) => ({ data: workouts, next_cursor: null });
+
 const mockWorkouts: Workout[] = [
   {
     id: 1,
@@ -70,7 +73,7 @@ const mockWorkouts: Workout[] = [
 describe('MyWorkoutsPage - Infinite Scroll', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetMyWorkouts.mockResolvedValue(mockWorkouts);
+    mockGetMyWorkouts.mockResolvedValue(wrap(mockWorkouts) as any);
   });
 
   it('renders the page with heading', () => {
@@ -80,7 +83,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
   });
 
   it('shows message when no workouts exist', () => {
-    mockGetMyWorkouts.mockResolvedValue([]);
+    mockGetMyWorkouts.mockResolvedValue(wrap([]) as any);
     render(<MyWorkoutsPage />);
 
     expect(screen.getByText(/you haven't logged any workouts yet/i)).toBeInTheDocument();
@@ -90,7 +93,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockGetMyWorkouts).toHaveBeenCalledWith(0, 100);
+      expect(mockGetMyWorkouts).toHaveBeenCalledWith(null, 100);
     });
   });
 
@@ -143,7 +146,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     }));
 
     mockGetMyWorkouts
-      .mockResolvedValueOnce(fullPage)
+      .mockResolvedValueOnce(wrap(fullPage) as any)
       .mockImplementation(() => new Promise(() => {})); // Pending next page
 
     render(<MyWorkoutsPage />);
@@ -301,7 +304,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
       },
     ];
 
-    mockGetMyWorkouts.mockResolvedValue(workoutsWithStringIds);
+    mockGetMyWorkouts.mockResolvedValue(wrap(workoutsWithStringIds) as any);
 
     render(<MyWorkoutsPage />);
 
@@ -332,7 +335,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
       },
     ];
 
-    mockGetMyWorkouts.mockResolvedValue(edgeCaseWorkouts);
+    mockGetMyWorkouts.mockResolvedValue(wrap(edgeCaseWorkouts) as any);
 
     render(<MyWorkoutsPage />);
 
