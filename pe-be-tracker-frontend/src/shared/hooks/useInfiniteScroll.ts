@@ -58,8 +58,8 @@ export const useInfiniteScroll = <T>({
   useEffect(() => {
     if (data?.pages) {
       const flatData = data.pages.flatMap((page) => {
-        if (!page || !(page as CursorResponse<T>).data) return [] as T[];
-        return (page as CursorResponse<T>).data;
+        if (!page || !page.data) return [] as T[];
+        return page.data;
       });
       setAllData(flatData);
     }

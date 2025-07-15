@@ -59,7 +59,7 @@ const mockExerciseTypes: ExerciseType[] = [
 describe('ExerciseTypesPage - Infinite Scroll', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetExerciseTypes.mockResolvedValue(mockExerciseTypes);
+    mockGetExerciseTypes.mockResolvedValue({ data: mockExerciseTypes, next_cursor: null });
   });
 
   it('renders the page title and search controls', async () => {
@@ -74,7 +74,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
-      expect(mockGetExerciseTypes).toHaveBeenCalledWith('usage', 0, 100);
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith('usage', null, 100);
     });
   });
 
@@ -183,7 +183,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     }));
 
     mockGetExerciseTypes
-      .mockResolvedValueOnce(fullPage)
+      .mockResolvedValueOnce({ data: fullPage, next_cursor: 100 })
       .mockImplementation(() => new Promise(() => {})); // Pending next page
 
     render(<ExerciseTypesPage />);
@@ -217,7 +217,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
   it('shows no more items message when all data is loaded', async () => {
     // Mock API to return less than limit (indicating end of data)
     const partialPage = mockExerciseTypes.slice(0, 2);
-    mockGetExerciseTypes.mockResolvedValue(partialPage);
+    mockGetExerciseTypes.mockResolvedValue({ data: partialPage, next_cursor: null });
 
     render(<ExerciseTypesPage />);
 
@@ -242,7 +242,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
   });
 
   it('shows empty state when no exercise types exist', async () => {
-    mockGetExerciseTypes.mockResolvedValue([]);
+    mockGetExerciseTypes.mockResolvedValue({ data: [], next_cursor: null });
 
     render(<ExerciseTypesPage />);
 
@@ -280,7 +280,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       times_used: i + 1,
     }));
 
-    mockGetExerciseTypes.mockResolvedValue(manyExerciseTypes);
+    mockGetExerciseTypes.mockResolvedValue({ data: manyExerciseTypes, next_cursor: null });
 
     render(<ExerciseTypesPage />);
 

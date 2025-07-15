@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getMyWorkouts, type Workout, type PaginatedWorkouts } from '@/features/workouts';
+import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
 import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
@@ -24,7 +24,7 @@ const MyWorkoutsPage = () => {
     refetch,
   } = useInfiniteScroll<Workout>({
     queryKey: ['workouts'],
-    queryFn: (cursor, limit) => getMyWorkouts(cursor ?? undefined, limit) as unknown as Promise<{ data: Workout[]; next_cursor?: number | null }>,
+    queryFn: (cursor, limit) => getMyWorkouts(cursor, limit),
     limit: 100,
     enabled: isAuthenticated(),
   });
