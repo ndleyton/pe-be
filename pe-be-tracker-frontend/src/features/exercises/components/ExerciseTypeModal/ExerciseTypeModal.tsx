@@ -15,14 +15,16 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   const queryClient = useQueryClient();
   const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
   
-  const { data: serverExerciseTypes = [], isLoading, error } = useQuery({
+  const { data: serverExerciseTypesResponse, isLoading, error } = useQuery({
     queryKey: ['exerciseTypes'],
     queryFn: () => getExerciseTypes('usage'), // Use usage-based ordering by default
     enabled: isAuthenticated(), // Only fetch when authenticated
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const exerciseTypes = isAuthenticated() ? serverExerciseTypes : guestData.exerciseTypes;
+  const exerciseTypes = isAuthenticated() 
+    ? (serverExerciseTypesResponse?.data || [])
+    : guestData.exerciseTypes;
   
   const createMutation = useMutation({
     mutationFn: createExerciseType,
@@ -39,7 +41,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
       ) {
         // Backend indicates the type already exists — select it instead of showing an error
         const existing = exerciseTypes.find(
-          (t) => t.name.toLowerCase() === searchTerm.toLowerCase(),
+          (t: ExerciseType | GuestExerciseType) => t.name.toLowerCase() === searchTerm.toLowerCase(),
         );
         if (existing) {
           handleSelect(existing);
@@ -53,7 +55,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   const filteredExerciseTypes = useMemo(() => {
     if (!searchTerm.trim()) return exerciseTypes;
     const term = searchTerm.toLowerCase().trim();
-    return exerciseTypes.filter(type => 
+    return exerciseTypes.filter((type: ExerciseType | GuestExerciseType) => 
       type.name.toLowerCase().includes(term) || 
       (type.description && type.description.toLowerCase().includes(term))
     );
@@ -102,7 +104,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
 
     // Avoid creating duplicates — if a type with the same name (case-insensitive) already exists, reuse it
     const existingType = exerciseTypes.find(
-      (type) => type.name.toLowerCase() === trimmedName.toLowerCase(),
+      (type: ExerciseType | GuestExerciseType) => type.name.toLowerCase() === trimmedName.toLowerCase(),
     );
 
     if (existingType) {
@@ -213,7 +215,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
 
     return (
       <div className="grid gap-3">
-        {filteredExerciseTypes.map((exerciseType) => (
+        {filteredExerciseTypes.map((exerciseType: ExerciseType | GuestExerciseType) => (
           <div
             key={exerciseType.id}
             onClick={() => handleSelect(exerciseType)}
