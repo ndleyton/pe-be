@@ -1,42 +1,33 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import api from '@/shared/api/client';
+import { getMyWorkouts, type Workout } from '@/api/workouts';
 import { WorkoutForm } from '../features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '../shared/components/ui';
 import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
+import { useInfiniteScroll } from '@/shared/hooks';
 
-type Workout = {
-  id: number | string; // Can be number (server) or string (guest)
-  name: string | null;
-  notes: string | null;
-  start_time: string;
-  end_time: string | null;
-}
-
-const fetchWorkouts = async (): Promise<Workout[]> => {
-  const response = await api.get('/workouts/mine');
-  return response.data;
-};
+// Remove the local type definition since we're importing it from the API
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
   const { data: guestData, isAuthenticated } = useGuestData();
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   
-  const { data: serverWorkouts = [], isLoading, error, refetch } = useQuery({
+  const {
+    data: serverWorkouts,
+    isLoading,
+    isFetchingNextPage,
+    hasMore,
+    error,
+    refetch,
+  } = useInfiniteScroll<Workout>({
     queryKey: ['workouts'],
-    queryFn: fetchWorkouts,
-    enabled: isAuthenticated(), // Only fetch when authenticated
-    retry: (failureCount, error: unknown) => {
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-        return false;
-      }
-      return failureCount < 3;
-    },
+    queryFn: (offset, limit) => getMyWorkouts(offset, limit),
+    limit: 20,
+    enabled: isAuthenticated(),
   });
 
   // Use guest data if not authenticated, server data if authenticated
@@ -48,6 +39,8 @@ const MyWorkoutsPage = () => {
         notes: gw.notes,
         start_time: gw.start_time,
         end_time: gw.end_time,
+        created_at: gw.created_at || new Date().toISOString(),
+        updated_at: gw.updated_at || new Date().toISOString(),
       }));
 
   const getErrorMessage = (error: unknown) => {
@@ -165,39 +158,55 @@ const MyWorkoutsPage = () => {
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {workouts.map(workout => (
-                <div
-                  key={workout.id}
-                  onClick={() => handleWorkoutClick(workout.id)}
-                  className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold text-lg">💪</span>
-                    </div>
-                    <div>
-                      <h3 className="text-foreground font-medium">
-                        {workout.name || 'Traditional Strength Training'}
-                      </h3>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-primary font-mono text-lg">
-                          {formatDuration(workout.start_time, workout.end_time)}
-                        </span>
-                        <span className="text-muted-foreground text-sm">
-                          {formatDate(workout.start_time)}
-                        </span>
+            <>
+              <div className="space-y-3">
+                {workouts.map(workout => (
+                  <div
+                    key={workout.id}
+                    onClick={() => handleWorkoutClick(workout.id)}
+                    className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold text-lg">💪</span>
+                      </div>
+                      <div>
+                        <h3 className="text-foreground font-medium">
+                          {workout.name || 'Traditional Strength Training'}
+                        </h3>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <span className="text-primary font-mono text-lg">
+                            {formatDuration(workout.start_time, workout.end_time)}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            {formatDate(workout.start_time)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-muted-foreground">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                ))}
+              </div>
+              
+              {/* Loading more indicator for authenticated users */}
+              {isAuthenticated() && isFetchingNextPage && (
+                <div className="flex justify-center py-8">
+                  <span className="loading loading-spinner loading-lg"></span>
                 </div>
-              ))}
-            </div>
+              )}
+              
+              {/* End of results indicator for authenticated users */}
+              {isAuthenticated() && !hasMore && workouts.length > 0 && (
+                <div className="text-center py-8">
+                  <span className="text-muted-foreground text-sm">No more workouts to load</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

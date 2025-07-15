@@ -130,8 +130,12 @@ export interface CreateExerciseTypeData {
 }
 
 // Get all exercise types (ordered by usage by default)
-export const getExerciseTypes = async (orderBy: 'usage' | 'name' = 'usage'): Promise<ExerciseType[]> => {
-  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}`);
+export const getExerciseTypes = async (
+  orderBy: 'usage' | 'name' = 'usage',
+  offset: number = 0,
+  limit: number = 100
+): Promise<ExerciseType[]> => {
+  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
   return response.data;
 };
 
