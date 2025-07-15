@@ -31,7 +31,7 @@ const ExerciseTypesPage: React.FC = () => {
   } = useInfiniteScroll<ExerciseType>({
     queryKey: ['exerciseTypes', orderBy],
     queryFn: (offset, limit) => getExerciseTypes(orderBy, offset, limit),
-    limit: 20,
+    limit: 100,
   });
 
   const filteredExerciseTypes = useMemo(() => {

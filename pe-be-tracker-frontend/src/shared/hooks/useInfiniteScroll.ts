@@ -12,7 +12,7 @@ interface UseInfiniteScrollOptions<T> {
 export const useInfiniteScroll = <T>({
   queryKey,
   queryFn,
-  limit = 20,
+  limit = 100,
   threshold = 300,
   enabled = true,
 }: UseInfiniteScrollOptions<T>) => {
