@@ -199,13 +199,6 @@ const MyWorkoutsPage = () => {
                   <span className="loading loading-spinner loading-lg"></span>
                 </div>
               )}
-              
-              {/* End of results indicator for authenticated users */}
-              {isAuthenticated() && !hasMore && workouts.length > 0 && (
-                <div className="text-center py-8">
-                  <span className="text-muted-foreground text-sm">No more workouts to load</span>
-                </div>
-              )}
             </>
           )}
         </div>
