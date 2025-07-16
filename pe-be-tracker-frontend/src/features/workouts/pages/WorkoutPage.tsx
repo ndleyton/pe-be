@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/shared/api/client';
-import { getExercisesInWorkout, Exercise } from '../api/exercises';
-import { ExerciseForm, ExerciseList } from '../features/exercises/components';
-import { FinishWorkoutModal } from '../features/workouts/components';
-import { SaveRecipeModal } from '../features/recipes/components/SaveRecipeModal/SaveRecipeModal';
-import { FloatingActionButton } from '../shared/components/ui';
+import { getExercisesInWorkout, Exercise } from '@/features/exercises/api';
+import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
+import { FinishWorkoutModal } from '@/features/workouts/components';
+import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
+import { FloatingActionButton } from '@/shared/components/ui';
 import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
 import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 

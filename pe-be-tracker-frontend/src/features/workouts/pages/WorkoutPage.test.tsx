@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { render } from '../test/utils';
+import { render } from '@/test/utils';
 import WorkoutPage from './WorkoutPage';
 
 // Mock react-router-dom

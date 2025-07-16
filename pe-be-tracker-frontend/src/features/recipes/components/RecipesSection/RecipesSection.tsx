@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGuestData, GuestRecipe } from '@/contexts/GuestDataContext';
-import { getRecipes, deleteRecipe, Recipe } from '@/api/recipes';
+import { getRecipes, deleteRecipe, Recipe } from '@/features/recipes/api';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 
 interface RecipesSectionProps {
