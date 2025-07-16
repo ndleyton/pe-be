@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import api from '@/shared/api/client';
+import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WeekTracking } from '@/shared/components/ui';
 import { useGuestData } from '@/contexts/GuestDataContext';
 import {
@@ -11,17 +11,9 @@ import {
 } from '@/components/ui/alert';
 import { ModeToggle } from '@/components/mode-toggle';
 
-type Workout = {
-  id: number | string;
-  name: string | null;
-  notes: string | null;
-  start_time: string;
-  end_time: string | null;
-}
-
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  const response = await api.get('/workouts/mine');
-  return response.data;
+  const { data } = await getMyWorkouts(undefined, 100);
+  return data;
 };
 
 const ProfilePage: React.FC = () => {
@@ -40,16 +32,18 @@ const ProfilePage: React.FC = () => {
   });
 
   const workouts: Workout[] = isAuthenticated() 
-    ? serverWorkouts 
-    : guestData.workouts.map(gw => ({
+    ? serverWorkouts
+    : (guestData?.workouts && Array.isArray(guestData.workouts) ? guestData.workouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
         start_time: gw.start_time,
         end_time: gw.end_time,
-      }));
+        created_at: gw.created_at || new Date().toISOString(),
+        updated_at: gw.updated_at || new Date().toISOString(),
+      })) : []);
 
-  const completedWorkouts = workouts.filter(w => w.end_time);
+  const completedWorkouts = Array.isArray(workouts) ? workouts.filter(w => w.end_time) : [];
   const totalWorkouts = workouts.length;
   const averageWorkoutTime = completedWorkouts.length > 0 
     ? completedWorkouts.reduce((sum, workout) => {

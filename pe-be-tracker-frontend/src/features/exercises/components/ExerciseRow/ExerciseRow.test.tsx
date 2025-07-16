@@ -71,6 +71,9 @@ describe('ExerciseRow', () => {
       times_used: 5,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
+      muscle_groups: ['chest'],
+      equipment: 'barbell',
+      usage_count: 5,
     },
     exercise_sets: [mockExerciseSet1, mockExerciseSet2],
   };

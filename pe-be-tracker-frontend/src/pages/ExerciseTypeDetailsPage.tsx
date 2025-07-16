@@ -5,7 +5,7 @@ import { ArrowLeft, Image } from 'lucide-react';
 import { getExerciseTypeById, getExerciseTypeStats } from '@/api/exercises';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
-import { addExerciseToCurrentWorkout } from '@/api/workouts';
+import { addExerciseToCurrentWorkout } from '@/features/workouts';
 import { Button } from '@/components/ui/button';
 import {
   Card,

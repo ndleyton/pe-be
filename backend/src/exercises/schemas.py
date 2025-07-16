@@ -210,4 +210,13 @@ class ExerciseTypeStats(BaseModel):
     intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias='intensityUnit')
 
     class Config:
-        populate_by_name = True 
+        populate_by_name = True
+
+
+class PaginatedExerciseTypesResponse(BaseModel):
+    """Schema for paginated exercise types response"""
+    data: List[ExerciseTypeRead]
+    next_cursor: Optional[int] = None
+
+    class Config:
+        from_attributes = True 

@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
 import { ExerciseTypeCard } from '@/features/exercises/components';
@@ -17,14 +16,22 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import { useInfiniteScroll } from '@/shared/hooks';
 
 const ExerciseTypesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [orderBy, setOrderBy] = useState<'usage' | 'name'>('usage');
 
-  const { data: exerciseTypes = [], isLoading, error } = useQuery({
+  const {
+    data: exerciseTypes,
+    isLoading,
+    isFetchingNextPage,
+    hasMore,
+    error,
+  } = useInfiniteScroll<ExerciseType>({
     queryKey: ['exerciseTypes', orderBy],
-    queryFn: () => getExerciseTypes(orderBy),
+    queryFn: (cursor, limit) => getExerciseTypes(orderBy, cursor, limit),
+    limit: 100,
   });
 
   const filteredExerciseTypes = useMemo(() => {
@@ -93,11 +100,27 @@ const ExerciseTypesPage: React.FC = () => {
 
       {/* Exercise Types Grid */}
       {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredExerciseTypes.map((exerciseType) => (
-            <ExerciseTypeCard key={exerciseType.id} exerciseType={exerciseType} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredExerciseTypes.map((exerciseType) => (
+              <ExerciseTypeCard key={exerciseType.id} exerciseType={exerciseType} />
+            ))}
+          </div>
+          
+          {/* Loading more indicator */}
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-8">
+              <span className="loading loading-spinner loading-lg"></span>
+            </div>
+          )}
+          
+          {/* End of results indicator */}
+          {!hasMore && filteredExerciseTypes.length > 0 && (
+            <div className="text-center py-8">
+              <span className="text-gray-500 text-sm">No more exercise types to load</span>
+            </div>
+          )}
+        </>
       )}
 
       {/* Empty State */}

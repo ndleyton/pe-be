@@ -101,7 +101,7 @@ describe('syncGuestDataToServer', () => {
 
     // Mock API responses
     (api.get as any)
-      .mockResolvedValueOnce({ data: [] }) // exercise types
+      .mockResolvedValueOnce({ data: { data: [] } }) // exercise types
       .mockResolvedValueOnce({ data: [] }); // workout types
 
     (api.post as any)
@@ -230,7 +230,7 @@ describe('syncGuestDataToServer', () => {
     // Mock API responses with existing types
     (api.get as any)
       .mockResolvedValueOnce({ 
-        data: [{ id: 5, name: 'Push-ups', description: 'Existing push-ups' }] 
+        data: { data: [{ id: 5, name: 'Push-ups', description: 'Existing push-ups' }] }
       }) // existing exercise types
       .mockResolvedValueOnce({ 
         data: [{ id: 3, name: 'Strength Training', description: 'Existing type' }] 

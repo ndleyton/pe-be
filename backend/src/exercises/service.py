@@ -14,7 +14,7 @@ from src.exercises.crud import (
     get_intensity_units
 )
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
-from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate, PaginatedExerciseTypesResponse
 
 
 class ExerciseService:
@@ -43,8 +43,8 @@ class ExerciseTypeService:
     @staticmethod
     async def get_all_exercise_types(
         session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
-    ) -> List[ExerciseType]:
-        """Get all exercise types with optional ordering"""
+    ) -> PaginatedExerciseTypesResponse:
+        """Get all exercise types with optional ordering and pagination"""
         return await get_exercise_types(session, order_by, offset, limit)
     
     @staticmethod
