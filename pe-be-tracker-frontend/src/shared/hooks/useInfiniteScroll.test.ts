@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useInfiniteScroll } from './useInfiniteScroll';
 
+// Helper to wrap arrays into cursor response
+const wrap = <T,>(items: T[], next: number | null = null) => ({ data: items, next_cursor: next });
+
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
@@ -59,7 +62,7 @@ describe('useInfiniteScroll', () => {
   });
 
   it('should initialize with empty data and loading state', () => {
-    mockQueryFn.mockResolvedValue([]);
+    mockQueryFn.mockResolvedValue(wrap([]));
 
     const { result } = renderHook(
       () =>
@@ -79,7 +82,7 @@ describe('useInfiniteScroll', () => {
 
   it('should call queryFn with correct parameters', async () => {
     const mockData = [{ id: 1, name: 'Item 1' }];
-    mockQueryFn.mockResolvedValue(mockData);
+    mockQueryFn.mockResolvedValue(wrap(mockData));
 
     renderHook(
       () =>
@@ -92,7 +95,7 @@ describe('useInfiniteScroll', () => {
     );
 
     await waitFor(() => {
-      expect(mockQueryFn).toHaveBeenCalledWith(0, 10);
+      expect(mockQueryFn).toHaveBeenCalledWith(undefined, 10);
     });
   });
 
@@ -101,8 +104,8 @@ describe('useInfiniteScroll', () => {
     const page2 = [{ id: 3, name: 'Item 3' }, { id: 4, name: 'Item 4' }];
 
     mockQueryFn
-      .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2);
+      .mockResolvedValueOnce(wrap(page1, 1))
+      .mockResolvedValueOnce(wrap(page2, null));
 
     const { result } = renderHook(
       () =>
@@ -134,7 +137,7 @@ describe('useInfiniteScroll', () => {
 
   it('should set hasMore to false when returned data is less than limit', async () => {
     const incompleteData = [{ id: 1, name: 'Item 1' }]; // Less than limit of 10
-    mockQueryFn.mockResolvedValue(incompleteData);
+    mockQueryFn.mockResolvedValue(wrap(incompleteData));
 
     const { result } = renderHook(
       () =>
@@ -153,7 +156,7 @@ describe('useInfiniteScroll', () => {
 
   it('should set hasMore to true when returned data equals limit', async () => {
     const fullData = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
-    mockQueryFn.mockResolvedValue(fullData);
+    mockQueryFn.mockResolvedValue(wrap(fullData, 10));
 
     const { result } = renderHook(
       () =>
@@ -171,7 +174,7 @@ describe('useInfiniteScroll', () => {
   });
 
   it('should not trigger scroll when disabled', async () => {
-    mockQueryFn.mockResolvedValue([]);
+    mockQueryFn.mockResolvedValue(wrap([]));
 
     renderHook(
       () =>
@@ -202,8 +205,8 @@ describe('useInfiniteScroll', () => {
     const page2 = [{ id: 2, name: 'Item 2' }];
 
     mockQueryFn
-      .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2);
+      .mockResolvedValueOnce(wrap(page1, 1))
+      .mockResolvedValueOnce(wrap(page2, null));
 
     const { result } = renderHook(
       () =>
@@ -240,8 +243,8 @@ describe('useInfiniteScroll', () => {
     const resetData = [{ id: 2, name: 'Item 2' }];
 
     mockQueryFn
-      .mockResolvedValueOnce(initialData)
-      .mockResolvedValueOnce(resetData);
+      .mockResolvedValueOnce(wrap(initialData, null))
+      .mockResolvedValueOnce(wrap(resetData, null));
 
     const { result } = renderHook(
       () =>
@@ -286,7 +289,7 @@ describe('useInfiniteScroll', () => {
   });
 
   it('should use custom limit when provided', async () => {
-    mockQueryFn.mockResolvedValue([]);
+    mockQueryFn.mockResolvedValue(wrap([]));
 
     renderHook(
       () =>
@@ -299,12 +302,12 @@ describe('useInfiniteScroll', () => {
     );
 
     await waitFor(() => {
-      expect(mockQueryFn).toHaveBeenCalledWith(0, 50);
+      expect(mockQueryFn).toHaveBeenCalledWith(undefined, 50);
     });
   });
 
   it('should use default limit when not provided', async () => {
-    mockQueryFn.mockResolvedValue([]);
+    mockQueryFn.mockResolvedValue(wrap([]));
 
     renderHook(
       () =>
@@ -316,7 +319,7 @@ describe('useInfiniteScroll', () => {
     );
 
     await waitFor(() => {
-      expect(mockQueryFn).toHaveBeenCalledWith(0, 100);
+      expect(mockQueryFn).toHaveBeenCalledWith(undefined, 100);
     });
   });
 });
