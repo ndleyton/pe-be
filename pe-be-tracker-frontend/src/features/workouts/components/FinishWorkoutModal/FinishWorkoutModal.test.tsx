@@ -13,6 +13,13 @@ const defaultProps = {
 describe('FinishWorkoutModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Mock fetch for AnatomicalImage component
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        text: () => Promise.resolve('<svg></svg>'),
+      })
+    ) as any;
   });
 
   describe('Rendering and Visibility', () => {
