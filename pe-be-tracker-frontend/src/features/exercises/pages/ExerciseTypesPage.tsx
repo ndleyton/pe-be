@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { getExerciseTypes, type ExerciseType } from '@/api/exercises';
+import { getExerciseTypes, type ExerciseType } from '@/features/exercises/api';
 import { ExerciseTypeCard } from '@/features/exercises/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

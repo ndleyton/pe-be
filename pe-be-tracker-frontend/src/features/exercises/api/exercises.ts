@@ -157,7 +157,7 @@ export interface ProgressiveOverloadDataPoint {
   reps: number;
 }
 
-export interface LastWorkoutInfo {
+export interface LastWorkoutData {
   date: string;
   sets: number;
   totalReps: number;
@@ -165,7 +165,7 @@ export interface LastWorkoutInfo {
   totalVolume: number;
 }
 
-export interface PersonalBestInfo {
+export interface PersonalBestData {
   date: string;
   weight: number;
   reps: number;
@@ -174,8 +174,8 @@ export interface PersonalBestInfo {
 
 export interface ExerciseTypeStats {
   progressiveOverload: ProgressiveOverloadDataPoint[];
-  lastWorkout: LastWorkoutInfo | null;
-  personalBest: PersonalBestInfo | null;
+  lastWorkout: LastWorkoutData | null;
+  personalBest: PersonalBestData | null;
   totalSets: number;
   intensityUnit: IntensityUnit;
 }

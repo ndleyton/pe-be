@@ -1,5 +1,5 @@
 import React from 'react';
-import type { LastWorkoutInfo as LastWorkoutInfoType, IntensityUnit } from '@/api/exercises';
+import type { LastWorkoutData as LastWorkoutInfoType, IntensityUnit } from '@/features/exercises/api';
 
 interface LastWorkoutInfoProps {
   lastWorkout: LastWorkoutInfoType;

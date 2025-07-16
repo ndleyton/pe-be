@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ProgressiveOverloadDataPoint } from '@/api/exercises';
+import type { ProgressiveOverloadDataPoint } from '@/features/exercises/api';
 
 interface ProgressiveOverloadChartProps {
   data: ProgressiveOverloadDataPoint[];
