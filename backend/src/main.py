@@ -10,6 +10,7 @@ from src.exercises.router import router as exercises_router
 from src.exercise_sets.router import router as exercise_sets_router
 from src.recipes.router import router as recipes_router
 from src.admin.router import router as admin_router
+from src.health.router import router as health_router
 
 
 def create_app() -> FastAPI:
@@ -66,13 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(exercise_sets_router, prefix=f"{api_prefix}/exercise-sets", tags=["exercise-sets"])
     app.include_router(recipes_router, prefix=f"{api_prefix}/recipes", tags=["recipes"])
     app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
-
-
-    # Health check endpoint
-    @app.get("/health")
-    async def health_check():
-        """Health check endpoint"""
-        return {"status": "healthy", "message": "PE Tracker API is running"}
+    app.include_router(health_router, tags=["health"])
 
     # Register OAuth2 error handler so Google sign-in redirects work as before
     async def oauth_exception_handler(request: Request, exc: OAuth2Error):
