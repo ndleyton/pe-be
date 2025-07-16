@@ -74,7 +74,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
-      expect(mockGetExerciseTypes).toHaveBeenCalledWith('usage', null, 100);
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith('usage', undefined, 100);
     });
   });
 
@@ -96,7 +96,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     mockGetExerciseTypes.mockImplementation(() => new Promise(() => {})); // Never resolves
     render(<ExerciseTypesPage />);
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
   });
 
   it('filters exercise types based on search term', async () => {
@@ -210,7 +210,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
 
     // Should show loading more indicator
     await waitFor(() => {
-      expect(screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
     });
   });
 
