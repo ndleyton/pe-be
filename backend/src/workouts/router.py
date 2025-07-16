@@ -25,7 +25,7 @@ async def get_my_workouts(
     """Get all workouts for the current user"""
     workouts = await WorkoutService.get_my_workouts(session, user.id, limit, cursor)
 
-    next_cursor = workouts[-1].id if len(workouts) == limit else None
+    next_cursor = workouts[-1].id if len(workouts) == limit and len(workouts) > 0 else None
     return {"data": workouts, "next_cursor": next_cursor}
 
 
