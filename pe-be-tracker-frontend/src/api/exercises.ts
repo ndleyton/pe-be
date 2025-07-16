@@ -1,20 +1,9 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import type { MuscleGroup, Muscle } from '@/shared/types';
+import { type ExerciseType } from '@/features/exercises/types';
 
-export type { MuscleGroup, Muscle };
-
-export interface ExerciseType {
-  id: number | string;
-  name: string;
-  description: string | null;
-  default_intensity_unit: number;
-  times_used: number;
-  muscles?: Muscle[];
-  images?: string[];
-  created_at?: string;
-  updated_at?: string;
-}
+export type { MuscleGroup, Muscle, ExerciseType };
 
 export interface IntensityUnit {
   id: number;
@@ -129,9 +118,16 @@ export interface CreateExerciseTypeData {
   default_intensity_unit?: number;
 }
 
-// Get all exercise types (ordered by usage by default)
-export const getExerciseTypes = async (orderBy: 'usage' | 'name' = 'usage'): Promise<ExerciseType[]> => {
-  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}`);
+// Get all exercise types with cursor-based pagination
+export const getExerciseTypes = async (
+  orderBy: 'usage' | 'name' = 'usage',
+  cursor?: number | null,
+  limit: number = 100
+): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
+  const offset = cursor || 0;
+  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
+  
+  // Server returns: { data: [...], next_cursor: ... }
   return response.data;
 };
 
