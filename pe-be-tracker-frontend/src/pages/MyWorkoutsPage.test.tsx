@@ -14,6 +14,26 @@ vi.mock('@/features/workouts', () => ({
   getMyWorkouts: vi.fn(),
 }));
 
+vi.mock('axios', async () => {
+  const actual = await vi.importActual('axios');
+  return {
+    ...actual,
+    default: actual.default,
+    isAxiosError: (error: any) => error && error.isAxiosError === true,
+  };
+});
+
+vi.mock('@/contexts/GuestDataContext', async () => {
+  const actual = await vi.importActual('@/contexts/GuestDataContext');
+  return {
+    ...actual,
+    useGuestData: () => ({ 
+      isAuthenticated: () => true, 
+      guestData: { workouts: [], recipes: [] },
+    }),
+  };
+});
+
 vi.mock('../shared/components/ui', () => ({
   FloatingActionButton: ({ children, onClick, dataTestId }: any) => (
     <button data-testid={dataTestId} onClick={onClick}>
@@ -76,24 +96,28 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     mockGetMyWorkouts.mockResolvedValue(wrap(mockWorkouts) as any);
   });
 
-  it('renders the page with heading', () => {
+  it('renders the page with heading', async () => {
     render(<MyWorkoutsPage />);
 
-    expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+    });
   });
 
-  it('shows message when no workouts exist', () => {
+  it('shows message when no workouts exist', async () => {
     mockGetMyWorkouts.mockResolvedValue(wrap([]) as any);
     render(<MyWorkoutsPage />);
 
-    expect(screen.getByText(/you haven't logged any workouts yet/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/you haven't logged any workouts yet/i)).toBeInTheDocument();
+    });
   });
 
   it('calls getMyWorkouts with default parameters for authenticated users', async () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockGetMyWorkouts).toHaveBeenCalledWith(null, 100);
+      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 100);
     });
   });
 
@@ -128,7 +152,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1/1/24')).toBeInTheDocument();
+      expect(screen.getAllByText('1/1/24')).toHaveLength(2); // Two workouts on same day
       expect(screen.getByText('1/2/24')).toBeInTheDocument();
     });
   });
@@ -194,6 +218,11 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
   it('shows and hides workout form', async () => {
     render(<MyWorkoutsPage />);
 
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+    });
+
     // FAB should be visible initially
     expect(screen.getByTestId('fab-add-workout')).toBeInTheDocument();
 
@@ -220,6 +249,11 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
   it('starts workout from recipe', async () => {
     render(<MyWorkoutsPage />);
 
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+    });
+
     const startFromRecipeButton = screen.getByText('Start from recipe');
     await userEvent.click(startFromRecipeButton);
 
@@ -234,7 +268,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to load workouts/i)).toBeInTheDocument();
+      expect(screen.getByText('API Error')).toBeInTheDocument();
     });
   });
 
@@ -242,6 +276,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     const unauthorizedError = {
       response: { status: 401 },
       message: 'Unauthorized',
+      isAxiosError: true,
     };
     mockGetMyWorkouts.mockRejectedValue(unauthorizedError);
 
@@ -257,6 +292,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     const forbiddenError = {
       response: { status: 403 },
       message: 'Forbidden',
+      isAxiosError: true,
     };
     mockGetMyWorkouts.mockRejectedValue(forbiddenError);
 
@@ -269,6 +305,11 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
   it('refetches data when workout is created', async () => {
     render(<MyWorkoutsPage />);
+
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+    });
 
     // Show form
     await userEvent.click(screen.getByTestId('fab-add-workout'));

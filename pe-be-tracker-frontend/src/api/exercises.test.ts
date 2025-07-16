@@ -87,7 +87,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should handle large offset values', async () => {
-      mockApi.get.mockResolvedValue({ data: [] });
+      mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       const result = await getExerciseTypes('usage', 1000, 100);
 
@@ -112,7 +112,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should handle empty response', async () => {
-      mockApi.get.mockResolvedValue({ data: [] });
+      mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       const result = await getExerciseTypes('usage', 100, 100);
 
