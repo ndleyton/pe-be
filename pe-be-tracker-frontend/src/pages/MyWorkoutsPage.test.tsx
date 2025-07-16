@@ -170,7 +170,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     }));
 
     mockGetMyWorkouts
-      .mockResolvedValueOnce(wrap(fullPage) as any)
+      .mockResolvedValueOnce({ data: fullPage, next_cursor: 100 } as any)
       .mockImplementation(() => new Promise(() => {})); // Pending next page
 
     render(<MyWorkoutsPage />);
@@ -197,7 +197,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Should show loading more indicator
     await waitFor(() => {
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
     });
   });
 
