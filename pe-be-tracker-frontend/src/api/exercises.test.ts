@@ -14,6 +14,9 @@ vi.mock('@/shared/api/client', () => ({
 
 const mockApi = api as any;
 
+// Helper to wrap exercise type arrays in cursor pagination shape
+const wrap = (exerciseTypes: ExerciseType[]) => ({ data: exerciseTypes, next_cursor: null });
+
 describe('exercises API - pagination', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +51,7 @@ describe('exercises API - pagination', () => {
     ];
 
     it('should call API with default pagination parameters', async () => {
-      mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
+      mockApi.get.mockResolvedValue({ data: wrap(mockExerciseTypes) });
 
       const result = await getExerciseTypes();
 
@@ -57,7 +60,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should call API with custom order by parameter', async () => {
-      mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
+      mockApi.get.mockResolvedValue({ data: wrap(mockExerciseTypes) });
 
       const result = await getExerciseTypes('name');
 
@@ -66,7 +69,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should call API with custom pagination parameters', async () => {
-      mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
+      mockApi.get.mockResolvedValue({ data: wrap(mockExerciseTypes) });
 
       const result = await getExerciseTypes('usage', 20, 50);
 
@@ -75,7 +78,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should handle offset 0 and limit 100', async () => {
-      mockApi.get.mockResolvedValue({ data: mockExerciseTypes });
+      mockApi.get.mockResolvedValue({ data: wrap(mockExerciseTypes) });
 
       const result = await getExerciseTypes('usage', 0, 100);
 
@@ -93,7 +96,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should handle small limit values', async () => {
-      mockApi.get.mockResolvedValue({ data: mockExerciseTypes.slice(0, 1) });
+      mockApi.get.mockResolvedValue({ data: wrap(mockExerciseTypes.slice(0, 1)) });
 
       const result = await getExerciseTypes('usage', 0, 1);
 
@@ -118,7 +121,7 @@ describe('exercises API - pagination', () => {
     });
 
     it('should handle response with exactly limit items', async () => {
-      const fullPageData = Array.from({ length: 100 }, (_, i) => ({
+      const fullPageData: ExerciseType[] = Array.from({ length: 100 }, (_, i) => ({
         id: i + 1,
         name: `Exercise ${i + 1}`,
         description: `Description ${i + 1}`,
@@ -127,9 +130,11 @@ describe('exercises API - pagination', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
         usage_count: i + 1,
+        default_intensity_unit: 1,
+        times_used: i + 1,
       }));
 
-      mockApi.get.mockResolvedValue({ data: fullPageData });
+      mockApi.get.mockResolvedValue({ data: wrap(fullPageData) });
 
       const result = await getExerciseTypes('usage', 0, 100);
 
@@ -139,7 +144,7 @@ describe('exercises API - pagination', () => {
 
     it('should handle response with less than limit items', async () => {
       const partialPageData = mockExerciseTypes.slice(0, 1);
-      mockApi.get.mockResolvedValue({ data: partialPageData });
+      mockApi.get.mockResolvedValue({ data: wrap(partialPageData) });
 
       const result = await getExerciseTypes('usage', 50, 100);
 
