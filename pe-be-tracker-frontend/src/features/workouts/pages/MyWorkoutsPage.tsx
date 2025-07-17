@@ -8,6 +8,7 @@ import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataCon
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
+import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 
 // Remove the local type definition since we're importing it from the API
 
@@ -38,8 +39,8 @@ const MyWorkoutsPage = () => {
         notes: gw.notes,
         start_time: gw.start_time,
         end_time: gw.end_time,
-        created_at: gw.created_at || new Date().toISOString(),
-        updated_at: gw.updated_at || new Date().toISOString(),
+        created_at: gw.created_at || getCurrentUTCTimestamp(),
+        updated_at: gw.updated_at || getCurrentUTCTimestamp(),
       }));
 
   const getErrorMessage = (error: unknown) => {
@@ -52,30 +53,6 @@ const MyWorkoutsPage = () => {
     return error instanceof Error ? error.message : "Failed to load workouts.";
   };
 
-  const formatDuration = (startTime: string, endTime: string | null) => {
-    if (!endTime) return "In Progress";
-    
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const durationMs = end.getTime() - start.getTime();
-    const durationMinutes = Math.floor(durationMs / (1000 * 60));
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}`;
-    }
-    return `0:${minutes.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'numeric', 
-      day: 'numeric', 
-      year: '2-digit' 
-    });
-  };
 
   const handleWorkoutClick = (workoutId: number | string) => {
     navigate(`/workout/${workoutId}`);
@@ -177,10 +154,10 @@ const MyWorkoutsPage = () => {
                         </h3>
                         <div className="flex items-center space-x-4 mt-1">
                           <span className="text-primary font-mono text-lg">
-                            {formatDuration(workout.start_time, workout.end_time)}
+                            {parseWorkoutDuration(workout.start_time, workout.end_time).durationText}
                           </span>
                           <span className="text-muted-foreground text-sm">
-                            {formatDate(workout.start_time)}
+                            {formatDisplayDate(workout.start_time, { includeTime: false, includeTimezone: false })}
                           </span>
                         </div>
                       </div>

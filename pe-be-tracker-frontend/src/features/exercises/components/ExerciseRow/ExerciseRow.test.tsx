@@ -101,7 +101,9 @@ describe('ExerciseRow', () => {
   it('displays timestamp when available', () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    expect(screen.getByText(new Date('2024-01-01T10:00:00Z').toLocaleString())).toBeInTheDocument();
+    // The component uses formatDisplayDate - check for date component (timezone-agnostic)
+    // We expect to see "Jan 1" but time could vary by timezone
+    expect(screen.getByText(/Jan 1/)).toBeInTheDocument();
   });
 
   it('displays created date when timestamp is not available', () => {
@@ -113,7 +115,9 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow exercise={exerciseWithoutTimestamp} onExerciseUpdate={mockOnExerciseUpdate} />);
 
     expect(screen.getByText(/Created:/)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(new Date('2024-01-01T00:00:00Z').toLocaleString()))).toBeInTheDocument();
+    // The component uses formatDisplayDate - check for date component (timezone-agnostic)
+    // Date could be Dec 31 or Jan 1 depending on timezone, so check for either
+    expect(screen.getByText(/(Dec 31|Jan 1)/)).toBeInTheDocument();
   });
 
   it('shows add set button', () => {

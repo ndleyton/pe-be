@@ -9,13 +9,14 @@ import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/S
 import { FloatingActionButton } from '@/shared/components/ui';
 import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
 import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
+import { getCurrentUTCTimestamp } from '@/utils/date';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   console.log('Updating workout end time for ID:', workoutId);
   const response = await api.patch(
     `/workouts/${workoutId}`,
     {
-      end_time: new Date().toISOString(),
+      end_time: getCurrentUTCTimestamp(),
     },
   );
   console.log('Workout updated successfully:', response.data);
@@ -108,14 +109,40 @@ const WorkoutPage: React.FC = () => {
       // Try to derive the start time from workout data if available
       if (isAuthenticated()) {
         if (serverWorkout && (serverWorkout as any).start_time) {
-          start(new Date((serverWorkout as any).start_time));
+          const workoutStartTime = (serverWorkout as any).start_time;
+          try {
+            const startDate = new Date(workoutStartTime);
+            // Validate the date and ensure it's not in the future
+            if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
+              start(startDate);
+            } else {
+              console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
+              start();
+            }
+          } catch (error) {
+            console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
+            start();
+          }
         } else {
           start();
         }
       } else {
         const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
         if (guestWorkout && (guestWorkout as any).start_time) {
-          start(new Date((guestWorkout as any).start_time));
+          const workoutStartTime = (guestWorkout as any).start_time;
+          try {
+            const startDate = new Date(workoutStartTime);
+            // Validate the date and ensure it's not in the future
+            if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
+              start(startDate);
+            } else {
+              console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
+              start();
+            }
+          } catch (error) {
+            console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
+            start();
+          }
         } else {
           start();
         }
@@ -159,7 +186,7 @@ const WorkoutPage: React.FC = () => {
       } else {
         // For guest mode, update the workout end time
         guestActions.updateWorkout(workoutId, {
-          end_time: new Date().toISOString(),
+          end_time: getCurrentUTCTimestamp(),
         });
         stop();
         setShowFinishModal(false);

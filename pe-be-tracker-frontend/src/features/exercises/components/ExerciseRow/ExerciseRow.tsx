@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Exercise, ExerciseSet } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/contexts/GuestDataContext';
 import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { formatDisplayDate } from '@/utils/date';
 
 interface ExerciseRowProps {
   exercise: Exercise;
@@ -89,11 +90,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
             <div className="text-right text-sm text-muted-foreground">
               {exercise.timestamp ? (
                 <div>
-                  {new Date(exercise.timestamp).toLocaleString()}
+                  {formatDisplayDate(exercise.timestamp, { timeStyle: 'short', includeTimezone: false })}
                 </div>
               ) : (
                 <div>
-                  Created: {new Date(exercise.created_at).toLocaleString()}
+                  Created: {formatDisplayDate(exercise.created_at, { timeStyle: 'short', includeTimezone: false })}
                 </div>
               )}
             </div>
