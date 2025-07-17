@@ -73,6 +73,12 @@ jobs:
     - name: Install coverage dependencies
       run: poetry add --group dev pytest-cov
       
+    - name: Run ruff linting
+      run: poetry run ruff check src/ tests/
+      
+    - name: Run ruff formatting check
+      run: poetry run ruff format --check src/ tests/
+      
     - name: Create test database
       run: |
         PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pe_be_test;" || echo "Database might already exist"
