@@ -15,7 +15,7 @@ from src.health.router import router as health_router
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application with all domain routers"""
-    
+
     fastapi_kwargs = {
         "title": "PE Tracker API",
         "description": "Personal Exercise Tracker API with domain-driven architecture",
@@ -26,9 +26,13 @@ def create_app() -> FastAPI:
 
     app = FastAPI(**fastapi_kwargs)
 
-    base_frontend = settings.FRONTEND_URL.rstrip('/')
+    base_frontend = settings.FRONTEND_URL.rstrip("/")
     # Derive a 127.0.0.1 variant if the base contains 'localhost'
-    localhost_variant = base_frontend.replace("localhost", "127.0.0.1") if "localhost" in base_frontend else None
+    localhost_variant = (
+        base_frontend.replace("localhost", "127.0.0.1")
+        if "localhost" in base_frontend
+        else None
+    )
 
     # Common dev hosts to allow
     allowed_origins = {
@@ -60,11 +64,19 @@ def create_app() -> FastAPI:
 
     # Users & Auth routes – keep the API prefix so endpoints remain backward-compatible
     app.include_router(users_router, prefix=api_prefix)
-    
+
     # Domain-specific routes with API prefix
-    app.include_router(workouts_router, prefix=f"{api_prefix}/workouts", tags=["workouts"])
-    app.include_router(exercises_router, prefix=f"{api_prefix}/exercises", tags=["exercises"])
-    app.include_router(exercise_sets_router, prefix=f"{api_prefix}/exercise-sets", tags=["exercise-sets"])
+    app.include_router(
+        workouts_router, prefix=f"{api_prefix}/workouts", tags=["workouts"]
+    )
+    app.include_router(
+        exercises_router, prefix=f"{api_prefix}/exercises", tags=["exercises"]
+    )
+    app.include_router(
+        exercise_sets_router,
+        prefix=f"{api_prefix}/exercise-sets",
+        tags=["exercise-sets"],
+    )
     app.include_router(recipes_router, prefix=f"{api_prefix}/recipes", tags=["recipes"])
     app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
     app.include_router(health_router, tags=["health"])
@@ -82,4 +94,4 @@ def create_app() -> FastAPI:
 
 
 # Create app instance
-app = create_app() 
+app = create_app()
