@@ -3,6 +3,7 @@ import { Exercise, ExerciseSet } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/contexts/GuestDataContext';
 import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { formatDisplayDate } from '@/utils/date';
+import { truncateWords } from '@/utils/text';
 
 interface ExerciseRowProps {
   exercise: Exercise;
@@ -73,9 +74,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 <h4 className="text-foreground font-medium">
                   {exercise.exercise_type.name}
                 </h4>
-                {exercise.exercise_type.description && (
+                {truncateWords(exercise.exercise_type.description, 4) && (
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    {exercise.exercise_type.description}
+                    {truncateWords(exercise.exercise_type.description, 4)}
                   </p>
                 )}
                 {exercise.notes && (

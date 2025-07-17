@@ -103,6 +103,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
         end_time: data.end_time || null,
         workout_type_id: data.workout_type_id as string,
         workout_type: workoutType,
+        exercises: recipe ? recipe.exercises : [],
       });
 
       resetForm();
