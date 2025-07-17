@@ -18,4 +18,4 @@ describe('truncateWords', () => {
   it('truncates to the specified number of words and adds ellipsis', () => {
     expect(truncateWords('one two three four five six', 4)).toBe('one two three four...');
   });
-}); 
+});
