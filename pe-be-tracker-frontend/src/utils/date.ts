@@ -1,4 +1,18 @@
-export const toUTCISOString = (local: string): string => {
+// Memoized date formatters for better performance
+type FormatterKey = string;
+const formattersCache = new Map<FormatterKey, Intl.DateTimeFormat>();
+
+const getDateFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
+  const key = JSON.stringify(options);
+  let formatter = formattersCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(undefined, options);
+    formattersCache.set(key, formatter);
+  }
+  return formatter;
+};
+
+export const toUTCISOString = (local: string | null | undefined): string => {
   if (!local?.trim()) return '';
   
   // If already has timezone info, parse and convert to UTC
@@ -30,13 +44,13 @@ export const toUTCISOString = (local: string): string => {
   }
 };
 
-export const formatDisplayDate = (timestamp: string, options: {
+export const formatDisplayDate = (timestamp: string | null | undefined, options: {
   includeTime?: boolean;
   includeTimezone?: boolean;
   dateStyle?: 'short' | 'medium' | 'long' | 'full';
   timeStyle?: 'short' | 'medium' | 'long' | 'full';
 } = {}): string => {
-  if (!timestamp) return '';
+  if (!timestamp?.trim()) return '';
   
   try {
     const date = new Date(timestamp);
@@ -70,14 +84,15 @@ export const formatDisplayDate = (timestamp: string, options: {
       formatOptions.timeZoneName = 'short';
     }
 
-    return date.toLocaleString(undefined, formatOptions);
+    const formatter = getDateFormatter(formatOptions);
+    return formatter.format(date);
   } catch {
     return '';
   }
 };
 
-export const formatRelativeTime = (timestamp: string): string => {
-  if (!timestamp) return '';
+export const formatRelativeTime = (timestamp: string | null | undefined): string => {
+  if (!timestamp?.trim()) return '';
   
   try {
     const date = new Date(timestamp);
@@ -124,11 +139,11 @@ export const generateRandomId = (): string => {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 };
 
-export const parseWorkoutDuration = (startTime: string, endTime: string | null): {
+export const parseWorkoutDuration = (startTime: string | null | undefined, endTime: string | null | undefined): {
   durationMs: number;
   durationText: string;
 } => {
-  if (!startTime || !endTime) {
+  if (!startTime?.trim() || !endTime?.trim()) {
     return { durationMs: 0, durationText: 'In Progress' };
   }
 
