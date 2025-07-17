@@ -101,7 +101,8 @@ describe('ExerciseRow', () => {
   it('displays timestamp when available', () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    expect(screen.getByText(new Date('2024-01-01T10:00:00Z').toLocaleString())).toBeInTheDocument();
+    // The component uses formatDisplayDate which produces format like "Jan 1, 7:00 AM"
+    expect(screen.getByText(/Jan 1.*AM/)).toBeInTheDocument();
   });
 
   it('displays created date when timestamp is not available', () => {
@@ -113,7 +114,8 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow exercise={exerciseWithoutTimestamp} onExerciseUpdate={mockOnExerciseUpdate} />);
 
     expect(screen.getByText(/Created:/)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(new Date('2024-01-01T00:00:00Z').toLocaleString()))).toBeInTheDocument();
+    // The component uses formatDisplayDate which produces format like "Dec 31, 9:00 PM"
+    expect(screen.getByText(/Dec 31.*PM/)).toBeInTheDocument();
   });
 
   it('shows add set button', () => {

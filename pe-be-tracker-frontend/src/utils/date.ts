@@ -44,22 +44,27 @@ export const formatDisplayDate = (timestamp: string, options: {
 
     const {
       includeTime = true,
-      includeTimezone = true,
+      includeTimezone = false,
       dateStyle = 'medium',
       timeStyle = 'short'
     } = options;
 
-    const formatOptions: Intl.DateTimeFormatOptions = {
-      dateStyle: includeTime ? undefined : dateStyle,
-      timeStyle: includeTime ? timeStyle : undefined,
-      ...(includeTime && !dateStyle && !timeStyle ? {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      } : {})
-    };
+    const formatOptions: Intl.DateTimeFormatOptions = {};
+    
+    if (includeTime) {
+      // When including time, use explicit format options (no year for cleaner UI)
+      formatOptions.month = 'short';
+      formatOptions.day = 'numeric';
+      formatOptions.hour = 'numeric';
+      formatOptions.minute = '2-digit';
+      if (timeStyle === 'medium' || timeStyle === 'long' || timeStyle === 'full') {
+        formatOptions.second = '2-digit';
+      }
+    } else {
+      // When not including time, use explicit format options (no year for cleaner UI)
+      formatOptions.month = 'short';
+      formatOptions.day = 'numeric';
+    }
 
     if (includeTimezone) {
       formatOptions.timeZoneName = 'short';
@@ -124,7 +129,7 @@ export const parseWorkoutDuration = (startTime: string, endTime: string | null):
   durationText: string;
 } => {
   if (!startTime || !endTime) {
-    return { durationMs: 0, durationText: 'In progress' };
+    return { durationMs: 0, durationText: 'In Progress' };
   }
 
   try {
