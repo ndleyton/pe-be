@@ -3,4 +3,4 @@ export const truncateWords = (text: string | null | undefined, count: number): s
   const words = text.trim().split(/\s+/);
   if (words.length <= count) return text;
   return words.slice(0, count).join(' ') + '...';
-}; 
+};
