@@ -24,7 +24,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
   const handleSave = async () => {
     try {
       if (isAuthenticated()) {
-        const updatedSet = await updateExerciseSet(exerciseSet.id as number, editData);
+        const updatedSet = await updateExerciseSet(exerciseSet.id, editData);
         onUpdate(updatedSet);
         
         // Invalidate the exercises query to refresh the cache
@@ -61,7 +61,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
     if (window.confirm('Are you sure you want to delete this set?')) {
       try {
         if (isAuthenticated()) {
-          await deleteExerciseSet(exerciseSet.id as number);
+          await deleteExerciseSet(exerciseSet.id);
           
           if (workoutId) {
             queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
@@ -80,7 +80,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
   const toggleDone = async () => {
     try {
       if (isAuthenticated()) {
-        const updatedSet = await updateExerciseSet(exerciseSet.id as number, { done: !exerciseSet.done });
+        const updatedSet = await updateExerciseSet(exerciseSet.id, { done: !exerciseSet.done });
         onUpdate(updatedSet);
         
         if (workoutId) {
