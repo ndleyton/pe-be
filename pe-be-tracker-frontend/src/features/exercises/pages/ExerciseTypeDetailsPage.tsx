@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Image } from 'lucide-react';
-import { getExerciseTypeById, getExerciseTypeStats } from '@/api/exercises';
+import { getExerciseTypeById, getExerciseTypeStats } from '@/features/exercises/api';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
 import { addExerciseToCurrentWorkout } from '@/features/workouts';

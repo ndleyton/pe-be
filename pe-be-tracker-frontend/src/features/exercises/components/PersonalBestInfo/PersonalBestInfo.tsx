@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
-import type { PersonalBestInfo as PersonalBestInfoType, IntensityUnit } from '@/api/exercises';
+import type { PersonalBestData as PersonalBestInfoType, IntensityUnit } from '@/features/exercises/api';
 
 interface PersonalBestInfoProps {
   personalBest: PersonalBestInfoType;

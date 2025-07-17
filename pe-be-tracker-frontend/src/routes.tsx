@@ -3,14 +3,14 @@ import { RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
 
-const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const MyWorkoutsPage = lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
+const ProfilePage = lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
+const SettingsPage = lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
 const OAuthCallbackPage = lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
-const WorkoutPage = lazy(() => import('./pages/WorkoutPage'));
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const ExerciseTypesPage = lazy(() => import('./pages/ExerciseTypesPage'));
-const ExerciseTypeDetailsPage = lazy(() => import('./pages/ExerciseTypeDetailsPage'));
+const WorkoutPage = lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
+const ChatPage = lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
+const ExerciseTypesPage = lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
+const ExerciseTypeDetailsPage = lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const routes: RouteObject[] = [

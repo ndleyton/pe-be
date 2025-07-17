@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { render } from '../test/utils';
+import { render } from '@/test/utils';
 import MyWorkoutsPage from './MyWorkoutsPage';
 import { getMyWorkouts } from '@/features/workouts';
 import type { Workout } from '@/features/workouts';
 
-vi.mock('../features/workouts/components', () => ({
+vi.mock('@/features/workouts/components', () => ({
   WorkoutForm: () => <div data-testid="workout-form">Mock Workout Form</div>,
 }));
 
@@ -34,7 +34,7 @@ vi.mock('@/contexts/GuestDataContext', async () => {
   };
 });
 
-vi.mock('../shared/components/ui', () => ({
+vi.mock('@/shared/components/ui', () => ({
   FloatingActionButton: ({ children, onClick, dataTestId }: any) => (
     <button data-testid={dataTestId} onClick={onClick}>
       {children}

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { render } from '../test/utils';
+import { render } from '@/test/utils';
 import ExerciseTypesPage from './ExerciseTypesPage';
-import { getExerciseTypes } from '@/api/exercises';
+import { getExerciseTypes } from '@/features/exercises/api';
 import type { ExerciseType } from '@/features/exercises/types';
 
-vi.mock('@/api/exercises');
+vi.mock('@/features/exercises/api');
 vi.mock('@/features/exercises/components', () => ({
   ExerciseTypeCard: ({ exerciseType }: { exerciseType: ExerciseType }) => (
     <div data-testid={`exercise-type-${exerciseType.id}`}>
