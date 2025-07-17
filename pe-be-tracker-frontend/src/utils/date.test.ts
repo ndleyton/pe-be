@@ -242,7 +242,7 @@ describe('Date Utilities', () => {
 
     it('generates valid UUID format when crypto.randomUUID is available', () => {
       // Check if we're in an environment with crypto.randomUUID
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         const id = generateRandomId();
         expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       } else {
