@@ -46,7 +46,10 @@ export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const start = (at?: Date) => {
     const startAt = at ?? new Date();
     setStartTime(startAt);
-    setElapsedSeconds(Math.floor((Date.now() - startAt.getTime()) / 1000));
+    
+    // Calculate elapsed seconds, ensuring it's never negative
+    const calculatedElapsed = Math.floor((Date.now() - startAt.getTime()) / 1000);
+    setElapsedSeconds(Math.max(0, calculatedElapsed));
 
     clear();
     startInterval();
