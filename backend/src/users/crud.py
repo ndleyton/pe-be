@@ -27,15 +27,17 @@ async def create_user(session: AsyncSession, user_create: UserCreate) -> User:
     return user
 
 
-async def update_user(session: AsyncSession, user_id: int, user_update: UserUpdate) -> Optional[User]:
+async def update_user(
+    session: AsyncSession, user_id: int, user_update: UserUpdate
+) -> Optional[User]:
     """Update an existing user"""
     user = await get_user_by_id(session, user_id)
     if not user:
         return None
-    
+
     for field, value in user_update.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
-    
+
     await session.commit()
     await session.refresh(user)
     return user
@@ -46,7 +48,7 @@ async def delete_user(session: AsyncSession, user_id: int) -> bool:
     user = await get_user_by_id(session, user_id)
     if not user:
         return False
-    
+
     await session.delete(user)
     await session.commit()
-    return True 
+    return True

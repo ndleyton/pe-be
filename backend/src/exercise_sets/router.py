@@ -2,7 +2,11 @@ from typing import List
 from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetRead, ExerciseSetUpdate
+from src.exercise_sets.schemas import (
+    ExerciseSetCreate,
+    ExerciseSetRead,
+    ExerciseSetUpdate,
+)
 from src.exercise_sets.service import ExerciseSetService
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -15,20 +19,24 @@ router = APIRouter(tags=["exercise-sets"])
 async def create_exercise_set(
     exercise_set_in: ExerciseSetCreate,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise set"""
-    return await ExerciseSetService.create_new_exercise_set(session, exercise_set_in, user.id)
+    return await ExerciseSetService.create_new_exercise_set(
+        session, exercise_set_in, user.id
+    )
 
 
 @router.get("/exercise/{exercise_id}", response_model=List[ExerciseSetRead])
 async def get_exercise_sets(
     exercise_id: int,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise sets for a specific exercise"""
-    return await ExerciseSetService.get_exercise_sets_for_exercise(session, exercise_id, user.id)
+    return await ExerciseSetService.get_exercise_sets_for_exercise(
+        session, exercise_id, user.id
+    )
 
 
 @router.put("/{exercise_set_id}", response_model=ExerciseSetRead)
@@ -36,7 +44,7 @@ async def update_exercise_set(
     exercise_set_id: int,
     exercise_set_update: ExerciseSetUpdate,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Update an exercise set"""
     exercise_set = await ExerciseSetService.update_exercise_set_data(
@@ -51,9 +59,11 @@ async def update_exercise_set(
 async def delete_exercise_set(
     exercise_set_id: int,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Delete an exercise set"""
-    success = await ExerciseSetService.remove_exercise_set(session, exercise_set_id, user.id)
+    success = await ExerciseSetService.remove_exercise_set(
+        session, exercise_set_id, user.id
+    )
     if not success:
-        raise HTTPException(status_code=404, detail="Exercise set not found") 
+        raise HTTPException(status_code=404, detail="Exercise set not found")

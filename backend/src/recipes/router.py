@@ -14,7 +14,7 @@ router = APIRouter(tags=["recipes"])
 @router.get("/", response_model=List[RecipeRead])
 async def get_user_recipes(
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get all recipes for the authenticated user"""
     return await recipe_service.get_user_recipes(session, user.id)
@@ -24,7 +24,7 @@ async def get_user_recipes(
 async def get_recipe(
     recipe_id: int,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get a specific recipe by ID"""
     recipe = await recipe_service.get_recipe(session, recipe_id, user.id)
@@ -37,7 +37,7 @@ async def get_recipe(
 async def create_recipe(
     recipe_in: RecipeCreate,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new recipe"""
     return await recipe_service.create_recipe(session, recipe_in, user.id)
@@ -48,7 +48,7 @@ async def update_recipe(
     recipe_id: int,
     recipe_in: RecipeUpdate,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Update an existing recipe"""
     recipe = await recipe_service.update_recipe(session, recipe_id, recipe_in, user.id)
@@ -61,7 +61,7 @@ async def update_recipe(
 async def delete_recipe(
     recipe_id: int,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Delete a recipe"""
     success = await recipe_service.delete_recipe(session, recipe_id, user.id)
