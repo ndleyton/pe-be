@@ -52,13 +52,13 @@ export const formatDisplayDate = (timestamp: string, options: {
     const formatOptions: Intl.DateTimeFormatOptions = {
       dateStyle: includeTime ? undefined : dateStyle,
       timeStyle: includeTime ? timeStyle : undefined,
-      ...(includeTime && !dateStyle && !timeStyle && {
+      ...(includeTime && !dateStyle && !timeStyle ? {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit'
-      })
+      } : {})
     };
 
     if (includeTimezone) {
@@ -99,7 +99,7 @@ export const getCurrentUTCTimestamp = (): string => {
   return new Date().toISOString();
 };
 
-export const generateSecureId = (): string => {
+export const generateRandomId = (): string => {
   // Use crypto.randomUUID if available, fallback to secure random string
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
