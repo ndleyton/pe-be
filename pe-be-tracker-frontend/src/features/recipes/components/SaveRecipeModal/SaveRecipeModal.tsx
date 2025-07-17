@@ -31,7 +31,7 @@ const convertToGuestExercises = (exercises: Exercise[]): GuestExercise[] => {
     created_at: exercise.created_at,
     updated_at: exercise.updated_at,
     exercise_type: {
-      id: String(exercise.exercise_type.id),
+      id: exercise.exercise_type.id.toString(),
       name: exercise.exercise_type.name,
       description: exercise.exercise_type.description,
       default_intensity_unit: exercise.exercise_type.default_intensity_unit,
