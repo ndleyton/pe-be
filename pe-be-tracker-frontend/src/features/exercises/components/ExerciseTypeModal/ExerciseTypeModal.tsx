@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/api/exercises';
+import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/features/exercises/api';
 import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
 import axios from 'axios';
 

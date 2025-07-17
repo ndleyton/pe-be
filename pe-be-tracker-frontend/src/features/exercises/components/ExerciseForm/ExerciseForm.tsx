@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
-import { ExerciseType } from '@/api/exercises';
+import { ExerciseType } from '@/features/exercises/api';
 import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
 import { Button } from '@/components/ui/button';
 

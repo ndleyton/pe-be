@@ -1,5 +1,5 @@
 import React from 'react';
-import { Exercise } from '@/api/exercises';
+import { Exercise } from '@/features/exercises/api';
 import ExerciseRow from '../ExerciseRow';
 
 interface ExerciseListProps {

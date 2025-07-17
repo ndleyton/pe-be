@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { render } from '@/test/utils';
 import AddExerciseSetForm from './AddExerciseSetForm';
-import { ExerciseSet } from '@/api/exercises';
-import * as exerciseApi from '@/api/exercises';
+import { ExerciseSet } from '@/features/exercises/api';
+import * as exerciseApi from '@/features/exercises/api';
 
-vi.mock('@/api/exercises', async () => {
-  const actual = await vi.importActual('@/api/exercises');
+vi.mock('@/features/exercises/api', async () => {
+  const actual = await vi.importActual('@/features/exercises/api');
   return {
     ...actual,
     createExerciseSet: vi.fn(),

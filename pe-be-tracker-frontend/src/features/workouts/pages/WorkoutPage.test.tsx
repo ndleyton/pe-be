@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { render } from '../test/utils';
+import { render } from '@/test/utils';
 import WorkoutPage from './WorkoutPage';
 
 // Mock react-router-dom
@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock the ExerciseForm component
-vi.mock('../features/exercises/components', () => ({
+vi.mock('@/features/exercises/components', () => ({
   ExerciseForm: () => <div data-testid="exercise-form">Mock Exercise Form</div>,
   ExerciseList: () => <div data-testid="exercise-list">Mock Exercise List</div>,
 }));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Exercise, ExerciseSet } from '@/api/exercises';
+import { Exercise, ExerciseSet } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/contexts/GuestDataContext';
 import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
 

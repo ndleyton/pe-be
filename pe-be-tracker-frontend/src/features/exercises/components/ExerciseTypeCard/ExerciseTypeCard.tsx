@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Flame } from 'lucide-react';
-import type { ExerciseType } from '@/api/exercises';
+import type { ExerciseType } from '@/features/exercises/api';
 import {
   Card,
   CardContent,
