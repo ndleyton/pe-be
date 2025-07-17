@@ -61,3 +61,28 @@ docker compose down -v
 ```
 
 This will ensure a clean shutdown and remove the database volume, allowing you to start fresh if needed.
+
+## Timezone & Date Handling
+
+PE-BE Tracker follows a **UTC-first** strategy:
+
+1. **Storage & Transport (Always UTC)**
+   * All `DateTime` columns in Postgres are declared with `timezone=True` so they map to the `timestamptz` type.
+   * The backend converts every inbound timestamp to UTC via Pydantic validators (`ensure_utc`) and generates server-side timestamps with `datetime.now(timezone.utc)`.
+   * FastAPI serialises these aware `datetime` objects as ISO-8601 strings that end with `Z` (e.g. `2024-06-17T13:45:00Z`).
+   * The React frontend sends timestamps in the same format, using the helper `toUTCISOString()` to convert user input to UTC before an API call.
+
+2. **Presentation (User Local by Default)**
+   * Timestamps received from the API are kept in UTC but **rendered** in the user’s local time zone via `formatDisplayDate()` and `formatRelativeTime()`.
+   * If you need to show the actual zone, pass `includeTimezone: true` to `formatDisplayDate` and it will append the short zone label (e.g. `PDT`).
+
+3. **HTML `<input type="datetime-local">` Quirk**
+   * This control emits a string **without** a time-zone designator. `toUTCISOString()` detects this case and appends the user’s offset so the value is stored correctly.
+
+### Quick Rules for Contributors
+
+* **When sending data to the backend:** always run human input through `toUTCISOString()` or send `null`.
+* **When displaying a timestamp:** use `formatDisplayDate()` or `formatRelativeTime()`—do **not** call `new Date().toLocaleString()` directly unless you have a special case.
+* **Never store local time** in the database; every timestamp must be timezone-aware UTC.
+
+By centralising conversions in these helpers we avoid silent bugs, ensure consistent UX, and make future locale/timezone requirements easier to implement.
