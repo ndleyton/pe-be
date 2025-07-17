@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class ExerciseSetBase(BaseModel):
     """Base schema for exercise set data"""
+
     reps: Optional[int] = None
     intensity: Optional[float] = None
     intensity_unit_id: int
@@ -15,11 +16,13 @@ class ExerciseSetBase(BaseModel):
 
 class ExerciseSetCreate(ExerciseSetBase):
     """Schema for creating exercise sets"""
+
     pass
 
 
 class ExerciseSetUpdate(BaseModel):
     """Schema for updating exercise sets"""
+
     reps: Optional[int] = None
     intensity: Optional[float] = None
     intensity_unit_id: Optional[int] = None
@@ -29,9 +32,10 @@ class ExerciseSetUpdate(BaseModel):
 
 class ExerciseSetRead(ExerciseSetBase):
     """Schema for reading exercise set data"""
+
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

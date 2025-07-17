@@ -9,27 +9,34 @@ from src.exercises.schemas import (
     ExerciseTypeCreate,
     IntensityUnitRead,
     ExerciseTypeStats,
-    PaginatedExerciseTypesResponse
+    PaginatedExerciseTypesResponse,
 )
-from src.exercises.service import ExerciseService, ExerciseTypeService, IntensityUnitService
+from src.exercises.service import (
+    ExerciseService,
+    ExerciseTypeService,
+    IntensityUnitService,
+)
 from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User
 
 router = APIRouter(tags=["exercises"])
 
+
 # Exercise endpoints
 @router.post("/", response_model=ExerciseRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise(
     exercise_in: ExerciseCreate,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise"""
     return await ExerciseService.create_new_exercise(session, exercise_in)
 
+
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
+
 
 @exercise_types_router.get("", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
@@ -42,56 +49,70 @@ async def get_exercise_types(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
-    return await ExerciseTypeService.get_all_exercise_types(session, order_by, offset, limit)
+    return await ExerciseTypeService.get_all_exercise_types(
+        session, order_by, offset, limit
+    )
+
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
 async def get_exercise_type(
-    exercise_type_id: int,
-    session: AsyncSession = Depends(get_async_session)
+    exercise_type_id: int, session: AsyncSession = Depends(get_async_session)
 ):
     """Get an exercise type by ID."""
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exercise type with ID {exercise_type_id} not found"
+            detail=f"Exercise type with ID {exercise_type_id} not found",
         )
     return exercise_type
 
-@exercise_types_router.get("/{exercise_type_id}/stats", response_model=ExerciseTypeStats)
+
+@exercise_types_router.get(
+    "/{exercise_type_id}/stats", response_model=ExerciseTypeStats
+)
 async def get_exercise_type_stats(
-    exercise_type_id: int,
-    session: AsyncSession = Depends(get_async_session)
+    exercise_type_id: int, session: AsyncSession = Depends(get_async_session)
 ):
     """Get exercise type statistics including progressive overload data."""
     # First check if exercise type exists
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exercise type with ID {exercise_type_id} not found"
+            detail=f"Exercise type with ID {exercise_type_id} not found",
         )
-    
-    return await ExerciseTypeService.get_exercise_type_statistics(session, exercise_type_id)
 
-@exercise_types_router.post("", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
+    return await ExerciseTypeService.get_exercise_type_statistics(
+        session, exercise_type_id
+    )
+
+
+@exercise_types_router.post(
+    "", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED
+)
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise type."""
     return await ExerciseTypeService.create_new_exercise_type(session, exercise_type)
 
+
 # Intensity Units endpoints
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
+
 @intensity_units_router.get("", response_model=List[IntensityUnitRead])
-async def get_intensity_units(
-    session: AsyncSession = Depends(get_async_session)
-):
+async def get_intensity_units(session: AsyncSession = Depends(get_async_session)):
     """Get all intensity units"""
     return await IntensityUnitService.get_all_intensity_units(session)
 
+
 # Include sub-routers
 router.include_router(exercise_types_router)
-router.include_router(intensity_units_router) 
+router.include_router(intensity_units_router)

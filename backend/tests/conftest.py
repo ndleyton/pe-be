@@ -19,15 +19,19 @@ import src.recipes.models  # noqa: F401
 
 def get_test_database_url():
     """Get test database URL and ensure it's async compatible."""
-    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test")
-    
+    db_url = os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test",
+    )
+
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
     if db_url.startswith("postgresql://"):
         return db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif db_url.startswith("postgres://"):
         return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    
+
     return db_url
+
 
 # Test database URL - use environment variable or default
 TEST_DATABASE_URL = get_test_database_url()
@@ -70,9 +74,10 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 def client(db_session: AsyncSession):
     """Create a test client with test database session."""
+
     def override_get_db():
         return db_session
-    
+
     app.dependency_overrides[get_async_session] = override_get_db
     with TestClient(app) as test_client:
         yield test_client

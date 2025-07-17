@@ -7,18 +7,19 @@ from src.core.config import settings
 
 class ExerciseBase(BaseModel):
     """Base schema for exercise data"""
+
     timestamp: Optional[datetime] = None
     notes: Optional[str] = None
     exercise_type_id: int
     workout_id: int
 
-    @validator('timestamp', pre=True, always=True)
+    @validator("timestamp", pre=True, always=True)
     def ensure_utc_timestamp(cls, v):
         if v is None:
             return v
         if isinstance(v, str):
             # Parse ISO string, handle 'Z' as UTC
-            v = datetime.fromisoformat(v.replace('Z', '+00:00'))
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
@@ -26,16 +27,18 @@ class ExerciseBase(BaseModel):
 
 class ExerciseCreate(ExerciseBase):
     """Schema for creating exercises"""
+
     pass
 
 
 class ExerciseRead(ExerciseBase):
     """Schema for reading exercise data"""
+
     id: int
     created_at: datetime
     updated_at: datetime
-    exercise_type: 'ExerciseTypeRead'
-    exercise_sets: List['ExerciseSetRead'] = []
+    exercise_type: "ExerciseTypeRead"
+    exercise_sets: List["ExerciseSetRead"] = []
 
     class Config:
         from_attributes = True
@@ -43,7 +46,10 @@ class ExerciseRead(ExerciseBase):
 
 class ExerciseTypeCreate(BaseModel):
     """Schema for creating exercise types"""
-    name: str = Field(..., min_length=1, description="Human-readable exercise type name")
+
+    name: str = Field(
+        ..., min_length=1, description="Human-readable exercise type name"
+    )
     description: str = "Custom exercise"
     default_intensity_unit: int = 1
     muscle_ids: Optional[List[int]] = Field(
@@ -51,18 +57,19 @@ class ExerciseTypeCreate(BaseModel):
         description="List of muscle IDs to associate with this exercise type (optional)",
     )
 
-    @validator('name', pre=True)
+    @validator("name", pre=True)
     def validate_and_strip_name(cls, v):
         if v is None:
-            raise ValueError('Name cannot be empty')
+            raise ValueError("Name cannot be empty")
         v = v.strip()
         if not v:
-            raise ValueError('Name cannot be empty')
+            raise ValueError("Name cannot be empty")
         return v
 
 
 class MuscleGroupRead(BaseModel):
     """Schema for reading muscle group data"""
+
     id: int
     name: str
     created_at: datetime
@@ -74,6 +81,7 @@ class MuscleGroupRead(BaseModel):
 
 class MuscleRead(BaseModel):
     """Schema for reading muscle data"""
+
     id: int
     name: str
     muscle_group_id: int
@@ -87,6 +95,7 @@ class MuscleRead(BaseModel):
 
 class ExerciseTypeRead(BaseModel):
     """Schema for reading exercise type data"""
+
     id: int
     name: str
     description: str
@@ -103,27 +112,33 @@ class ExerciseTypeRead(BaseModel):
         """Process image URLs with IMAGE_URL_PREFIX for relative URLs"""
         if not self.images_url:
             return []
-        
+
         try:
-            image_list = json.loads(self.images_url) if isinstance(self.images_url, str) else self.images_url
+            image_list = (
+                json.loads(self.images_url)
+                if isinstance(self.images_url, str)
+                else self.images_url
+            )
             if not isinstance(image_list, list):
                 return []
-            
+
             processed_images = []
             for image_url in image_list:
                 if not image_url:
                     continue
-                
+
                 # If it's already an absolute URL, use as-is
-                if image_url.startswith(('http://', 'https://')):
+                if image_url.startswith(("http://", "https://")):
                     processed_images.append(image_url)
                 else:
                     # For relative URLs, prepend the IMAGE_URL_PREFIX
                     if settings.IMAGE_URL_PREFIX:
-                        processed_images.append(f"{settings.IMAGE_URL_PREFIX.rstrip('/')}/{image_url.lstrip('/')}")
+                        processed_images.append(
+                            f"{settings.IMAGE_URL_PREFIX.rstrip('/')}/{image_url.lstrip('/')}"
+                        )
                     else:
                         processed_images.append(image_url)
-            
+
             return processed_images
         except (json.JSONDecodeError, TypeError):
             return []
@@ -134,6 +149,7 @@ class ExerciseTypeRead(BaseModel):
 
 class IntensityUnitRead(BaseModel):
     """Schema for reading intensity unit data"""
+
     id: int
     name: str
     abbreviation: str
@@ -144,10 +160,8 @@ class IntensityUnitRead(BaseModel):
         from_attributes = True
 
 
-
-
 if TYPE_CHECKING:
-    from src.exercise_sets.schemas import ExerciseSetRead 
+    from src.exercise_sets.schemas import ExerciseSetRead
 
 # Runtime import to ensure forward refs are available when model_rebuild is executed
 from src.exercise_sets.schemas import ExerciseSetRead  # noqa: E402,F401
@@ -159,9 +173,10 @@ ExerciseRead.model_rebuild()
 # Exercise Type Statistics Schemas
 class ProgressiveOverloadStat(BaseModel):
     """Schema for progressive overload data points"""
+
     date: date
-    max_weight: float = Field(..., alias='maxWeight')
-    total_volume: float = Field(..., alias='totalVolume')
+    max_weight: float = Field(..., alias="maxWeight")
+    total_volume: float = Field(..., alias="totalVolume")
     reps: int
 
     class Config:
@@ -170,11 +185,12 @@ class ProgressiveOverloadStat(BaseModel):
 
 class LastWorkoutStat(BaseModel):
     """Schema for last workout statistics"""
+
     date: datetime
     sets: int
-    total_reps: int = Field(..., alias='totalReps')
-    max_weight: float = Field(..., alias='maxWeight')
-    total_volume: float = Field(..., alias='totalVolume')
+    total_reps: int = Field(..., alias="totalReps")
+    max_weight: float = Field(..., alias="maxWeight")
+    total_volume: float = Field(..., alias="totalVolume")
 
     class Config:
         populate_by_name = True
@@ -182,6 +198,7 @@ class LastWorkoutStat(BaseModel):
 
 class PersonalBestStat(BaseModel):
     """Schema for personal best statistics"""
+
     date: datetime
     weight: float
     reps: int
@@ -193,6 +210,7 @@ class PersonalBestStat(BaseModel):
 
 class IntensityUnitSummary(BaseModel):
     """Schema for intensity unit summary"""
+
     id: int
     name: str
     abbreviation: str
@@ -203,11 +221,14 @@ class IntensityUnitSummary(BaseModel):
 
 class ExerciseTypeStats(BaseModel):
     """Schema for comprehensive exercise type statistics"""
-    progressive_overload: List[ProgressiveOverloadStat] = Field(..., alias='progressiveOverload')
-    last_workout: Optional[LastWorkoutStat] = Field(None, alias='lastWorkout')
-    personal_best: Optional[PersonalBestStat] = Field(None, alias='personalBest')
-    total_sets: int = Field(..., alias='totalSets')
-    intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias='intensityUnit')
+
+    progressive_overload: List[ProgressiveOverloadStat] = Field(
+        ..., alias="progressiveOverload"
+    )
+    last_workout: Optional[LastWorkoutStat] = Field(None, alias="lastWorkout")
+    personal_best: Optional[PersonalBestStat] = Field(None, alias="personalBest")
+    total_sets: int = Field(..., alias="totalSets")
+    intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias="intensityUnit")
 
     class Config:
         populate_by_name = True
@@ -215,8 +236,9 @@ class ExerciseTypeStats(BaseModel):
 
 class PaginatedExerciseTypesResponse(BaseModel):
     """Schema for paginated exercise types response"""
+
     data: List[ExerciseTypeRead]
     next_cursor: Optional[int] = None
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

@@ -2,14 +2,15 @@
 Simplified Recipe CRUD unit tests focusing on core business logic.
 These tests validate the Recipe models, schemas, and basic CRUD operations.
 """
+
 import pytest
 from pydantic import ValidationError
 
 from src.recipes.schemas import (
-    RecipeCreate, 
-    RecipeUpdate, 
-    ExerciseTemplateCreate, 
-    SetTemplateCreate
+    RecipeCreate,
+    RecipeUpdate,
+    ExerciseTemplateCreate,
+    SetTemplateCreate,
 )
 
 
@@ -18,20 +19,14 @@ class TestRecipeSchemas:
 
     def test_set_template_create_valid(self):
         """Test creating a valid SetTemplateCreate."""
-        set_data = SetTemplateCreate(
-            reps=10,
-            intensity=50.0,
-            intensity_unit_id=1
-        )
+        set_data = SetTemplateCreate(reps=10, intensity=50.0, intensity_unit_id=1)
         assert set_data.reps == 10
         assert set_data.intensity == 50.0
         assert set_data.intensity_unit_id == 1
 
     def test_set_template_create_optional_fields(self):
         """Test SetTemplateCreate with optional fields."""
-        set_data = SetTemplateCreate(
-            intensity_unit_id=1
-        )
+        set_data = SetTemplateCreate(intensity_unit_id=1)
         assert set_data.reps is None
         assert set_data.intensity is None
         assert set_data.intensity_unit_id == 1
@@ -47,8 +42,8 @@ class TestRecipeSchemas:
             exercise_type_id=1,
             set_templates=[
                 SetTemplateCreate(reps=10, intensity=50.0, intensity_unit_id=1),
-                SetTemplateCreate(reps=8, intensity=60.0, intensity_unit_id=1)
-            ]
+                SetTemplateCreate(reps=8, intensity=60.0, intensity_unit_id=1),
+            ],
         )
         assert exercise_data.exercise_type_id == 1
         assert len(exercise_data.set_templates) == 2
@@ -70,9 +65,9 @@ class TestRecipeSchemas:
                     exercise_type_id=1,
                     set_templates=[
                         SetTemplateCreate(reps=10, intensity=50.0, intensity_unit_id=1)
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
         assert recipe_data.name == "Test Recipe"
         assert recipe_data.description == "A test workout recipe"
@@ -81,10 +76,7 @@ class TestRecipeSchemas:
 
     def test_recipe_create_minimal(self):
         """Test RecipeCreate with minimal required fields."""
-        recipe_data = RecipeCreate(
-            name="Minimal Recipe",
-            workout_type_id=1
-        )
+        recipe_data = RecipeCreate(name="Minimal Recipe", workout_type_id=1)
         assert recipe_data.name == "Minimal Recipe"
         assert recipe_data.description is None
         assert recipe_data.workout_type_id == 1
@@ -93,20 +85,14 @@ class TestRecipeSchemas:
     def test_recipe_create_invalid_name_empty(self):
         """Test RecipeCreate with invalid empty name."""
         with pytest.raises(ValidationError) as exc_info:
-            RecipeCreate(
-                name="",
-                workout_type_id=1
-            )
+            RecipeCreate(name="", workout_type_id=1)
         assert "at least 1 character" in str(exc_info.value)
 
     def test_recipe_create_invalid_name_too_long(self):
         """Test RecipeCreate with name too long."""
         long_name = "a" * 256  # Exceeds 255 character limit
         with pytest.raises(ValidationError) as exc_info:
-            RecipeCreate(
-                name=long_name,
-                workout_type_id=1
-            )
+            RecipeCreate(name=long_name, workout_type_id=1)
         assert "at most 255 characters" in str(exc_info.value)
 
     def test_recipe_create_missing_required_fields(self):
@@ -124,9 +110,7 @@ class TestRecipeSchemas:
     def test_recipe_update_all_fields(self):
         """Test RecipeUpdate with all fields."""
         update_data = RecipeUpdate(
-            name="Updated Recipe",
-            description="Updated description",
-            workout_type_id=2
+            name="Updated Recipe", description="Updated description", workout_type_id=2
         )
         assert update_data.name == "Updated Recipe"
         assert update_data.description == "Updated description"
@@ -149,42 +133,44 @@ class TestRecipeBusinessLogic:
             ExerciseTemplateCreate(
                 exercise_type_id=1,  # Bench Press
                 set_templates=[
-                    SetTemplateCreate(reps=10, intensity=135.0, intensity_unit_id=2),  # lbs
+                    SetTemplateCreate(
+                        reps=10, intensity=135.0, intensity_unit_id=2
+                    ),  # lbs
                     SetTemplateCreate(reps=8, intensity=155.0, intensity_unit_id=2),
                     SetTemplateCreate(reps=6, intensity=175.0, intensity_unit_id=2),
-                ]
+                ],
             ),
             ExerciseTemplateCreate(
                 exercise_type_id=2,  # Squats
                 set_templates=[
                     SetTemplateCreate(reps=12, intensity=225.0, intensity_unit_id=2),
                     SetTemplateCreate(reps=10, intensity=245.0, intensity_unit_id=2),
-                ]
-            )
+                ],
+            ),
         ]
 
         recipe_data = RecipeCreate(
             name="Push Day Workout",
             description="Upper body push workout focusing on chest and triceps",
             workout_type_id=1,
-            exercise_templates=exercise_templates
+            exercise_templates=exercise_templates,
         )
 
         # Validate the recipe structure
         assert recipe_data.name == "Push Day Workout"
         assert len(recipe_data.exercise_templates) == 2
-        
+
         # Validate first exercise (Bench Press)
         bench_press = recipe_data.exercise_templates[0]
         assert bench_press.exercise_type_id == 1
         assert len(bench_press.set_templates) == 3
-        
+
         # Validate progressive overload in sets
         sets = bench_press.set_templates
         assert sets[0].reps == 10 and sets[0].intensity == 135.0
         assert sets[1].reps == 8 and sets[1].intensity == 155.0
         assert sets[2].reps == 6 and sets[2].intensity == 175.0
-        
+
         # Validate second exercise (Squats)
         squats = recipe_data.exercise_templates[1]
         assert squats.exercise_type_id == 2
@@ -199,15 +185,14 @@ class TestRecipeBusinessLogic:
             exercise_templates=[
                 ExerciseTemplateCreate(
                     exercise_type_id=1,
-                    set_templates=[SetTemplateCreate(reps=10, intensity_unit_id=1)]
+                    set_templates=[SetTemplateCreate(reps=10, intensity_unit_id=1)],
                 )
-            ]
+            ],
         )
 
         # Simulate partial update
         update_data = RecipeUpdate(
-            name="Updated Recipe Name",
-            description="Updated description"
+            name="Updated Recipe Name", description="Updated description"
         )
 
         # Verify update data is separate from original
@@ -218,11 +203,9 @@ class TestRecipeBusinessLogic:
     def test_empty_recipe_valid(self):
         """Test that a recipe with no exercises is valid."""
         empty_recipe = RecipeCreate(
-            name="Empty Recipe",
-            workout_type_id=1,
-            exercise_templates=[]
+            name="Empty Recipe", workout_type_id=1, exercise_templates=[]
         )
-        
+
         assert empty_recipe.name == "Empty Recipe"
         assert len(empty_recipe.exercise_templates) == 0
 
@@ -242,7 +225,7 @@ class TestRecipeBusinessLogic:
                         SetTemplateCreate(reps=4, intensity=315.0, intensity_unit_id=2),
                         SetTemplateCreate(reps=6, intensity=275.0, intensity_unit_id=2),
                         SetTemplateCreate(reps=8, intensity=225.0, intensity_unit_id=2),
-                    ]
+                    ],
                 ),
                 # Pull-ups - bodyweight
                 ExerciseTemplateCreate(
@@ -251,16 +234,18 @@ class TestRecipeBusinessLogic:
                         SetTemplateCreate(reps=8, intensity_unit_id=3),  # bodyweight
                         SetTemplateCreate(reps=6, intensity_unit_id=3),
                         SetTemplateCreate(reps=4, intensity_unit_id=3),
-                    ]
+                    ],
                 ),
                 # Cardio - time-based
                 ExerciseTemplateCreate(
                     exercise_type_id=5,
                     set_templates=[
-                        SetTemplateCreate(intensity_unit_id=4),  # time-based, no reps/weight
-                    ]
-                )
-            ]
+                        SetTemplateCreate(
+                            intensity_unit_id=4
+                        ),  # time-based, no reps/weight
+                    ],
+                ),
+            ],
         )
 
         assert len(complex_recipe.exercise_templates) == 3
@@ -290,7 +275,7 @@ class TestRecipeValidation:
         set_data = SetTemplateCreate(
             reps=1000,  # High rep endurance work
             intensity=500.0,  # Heavy weight
-            intensity_unit_id=1
+            intensity_unit_id=1,
         )
         assert set_data.reps == 1000
         assert set_data.intensity == 500.0
@@ -298,10 +283,7 @@ class TestRecipeValidation:
     def test_recipe_name_whitespace_handling(self):
         """Test recipe name with various whitespace scenarios."""
         # Leading/trailing whitespace should be handled by validation
-        recipe_data = RecipeCreate(
-            name="  Valid Recipe Name  ",
-            workout_type_id=1
-        )
+        recipe_data = RecipeCreate(name="  Valid Recipe Name  ", workout_type_id=1)
         # Note: Pydantic doesn't automatically strip whitespace unless configured
         assert recipe_data.name == "  Valid Recipe Name  "
 
@@ -319,20 +301,18 @@ SAMPLE_RECIPES = {
                     SetTemplateCreate(reps=8, intensity_unit_id=3),  # bodyweight
                     SetTemplateCreate(reps=6, intensity_unit_id=3),
                     SetTemplateCreate(reps=4, intensity_unit_id=3),
-                ]
+                ],
             ),
             ExerciseTemplateCreate(
                 exercise_type_id=2,  # Dumbbell Press
                 set_templates=[
-                    SetTemplateCreate(reps=12, intensity=20.0, intensity_unit_id=2),  # lbs
+                    SetTemplateCreate(
+                        reps=12, intensity=20.0, intensity_unit_id=2
+                    ),  # lbs
                     SetTemplateCreate(reps=10, intensity=25.0, intensity_unit_id=2),
-                ]
-            )
-        ]
+                ],
+            ),
+        ],
     ),
-    
-    "minimal": RecipeCreate(
-        name="Quick Workout",
-        workout_type_id=1
-    )
+    "minimal": RecipeCreate(name="Quick Workout", workout_type_id=1),
 }

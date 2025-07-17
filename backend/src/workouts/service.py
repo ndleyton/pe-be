@@ -16,7 +16,13 @@ from src.workouts.crud import (
     get_user_workouts,
 )
 from src.workouts.models import Workout, WorkoutType
-from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate, WorkoutParseResponse, AddExerciseRequest
+from src.workouts.schemas import (
+    WorkoutCreate,
+    WorkoutUpdate,
+    WorkoutTypeCreate,
+    WorkoutParseResponse,
+    AddExerciseRequest,
+)
 from src.core.config import settings
 from src.exercises.crud import create_exercise
 from src.exercise_sets.crud import create_exercise_set
@@ -29,14 +35,17 @@ from src.exercises.crud import get_exercises_for_workout
 # Seed data defines Strength Training workout type with ID = 4 (see migration 7df0abdd1d04)
 DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID = 4
 
+
 class WorkoutService:
     """Service layer for workout business logic"""
-    
+
     @staticmethod
-    async def get_workout(session: AsyncSession, workout_id: int, user_id: int) -> Optional[Workout]:
+    async def get_workout(
+        session: AsyncSession, workout_id: int, user_id: int
+    ) -> Optional[Workout]:
         """Get a workout by ID for a specific user"""
         return await get_workout_by_id(session, workout_id, user_id)
-    
+
     @staticmethod
     async def get_my_workouts(
         session: AsyncSession,
@@ -46,26 +55,30 @@ class WorkoutService:
     ) -> List[Workout]:
         """Get workouts for a user using keyset pagination"""
         return await get_user_workouts(session, user_id, limit, cursor)
-    
+
     @staticmethod
-    async def create_new_workout(session: AsyncSession, workout_data: WorkoutCreate, user_id: int) -> Workout:
+    async def create_new_workout(
+        session: AsyncSession, workout_data: WorkoutCreate, user_id: int
+    ) -> Workout:
         """Create a new workout with business logic validation"""
         # Add any business logic here (e.g., validation, default values)
         return await create_workout(session, workout_data, user_id)
-    
+
     @staticmethod
     async def update_workout_data(
-        session: AsyncSession, 
-        workout_id: int, 
-        workout_data: WorkoutUpdate, 
-        user_id: int
+        session: AsyncSession,
+        workout_id: int,
+        workout_data: WorkoutUpdate,
+        user_id: int,
     ) -> Optional[Workout]:
         """Update workout data with business logic validation"""
         # Add any business logic here (e.g., validation, authorization)
         return await update_workout(session, workout_id, workout_data, user_id)
-    
+
     @staticmethod
-    async def remove_workout(session: AsyncSession, workout_id: int, user_id: int) -> bool:
+    async def remove_workout(
+        session: AsyncSession, workout_id: int, user_id: int
+    ) -> bool:
         """Remove a workout with business logic validation"""
         # Add any business logic here (e.g., cascade deletion, authorization)
         return await delete_workout(session, workout_id, user_id)
@@ -88,7 +101,11 @@ class WorkoutService:
         workout = await get_latest_workout_for_user(session, user_id)
 
         today = date.today()
-        if not workout or workout.start_time is None or workout.start_time.date() != today:
+        if (
+            not workout
+            or workout.start_time is None
+            or workout.start_time.date() != today
+        ):
             # Need to create a new workout for today
             workout_create = WorkoutCreate(
                 name=today.strftime("Workout %Y-%m-%d"),
@@ -100,7 +117,11 @@ class WorkoutService:
         # 3. Check if exercise type already exists in workout
         existing_exercises = await get_exercises_for_workout(session, workout.id)
         exercise = next(
-            (ex for ex in existing_exercises if ex.exercise_type_id == payload.exercise_type_id),
+            (
+                ex
+                for ex in existing_exercises
+                if ex.exercise_type_id == payload.exercise_type_id
+            ),
             None,
         )
         if not exercise:
@@ -130,14 +151,16 @@ class WorkoutService:
 
 class WorkoutTypeService:
     """Service layer for workout type business logic"""
-    
+
     @staticmethod
     async def get_all_workout_types(session: AsyncSession) -> List[WorkoutType]:
         """Get all workout types"""
         return await get_workout_types(session)
-    
+
     @staticmethod
-    async def create_new_workout_type(session: AsyncSession, workout_type_data: WorkoutTypeCreate) -> WorkoutType:
+    async def create_new_workout_type(
+        session: AsyncSession, workout_type_data: WorkoutTypeCreate
+    ) -> WorkoutType:
         """Create a new workout type with business logic validation"""
         # Add any business logic here (e.g., validation, default values)
         return await create_workout_type(session, workout_type_data)
@@ -145,7 +168,7 @@ class WorkoutTypeService:
 
 class WorkoutParsingService:
     """Service layer for workout text parsing using LLM with Langfuse observability"""
-    
+
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
         """Get initialized Langfuse client if configured"""
@@ -153,39 +176,42 @@ class WorkoutParsingService:
             return Langfuse(
                 public_key=settings.LANGFUSE_PUBLIC_KEY,
                 secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST
+                host=settings.LANGFUSE_HOST,
             )
         return None
-    
+
     @staticmethod
     async def parse_workout_text(workout_text: str) -> WorkoutParseResponse:
         """Parse raw workout text using OpenAI LLM with Langfuse observability"""
         if not settings.OPENAI_API_KEY:
             raise ValueError("OpenAI API key not configured")
-        
+
         langfuse = WorkoutParsingService._get_langfuse_client()
         trace = None
-        
+
         try:
             # Initialize Langfuse trace if available
             if langfuse:
                 trace = langfuse.trace(
                     name="workout-parsing",
-                    metadata={"model": "gpt-3.5-turbo", "service": "parser-to-json"}
+                    metadata={"model": "gpt-3.5-turbo", "service": "parser-to-json"},
                 )
-            
+
             # Get prompt from Langfuse if available, otherwise use hardcoded prompt
             if langfuse:
                 try:
                     prompt = langfuse.get_prompt("parser-to-json", label="production")
                     system_prompt = prompt.prompt
-                    
+
                     # Log prompt usage
                     if trace:
                         trace.generation(
                             name="prompt-fetch",
                             prompt=prompt.prompt,
-                            metadata={"prompt_name": "parser-to-json", "label": "production"}
+                            metadata={
+                                "prompt_name": "parser-to-json",
+                                "label": "production",
+                            },
                         )
                 except Exception as e:
                     # Fallback to hardcoded prompt if Langfuse fails
@@ -193,24 +219,27 @@ class WorkoutParsingService:
                     system_prompt = WorkoutParsingService._get_fallback_prompt()
             else:
                 system_prompt = WorkoutParsingService._get_fallback_prompt()
-            
+
             # Set up OpenAI client
             client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-            
+
             # Call OpenAI API
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Parse this workout:\n\n{workout_text}"}
+                    {
+                        "role": "user",
+                        "content": f"Parse this workout:\n\n{workout_text}",
+                    },
                 ],
                 temperature=0.1,
-                max_tokens=1000
+                max_tokens=1000,
             )
-            
+
             # Parse the response
             response_text = response.choices[0].message.content.strip()
-            
+
             # Log generation to Langfuse
             if trace:
                 trace.generation(
@@ -218,7 +247,10 @@ class WorkoutParsingService:
                     model="gpt-3.5-turbo",
                     input=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Parse this workout:\n\n{workout_text}"}
+                        {
+                            "role": "user",
+                            "content": f"Parse this workout:\n\n{workout_text}",
+                        },
                     ],
                     output=response_text,
                     metadata={
@@ -227,32 +259,34 @@ class WorkoutParsingService:
                         "usage": {
                             "prompt_tokens": response.usage.prompt_tokens,
                             "completion_tokens": response.usage.completion_tokens,
-                            "total_tokens": response.usage.total_tokens
-                        }
-                    }
+                            "total_tokens": response.usage.total_tokens,
+                        },
+                    },
                 )
-            
+
             # Try to extract JSON if there's extra text
-            if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '').strip()
-            elif response_text.startswith('```'):
-                response_text = response_text.replace('```', '').strip()
-            
+            if response_text.startswith("```json"):
+                response_text = (
+                    response_text.replace("```json", "").replace("```", "").strip()
+                )
+            elif response_text.startswith("```"):
+                response_text = response_text.replace("```", "").strip()
+
             # Parse JSON response
             parsed_data = json.loads(response_text)
-            
+
             # Validate and return as Pydantic model
             result = WorkoutParseResponse(**parsed_data)
-            
+
             # Log successful parsing
             if trace:
                 trace.update(
                     output=result.model_dump(),
-                    metadata={"status": "success", "workout_name": result.name}
+                    metadata={"status": "success", "workout_name": result.name},
                 )
-            
+
             return result
-            
+
         except json.JSONDecodeError as e:
             error_msg = f"Failed to parse LLM response as JSON: {e}"
             if trace:
@@ -268,7 +302,7 @@ class WorkoutParsingService:
             if trace:
                 trace.update(metadata={"status": "error", "error": error_msg})
             raise ValueError(error_msg)
-    
+
     @staticmethod
     def _get_fallback_prompt() -> str:
         """Get fallback system prompt if Langfuse is not available"""
