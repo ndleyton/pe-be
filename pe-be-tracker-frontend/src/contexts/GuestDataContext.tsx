@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
-import { generateSecureId, getCurrentUTCTimestamp } from '@/utils/date';
+import { generateRandomId, getCurrentUTCTimestamp } from '@/utils/date';
 
 // Guest data interfaces that mirror the server-side structures but with local IDs
 export interface GuestExerciseType {
@@ -141,7 +141,7 @@ const GuestDataContext = createContext<GuestDataContextType | undefined>(undefin
 const GUEST_DATA_KEY = 'pe-guest-data';
 
 // Utility functions (use secure implementations from date utils)
-const generateId = generateSecureId;
+const generateId = generateRandomId;
 const getCurrentTimestamp = getCurrentUTCTimestamp;
 
 // Initial data with default exercise types and workout types
