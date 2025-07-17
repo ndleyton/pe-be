@@ -90,11 +90,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
             <div className="text-right text-sm text-muted-foreground">
               {exercise.timestamp ? (
                 <div>
-                  {formatDisplayDate(exercise.timestamp, { timeStyle: 'short', includeTimezone: true })}
+                  {formatDisplayDate(exercise.timestamp, { timeStyle: 'short', includeTimezone: false })}
                 </div>
               ) : (
                 <div>
-                  Created: {formatDisplayDate(exercise.created_at, { timeStyle: 'short', includeTimezone: true })}
+                  Created: {formatDisplayDate(exercise.created_at, { timeStyle: 'short', includeTimezone: false })}
                 </div>
               )}
             </div>

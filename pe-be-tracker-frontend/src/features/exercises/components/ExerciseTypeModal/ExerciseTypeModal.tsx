@@ -68,22 +68,27 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated()) {
       // Optimistically update the times_used count in the cache for server data
-      queryClient.setQueryData(['exerciseTypes'], (oldData: ExerciseType[] | undefined) => {
-        if (!oldData) return oldData;
+      queryClient.setQueryData(['exerciseTypes'], (oldData: { data: ExerciseType[]; next_cursor?: number | null } | undefined) => {
+        if (!oldData || !oldData.data) return oldData;
         
-        const updatedTypes = oldData.map(type => 
+        const updatedTypes = oldData.data.map(type => 
           type.id === exerciseType.id 
             ? { ...type, times_used: type.times_used + 1 }
             : type
         );
         
         // Re-sort by times_used DESC, then by name ASC to maintain the expected order
-        return updatedTypes.sort((a, b) => {
+        const sortedTypes = updatedTypes.sort((a, b) => {
           if (a.times_used !== b.times_used) {
             return b.times_used - a.times_used; // DESC
           }
           return a.name.localeCompare(b.name); // ASC
         });
+
+        return {
+          ...oldData,
+          data: sortedTypes
+        };
       });
     } else {
       // Update guest data times_used count
