@@ -40,6 +40,10 @@ exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-type
 
 @exercise_types_router.get("", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
+    name: Optional[str] = Query(
+        default=None,
+        description="Search for exercise types by name (case-insensitive)",
+    ),
     order_by: Optional[str] = Query(
         default="usage",
         description="Sort order: 'usage' for usage-based sort, 'name' for alphabetical",
@@ -50,7 +54,7 @@ async def get_exercise_types(
 ):
     """Get all exercise types from the database with pagination."""
     return await ExerciseTypeService.get_all_exercise_types(
-        session, order_by, offset, limit
+        session, name, order_by, offset, limit
     )
 
 
