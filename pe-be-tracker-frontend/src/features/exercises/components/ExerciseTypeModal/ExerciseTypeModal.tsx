@@ -4,12 +4,18 @@ import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExe
 import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
 import axios from 'axios';
 import { truncateWords } from '@/utils/text';
+import { MUSCLE_DISPLAY_LIMIT } from '@/shared/constants';
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (exerciseType: ExerciseType | GuestExerciseType) => void;
 }
+
+// Type guard to check if an exercise type has muscles property
+const hasMusclesProperty = (exerciseType: ExerciseType | GuestExerciseType): exerciseType is ExerciseType & { muscles: Array<{ id: number; name: string }> } => {
+  return 'muscles' in exerciseType && Array.isArray(exerciseType.muscles);
+};
 
 const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -243,12 +249,12 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
                   )}
                 </div>
                 <p className="text-muted-foreground text-sm mt-1">
-                  {truncateWords((exerciseType as any).description, 4)}
+                  {truncateWords(exerciseType.description, 4)}
                 </p>
 
-                {(exerciseType as any).muscles && (exerciseType as any).muscles.length > 0 && (
+                {hasMusclesProperty(exerciseType) && exerciseType.muscles.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {(exerciseType as any).muscles.slice(0, 3).map((muscle: { id: number; name: string }) => (
+                    {exerciseType.muscles.slice(0, MUSCLE_DISPLAY_LIMIT).map((muscle) => (
                       <span
                         key={muscle.id}
                         className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -256,9 +262,9 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
                         {muscle.name}
                       </span>
                     ))}
-                    {(exerciseType as any).muscles.length > 3 && (
+                    {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
                       <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                        +{(exerciseType as any).muscles.length - 3} more
+                        +{exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT} more
                       </span>
                     )}
                   </div>

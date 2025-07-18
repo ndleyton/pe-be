@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Flame } from 'lucide-react';
 import type { ExerciseType } from '@/features/exercises/api';
+import { MUSCLE_DISPLAY_LIMIT } from '@/shared/constants';
 import {
   Card,
   CardContent,
@@ -29,7 +30,7 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
           
           {muscles && muscles.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
-              {muscles.slice(0, 3).map((muscle) => (
+              {muscles.slice(0, MUSCLE_DISPLAY_LIMIT).map((muscle) => (
                 <span
                   key={muscle.id}
                   className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -37,9 +38,9 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
                   {muscle.name}
                 </span>
               ))}
-              {muscles.length > 3 && (
+              {muscles.length > MUSCLE_DISPLAY_LIMIT && (
                 <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                  +{muscles.length - 3} more
+                  +{muscles.length - MUSCLE_DISPLAY_LIMIT} more
                 </span>
               )}
             </div>
