@@ -3,6 +3,7 @@ import asyncio
 import os
 from typing import AsyncGenerator
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -68,6 +69,20 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
     async with TestSessionLocal() as session:
         yield session
+        await session.rollback()
+
+
+@pytest.fixture
+async def async_client(setup_database) -> AsyncGenerator[AsyncClient, None]:
+    """Create a test client with test database session."""
+    async with TestSessionLocal() as session:
+        async def override_get_db():
+            yield session
+
+        app.dependency_overrides[get_async_session] = override_get_db
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            yield client
+        app.dependency_overrides.clear()
         await session.rollback()
 
 

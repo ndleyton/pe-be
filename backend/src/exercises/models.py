@@ -20,15 +20,7 @@ if TYPE_CHECKING:
     from src.exercise_sets.models import ExerciseSet
 
 
-# Association table for exercise types and muscles
-exercise_types_muscles = Table(
-    "exercise_types_muscles",
-    Base.metadata,
-    Column(
-        "exercise_type_id", Integer, ForeignKey("exercise_types.id"), primary_key=True
-    ),
-    Column("muscle_id", Integer, ForeignKey("muscles.id"), primary_key=True),
-)
+# Note: Removed exercise_types_muscles table - now using ExerciseMuscle model instead
 
 
 class ExerciseType(Base):
@@ -44,8 +36,16 @@ class ExerciseType(Base):
     images_url = Column(Text, nullable=True)
 
     # Relationships
-    muscles = relationship(
-        "Muscle", secondary=exercise_types_muscles, back_populates="exercise_types"
+    exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
+        "ExerciseMuscle", back_populates="exercise_type", cascade="all, delete-orphan"
+    )
+    
+    # Association object pattern for muscles
+    muscles: Mapped[List["Muscle"]] = relationship(
+        "Muscle", 
+        secondary="exercise_muscles",
+        viewonly=True,
+        overlaps="exercise_muscles,muscle"
     )
     exercises: Mapped[List["Exercise"]] = relationship(
         "Exercise", back_populates="exercise_type"
@@ -101,8 +101,16 @@ class Muscle(Base):
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
 
     # Relationships
-    exercise_types = relationship(
-        "ExerciseType", secondary=exercise_types_muscles, back_populates="muscles"
+    exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
+        "ExerciseMuscle", back_populates="muscle"
+    )
+    
+    # Association object pattern for exercise types
+    exercise_types: Mapped[List["ExerciseType"]] = relationship(
+        "ExerciseType",
+        secondary="exercise_muscles", 
+        viewonly=True,
+        overlaps="exercise_muscles,exercise_type"
     )
     muscle_group: Mapped["MuscleGroup"] = relationship(
         "MuscleGroup", back_populates="muscles"
@@ -119,3 +127,11 @@ class ExerciseMuscle(Base):
     is_primary = Column(Boolean, nullable=False, default=False, server_default="false")
 
     __table_args__ = (UniqueConstraint("exercise_type_id", "muscle_id"),)
+
+    # Relationships
+    exercise_type: Mapped["ExerciseType"] = relationship(
+        "ExerciseType", back_populates="exercise_muscles"
+    )
+    muscle: Mapped["Muscle"] = relationship(
+        "Muscle", back_populates="exercise_muscles"
+    )

@@ -1,7 +1,70 @@
 from fastapi.testclient import TestClient
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient
+import time
 
 from src.core.config import settings
 from src.exercises.models import ExerciseType
+
+
+def get_test_exercise_types(suffix=""):
+    """Get common exercise types test data with optional suffix for uniqueness."""
+    timestamp = int(time.time() * 1000) if not suffix else suffix
+    return [
+        ExerciseType(name=f"Test Biceps Curl {timestamp}", description="Arm exercise", default_intensity_unit=1),
+        ExerciseType(name=f"Test Triceps Extension {timestamp}", description="Arm exercise", default_intensity_unit=1),
+        ExerciseType(name=f"Test Squat {timestamp}", description="Leg exercise", default_intensity_unit=1),
+        ExerciseType(name=f"Test Deadlift {timestamp}", description="Full body exercise", default_intensity_unit=1),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_fuzzy_match_exercise_type(async_client: AsyncClient, db_session):
+    """Test fuzzy matching for exercise types."""
+    session = await anext(db_session)
+    exercise_types = get_test_exercise_types("test1")
+    session.add_all(exercise_types)
+    await session.commit()
+
+    client = await anext(async_client)
+    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bicep+Curl")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) > 0
+    assert "Biceps Curl" in data["data"][0]["name"]
+
+
+
+@pytest.mark.asyncio
+async def test_fuzzy_match_with_no_close_match(async_client: AsyncClient, db_session):
+    """Test fuzzy matching with no close match."""
+    session = await anext(db_session)
+    session.add_all(get_test_exercise_types("no_match"))
+    await session.commit()
+
+    client = await anext(async_client)
+    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=NonExistentExercise")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 0
+
+
+
+@pytest.mark.asyncio
+async def test_fuzzy_match_with_multiple_close_matches(async_client: AsyncClient, db_session):
+    """Test fuzzy matching with multiple close matches."""
+    session = await anext(db_session)
+    session.add_all(get_test_exercise_types("multi_match"))
+    await session.commit()
+
+    client = await anext(async_client)
+    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bi")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) > 0
+    assert "Biceps Curl" in data["data"][0]["name"]
+
 
 
 class TestExercisesAPI:
@@ -21,51 +84,6 @@ class TestExercisesAPI:
         }
         response = client.post(f"{settings.API_PREFIX}/exercises/", json=exercise_data)
         assert response.status_code == 401
-
-    # Note: Add authenticated tests once you have test user fixtures
-    # def test_get_exercises_in_workout_authorized(self, client: TestClient, test_user, test_workout):
-    #     """Test getting exercises in workout with authentication."""
-    #     # Create an exercise for the workout
-    #     exercise_data = {
-    #         "exercise_type_id": 1,
-    #         "workout_id": test_workout.id,
-    #         "notes": "Test exercise"
-    #     }
-    #     create_response = client.post(
-    #         f"{settings.API_PREFIX}/exercises/",
-    #         json=exercise_data,
-    #         headers={"Authorization": f"Bearer {test_user.token}"}
-    #     )
-    #     assert create_response.status_code == 201
-    #
-    #     # Get exercises for the workout
-    #     response = client.get(
-    #         f"{settings.API_PREFIX}/workouts/{test_workout.id}/exercises",
-    #         headers={"Authorization": f"Bearer {test_user.token}"}
-    #     )
-    #     assert response.status_code == 200
-    #     exercises = response.json()
-    #     assert len(exercises) == 1
-    #     assert exercises[0]["workout_id"] == test_workout.id
-    #     assert exercises[0]["notes"] == "Test exercise"
-    #
-    # def test_get_exercises_in_workout_not_owner(self, client: TestClient, test_user, other_user_workout):
-    #     """Test getting exercises in workout that doesn't belong to user."""
-    #     response = client.get(
-    #         f"{settings.API_PREFIX}/workouts/{other_user_workout.id}/exercises",
-    #         headers={"Authorization": f"Bearer {test_user.token}"}
-    #     )
-    #     assert response.status_code == 404
-    #     assert response.json()["detail"] == "Workout not found"
-    #
-    # def test_get_exercises_in_nonexistent_workout(self, client: TestClient, test_user):
-    #     """Test getting exercises in nonexistent workout."""
-    #     response = client.get(
-    #         f"{settings.API_PREFIX}/workouts/99999/exercises",
-    #         headers={"Authorization": f"Bearer {test_user.token}"}
-    #     )
-    #     assert response.status_code == 404
-    #     assert response.json()["detail"] == "Workout not found"
 
 
 class TestExerciseTypesUsage:
