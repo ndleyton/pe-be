@@ -90,14 +90,17 @@ async def get_exercise_types(
 
     if name:
         # If a name is provided, fetch all and perform fuzzy matching
-        result = await session.execute(query)
+        MAX_FUZZY_SEARCH_RESULTS = 1000
+        result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
         all_types = result.scalars().all()
         
         choices = {t.id: t.name for t in all_types}
 
         # Extract best matches with a score above a certain threshold.
         # We use WRatio which takes partial ratios, order etc. into account.
-        matches = process.extractBests(name, choices, score_cutoff=50, limit=limit)
+        # Limit fuzzy search results to prevent excessive processing
+        fuzzy_limit = min(limit * 3, 100)  # Get more candidates than needed, but cap at 100
+        matches = process.extractBests(name, choices, score_cutoff=80, limit=fuzzy_limit)
 
         # Build a quick lookup table for score so we don't have to iterate again
         score_lookup = {match[2]: match[1] for match in matches}
@@ -137,7 +140,10 @@ async def get_exercise_types(
 
         exercise_types.sort(key=_sort_key)
         
-        next_cursor = None # No pagination for fuzzy search for now
+        # Apply pagination to fuzzy search results
+        total_results = len(exercise_types)
+        exercise_types = exercise_types[offset:offset + limit]
+        next_cursor = offset + limit if offset + limit < total_results else None
     else:
         # Original pagination logic when no name is provided
         if order_by == "usage":
