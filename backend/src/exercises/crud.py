@@ -5,6 +5,11 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process
 
+# Minimum fuzzy-match score that an exercise-type name must reach to be
+# considered a match.  Tweaking this value lets us control how permissive the
+# search is without hunting through the implementation.
+FUZZY_SCORE_CUTOFF = 50  # was hard-coded before
+
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
 from src.exercises.schemas import (
     ExerciseCreate,
@@ -100,7 +105,7 @@ async def get_exercise_types(
         # We use WRatio which takes partial ratios, order etc. into account.
         # Limit fuzzy search results to prevent excessive processing
         fuzzy_limit = min(limit * 3, 100)  # Get more candidates than needed, but cap at 100
-        matches = process.extractBests(name, choices, score_cutoff=80, limit=fuzzy_limit)
+        matches = process.extractBests(name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit)
 
         # Build a quick lookup table for score so we don't have to iterate again
         score_lookup = {match[2]: match[1] for match in matches}
@@ -202,8 +207,24 @@ async def create_exercise_type(
             exercise_type.muscles = muscles
 
         session.add(exercise_type)
-        await session.commit()
-        await session.refresh(exercise_type)
+        try:
+            await session.commit()
+            await session.refresh(exercise_type)
+        except IntegrityError:
+            # A row with the same *name* already exists – fetch and return it
+            # instead of bubbling the error.  This makes the operation
+            # idempotent and plays nicely with the sync-guest-data flow where
+            # we may attempt to re-insert the same exercise type.
+            await session.rollback()
+
+            dup = await session.execute(
+                select(ExerciseType).where(ExerciseType.name == exercise_type_create.name)
+            )
+            existing = dup.scalar_one_or_none()
+            if existing is None:
+                # The error was not because of name – re-raise
+                raise
+            exercise_type = existing
 
         # Eagerly load muscles and muscle_group relationships for response serialization
         result = await session.execute(
@@ -215,6 +236,7 @@ async def create_exercise_type(
         )
         return result.scalar_one()
     except IntegrityError:
+        # Catch any *other* integrity errors (e.g., FK issues) and propagate.
         await session.rollback()
         raise
 

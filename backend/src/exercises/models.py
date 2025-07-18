@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from src.exercise_sets.models import ExerciseSet
 
 
-# Note: Removed exercise_types_muscles table - now using ExerciseMuscle model instead
 
 
 class ExerciseType(Base):

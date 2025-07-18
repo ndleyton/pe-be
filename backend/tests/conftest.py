@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from src.main import app
@@ -56,10 +57,26 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 async def setup_database():
-    """Create test database tables."""
+    """Ensure a clean test database state for each test session.
+
+    We first drop *all* tables to remove any leftover schema from previous
+    runs (e.g., stale unique constraints).  Then we recreate the schema from
+    the current SQLAlchemy models.  After the test session completes, we
+    drop the tables again so that subsequent sessions always start from a
+    blank slate.
+    """
     async with test_engine.begin() as conn:
+        # Drop in case a previous interrupted session left stale tables
+        await conn.run_sync(Base.metadata.drop_all)
+        # Re-create the schema based on the *current* models
         await conn.run_sync(Base.metadata.create_all)
+
+        # No additional tweaks required – the schema now reflects production
+        # constraints (including the unique exercise type name).
+
     yield
+
+    # Tear-down: drop everything to avoid leaking state between sessions
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -68,8 +85,34 @@ async def setup_database():
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
     async with TestSessionLocal() as session:
+        # Ensure tables are clean *before* each test starts. This avoids
+        # leftover rows from a previous test run within the same pytest
+        # session causing UNIQUE-constraint violations (e.g. ExerciseType.name).
+        for table in [
+            "exercises",
+            "exercise_sets",
+            "exercise_muscles",
+            "exercise_types",
+        ]:
+            await session.execute(text(f"TRUNCATE {table} CASCADE"))
+        await session.commit()
+
         yield session
+
+        # Roll back any open transaction *and* clear data inserted by the test
+        # so that subsequent tests start with an empty database but without
+        # the overhead of re-creating the whole schema each time.
         await session.rollback()
+
+        # Final clean-up to guarantee pristine state even if the test failed
+        for table in [
+            "exercises",
+            "exercise_sets",
+            "exercise_muscles",
+            "exercise_types",
+        ]:
+            await session.execute(text(f"TRUNCATE {table} CASCADE"))
+        await session.commit()
 
 
 @pytest.fixture
