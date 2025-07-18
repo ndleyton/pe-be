@@ -96,7 +96,7 @@ export interface GuestData {
 // Action types
 export interface GuestDataActions {
   // Workout actions
-  addWorkout: (workout: Omit<GuestWorkout, 'id' | 'created_at' | 'updated_at' | 'exercises'>) => string;
+  addWorkout: (workout: Omit<GuestWorkout, 'id' | 'created_at' | 'updated_at'>) => string;
   updateWorkout: (id: string, updates: Partial<GuestWorkout>) => void;
   deleteWorkout: (id: string) => void;
   
@@ -273,7 +273,6 @@ export const GuestDataProvider: React.FC<GuestDataProviderProps> = ({ children }
       const newWorkout: GuestWorkout = {
         ...workout,
         id,
-        exercises: [],
         created_at: now,
         updated_at: now,
       };

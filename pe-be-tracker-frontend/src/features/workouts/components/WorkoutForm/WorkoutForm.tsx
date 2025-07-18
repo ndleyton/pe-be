@@ -21,6 +21,7 @@ interface WorkoutFormProps {
   recipe?: GuestRecipe | null;
 }
 
+
 const createWorkout = async (data: WorkoutFormData) => {
   const response = await api.post(
     '/workouts/',
@@ -103,7 +104,13 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
         end_time: data.end_time || null,
         workout_type_id: data.workout_type_id as string,
         workout_type: workoutType,
+        exercises: [],
       });
+
+      // If there's a recipe, create exercises from it
+      if (recipe) {
+        guestActions.createExercisesFromRecipe(recipe, newWorkoutId);
+      }
 
       resetForm();
       onWorkoutCreated(newWorkoutId);
