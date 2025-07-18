@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
+from thefuzz import process
 
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
 from src.exercises.schemas import (
@@ -80,28 +81,43 @@ async def create_exercise(
 
 # Exercise Type CRUD operations
 async def get_exercise_types(
-    session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
+    session: AsyncSession, name: Optional[str] = None, order_by: str = "usage", offset: int = 0, limit: int = 100
 ) -> PaginatedExerciseTypesResponse:
-    """Get all exercise types with optional ordering and pagination"""
+    """Get all exercise types with optional filtering, ordering and pagination"""
     query = select(ExerciseType).options(
         selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
     )
 
-    if order_by == "usage":
-        # Order by times_used DESC (most used first), then by name ASC (alphabetical)
-        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
-    elif order_by == "name":
-        # Order alphabetically by name
-        query = query.order_by(ExerciseType.name)
+    if name:
+        # If a name is provided, fetch all and perform fuzzy matching
+        result = await session.execute(query)
+        all_types = result.scalars().all()
+        
+        choices = {t.id: t.name for t in all_types}
+        # Extract best matches with a score above a certain threshold
+        matches = process.extractBests(name, choices, score_cutoff=80, limit=limit)
+        
+        matched_ids = [match[2] for match in matches]
+        
+        # Filter the original list to only include matched IDs
+        exercise_types = [t for t in all_types if t.id in matched_ids]
+        
+        # Sort the results by the fuzzy match score (highest first)
+        exercise_types.sort(key=lambda t: [m[1] for m in matches if m[2] == t.id][0], reverse=True)
+        
+        next_cursor = None # No pagination for fuzzy search for now
     else:
-        # Default to usage-based ordering
-        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+        # Original pagination logic when no name is provided
+        if order_by == "usage":
+            query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+        elif order_by == "name":
+            query = query.order_by(ExerciseType.name)
+        else:
+            query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
 
-    result = await session.execute(query.offset(offset).limit(limit))
-    exercise_types = result.scalars().all()
-
-    # Calculate next cursor - if we got a full page, there might be more
-    next_cursor = offset + limit if len(exercise_types) == limit else None
+        result = await session.execute(query.offset(offset).limit(limit))
+        exercise_types = result.scalars().all()
+        next_cursor = offset + limit if len(exercise_types) == limit else None
 
     return PaginatedExerciseTypesResponse(data=exercise_types, next_cursor=next_cursor)
 

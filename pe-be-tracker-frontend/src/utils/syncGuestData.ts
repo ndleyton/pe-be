@@ -15,7 +15,7 @@ export interface SyncResult {
 const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number> => {
   try {
     // First try to find existing exercise type by name
-    const { data: response } = await api.get(`${endpoints.exerciseTypes}?order_by=name`);
+    const { data: response } = await api.get(`${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}`);
     const existingTypes = response.data;
     const existing = existingTypes.find((type: any) => 
       type.name.toLowerCase() === guestExerciseType.name.toLowerCase()
@@ -36,7 +36,7 @@ const findOrCreateExerciseType = async (guestExerciseType: any): Promise<number>
     } catch (err: any) {
       // If duplicate (400) occurred between GET and POST, fetch again
       if (err?.response?.status === 400) {
-        const { data: response } = await api.get(`${endpoints.exerciseTypes}?order_by=name`);
+        const { data: response } = await api.get(`${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}`);
         const existingTypesAfter = response.data;
         const existingAfter = existingTypesAfter.find((type: any) => type.name.toLowerCase() === guestExerciseType.name.toLowerCase());
         if (existingAfter) return existingAfter.id;
@@ -94,7 +94,7 @@ export async function syncGuestDataToServer(
   let syncedSets = 0;
 
   try {
-    console.log('Starting guest data sync...', { workouts: guestData.workouts.length });
+    console.log('Initiating guest data sync with data:', JSON.stringify(guestData, null, 2));
 
     // If no guest data to sync, return early
     if (guestData.workouts.length === 0) {
@@ -122,8 +122,10 @@ export async function syncGuestDataToServer(
     });
 
     for (const [guestId, exerciseType] of uniqueExerciseTypes) {
+      console.log(`Syncing exercise type: ${exerciseType.name} (Guest ID: ${guestId})`);
       const serverId = await findOrCreateExerciseType(exerciseType);
       exerciseTypeIdMap.set(guestId, serverId);
+      console.log(`Mapped exercise type ${exerciseType.name} to Server ID: ${serverId}`);
     }
 
     // Then, sync all unique workout types
@@ -135,8 +137,10 @@ export async function syncGuestDataToServer(
     });
 
     for (const [guestId, workoutType] of uniqueWorkoutTypes) {
+      console.log(`Syncing workout type: ${workoutType.name} (Guest ID: ${guestId})`);
       const serverId = await findOrCreateWorkoutType(workoutType);
       workoutTypeIdMap.set(guestId, serverId);
+      console.log(`Mapped workout type ${workoutType.name} to Server ID: ${serverId}`);
     }
 
     // Now sync each workout
@@ -149,14 +153,15 @@ export async function syncGuestDataToServer(
           throw new Error(`No server ID found for workout type ${guestWorkout.workout_type_id}`);
         }
 
-        // Create workout on server
-        const { data: createdWorkout } = await api.post('/workouts/', {
+        const workoutPayload = {
           name: guestWorkout.name,
           notes: guestWorkout.notes,
           start_time: guestWorkout.start_time ? toUTCISOString(guestWorkout.start_time) : null,
           end_time: guestWorkout.end_time ? toUTCISOString(guestWorkout.end_time) : null,
           workout_type_id: serverWorkoutTypeId,
-        });
+        };
+        console.log('Creating workout on server with payload:', workoutPayload);
+        const { data: createdWorkout } = await api.post('/workouts/', workoutPayload);
 
         syncedWorkouts++;
         console.log(`Created workout on server with ID: ${createdWorkout.id}`);
@@ -169,13 +174,14 @@ export async function syncGuestDataToServer(
               throw new Error(`No server ID found for exercise type ${guestExercise.exercise_type_id}`);
             }
 
-            // Create exercise on server
-            const { data: createdExercise } = await api.post('/exercises/', {
+            const exercisePayload = {
               exercise_type_id: serverExerciseTypeId,
               workout_id: createdWorkout.id,
               timestamp: guestExercise.timestamp ? toUTCISOString(guestExercise.timestamp) : null,
               notes: guestExercise.notes,
-            });
+            };
+            console.log('Creating exercise on server with payload:', exercisePayload);
+            const { data: createdExercise } = await api.post('/exercises/', exercisePayload);
 
             syncedExercises++;
             console.log(`Created exercise on server with ID: ${createdExercise.id}`);
@@ -183,29 +189,30 @@ export async function syncGuestDataToServer(
             // Sync exercise sets for this exercise
             for (const guestSet of guestExercise.exercise_sets) {
               try {
-                // Create exercise set on server
-                await api.post('/exercise-sets/', {
+                const setPayload = {
                   reps: guestSet.reps,
                   intensity: guestSet.intensity,
                   intensity_unit_id: guestSet.intensity_unit_id,
                   exercise_id: createdExercise.id,
                   rest_time_seconds: guestSet.rest_time_seconds,
                   done: guestSet.done,
-                });
+                };
+                console.log('Creating exercise set on server with payload:', setPayload);
+                await api.post('/exercise-sets/', setPayload);
 
                 syncedSets++;
               } catch (setError) {
-                console.error(`Failed to sync exercise set:`, setError);
+                console.error(`Failed to sync exercise set for exercise ID ${createdExercise.id}. Set data:`, guestSet, 'Error:', setError);
                 // Continue with other sets even if one fails
               }
             }
           } catch (exerciseError) {
-            console.error(`Failed to sync exercise:`, exerciseError);
+            console.error(`Failed to sync exercise for workout ID ${createdWorkout.id}. Exercise data:`, guestExercise, 'Error:', exerciseError);
             // Continue with other exercises even if one fails
           }
         }
       } catch (workoutError) {
-        console.error(`Failed to sync workout:`, workoutError);
+        console.error(`Failed to sync workout. Workout data:`, guestWorkout, 'Error:', workoutError);
         // Continue with other workouts even if one fails
       }
     }
