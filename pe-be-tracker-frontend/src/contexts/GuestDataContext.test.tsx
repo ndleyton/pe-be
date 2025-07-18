@@ -45,6 +45,7 @@ const TestComponent = () => {
             end_time: null,
             workout_type_id: workoutType.id,
             workout_type: workoutType,
+            exercises: [],
           });
         }}
       >
