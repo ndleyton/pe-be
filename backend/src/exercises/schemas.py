@@ -1,6 +1,6 @@
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone, date
-from pydantic import validator, BaseModel, Field, computed_field
+from pydantic import field_validator, BaseModel, Field, computed_field
 import json
 from src.core.config import settings
 
@@ -13,7 +13,8 @@ class ExerciseBase(BaseModel):
     exercise_type_id: int
     workout_id: int
 
-    @validator("timestamp", pre=True, always=True)
+    @field_validator("timestamp", mode="before")
+    @classmethod
     def ensure_utc_timestamp(cls, v):
         if v is None:
             return v
@@ -57,7 +58,8 @@ class ExerciseTypeCreate(BaseModel):
         description="List of muscle IDs to associate with this exercise type (optional)",
     )
 
-    @validator("name", pre=True)
+    @field_validator("name", mode="before")
+    @classmethod
     def validate_and_strip_name(cls, v):
         if v is None:
             raise ValueError("Name cannot be empty")

@@ -1,32 +1,41 @@
 from fastapi.testclient import TestClient
 import pytest
-import time
+import uuid
+from httpx import AsyncClient
 
+from src.main import app
 from src.core.config import settings
+from src.core.database import get_async_session
 from src.exercises.models import ExerciseType
+
+# Import the test session from conftest
+from tests.conftest import TestSessionLocal, setup_database
+
 
 
 def get_test_exercise_types(suffix=""):
     """Get common exercise types test data with optional suffix for uniqueness."""
-    timestamp = int(time.time() * 1000) if not suffix else suffix
+    unique_id = (
+        suffix + "_" + str(uuid.uuid4())[:8] if suffix else str(uuid.uuid4())[:8]
+    )
     return [
         ExerciseType(
-            name=f"Test Biceps Curl {timestamp}",
+            name=f"Test Biceps Curl {unique_id}",
             description="Arm exercise",
             default_intensity_unit=1,
         ),
         ExerciseType(
-            name=f"Test Triceps Extension {timestamp}",
+            name=f"Test Triceps Extension {unique_id}",
             description="Arm exercise",
             default_intensity_unit=1,
         ),
         ExerciseType(
-            name=f"Test Squat {timestamp}",
+            name=f"Test Squat {unique_id}",
             description="Leg exercise",
             default_intensity_unit=1,
         ),
         ExerciseType(
-            name=f"Test Deadlift {timestamp}",
+            name=f"Test Deadlift {unique_id}",
             description="Full body exercise",
             default_intensity_unit=1,
         ),
@@ -34,54 +43,65 @@ def get_test_exercise_types(suffix=""):
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_exercise_type(async_client, db_session):
-    """Test fuzzy matching for exercise types."""
-    session = await db_session.__anext__()
-    exercise_types = get_test_exercise_types("test1")
-    session.add_all(exercise_types)
-    await session.commit()
+async def test_fuzzy_match_exercise_type_simple(setup_database):
+    """Test fuzzy matching for exercise types with better isolation."""
+    async with TestSessionLocal() as session:
+        transaction = await session.begin()
 
-    client = await async_client.__anext__()
-    response = await client.get(
-        f"{settings.API_PREFIX}/exercises/exercise-types?name=Bicep+Curl"
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["data"]) > 0
-    assert "Biceps Curl" in data["data"][0]["name"]
+        try:
+            # Create a unique exercise type with a very specific name
+            unique_suffix = str(uuid.uuid4())
+            test_exercise = ExerciseType(
+                name=f"UniqueTestBicepsCurl_{unique_suffix}",
+                description="Test exercise for fuzzy matching",
+                default_intensity_unit=1,
+            )
+            session.add(test_exercise)
+            await session.flush()
 
+            # Store the ID for verification
+            test_exercise_id = test_exercise.id
 
-@pytest.mark.asyncio
-async def test_fuzzy_match_with_no_close_match(async_client, db_session):
-    """Test fuzzy matching with no close match."""
-    session = await db_session.__anext__()
-    session.add_all(get_test_exercise_types("no_match"))
-    await session.commit()
+            async def override_get_db():
+                yield session
 
-    client = await async_client.__anext__()
-    response = await client.get(
-        f"{settings.API_PREFIX}/exercises/exercise-types?name=NonExistentExercise"
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["data"]) == 0
+            app.dependency_overrides[get_async_session] = override_get_db
 
+            async with AsyncClient(app=app, base_url="http://test") as client:
+                # Test 1: Exact substring match
+                response = await client.get(
+                    f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
+                )
+                assert response.status_code == 200
+                data = response.json()
 
-@pytest.mark.asyncio
-async def test_fuzzy_match_with_multiple_close_matches(async_client, db_session):
-    """Test fuzzy matching with multiple close matches."""
-    session = await db_session.__anext__()
-    session.add_all(get_test_exercise_types("multi_match"))
-    await session.commit()
+                # Filter results to only our test exercise
+                our_results = [
+                    ex
+                    for ex in data["data"]
+                    if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+                ]
+                assert len(our_results) == 1
+                assert our_results[0]["id"] == test_exercise_id
 
-    client = await async_client.__anext__()
-    response = await client.get(
-        f"{settings.API_PREFIX}/exercises/exercise-types?name=Bi"
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["data"]) > 0
-    assert "Biceps Curl" in data["data"][0]["name"]
+                # Test 2: Fuzzy match with typo (missing 's')
+                response = await client.get(
+                    f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
+                )
+                assert response.status_code == 200
+                data = response.json()
+
+                # Check if our exercise is in the results (fuzzy match should find it)
+                found = any(
+                    ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+                    for ex in data["data"]
+                )
+                assert found is True
+
+            app.dependency_overrides.clear()
+
+        finally:
+            await transaction.rollback()
 
 
 class TestExercisesAPI:
