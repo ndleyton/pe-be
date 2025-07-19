@@ -1,7 +1,5 @@
 from fastapi.testclient import TestClient
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient
 import time
 
 from src.core.config import settings
@@ -20,14 +18,14 @@ def get_test_exercise_types(suffix=""):
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_exercise_type(async_client: AsyncClient, db_session):
+async def test_fuzzy_match_exercise_type(async_client, db_session):
     """Test fuzzy matching for exercise types."""
-    session = await anext(db_session)
+    session = await db_session.__anext__()
     exercise_types = get_test_exercise_types("test1")
     session.add_all(exercise_types)
     await session.commit()
 
-    client = await anext(async_client)
+    client = await async_client.__anext__()
     response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bicep+Curl")
     assert response.status_code == 200
     data = response.json()
@@ -37,13 +35,13 @@ async def test_fuzzy_match_exercise_type(async_client: AsyncClient, db_session):
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_with_no_close_match(async_client: AsyncClient, db_session):
+async def test_fuzzy_match_with_no_close_match(async_client, db_session):
     """Test fuzzy matching with no close match."""
-    session = await anext(db_session)
+    session = await db_session.__anext__()
     session.add_all(get_test_exercise_types("no_match"))
     await session.commit()
 
-    client = await anext(async_client)
+    client = await async_client.__anext__()
     response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=NonExistentExercise")
     assert response.status_code == 200
     data = response.json()
@@ -52,13 +50,13 @@ async def test_fuzzy_match_with_no_close_match(async_client: AsyncClient, db_ses
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_with_multiple_close_matches(async_client: AsyncClient, db_session):
+async def test_fuzzy_match_with_multiple_close_matches(async_client, db_session):
     """Test fuzzy matching with multiple close matches."""
-    session = await anext(db_session)
+    session = await db_session.__anext__()
     session.add_all(get_test_exercise_types("multi_match"))
     await session.commit()
 
-    client = await anext(async_client)
+    client = await async_client.__anext__()
     response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bi")
     assert response.status_code == 200
     data = response.json()

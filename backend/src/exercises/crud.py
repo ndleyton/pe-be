@@ -5,17 +5,17 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process
 
-# Minimum fuzzy-match score that an exercise-type name must reach to be
-# considered a match.  Tweaking this value lets us control how permissive the
-# search is without hunting through the implementation.
-FUZZY_SCORE_CUTOFF = 50  # was hard-coded before
-
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
     PaginatedExerciseTypesResponse,
 )
+
+# Minimum fuzzy-match score that an exercise-type name must reach to be
+# considered a match.  Tweaking this value lets us control how permissive the
+# search is without hunting through the implementation.
+FUZZY_SCORE_CUTOFF = 50  # was hard-coded before
 
 
 async def get_exercise_by_id(
