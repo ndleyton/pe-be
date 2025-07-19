@@ -19,8 +19,6 @@ if TYPE_CHECKING:
     from src.exercise_sets.models import ExerciseSet
 
 
-
-
 class ExerciseType(Base):
     """Model for exercise types"""
 
@@ -37,13 +35,13 @@ class ExerciseType(Base):
     exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
         "ExerciseMuscle", back_populates="exercise_type", cascade="all, delete-orphan"
     )
-    
+
     # Association object pattern for muscles
     muscles: Mapped[List["Muscle"]] = relationship(
-        "Muscle", 
+        "Muscle",
         secondary="exercise_muscles",
         viewonly=True,
-        overlaps="exercise_muscles,muscle"
+        overlaps="exercise_muscles,muscle",
     )
     exercises: Mapped[List["Exercise"]] = relationship(
         "Exercise", back_populates="exercise_type"
@@ -102,13 +100,13 @@ class Muscle(Base):
     exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
         "ExerciseMuscle", back_populates="muscle"
     )
-    
+
     # Association object pattern for exercise types
     exercise_types: Mapped[List["ExerciseType"]] = relationship(
         "ExerciseType",
-        secondary="exercise_muscles", 
+        secondary="exercise_muscles",
         viewonly=True,
-        overlaps="exercise_muscles,exercise_type"
+        overlaps="exercise_muscles,exercise_type",
     )
     muscle_group: Mapped["MuscleGroup"] = relationship(
         "MuscleGroup", back_populates="muscles"
@@ -130,6 +128,4 @@ class ExerciseMuscle(Base):
     exercise_type: Mapped["ExerciseType"] = relationship(
         "ExerciseType", back_populates="exercise_muscles"
     )
-    muscle: Mapped["Muscle"] = relationship(
-        "Muscle", back_populates="exercise_muscles"
-    )
+    muscle: Mapped["Muscle"] = relationship("Muscle", back_populates="exercise_muscles")
