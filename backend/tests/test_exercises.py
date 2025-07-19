@@ -10,10 +10,26 @@ def get_test_exercise_types(suffix=""):
     """Get common exercise types test data with optional suffix for uniqueness."""
     timestamp = int(time.time() * 1000) if not suffix else suffix
     return [
-        ExerciseType(name=f"Test Biceps Curl {timestamp}", description="Arm exercise", default_intensity_unit=1),
-        ExerciseType(name=f"Test Triceps Extension {timestamp}", description="Arm exercise", default_intensity_unit=1),
-        ExerciseType(name=f"Test Squat {timestamp}", description="Leg exercise", default_intensity_unit=1),
-        ExerciseType(name=f"Test Deadlift {timestamp}", description="Full body exercise", default_intensity_unit=1),
+        ExerciseType(
+            name=f"Test Biceps Curl {timestamp}",
+            description="Arm exercise",
+            default_intensity_unit=1,
+        ),
+        ExerciseType(
+            name=f"Test Triceps Extension {timestamp}",
+            description="Arm exercise",
+            default_intensity_unit=1,
+        ),
+        ExerciseType(
+            name=f"Test Squat {timestamp}",
+            description="Leg exercise",
+            default_intensity_unit=1,
+        ),
+        ExerciseType(
+            name=f"Test Deadlift {timestamp}",
+            description="Full body exercise",
+            default_intensity_unit=1,
+        ),
     ]
 
 
@@ -26,12 +42,13 @@ async def test_fuzzy_match_exercise_type(async_client, db_session):
     await session.commit()
 
     client = await async_client.__anext__()
-    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bicep+Curl")
+    response = await client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types?name=Bicep+Curl"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) > 0
     assert "Biceps Curl" in data["data"][0]["name"]
-
 
 
 @pytest.mark.asyncio
@@ -42,11 +59,12 @@ async def test_fuzzy_match_with_no_close_match(async_client, db_session):
     await session.commit()
 
     client = await async_client.__anext__()
-    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=NonExistentExercise")
+    response = await client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types?name=NonExistentExercise"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) == 0
-
 
 
 @pytest.mark.asyncio
@@ -57,12 +75,13 @@ async def test_fuzzy_match_with_multiple_close_matches(async_client, db_session)
     await session.commit()
 
     client = await async_client.__anext__()
-    response = await client.get(f"{settings.API_PREFIX}/exercises/exercise-types?name=Bi")
+    response = await client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types?name=Bi"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) > 0
     assert "Biceps Curl" in data["data"][0]["name"]
-
 
 
 class TestExercisesAPI:

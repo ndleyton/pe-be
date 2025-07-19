@@ -119,6 +119,7 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
 async def async_client(setup_database) -> AsyncGenerator[AsyncClient, None]:
     """Create a test client with test database session."""
     async with TestSessionLocal() as session:
+
         async def override_get_db():
             yield session
 

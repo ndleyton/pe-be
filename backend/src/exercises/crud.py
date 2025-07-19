@@ -86,7 +86,11 @@ async def create_exercise(
 
 # Exercise Type CRUD operations
 async def get_exercise_types(
-    session: AsyncSession, name: Optional[str] = None, order_by: str = "usage", offset: int = 0, limit: int = 100
+    session: AsyncSession,
+    name: Optional[str] = None,
+    order_by: str = "usage",
+    offset: int = 0,
+    limit: int = 100,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
     query = select(ExerciseType).options(
@@ -98,14 +102,18 @@ async def get_exercise_types(
         MAX_FUZZY_SEARCH_RESULTS = 1000
         result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
         all_types = result.scalars().all()
-        
+
         choices = {t.id: t.name for t in all_types}
 
         # Extract best matches with a score above a certain threshold.
         # We use WRatio which takes partial ratios, order etc. into account.
         # Limit fuzzy search results to prevent excessive processing
-        fuzzy_limit = min(limit * 3, 100)  # Get more candidates than needed, but cap at 100
-        matches = process.extractBests(name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit)
+        fuzzy_limit = min(
+            limit * 3, 100
+        )  # Get more candidates than needed, but cap at 100
+        matches = process.extractBests(
+            name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit
+        )
 
         # Build a quick lookup table for score so we don't have to iterate again
         score_lookup = {match[2]: match[1] for match in matches}
@@ -144,10 +152,10 @@ async def get_exercise_types(
             return (test_prefix, pos, -score_lookup[t.id], -t.id, t.name.lower())
 
         exercise_types.sort(key=_sort_key)
-        
+
         # Apply pagination to fuzzy search results
         total_results = len(exercise_types)
-        exercise_types = exercise_types[offset:offset + limit]
+        exercise_types = exercise_types[offset : offset + limit]
         next_cursor = offset + limit if offset + limit < total_results else None
     else:
         # Original pagination logic when no name is provided
@@ -218,7 +226,9 @@ async def create_exercise_type(
             await session.rollback()
 
             dup = await session.execute(
-                select(ExerciseType).where(ExerciseType.name == exercise_type_create.name)
+                select(ExerciseType).where(
+                    ExerciseType.name == exercise_type_create.name
+                )
             )
             existing = dup.scalar_one_or_none()
             if existing is None:
