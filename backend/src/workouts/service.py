@@ -316,6 +316,7 @@ Given a workout description, extract:
    - 3: Sports
    - 4: Strength Training
    - 5: Mobility
+   - 6: Other
 3. Optional notes about the workout
 4. List of exercises with:
    - Exercise name (standardized, e.g., "Bench Press", "Squat", "Deadlift")

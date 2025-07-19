@@ -180,6 +180,11 @@ const getInitialGuestData = (): GuestData => ({
   workoutTypes: [
     {
       id: generateId(),
+      name: 'Other',
+      description: 'General workout session',
+    },
+    {
+      id: generateId(),
       name: 'Strength Training',
       description: 'Traditional weightlifting session',
     },
