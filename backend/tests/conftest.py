@@ -87,11 +87,19 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     async with TestSessionLocal() as session:
         async with session.begin():
             # Clean tables before test
-            for table in ["exercises", "exercise_sets", "exercise_muscles", "exercise_types", "workouts", "users", "recipes"]:
+            for table in [
+                "exercises",
+                "exercise_sets",
+                "exercise_muscles",
+                "exercise_types",
+                "workouts",
+                "users",
+                "recipes",
+            ]:
                 await session.execute(text(f"TRUNCATE {table} CASCADE"))
-            
+
             yield session
-            
+
             # Rollback will happen automatically when context exits
             # This ensures ALL changes in this session are rolled back
 
@@ -99,14 +107,15 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create a test client that uses the SAME session as db_session fixture."""
+
     async def override_get_db():
         yield db_session  # Use the session from db_session fixture!
-    
+
     app.dependency_overrides[get_async_session] = override_get_db
-    
+
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
-    
+
     app.dependency_overrides.clear()
 
 

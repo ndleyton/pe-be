@@ -12,7 +12,6 @@ from src.exercises.models import ExerciseType
 from tests.conftest import TestSessionLocal
 
 
-
 def get_test_exercise_types(suffix=""):
     """Get common exercise types test data with optional suffix for uniqueness."""
     unique_id = (
