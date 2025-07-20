@@ -1,6 +1,5 @@
 import pytest
 import pytest_asyncio
-import asyncio
 import os
 from typing import AsyncGenerator
 from fastapi.testclient import TestClient

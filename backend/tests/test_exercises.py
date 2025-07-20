@@ -9,7 +9,6 @@ from src.core.database import get_async_session
 from src.exercises.models import ExerciseType
 
 # Import the test session from conftest
-from tests.conftest import TestSessionLocal
 
 
 def get_test_exercise_types(suffix=""):
