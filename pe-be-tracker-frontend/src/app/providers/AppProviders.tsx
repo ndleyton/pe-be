@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { ErrorInfo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ErrorBoundary } from 'react-error-boundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 import { GuestDataProvider } from '@/contexts/GuestDataContext';
 import { config } from '@/app/config/env';
 import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
+import { ErrorFallback } from '@/shared/components/error';
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -14,26 +16,55 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 1,
       refetchOnWindowFocus: false,
+      // Add error handling for queries
+      throwOnError: false, // Let error boundaries handle errors instead of throwing
     },
     mutations: {
       retry: 1,
+      // Add error handling for mutations
+      throwOnError: false,
     },
   },
 });
 
+// Global error handler for the entire app
+const handleGlobalError = (error: Error, errorInfo: ErrorInfo) => {
+  console.error('Global Error Boundary caught an error:', error);
+  console.error('Component Stack:', errorInfo.componentStack);
+  
+  // In production, send to error tracking service
+  if (process.env.NODE_ENV === 'production') {
+    // Example: Send to error tracking service
+    // errorTrackingService.captureException(error, {
+    //   tags: { boundary: 'global' },
+    //   extra: errorInfo
+    // });
+  }
+};
+
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <GuestDataProvider>
-          <DrawerProvider>
-            <WorkoutTimerProvider>
-              {children}
-            </WorkoutTimerProvider>
-          </DrawerProvider>
-        </GuestDataProvider>
-      </AuthProvider>
-      {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={handleGlobalError}
+      onReset={() => {
+        // Reset any global state that might be causing issues
+        queryClient.clear();
+        // Could also clear localStorage or other persistent state if needed
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <GuestDataProvider>
+            <DrawerProvider>
+              <WorkoutTimerProvider>
+                {children}
+              </WorkoutTimerProvider>
+            </DrawerProvider>
+          </GuestDataProvider>
+        </AuthProvider>
+        {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
