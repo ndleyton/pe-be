@@ -44,6 +44,20 @@ apiClient.interceptors.response.use(
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
       console.error('[API ERROR]', error);
+      
+      // Log detailed error information to help with debugging
+      if (error.response) {
+        // eslint-disable-next-line no-console
+        console.error('[API ERROR] Response data:', error.response.data);
+        // eslint-disable-next-line no-console
+        console.error('[API ERROR] Response status:', error.response.status);
+      } else if (error.request) {
+        // eslint-disable-next-line no-console
+        console.error('[API ERROR] No response received:', error.request);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('[API ERROR] Request setup error:', error.message);
+      }
     }
     
     return Promise.reject(error);

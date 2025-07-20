@@ -59,9 +59,13 @@ export const useInfiniteScroll = <T>({
     if (data?.pages) {
       const flatData = data.pages.flatMap((page) => {
         if (!page || !page.data) return [];
-        return page.data;
+        // Defensive check to ensure page.data is actually an array
+        return Array.isArray(page.data) ? page.data : [];
       });
       setAllData(flatData);
+    } else {
+      // Ensure we always have an array
+      setAllData([]);
     }
   }, [data]);
 

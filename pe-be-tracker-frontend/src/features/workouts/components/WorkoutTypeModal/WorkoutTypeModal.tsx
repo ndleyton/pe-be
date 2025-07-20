@@ -30,7 +30,9 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const workoutTypes = isAuthenticated() ? serverWorkoutTypes : guestData.workoutTypes;
+  const workoutTypes = isAuthenticated() 
+    ? (Array.isArray(serverWorkoutTypes) ? serverWorkoutTypes : [])
+    : (Array.isArray(guestData.workoutTypes) ? guestData.workoutTypes : []);
 
   const handleSelect = (workoutType: WorkoutType | GuestWorkoutType) => {
     onSelect(workoutType);

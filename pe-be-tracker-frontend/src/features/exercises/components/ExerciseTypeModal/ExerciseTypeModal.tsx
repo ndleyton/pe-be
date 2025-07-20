@@ -30,8 +30,8 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
 
   // Use guest data if not authenticated, server data if authenticated
   const exerciseTypes = isAuthenticated() 
-    ? (serverExerciseTypesResponse?.data || [])
-    : guestData.exerciseTypes;
+    ? (Array.isArray(serverExerciseTypesResponse?.data) ? serverExerciseTypesResponse.data : [])
+    : (Array.isArray(guestData.exerciseTypes) ? guestData.exerciseTypes : []);
   
   const createMutation = useMutation({
     mutationFn: createExerciseType,

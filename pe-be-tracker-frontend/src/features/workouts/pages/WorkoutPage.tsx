@@ -56,9 +56,13 @@ const WorkoutPage: React.FC = () => {
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const exercises: Exercise[] = isAuthenticated() 
-    ? serverExercises 
-    : (guestData.workouts.find(w => w.id === workoutId)?.exercises || []).map((guestExercise: GuestExercise): Exercise => ({
+  const exercises: Exercise[] = React.useMemo(() => {
+    if (isAuthenticated()) {
+      return Array.isArray(serverExercises) ? serverExercises : [];
+    } else {
+      const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
+      const guestExercises = guestWorkout?.exercises || [];
+      return Array.isArray(guestExercises) ? guestExercises.map((guestExercise: GuestExercise): Exercise => ({
         id: guestExercise.id,
         timestamp: guestExercise.timestamp,
         notes: guestExercise.notes,
@@ -78,7 +82,7 @@ const WorkoutPage: React.FC = () => {
           updated_at: guestExercise.updated_at,
           usage_count: guestExercise.exercise_type.times_used,
         },
-        exercise_sets: guestExercise.exercise_sets.map(guestSet => ({
+        exercise_sets: Array.isArray(guestExercise.exercise_sets) ? guestExercise.exercise_sets.map(guestSet => ({
           id: guestSet.id,
           reps: guestSet.reps,
           intensity: guestSet.intensity,
@@ -88,8 +92,10 @@ const WorkoutPage: React.FC = () => {
           done: guestSet.done,
           created_at: guestSet.created_at,
           updated_at: guestSet.updated_at,
-        })),
-      }));
+        })) : [],
+      })) : [];
+    }
+  }, [isAuthenticated, serverExercises, guestData.workouts, workoutId]);
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
