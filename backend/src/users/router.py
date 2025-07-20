@@ -47,7 +47,11 @@ router.include_router(
 
 router.include_router(
     fastapi_users.get_oauth_router(
-        google_oauth_client, auth_backend, settings.SECRET_KEY
+        google_oauth_client,
+        auth_backend,
+        settings.SECRET_KEY,
+        is_verified_by_default=True,
+        redirect_url=settings.GOOGLE_REDIRECT_URI,
     ),
     prefix="/auth/google",
     tags=["auth"],
