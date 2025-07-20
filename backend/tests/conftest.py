@@ -112,13 +112,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
 
 
 @pytest.fixture
-def client(db_session: AsyncSession):
-    """Create a test client with test database session."""
-
-    def override_get_db():
-        return db_session
-
-    app.dependency_overrides[get_async_session] = override_get_db
+def client():
+    """Create a test client for sync tests (no database setup)."""
     with TestClient(app) as test_client:
         yield test_client
-    app.dependency_overrides.clear()
