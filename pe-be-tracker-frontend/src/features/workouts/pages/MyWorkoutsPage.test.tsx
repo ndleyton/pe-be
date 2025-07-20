@@ -29,7 +29,14 @@ vi.mock('@/contexts/GuestDataContext', async () => {
     ...actual,
     useGuestData: () => ({ 
       isAuthenticated: () => true, 
-      guestData: { workouts: [], recipes: [] },
+      guestData: { 
+        workouts: [], 
+        recipes: [], 
+        exerciseTypes: [], 
+        workoutTypes: [], 
+        intensityUnits: [], 
+        muscles: [] 
+      },
     }),
   };
 });

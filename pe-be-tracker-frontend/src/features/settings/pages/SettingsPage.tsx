@@ -7,6 +7,7 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ErrorTestComponent } from '@/shared/components/error';
 
 const SettingsPage: React.FC = () => {
   const { isAuthenticated } = useGuestData();
@@ -80,6 +81,11 @@ const SettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Development Tools */}
+          {process.env.NODE_ENV === 'development' && (
+            <ErrorTestComponent className="border-dashed" />
+          )}
         </div>
       </div>
     </div>
