@@ -40,9 +40,9 @@ const MyWorkoutsPage = () => {
       return Array.isArray(serverWorkouts) ? serverWorkouts : [];
     } else {
       // Ensure guestData.workouts is always an array
-      const guestWorkouts = Array.isArray(guestData.workouts) ? guestData.workouts : [];
-      if (!Array.isArray(guestData.workouts)) {
-        console.warn('[DEBUG] guestData.workouts is not an array:', typeof guestData.workouts, guestData.workouts);
+      const guestWorkouts = Array.isArray(guestData?.workouts) ? guestData.workouts : [];
+      if (!Array.isArray(guestData?.workouts)) {
+        console.warn('[DEBUG] guestData.workouts is not an array:', typeof guestData?.workouts, guestData?.workouts);
       }
       return guestWorkouts.map(gw => ({
         id: gw.id,
@@ -54,7 +54,7 @@ const MyWorkoutsPage = () => {
         updated_at: gw.updated_at || getCurrentUTCTimestamp(),
       }));
     }
-  }, [isAuthenticated, serverWorkouts, guestData.workouts]);
+  }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
