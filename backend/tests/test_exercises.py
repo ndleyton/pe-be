@@ -88,8 +88,7 @@ async def test_fuzzy_match_exercise_type_simple(db_session):
 
         # Check if our exercise is in the results (fuzzy match should find it)
         found = any(
-            ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
-            for ex in data["data"]
+            ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}" for ex in data["data"]
         )
         assert found is True
 
