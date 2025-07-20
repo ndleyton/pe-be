@@ -88,6 +88,7 @@ auth_backend = AuthenticationBackend(
         cookie_max_age=3600 * 24 * 7,  # 7 days
         cookie_secure=settings.COOKIE_SECURE,  # Configurable via COOKIE_SECURE environment variable
         cookie_samesite=settings.COOKIE_SAMESITE,
+        cookie_domain=settings.COOKIE_DOMAIN,
     ),
     get_strategy=get_jwt_strategy,
 )
