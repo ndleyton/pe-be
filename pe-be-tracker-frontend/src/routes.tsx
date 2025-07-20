@@ -1,17 +1,38 @@
-import React, { lazy, Suspense } from 'react';
-import { RouteObject } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { type RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
+import NotFoundPage from './pages/NotFoundPage';
+import { PageErrorBoundary } from '@/shared/components/error';
 
-const MyWorkoutsPage = lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
-const ProfilePage = lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
-const SettingsPage = lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
-const OAuthCallbackPage = lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
-const WorkoutPage = lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
-const ChatPage = lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
-const ExerciseTypesPage = lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
-const ExerciseTypeDetailsPage = lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+// Lazy load components with error boundaries
+const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
+const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
+const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
+const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
+const ChatPage = React.lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
+const ProfilePage = React.lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
+const SettingsPage = React.lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
+const OAuthCallbackPage = React.lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
+
+// Enhanced loading component with error handling
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <div className="text-center">
+      <div className="loading loading-spinner loading-lg mb-2"></div>
+      <div className="text-muted-foreground">Loading...</div>
+    </div>
+  </div>
+);
+
+// Wrapper component for pages with error boundary and suspense
+const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <PageErrorBoundary>
+    <Suspense fallback={<LoadingFallback />}>
+      {children}
+    </Suspense>
+  </PageErrorBoundary>
+);
 
 const routes: RouteObject[] = [
   {
@@ -20,7 +41,11 @@ const routes: RouteObject[] = [
   },
   {
     path: '/oauth/callback',
-    element: <OAuthCallbackPage />,
+    element: (
+      <PageWrapper>
+        <OAuthCallbackPage />
+      </PageWrapper>
+    ),
   },
   {
     path: '/',
@@ -28,41 +53,77 @@ const routes: RouteObject[] = [
     children: [
       {
         path: 'dashboard',
-        element: <Suspense fallback={<div>Loading...</div>}><MyWorkoutsPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <MyWorkoutsPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'workouts',
-        element: <Suspense fallback={<div>Loading...</div>}><MyWorkoutsPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <MyWorkoutsPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'workout/:workoutId',
-        element: <Suspense fallback={<div>Loading...</div>}><WorkoutPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <WorkoutPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'exercise-types',
-        element: <Suspense fallback={<div>Loading...</div>}><ExerciseTypesPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <ExerciseTypesPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'exercise-types/:exerciseTypeId',
-        element: <Suspense fallback={<div>Loading...</div>}><ExerciseTypeDetailsPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <ExerciseTypeDetailsPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'chat',
-        element: <Suspense fallback={<div>Loading...</div>}><ChatPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <ChatPage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'profile',
-        element: <Suspense fallback={<div>Loading...</div>}><ProfilePage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <ProfilePage />
+          </PageWrapper>
+        ),
       },
       {
         path: 'settings',
-        element: <Suspense fallback={<div>Loading...</div>}><SettingsPage /></Suspense>,
+        element: (
+          <PageWrapper>
+            <SettingsPage />
+          </PageWrapper>
+        ),
       }
     ]
   },
   {
     path: '*',
-    element: <Suspense fallback={<div>Loading...</div>}><NotFoundPage /></Suspense>,
+    element: (
+      <PageWrapper>
+        <NotFoundPage />
+      </PageWrapper>
+    ),
   }
 ];
 
