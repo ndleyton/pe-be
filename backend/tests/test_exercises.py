@@ -42,65 +42,59 @@ def get_test_exercise_types(suffix=""):
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_exercise_type_simple(setup_database):
+async def test_fuzzy_match_exercise_type_simple(db_session):
     """Test fuzzy matching for exercise types with better isolation."""
-    async with TestSessionLocal() as session:
-        transaction = await session.begin()
 
-        try:
-            # Create a unique exercise type with a very specific name
-            unique_suffix = str(uuid.uuid4())
-            test_exercise = ExerciseType(
-                name=f"UniqueTestBicepsCurl_{unique_suffix}",
-                description="Test exercise for fuzzy matching",
-                default_intensity_unit=1,
-            )
-            session.add(test_exercise)
-            await session.flush()
+    # Create a unique exercise type with a very specific name
+    unique_suffix = str(uuid.uuid4())
+    test_exercise = ExerciseType(
+        name=f"UniqueTestBicepsCurl_{unique_suffix}",
+        description="Test exercise for fuzzy matching",
+        default_intensity_unit=1,
+    )
+    db_session.add(test_exercise)
+    await db_session.flush()
 
-            # Store the ID for verification
-            test_exercise_id = test_exercise.id
+    # Store the ID for verification
+    test_exercise_id = test_exercise.id
 
-            async def override_get_db():
-                yield session
+    async def override_get_db():
+        yield db_session
 
-            app.dependency_overrides[get_async_session] = override_get_db
+    app.dependency_overrides[get_async_session] = override_get_db
 
-            async with AsyncClient(app=app, base_url="http://test") as client:
-                # Test 1: Exact substring match
-                response = await client.get(
-                    f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
-                )
-                assert response.status_code == 200
-                data = response.json()
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        # Test 1: Exact substring match
+        response = await client.get(
+            f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
+        )
+        assert response.status_code == 200
+        data = response.json()
 
-                # Filter results to only our test exercise
-                our_results = [
-                    ex
-                    for ex in data["data"]
-                    if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
-                ]
-                assert len(our_results) == 1
-                assert our_results[0]["id"] == test_exercise_id
+        # Filter results to only our test exercise
+        our_results = [
+            ex
+            for ex in data["data"]
+            if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+        ]
+        assert len(our_results) == 1
+        assert our_results[0]["id"] == test_exercise_id
 
-                # Test 2: Fuzzy match with typo (missing 's')
-                response = await client.get(
-                    f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
-                )
-                assert response.status_code == 200
-                data = response.json()
+        # Test 2: Fuzzy match with typo (missing 's')
+        response = await client.get(
+            f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
+        )
+        assert response.status_code == 200
+        data = response.json()
 
-                # Check if our exercise is in the results (fuzzy match should find it)
-                found = any(
-                    ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
-                    for ex in data["data"]
-                )
-                assert found is True
+        # Check if our exercise is in the results (fuzzy match should find it)
+        found = any(
+            ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+            for ex in data["data"]
+        )
+        assert found is True
 
-            app.dependency_overrides.clear()
-
-        finally:
-            await transaction.rollback()
+    app.dependency_overrides.clear()
 
 
 class TestExercisesAPI:

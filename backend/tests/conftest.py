@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import asyncio
 import os
 from typing import AsyncGenerator
@@ -23,7 +24,7 @@ def get_test_database_url():
     """Get test database URL and ensure it's async compatible."""
     db_url = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test",
+        "postgresql+asyncpg://ndleyton@localhost:5432/gym_tracker_test",
     )
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
@@ -47,22 +48,14 @@ TestSessionLocal = sessionmaker(
 )
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def setup_database():
-    """Ensure a clean test database state for each test session.
+    """Ensure a clean test database state for each test function.
 
     We first drop *all* tables to remove any leftover schema from previous
     runs (e.g., stale unique constraints).  Then we recreate the schema from
-    the current SQLAlchemy models.  After the test session completes, we
-    drop the tables again so that subsequent sessions always start from a
+    the current SQLAlchemy models.  After the test function completes, we
+    drop the tables again so that subsequent tests always start from a
     blank slate.
     """
     async with test_engine.begin() as conn:
@@ -76,12 +69,12 @@ async def setup_database():
 
     yield
 
-    # Tear-down: drop everything to avoid leaking state between sessions
+    # Tear-down: drop everything to avoid leaking state between tests
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session with proper cleanup."""
     async with TestSessionLocal() as session:
@@ -104,7 +97,7 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
             # This ensures ALL changes in this session are rolled back
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create a test client that uses the SAME session as db_session fixture."""
 
