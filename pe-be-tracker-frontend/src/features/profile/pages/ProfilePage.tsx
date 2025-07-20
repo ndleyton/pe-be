@@ -43,8 +43,10 @@ const ProfilePage: React.FC = () => {
         updated_at: gw.updated_at || new Date().toISOString(),
       })) : []);
 
-  const completedWorkouts = Array.isArray(workouts) ? workouts.filter(w => w.end_time) : [];
-  const totalWorkouts = workouts.length;
+  // defensive programming to ensure arrays are always arrays
+  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
+  const completedWorkouts = safeWorkouts.filter(w => w.end_time);
+  const totalWorkouts = safeWorkouts.length;
   const averageWorkoutTime = completedWorkouts.length > 0 
     ? completedWorkouts.reduce((sum, workout) => {
         if (workout.end_time) {

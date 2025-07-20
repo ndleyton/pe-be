@@ -55,8 +55,8 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
 
   // Use backend data for authenticated users, guest data for guests
   const recipes: GuestRecipe[] = isAuthenticated() 
-    ? serverRecipes.map(convertToGuestRecipe)
-    : guestData.recipes || [];
+    ? (Array.isArray(serverRecipes) ? serverRecipes.map(convertToGuestRecipe) : [])
+    : (Array.isArray(guestData.recipes) ? guestData.recipes : []);
 
   // Handle recipe deletion
   const handleDeleteRecipe = async (recipeId: string) => {

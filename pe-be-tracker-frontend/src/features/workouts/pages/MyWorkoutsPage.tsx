@@ -31,9 +31,20 @@ const MyWorkoutsPage = () => {
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const workouts: Workout[] = isAuthenticated() 
-    ? serverWorkouts 
-    : guestData.workouts.map(gw => ({
+  const workouts: Workout[] = React.useMemo(() => {
+    if (isAuthenticated()) {
+      // Ensure serverWorkouts is always an array
+      if (!Array.isArray(serverWorkouts)) {
+        console.warn('[DEBUG] serverWorkouts is not an array:', typeof serverWorkouts, serverWorkouts);
+      }
+      return Array.isArray(serverWorkouts) ? serverWorkouts : [];
+    } else {
+      // Ensure guestData.workouts is always an array
+      const guestWorkouts = Array.isArray(guestData.workouts) ? guestData.workouts : [];
+      if (!Array.isArray(guestData.workouts)) {
+        console.warn('[DEBUG] guestData.workouts is not an array:', typeof guestData.workouts, guestData.workouts);
+      }
+      return guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
@@ -42,6 +53,8 @@ const MyWorkoutsPage = () => {
         created_at: gw.created_at || getCurrentUTCTimestamp(),
         updated_at: gw.updated_at || getCurrentUTCTimestamp(),
       }));
+    }
+  }, [isAuthenticated, serverWorkouts, guestData.workouts]);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -89,7 +102,7 @@ const MyWorkoutsPage = () => {
     return <p className="text-destructive">{errorMessage}</p>;
   }
 
-  const validWorkouts = workouts.filter(Boolean);
+  const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
 
   return (
     <>
