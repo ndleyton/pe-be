@@ -30,7 +30,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: pe_be_test
+          POSTGRES_DB: gym_tracker_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -81,11 +81,11 @@ jobs:
       
     - name: Create test database
       run: |
-        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pe_be_test;" || echo "Database might already exist"
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gym_tracker_test;" || echo "Database might already exist"
         
     - name: Run database migrations
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
         SECRET_KEY: test-secret-key-for-ci
         ENVIRONMENT: test
         GOOGLE_CLIENT_ID: test-google-client-id-ci
@@ -96,7 +96,7 @@ jobs:
         
     - name: Run tests
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
         SECRET_KEY: test-secret-key-for-ci
         ENVIRONMENT: test
         GOOGLE_CLIENT_ID: test-google-client-id-ci
@@ -178,7 +178,7 @@ jobs:
         GOOGLE_CLIENT_ID: test-google-client-id-ci
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
       run: |
         # Validate that the application can start
         poetry run python -c "from src.main import app; print('✅ App imports successfully')"

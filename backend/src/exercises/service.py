@@ -53,12 +53,13 @@ class ExerciseTypeService:
     @staticmethod
     async def get_all_exercise_types(
         session: AsyncSession,
+        name: Optional[str] = None,
         order_by: str = "usage",
         offset: int = 0,
         limit: int = 100,
     ) -> PaginatedExerciseTypesResponse:
-        """Get all exercise types with optional ordering and pagination"""
-        return await get_exercise_types(session, order_by, offset, limit)
+        """Get all exercise types with optional filtering, ordering and pagination"""
+        return await get_exercise_types(session, name, order_by, offset, limit)
 
     @staticmethod
     async def get_exercise_type(
