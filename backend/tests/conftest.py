@@ -1,9 +1,11 @@
 import pytest
-import asyncio
+import pytest_asyncio
 import os
 from typing import AsyncGenerator
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from src.main import app
@@ -21,7 +23,7 @@ def get_test_database_url():
     """Get test database URL and ensure it's async compatible."""
     db_url = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test",
+        "postgresql+asyncpg://ndleyton@localhost:5432/gym_tracker_test",
     )
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
@@ -45,40 +47,72 @@ TestSessionLocal = sessionmaker(
 )
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def setup_database():
-    """Create test database tables."""
+    """Ensure a clean test database state for each test function.
+
+    We first drop *all* tables to remove any leftover schema from previous
+    runs (e.g., stale unique constraints).  Then we recreate the schema from
+    the current SQLAlchemy models.  After the test function completes, we
+    drop the tables again so that subsequent tests always start from a
+    blank slate.
+    """
     async with test_engine.begin() as conn:
+        # Drop in case a previous interrupted session left stale tables
+        await conn.run_sync(Base.metadata.drop_all)
+        # Re-create the schema based on the *current* models
         await conn.run_sync(Base.metadata.create_all)
+
+        # No additional tweaks required – the schema now reflects production
+        # constraints (including the unique exercise type name).
+
     yield
+
+    # Tear-down: drop everything to avoid leaking state between tests
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """Create a test database session."""
+    """Create a test database session with proper cleanup."""
     async with TestSessionLocal() as session:
-        yield session
-        await session.rollback()
+        async with session.begin():
+            # Clean tables before test
+            for table in [
+                "exercises",
+                "exercise_sets",
+                "exercise_muscles",
+                "exercise_types",
+                "workouts",
+                "users",
+                "recipes",
+            ]:
+                await session.execute(text(f"TRUNCATE {table} CASCADE"))
+
+            yield session
+
+            # Rollback will happen automatically when context exits
+            # This ensures ALL changes in this session are rolled back
 
 
-@pytest.fixture
-def client(db_session: AsyncSession):
-    """Create a test client with test database session."""
+@pytest_asyncio.fixture
+async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Create a test client that uses the SAME session as db_session fixture."""
 
-    def override_get_db():
-        return db_session
+    async def override_get_db():
+        yield db_session  # Use the session from db_session fixture!
 
     app.dependency_overrides[get_async_session] = override_get_db
+
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client():
+    """Create a test client for sync tests (no database setup)."""
     with TestClient(app) as test_client:
         yield test_client
-    app.dependency_overrides.clear()

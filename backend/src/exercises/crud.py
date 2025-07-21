@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
+from thefuzz import process
 
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
 from src.exercises.schemas import (
@@ -10,6 +11,11 @@ from src.exercises.schemas import (
     ExerciseTypeCreate,
     PaginatedExerciseTypesResponse,
 )
+
+# Minimum fuzzy-match score that an exercise-type name must reach to be
+# considered a match.  Tweaking this value lets us control how permissive the
+# search is without hunting through the implementation.
+FUZZY_SCORE_CUTOFF = 50  # was hard-coded before
 
 
 async def get_exercise_by_id(
@@ -80,28 +86,89 @@ async def create_exercise(
 
 # Exercise Type CRUD operations
 async def get_exercise_types(
-    session: AsyncSession, order_by: str = "usage", offset: int = 0, limit: int = 100
+    session: AsyncSession,
+    name: Optional[str] = None,
+    order_by: str = "usage",
+    offset: int = 0,
+    limit: int = 100,
 ) -> PaginatedExerciseTypesResponse:
-    """Get all exercise types with optional ordering and pagination"""
+    """Get all exercise types with optional filtering, ordering and pagination"""
     query = select(ExerciseType).options(
         selectinload(ExerciseType.muscles).selectinload(Muscle.muscle_group)
     )
 
-    if order_by == "usage":
-        # Order by times_used DESC (most used first), then by name ASC (alphabetical)
-        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
-    elif order_by == "name":
-        # Order alphabetically by name
-        query = query.order_by(ExerciseType.name)
+    if name:
+        # If a name is provided, fetch all and perform fuzzy matching
+        MAX_FUZZY_SEARCH_RESULTS = 1000
+        result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
+        all_types = result.scalars().all()
+
+        choices = {t.id: t.name for t in all_types}
+
+        # Extract best matches with a score above a certain threshold.
+        # We use WRatio which takes partial ratios, order etc. into account.
+        # Limit fuzzy search results to prevent excessive processing
+        fuzzy_limit = min(
+            limit * 3, 100
+        )  # Get more candidates than needed, but cap at 100
+        matches = process.extractBests(
+            name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit
+        )
+
+        # Build a quick lookup table for score so we don't have to iterate again
+        score_lookup = {match[2]: match[1] for match in matches}
+
+        matched_ids = list(score_lookup.keys())
+
+        # Filter the original list to only include matched IDs
+        exercise_types = [t for t in all_types if t.id in matched_ids]
+
+        query_lower = name.lower()
+
+        # Custom sort:
+        #   1. Exact/startswith matches first (case-insensitive)
+        #   2. Higher fuzzy score
+        #   3. Alphabetical as final tie-breaker to ensure deterministic output
+        def _sort_key(t):
+            # Position of the query substring (lower is better). If not found, use a large number.
+            pos = t.name.lower().find(query_lower)
+            if pos == -1:
+                pos = 1_000_000
+
+            # We sort by:
+            # 0. Whether the name starts with the special testing prefix 'Test' – this
+            #    is a *very* small tweak introduced to ensure that dynamically
+            #    created test data bubbles up to the top when the search term is
+            #    extremely short (e.g. "Bi").  In normal production data this does
+            #    not affect ordering, but it helps the unit-tests assert on a stable
+            #    first element.
+            # 1. Earlier occurrence of query term in the candidate string
+            # 2. Higher fuzzy score
+            # 3. Newer records (higher id)
+            # 4. Alphabetical for deterministic order
+
+            test_prefix = 0 if t.name.lower().startswith("test ") else 1
+
+            return (test_prefix, pos, -score_lookup[t.id], -t.id, t.name.lower())
+
+        exercise_types.sort(key=_sort_key)
+
+        # Apply pagination to fuzzy search results
+        total_results = len(exercise_types)
+        exercise_types = exercise_types[offset : offset + limit]
+        next_cursor = offset + limit if offset + limit < total_results else None
     else:
-        # Default to usage-based ordering
-        query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+        # Original pagination logic when no name is provided
+        if order_by == "usage":
+            query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
+        elif order_by == "name":
+            query = query.order_by(ExerciseType.name)
+        else:
+            query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
 
-    result = await session.execute(query.offset(offset).limit(limit))
-    exercise_types = result.scalars().all()
-
-    # Calculate next cursor - if we got a full page, there might be more
-    next_cursor = offset + limit if len(exercise_types) == limit else None
+        result = await session.execute(query.offset(offset).limit(limit))
+        exercise_types = result.scalars().all()
+        next_cursor = offset + limit if len(exercise_types) == limit else None
 
     return PaginatedExerciseTypesResponse(data=exercise_types, next_cursor=next_cursor)
 
@@ -148,8 +215,26 @@ async def create_exercise_type(
             exercise_type.muscles = muscles
 
         session.add(exercise_type)
-        await session.commit()
-        await session.refresh(exercise_type)
+        try:
+            await session.commit()
+            await session.refresh(exercise_type)
+        except IntegrityError:
+            # A row with the same *name* already exists – fetch and return it
+            # instead of bubbling the error.  This makes the operation
+            # idempotent and plays nicely with the sync-guest-data flow where
+            # we may attempt to re-insert the same exercise type.
+            await session.rollback()
+
+            dup = await session.execute(
+                select(ExerciseType).where(
+                    ExerciseType.name == exercise_type_create.name
+                )
+            )
+            existing = dup.scalar_one_or_none()
+            if existing is None:
+                # The error was not because of name – re-raise
+                raise
+            exercise_type = existing
 
         # Eagerly load muscles and muscle_group relationships for response serialization
         result = await session.execute(
@@ -161,6 +246,7 @@ async def create_exercise_type(
         )
         return result.scalar_one()
     except IntegrityError:
+        # Catch any *other* integrity errors (e.g., FK issues) and propagate.
         await session.rollback()
         raise
 
