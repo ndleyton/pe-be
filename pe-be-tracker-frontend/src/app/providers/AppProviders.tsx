@@ -2,7 +2,8 @@ import React, { ErrorInfo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
-import { StoreInitializer } from '@/components/StoreInitializer';
+// Temporarily disabled to test
+// import { StoreInitializer } from '@/components/StoreInitializer';
 import { config } from '@/app/config/env';
 import { ErrorFallback } from '@/shared/components/error';
 
@@ -51,9 +52,7 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <StoreInitializer>
-          {children}
-        </StoreInitializer>
+        {children}
         {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>

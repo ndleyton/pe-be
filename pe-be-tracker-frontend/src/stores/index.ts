@@ -1,7 +1,11 @@
 // Export all stores from a single entry point
-export { useAuthStore, type User } from './auth';
+export { useAuthStore, selectIsAuthenticated, selectUser, selectLoading, type User } from './auth';
 export { 
   useGuestStore, 
+  selectWorkouts,
+  selectExerciseTypes,
+  selectWorkoutTypes,
+  selectRecipes,
   type GuestWorkout, 
   type GuestExercise, 
   type GuestRecipe,

@@ -14,9 +14,6 @@ interface AuthStore {
   user: User | null;
   loading: boolean;
 
-  // Computed getters
-  isAuthenticated: boolean;
-
   // Actions
   login: (user: User) => void;
   logout: () => Promise<void>;
@@ -32,11 +29,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // Initial state
   user: null,
   loading: true,
-
-  // Computed getter - always up to date
-  get isAuthenticated() {
-    return !!get().user;
-  },
 
   // Actions
   login: (user) => {
@@ -99,3 +91,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
 }));
+
+// Selector functions - use these instead of computed getters
+export const selectIsAuthenticated = (state: AuthStore) => !!state.user;
+export const selectUser = (state: AuthStore) => state.user;
+export const selectLoading = (state: AuthStore) => state.loading;

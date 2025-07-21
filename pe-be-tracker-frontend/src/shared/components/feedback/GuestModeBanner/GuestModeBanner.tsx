@@ -1,11 +1,14 @@
 import React from 'react';
-import { useGuestData } from '@/hooks';
+// Temporarily disabled to fix infinite loop
+// import { useGuestData } from '@/hooks';
 
 const GuestModeBanner: React.FC = () => {
-  const { isAuthenticated, data: guestData } = useGuestData();
+  // Temporarily hardcoded to fix infinite loop
+  const isAuthenticated = false;
+  const guestData = { workouts: [] };
 
   // Don't show banner if user is authenticated
-  if (isAuthenticated()) {
+  if (isAuthenticated) {
     return null;
   }
 

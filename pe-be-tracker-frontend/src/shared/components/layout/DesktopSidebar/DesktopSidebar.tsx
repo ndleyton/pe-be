@@ -7,7 +7,10 @@ import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const DesktopSidebar: React.FC = () => {
-  const { isAuthenticated, signOut } = useAuth();
+  // Temporarily disabled to fix infinite loop
+  // const { isAuthenticated, signOut } = useAuth();
+  const isAuthenticated = () => false;
+  const signOut = async () => {};
   const googleSignIn = useGoogleSignIn();
 
   return (

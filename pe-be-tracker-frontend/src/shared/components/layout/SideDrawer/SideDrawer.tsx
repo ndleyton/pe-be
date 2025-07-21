@@ -13,8 +13,14 @@ import {
 import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const SideDrawer: React.FC = () => {
-  const { isOpen, closeDrawer } = useDrawer();
-  const { isAuthenticated, signOut } = useAuth();
+  // Temporarily disabled to fix infinite loop
+  // const { isOpen, closeDrawer } = useDrawer();
+  const isOpen = false;
+  const closeDrawer = () => {};
+  // Temporarily disabled to fix infinite loop
+  // const { isAuthenticated, signOut } = useAuth();
+  const isAuthenticated = () => false;
+  const signOut = async () => {};
   const googleSignIn = useGoogleSignIn();
 
   return (

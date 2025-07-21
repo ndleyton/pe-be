@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { HomeLogo } from '@/shared/components/layout';
-import { useGuestData } from '@/hooks';
+// Temporarily disabled to fix infinite loop
+// import { useGuestData } from '@/hooks';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 import api from '@/shared/api/client';
 
 const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { data: guestData, actions: guestActions } = useGuestData();
+  // Temporarily disabled
+  // const { data: guestData, actions: guestActions } = useGuestData();
+  const guestData = { workouts: [] };
+  const guestActions = { clear: () => {} };
   const [syncStatus, setSyncStatus] = useState<'processing' | 'syncing' | 'complete' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
 

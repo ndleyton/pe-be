@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleDrawer } = useDrawer();
-  const { isAuthenticated } = useAuth();
+  // Temporarily disabled to fix infinite loop
+  // const { toggleDrawer } = useDrawer();
+  const toggleDrawer = () => {};
+  // Temporarily disabled to fix infinite loop
+  // const { isAuthenticated } = useAuth();
+  const isAuthenticated = () => false;
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated()) {

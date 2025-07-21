@@ -6,11 +6,12 @@ import './index.css';
 import { ThemeProvider } from './components/theme-provider';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // Temporarily disabled StrictMode to debug infinite loop
+  // <React.StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AppProviders>
         <AppRouter />
       </AppProviders>
     </ThemeProvider>
-  </React.StrictMode>,
+  // </React.StrictMode>,
 )

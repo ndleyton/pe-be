@@ -1,9 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useShallow } from 'zustand/react/shallow';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WeekTracking } from '@/shared/components/ui';
-import { useAuthStore, useGuestStore } from '@/stores';
+// Temporarily comment out ALL Zustand stores to test
+// import { useSimpleAuthStore, selectIsAuthenticated, selectLoading } from '@/stores/auth-simple';
+// import { useAuthStore, useGuestStore, selectIsAuthenticated, selectLoading, selectWorkouts } from '@/stores';
 import {
   Alert,
   AlertDescription,
@@ -17,23 +20,27 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 };
 
 const ProfilePage: React.FC = () => {
-  // Use Zustand stores - no more race conditions!
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const loading = useAuthStore((state) => state.loading);
-  const guestWorkouts = useGuestStore((state) => state.workouts);
+  // Temporarily use hardcoded values to test without Zustand
+  const isAuthenticated = false;
+  const loading = false;
+  const guestWorkouts: any[] = [];
   
-  const { data: serverWorkouts = [], isLoading, error } = useQuery({
-    queryKey: ['workouts'],
-    queryFn: fetchWorkouts,
-    // Wait for auth to finish loading AND user to be authenticated
-    enabled: !loading && isAuthenticated,
-    retry: (failureCount, error: unknown) => {
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-  });
+  // Temporarily disable React Query to test
+  const serverWorkouts: any[] = [];
+  const isLoading = false;
+  const error = null;
+
+  // const { data: serverWorkouts = [], isLoading, error } = useQuery({
+  //   queryKey: ['workouts'],
+  //   queryFn: fetchWorkouts,
+  //   enabled: !loading && isAuthenticated,
+  //   retry: (failureCount, error: unknown) => {
+  //     if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+  //       return false;
+  //     }
+  //     return failureCount < 3;
+  //   },
+  // });
 
   const workouts: Workout[] = isAuthenticated 
     ? serverWorkouts

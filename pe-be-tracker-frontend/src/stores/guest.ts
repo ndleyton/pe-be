@@ -488,3 +488,9 @@ export const useGuestStore = create<GuestStore>()(
     }
   )
 );
+
+// Selector functions to prevent infinite loops
+export const selectWorkouts = (state: GuestStore) => state.workouts;
+export const selectExerciseTypes = (state: GuestStore) => state.exerciseTypes;
+export const selectWorkoutTypes = (state: GuestStore) => state.workoutTypes;
+export const selectRecipes = (state: GuestStore) => state.recipes;
