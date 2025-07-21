@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-import { useGuestData, GuestWorkoutType, GuestRecipe } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestWorkoutType, GuestRecipe } from '@/hooks';
 import { Button } from '@/components/ui/button';
 
 interface WorkoutFormData {

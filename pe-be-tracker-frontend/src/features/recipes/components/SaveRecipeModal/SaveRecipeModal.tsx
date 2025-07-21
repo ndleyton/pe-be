@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
+import { useGuestData } from '@/hooks';
+import { GuestExercise } from '@/stores';
 import { Exercise } from '@/features/exercises/api';
 import { createRecipe, CreateRecipeData } from '@/features/recipes/api';
 import { Button } from '@/components/ui/button';

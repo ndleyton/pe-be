@@ -3,22 +3,13 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppLayout from './AppLayout';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { GuestDataProvider } from '@/contexts/GuestDataContext';
-import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 
 const MockComponent = () => <div>Mock Content</div>;
 
 const renderWithProviders = (ui: React.ReactElement) => {
   return render(
     <MemoryRouter>
-      <WorkoutTimerProvider>
-        <AuthProvider>
-          <GuestDataProvider>
-            {ui}
-          </GuestDataProvider>
-        </AuthProvider>
-      </WorkoutTimerProvider>
+      {ui}
     </MemoryRouter>
   );
 };

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
 import { IntensityUnitModal } from '@/features/exercises/components';
-import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
+import { useGuestData } from '@/hooks';
+import { GuestExerciseSet } from '@/stores';
 
 interface AddExerciseSetFormProps {
   exerciseId: number | string; // Can be number (server) or string (guest)

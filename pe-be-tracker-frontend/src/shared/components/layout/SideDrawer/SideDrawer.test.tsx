@@ -4,7 +4,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SideDrawer from './SideDrawer';
-import { AuthProvider } from '@/contexts/AuthContext';
+// AuthProvider removed - using Zustand store instead
 import api from '@/shared/api/client';
 
 // Mock the API client
@@ -27,18 +27,26 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
-// Mock the DrawerContext - default to open for most tests
+// Mock the Zustand hooks - default to open for most tests
 const mockCloseDrawer = vi.fn();
 const mockOpenDrawer = vi.fn();
 const mockToggleDrawer = vi.fn();
+const mockSignOut = vi.fn();
+const mockIsAuthenticated = vi.fn(() => false);
 let mockIsOpen = true;
 
-vi.mock('@/contexts/DrawerContext', () => ({
+vi.mock('@/hooks', () => ({
   useDrawer: () => ({
     isOpen: mockIsOpen,
     openDrawer: mockOpenDrawer,
     closeDrawer: mockCloseDrawer,
     toggleDrawer: mockToggleDrawer,
+  }),
+  useAuth: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    signOut: mockSignOut,
+    user: null,
+    loading: false,
   }),
 }));
 
@@ -51,9 +59,7 @@ const TestWrapper = ({
   initialEntries?: string[];
 }) => (
   <MemoryRouter initialEntries={initialEntries}>
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    {children}
   </MemoryRouter>
 );
 

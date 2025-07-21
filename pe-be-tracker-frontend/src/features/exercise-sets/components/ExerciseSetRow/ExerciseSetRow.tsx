@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
-import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
+import { useGuestData } from '@/hooks';
+import { GuestExerciseSet } from '@/stores';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;

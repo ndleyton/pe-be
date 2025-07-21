@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGuestData } from '@/contexts/GuestDataContext';
+import { useGuestData } from '@/hooks';
 import { ModeToggle } from '@/components/mode-toggle';
 import {
   Alert,

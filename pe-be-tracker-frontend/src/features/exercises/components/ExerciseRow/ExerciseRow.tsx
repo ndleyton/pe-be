@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Exercise, ExerciseSet } from '@/features/exercises/api';
-import { GuestExerciseSet } from '@/contexts/GuestDataContext';
+import { GuestExerciseSet } from '@/hooks';
 import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';

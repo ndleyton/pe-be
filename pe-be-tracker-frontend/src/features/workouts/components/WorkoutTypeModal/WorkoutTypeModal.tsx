@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestWorkoutType } from '@/hooks';
 
 interface WorkoutType {
   id: number;

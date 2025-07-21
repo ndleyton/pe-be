@@ -5,7 +5,7 @@ import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
 import { ExerciseType } from '@/features/exercises/api';
-import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestExerciseType } from '@/hooks';
 import { Button } from '@/components/ui/button';
 
 interface ExerciseFormData {

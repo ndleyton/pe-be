@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
 import api from '@/shared/api/client';
-import { useGuestData } from '@/contexts/GuestDataContext';
+import { useGuestData } from '@/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

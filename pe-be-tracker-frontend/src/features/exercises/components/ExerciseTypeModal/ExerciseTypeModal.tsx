@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/features/exercises/api';
-import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestExerciseType } from '@/hooks';
 import axios from 'axios';
 import { truncateWords } from '@/utils/text';
 import { MUSCLE_DISPLAY_LIMIT } from '@/shared/constants';

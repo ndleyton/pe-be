@@ -1,6 +1,15 @@
 // Export all stores from a single entry point
 export { useAuthStore, type User } from './auth';
-export { useGuestStore, type GuestWorkout, type GuestExercise, type GuestRecipe } from './guest';
+export { 
+  useGuestStore, 
+  type GuestWorkout, 
+  type GuestExercise, 
+  type GuestRecipe,
+  type GuestExerciseSet,
+  type GuestExerciseType,
+  type GuestWorkoutType,
+  type GuestIntensityUnit
+} from './guest';
 export { useUIStore } from './ui';
 
 // Initialize auth store on app startup

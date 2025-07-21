@@ -3,8 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppBar from './AppBar';
-import { DrawerProvider } from '@/contexts/DrawerContext';
-import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
+// Context providers removed - using Zustand stores instead
 
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
@@ -16,26 +15,33 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock the DrawerContext
+// Mock the Zustand hooks
 const mockToggleDrawer = vi.fn();
-vi.mock('@/contexts/DrawerContext', () => ({
+const mockSignOut = vi.fn();
+const mockIsAuthenticated = vi.fn(() => false);
+
+vi.mock('@/hooks', () => ({
   useDrawer: () => ({
     isOpen: false,
     openDrawer: vi.fn(),
     closeDrawer: vi.fn(),
     toggleDrawer: mockToggleDrawer,
   }),
-  DrawerProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-// Mock the AuthContext
-const mockSignOut = vi.fn();
-const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     signOut: mockSignOut,
     user: null,
+  }),
+  useWorkoutTimer: () => ({
+    startTime: null,
+    elapsedSeconds: 0,
+    paused: false,
+    formatted: '00:00:00',
+    start: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    togglePause: vi.fn(),
+    stop: vi.fn(),
   }),
 }));
 
@@ -60,11 +66,7 @@ vi.mock('./DesktopNav', () => ({
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <MemoryRouter initialEntries={['/dashboard']}>
-      <WorkoutTimerProvider>
-        <DrawerProvider>
-          {children}
-        </DrawerProvider>
-      </WorkoutTimerProvider>
+      {children}
     </MemoryRouter>
   );
 };

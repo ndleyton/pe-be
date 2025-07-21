@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '@/shared/components/ui';
-import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
+import { useGuestData, GuestWorkout, GuestRecipe } from '@/hooks';
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
