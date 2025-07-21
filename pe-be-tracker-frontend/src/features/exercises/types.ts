@@ -7,8 +7,8 @@ export interface ExerciseType {
   created_at: string;
   updated_at: string;
   usage_count: number;
-  default_intensity_unit: any; // You might want to define a more specific type for this
+  default_intensity_unit: any;
   times_used: number;
-  images?: string[]; // Optional for ExerciseTypeDetailsPage
-  muscles?: Array<{ id: number; name: string }>; // Optional for ExerciseTypeDetailsPage
+  images?: string[];
+  muscles?: Array<{ id: number; name: string }>;
 }
