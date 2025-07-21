@@ -1,8 +1,9 @@
+import { useGuestStore } from '@/stores';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import { useGuestData, GuestWorkoutType } from '@/contexts/GuestDataContext';
+;
 
 interface WorkoutType {
   id: number;
@@ -22,15 +23,15 @@ const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
 };
 
 const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
-  const { data: guestData, isAuthenticated } = useGuestData();
+  // TODO: Migrate useGuestData destructuring: data: guestData, isAuthenticated 
   const { data: serverWorkoutTypes = [], isLoading, error } = useQuery({
     queryKey: ['workoutTypes'],
     queryFn: fetchWorkoutTypes,
-    enabled: isAuthenticated(), // Only fetch when authenticated
+    enabled: isAuthenticated, // Only fetch when authenticated
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const workoutTypes = isAuthenticated() 
+  const workoutTypes = isAuthenticated 
     ? (Array.isArray(serverWorkoutTypes) ? serverWorkoutTypes : [])
     : (Array.isArray(guestData.workoutTypes) ? guestData.workoutTypes : []);
 
@@ -57,7 +58,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
   );
 
   const renderContent = () => {
-    if (isAuthenticated() && isLoading) {
+    if (isAuthenticated && isLoading) {
       return (
         <div className="grid gap-3">
           {Array.from({ length: 5 }).map((_, index) => (
@@ -67,7 +68,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
       );
     }
 
-    if (isAuthenticated() && error) {
+    if (isAuthenticated && error) {
       return (
         <div className="text-center py-8">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -86,7 +87,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
             <span className="text-muted-foreground text-2xl">📋</span>
           </div>
           <h4 className="text-foreground font-medium mb-2">No workout types available</h4>
-          <p className="text-muted-foreground text-sm">{isAuthenticated() ? 'Contact support if this persists' : 'Guest workout types will be created automatically'}</p>
+          <p className="text-muted-foreground text-sm">{isAuthenticated ? 'Contact support if this persists' : 'Guest workout types will be created automatically'}</p>
         </div>
       );
     }

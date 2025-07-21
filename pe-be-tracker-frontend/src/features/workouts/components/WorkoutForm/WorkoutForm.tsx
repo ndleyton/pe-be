@@ -1,3 +1,4 @@
+import { useGuestStore } from '@/stores';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-import { useGuestData, GuestWorkoutType, GuestRecipe } from '@/contexts/GuestDataContext';
+;
 import { Button } from '@/components/ui/button';
 
 interface WorkoutFormData {
@@ -38,7 +39,7 @@ const createWorkout = async (data: WorkoutFormData) => {
 
 const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) => {
   const navigate = useNavigate();
-  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
+  const guestData = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedWorkoutType, setSelectedWorkoutType] = useState<WorkoutType | GuestWorkoutType | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -86,7 +87,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   });
 
   const onSubmit = (data: WorkoutFormData) => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       // Use API for authenticated users
       mutation.mutate(data);
     } else {
@@ -235,20 +236,20 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
           type="hidden"
           {...register('workout_type_id', {
             required: 'Workout type is required',
-            valueAsNumber: isAuthenticated(), // Only convert to number if authenticated
+            valueAsNumber: isAuthenticated, // Only convert to number if authenticated
           })}
         />
         {formState.errors.workout_type_id && <div className="text-destructive text-sm mt-2">{formState.errors.workout_type_id.message}</div>}
       </div>
       <Button
         type="submit"
-        disabled={isAuthenticated() && mutation.isPending}
+        disabled={isAuthenticated && mutation.isPending}
         className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
         data-testid="start-workout-button"
       >
-        {(isAuthenticated() && mutation.isPending) ? 'Creating...' : 'Start Workout'}
+        {(isAuthenticated && mutation.isPending) ? 'Creating...' : 'Start Workout'}
       </Button>
-      {isAuthenticated() && mutation.error && <div className="text-destructive mt-3">Failed to create workout.</div>}
+      {isAuthenticated && mutation.error && <div className="text-destructive mt-3">Failed to create workout.</div>}
 
       <WorkoutTypeModal
         isOpen={showModal}

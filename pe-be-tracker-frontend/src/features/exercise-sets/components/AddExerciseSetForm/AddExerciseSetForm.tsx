@@ -1,8 +1,9 @@
+import { useGuestStore } from '@/stores';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
 import { IntensityUnitModal } from '@/features/exercises/components';
-import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
+;
 
 interface AddExerciseSetFormProps {
   exerciseId: number | string; // Can be number (server) or string (guest)
@@ -11,7 +12,7 @@ interface AddExerciseSetFormProps {
 }
 
 const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onSetAdded, onCancel }) => {
-  const { isAuthenticated, actions: guestActions } = useGuestData();
+  // TODO: Migrate useGuestData destructuring: isAuthenticated, actions: guestActions 
   const [formData, setFormData] = useState<CreateExerciseSetData>({
     exercise_id: exerciseId,
     intensity_unit_id: 1, // Default to first intensity unit (kg)
@@ -26,7 +27,7 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
   const { data: intensityUnits = [], isLoading: isLoadingUnits } = useQuery({
     queryKey: ['intensityUnits'],
     queryFn: getIntensityUnits,
-    enabled: isAuthenticated(), // Only fetch when authenticated
+    enabled: isAuthenticated, // Only fetch when authenticated
   });
 
   // For guest mode, use hardcoded intensity units
@@ -36,7 +37,7 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
     { id: 3, name: 'Pounds', abbreviation: 'lbs' },
   ];
 
-  const currentIntensityUnits = isAuthenticated() ? intensityUnits : guestIntensityUnits;
+  const currentIntensityUnits = isAuthenticated ? intensityUnits : guestIntensityUnits;
 
   const currentUnit = currentIntensityUnits.find(unit => unit.id === formData.intensity_unit_id) || currentIntensityUnits[0];
 
@@ -49,7 +50,7 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
     setIsSubmitting(true);
 
     try {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         // Use API for authenticated users
         const newSet = await createExerciseSet(formData);
         onSetAdded(newSet);
@@ -141,9 +142,9 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
                 onClick={handleUnitButtonClick}
                 className="px-3 py-2 bg-muted border border-l-0 border-border rounded-r text-muted-foreground text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring select-none"
                 aria-label={currentUnit ? `Current unit: ${currentUnit.name}. Click to change unit` : 'Loading units...'}
-                disabled={(isAuthenticated() && isLoadingUnits) || !currentUnit}
+                disabled={(isAuthenticated && isLoadingUnits) || !currentUnit}
               >
-                {(isAuthenticated() && isLoadingUnits) ? '...' : (currentUnit?.abbreviation || 'kg')}
+                {(isAuthenticated && isLoadingUnits) ? '...' : (currentUnit?.abbreviation || 'kg')}
               </button>
             </div>
           </div>

@@ -1,9 +1,10 @@
+import { useGuestStore } from '@/stores';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
 import api from '@/shared/api/client';
-import { useGuestData } from '@/contexts/GuestDataContext';
+;
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -130,7 +131,7 @@ const createExerciseSet = async (setData: {
 
 const ChatPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useGuestData();
+  // TODO: Migrate useGuestData destructuring: isAuthenticated 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -147,19 +148,19 @@ const ChatPage: React.FC = () => {
   const { data: workoutTypes = [] } = useQuery<WorkoutType[]>({
     queryKey: ['workout-types'],
     queryFn: fetchWorkoutTypes,
-    enabled: isAuthenticated(),
+    enabled: isAuthenticated,
   });
 
   const { data: exerciseTypes = [] } = useQuery({
     queryKey: ['exercise-types'],
     queryFn: fetchExerciseTypes,
-    enabled: isAuthenticated(),
+    enabled: isAuthenticated,
   });
 
   const { data: intensityUnits = [] } = useQuery({
     queryKey: ['intensity-units'],
     queryFn: fetchIntensityUnits,
-    enabled: isAuthenticated(),
+    enabled: isAuthenticated,
   });
 
   const parseWorkoutMutation = useMutation({
@@ -306,7 +307,7 @@ const ChatPage: React.FC = () => {
     // Check if this looks like a workout description
     const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(messageContent);
     
-    if (looksLikeWorkout && isAuthenticated()) {
+    if (looksLikeWorkout && isAuthenticated) {
       // Parse the workout
       parseWorkoutMutation.mutate(messageContent);
     } else {
@@ -315,7 +316,7 @@ const ChatPage: React.FC = () => {
         const response: ChatMessage = {
           id: Date.now().toString() + '-response',
           role: 'assistant',
-          content: isAuthenticated() 
+          content: isAuthenticated 
             ? 'That doesn\'t look like a workout description. Try describing your exercises with sets, reps, and weights!'
             : 'Please sign in to use the workout parsing feature.',
           timestamp: new Date(),
@@ -396,7 +397,7 @@ const ChatPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                  {!isAuthenticated() && (
+                  {!isAuthenticated && (
                     <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <p className="text-destructive text-sm">
                         ⚠️ You need to be signed in to parse and save workouts

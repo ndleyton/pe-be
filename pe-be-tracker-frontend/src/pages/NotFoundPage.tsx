@@ -1,15 +1,16 @@
+import { useAuthStore } from '@/stores';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+;
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   const handleGoHome = () => {
     // Navigate to dashboard if authenticated, otherwise to landing page
-    navigate(isAuthenticated() ? '/dashboard' : '/');
+    navigate(isAuthenticated ? '/dashboard' : '/');
   };
 
   const handleGoBack = () => {
@@ -47,7 +48,7 @@ const NotFoundPage: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
           >
             <Home className="h-5 w-5" />
-            {isAuthenticated() ? 'Go to Dashboard' : 'Go to Home'}
+            {isAuthenticated ? 'Go to Dashboard' : 'Go to Home'}
           </button>
           
           <button

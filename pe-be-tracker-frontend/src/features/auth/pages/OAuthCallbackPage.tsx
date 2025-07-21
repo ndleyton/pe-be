@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { HomeLogo } from '@/shared/components/layout';
-import { useGuestData } from '@/contexts/GuestDataContext';
+import { useGuestStore } from '@/stores';
+import { useShallow } from 'zustand/react/shallow';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 import api from '@/shared/api/client';
 
 const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { data: guestData, actions: guestActions } = useGuestData();
+  const { workouts, clear } = useGuestStore(useShallow((state) => ({
+    workouts: state.workouts,
+    clear: state.clear
+  })));
   const [syncStatus, setSyncStatus] = useState<'processing' | 'syncing' | 'complete' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
@@ -40,11 +44,16 @@ const OAuthCallbackPage: React.FC = () => {
   
 
         // Check if there's guest data to sync
-        if (guestData.workouts.length > 0) {
+        if (workouts.length > 0) {
           setSyncStatus('syncing');
           console.log('Syncing guest data to server...');
           
-          const syncResult = await syncGuestDataToServer(guestData, guestActions.clear);
+          const syncResult = await syncGuestDataToServer({ 
+            workouts, 
+            exerciseTypes: useGuestStore.getState().exerciseTypes,
+            workoutTypes: useGuestStore.getState().workoutTypes,
+            recipes: useGuestStore.getState().recipes
+          }, clear);
           
           if (syncResult.success) {
             showSyncSuccessToast(syncResult);
@@ -77,7 +86,7 @@ const OAuthCallbackPage: React.FC = () => {
     };
 
     handleOAuthCallback();
-  }, [navigate, searchParams, guestData, guestActions]);
+  }, [navigate, searchParams, workouts, clear]);
 
   const getStatusContent = () => {
     switch (syncStatus) {
@@ -91,7 +100,7 @@ const OAuthCallbackPage: React.FC = () => {
         return {
           icon: <div className="loading loading-spinner loading-lg text-blue-500"></div>,
           title: 'Syncing your data...',
-          description: `Uploading ${guestData.workouts.length} workout${guestData.workouts.length !== 1 ? 's' : ''} to your account`
+          description: `Uploading ${workouts.length} workout${workouts.length !== 1 ? 's' : ''} to your account`
         };
       case 'complete':
         return {

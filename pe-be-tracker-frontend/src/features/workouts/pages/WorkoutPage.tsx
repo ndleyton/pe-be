@@ -1,3 +1,4 @@
+import { useGuestStore } from '@/stores';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,7 +8,7 @@ import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
 import { FloatingActionButton } from '@/shared/components/ui';
-import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
+;
 import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 import { getCurrentUTCTimestamp } from '@/utils/date';
 
@@ -34,7 +35,7 @@ const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
+  const guestData = useGuestStore();
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
   const { start, stop, startTime } = useWorkoutTimer();
@@ -45,19 +46,19 @@ const WorkoutPage: React.FC = () => {
   const { data: serverWorkout } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: () => fetchWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated(),
+    enabled: !!workoutId && isAuthenticated,
   });
 
   // Fetch exercises for this workout (only when authenticated)
   const { data: serverExercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
     queryKey: ['exercises', workoutId],
     queryFn: () => getExercisesInWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated(), // Only fetch when authenticated
+    enabled: !!workoutId && isAuthenticated, // Only fetch when authenticated
   });
 
   // Use guest data if not authenticated, server data if authenticated
   const exercises: Exercise[] = React.useMemo(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       return Array.isArray(serverExercises) ? serverExercises : [];
     } else {
       const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -113,7 +114,7 @@ const WorkoutPage: React.FC = () => {
   useEffect(() => {
     if (!startTime) {
       // Try to derive the start time from workout data if available
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         if (serverWorkout && (serverWorkout as any).start_time) {
           const workoutStartTime = (serverWorkout as any).start_time;
           try {
@@ -161,7 +162,7 @@ const WorkoutPage: React.FC = () => {
   // Auto-create exercises from recipe when page loads
   useEffect(() => {
     if (recipe && workoutId && exercises.length === 0) {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
         console.log('Would create recipe from workout for authenticated user:', recipe.name);
@@ -174,7 +175,7 @@ const WorkoutPage: React.FC = () => {
 
   // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
     }
     // For guest mode, the data is already updated via the context
@@ -183,7 +184,7 @@ const WorkoutPage: React.FC = () => {
   const handleFinishWorkout = () => {
     console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         finishWorkoutMutation.mutate(workoutId, {
           onSuccess: () => {
             stop();
@@ -214,7 +215,7 @@ const WorkoutPage: React.FC = () => {
   };
 
   // Determine workout name based on authentication state
-  const workoutName = isAuthenticated()
+  const workoutName = isAuthenticated
     ? serverWorkout?.name ?? null
     : guestData.workouts.find(w => w.id === workoutId)?.name ?? null;
 
@@ -249,15 +250,15 @@ const WorkoutPage: React.FC = () => {
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
           exercises={exercises} 
-          isLoading={isAuthenticated() && exercisesLoading} 
-          error={isAuthenticated() ? exercisesError : null} 
+          isLoading={isAuthenticated && exercisesLoading} 
+          error={isAuthenticated ? exercisesError : null} 
           workoutId={workoutId}
         />
       </div>
       
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
-        disabled={isAuthenticated() && finishWorkoutMutation.isPending}
+        disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>
@@ -266,7 +267,7 @@ const WorkoutPage: React.FC = () => {
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
-        isLoading={isAuthenticated() && finishWorkoutMutation.isPending}
+        isLoading={isAuthenticated && finishWorkoutMutation.isPending}
         exercises={exercises}
         onSaveRecipe={handleSaveRecipe}
         workoutName={workoutName || undefined}
