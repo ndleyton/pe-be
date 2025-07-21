@@ -1,11 +1,12 @@
 import React from 'react';
-import { useGuestData } from '@/contexts/GuestDataContext';
+import { useAuthStore, useGuestStore } from '@/stores';
 
 const GuestModeBanner: React.FC = () => {
-  const { isAuthenticated, data: guestData } = useGuestData();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const workouts = useGuestStore(state => state.workouts);
 
   // Don't show banner if user is authenticated
-  if (isAuthenticated()) {
+  if (isAuthenticated) {
     return null;
   }
 
@@ -28,9 +29,9 @@ const GuestModeBanner: React.FC = () => {
         <div className="ml-3">
           <p className="text-sm text-blue-700">
             <strong>Guest Mode:</strong> Your workout data is stored locally on this device. 
-            {guestData.workouts.length > 0 && (
+            {workouts.length > 0 && (
               <span className="ml-1">
-                You have {guestData.workouts.length} workout{guestData.workouts.length !== 1 ? 's' : ''} saved.
+                You have {workouts.length} workout{workouts.length !== 1 ? 's' : ''} saved.
               </span>
             )}
             {' '}
