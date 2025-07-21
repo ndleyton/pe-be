@@ -1,13 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores';
 import { navItems } from '@/shared/navigation/navItems';
 import { Button } from '@/components/ui/button';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const DesktopSidebar: React.FC = () => {
-  const { isAuthenticated, signOut } = useAuth();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const signOut = useAuthStore(state => state.signOut);
   const googleSignIn = useGoogleSignIn();
 
   return (
@@ -38,7 +39,7 @@ const DesktopSidebar: React.FC = () => {
           })}
         </nav>
         <div className="p-4 border-t">
-          {isAuthenticated() ? (
+          {isAuthenticated ? (
             <div className="space-y-2">
               <NavLink to="/settings" className="w-full">
                 <Button variant="ghost" className="w-full justify-start">

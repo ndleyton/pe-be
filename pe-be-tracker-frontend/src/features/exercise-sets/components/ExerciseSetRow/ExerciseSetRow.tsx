@@ -1,7 +1,8 @@
+import { useGuestStore } from '@/stores';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
-import { useGuestData, GuestExerciseSet } from '@/contexts/GuestDataContext';
+;
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
@@ -11,7 +12,7 @@ interface ExerciseSetRowProps {
 }
 
 const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, onDelete, workoutId }) => {
-  const { isAuthenticated, actions: guestActions } = useGuestData();
+  // TODO: Migrate useGuestData destructuring: isAuthenticated, actions: guestActions 
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<UpdateExerciseSetData>({
@@ -23,7 +24,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   const handleSave = async () => {
     try {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         const updatedSet = await updateExerciseSet(exerciseSet.id, editData);
         onUpdate(updatedSet);
         
@@ -60,7 +61,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this set?')) {
       try {
-        if (isAuthenticated()) {
+        if (isAuthenticated) {
           await deleteExerciseSet(exerciseSet.id);
           
           if (workoutId) {
@@ -79,7 +80,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   const toggleDone = async () => {
     try {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         const updatedSet = await updateExerciseSet(exerciseSet.id, { done: !exerciseSet.done });
         onUpdate(updatedSet);
         

@@ -33,15 +33,7 @@ class ExerciseType(Base):
 
     # Relationships
     exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
-        "ExerciseMuscle", back_populates="exercise_type", cascade="all, delete-orphan"
-    )
-
-    # Association object pattern for muscles
-    muscles: Mapped[List["Muscle"]] = relationship(
-        "Muscle",
-        secondary="exercise_muscles",
-        viewonly=True,
-        overlaps="exercise_muscles,muscle",
+        back_populates="exercise_type"
     )
     exercises: Mapped[List["Exercise"]] = relationship(
         "Exercise", back_populates="exercise_type"
@@ -97,16 +89,8 @@ class Muscle(Base):
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
 
     # Relationships
-    exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
-        "ExerciseMuscle", back_populates="muscle"
-    )
-
-    # Association object pattern for exercise types
-    exercise_types: Mapped[List["ExerciseType"]] = relationship(
-        "ExerciseType",
-        secondary="exercise_muscles",
-        viewonly=True,
-        overlaps="exercise_muscles,exercise_type",
+    exercise_types: Mapped[List["ExerciseMuscle"]] = relationship(
+        back_populates="muscle"
     )
     muscle_group: Mapped["MuscleGroup"] = relationship(
         "MuscleGroup", back_populates="muscles"
@@ -124,8 +108,6 @@ class ExerciseMuscle(Base):
 
     __table_args__ = (UniqueConstraint("exercise_type_id", "muscle_id"),)
 
-    # Relationships
-    exercise_type: Mapped["ExerciseType"] = relationship(
-        "ExerciseType", back_populates="exercise_muscles"
-    )
-    muscle: Mapped["Muscle"] = relationship("Muscle", back_populates="exercise_muscles")
+    exercise_type: Mapped["ExerciseType"] = relationship(back_populates="exercise_muscles")
+    muscle: Mapped["Muscle"] = relationship(back_populates="exercise_muscles")
+
