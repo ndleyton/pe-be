@@ -1,12 +1,10 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Pause, Play } from 'lucide-react';
-import { useDrawer } from '@/contexts/DrawerContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDrawer, useAuth, useWorkoutTimer } from '@/hooks';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 import { Button } from '@/components/ui/button';
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();

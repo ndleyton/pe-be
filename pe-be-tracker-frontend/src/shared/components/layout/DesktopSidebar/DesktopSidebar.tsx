@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks';
 import { navItems } from '@/shared/navigation/navItems';
 import { Button } from '@/components/ui/button';
 import HomeLogo from '../HomeLogo';

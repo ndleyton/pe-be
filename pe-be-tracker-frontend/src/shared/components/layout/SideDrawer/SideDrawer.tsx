@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useDrawer } from '@/contexts/DrawerContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDrawer, useAuth } from '@/hooks';
 import { navItems } from '@/shared/navigation/navItems';
 import { Button } from '@/components/ui/button';
 import {

@@ -7,8 +7,8 @@ import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
 import { FloatingActionButton } from '@/shared/components/ui';
-import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
+import { useGuestData, useWorkoutTimer } from '@/hooks';
+import { GuestExercise, GuestRecipe } from '@/stores';
 import { getCurrentUTCTimestamp } from '@/utils/date';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
