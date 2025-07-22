@@ -89,7 +89,7 @@ class Muscle(Base):
     muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
 
     # Relationships
-    exercise_types: Mapped[List["ExerciseMuscle"]] = relationship(
+    exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
         back_populates="muscle"
     )
     muscle_group: Mapped["MuscleGroup"] = relationship(
