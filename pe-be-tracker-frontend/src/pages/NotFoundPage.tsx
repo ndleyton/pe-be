@@ -72,7 +72,7 @@ const NotFoundPage: React.FC = () => {
               Dashboard
             </button>
             <button
-              onClick={() => navigate('/workouts')}
+              onClick={() => navigate('/dashboard')}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >
