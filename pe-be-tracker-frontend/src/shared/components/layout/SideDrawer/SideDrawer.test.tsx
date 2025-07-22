@@ -18,9 +18,15 @@ vi.mock('@/shared/api/client', () => ({
 const mockApi = vi.mocked(api, { deep: true });
 
 // Mock window.location.href
+let mockLocationHref = '';
 const mockLocation = {
-  href: '',
+  get href() { return mockLocationHref; },
+  set href(value) { mockLocationHref = value; },
+  assign: vi.fn(),
+  reload: vi.fn(),
+  replace: vi.fn(),
 };
+
 Object.defineProperty(window, 'location', {
   value: mockLocation,
   writable: true,
@@ -82,7 +88,7 @@ const TestWrapper = ({
 describe('SideDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocation.href = '';
+    mockLocationHref = '';
     mockIsOpen = true; // Default to open for most tests
     mockIsAuthenticated.mockReturnValue(false); // Default to non-authenticated
     // Mock API to not be authenticated by default
@@ -293,10 +299,9 @@ describe('SideDrawer', () => {
     it('should handle Google sign-in flow', async () => {
       const user = userEvent.setup();
       
-      // First API call should fail (not authenticated)
-      mockApi.get.mockRejectedValueOnce(new Error('Unauthorized'));
-      // Second API call for Google OAuth should succeed
-      mockApi.get.mockResolvedValueOnce({
+      // Clear the default rejection and mock successful OAuth response
+      mockApi.get.mockReset();
+      mockApi.get.mockResolvedValue({
         data: { authorization_url: 'https://accounts.google.com/oauth/authorize' }
       });
       
@@ -312,15 +317,19 @@ describe('SideDrawer', () => {
       
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
       
-      expect(mockApi.get).toHaveBeenCalledWith('/auth/google/authorize');
-      expect(mockLocation.href).toBe('https://accounts.google.com/oauth/authorize');
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/auth/google/authorize');
+        expect(mockLocationHref).toBe('https://accounts.google.com/oauth/authorize');
+      });
     });
 
     it('should handle Google sign-in failure gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
       
-      mockApi.get.mockRejectedValueOnce(new Error('Network error'));
+      // Clear the default rejection and set specific failure
+      mockApi.get.mockReset();
+      mockApi.get.mockRejectedValue(new Error('Network error'));
       
       render(
         <TestWrapper>
@@ -335,7 +344,7 @@ describe('SideDrawer', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
       
       expect(consoleSpy).toHaveBeenCalledWith('Google sign-in failed', expect.any(Error));
-      expect(mockLocation.href).toBe('');
+      expect(mockLocationHref).toBe('');
       
       consoleSpy.mockRestore();
     });
