@@ -1,6 +1,6 @@
 # Error Boundary System
 
-This document describes the comprehensive error boundary system implemented in the PE-BE Tracker Frontend to provide graceful error handling and improved user experience.
+This document describes the comprehensive error boundary system implemented in the PersonalBestie Frontend to provide graceful error handling and improved user experience.
 
 ## Overview
 
