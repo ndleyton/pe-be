@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useDrawer } from '@/contexts/DrawerContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUIStore, useAuthStore } from '@/stores';
 import { navItems } from '@/shared/navigation/navItems';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,8 +13,10 @@ import {
 import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const SideDrawer: React.FC = () => {
-  const { isOpen, closeDrawer } = useDrawer();
-  const { isAuthenticated, signOut } = useAuth();
+  const isOpen = useUIStore(state => state.isDrawerOpen);
+  const closeDrawer = useUIStore(state => state.closeDrawer);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const signOut = useAuthStore(state => state.signOut);
   const googleSignIn = useGoogleSignIn();
 
   return (
@@ -54,7 +55,7 @@ const SideDrawer: React.FC = () => {
         </nav>
         <div className="mt-auto pt-4 border-t">
           <div className="space-y-2">
-            {isAuthenticated() ? (
+            {isAuthenticated ? (
               <>
                 <NavLink to="/settings" className="w-full">
                   <Button variant="ghost" className="w-full justify-start" onClick={closeDrawer}>

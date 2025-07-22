@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WeekTracking } from '@/shared/components/ui';
-import { useGuestData } from '@/contexts/GuestDataContext';
+import { useAuthStore, useGuestStore } from '@/stores';
 import {
   Alert,
   AlertDescription,
@@ -17,12 +17,16 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { data: guestData, isAuthenticated } = useGuestData();
+  // Use new store structure
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const loading = useAuthStore((state) => state.loading);
+  const guestWorkouts = useGuestStore((state) => state.workouts);
   
   const { data: serverWorkouts = [], isLoading, error } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
-    enabled: isAuthenticated(),
+    // Wait for auth to finish loading AND user to be authenticated
+    enabled: !loading && isAuthenticated,
     retry: (failureCount, error: unknown) => {
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
         return false;
@@ -31,9 +35,9 @@ const ProfilePage: React.FC = () => {
     },
   });
 
-  const workouts: Workout[] = isAuthenticated() 
-    ? serverWorkouts
-    : (guestData?.workouts && Array.isArray(guestData.workouts) ? guestData.workouts.map(gw => ({
+  const workouts: Workout[] = isAuthenticated 
+    ? (Array.isArray(serverWorkouts) ? serverWorkouts : [])
+    : (Array.isArray(guestWorkouts) ? guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
@@ -57,7 +61,7 @@ const ProfilePage: React.FC = () => {
       }, 0) / completedWorkouts.length / (1000 * 60) // Convert to minutes
     : 0;
 
-  if (isAuthenticated() && isLoading) {
+  if (isAuthenticated && isLoading) {
     return (
       <div className="p-4">
         <div className="max-w-4xl mx-auto">
@@ -71,7 +75,7 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  if (isAuthenticated() && error) {
+  if (isAuthenticated && error) {
     return (
       <div className="p-4">
         <div className="max-w-4xl mx-auto">
@@ -144,11 +148,11 @@ const ProfilePage: React.FC = () => {
             <div>
               <label className="text-sm text-base-content/70">Status</label>
               <p className="font-medium">
-                {isAuthenticated() ? 'Signed In' : 'Guest Mode'}
+                {isAuthenticated ? 'Signed In' : 'Guest Mode'}
               </p>
             </div>
             
-            {!isAuthenticated() && (
+            {!isAuthenticated && (
               <Alert>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <AlertTitle>Guest Mode Active</AlertTitle>

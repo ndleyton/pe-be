@@ -5,7 +5,7 @@ import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
 import { ExerciseType } from '@/features/exercises/api';
-import { useGuestData, GuestExerciseType } from '@/contexts/GuestDataContext';
+import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
 import { Button } from '@/components/ui/button';
 
 interface ExerciseFormData {
@@ -33,7 +33,10 @@ const createExercise = async (data: ExerciseFormData & { workout_id: number }) =
 };
 
 const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
-  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
   
@@ -56,7 +59,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   });
 
   const onSubmit = (data: ExerciseFormData) => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       // Use API for authenticated users
       mutation.mutate({
         ...data,
@@ -131,7 +134,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
           type="hidden"
           {...register('exercise_type_id', {
             required: 'Exercise is required',
-            valueAsNumber: isAuthenticated(), // Only convert to number if authenticated
+            valueAsNumber: isAuthenticated, // Only convert to number if authenticated
           })}
         />
         {errors.exercise_type_id && <div className="text-destructive text-sm mt-2">{errors.exercise_type_id.message}</div>}
@@ -147,12 +150,12 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
       </div>
       <Button
         type="submit"
-        disabled={isAuthenticated() && mutation.isPending}
+        disabled={isAuthenticated && mutation.isPending}
         className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
       >
-        {(isAuthenticated() && mutation.isPending) ? 'Adding...' : 'Add Exercise'}
+        {(isAuthenticated && mutation.isPending) ? 'Adding...' : 'Add Exercise'}
       </Button>
-      {isAuthenticated() && mutation.error && <div className="text-destructive mt-3">Failed to create exercise.</div>}
+      {isAuthenticated && mutation.error && <div className="text-destructive mt-3">Failed to create exercise.</div>}
 
       <ExerciseTypeModal
         isOpen={showModal}

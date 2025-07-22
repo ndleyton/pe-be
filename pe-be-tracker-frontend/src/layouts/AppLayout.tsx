@@ -1,13 +1,11 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { DrawerProvider } from '@/contexts/DrawerContext';
 import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
 import { GuestModeBanner } from '../shared/components/feedback';
 
 const AppLayout: React.FC = () => {
   return (
-    <DrawerProvider>
-      <div className="min-h-screen bg-base-200 flex">
+    <div className="min-h-screen bg-base-200 flex">
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
@@ -43,7 +41,6 @@ const AppLayout: React.FC = () => {
           <BottomNav />
         </div>
       </div>
-    </DrawerProvider>
   );
 };
 

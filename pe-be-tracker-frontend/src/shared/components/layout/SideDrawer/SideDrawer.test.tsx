@@ -4,7 +4,6 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SideDrawer from './SideDrawer';
-import { AuthProvider } from '@/contexts/AuthContext';
 import api from '@/shared/api/client';
 
 // Mock the API client
@@ -19,26 +18,57 @@ vi.mock('@/shared/api/client', () => ({
 const mockApi = vi.mocked(api, { deep: true });
 
 // Mock window.location.href
+let mockLocationHref = '';
 const mockLocation = {
-  href: '',
+  get href() { return mockLocationHref; },
+  set href(value) { mockLocationHref = value; },
+  assign: vi.fn(),
+  reload: vi.fn(),
+  replace: vi.fn(),
 };
+
 Object.defineProperty(window, 'location', {
   value: mockLocation,
   writable: true,
 });
 
-// Mock the DrawerContext - default to open for most tests
+// Mock Zustand stores
 const mockCloseDrawer = vi.fn();
 const mockOpenDrawer = vi.fn();
 const mockToggleDrawer = vi.fn();
+const mockIsAuthenticated = vi.fn(() => false);
+const mockSignOut = vi.fn();
 let mockIsOpen = true;
 
-vi.mock('@/contexts/DrawerContext', () => ({
-  useDrawer: () => ({
-    isOpen: mockIsOpen,
-    openDrawer: mockOpenDrawer,
-    closeDrawer: mockCloseDrawer,
-    toggleDrawer: mockToggleDrawer,
+vi.mock('@/stores', () => ({
+  useUIStore: vi.fn((selector) => {
+    const state = {
+      isDrawerOpen: mockIsOpen,
+      workoutTimer: {
+        startTime: null,
+        elapsedSeconds: 0,
+        paused: false,
+        intervalId: null,
+      },
+      openDrawer: mockOpenDrawer,
+      closeDrawer: mockCloseDrawer,
+      toggleDrawer: mockToggleDrawer,
+      startWorkoutTimer: vi.fn(),
+      pauseWorkoutTimer: vi.fn(),
+      resumeWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: vi.fn(),
+      stopWorkoutTimer: vi.fn(),
+      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+    };
+    return selector ? selector(state) : state;
+  }),
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      signOut: mockSignOut,
+      user: null,
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 
@@ -51,17 +81,16 @@ const TestWrapper = ({
   initialEntries?: string[];
 }) => (
   <MemoryRouter initialEntries={initialEntries}>
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    {children}
   </MemoryRouter>
 );
 
 describe('SideDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocation.href = '';
+    mockLocationHref = '';
     mockIsOpen = true; // Default to open for most tests
+    mockIsAuthenticated.mockReturnValue(false); // Default to non-authenticated
     // Mock API to not be authenticated by default
     mockApi.get.mockRejectedValue(new Error('Unauthorized'));
   });
@@ -243,6 +272,9 @@ describe('SideDrawer', () => {
     });
 
     it('should show Settings and Sign Out buttons when authenticated', async () => {
+      // Set authenticated state
+      mockIsAuthenticated.mockReturnValue(true);
+      
       // API returns user (authenticated)
       mockApi.get.mockResolvedValueOnce({
         data: { id: 1, email: 'test@example.com', name: 'Test User' }
@@ -267,10 +299,9 @@ describe('SideDrawer', () => {
     it('should handle Google sign-in flow', async () => {
       const user = userEvent.setup();
       
-      // First API call should fail (not authenticated)
-      mockApi.get.mockRejectedValueOnce(new Error('Unauthorized'));
-      // Second API call for Google OAuth should succeed
-      mockApi.get.mockResolvedValueOnce({
+      // Clear the default rejection and mock successful OAuth response
+      mockApi.get.mockReset();
+      mockApi.get.mockResolvedValue({
         data: { authorization_url: 'https://accounts.google.com/oauth/authorize' }
       });
       
@@ -286,15 +317,19 @@ describe('SideDrawer', () => {
       
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
       
-      expect(mockApi.get).toHaveBeenCalledWith('/auth/google/authorize');
-      expect(mockLocation.href).toBe('https://accounts.google.com/oauth/authorize');
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/auth/google/authorize');
+        expect(mockLocationHref).toBe('https://accounts.google.com/oauth/authorize');
+      });
     });
 
     it('should handle Google sign-in failure gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
       
-      mockApi.get.mockRejectedValueOnce(new Error('Network error'));
+      // Clear the default rejection and set specific failure
+      mockApi.get.mockReset();
+      mockApi.get.mockRejectedValue(new Error('Network error'));
       
       render(
         <TestWrapper>
@@ -309,7 +344,7 @@ describe('SideDrawer', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
       
       expect(consoleSpy).toHaveBeenCalledWith('Google sign-in failed', expect.any(Error));
-      expect(mockLocation.href).toBe('');
+      expect(mockLocationHref).toBe('');
       
       consoleSpy.mockRestore();
     });
@@ -318,6 +353,9 @@ describe('SideDrawer', () => {
   describe('Sign Out', () => {
     it('should handle sign out and close drawer', async () => {
       const user = userEvent.setup();
+      
+      // Set authenticated state
+      mockIsAuthenticated.mockReturnValue(true);
       
       // Setup authenticated state
       mockApi.get.mockResolvedValueOnce({
@@ -355,6 +393,9 @@ describe('SideDrawer', () => {
     });
 
     it('should focus first navigation link when drawer opens', () => {
+      // Ensure non-authenticated state for this test
+      mockIsAuthenticated.mockReturnValue(false);
+      
       render(
         <TestWrapper>
           <SideDrawer />

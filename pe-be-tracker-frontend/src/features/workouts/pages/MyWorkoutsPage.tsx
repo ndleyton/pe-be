@@ -1,20 +1,23 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
+import { useNavigate } from 'react-router-dom';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '@/shared/components/ui';
-import { useGuestData, GuestWorkout, GuestRecipe } from '@/contexts/GuestDataContext';
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 
-// Remove the local type definition since we're importing it from the API
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
-  const { data: guestData, isAuthenticated } = useGuestData();
+  
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   
   const {
@@ -27,12 +30,12 @@ const MyWorkoutsPage = () => {
     queryKey: ['workouts'],
     queryFn: (cursor, limit) => getMyWorkouts(cursor, limit),
     limit: 100,
-    enabled: isAuthenticated(),
+    enabled: isAuthenticated,
   });
 
   // Use guest data if not authenticated, server data if authenticated
   const workouts: Workout[] = React.useMemo(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       // Ensure serverWorkouts is always an array
       if (!Array.isArray(serverWorkouts)) {
         console.warn('[DEBUG] serverWorkouts is not an array:', typeof serverWorkouts, serverWorkouts);
@@ -78,9 +81,9 @@ const MyWorkoutsPage = () => {
     setShowWorkoutForm(true);
   };
 
-  if (isAuthenticated() && isLoading) return <p className="text-muted-foreground">Loading workouts...</p>;
+  if (isAuthenticated && isLoading) return <p className="text-muted-foreground">Loading workouts...</p>;
   
-  if (isAuthenticated() && error) {
+  if (isAuthenticated && error) {
     const errorMessage = getErrorMessage(error);
     const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
     
@@ -120,7 +123,7 @@ const MyWorkoutsPage = () => {
               <WorkoutForm 
                 recipe={selectedRecipe}
                 onWorkoutCreated={(workoutId) => {
-                  if (isAuthenticated()) {
+                  if (isAuthenticated) {
                     refetch();
                   }
                   setShowWorkoutForm(false);
@@ -185,7 +188,7 @@ const MyWorkoutsPage = () => {
               </div>
               
               {/* Loading more indicator for authenticated users */}
-              {isAuthenticated() && isFetchingNextPage && (
+              {isAuthenticated && isFetchingNextPage && (
                 <div className="flex justify-center py-8">
                   <span className="loading loading-spinner loading-lg"></span>
                 </div>

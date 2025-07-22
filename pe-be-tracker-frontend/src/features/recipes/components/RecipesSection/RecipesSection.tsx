@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useGuestData, GuestRecipe } from '@/contexts/GuestDataContext';
+import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { getRecipes, deleteRecipe, Recipe } from '@/features/recipes/api';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 
@@ -43,24 +43,27 @@ const convertToGuestRecipe = (recipe: Recipe): GuestRecipe => ({
 });
 
 export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }) => {
-  const { isAuthenticated, data: guestData, actions: guestActions } = useGuestData();
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const queryClient = useQueryClient();
 
   // Fetch recipes from backend for authenticated users
   const { data: serverRecipes = [], isLoading, error } = useQuery({
     queryKey: ['recipes'],
     queryFn: getRecipes,
-    enabled: isAuthenticated(), // Only fetch when authenticated
+    enabled: isAuthenticated, // Only fetch when authenticated
   });
 
   // Use backend data for authenticated users, guest data for guests
-  const recipes: GuestRecipe[] = isAuthenticated() 
+  const recipes: GuestRecipe[] = isAuthenticated 
     ? (Array.isArray(serverRecipes) ? serverRecipes.map(convertToGuestRecipe) : [])
     : (Array.isArray(guestData.recipes) ? guestData.recipes : []);
 
   // Handle recipe deletion
   const handleDeleteRecipe = async (recipeId: string) => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       try {
         await deleteRecipe(recipeId);
         // Invalidate recipes query to refresh the list
