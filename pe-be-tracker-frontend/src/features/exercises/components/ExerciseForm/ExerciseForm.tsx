@@ -1,4 +1,3 @@
-import { useGuestStore } from '@/stores';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -6,7 +5,7 @@ import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
 import { ExerciseType } from '@/features/exercises/api';
-;
+import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
 import { Button } from '@/components/ui/button';
 
 interface ExerciseFormData {
@@ -34,7 +33,10 @@ const createExercise = async (data: ExerciseFormData & { workout_id: number }) =
 };
 
 const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
   

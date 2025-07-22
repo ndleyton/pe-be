@@ -1,9 +1,8 @@
-import { useGuestStore } from '@/stores';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-;
+import { useGuestStore, useAuthStore, GuestWorkoutType } from '@/stores';
 
 interface WorkoutType {
   id: number;
@@ -23,7 +22,9 @@ const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
 };
 
 const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
-  // TODO: Migrate useGuestData destructuring: data: guestData, isAuthenticated 
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore(); 
   const { data: serverWorkoutTypes = [], isLoading, error } = useQuery({
     queryKey: ['workoutTypes'],
     queryFn: fetchWorkoutTypes,

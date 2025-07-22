@@ -1,9 +1,8 @@
-import { useGuestStore } from '@/stores';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
 import { IntensityUnitModal } from '@/features/exercises/components';
-;
+import { useGuestStore, useAuthStore, GuestExerciseSet } from '@/stores';
 
 interface AddExerciseSetFormProps {
   exerciseId: number | string; // Can be number (server) or string (guest)
@@ -12,7 +11,9 @@ interface AddExerciseSetFormProps {
 }
 
 const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onSetAdded, onCancel }) => {
-  // TODO: Migrate useGuestData destructuring: isAuthenticated, actions: guestActions 
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestActions = useGuestStore(); 
   const [formData, setFormData] = useState<CreateExerciseSetData>({
     exercise_id: exerciseId,
     intensity_unit_id: 1, // Default to first intensity unit (kg)

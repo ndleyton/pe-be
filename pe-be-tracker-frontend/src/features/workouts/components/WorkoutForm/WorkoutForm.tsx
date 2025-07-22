@@ -1,4 +1,3 @@
-import { useGuestStore } from '@/stores';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -6,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-;
+import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
 import { Button } from '@/components/ui/button';
 
 interface WorkoutFormData {
@@ -39,7 +38,10 @@ const createWorkout = async (data: WorkoutFormData) => {
 
 const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) => {
   const navigate = useNavigate();
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedWorkoutType, setSelectedWorkoutType] = useState<WorkoutType | GuestWorkoutType | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
