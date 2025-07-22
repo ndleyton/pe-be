@@ -157,10 +157,31 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # Remove seeded reference data in reverse dependency order
-    op.execute("DELETE FROM exercise_types_muscles WHERE exercise_type_id IN (1,2,3) OR muscle_id IN (1,2,3,4,5,6,7,8)")
-    op.execute("DELETE FROM exercise_types WHERE id IN (1,2,3)")
-    op.execute("DELETE FROM muscles WHERE id IN (1,2,3,4,5,6,7,8)")
-    op.execute("DELETE FROM muscle_groups WHERE id IN (1,2,3,4,5,6)")
-    op.execute("DELETE FROM intensity_units WHERE id IN (1,2,3,4,5)")
-    op.execute("DELETE FROM workout_types WHERE id IN (1,2,3,4,5)")
+    # Remove seeded reference data in reverse dependency order using table constructs
+    from sqlalchemy.sql import table, column
+    
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    
+    # Only attempt deletions if tables exist
+    table_configs = [
+        ('exercise_types_muscles', [1,2,3], [1,2,3,4,5,6,7,8]),  # (table, exercise_type_ids, muscle_ids)
+        ('exercise_types', [1,2,3], None),
+        ('muscles', [1,2,3,4,5,6,7,8], None),
+        ('muscle_groups', [1,2,3,4,5,6], None),
+        ('intensity_units', [1,2,3,4,5], None),
+        ('workout_types', [1,2,3,4,5], None),
+    ]
+    
+    for table_name, ids, muscle_ids in table_configs:
+        if table_name in inspector.get_table_names():
+            if table_name == 'exercise_types_muscles':
+                # Special case for junction table
+                connection.execute(sa.text(
+                    "DELETE FROM exercise_types_muscles WHERE exercise_type_id = ANY(:exercise_ids) OR muscle_id = ANY(:muscle_ids)"
+                ), exercise_ids=ids, muscle_ids=muscle_ids)
+            else:
+                # Regular tables
+                connection.execute(sa.text(
+                    f"DELETE FROM {table_name} WHERE id = ANY(:ids)"
+                ), ids=ids)
