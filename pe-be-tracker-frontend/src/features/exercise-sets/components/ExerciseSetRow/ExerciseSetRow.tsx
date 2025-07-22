@@ -1,8 +1,7 @@
-import { useGuestStore } from '@/stores';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
-;
+import { useGuestStore, useAuthStore } from '@/stores';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
@@ -12,7 +11,9 @@ interface ExerciseSetRowProps {
 }
 
 const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, onDelete, workoutId }) => {
-  // TODO: Migrate useGuestData destructuring: isAuthenticated, actions: guestActions 
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestActions = useGuestStore();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<UpdateExerciseSetData>({

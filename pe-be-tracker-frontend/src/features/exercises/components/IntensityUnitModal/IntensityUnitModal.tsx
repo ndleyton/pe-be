@@ -1,8 +1,7 @@
-import { useGuestStore } from '@/stores';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
-;
+import { useGuestStore, useAuthStore } from '@/stores';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -18,7 +17,8 @@ interface IntensityUnitModalProps {
 }
 
 const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose, onSelect }) => {
-  // TODO: Migrate useGuestData destructuring: isAuthenticated 
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated); 
   const { data: serverIntensityUnits = [], isLoading, error } = useQuery({
     queryKey: ['intensityUnits'],
     queryFn: getIntensityUnits,

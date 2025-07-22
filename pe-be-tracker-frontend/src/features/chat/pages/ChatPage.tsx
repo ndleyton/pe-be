@@ -1,10 +1,9 @@
-import { useGuestStore } from '@/stores';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
 import api from '@/shared/api/client';
-;
+import { useGuestStore, useAuthStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,7 +130,8 @@ const createExerciseSet = async (setData: {
 
 const ChatPage: React.FC = () => {
   const queryClient = useQueryClient();
-  // TODO: Migrate useGuestData destructuring: isAuthenticated 
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated); 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);

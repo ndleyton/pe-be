@@ -1,7 +1,6 @@
-import { useGuestStore } from '@/stores';
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-;
+import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { getRecipes, deleteRecipe, Recipe } from '@/features/recipes/api';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 
@@ -44,7 +43,10 @@ const convertToGuestRecipe = (recipe: Recipe): GuestRecipe => ({
 });
 
 export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }) => {
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const queryClient = useQueryClient();
 
   // Fetch recipes from backend for authenticated users

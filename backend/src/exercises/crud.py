@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process
 
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, ExerciseMuscle
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,

@@ -1,8 +1,7 @@
-import { useGuestStore } from '@/stores';
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getExerciseTypes, createExerciseType, type ExerciseType, type CreateExerciseTypeData } from '@/features/exercises/api';
-;
+import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
 import axios from 'axios';
 import { truncateWords } from '@/utils/text';
 import { MUSCLE_DISPLAY_LIMIT } from '@/shared/constants';
@@ -21,7 +20,10 @@ const hasMusclesProperty = (exerciseType: ExerciseType | GuestExerciseType): exe
 const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  // Get state from stores  
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   
   const { data: serverExerciseTypesResponse, isLoading, error } = useQuery({
     queryKey: ['exerciseTypes'],
