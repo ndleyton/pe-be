@@ -1,4 +1,4 @@
-# Fitness Tracker Backend (FastAPI)
+# PersonalBestie Backend (FastAPI)
 
 ## Setup
 

@@ -30,7 +30,7 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
       <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
         <span className="text-white font-bold text-sm">PB</span>
       </div>
-      <span>PB Tracker</span>
+      <span>PBestie</span>
     </div>
   );
 };

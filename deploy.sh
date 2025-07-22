@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# PE-BE Deployment Script
+# PersonalBestie Deployment Script
 # Usage: ./deploy.sh [environment]
 # Environments: development, staging, production
 

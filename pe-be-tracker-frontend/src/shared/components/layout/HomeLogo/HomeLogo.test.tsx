@@ -8,7 +8,7 @@ describe('HomeLogo', () => {
   it('renders as a non-interactive element when no onClick is provided', () => {
     render(<HomeLogo />);
     
-    const logo = screen.getByText('PB Tracker');
+    const logo = screen.getByText('PBestie');
     expect(logo.closest('div')).not.toHaveAttribute('role');
     expect(logo.closest('div')).not.toHaveAttribute('tabIndex');
     expect(logo.closest('div')).not.toHaveClass('cursor-pointer');
