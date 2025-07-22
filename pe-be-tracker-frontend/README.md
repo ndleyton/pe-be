@@ -1,4 +1,4 @@
-# PE-BE Tracker Frontend
+# PersonalBestie Frontend
 
 A React + TypeScript fitness tracking application with local-first guest mode and Google OAuth authentication.
 
@@ -131,7 +131,7 @@ The frontend uses **nested API endpoints** that follow logical groupings:
 
 This project relies on Vite's built-in environment system. **Only variables prefixed with `VITE_` are exposed to the browser bundle.**
 
-Create per-environment files at the root of `pe-be-tracker-frontend`:
+Create per-environment files at the root of `personalbestie-frontend`:
 
 ```
 .env.development      # loaded while `npm run dev`

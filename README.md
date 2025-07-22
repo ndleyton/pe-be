@@ -1,6 +1,6 @@
-# PE-BE Tracker
+# PersonalBestie
 
-PE-BE Tracker is a full-stack application designed to help users track their workouts with a (coming soon) AI agent Personal Trainer. It provides a robust backend API for data management and a responsive frontend for an intuitive user experience.
+PersonalBestie is a full-stack application designed to help users track their workouts with a (coming soon) AI agent Personal Trainer. It provides a robust backend API for data management and a responsive frontend for an intuitive user experience.
 
 ## Tech Stack
 
@@ -25,7 +25,7 @@ PE-BE Tracker is a full-stack application designed to help users track their wor
 
 ## How to Run
 
-To get the PE-BE Tracker application up and running on your local machine, follow these steps:
+To get the PersonalBestie application up and running on your local machine, follow these steps:
 
 ### Prerequisites
 
@@ -64,7 +64,7 @@ This will ensure a clean shutdown and remove the database volume, allowing you t
 
 ## Timezone & Date Handling
 
-PE-BE Tracker follows a **UTC-first** strategy:
+PersonalBestie follows a **UTC-first** strategy:
 
 1. **Storage & Transport (Always UTC)**
    * All `DateTime` columns in Postgres are declared with `timezone=True` so they map to the `timestamptz` type.

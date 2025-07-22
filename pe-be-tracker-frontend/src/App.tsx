@@ -18,7 +18,7 @@ const App: React.FC = () => {
       </div>
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-xs p-8 bg-base-100 rounded-xl shadow-lg flex flex-col items-center gap-6">
-          <h1 className="text-2xl font-bold text-center mb-4">Welcome to Fitness Tracker</h1>
+          <h1 className="text-2xl font-bold text-center mb-4">Welcome to PersonalBestie</h1>
           
           <div className="w-full space-y-4">
             <GoogleSignInButton />
