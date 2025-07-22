@@ -4,14 +4,38 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebar from './DesktopSidebar';
 
-// Mock the AuthContext
+// Mock Zustand stores
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    isAuthenticated: mockIsAuthenticated,
-    signOut: mockSignOut,
-    user: null,
+vi.mock('@/stores', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      signOut: mockSignOut,
+      user: null,
+    };
+    return selector ? selector(state) : state;
+  }),
+  useUIStore: vi.fn((selector) => {
+    const state = {
+      isDrawerOpen: false,
+      workoutTimer: {
+        startTime: null,
+        elapsedSeconds: 0,
+        paused: false,
+        intervalId: null,
+      },
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      toggleDrawer: vi.fn(),
+      startWorkoutTimer: vi.fn(),
+      pauseWorkoutTimer: vi.fn(),
+      resumeWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: vi.fn(),
+      stopWorkoutTimer: vi.fn(),
+      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 

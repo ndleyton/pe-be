@@ -7,8 +7,7 @@ import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
 import { FloatingActionButton } from '@/shared/components/ui';
-import { useGuestData, GuestExercise, GuestRecipe } from '@/contexts/GuestDataContext';
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
+import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } from '@/stores';
 import { getCurrentUTCTimestamp } from '@/utils/date';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
@@ -34,10 +33,19 @@ const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { data: guestData, actions: guestActions, isAuthenticated } = useGuestData();
+  
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  const guestActions = useGuestStore();
+  
+  // Get workout timer state and actions from UI store
+  const startTime = useUIStore(state => state.workoutTimer.startTime);
+  const startWorkoutTimer = useUIStore(state => state.startWorkoutTimer);
+  const stopWorkoutTimer = useUIStore(state => state.stopWorkoutTimer);
+  
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
-  const { start, stop, startTime } = useWorkoutTimer();
   
   const recipe = location.state?.recipe as GuestRecipe | undefined;
 
@@ -45,19 +53,19 @@ const WorkoutPage: React.FC = () => {
   const { data: serverWorkout } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: () => fetchWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated(),
+    enabled: !!workoutId && isAuthenticated,
   });
 
   // Fetch exercises for this workout (only when authenticated)
   const { data: serverExercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
     queryKey: ['exercises', workoutId],
     queryFn: () => getExercisesInWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated(), // Only fetch when authenticated
+    enabled: !!workoutId && isAuthenticated, // Only fetch when authenticated
   });
 
   // Use guest data if not authenticated, server data if authenticated
   const exercises: Exercise[] = React.useMemo(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       return Array.isArray(serverExercises) ? serverExercises : [];
     } else {
       const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -113,24 +121,24 @@ const WorkoutPage: React.FC = () => {
   useEffect(() => {
     if (!startTime) {
       // Try to derive the start time from workout data if available
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         if (serverWorkout && (serverWorkout as any).start_time) {
           const workoutStartTime = (serverWorkout as any).start_time;
           try {
             const startDate = new Date(workoutStartTime);
             // Validate the date and ensure it's not in the future
             if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
-              start(startDate);
+              startWorkoutTimer(startDate);
             } else {
               console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
-              start();
+              startWorkoutTimer();
             }
           } catch (error) {
             console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
-            start();
+            startWorkoutTimer();
           }
         } else {
-          start();
+          startWorkoutTimer();
         }
       } else {
         const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -140,28 +148,28 @@ const WorkoutPage: React.FC = () => {
             const startDate = new Date(workoutStartTime);
             // Validate the date and ensure it's not in the future
             if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
-              start(startDate);
+              startWorkoutTimer(startDate);
             } else {
               console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
-              start();
+              startWorkoutTimer();
             }
           } catch (error) {
             console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
-            start();
+            startWorkoutTimer();
           }
         } else {
-          start();
+          startWorkoutTimer();
         }
       }
     }
-    // We purposely ignore exhaustive-deps for start to avoid resetting interval unnecessarily
+    // We purposely ignore exhaustive-deps for startWorkoutTimer to avoid resetting interval unnecessarily
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverWorkout, workoutId]);
 
   // Auto-create exercises from recipe when page loads
   useEffect(() => {
     if (recipe && workoutId && exercises.length === 0) {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
         console.log('Would create recipe from workout for authenticated user:', recipe.name);
@@ -174,7 +182,7 @@ const WorkoutPage: React.FC = () => {
 
   // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
     }
     // For guest mode, the data is already updated via the context
@@ -183,10 +191,10 @@ const WorkoutPage: React.FC = () => {
   const handleFinishWorkout = () => {
     console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         finishWorkoutMutation.mutate(workoutId, {
           onSuccess: () => {
-            stop();
+            stopWorkoutTimer();
           },
         });
       } else {
@@ -194,7 +202,7 @@ const WorkoutPage: React.FC = () => {
         guestActions.updateWorkout(workoutId, {
           end_time: getCurrentUTCTimestamp(),
         });
-        stop();
+        stopWorkoutTimer();
         setShowFinishModal(false);
         navigate('/workouts');
       }
@@ -214,7 +222,7 @@ const WorkoutPage: React.FC = () => {
   };
 
   // Determine workout name based on authentication state
-  const workoutName = isAuthenticated()
+  const workoutName = isAuthenticated
     ? serverWorkout?.name ?? null
     : guestData.workouts.find(w => w.id === workoutId)?.name ?? null;
 
@@ -249,15 +257,15 @@ const WorkoutPage: React.FC = () => {
         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
           exercises={exercises} 
-          isLoading={isAuthenticated() && exercisesLoading} 
-          error={isAuthenticated() ? exercisesError : null} 
+          isLoading={isAuthenticated && exercisesLoading} 
+          error={isAuthenticated ? exercisesError : null} 
           workoutId={workoutId}
         />
       </div>
       
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
-        disabled={isAuthenticated() && finishWorkoutMutation.isPending}
+        disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>
@@ -266,7 +274,7 @@ const WorkoutPage: React.FC = () => {
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
-        isLoading={isAuthenticated() && finishWorkoutMutation.isPending}
+        isLoading={isAuthenticated && finishWorkoutMutation.isPending}
         exercises={exercises}
         onSaveRecipe={handleSaveRecipe}
         workoutName={workoutName || undefined}

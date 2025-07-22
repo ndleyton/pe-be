@@ -2,12 +2,9 @@ import React, { ErrorInfo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { DrawerProvider } from '@/contexts/DrawerContext';
-import { GuestDataProvider } from '@/contexts/GuestDataContext';
 import { config } from '@/app/config/env';
-import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 import { ErrorFallback } from '@/shared/components/error';
+import { StoreInitializer } from '@/stores';
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -54,15 +51,9 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <GuestDataProvider>
-            <DrawerProvider>
-              <WorkoutTimerProvider>
-                {children}
-              </WorkoutTimerProvider>
-            </DrawerProvider>
-          </GuestDataProvider>
-        </AuthProvider>
+        <StoreInitializer>
+          {children}
+        </StoreInitializer>
         {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>

@@ -14,7 +14,7 @@ export const useGoogleSignIn = () => {
         window.location.href = data.authorization_url;
       } else {
         // eslint-disable-next-line no-console
-        console.error('Authorization URL missing in response');
+        console.error('Google sign-in failed', new Error('Authorization URL missing in response'));
       }
     } catch (error) {
       // eslint-disable-next-line no-console

@@ -1,20 +1,18 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Pause, Play } from 'lucide-react';
-import { useDrawer } from '@/contexts/DrawerContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUIStore, useAuthStore } from '@/stores';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 import { Button } from '@/components/ui/button';
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleDrawer } = useDrawer();
-  const { isAuthenticated } = useAuth();
+  const toggleDrawer = useUIStore(state => state.toggleDrawer);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   const handleLogoClick = useCallback(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       navigate('/dashboard');
     } else {
       navigate('/');
@@ -22,7 +20,12 @@ const AppBar: React.FC = () => {
   }, [navigate, isAuthenticated]);
 
   const googleSignIn = useGoogleSignIn();
-  const { startTime, formatted, paused, togglePause } = useWorkoutTimer();
+  
+  // Get workout timer state from UI store
+  const startTime = useUIStore(state => state.workoutTimer.startTime);
+  const formatted = useUIStore(state => state.getFormattedWorkoutTime());
+  const paused = useUIStore(state => state.workoutTimer.paused);
+  const togglePause = useUIStore(state => state.toggleWorkoutTimer);
 
   return (
     <header className="relative flex h-16 items-center justify-center border-b bg-background px-4" role="banner" aria-label="Primary navigation">
@@ -72,7 +75,7 @@ const AppBar: React.FC = () => {
             )}
           </button>
         )}
-        {!isAuthenticated() && (
+        {!isAuthenticated && (
           <Button onClick={googleSignIn} size="sm">
             Sign In
           </Button>

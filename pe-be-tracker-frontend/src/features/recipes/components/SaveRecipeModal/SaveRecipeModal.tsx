@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGuestData, GuestExercise } from '@/contexts/GuestDataContext';
+import { useGuestStore, useAuthStore, GuestExercise } from '@/stores';
 import { Exercise } from '@/features/exercises/api';
 import { createRecipe, CreateRecipeData } from '@/features/recipes/api';
 import { Button } from '@/components/ui/button';
@@ -57,7 +57,9 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
   workoutName,
   exercises,
 }) => {
-  const { isAuthenticated, actions: guestActions } = useGuestData();
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestActions = useGuestStore();
   const queryClient = useQueryClient();
   const [recipeName, setRecipeName] = useState(workoutName || 'My Recipe');
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +69,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
     
     setIsLoading(true);
     try {
-      if (isAuthenticated()) {
+      if (isAuthenticated) {
         // For authenticated users, use the backend API
         const recipeData: CreateRecipeData = {
           name: recipeName,
