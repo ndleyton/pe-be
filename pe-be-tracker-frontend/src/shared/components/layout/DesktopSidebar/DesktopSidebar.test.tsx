@@ -4,14 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebar from './DesktopSidebar';
 
-// Mock the AuthContext
+// Mock Zustand stores
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    isAuthenticated: mockIsAuthenticated,
-    signOut: mockSignOut,
-    user: null,
+vi.mock('@/stores', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      signOut: mockSignOut,
+      user: null,
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 

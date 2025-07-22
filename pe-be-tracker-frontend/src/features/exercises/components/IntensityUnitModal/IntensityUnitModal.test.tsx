@@ -5,11 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import IntensityUnitModal from './IntensityUnitModal';
 import * as exerciseApi from '@/features/exercises/api';
 
-// Mock the GuestDataContext
+// Mock Zustand stores
 const mockIsAuthenticated = vi.fn();
-vi.mock('@/contexts/GuestDataContext', () => ({
-  useGuestData: () => ({
-    isAuthenticated: mockIsAuthenticated,
+vi.mock('@/stores', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      user: null,
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 

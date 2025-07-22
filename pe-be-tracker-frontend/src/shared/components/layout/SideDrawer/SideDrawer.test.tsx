@@ -4,7 +4,6 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SideDrawer from './SideDrawer';
-import { AuthProvider } from '@/contexts/AuthContext';
 import api from '@/shared/api/client';
 
 // Mock the API client
@@ -27,18 +26,43 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
-// Mock the DrawerContext - default to open for most tests
+// Mock Zustand stores
 const mockCloseDrawer = vi.fn();
 const mockOpenDrawer = vi.fn();
 const mockToggleDrawer = vi.fn();
+const mockIsAuthenticated = vi.fn(() => false);
+const mockSignOut = vi.fn();
 let mockIsOpen = true;
 
-vi.mock('@/contexts/DrawerContext', () => ({
-  useDrawer: () => ({
-    isOpen: mockIsOpen,
-    openDrawer: mockOpenDrawer,
-    closeDrawer: mockCloseDrawer,
-    toggleDrawer: mockToggleDrawer,
+vi.mock('@/stores', () => ({
+  useUIStore: vi.fn((selector) => {
+    const state = {
+      isDrawerOpen: mockIsOpen,
+      workoutTimer: {
+        startTime: null,
+        elapsedSeconds: 0,
+        paused: false,
+        intervalId: null,
+      },
+      openDrawer: mockOpenDrawer,
+      closeDrawer: mockCloseDrawer,
+      toggleDrawer: mockToggleDrawer,
+      startWorkoutTimer: vi.fn(),
+      pauseWorkoutTimer: vi.fn(),
+      resumeWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: vi.fn(),
+      stopWorkoutTimer: vi.fn(),
+      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+    };
+    return selector ? selector(state) : state;
+  }),
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      signOut: mockSignOut,
+      user: null,
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 
@@ -51,9 +75,7 @@ const TestWrapper = ({
   initialEntries?: string[];
 }) => (
   <MemoryRouter initialEntries={initialEntries}>
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    {children}
   </MemoryRouter>
 );
 
