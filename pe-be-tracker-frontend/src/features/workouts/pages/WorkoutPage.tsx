@@ -1,4 +1,3 @@
-import { useGuestStore } from '@/stores';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,8 +7,7 @@ import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
 import { FloatingActionButton } from '@/shared/components/ui';
-;
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
+import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } from '@/stores';
 import { getCurrentUTCTimestamp } from '@/utils/date';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
@@ -35,10 +33,19 @@ const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
+  const guestActions = useGuestStore();
+  
+  // Get workout timer state and actions from UI store
+  const startTime = useUIStore(state => state.workoutTimer.startTime);
+  const startWorkoutTimer = useUIStore(state => state.startWorkoutTimer);
+  const stopWorkoutTimer = useUIStore(state => state.stopWorkoutTimer);
+  
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
-  const { start, stop, startTime } = useWorkoutTimer();
   
   const recipe = location.state?.recipe as GuestRecipe | undefined;
 
@@ -121,17 +128,17 @@ const WorkoutPage: React.FC = () => {
             const startDate = new Date(workoutStartTime);
             // Validate the date and ensure it's not in the future
             if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
-              start(startDate);
+              startWorkoutTimer(startDate);
             } else {
               console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
-              start();
+              startWorkoutTimer();
             }
           } catch (error) {
             console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
-            start();
+            startWorkoutTimer();
           }
         } else {
-          start();
+          startWorkoutTimer();
         }
       } else {
         const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -141,21 +148,21 @@ const WorkoutPage: React.FC = () => {
             const startDate = new Date(workoutStartTime);
             // Validate the date and ensure it's not in the future
             if (!isNaN(startDate.getTime()) && startDate.getTime() <= Date.now()) {
-              start(startDate);
+              startWorkoutTimer(startDate);
             } else {
               console.warn('Invalid or future workout start time, using current time:', workoutStartTime);
-              start();
+              startWorkoutTimer();
             }
           } catch (error) {
             console.warn('Failed to parse workout start time, using current time:', workoutStartTime, error);
-            start();
+            startWorkoutTimer();
           }
         } else {
-          start();
+          startWorkoutTimer();
         }
       }
     }
-    // We purposely ignore exhaustive-deps for start to avoid resetting interval unnecessarily
+    // We purposely ignore exhaustive-deps for startWorkoutTimer to avoid resetting interval unnecessarily
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverWorkout, workoutId]);
 
@@ -187,7 +194,7 @@ const WorkoutPage: React.FC = () => {
       if (isAuthenticated) {
         finishWorkoutMutation.mutate(workoutId, {
           onSuccess: () => {
-            stop();
+            stopWorkoutTimer();
           },
         });
       } else {
@@ -195,7 +202,7 @@ const WorkoutPage: React.FC = () => {
         guestActions.updateWorkout(workoutId, {
           end_time: getCurrentUTCTimestamp(),
         });
-        stop();
+        stopWorkoutTimer();
         setShowFinishModal(false);
         navigate('/workouts');
       }
