@@ -16,6 +16,27 @@ vi.mock('@/stores', () => ({
     };
     return selector ? selector(state) : state;
   }),
+  useUIStore: vi.fn((selector) => {
+    const state = {
+      isDrawerOpen: false,
+      workoutTimer: {
+        startTime: null,
+        elapsedSeconds: 0,
+        paused: false,
+        intervalId: null,
+      },
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      toggleDrawer: vi.fn(),
+      startWorkoutTimer: vi.fn(),
+      pauseWorkoutTimer: vi.fn(),
+      resumeWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: vi.fn(),
+      stopWorkoutTimer: vi.fn(),
+      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 // Mock API client

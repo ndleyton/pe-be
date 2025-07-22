@@ -41,6 +41,29 @@ vi.mock('@/contexts/GuestDataContext', async () => {
   };
 });
 
+vi.mock('@/stores', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const mockState = {
+      isAuthenticated: true,
+      user: { id: 1, email: 'test@example.com' },
+      loading: false,
+      initialized: true,
+    };
+    return selector ? selector(mockState) : mockState;
+  }),
+  useGuestStore: vi.fn((selector) => {
+    const mockState = {
+      workouts: [],
+      recipes: [],
+      exerciseTypes: [],
+      workoutTypes: [],
+      intensityUnits: [],
+      muscles: [],
+    };
+    return selector ? selector(mockState) : mockState;
+  }),
+}));
+
 vi.mock('@/shared/components/ui', () => ({
   FloatingActionButton: ({ children, onClick, dataTestId }: any) => (
     <button data-testid={dataTestId} onClick={onClick}>

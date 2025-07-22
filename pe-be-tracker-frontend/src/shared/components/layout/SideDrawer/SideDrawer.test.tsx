@@ -84,6 +84,7 @@ describe('SideDrawer', () => {
     vi.clearAllMocks();
     mockLocation.href = '';
     mockIsOpen = true; // Default to open for most tests
+    mockIsAuthenticated.mockReturnValue(false); // Default to non-authenticated
     // Mock API to not be authenticated by default
     mockApi.get.mockRejectedValue(new Error('Unauthorized'));
   });
@@ -265,6 +266,9 @@ describe('SideDrawer', () => {
     });
 
     it('should show Settings and Sign Out buttons when authenticated', async () => {
+      // Set authenticated state
+      mockIsAuthenticated.mockReturnValue(true);
+      
       // API returns user (authenticated)
       mockApi.get.mockResolvedValueOnce({
         data: { id: 1, email: 'test@example.com', name: 'Test User' }
@@ -341,6 +345,9 @@ describe('SideDrawer', () => {
     it('should handle sign out and close drawer', async () => {
       const user = userEvent.setup();
       
+      // Set authenticated state
+      mockIsAuthenticated.mockReturnValue(true);
+      
       // Setup authenticated state
       mockApi.get.mockResolvedValueOnce({
         data: { id: 1, email: 'test@example.com', name: 'Test User' }
@@ -377,6 +384,9 @@ describe('SideDrawer', () => {
     });
 
     it('should focus first navigation link when drawer opens', () => {
+      // Ensure non-authenticated state for this test
+      mockIsAuthenticated.mockReturnValue(false);
+      
       render(
         <TestWrapper>
           <SideDrawer />
