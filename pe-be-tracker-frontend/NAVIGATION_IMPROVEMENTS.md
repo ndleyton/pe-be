@@ -104,11 +104,6 @@ Based on extensive research of navigation best practices from leading UX resourc
 
 ### **Visual Design System**
 
-#### **Brand Identity**
-- **Logo**: Blue rounded square with "FT" monogram
-- **Typography**: "PersonalBestie" in semibold
-- **Colors**: Primary blue with consistent theming
-
 #### **Navigation States**
 - **Active**: `bg-primary text-primary-content` with subtle shadow
 - **Hover**: `hover:bg-base-200` for better interactivity
