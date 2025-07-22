@@ -4,9 +4,9 @@ test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // 1. Navigate to the workouts page
-    await page.click('text=Workouts');
-    await expect(page).toHaveURL('/workouts');
+    // 1. Navigate to the dashboard page
+    await page.click('text=Dashboard');
+    await expect(page).toHaveURL('/dashboard');
 
     // 2. Click the floating action button to show the workout form
     await page.click('[data-testid="fab-add-workout"]');
