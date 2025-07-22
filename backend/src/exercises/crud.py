@@ -5,7 +5,13 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process
 
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, ExerciseMuscle
+from src.exercises.models import (
+    Exercise,
+    ExerciseType,
+    IntensityUnit,
+    Muscle,
+    ExerciseMuscle,
+)
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
@@ -94,7 +100,9 @@ async def get_exercise_types(
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
     query = select(ExerciseType).options(
-        selectinload(ExerciseType.exercise_muscles).selectinload(ExerciseMuscle.muscle).selectinload(Muscle.muscle_group)
+        selectinload(ExerciseType.exercise_muscles)
+        .selectinload(ExerciseMuscle.muscle)
+        .selectinload(Muscle.muscle_group)
     )
 
     if name:
@@ -179,7 +187,11 @@ async def get_exercise_type_by_id(
     """Get an exercise type by ID with relationships loaded"""
     result = await session.execute(
         select(ExerciseType)
-        .options(selectinload(ExerciseType.exercise_muscles).selectinload(ExerciseMuscle.muscle).selectinload(Muscle.muscle_group))
+        .options(
+            selectinload(ExerciseType.exercise_muscles)
+            .selectinload(ExerciseMuscle.muscle)
+            .selectinload(Muscle.muscle_group)
+        )
         .where(ExerciseType.id == exercise_type_id)
     )
     return result.scalar_one_or_none()
@@ -240,7 +252,9 @@ async def create_exercise_type(
         result = await session.execute(
             select(ExerciseType)
             .options(
-                selectinload(ExerciseType.exercise_muscles).selectinload(ExerciseMuscle.muscle).selectinload(Muscle.muscle_group)
+                selectinload(ExerciseType.exercise_muscles)
+                .selectinload(ExerciseMuscle.muscle)
+                .selectinload(Muscle.muscle_group)
             )
             .where(ExerciseType.id == exercise_type.id)
         )
