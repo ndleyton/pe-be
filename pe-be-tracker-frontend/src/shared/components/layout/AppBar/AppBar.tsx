@@ -5,7 +5,6 @@ import { useUIStore, useAuthStore } from '@/stores';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 import { Button } from '@/components/ui/button';
-import { useWorkoutTimer } from '@/contexts/WorkoutTimerContext';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +20,12 @@ const AppBar: React.FC = () => {
   }, [navigate, isAuthenticated]);
 
   const googleSignIn = useGoogleSignIn();
-  const { startTime, formatted, paused, togglePause } = useWorkoutTimer();
+  
+  // Get workout timer state from UI store
+  const startTime = useUIStore(state => state.workoutTimer.startTime);
+  const formatted = useUIStore(state => state.getFormattedWorkoutTime());
+  const paused = useUIStore(state => state.workoutTimer.paused);
+  const togglePause = useUIStore(state => state.toggleWorkoutTimer);
 
   return (
     <header className="relative flex h-16 items-center justify-center border-b bg-background px-4" role="banner" aria-label="Primary navigation">

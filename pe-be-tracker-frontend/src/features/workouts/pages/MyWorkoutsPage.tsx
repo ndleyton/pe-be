@@ -1,5 +1,5 @@
-import { useGuestStore } from '@/stores';
 import React from 'react';
+import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
@@ -15,7 +15,11 @@ import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from 
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
-  // TODO: Migrate useGuestData destructuring: data: guestData, isAuthenticated 
+  
+  // Get state from stores
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   
   const {

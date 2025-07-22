@@ -1,10 +1,9 @@
-import { useGuestStore } from '@/stores';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WeekTracking } from '@/shared/components/ui';
-;
+import { useAuthStore, useGuestStore } from '@/stores';
 import {
   Alert,
   AlertDescription,
@@ -18,12 +17,16 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 };
 
 const ProfilePage: React.FC = () => {
-  // TODO: Migrate useGuestData destructuring: data: guestData, isAuthenticated 
+  // Use new store structure
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const loading = useAuthStore((state) => state.loading);
+  const guestWorkouts = useGuestStore((state) => state.workouts);
   
   const { data: serverWorkouts = [], isLoading, error } = useQuery({
     queryKey: ['workouts'],
     queryFn: fetchWorkouts,
-    enabled: isAuthenticated,
+    // Wait for auth to finish loading AND user to be authenticated
+    enabled: !loading && isAuthenticated,
     retry: (failureCount, error: unknown) => {
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
         return false;
@@ -34,7 +37,7 @@ const ProfilePage: React.FC = () => {
 
   const workouts: Workout[] = isAuthenticated 
     ? serverWorkouts
-    : (guestData?.workouts && Array.isArray(guestData.workouts) ? guestData.workouts.map(gw => ({
+    : guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
@@ -42,7 +45,7 @@ const ProfilePage: React.FC = () => {
         end_time: gw.end_time,
         created_at: gw.created_at || new Date().toISOString(),
         updated_at: gw.updated_at || new Date().toISOString(),
-      })) : []);
+      }));
 
   // defensive programming to ensure arrays are always arrays
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
