@@ -24,8 +24,8 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="2.0064659"
-     inkscape:cx="108.39955"
-     inkscape:cy="89.959165"
+     inkscape:cx="94.444664"
+     inkscape:cy="85.972055"
      inkscape:window-width="1128"
      inkscape:window-height="594"
      inkscape:window-x="137"
@@ -42,12 +42,6 @@
      id="g3">
     <!-- Main Kettlebell Body (Heart Shape) -->
     <!-- This path creates the chunky heart shape. The fill is a dark charcoal for strong contrast. -->
-    <path
-       d="m 50.996777,33.8974 c 8.576033,-12.596811 30.016114,-8.397874 30.016114,12.59681 0,20.994685 -21.440081,32.308156 -30.016114,32.308156 -8.576032,0 -30.016112,-11.313471 -30.016112,-32.308156 0,-20.994684 21.44008,-25.193621 30.016112,-12.59681 z"
-       fill="#232121"
-       id="path1"
-       style="fill:#ff0066;stroke-width:0.848648"
-       sodipodi:nodetypes="csssc" />
     <!-- Kettlebell Handle -->
     <!-- A thick, rounded stroke creates the chunky handle. 'stroke-linecap="round"' makes the ends soft and friendly. -->
     <path
@@ -61,6 +55,21 @@
        style="stroke:#ff0066;stroke-opacity:1" />
     <!-- Energetic Rose Accent (Shine/Highlight) -->
     <!-- This small path adds a dynamic highlight and introduces the energetic rose accent color. -->
+    <path
+       d="M 38.243883,27.824996 C 8.8157224,1.4118454 93.03023,2.7625837 64.437669,28.017958"
+       fill="none"
+       stroke="#232121"
+       stroke-width="8.85958"
+       stroke-linecap="round"
+       id="path4"
+       sodipodi:nodetypes="cc"
+       style="stroke:#c7004f;stroke-width:4.87075;stroke-dasharray:none;stroke-opacity:0.442623" />
+    <path
+       d="m 50.996777,33.8974 c 8.576033,-12.596811 30.016114,-8.397874 30.016114,12.59681 0,20.994685 -21.440081,32.308156 -30.016114,32.308156 -8.576032,0 -30.016112,-11.313471 -30.016112,-32.308156 0,-20.994684 21.44008,-25.193621 30.016112,-12.59681 z"
+       fill="#232121"
+       id="path1"
+       style="fill:#ff0066;stroke-width:0.848648"
+       sodipodi:nodetypes="csssc" />
     <path
        d="M 58.747583,35.271752 C 66.747583,32.605086 72,38.262085 76,46.262085 l -3.754028,2.75725 C 68.912638,42.352669 64.080916,37.271752 58.747583,35.271752 Z"
        fill="#F72585"
