@@ -9,11 +9,14 @@ interface Workout {
 }
 
 interface WeekTrackingProps {
-  workouts: Workout[];
+  workouts: Workout[] | undefined;
   className?: string;
 }
 
 const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' }) => {
+  // Defensive programming - ensure workouts is always an array
+  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
+  
   const getLast7Days = () => {
     const days = [];
     const today = new Date();
@@ -29,7 +32,7 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
 
   const hasWorkoutOnDate = (date: Date) => {
     const dateString = date.toDateString();
-    return workouts.some(workout => {
+    return safeWorkouts.some(workout => {
       const workoutDate = new Date(workout.start_time);
       return workoutDate.toDateString() === dateString;
     });
@@ -43,9 +46,9 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
   const last7Days = getLast7Days();
 
   return (
-    <div className={`bg-base-100 rounded-lg p-4 ${workouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`}>
+    <div className={`bg-base-100 rounded-lg p-4 ${safeWorkouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`}>
       <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
-      <div className={`flex ${workouts.length === 0 ? 'justify-center' : 'justify-between'} items-center gap-1`}>
+      <div className={`flex ${safeWorkouts.length === 0 ? 'justify-center' : 'justify-between'} items-center gap-1`}>
         {last7Days.map((date, index) => {
           const hasWorkout = hasWorkoutOnDate(date);
           const isToday = date.toDateString() === new Date().toDateString();

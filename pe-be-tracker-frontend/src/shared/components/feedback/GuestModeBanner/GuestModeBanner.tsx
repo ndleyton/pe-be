@@ -4,6 +4,9 @@ import { useAuthStore, useGuestStore } from '@/stores';
 const GuestModeBanner: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const workouts = useGuestStore(state => state.workouts);
+  
+  // Ensure workouts is always an array
+  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
   // Don't show banner if user is authenticated
   if (isAuthenticated) {
@@ -29,9 +32,9 @@ const GuestModeBanner: React.FC = () => {
         <div className="ml-3">
           <p className="text-sm text-blue-700">
             <strong>Guest Mode:</strong> Your workout data is stored locally on this device. 
-            {workouts.length > 0 && (
+            {safeWorkouts.length > 0 && (
               <span className="ml-1">
-                You have {workouts.length} workout{workouts.length !== 1 ? 's' : ''} saved.
+                You have {safeWorkouts.length} workout{safeWorkouts.length !== 1 ? 's' : ''} saved.
               </span>
             )}
             {' '}
