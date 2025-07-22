@@ -176,9 +176,10 @@ describe('SideDrawer', () => {
         </TestWrapper>
       );
       
-      expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /exercises/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
     });
 
     it('should have correct href attributes', () => {
@@ -188,20 +189,21 @@ describe('SideDrawer', () => {
         </TestWrapper>
       );
       
-      expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/dashboard');
-      expect(screen.getByRole('link', { name: /workouts/i })).toHaveAttribute('href', '/workouts');
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByRole('link', { name: /exercises/i })).toHaveAttribute('href', '/exercise-types');
       expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+      expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat');
     });
 
     it('should highlight active navigation link', () => {
       render(
-        <TestWrapper initialEntries={['/workouts']}>
+        <TestWrapper initialEntries={['/dashboard']}>
           <SideDrawer />
         </TestWrapper>
       );
       
-      const workoutsLink = screen.getByRole('link', { name: /workouts/i });
-      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-foreground');
+      const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
+      expect(dashboardLink).toHaveClass('bg-primary', 'text-primary-foreground');
     });
 
     it('should close drawer when navigation link is clicked', async () => {
@@ -213,7 +215,7 @@ describe('SideDrawer', () => {
         </TestWrapper>
       );
       
-      await user.click(screen.getByRole('link', { name: /home/i }));
+      await user.click(screen.getByRole('link', { name: /dashboard/i }));
       
       expect(mockCloseDrawer).toHaveBeenCalled();
     });
