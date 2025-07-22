@@ -9,10 +9,13 @@ import api from '@/shared/api/client';
 const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { workouts, clear } = useGuestStore(useShallow((state) => ({
+  const { workouts: rawWorkouts, clear } = useGuestStore(useShallow((state) => ({
     workouts: state.workouts,
     clear: state.clear
   })));
+  
+  // Ensure workouts is always an array
+  const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
   const [syncStatus, setSyncStatus] = useState<'processing' | 'syncing' | 'complete' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
 

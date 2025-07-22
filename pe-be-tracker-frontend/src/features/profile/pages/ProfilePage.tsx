@@ -36,8 +36,8 @@ const ProfilePage: React.FC = () => {
   });
 
   const workouts: Workout[] = isAuthenticated 
-    ? serverWorkouts
-    : guestWorkouts.map(gw => ({
+    ? (Array.isArray(serverWorkouts) ? serverWorkouts : [])
+    : (Array.isArray(guestWorkouts) ? guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
@@ -45,7 +45,7 @@ const ProfilePage: React.FC = () => {
         end_time: gw.end_time,
         created_at: gw.created_at || new Date().toISOString(),
         updated_at: gw.updated_at || new Date().toISOString(),
-      }));
+      })) : []);
 
   // defensive programming to ensure arrays are always arrays
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
