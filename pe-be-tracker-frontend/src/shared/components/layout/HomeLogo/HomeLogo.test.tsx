@@ -8,10 +8,14 @@ describe('HomeLogo', () => {
   it('renders as a non-interactive element when no onClick is provided', () => {
     render(<HomeLogo />);
     
-    const logo = screen.getByText('PBestie');
-    expect(logo.closest('div')).not.toHaveAttribute('role');
-    expect(logo.closest('div')).not.toHaveAttribute('tabIndex');
-    expect(logo.closest('div')).not.toHaveClass('cursor-pointer');
+    const logo = screen.getByTestId('home-logo');
+    expect(logo).not.toHaveAttribute('role');
+    expect(logo).not.toHaveAttribute('tabIndex');
+    expect(logo).not.toHaveClass('cursor-pointer');
+    
+    // Check that both text parts are rendered
+    expect(screen.getByText('Personal')).toBeInTheDocument();
+    expect(screen.getByText('Bestie')).toBeInTheDocument();
   });
 
   it('renders as an interactive button when onClick is provided', () => {
@@ -78,5 +82,14 @@ describe('HomeLogo', () => {
     
     const logo = screen.getByRole('button', { name: 'Go to home page' });
     expect(logo).toHaveClass('focus:ring-2', 'focus:ring-blue-400');
+  });
+
+  it('renders the logo image with correct attributes', () => {
+    render(<HomeLogo />);
+    
+    const logoImage = screen.getByAltText('PBestie Logo');
+    expect(logoImage).toBeInTheDocument();
+    expect(logoImage).toHaveAttribute('src', '/assets/logo.svg');
+    expect(logoImage).toHaveClass('w-8', 'h-8');
   });
 });
