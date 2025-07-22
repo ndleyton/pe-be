@@ -108,6 +108,7 @@ class ExerciseMuscle(Base):
 
     __table_args__ = (UniqueConstraint("exercise_type_id", "muscle_id"),)
 
-    exercise_type: Mapped["ExerciseType"] = relationship(back_populates="exercise_muscles")
+    exercise_type: Mapped["ExerciseType"] = relationship(
+        back_populates="exercise_muscles"
+    )
     muscle: Mapped["Muscle"] = relationship(back_populates="exercise_muscles")
-
