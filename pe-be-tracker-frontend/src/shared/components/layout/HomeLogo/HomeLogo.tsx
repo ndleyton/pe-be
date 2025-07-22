@@ -27,10 +27,11 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
       } ${className}`}
       aria-label={isInteractive ? "Go to home page" : undefined}
     >
-      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-sm">PB</span>
+      <img src="/assets/logo.svg" alt="PBestie Logo" className="w-8 h-8" />
+      <div className="flex flex-col leading-none items-start text-left text-base text-rose-400">
+        <span>Personal</span>
+        <span>Bestie</span>
       </div>
-      <span>PBestie</span>
     </div>
   );
 };
