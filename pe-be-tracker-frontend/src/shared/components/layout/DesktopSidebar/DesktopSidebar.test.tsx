@@ -91,9 +91,10 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /exercises/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
     });
 
     it('should have correct href attributes for navigation links', () => {
@@ -103,35 +104,36 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/dashboard');
-      expect(screen.getByRole('link', { name: /workouts/i })).toHaveAttribute('href', '/workouts');
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByRole('link', { name: /exercises/i })).toHaveAttribute('href', '/exercise-types');
       expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+      expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat');
     });
   });
 
   describe('Navigation States', () => {
     it('should highlight the active navigation item', () => {
       render(
-        <TestWrapper initialEntries={['/workouts']}>
+        <TestWrapper initialEntries={['/dashboard']}>
           <DesktopSidebar />
         </TestWrapper>
       );
 
-      const workoutsLink = screen.getByRole('link', { name: /workouts/i });
-      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-foreground');
+      const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
+      expect(dashboardLink).toHaveClass('bg-primary', 'text-primary-foreground');
     });
 
     it('should not highlight inactive navigation items', () => {
       render(
-        <TestWrapper initialEntries={['/workouts']}>
+        <TestWrapper initialEntries={['/dashboard']}>
           <DesktopSidebar />
         </TestWrapper>
       );
 
-      const homeLink = screen.getByRole('link', { name: /home/i });
+      const exercisesLink = screen.getByRole('link', { name: /exercises/i });
       const profileLink = screen.getByRole('link', { name: /profile/i });
       
-      expect(homeLink).not.toHaveClass('bg-primary', 'text-primary-content');
+      expect(exercisesLink).not.toHaveClass('bg-primary', 'text-primary-content');
       expect(profileLink).not.toHaveClass('bg-primary', 'text-primary-content');
     });
   });
@@ -193,16 +195,16 @@ describe('DesktopSidebar', () => {
 
       // Tab through navigation items
       await user.tab();
-      expect(screen.getByRole('link', { name: /home/i })).toHaveFocus();
-
-      await user.tab();
-      expect(screen.getByRole('link', { name: /workouts/i })).toHaveFocus();
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByRole('link', { name: /exercises/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByRole('link', { name: /chat/i })).toHaveFocus();
     });
 
     it('should have proper semantic structure', () => {
