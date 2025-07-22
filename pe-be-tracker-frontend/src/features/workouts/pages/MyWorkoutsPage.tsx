@@ -1,17 +1,15 @@
 import React from 'react';
+import axios from 'axios';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
 import { FloatingActionButton, WeekTracking } from '@/shared/components/ui';
-;
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
 import { Button } from '@/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 
-// Remove the local type definition since we're importing it from the API
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();

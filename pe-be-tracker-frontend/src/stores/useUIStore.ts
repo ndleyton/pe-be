@@ -53,15 +53,29 @@ export const useUIStore = create<UIStore>((set, get) => ({
   toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
 
   startWorkoutTimer: (at?: Date) => {
+    const { workoutTimer } = get();
+    
+    // Clear any existing interval to prevent memory leaks
+    if (workoutTimer.intervalId) {
+      clearInterval(workoutTimer.intervalId);
+    }
+
     const startTime = at || new Date();
     const intervalId = window.setInterval(() => {
-      const { workoutTimer } = get();
-      if (!workoutTimer.paused && workoutTimer.startTime) {
-        const elapsed = Math.floor((Date.now() - workoutTimer.startTime.getTime()) / 1000);
-        set(state => ({
-          workoutTimer: { ...state.workoutTimer, elapsedSeconds: elapsed }
-        }));
-      }
+      // Use functional state update to avoid stale closure issues
+      set(state => {
+        const { workoutTimer } = state;
+        if (!workoutTimer.paused && workoutTimer.startTime) {
+          const elapsed = Math.floor((Date.now() - workoutTimer.startTime.getTime()) / 1000);
+          return {
+            workoutTimer: { 
+              ...workoutTimer, 
+              elapsedSeconds: elapsed 
+            }
+          };
+        }
+        return state;
+      });
     }, 1000);
 
     set({
@@ -95,9 +109,12 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   stopWorkoutTimer: () => {
     const { workoutTimer } = get();
+    
+    // clear the interval to prevent memory leaks
     if (workoutTimer.intervalId) {
       clearInterval(workoutTimer.intervalId);
     }
+    
     set({
       workoutTimer: {
         startTime: null,
