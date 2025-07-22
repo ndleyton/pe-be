@@ -3,8 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppBar from './AppBar';
-import { DrawerProvider } from '@/contexts/DrawerContext';
-import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
@@ -16,26 +14,40 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock the DrawerContext
+// Mock Zustand stores
 const mockToggleDrawer = vi.fn();
-vi.mock('@/contexts/DrawerContext', () => ({
-  useDrawer: () => ({
-    isOpen: false,
-    openDrawer: vi.fn(),
-    closeDrawer: vi.fn(),
-    toggleDrawer: mockToggleDrawer,
-  }),
-  DrawerProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-// Mock the AuthContext
-const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    isAuthenticated: mockIsAuthenticated,
-    signOut: mockSignOut,
-    user: null,
+const mockSignOut = vi.fn();
+
+vi.mock('@/stores', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      isAuthenticated: mockIsAuthenticated(),
+      signOut: mockSignOut,
+      user: null,
+    };
+    return selector ? selector(state) : state;
+  }),
+  useUIStore: vi.fn((selector) => {
+    const state = {
+      isDrawerOpen: false,
+      workoutTimer: {
+        startTime: null,
+        elapsedSeconds: 0,
+        paused: false,
+        intervalId: null,
+      },
+      toggleDrawer: mockToggleDrawer,
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      startWorkoutTimer: vi.fn(),
+      pauseWorkoutTimer: vi.fn(),
+      resumeWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: vi.fn(),
+      stopWorkoutTimer: vi.fn(),
+      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+    };
+    return selector ? selector(state) : state;
   }),
 }));
 
@@ -60,11 +72,7 @@ vi.mock('./DesktopNav', () => ({
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <MemoryRouter initialEntries={['/dashboard']}>
-      <WorkoutTimerProvider>
-        <DrawerProvider>
-          {children}
-        </DrawerProvider>
-      </WorkoutTimerProvider>
+      {children}
     </MemoryRouter>
   );
 };
