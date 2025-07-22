@@ -24,8 +24,8 @@ def upgrade() -> None:
     This table is redundant since we now use the exercise_muscles table
     which includes additional fields like is_primary and timestamps.
     """
-    # Drop the legacy association table
-    op.drop_table('exercise_types_muscles')
+    # Drop the legacy association table if it exists
+    op.execute("DROP TABLE IF EXISTS exercise_types_muscles")
 
 
 def downgrade() -> None:
