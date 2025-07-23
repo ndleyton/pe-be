@@ -33,8 +33,8 @@ async def get_exercise_by_id(
         .options(
             selectinload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-                .selectinload(ExerciseMuscle.muscle)
-                    .selectinload(Muscle.muscle_group),
+            .selectinload(ExerciseMuscle.muscle)
+            .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
         .where(Exercise.id == exercise_id)
@@ -84,8 +84,8 @@ async def create_exercise(
         .options(
             selectinload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-                .selectinload(ExerciseMuscle.muscle)
-                    .selectinload(Muscle.muscle_group),
+            .selectinload(ExerciseMuscle.muscle)
+            .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
         .where(Exercise.id == exercise.id)
@@ -232,7 +232,7 @@ async def create_exercise_type(
                 exercise_muscle = ExerciseMuscle(
                     exercise_type=exercise_type,
                     muscle=muscle,
-                    is_primary=False  # You may want to make this configurable
+                    is_primary=False,  # You may want to make this configurable
                 )
                 session.add(exercise_muscle)
 
