@@ -84,8 +84,8 @@ async def create_exercise(
         .options(
             selectinload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group),
+                .selectinload(ExerciseMuscle.muscle)
+                    .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
         .where(Exercise.id == exercise.id)
