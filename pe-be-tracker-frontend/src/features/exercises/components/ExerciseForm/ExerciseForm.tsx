@@ -6,7 +6,7 @@ import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
 import { ExerciseType } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 
 interface ExerciseFormData {
   exercise_type_id: number | string; // Can be number (server) or string (guest)

@@ -2,14 +2,14 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useUIStore, useAuthStore } from '@/stores';
 import { navItems } from '@/shared/navigation/navItems';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/shared/components/ui/sheet";
 import { useGoogleSignIn } from '@/features/auth/hooks';
 
 const SideDrawer: React.FC = () => {
