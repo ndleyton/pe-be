@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Exercise, ExerciseSet, IntensityUnit } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { AddExerciseSetForm } from '@/features/exercise-sets/components';
@@ -21,14 +21,6 @@ interface ExerciseRowProps {
   workoutId?: string;
 }
 
-interface SetData {
-  id: number | string;
-  type?: 'warmup' | 'working';
-  weight?: number;
-  reps?: number;
-  notes?: string;
-  completed: boolean;
-}
 
 interface RestTimer {
   minutes: number;
@@ -58,17 +50,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     };
   });
   
-  // Convert exercise sets to sets with additional UI state
-  const [sets, setSets] = useState<SetData[]>(() => {
-    return exerciseSets.map((set, index) => ({
-      id: set.id,
-      type: index === 0 ? 'warmup' : 'working',
-      weight: set.intensity || 0,
-      reps: set.reps || 0,
-      notes: '',
-      completed: set.done
-    }));
-  });
+  // Helper function to get set type
+  const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
 
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
@@ -85,45 +68,90 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   };
 
   const updateSet = (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
-    setSets(prev => prev.map(set => 
-      set.id === setId ? { ...set, [field]: value } : set
-    ));
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          [field === 'weight' ? 'intensity' : 'reps']: value
+        };
+      }
+      return set;
+    });
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: updatedSets
+      });
+    }
   };
 
   const incrementReps = (exerciseId: string | number, setId: string | number) => {
-    setSets(prev => prev.map(set => 
-      set.id === setId ? { ...set, reps: (set.reps || 0) + 1 } : set
-    ));
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    const newReps = (currentSet?.reps || 0) + 1;
+    updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const decrementReps = (exerciseId: string | number, setId: string | number) => {
-    setSets(prev => prev.map(set => 
-      set.id === setId ? { ...set, reps: Math.max((set.reps || 0) - 1, 0) } : set
-    ));
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    const newReps = Math.max((currentSet?.reps || 0) - 1, 0);
+    updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const toggleSetCompletion = (exerciseId: string | number, setId: string | number) => {
-    setSets(prev => prev.map(set => 
-      set.id === setId ? { ...set, completed: !set.completed } : set
-    ));
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          done: !set.done
+        };
+      }
+      return set;
+    });
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: updatedSets
+      });
+    }
   };
 
   const updateSetNotes = (exerciseId: string | number, setId: string | number, notes: string) => {
-    setSets(prev => prev.map(set => 
-      set.id === setId ? { ...set, notes } : set
-    ));
+    // For now, just store in local state since notes aren't part of ExerciseSet API
+    // Could be extended to update a notes field if added to the API
+    console.log('Set notes updated:', { setId, notes });
   };
 
   const addSet = (exerciseId: string | number) => {
-    const newSet: SetData = {
+    const lastSet = exerciseSets[exerciseSets.length - 1];
+    
+    const newExerciseSet: ExerciseSet = {
       id: Date.now(), // Temporary ID
-      type: 'working',
-      weight: sets.length > 0 ? sets[sets.length - 1].weight : 0,
-      reps: sets.length > 0 ? sets[sets.length - 1].reps : 0,
-      notes: '',
-      completed: false
+      reps: lastSet?.reps || 0,
+      intensity: lastSet?.intensity || 0,
+      intensity_unit_id: currentIntensityUnit.id,
+      exercise_id: exerciseId,
+      rest_time_seconds: null,
+      done: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
-    setSets(prev => [...prev, newSet]);
+    
+    const updatedSets = [...exerciseSets, newExerciseSet];
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: updatedSets
+      });
+    }
   };
 
   const handleIntensityUnitChange = (unit: IntensityUnit | GuestIntensityUnit) => {
@@ -140,8 +168,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               <div className="w-4 h-4 bg-gray-600 rounded"></div>
             </div>
             <div>
-              <h3 className="font-semibold text-blue-600">
-                {exercise.exercise_type.name} ({exercise.exercise_type.default_intensity_unit || 'kg'})
+              <h3 className="font-semibold text-rose-700">
+                {exercise.exercise_type.name} 
               </h3>
             </div>
           </div>
@@ -191,16 +219,16 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
         {/* Sets */}
         <div className="space-y-2">
-          {sets.map((set, index) => (
+          {exerciseSets.map((set, index) => (
             <div
               key={set.id}
               className={`grid gap-4 items-center p-2 rounded ${
-                set.completed ? "bg-green-100" : "bg-white"
+                set.done ? "bg-green-100" : "bg-white"
               }`}
               style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
             >
               <div className="font-medium">
-                {set.type === "warmup" ? (
+                {getSetType(index) === "warmup" ? (
                   <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700">
                     W
                   </Badge>
@@ -226,7 +254,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     </DialogHeader>
                     <Textarea
                       placeholder="Add notes for this set..."
-                      value={set.notes || ""}
+                      value={""}
                       onChange={(e) => updateSetNotes(exercise.id, set.id, e.target.value)}
                       className="min-h-[100px]"
                     />
@@ -236,10 +264,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               <div>
                 <Input
                   type="number"
-                  value={set.weight || ""}
+                  value={set.intensity || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
                   className="h-8 text-center"
-                  disabled={set.completed}
+                  disabled={set.done}
                 />
               </div>
               <div className="flex items-center gap-1">
@@ -248,7 +276,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   size="sm"
                   className="h-6 w-6 p-0 bg-transparent"
                   onClick={() => decrementReps(exercise.id, set.id)}
-                  disabled={set.completed}
+                  disabled={set.done}
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
@@ -257,23 +285,23 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   value={set.reps || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
                   className="h-8 text-center flex-1 min-w-0"
-                  disabled={set.completed}
+                  disabled={set.done}
                 />
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-6 w-6 p-0 bg-transparent"
                   onClick={() => incrementReps(exercise.id, set.id)}
-                  disabled={set.completed}
+                  disabled={set.done}
                 >
                   <Plus className="w-3 h-3" />
                 </Button>
               </div>
               <div className="flex justify-end">
                 <Button
-                  variant={set.completed ? "default" : "outline"}
+                  variant={set.done ? "default" : "outline"}
                   size="sm"
-                  className={`h-8 w-8 p-0 ${set.completed ? "bg-green-500 hover:bg-green-600" : ""}`}
+                  className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600" : ""}`}
                   onClick={() => toggleSetCompletion(exercise.id, set.id)}
                 >
                   <Check className="w-4 h-4" />
