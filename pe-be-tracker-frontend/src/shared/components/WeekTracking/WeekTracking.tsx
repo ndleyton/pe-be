@@ -14,7 +14,6 @@ interface WeekTrackingProps {
 }
 
 const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' }) => {
-  // Defensive programming - ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
   
   const getLast7Days = () => {

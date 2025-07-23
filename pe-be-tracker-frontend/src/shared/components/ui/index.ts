@@ -7,4 +7,3 @@ export * from './scroll-area';
 export * from './select';
 export * from './sheet';
 
-// Note: layout, feedback, error, etc. are now exported from ../layout, ../feedback, ../error
