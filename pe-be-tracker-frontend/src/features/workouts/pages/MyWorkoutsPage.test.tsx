@@ -64,12 +64,15 @@ vi.mock('@/stores', () => ({
   }),
 }));
 
-vi.mock('@/shared/components/ui', () => ({
-  FloatingActionButton: ({ children, onClick, dataTestId }: any) => (
+vi.mock('@/shared/components/FloatingActionButton', () => ({
+  default: ({ children, onClick, dataTestId }: any) => (
     <button data-testid={dataTestId} onClick={onClick}>
       {children}
     </button>
   ),
+}));
+
+vi.mock('@/shared/components/WeekTracking', () => ({
   WeekTracking: ({ workouts }: { workouts: any[] }) => (
     <div data-testid="week-tracking">Week tracking with {workouts.length} workouts</div>
   ),
