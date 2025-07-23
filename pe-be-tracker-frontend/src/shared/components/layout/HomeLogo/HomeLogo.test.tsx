@@ -81,7 +81,7 @@ describe('HomeLogo', () => {
     render(<HomeLogo onClick={mockOnClick} />);
     
     const logo = screen.getByRole('button', { name: 'Go to home page' });
-    expect(logo).toHaveClass('focus:ring-2', 'focus:ring-blue-400');
+    expect(logo).toHaveClass('focus:ring-2', 'focus:ring-ring');
   });
 
   it('renders the logo image with correct attributes', () => {
