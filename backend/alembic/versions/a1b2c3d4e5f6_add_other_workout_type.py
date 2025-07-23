@@ -19,26 +19,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add 'Other' workout type."""
-    from sqlalchemy.sql import table, column
     import datetime
-
-    # Workout Types
-    workout_type_table = table(
-        'workout_types',
-        column('id', sa.Integer),
-        column('name', sa.String),
-        column('description', sa.String),
-        column('created_at', sa.DateTime),
-        column('updated_at', sa.DateTime),
-    )
     
-    now = datetime.datetime.now()
-    op.bulk_insert(
-        workout_type_table,
-        [
-            {'id': 6, 'name': 'Other', 'description': 'General workout session', 'created_at': now, 'updated_at': now},
-        ]
-    )
+    now = datetime.datetime.utcnow()
+    
+    # Use raw SQL with ON CONFLICT to handle existing records
+    op.execute(f"""
+        INSERT INTO workout_types (id, name, description, created_at, updated_at)
+        VALUES (6, 'Other', 'General workout session', '{now}', '{now}')
+        ON CONFLICT (id) DO NOTHING
+    """)
 
 
 def downgrade() -> None:
