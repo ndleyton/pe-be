@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Exercise, ExerciseSet } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
-import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
+import { MoreVertical, Timer, StickyNote, Plus, Minus, Check } from 'lucide-react';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';
 
@@ -11,10 +13,43 @@ interface ExerciseRowProps {
   workoutId?: string;
 }
 
+interface SetData {
+  id: number | string;
+  type?: 'warmup' | 'working';
+  weight?: number;
+  reps?: number;
+  notes?: string;
+  completed: boolean;
+}
+
+interface RestTimer {
+  minutes: number;
+  seconds: number;
+}
+
+interface NotesModalState {
+  exerciseId: string | number;
+  setId: string | number;
+}
+
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
+  const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
+  const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
+  
+  // Convert exercise sets to sets with additional UI state
+  const [sets, setSets] = useState<SetData[]>(() => {
+    return exerciseSets.map((set, index) => ({
+      id: set.id,
+      type: index === 0 ? 'warmup' : 'working',
+      weight: set.intensity || 0,
+      reps: set.reps || 0,
+      notes: '',
+      completed: set.done
+    }));
+  });
 
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
@@ -30,136 +65,193 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     }
   };
 
-  const handleSetUpdate = (updatedSet: ExerciseSet) => {
-    const updatedSets = exerciseSets.map(set => 
-      set.id === updatedSet.id ? updatedSet : set
-    );
-    setExerciseSets(updatedSets);
-    
-    // Update the parent with the updated exercise
-    if (onExerciseUpdate) {
-      onExerciseUpdate({
-        ...exercise,
-        exercise_sets: updatedSets
-      });
-    }
+  const updateSet = (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
+    setSets(prev => prev.map(set => 
+      set.id === setId ? { ...set, [field]: value } : set
+    ));
   };
 
-  const handleSetDelete = (setId: number | string) => {
-    const updatedSets = exerciseSets.filter(set => set.id !== setId);
-    setExerciseSets(updatedSets);
-    
-    // Update the parent with the updated exercise
-    if (onExerciseUpdate) {
-      onExerciseUpdate({
-        ...exercise,
-        exercise_sets: updatedSets
-      });
-    }
+  const incrementReps = (exerciseId: string | number, setId: string | number) => {
+    setSets(prev => prev.map(set => 
+      set.id === setId ? { ...set, reps: (set.reps || 0) + 1 } : set
+    ));
+  };
+
+  const decrementReps = (exerciseId: string | number, setId: string | number) => {
+    setSets(prev => prev.map(set => 
+      set.id === setId ? { ...set, reps: Math.max((set.reps || 0) - 1, 0) } : set
+    ));
+  };
+
+  const toggleSetCompletion = (exerciseId: string | number, setId: string | number) => {
+    setSets(prev => prev.map(set => 
+      set.id === setId ? { ...set, completed: !set.completed } : set
+    ));
+  };
+
+  const updateSetNotes = (exerciseId: string | number, setId: string | number, notes: string) => {
+    setSets(prev => prev.map(set => 
+      set.id === setId ? { ...set, notes } : set
+    ));
+  };
+
+  const addSet = (exerciseId: string | number) => {
+    const newSet: SetData = {
+      id: Date.now(), // Temporary ID
+      type: 'working',
+      weight: sets.length > 0 ? sets[sets.length - 1].weight : 0,
+      reps: sets.length > 0 ? sets[sets.length - 1].reps : 0,
+      notes: '',
+      completed: false
+    };
+    setSets(prev => [...prev, newSet]);
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      {/* Exercise Header */}
-      <div className="p-4 hover:bg-accent transition-colors">
+    <Card key={exercise.id}>
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
-                  {exercise.exercise_type.name.charAt(0).toUpperCase()}
-                </span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-gray-600 rounded"></div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-blue-600">
+                {exercise.exercise_type.name} ({exercise.exercise_type.default_intensity_unit || 'kg'})
+              </h3>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <Textarea
+          placeholder="Add notes here..."
+          className="mt-2 text-sm"
+          value={exerciseNotes}
+          onChange={(e) => setExerciseNotes(e.target.value)}
+        />
+
+        {/* Rest Timer */}
+        <div className="flex items-center gap-2 mt-2">
+          <Timer className="w-4 h-4 text-blue-500" />
+          <span className="text-sm text-blue-500">
+            Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
+          </span>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0">
+        {/* Sets Table Header */}
+        <div className="grid grid-cols-6 gap-2 text-xs font-medium text-gray-500 mb-2">
+          <div>SET</div>
+          <div>NOTES</div>
+          <div>KG</div>
+          <div className="col-span-2">REPS</div>
+          <div className="text-right">DONE</div>
+        </div>
+
+        {/* Sets */}
+        <div className="space-y-2">
+          {sets.map((set, index) => (
+            <div
+              key={set.id}
+              className={`grid grid-cols-6 gap-2 items-center p-2 rounded ${
+                set.completed ? "bg-green-100" : "bg-white"
+              }`}
+            >
+              <div className="font-medium">
+                {set.type === "warmup" ? (
+                  <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700">
+                    W
+                  </Badge>
+                ) : (
+                  <span>{index}</span>
+                )}
+              </div>
+              <div className="text-sm text-gray-500">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setNotesModal({ exerciseId: exercise.id, setId: set.id })}
+                    >
+                      <StickyNote className="w-3 h-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Set Notes</DialogTitle>
+                    </DialogHeader>
+                    <Textarea
+                      placeholder="Add notes for this set..."
+                      value={set.notes || ""}
+                      onChange={(e) => updateSetNotes(exercise.id, set.id, e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
               <div>
-                <h4 className="text-foreground font-medium">
-                  {exercise.exercise_type.name}
-                </h4>
-                {truncateWords(exercise.exercise_type.description, 4) && (
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    {truncateWords(exercise.exercise_type.description, 4)}
-                  </p>
-                )}
-                {exercise.notes && (
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {exercise.notes}
-                  </p>
-                )}
+                <Input
+                  type="number"
+                  value={set.weight || ""}
+                  onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
+                  className="h-8 text-center"
+                  disabled={set.completed}
+                />
+              </div>
+              <div className="flex items-center gap-1 col-span-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 w-6 p-0 bg-transparent"
+                  onClick={() => decrementReps(exercise.id, set.id)}
+                  disabled={set.completed}
+                >
+                  <Minus className="w-3 h-3" />
+                </Button>
+                <Input
+                  type="number"
+                  value={set.reps || ""}
+                  onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
+                  className="h-8 text-center w-12"
+                  disabled={set.completed}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 w-6 p-0 bg-transparent"
+                  onClick={() => incrementReps(exercise.id, set.id)}
+                  disabled={set.completed}
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant={set.completed ? "default" : "outline"}
+                  size="sm"
+                  className={`h-8 w-8 p-0 ${set.completed ? "bg-green-500 hover:bg-green-600" : ""}`}
+                  onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
               </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-right text-sm text-muted-foreground">
-              {exercise.timestamp ? (
-                <div>
-                  {formatDisplayDate(exercise.timestamp, { timeStyle: 'short', includeTimezone: false })}
-                </div>
-              ) : (
-                <div>
-                  Created: {formatDisplayDate(exercise.created_at, { timeStyle: 'short', includeTimezone: false })}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              {exerciseSets.length > 0 && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-muted-foreground hover:text-foreground text-sm"
-                >
-                  {isExpanded ? '▲' : `▼ ${exerciseSets.length} sets`}
-                </button>
-              )}
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center text-primary-foreground transition-colors"
-                title="Add set"
-              >
-                +
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
 
-      {/* Exercise Sets Section */}
-      {(isExpanded || showAddForm) && (
-        <div className="border-t border-border bg-background/50">
-          {/* Add Set Form */}
-          {showAddForm && (
-            <div className="p-4 border-b border-border">
-              <AddExerciseSetForm
-                exerciseId={exercise.id}
-                onSetAdded={handleSetAdded}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          )}
-
-          {/* Exercise Sets List */}
-          {isExpanded && exerciseSets.length > 0 && (
-            <div className="p-4 space-y-2">
-              <h5 className="text-muted-foreground text-sm font-medium mb-2">Sets ({exerciseSets.length})</h5>
-              {exerciseSets.map((set) => (
-                <ExerciseSetRow
-                  key={set.id}
-                  exerciseSet={set}
-                  onUpdate={handleSetUpdate}
-                  onDelete={handleSetDelete}
-                  workoutId={workoutId}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Empty state when expanded but no sets */}
-          {isExpanded && exerciseSets.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              No sets added yet. Click the + button to add your first set.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+        {/* Add Set Button */}
+        <Button variant="outline" className="w-full mt-4 bg-transparent" onClick={() => addSet(exercise.id)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Set
+        </Button>
+      </CardContent>
+    </Card>
 };
 
 export default ExerciseRow;
