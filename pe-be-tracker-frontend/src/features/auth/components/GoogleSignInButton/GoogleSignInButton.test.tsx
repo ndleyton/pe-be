@@ -62,7 +62,7 @@ describe('GoogleSignInButton', () => {
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveAttribute('width', '20');
       expect(svg).toHaveAttribute('height', '20');
-      expect(svg).toHaveAttribute('viewBox', '0 0 48 48');
+      expect(svg).toHaveAttribute('viewBox', '0 0 24 24');
     });
 
     it('should not display error message initially', () => {
