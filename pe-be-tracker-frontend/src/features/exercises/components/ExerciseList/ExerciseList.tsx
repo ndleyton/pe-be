@@ -33,7 +33,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error
       )}
       
       {exercises.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {exercises.map((exercise) => (
             <ExerciseRow key={exercise.id} exercise={exercise} workoutId={workoutId} />
           ))}
