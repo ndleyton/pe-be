@@ -33,8 +33,8 @@ async def get_exercise_by_id(
         .options(
             selectinload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group),
+                .selectinload(ExerciseMuscle.muscle)
+                    .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
         .where(Exercise.id == exercise_id)
