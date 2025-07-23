@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { Exercise, ExerciseSet } from '@/features/exercises/api';
+import { Exercise, ExerciseSet, IntensityUnit } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
 import { MoreVertical, Timer, StickyNote, Plus, Minus, Check } from 'lucide-react';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';
+
+// Guest intensity unit type (simplified)
+interface GuestIntensityUnit {
+  id: number;
+  name: string;
+  abbreviation: string;
+}
 
 interface ExerciseRowProps {
   exercise: Exercise;
@@ -38,6 +46,17 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
   const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  
+  // Default intensity unit based on exercise type or fallback
+  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>(() => {
+    // Try to get from exercise type default, otherwise fallback to kg
+    return {
+      id: 2,
+      name: 'Kilograms',
+      abbreviation: 'kg'
+    };
+  });
   
   // Convert exercise sets to sets with additional UI state
   const [sets, setSets] = useState<SetData[]>(() => {
@@ -107,6 +126,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     setSets(prev => [...prev, newSet]);
   };
 
+  const handleIntensityUnitChange = (unit: IntensityUnit | GuestIntensityUnit) => {
+    setCurrentIntensityUnit(unit);
+    setShowExerciseModal(false);
+  };
+
   return (
     <Card key={exercise.id}>
       <CardHeader className="pb-2">
@@ -121,9 +145,22 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               </h3>
             </div>
           </div>
-          <Button variant="ghost" size="sm">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
+          <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Exercise Settings</DialogTitle>
+              </DialogHeader>
+              <ExerciseTypeMore
+                currentIntensityUnit={currentIntensityUnit}
+                onIntensityUnitChange={handleIntensityUnitChange}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Textarea
@@ -147,7 +184,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         <div className="grid gap-4 text-xs font-medium text-gray-500 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
           <div>SET</div>
           <div>NOTES</div>
-          <div>KG</div>
+          <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
           <div>REPS</div>
           <div className="text-right">DONE</div>
         </div>
