@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
-import { GuestModeBanner } from '../shared/components/feedback';
+import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/ui/layout';
+import { GuestModeBanner } from '../shared/components/ui/feedback';
 
 const AppLayout: React.FC = () => {
   return (

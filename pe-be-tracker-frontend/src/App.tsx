@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleSignInButton } from "./features/auth/components";
-import { HomeLogo } from "./shared/components/layout";
+import { HomeLogo } from "./shared/components/ui/layout";
 import './App.css';
 
 const App: React.FC = () => {

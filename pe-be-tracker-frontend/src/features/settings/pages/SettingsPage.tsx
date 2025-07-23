@@ -1,13 +1,13 @@
 import React from 'react';
 import { useAuthStore } from '@/stores';
-import { ModeToggle } from '@/components/mode-toggle';
+import { ModeToggle } from '@/shared/components/ui/mode-toggle';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ErrorTestComponent } from '@/shared/components/error';
+} from '@/shared/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { ErrorTestComponent } from '@/shared/components/ui/error';
 
 const SettingsPage: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);

@@ -4,7 +4,7 @@ import { Menu, Pause, Play } from 'lucide-react';
 import { useUIStore, useAuthStore } from '@/stores';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();

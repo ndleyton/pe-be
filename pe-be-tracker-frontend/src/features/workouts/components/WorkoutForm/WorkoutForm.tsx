@@ -6,7 +6,7 @@ import api from '@/shared/api/client';
 import { toUTCISOString } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 
 interface WorkoutFormData {
   name?: string;

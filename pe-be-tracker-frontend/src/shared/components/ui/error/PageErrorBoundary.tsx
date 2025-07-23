@@ -1,7 +1,7 @@
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert';
+import { Button } from '@/shared/components/ui/button';
 import { ErrorInfo } from 'react';
 
 interface PageErrorFallbackProps {
