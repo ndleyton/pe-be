@@ -4,11 +4,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
 import api from '@/shared/api/client';
 import { useGuestStore, useAuthStore } from '@/stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ModeToggle } from '@/components/mode-toggle';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { ModeToggle } from '@/shared/components/theme/mode-toggle';
 
 interface ChatMessage {
   id: string;

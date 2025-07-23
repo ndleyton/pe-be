@@ -24,7 +24,8 @@
       "@/app/*": ["./app/*"],
       "@/utils/*": ["./utils/*"],
       "@/contexts/*": ["./contexts/*"],
-      "@/lib/*": ["./lib/*"]
+      "@/lib/*": ["./lib/*"],
+      "@/shared/components/ui/*": ["./shared/components/ui/*"]
     },
     "types": [
       "vite/client"

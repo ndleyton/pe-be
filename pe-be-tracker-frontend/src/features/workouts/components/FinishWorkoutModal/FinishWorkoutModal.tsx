@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscles } from '@/utils/muscleGroups';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import AnatomicalImage from './AnatomicalImage';
 import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
 import html2canvas from 'html2canvas';

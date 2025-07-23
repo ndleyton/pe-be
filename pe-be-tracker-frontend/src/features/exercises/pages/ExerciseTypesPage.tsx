@@ -2,20 +2,20 @@ import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { getExerciseTypes, type ExerciseType } from '@/features/exercises/api';
 import { ExerciseTypeCard } from '@/features/exercises/components';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/shared/components/ui/select';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '@/components/ui/alert';
+} from '@/shared/components/ui/alert';
 import { useInfiniteScroll } from '@/shared/hooks';
 
 const ExerciseTypesPage: React.FC = () => {

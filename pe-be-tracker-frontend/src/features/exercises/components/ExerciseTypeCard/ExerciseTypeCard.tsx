@@ -7,7 +7,7 @@ import {
   Card,
   CardContent,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/shared/components/ui/card';
 
 interface ExerciseTypeCardProps {
   exerciseType: ExerciseType;

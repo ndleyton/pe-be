@@ -4,9 +4,10 @@ import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
-import { FloatingActionButton, WeekTracking } from '@/shared/components/ui';
+import FloatingActionButton from '@/shared/components/FloatingActionButton';
+import { WeekTracking } from '@/shared/components/WeekTracking';
 import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 

@@ -14,7 +14,6 @@ interface WeekTrackingProps {
 }
 
 const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' }) => {
-  // Defensive programming - ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
   
   const getLast7Days = () => {
@@ -46,8 +45,8 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
   const last7Days = getLast7Days();
 
   return (
-    <div className={`bg-card rounded-lg p-4 ${safeWorkouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`}>
-      <h3 className="text-sm font-medium text-card-foreground/70 mb-3">Week Activity</h3>
+    <div className={`bg-base-100 rounded-lg p-4 ${safeWorkouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`} data-testid="week-tracking">
+      <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
       <div className={`flex ${safeWorkouts.length === 0 ? 'justify-center' : 'justify-between'} items-center gap-1`}>
         {last7Days.map((date, index) => {
           const hasWorkout = hasWorkoutOnDate(date);
