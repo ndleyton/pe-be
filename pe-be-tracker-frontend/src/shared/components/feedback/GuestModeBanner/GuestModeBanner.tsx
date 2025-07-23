@@ -14,11 +14,11 @@ const GuestModeBanner: React.FC = () => {
   }
 
   return (
-    <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div className="bg-accent border-l-4 border-primary p-4">
       <div className="flex">
         <div className="flex-shrink-0">
           <svg 
-            className="h-5 w-5 text-blue-400" 
+            className="h-5 w-5 text-primary" 
             fill="currentColor" 
             viewBox="0 0 20 20"
           >
@@ -30,7 +30,7 @@ const GuestModeBanner: React.FC = () => {
           </svg>
         </div>
         <div className="ml-3">
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-accent-foreground">
             <strong>Guest Mode:</strong> Your workout data is stored locally on this device. 
             {safeWorkouts.length > 0 && (
               <span className="ml-1">
