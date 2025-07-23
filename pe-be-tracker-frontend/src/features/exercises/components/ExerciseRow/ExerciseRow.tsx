@@ -144,11 +144,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
       <CardContent className="p-4 pt-0">
         {/* Sets Table Header */}
-        <div className="grid grid-cols-6 gap-2 text-xs font-medium text-gray-500 mb-2">
+        <div className="grid gap-4 text-xs font-medium text-gray-500 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
           <div>SET</div>
           <div>NOTES</div>
           <div>KG</div>
-          <div className="col-span-2">REPS</div>
+          <div>REPS</div>
           <div className="text-right">DONE</div>
         </div>
 
@@ -157,9 +157,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           {sets.map((set, index) => (
             <div
               key={set.id}
-              className={`grid grid-cols-6 gap-2 items-center p-2 rounded ${
+              className={`grid gap-4 items-center p-2 rounded ${
                 set.completed ? "bg-green-100" : "bg-white"
               }`}
+              style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
             >
               <div className="font-medium">
                 {set.type === "warmup" ? (
@@ -167,7 +168,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     W
                   </Badge>
                 ) : (
-                  <span>{index}</span>
+                  <span>{index + 1}</span>
                 )}
               </div>
               <div className="text-sm text-gray-500">
@@ -204,7 +205,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   disabled={set.completed}
                 />
               </div>
-              <div className="flex items-center gap-1 col-span-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -218,7 +219,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.reps || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center w-12"
+                  className="h-8 text-center flex-1 min-w-0"
                   disabled={set.completed}
                 />
                 <Button
@@ -252,6 +253,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         </Button>
       </CardContent>
     </Card>
+  );
 };
 
 export default ExerciseRow;
