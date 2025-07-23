@@ -1,4 +1,4 @@
-export const DEFAULT_MUSCLE_COLOR = 'hsl(240 5% 90%)'; // Muted color from theme
+export const DEFAULT_MUSCLE_COLOR = 'rgb(219, 213, 213)'; // Muted color from theme
 
 export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
   'Chest': [
@@ -89,18 +89,18 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
 
 export const getMuscleGroupColor = (intensity: number): string => {
   // Interpolate from light secondary to primary colors using theme
-  // Light secondary: hsl(174 80% 50%) -> Primary: hsl(300 70% 55%)
-  const startH = 174; // Secondary hue (teal)
-  const startS = 80;  // Secondary saturation
-  const startL = 70;  // Lighter for low intensity
+  // Light secondary: rgb(220, 213, 213) -> Primary: rgb(204, 0, 51)
+  const startR = 220; // Secondary R (light pink/gray)
+  const startG = 213; // Secondary G
+  const startB = 213; // Secondary B
   
-  const endH = 300;   // Primary hue (purple)
-  const endS = 70;    // Primary saturation  
-  const endL = 55;    // Primary lightness
+  const endR = 204;   // Primary R (dark red)
+  const endG = 0;     // Primary G
+  const endB = 51;    // Primary B
 
-  const h = Math.floor(startH + (endH - startH) * intensity);
-  const s = Math.floor(startS + (endS - startS) * intensity);
-  const l = Math.floor(startL + (endL - startL) * intensity);
+  const r = Math.floor(startR + (endR - startR) * intensity);
+  const g = Math.floor(startG + (endG - startG) * intensity);
+  const b = Math.floor(startB + (endB - startB) * intensity);
 
-  return `hsl(${h} ${s}% ${l}%)`;
+  return `rgb(${r}, ${g}, ${b})`;
 };
