@@ -32,7 +32,8 @@ async def get_exercise_by_id(
         select(Exercise)
         .options(
             selectinload(Exercise.exercise_type)
-            .selectinload(ExerciseType.muscles)
+            .selectinload(ExerciseType.exercise_muscles)
+            .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
@@ -49,7 +50,8 @@ async def get_exercises_for_workout(
         select(Exercise)
         .options(
             selectinload(Exercise.exercise_type)
-            .selectinload(ExerciseType.muscles)
+            .selectinload(ExerciseType.exercise_muscles)
+            .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
@@ -81,7 +83,8 @@ async def create_exercise(
         select(Exercise)
         .options(
             selectinload(Exercise.exercise_type)
-            .selectinload(ExerciseType.muscles)
+            .selectinload(ExerciseType.exercise_muscles)
+            .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
@@ -224,7 +227,14 @@ async def create_exercise_type(
                     f"Muscle IDs not found: {', '.join(map(str, missing_ids))}"
                 )
 
-            exercise_type.muscles = muscles
+            # Create ExerciseMuscle relationships
+            for muscle in muscles:
+                exercise_muscle = ExerciseMuscle(
+                    exercise_type=exercise_type,
+                    muscle=muscle,
+                    is_primary=False,  # You may want to make this configurable
+                )
+                session.add(exercise_muscle)
 
         session.add(exercise_type)
         try:
