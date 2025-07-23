@@ -55,7 +55,7 @@ describe('exercises API - pagination', () => {
 
       const result = await getExerciseTypes();
 
-      expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=100');
+      expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=usage&offset=0&limit=1000');
       expect(result.data).toEqual(mockExerciseTypes);
     });
 
@@ -64,7 +64,7 @@ describe('exercises API - pagination', () => {
 
       const result = await getExerciseTypes('name');
 
-      expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=name&offset=0&limit=100');
+      expect(mockApi.get).toHaveBeenCalledWith('/exercises/exercise-types?order_by=name&offset=0&limit=1000');
       expect(result.data).toEqual(mockExerciseTypes);
     });
 
