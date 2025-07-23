@@ -49,7 +49,7 @@ export const useInfiniteScroll = <T>({
         throw err;
       }
     },
-    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
     initialPageParam: undefined,
     enabled,
   });
