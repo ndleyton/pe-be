@@ -11,30 +11,30 @@ export const LastWorkoutInfo: React.FC<LastWorkoutInfoProps> = ({ lastWorkout, i
   
   return (
     <div className="space-y-3">
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         {workoutDate}
       </div>
       
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Sets:</span>
+          <span className="text-sm text-muted-foreground">Sets:</span>
           <span className="font-medium">{lastWorkout.sets}</span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Total Reps:</span>
+          <span className="text-sm text-muted-foreground">Total Reps:</span>
           <span className="font-medium">{lastWorkout.totalReps}</span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Max Weight:</span>
+          <span className="text-sm text-muted-foreground">Max Weight:</span>
           <span className="font-medium">
             {lastWorkout.maxWeight}{intensityUnit.abbreviation}
           </span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Total Volume:</span>
+          <span className="text-sm text-muted-foreground">Total Volume:</span>
           <span className="font-medium">
             {lastWorkout.totalVolume}{intensityUnit.abbreviation}
           </span>
@@ -42,7 +42,7 @@ export const LastWorkoutInfo: React.FC<LastWorkoutInfoProps> = ({ lastWorkout, i
       </div>
 
       <div className="pt-2 border-t">
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-muted-foreground">
           Last time you did <span className="font-semibold">{lastWorkout.sets} sets</span> with{' '}
           <span className="font-semibold">{lastWorkout.maxWeight}{intensityUnit.abbreviation}</span> max weight
         </p>

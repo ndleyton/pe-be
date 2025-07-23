@@ -1,4 +1,4 @@
-export const DEFAULT_MUSCLE_COLOR = '#E0E0E0'; // A light grey color
+export const DEFAULT_MUSCLE_COLOR = 'rgb(219, 213, 213)'; // Muted color from theme
 
 export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
   'Chest': [
@@ -88,14 +88,15 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
 };
 
 export const getMuscleGroupColor = (intensity: number): string => {
-  // Interpolate from a light blue to a royal blue
-  const startR = 173; // Light blue R
-  const startG = 216; // Light blue G
-  const startB = 230; // Light blue B
-
-  const endR = 65;  // Royal blue R
-  const endG = 105; // Royal blue G
-  const endB = 225; // Royal blue B
+  // Interpolate from light secondary to primary colors using theme
+  // Light secondary: rgb(220, 213, 213) -> Primary: rgb(204, 0, 51)
+  const startR = 220; // Secondary R (light pink/gray)
+  const startG = 213; // Secondary G
+  const startB = 213; // Secondary B
+  
+  const endR = 204;   // Primary R (dark red)
+  const endG = 0;     // Primary G
+  const endB = 51;    // Primary B
 
   const r = Math.floor(startR + (endR - startR) * intensity);
   const g = Math.floor(startG + (endG - startG) * intensity);

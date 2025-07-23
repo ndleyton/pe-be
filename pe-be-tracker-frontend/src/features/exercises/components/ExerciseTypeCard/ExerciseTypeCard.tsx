@@ -23,7 +23,7 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
           <CardTitle className="text-lg font-semibold">{name}</CardTitle>
           
           {description && (
-            <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
               {description}
             </p>
           )}
@@ -46,7 +46,7 @@ export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({ exerciseType
             </div>
           )}
           
-          <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Flame className="h-4 w-4" />
               <span>{times_used} times used</span>

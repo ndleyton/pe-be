@@ -5,7 +5,7 @@ import { GuestModeBanner } from '../shared/components/feedback';
 
 const AppLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-base-200 flex">
+    <div className="min-h-screen bg-background flex">
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"

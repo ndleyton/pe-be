@@ -46,8 +46,8 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
   const last7Days = getLast7Days();
 
   return (
-    <div className={`bg-base-100 rounded-lg p-4 ${safeWorkouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`}>
-      <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
+    <div className={`bg-card rounded-lg p-4 ${safeWorkouts.length === 0 ? 'w-fit mx-auto' : ''} ${className}`}>
+      <h3 className="text-sm font-medium text-card-foreground/70 mb-3">Week Activity</h3>
       <div className={`flex ${safeWorkouts.length === 0 ? 'justify-center' : 'justify-between'} items-center gap-1`}>
         {last7Days.map((date, index) => {
           const hasWorkout = hasWorkoutOnDate(date);
@@ -55,14 +55,14 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
           
           return (
             <div key={index} className="flex flex-col items-center gap-1">
-              <span className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-base-content/60'}`}>
+              <span className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-card-foreground/60'}`}>
                 {getDayName(date)}
               </span>
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                   hasWorkout
-                    ? 'bg-warning text-warning-content'
-                    : 'bg-base-200 border-2 border-base-300'
+                    ? 'bg-warning text-warning-foreground'
+                    : 'bg-muted border-2 border-border'
                 }`}
                 title={`${date.toLocaleDateString()}: ${hasWorkout ? 'Workout completed' : 'No workout'}`}
               >
@@ -75,14 +75,14 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
                     🔥
                   </span>
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-base-300" />
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                 )}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="flex justify-between text-xs text-base-content/50 mt-2">
+      <div className="flex justify-between text-xs text-card-foreground/50 mt-2">
         <span>7 days ago</span>
         <span>Today</span>
       </div>

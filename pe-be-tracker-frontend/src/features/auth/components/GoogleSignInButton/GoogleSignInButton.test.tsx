@@ -62,7 +62,7 @@ describe('GoogleSignInButton', () => {
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveAttribute('width', '20');
       expect(svg).toHaveAttribute('height', '20');
-      expect(svg).toHaveAttribute('viewBox', '0 0 48 48');
+      expect(svg).toHaveAttribute('viewBox', '0 0 24 24');
     });
 
     it('should not display error message initially', () => {
@@ -188,7 +188,7 @@ describe('GoogleSignInButton', () => {
       await waitFor(() => {
         const errorElement = screen.getByText('Test error');
         expect(errorElement).toBeInTheDocument();
-        expect(errorElement).toHaveClass('text-red-500', 'mt-2');
+        expect(errorElement).toHaveClass('text-destructive', 'mt-2');
         expect(errorElement.tagName).toBe('P');
       });
     });
