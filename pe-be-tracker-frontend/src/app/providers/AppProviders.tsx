@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
 import { config } from '@/app/config/env';
-import { ErrorFallback } from '@/shared/components/ui/error';
+import { ErrorFallback } from '@/shared/components/error';
 import { StoreInitializer } from '@/stores';
 
 // Configure React Query client

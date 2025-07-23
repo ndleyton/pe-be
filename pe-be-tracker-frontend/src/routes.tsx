@@ -3,7 +3,7 @@ import { type RouteObject } from 'react-router-dom';
 import App from './App';
 import AppLayout from './layouts/AppLayout';
 import NotFoundPage from './pages/NotFoundPage';
-import { PageErrorBoundary } from '@/shared/components/ui/error';
+import { PageErrorBoundary } from '@/shared/components/error';
 
 // Lazy load components with error boundaries
 const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { HomeLogo } from '@/shared/components/ui/layout';
+import { HomeLogo } from '@/shared/components/layout';
 import { useGuestStore } from '@/stores';
 import { useShallow } from 'zustand/react/shallow';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
