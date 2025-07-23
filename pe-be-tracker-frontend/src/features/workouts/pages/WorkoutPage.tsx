@@ -6,7 +6,7 @@ import { getExercisesInWorkout, Exercise } from '@/features/exercises/api';
 import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
-import { FloatingActionButton } from '@/shared/components/ui';
+import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } from '@/stores';
 import { getCurrentUTCTimestamp } from '@/utils/date';
 

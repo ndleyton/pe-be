@@ -8,7 +8,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import { ModeToggle } from '@/shared/components/ui/mode-toggle';
+import { ModeToggle } from '@/shared/components/theme/mode-toggle';
 
 interface ChatMessage {
   id: string;

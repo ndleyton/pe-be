@@ -2,14 +2,14 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
-import { WeekTracking } from '@/shared/components/ui/WeekTracking';
+import { WeekTracking } from '@/shared/components/WeekTracking';
 import { useAuthStore, useGuestStore } from '@/stores';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from '@/shared/components/ui/alert';
-import { ModeToggle } from '@/shared/components/ui/mode-toggle';
+import { ModeToggle } from '@/shared/components/theme/mode-toggle';
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
   const { data } = await getMyWorkouts(undefined, 100);
