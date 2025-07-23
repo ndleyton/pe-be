@@ -180,11 +180,6 @@ const getInitialGuestData = (): GuestData => ({
   workoutTypes: [
     {
       id: generateId(),
-      name: 'Other',
-      description: 'General workout session',
-    },
-    {
-      id: generateId(),
       name: 'Strength Training',
       description: 'Traditional weightlifting session',
     },
@@ -197,6 +192,11 @@ const getInitialGuestData = (): GuestData => ({
       id: generateId(),
       name: 'Bodyweight',
       description: 'Exercises using your own body weight',
+    },
+    {
+      id: generateId(),
+      name: 'Other',
+      description: 'General workout session',
     },
   ],
   recipes: [],
