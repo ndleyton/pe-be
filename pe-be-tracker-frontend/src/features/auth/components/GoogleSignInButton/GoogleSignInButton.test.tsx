@@ -188,7 +188,7 @@ describe('GoogleSignInButton', () => {
       await waitFor(() => {
         const errorElement = screen.getByText('Test error');
         expect(errorElement).toBeInTheDocument();
-        expect(errorElement).toHaveClass('text-red-500', 'mt-2');
+        expect(errorElement).toHaveClass('text-destructive', 'mt-2');
         expect(errorElement.tagName).toBe('P');
       });
     });

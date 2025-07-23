@@ -113,7 +113,7 @@ const OAuthCallbackPage: React.FC = () => {
         };
       case 'error':
         return {
-          icon: <div className="text-red-500 text-4xl">⚠</div>,
+          icon: <div className="text-destructive text-4xl">⚠</div>,
           title: 'Authentication failed',
           description: errorMessage
         };
