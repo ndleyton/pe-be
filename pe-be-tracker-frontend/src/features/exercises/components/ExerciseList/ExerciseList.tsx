@@ -12,16 +12,16 @@ interface ExerciseListProps {
 const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId }) => {
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-semibold text-gray-100 mb-4">
+      <h2 className="text-xl font-semibold text-foreground mb-4">
         Exercises ({exercises.length})
       </h2>
       
       {isLoading && (
-        <div className="text-gray-400 text-center py-4">Loading exercises...</div>
+        <div className="text-muted-foreground text-center py-4">Loading exercises...</div>
       )}
       
       {error && (
-        <div className="text-red-400 text-center py-4">
+        <div className="text-destructive text-center py-4">
           Failed to load exercises
         </div>
       )}

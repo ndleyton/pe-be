@@ -129,19 +129,19 @@ const OAuthCallbackPage: React.FC = () => {
   const statusContent = getStatusContent();
 
   return (
-    <div className="min-h-screen flex flex-col bg-base-200">
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="p-4">
         <HomeLogo />
       </div>
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           {statusContent.icon}
-          <h2 className="mt-4 text-xl font-semibold">{statusContent.title}</h2>
+          <h2 className="mt-4 text-xl font-semibold text-foreground">{statusContent.title}</h2>
           {statusContent.description && (
-            <p className="mt-2 text-gray-600">{statusContent.description}</p>
+            <p className="mt-2 text-muted-foreground">{statusContent.description}</p>
           )}
           {syncStatus === 'error' && (
-            <p className="mt-2 text-sm text-gray-500">Redirecting to login...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Redirecting to login...</p>
           )}
         </div>
       </div>

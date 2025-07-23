@@ -22,8 +22,8 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
       onKeyDown={handleKeyDown}
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
-      className={`flex items-center gap-2 text-lg font-bold text-gray-100 ${
-        isInteractive ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-800 rounded-md transition-all duration-200 hover:text-blue-400' : ''
+      className={`flex items-center gap-2 text-lg font-bold text-foreground ${
+        isInteractive ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background rounded-md transition-all duration-200 hover:text-primary' : ''
       } ${className}`}
       aria-label={isInteractive ? "Go to home page" : undefined}
     >

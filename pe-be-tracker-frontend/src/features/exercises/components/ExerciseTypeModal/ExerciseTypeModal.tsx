@@ -321,7 +321,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
               <button
                 onClick={handleCreateExerciseType}
                 disabled={isAuthenticated && createMutation.isPending}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-green-500 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-secondary hover:text-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Create "${searchTerm.trim()}"`}
               >
                 {(isAuthenticated && createMutation.isPending) ? (
@@ -339,7 +339,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
             {searchTerm && !showCreateButton && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
                 title="Clear search"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,7 +349,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({ isOpen, onClose, 
             )}
           </div>
           {isAuthenticated && createMutation.isError && (
-            <p className="mt-2 text-sm text-red-400">
+            <p className="mt-2 text-sm text-destructive">
               Failed to create exercise type. Please try again.
             </p>
           )}

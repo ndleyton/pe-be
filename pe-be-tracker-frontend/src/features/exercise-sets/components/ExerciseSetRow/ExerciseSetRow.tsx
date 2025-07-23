@@ -159,7 +159,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   return (
     <div className={`border rounded-lg p-3 flex items-center justify-between ${
-      exerciseSet.done ? 'bg-green-900/20 border-green-700' : 'bg-card border-border'
+      exerciseSet.done ? 'bg-secondary/20 border-secondary' : 'bg-card border-border'
     }`}>
       <div className="flex items-center space-x-4">
         <button
@@ -167,7 +167,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           aria-label={exerciseSet.done ? "Mark as incomplete" : "Mark as complete"}
           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
             exerciseSet.done
-              ? 'bg-green-600 border-green-600 text-white'
+              ? 'bg-secondary border-secondary text-secondary-foreground'
               : 'border-border hover:border-primary'
           }`}
         >
@@ -190,13 +190,13 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       <div className="flex items-center space-x-2">
         <button
           onClick={() => setIsEditing(true)}
-          className="text-blue-400 hover:text-blue-300 text-sm"
+          className="text-primary hover:text-primary/80 text-sm"
         >
           Edit
         </button>
         <button
           onClick={handleDelete}
-          className="text-red-400 hover:text-red-300 text-sm"
+          className="text-destructive hover:text-destructive/80 text-sm"
         >
           Delete
         </button>

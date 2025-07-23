@@ -66,9 +66,9 @@ const ProfilePage: React.FC = () => {
       <div className="p-4">
         <div className="max-w-4xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-base-300 rounded w-48 mb-6"></div>
-            <div className="h-32 bg-base-300 rounded mb-6"></div>
-            <div className="h-48 bg-base-300 rounded"></div>
+                      <div className="h-8 bg-muted rounded w-48 mb-6"></div>
+          <div className="h-32 bg-muted rounded mb-6"></div>
+          <div className="h-48 bg-muted rounded"></div>
           </div>
         </div>
       </div>
@@ -95,17 +95,17 @@ const ProfilePage: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-base-content/70 mt-1">Track your fitness journey</p>
+          <p className="text-muted-foreground mt-1">Track your fitness journey</p>
         </div>
         
         <WeekTracking workouts={workouts} className="mb-6" />
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-base-100 rounded-lg p-4">
+          <div className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/70">Total Workouts</p>
+                <p className="text-sm text-muted-foreground">Total Workouts</p>
                 <p className="text-2xl font-bold text-primary">{totalWorkouts}</p>
               </div>
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -114,27 +114,27 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-base-100 rounded-lg p-4">
+          <div className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/70">Completed</p>
-                <p className="text-2xl font-bold text-success">{completedWorkouts.length}</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-secondary">{completedWorkouts.length}</p>
               </div>
-              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
                 <span className="text-2xl">✅</span>
               </div>
             </div>
           </div>
           
-          <div className="bg-base-100 rounded-lg p-4">
+          <div className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/70">Avg Duration</p>
-                <p className="text-2xl font-bold text-info">
+                <p className="text-sm text-muted-foreground">Avg Duration</p>
+                <p className="text-2xl font-bold text-accent">
                   {averageWorkoutTime > 0 ? `${Math.round(averageWorkoutTime)}m` : '0m'}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-info/10 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
                 <span className="text-2xl">⏱️</span>
               </div>
             </div>
@@ -142,11 +142,11 @@ const ProfilePage: React.FC = () => {
         </div>
         
         {/* Profile Section */}
-        <div className="bg-base-100 rounded-lg p-6">
+        <div className="bg-card rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Account Information</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-base-content/70">Status</label>
+              <label className="text-sm text-muted-foreground">Status</label>
               <p className="font-medium">
                 {isAuthenticated ? 'Signed In' : 'Guest Mode'}
               </p>
