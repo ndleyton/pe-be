@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
 import { navItems } from '@/shared/navigation/navItems';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 

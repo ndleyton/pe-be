@@ -6,25 +6,25 @@ import { getExerciseTypeById, getExerciseTypeStats } from '@/features/exercises/
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
 import { addExerciseToCurrentWorkout } from '@/features/workouts';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/shared/components/ui/card';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '@/components/ui/alert';
+} from '@/shared/components/ui/alert';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from '@/components/ui/carousel';
+} from '@/shared/components/ui/carousel';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());

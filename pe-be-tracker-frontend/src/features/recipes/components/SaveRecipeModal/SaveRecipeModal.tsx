@@ -3,15 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGuestStore, useAuthStore, GuestExercise } from '@/stores';
 import { Exercise } from '@/features/exercises/api';
 import { createRecipe, CreateRecipeData } from '@/features/recipes/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet';
+} from '@/shared/components/ui/sheet';
 
 interface SaveRecipeModalProps {
   isOpen: boolean;

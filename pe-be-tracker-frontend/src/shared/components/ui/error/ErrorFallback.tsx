@@ -1,8 +1,8 @@
 import React from 'react';
 import { FallbackProps } from 'react-error-boundary';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { HomeLogo } from '@/shared/components/layout';
+import { Button } from '@/shared/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert';
+import { HomeLogo } from '@/shared/components/ui/layout';
 
 interface CustomFallbackProps extends FallbackProps {
   message?: string;
