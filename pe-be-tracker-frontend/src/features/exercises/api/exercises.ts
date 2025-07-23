@@ -122,7 +122,7 @@ export interface CreateExerciseTypeData {
 export const getExerciseTypes = async (
   orderBy: 'usage' | 'name' = 'usage',
   cursor?: number | null,
-  limit: number = 100
+  limit: number = 1000
 ): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
   const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
