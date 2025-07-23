@@ -12,30 +12,30 @@ export const PersonalBestInfo: React.FC<PersonalBestInfoProps> = ({ personalBest
   
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-amber-600">
+      <div className="flex items-center gap-2 text-warning">
         <Trophy className="h-5 w-5" />
         <span className="text-sm font-medium">Personal Record</span>
       </div>
       
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         Achieved on {prDate}
       </div>
       
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Weight:</span>
-          <span className="font-medium text-amber-600">
+          <span className="text-sm text-muted-foreground">Weight:</span>
+          <span className="font-medium text-warning">
             {personalBest.weight}{intensityUnit.abbreviation}
           </span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Reps:</span>
+          <span className="text-sm text-muted-foreground">Reps:</span>
           <span className="font-medium">{personalBest.reps}</span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Volume:</span>
+          <span className="text-sm text-muted-foreground">Volume:</span>
           <span className="font-medium">
             {personalBest.volume}{intensityUnit.abbreviation}
           </span>
@@ -43,9 +43,9 @@ export const PersonalBestInfo: React.FC<PersonalBestInfoProps> = ({ personalBest
       </div>
 
       <div className="pt-2 border-t">
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-muted-foreground">
           Your personal best is{' '}
-          <span className="font-semibold text-amber-600">
+          <span className="font-semibold text-warning">
             {personalBest.weight}{intensityUnit.abbreviation}
           </span>{' '}
           for <span className="font-semibold">{personalBest.reps} reps</span>

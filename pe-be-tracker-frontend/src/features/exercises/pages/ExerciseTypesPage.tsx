@@ -65,7 +65,7 @@ const ExerciseTypesPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+              <Search className="h-5 w-5 text-muted-foreground" />
             </div>
             <Input
               type="text"
@@ -117,7 +117,7 @@ const ExerciseTypesPage: React.FC = () => {
           {/* End of results indicator */}
           {!hasMore && filteredExerciseTypes.length > 0 && (
             <div className="text-center py-8">
-              <span className="text-gray-500 text-sm">No more exercise types to load</span>
+              <span className="text-muted-foreground text-sm">No more exercise types to load</span>
             </div>
           )}
         </>
@@ -126,7 +126,7 @@ const ExerciseTypesPage: React.FC = () => {
       {/* Empty State */}
       {!isLoading && filteredExerciseTypes.length === 0 && (
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">
+          <div className="text-muted-foreground mb-4">
             {searchTerm ? 'No exercise types found matching your search.' : 'No exercise types available.'}
           </div>
           {searchTerm && (

@@ -42,7 +42,7 @@ export const ErrorFallback: React.FC<CustomFallbackProps> = ({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-base-200">
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="p-4">
         <HomeLogo />
       </div>
