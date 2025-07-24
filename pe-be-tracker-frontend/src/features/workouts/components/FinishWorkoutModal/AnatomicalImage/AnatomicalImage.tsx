@@ -35,18 +35,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
 
       const maxSets = muscleGroupSummary.reduce((max, group) => Math.max(max, group.setCount), 0);
 
-      // Apply default color to all known muscle groups first
-      Object.values(MUSCLE_GROUP_MAPPING).flat().forEach(id => {
-        const musclePath = svgElement.getElementById ? 
-          svgElement.getElementById(id) : 
-          svgElement.querySelector(`#${id}`);
-        if (musclePath) {
-          musclePath.removeAttribute('class'); // Ensure no CSS class interferes
-          musclePath.setAttribute('fill', DEFAULT_MUSCLE_COLOR);
-        }
-      });
-
-      // Apply intensity-based color to worked-out muscle groups
+      // Apply intensity-based color only to worked-out muscle groups
       muscleGroupSummary.forEach(group => {
         const intensity = maxSets > 0 ? group.setCount / maxSets : 0;
         const color = getMuscleGroupColor(intensity);
@@ -58,8 +47,8 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
               svgElement.getElementById(id) : 
               svgElement.querySelector(`#${id}`);
             if (musclePath) {
-              musclePath.removeAttribute('class'); // Ensure no CSS class interferes
-              musclePath.setAttribute('fill', color);
+              // Use inline style to override CSS class fill
+              (musclePath as any).style.fill = color;
             }
           });
         }
