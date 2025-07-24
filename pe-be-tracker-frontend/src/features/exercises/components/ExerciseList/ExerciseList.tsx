@@ -13,7 +13,7 @@ interface ExerciseListProps {
 const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId, onExerciseUpdate }) => {
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-semibold text-foreground mb-4>
+      <h2 className="text-xl font-semibold text-foreground mb-4">
         Exercises: {exercises.length}
       </h2>
       
