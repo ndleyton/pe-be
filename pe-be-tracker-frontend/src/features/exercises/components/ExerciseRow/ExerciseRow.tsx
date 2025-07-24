@@ -58,6 +58,15 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   // Helper function to get set type
   const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
 
+  // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
+  const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
+    return sets.map(set => ({
+      ...set,
+      id: String(set.id),
+      exercise_id: String(set.exercise_id)
+    }));
+  };
+
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
     setExerciseSets(updatedSets);
@@ -67,7 +76,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
   };
@@ -89,7 +98,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
 
@@ -113,7 +122,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
-          onExerciseUpdate(exercise);
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
         }
         
         // TODO: Add toast notification when available
@@ -154,7 +166,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
 
@@ -174,7 +186,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
-          onExerciseUpdate(exercise);
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
         }
         
         // TODO: Add toast notification when available
@@ -213,7 +228,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
 
@@ -224,7 +239,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           intensity: lastSet?.intensity || 0,
           intensity_unit_id: currentIntensityUnit.id,
           exercise_id: exerciseId,
-          rest_time_seconds: null,
+          rest_time_seconds: 0, // TODO: Add rest time to the API
           done: false
         };
         
@@ -248,7 +263,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         // Rollback: Remove the optimistic set
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
-          onExerciseUpdate(exercise);
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
         }
         
         // TODO: Add toast notification when available
