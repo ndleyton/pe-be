@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Exercise, ExerciseSet, IntensityUnit } from '@/features/exercises/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
+import { useAuthStore } from '@/stores';
 import { AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
@@ -33,6 +35,9 @@ interface NotesModalState {
 }
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
+  const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
   const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
@@ -67,7 +72,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     }
   };
 
-  const updateSet = (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
+  const updateSet = async (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
+    // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
       if (set.id === setId) {
         return {
@@ -86,6 +92,33 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         exercise_sets: updatedSets
       });
     }
+
+    if (isAuthenticated) {
+      try {
+        // Call API to persist the change
+        const updateData: UpdateExerciseSetData = {};
+        if (field === 'weight') {
+          updateData.intensity = value;
+        } else {
+          updateData.reps = value;
+        }
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to update exercise set:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate(exercise);
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
   };
 
   const incrementReps = (exerciseId: string | number, setId: string | number) => {
@@ -100,7 +133,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     updateSet(exerciseId, setId, 'reps', newReps);
   };
 
-  const toggleSetCompletion = (exerciseId: string | number, setId: string | number) => {
+  const toggleSetCompletion = async (exerciseId: string | number, setId: string | number) => {
+    // Find the current set to get its completion status
+    const currentSet = exerciseSets.find(set => set.id === setId);
+    if (!currentSet) return;
+    
+    // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
       if (set.id === setId) {
         return {
@@ -119,6 +157,29 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         exercise_sets: updatedSets
       });
     }
+
+    if (isAuthenticated) {
+      try {
+        const updateData: UpdateExerciseSetData = {
+          done: !currentSet.done
+        };
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to toggle exercise set completion:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate(exercise);
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
   };
 
   const updateSetNotes = (exerciseId: string | number, setId: string | number, notes: string) => {
@@ -127,11 +188,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     console.log('Set notes updated:', { setId, notes });
   };
 
-  const addSet = (exerciseId: string | number) => {
+  const addSet = async (exerciseId: string | number) => {
     const lastSet = exerciseSets[exerciseSets.length - 1];
     
+    // Create optimistic new set with temporary ID
+    const tempId = `temp-${Date.now()}`;
     const newExerciseSet: ExerciseSet = {
-      id: Date.now(), // Temporary ID
+      id: tempId,
       reps: lastSet?.reps || 0,
       intensity: lastSet?.intensity || 0,
       intensity_unit_id: currentIntensityUnit.id,
@@ -142,6 +205,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
       updated_at: new Date().toISOString()
     };
     
+    // Optimistic update: Add new set to local state immediately
     const updatedSets = [...exerciseSets, newExerciseSet];
     setExerciseSets(updatedSets);
     
@@ -151,6 +215,44 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         ...exercise,
         exercise_sets: updatedSets
       });
+    }
+
+    if (isAuthenticated) {
+      try {
+        const newSetData: CreateExerciseSetData = {
+          reps: lastSet?.reps || 0,
+          intensity: lastSet?.intensity || 0,
+          intensity_unit_id: currentIntensityUnit.id,
+          exercise_id: exerciseId,
+          rest_time_seconds: null,
+          done: false
+        };
+        
+        const createdSet = await createExerciseSet(newSetData);
+        
+        // Replace the temporary set with the real one from the API
+        const finalUpdatedSets = updatedSets.map(set => 
+          set.id === tempId ? createdSet : set
+        );
+        setExerciseSets(finalUpdatedSets);
+        
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: finalUpdatedSets
+          });
+        }
+      } catch (error) {
+        console.error('Failed to create exercise set:', error);
+        
+        // Rollback: Remove the optimistic set
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate(exercise);
+        }
+        
+        // TODO: Add toast notification when available
+      }
     }
   };
 
