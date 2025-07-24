@@ -200,7 +200,7 @@ const WorkoutPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
     } else {
       // For guest mode, update the local exercise data
-      guestActions.updateExercise(updatedExercise.id, {
+      guestActions.updateExercise(String(updatedExercise.id), {
         exercise_sets: updatedExercise.exercise_sets
       });
     }
