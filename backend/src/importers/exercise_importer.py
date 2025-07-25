@@ -299,7 +299,9 @@ async def extract_and_transform_exercises():
                     "name": row["name"],
                     "description": description,
                     "images_url": json.dumps(row.get("images", [])),
-                    "instructions": "\n".join(row.get("instructions", []) or []) if row.get("instructions") else None,
+                    "instructions": "\n".join(row.get("instructions", []) or [])
+                    if row.get("instructions")
+                    else None,
                     "equipment": row.get("equipment"),
                     "category": row.get("category"),
                     "created_at": row["created_at"].isoformat()
