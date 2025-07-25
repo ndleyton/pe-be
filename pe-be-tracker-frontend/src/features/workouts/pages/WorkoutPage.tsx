@@ -87,7 +87,7 @@ const WorkoutPage: React.FC = () => {
           times_used: guestExercise.exercise_type.times_used,
           // Ensure muscles and muscle_groups are passed through
           muscles: guestExercise.exercise_type.muscles,
-          muscle_groups: guestExercise.exercise_type.muscle_groups,
+          muscle_groups: guestExercise.exercise_type.muscle_groups || [],
           equipment: null,
           created_at: guestExercise.created_at,
           updated_at: guestExercise.updated_at,
