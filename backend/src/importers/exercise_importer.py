@@ -343,10 +343,6 @@ async def extract_and_transform_exercises():
                     validate_muscle_data(muscle_name)
                     # Create muscle data with proper group assignment
                     muscle_group = get_muscle_group_for_muscle(muscle_name)
-                    muscle_data = {
-                        "name": muscle_name,
-                        "group": muscle_group
-                    }
                     muscles.add((muscle_name, muscle_group))  # Store as tuple to preserve grouping
                 except ValidationError as e:
                     print(f"Skipping invalid muscle '{muscle_name}': {e}")
@@ -460,7 +456,6 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             )
 
         # Prepare deterministic default names to avoid relying on set → list order
-        default_group_name = data.get("default_muscle_group", "Imported")
         default_unit_name = data.get("default_intensity_unit")
 
         # Insert muscles with proper muscle group mapping
