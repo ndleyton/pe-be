@@ -89,6 +89,7 @@ const WorkoutPage: React.FC = () => {
           created_at: guestExercise.created_at,
           updated_at: guestExercise.updated_at,
           usage_count: guestExercise.exercise_type.times_used,
+          muscles: guestExercise.exercise_type.muscles || [],
         },
         exercise_sets: Array.isArray(guestExercise.exercise_sets) ? guestExercise.exercise_sets.map(guestSet => ({
           id: guestSet.id,
