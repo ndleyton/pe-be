@@ -37,17 +37,9 @@ const MyWorkoutsPage = () => {
   // Use guest data if not authenticated, server data if authenticated
   const workouts: Workout[] = React.useMemo(() => {
     if (isAuthenticated) {
-      // Ensure serverWorkouts is always an array
-      if (!Array.isArray(serverWorkouts)) {
-        console.warn('[DEBUG] serverWorkouts is not an array:', typeof serverWorkouts, serverWorkouts);
-      }
       return Array.isArray(serverWorkouts) ? serverWorkouts : [];
     } else {
-      // Ensure guestData.workouts is always an array
       const guestWorkouts = Array.isArray(guestData?.workouts) ? guestData.workouts : [];
-      if (!Array.isArray(guestData?.workouts)) {
-        console.warn('[DEBUG] guestData.workouts is not an array:', typeof guestData?.workouts, guestData?.workouts);
-      }
       return guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
