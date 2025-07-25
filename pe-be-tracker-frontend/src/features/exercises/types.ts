@@ -4,6 +4,8 @@ export interface ExerciseType {
   description: string | null;
   muscle_groups: string[];
   equipment: string | null;
+  instructions: string | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
   usage_count: number;
