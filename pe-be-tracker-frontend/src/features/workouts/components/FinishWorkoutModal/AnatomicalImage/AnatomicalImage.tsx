@@ -48,7 +48,7 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
               svgElement.querySelector(`#${id}`);
             if (musclePath) {
               // Use inline style to override CSS class fill
-              (musclePath as any).style.fill = color;
+                            musclePath.setAttribute('fill', color);
             }
           });
         }
