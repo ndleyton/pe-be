@@ -39,9 +39,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
 
   const handleDownload = async () => {
-    console.log('handleDownload called');
     if (downloadAreaRef.current) {
-      console.log('downloadAreaRef.current exists', downloadAreaRef.current);
       try {
         const canvas = await html2canvas(downloadAreaRef.current, {
           useCORS: true, // Important for handling images loaded from different origins
@@ -49,9 +47,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
           backgroundColor: '#ffffff', // Use solid white background
           scale: 2, // Higher resolution for better quality
         });
-        console.log('html2canvas generated canvas', canvas);
         const image = canvas.toDataURL('image/png');
-        console.log('Image Data URL generated', image.substring(0, 50) + '...');
 
         const link = document.createElement('a');
         link.href = image;
@@ -59,13 +55,10 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        console.log('Download triggered');
       } catch (error) {
         console.error('Error downloading workout summary:', error);
         alert('Failed to download workout summary.');
       }
-    } else {
-      console.log('downloadAreaRef.current is null');
     }
   };
 
