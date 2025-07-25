@@ -100,8 +100,8 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
           name: recipeName,
           workout_type_id: 1, // Default workout type - could be made configurable
           exercise_templates: exercises.map(exercise => {
-            console.log('Processing exercise:', exercise.exercise_type.name, 'with', exercise.exercise_sets.length, 'sets');
-            console.log('Exercise sets:', exercise.exercise_sets);
+            // Removed debug log: Processing exercise details
+            // Removed debug log: Exercise sets
             
             return {
               exercise_type_id: exercise.exercise_type_id as number,
