@@ -176,6 +176,96 @@ def validate_intensity_unit_data(unit_name: str) -> None:
         )
 
 
+# Mapping from individual muscle names to anatomical muscle groups
+# This ensures muscles are properly categorized for anatomical visualization
+MUSCLE_NAME_TO_GROUP = {
+    # Arms
+    'biceps': 'Arms',
+    'triceps': 'Arms',
+    'biceps brachii': 'Arms',
+    'triceps brachii': 'Arms',
+    
+    # Forearms  
+    'forearms': 'Forearms',
+    'wrist flexors': 'Forearms',
+    'wrist extensors': 'Forearms',
+    
+    # Chest
+    'chest': 'Chest',
+    'pectorals': 'Chest',
+    'pectoralis major': 'Chest',
+    'pectoralis minor': 'Chest',
+    
+    # Back
+    'lats': 'Back',
+    'latissimus dorsi': 'Back',
+    'traps': 'Back',
+    'trapezius': 'Back',
+    'rhomboids': 'Back',
+    'lower back': 'Back',
+    'middle back': 'Back',
+    'erector spinae': 'Back',
+    'rear deltoids': 'Back',
+    
+    # Shoulders
+    'shoulders': 'Shoulders',
+    'deltoids': 'Shoulders',
+    'anterior deltoids': 'Shoulders',
+    'lateral deltoids': 'Shoulders',
+    'posterior deltoids': 'Shoulders',
+    
+    # Core
+    'abdominals': 'Core',
+    'abs': 'Core',
+    'core': 'Core',
+    'obliques': 'Core',
+    'rectus abdominis': 'Core',
+    'transverse abdominis': 'Core',
+    
+    # Legs (quadriceps, hamstrings, calves, adductors, abductors)
+    'quadriceps': 'Legs',
+    'hamstrings': 'Legs', 
+    'calves': 'Legs',
+    'adductors': 'Legs',
+    'abductors': 'Legs',
+    'tibialis anterior': 'Legs',
+    'gastrocnemius': 'Legs',
+    'soleus': 'Legs',
+    'vastus lateralis': 'Legs',
+    'vastus medialis': 'Legs',
+    'vastus intermedius': 'Legs',
+    'rectus femoris': 'Legs',
+    'biceps femoris': 'Legs',
+    'semitendinosus': 'Legs',
+    'semimembranosus': 'Legs',
+    
+    # Glutes
+    'glutes': 'Glutes',
+    'gluteus maximus': 'Glutes',
+    'gluteus medius': 'Glutes',
+    'gluteus minimus': 'Glutes',
+    
+    # Neck
+    'neck': 'Neck',
+    'sternocleidomastoid': 'Neck',
+}
+
+def get_muscle_group_for_muscle(muscle_name: str) -> str:
+    """Get the appropriate muscle group for a given muscle name"""
+    muscle_lower = muscle_name.lower().strip()
+    
+    # Try exact match first
+    if muscle_lower in MUSCLE_NAME_TO_GROUP:
+        return MUSCLE_NAME_TO_GROUP[muscle_lower]
+    
+    # Try partial matches for common variations
+    for key, group in MUSCLE_NAME_TO_GROUP.items():
+        if key in muscle_lower or muscle_lower in key:
+            return group
+    
+    # Fallback to "Imported" for unknown muscles
+    return "Imported"
+
 async def extract_and_transform_exercises():
     conn = await get_import_db_connection()
     try:
@@ -187,9 +277,14 @@ async def extract_and_transform_exercises():
         muscles = set()
         exercise_muscles = []
 
-        # Default names for grouping and units
+        # Add all known muscle groups
+        for group in set(MUSCLE_NAME_TO_GROUP.values()):
+            muscle_groups.add(group)
+        
+        # Add fallback muscle group for unknown muscles
         default_muscle_group = "Imported"
         muscle_groups.add(default_muscle_group)
+        
         # Optional default intensity unit can be None (user-defined later)
         default_unit: Optional[str] = None
 
@@ -246,9 +341,13 @@ async def extract_and_transform_exercises():
             for muscle_name in all_muscles:
                 try:
                     validate_muscle_data(muscle_name)
-                    muscles.add(muscle_name)
-                    # We'll associate all muscles with the default group for now
-                    # In a real scenario, you might have a mapping
+                    # Create muscle data with proper group assignment
+                    muscle_group = get_muscle_group_for_muscle(muscle_name)
+                    muscle_data = {
+                        "name": muscle_name,
+                        "group": muscle_group
+                    }
+                    muscles.add((muscle_name, muscle_group))  # Store as tuple to preserve grouping
                 except ValidationError as e:
                     print(f"Skipping invalid muscle '{muscle_name}': {e}")
                     continue
@@ -288,11 +387,14 @@ async def extract_and_transform_exercises():
 
         # No database changes were made; nothing to commit.
 
+        # Convert muscles from set of tuples to list of dicts
+        muscles_list = [{"name": name, "group": group} for name, group in muscles]
+        
         return {
             "exercise_types": exercise_types,
             "intensity_units": list(intensity_units),
             "muscle_groups": list(muscle_groups),
-            "muscles": list(muscles),
+            "muscles": muscles_list,
             "exercise_muscles": exercise_muscles,
             # Deterministic defaults for later import phase
             "default_muscle_group": default_muscle_group,
@@ -361,23 +463,34 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         default_group_name = data.get("default_muscle_group", "Imported")
         default_unit_name = data.get("default_intensity_unit")
 
-        # Insert muscles
-        for muscle_name in data["muscles"]:
-            # Get muscle group ID (using the default group)
+        # Insert muscles with proper muscle group mapping
+        for muscle_data in data["muscles"]:
+            if isinstance(muscle_data, dict):
+                muscle_name = muscle_data["name"]
+                muscle_group_name = muscle_data["group"]
+            else:
+                # Fallback for backward compatibility
+                muscle_name = muscle_data
+                muscle_group_name = get_muscle_group_for_muscle(muscle_name)
+            
+            # Get muscle group ID
             group_id = await conn.fetchval(
-                "SELECT id FROM muscle_groups WHERE name = $1", default_group_name
+                "SELECT id FROM muscle_groups WHERE name = $1", muscle_group_name
             )
 
-            await conn.execute(
-                """
-                INSERT INTO muscles (name, muscle_group_id, created_at, updated_at) 
-                VALUES ($1, $2, $3, $3) 
-                ON CONFLICT (name) DO NOTHING
-            """,
-                muscle_name,
-                group_id,
-                now_ts,
-            )
+            if group_id:
+                await conn.execute(
+                    """
+                    INSERT INTO muscles (name, muscle_group_id, created_at, updated_at) 
+                    VALUES ($1, $2, $3, $3) 
+                    ON CONFLICT (name) DO NOTHING
+                """,
+                    muscle_name,
+                    group_id,
+                    now_ts,
+                )
+            else:
+                print(f"Warning: Could not find muscle group '{muscle_group_name}' for muscle '{muscle_name}'")
 
         # Insert exercise types
         for exercise_type in data["exercise_types"]:

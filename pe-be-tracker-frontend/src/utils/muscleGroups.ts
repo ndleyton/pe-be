@@ -17,6 +17,50 @@ export interface ExerciseTypeWithMuscles {
   muscles: Muscle[];
 }
 
+// Mapping from individual muscle names to anatomical muscle groups
+// This handles the imported muscle data that uses generic "Imported" muscle group
+const MUSCLE_NAME_TO_GROUP: Record<string, string> = {
+  // Arms
+  'biceps': 'Arms',
+  'triceps': 'Arms',
+  
+  // Forearms  
+  'forearms': 'Forearms',
+  
+  // Chest
+  'chest': 'Chest',
+  'pectoralis major': 'Chest',
+  'pectoralis minor': 'Chest',
+  
+  // Back
+  'lats': 'Back',
+  'latissimus dorsi': 'Back',
+  'traps': 'Back',
+  'trapezius': 'Back',
+  'rhomboids': 'Back',
+  'lower back': 'Back',
+  'middle back': 'Back',
+  
+  // Shoulders
+  'shoulders': 'Shoulders',
+  
+  // Core
+  'abdominals': 'Core',
+  
+  // Legs (quadriceps, hamstrings, calves, adductors, abductors)
+  'quadriceps': 'Legs',
+  'hamstrings': 'Legs', 
+  'calves': 'Legs',
+  'adductors': 'Legs',
+  'abductors': 'Legs',
+  
+  // Glutes
+  'glutes': 'Glutes',
+  
+  // Neck
+  'neck': 'Neck',
+};
+
 /**
  * Gets muscle groups for an exercise type using the real muscle data from the API
  */
@@ -25,10 +69,25 @@ export function getExerciseMuscleGroups(exerciseType: ExerciseTypeWithMuscles): 
     return ['General'];
   }
   
-  // Extract unique muscle group names
   const muscleGroupNames = new Set<string>();
+  
   exerciseType.muscles.forEach(muscle => {
-    muscleGroupNames.add(muscle.muscle_group.name);
+    // First try to use the muscle group name directly (for properly categorized muscles)
+    if (muscle.muscle_group.name !== 'Imported') {
+      muscleGroupNames.add(muscle.muscle_group.name);
+    } else {
+      // For imported muscles, map individual muscle names to anatomical groups
+      const muscleName = muscle.name.toLowerCase();
+      const anatomicalGroup = MUSCLE_NAME_TO_GROUP[muscleName];
+      
+      if (anatomicalGroup) {
+        muscleGroupNames.add(anatomicalGroup);
+      } else {
+        // Fallback: try to infer from muscle name
+        console.warn(`Unknown muscle name for anatomical mapping: ${muscle.name}`);
+        muscleGroupNames.add('General');
+      }
+    }
   });
   
   return Array.from(muscleGroupNames);

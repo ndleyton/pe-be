@@ -65,7 +65,17 @@ export interface RecipeSet {
 // Get exercises for a specific workout
 export const getExercisesInWorkout = async (workoutId: string): Promise<Exercise[]> => {
   const response = await api.get(`/workouts/${workoutId}/exercises`);
-  return response.data;
+  const exercises = response.data;
+
+  // For each exercise, fetch the full exercise type data
+  const exercisesWithFullType = await Promise.all(
+    exercises.map(async (exercise: Exercise) => {
+      const exerciseType = await getExerciseTypeById(exercise.exercise_type_id.toString());
+      return { ...exercise, exercise_type: exerciseType };
+    })
+  );
+
+  return exercisesWithFullType;
 };
 
 // Exercise Set API functions

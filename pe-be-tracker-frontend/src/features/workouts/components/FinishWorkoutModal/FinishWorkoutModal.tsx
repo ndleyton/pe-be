@@ -34,8 +34,10 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
   if (!isOpen) return null;
 
+  console.log('FinishWorkoutModal exercises:', JSON.stringify(exercises, null, 2));
   // Calculate muscle group summary
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
+  console.log('FinishWorkoutModal muscleGroupSummary:', muscleGroupSummary);
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
 
   const handleDownload = async () => {
