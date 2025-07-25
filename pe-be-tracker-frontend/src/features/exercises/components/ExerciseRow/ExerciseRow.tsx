@@ -374,8 +374,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     </DialogHeader>
                     <Textarea
                       placeholder="Add notes for this set..."
-                      value={""}
-                      onChange={(e) => updateSetNotes(exercise.id, set.id, e.target.value)}
+                      value={notes}
+                      onChange={(e) => {
+                        setNotes(e.target.value); // Update local state
+                        updateSetNotes(exercise.id, set.id, e.target.value); // Persist changes
+                      }}
                       className="min-h-[100px]"
                     />
                   </DialogContent>
