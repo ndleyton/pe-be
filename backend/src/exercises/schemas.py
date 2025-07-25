@@ -1,6 +1,6 @@
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, Any
 from datetime import datetime, timezone, date
-from pydantic import field_validator, BaseModel, Field, computed_field
+from pydantic import field_validator, BaseModel, Field, computed_field, model_validator
 import json
 from src.core.config import settings
 
@@ -107,6 +107,50 @@ class ExerciseTypeRead(BaseModel):
     images_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_muscles_from_relationship(cls, data: Any) -> Any:
+        """Extract muscles from exercise_muscles relationship"""
+        if isinstance(data, dict):
+            return data
+
+        # Handle SQLAlchemy model objects
+        if hasattr(data, "exercise_muscles") and hasattr(data, "__dict__"):
+            # Convert to dict first
+            result = {}
+            for key, value in data.__dict__.items():
+                if not key.startswith("_"):
+                    result[key] = value
+
+            # Extract muscles from exercise_muscles relationship
+            if data.exercise_muscles:
+                result["muscles"] = [
+                    {
+                        "id": em.muscle.id,
+                        "name": em.muscle.name,
+                        "muscle_group_id": em.muscle.muscle_group_id,
+                        "muscle_group": {
+                            "id": em.muscle.muscle_group.id,
+                            "name": em.muscle.muscle_group.name,
+                            "created_at": em.muscle.muscle_group.created_at,
+                            "updated_at": em.muscle.muscle_group.updated_at,
+                        },
+                        "created_at": em.muscle.created_at,
+                        "updated_at": em.muscle.updated_at,
+                    }
+                    for em in data.exercise_muscles
+                    if hasattr(em, "muscle")
+                    and em.muscle
+                    and hasattr(em.muscle, "muscle_group")
+                    and em.muscle.muscle_group
+                ]
+            else:
+                result["muscles"] = []
+
+            return result
+
+        return data
 
     @computed_field
     @property

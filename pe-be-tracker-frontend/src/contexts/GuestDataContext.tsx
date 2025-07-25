@@ -10,6 +10,14 @@ export interface GuestExerciseType {
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
+  equipment?: string | null;
+  instructions?: string | null;
+  category?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  usage_count?: number;
+  muscles?: Array<{ id: number; name: string }>;
+  muscle_groups?: string[];
 }
 
 export interface GuestIntensityUnit {

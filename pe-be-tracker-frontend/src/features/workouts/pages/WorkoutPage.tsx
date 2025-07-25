@@ -66,6 +66,7 @@ const WorkoutPage: React.FC = () => {
   // Use guest data if not authenticated, server data if authenticated
   const exercises: Exercise[] = React.useMemo(() => {
     if (isAuthenticated) {
+      console.log('Authenticated user: serverExercises', serverExercises);
       return Array.isArray(serverExercises) ? serverExercises : [];
     } else {
       const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -84,12 +85,15 @@ const WorkoutPage: React.FC = () => {
           description: guestExercise.exercise_type.description,
           default_intensity_unit: guestExercise.exercise_type.default_intensity_unit,
           times_used: guestExercise.exercise_type.times_used,
-          muscle_groups: [],
-          equipment: null,
-          created_at: guestExercise.created_at,
-          updated_at: guestExercise.updated_at,
-          usage_count: guestExercise.exercise_type.times_used,
+          equipment: guestExercise.exercise_type.equipment || null,
+          instructions: guestExercise.exercise_type.instructions || null,
+          category: guestExercise.exercise_type.category || null,
+          created_at: guestExercise.exercise_type.created_at || guestExercise.created_at,
+          updated_at: guestExercise.exercise_type.updated_at || guestExercise.updated_at,
+          usage_count: guestExercise.exercise_type.usage_count || guestExercise.exercise_type.times_used,
+          // Ensure muscles and muscle_groups are passed through
           muscles: guestExercise.exercise_type.muscles || [],
+          muscle_groups: guestExercise.exercise_type.muscle_groups || [],
         },
         exercise_sets: Array.isArray(guestExercise.exercise_sets) ? guestExercise.exercise_sets.map(guestSet => ({
           id: guestSet.id,
