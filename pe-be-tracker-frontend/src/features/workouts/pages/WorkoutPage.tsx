@@ -86,13 +86,8 @@ const WorkoutPage: React.FC = () => {
           default_intensity_unit: guestExercise.exercise_type.default_intensity_unit,
           times_used: guestExercise.exercise_type.times_used,
           // Ensure muscles and muscle_groups are passed through
-          muscles: guestExercise.exercise_type.muscles,
-          muscle_groups: guestExercise.exercise_type.muscle_groups || [],
-          equipment: null,
-          created_at: guestExercise.created_at,
-          updated_at: guestExercise.updated_at,
-          usage_count: guestExercise.exercise_type.times_used,
           muscles: guestExercise.exercise_type.muscles || [],
+          muscle_groups: guestExercise.exercise_type.muscle_groups || [],
         },
         exercise_sets: Array.isArray(guestExercise.exercise_sets) ? guestExercise.exercise_sets.map(guestSet => ({
           id: guestSet.id,
