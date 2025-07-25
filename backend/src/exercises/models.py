@@ -30,6 +30,9 @@ class ExerciseType(Base):
     times_used = Column(Integer, default=0, nullable=False)
     external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
+    instructions = Column(Text, nullable=True)
+    equipment = Column(String, nullable=True)
+    category = Column(String, nullable=True)
 
     # Relationships
     exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
