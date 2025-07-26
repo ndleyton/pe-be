@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
@@ -9,6 +9,7 @@ import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrig
 import { MoreVertical, Timer, StickyNote, Plus, Minus, Check } from 'lucide-react';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';
+import { useDebounce } from '@/shared/hooks';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -41,7 +42,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
   const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
+  const debouncedExerciseNotes = useDebounce(exerciseNotes, 1000); // 1 second delay
   const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
+  const [setNotesValue, setSetNotesValue] = useState<string>('');
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -57,6 +60,16 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   
   // Helper function to get set type
   const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
+
+  // Effect to update parent when exercise notes change (debounced)
+  useEffect(() => {
+    if (debouncedExerciseNotes !== exercise.notes && onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        notes: debouncedExerciseNotes
+      });
+    }
+  }, [debouncedExerciseNotes, exercise, onExerciseUpdate]);
 
   // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
   const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
@@ -197,10 +210,52 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     }
   };
 
-  const updateSetNotes = (exerciseId: string | number, setId: string | number, notes: string) => {
-    // For now, just store in local state since notes aren't part of ExerciseSet API
-    // Could be extended to update a notes field if added to the API
-    console.log('Set notes updated:', { setId, notes });
+  const updateSetNotes = async (exerciseId: string | number, setId: string | number, notes: string) => {
+    // Optimistic update: Update local state immediately
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          notes: notes
+        };
+      }
+      return set;
+    });
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
+      });
+    }
+
+    if (isAuthenticated) {
+      try {
+        const updateData: UpdateExerciseSetData = {
+          notes: notes
+        };
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to update exercise set notes:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
   };
 
   const addSet = async (exerciseId: string | number) => {
@@ -216,6 +271,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
       exercise_id: exerciseId,
       rest_time_seconds: null,
       done: false,
+      notes: null,
+      type: exerciseSets.length === 0 ? 'warmup' : 'working',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -240,7 +297,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           intensity_unit_id: currentIntensityUnit.id,
           exercise_id: exerciseId,
           rest_time_seconds: 0, // TODO: Add rest time to the API
-          done: false
+          done: false,
+          notes: null,
+          type: exerciseSets.length === 0 ? 'warmup' : 'working'
         };
         
         const createdSet = await createExerciseSet(newSetData);
@@ -363,7 +422,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={() => setNotesModal({ exerciseId: exercise.id, setId: set.id })}
+                      onClick={() => {
+                        setNotesModal({ exerciseId: exercise.id, setId: set.id });
+                        setSetNotesValue(set.notes || '');
+                      }}
                     >
                       <StickyNote className="w-3 h-3" />
                     </Button>
@@ -374,10 +436,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     </DialogHeader>
                     <Textarea
                       placeholder="Add notes for this set..."
-                      value={notes}
+                      value={setNotesValue}
                       onChange={(e) => {
-                        setNotes(e.target.value); // Update local state
-                        updateSetNotes(exercise.id, set.id, e.target.value); // Persist changes
+                        setSetNotesValue(e.target.value);
+                        updateSetNotes(exercise.id, set.id, e.target.value);
                       }}
                       className="min-h-[100px]"
                     />
