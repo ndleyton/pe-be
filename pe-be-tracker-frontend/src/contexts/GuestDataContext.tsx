@@ -156,33 +156,585 @@ const getCurrentTimestamp = getCurrentUTCTimestamp;
 const getInitialGuestData = (): GuestData => ({
   workouts: [],
   exerciseTypes: [
+    // Most Popular Compound Movements
     {
-      id: generateId(),
+      id: '105',
+      name: 'Barbell Squat',
+      description: 'Lower body compound exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 7, name: 'Hamstrings' }, { id: 23, name: 'Glutes' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '88',
+      name: 'Barbell Deadlift',
+      description: 'Full body strength exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 7, name: 'Hamstrings' }, { id: 23, name: 'Glutes' }, { id: 24, name: 'Lower Back' }, { id: 10, name: 'Traps' }],
+      muscle_groups: ['Legs', 'Back'],
+    },
+    {
+      id: '84',
+      name: 'Barbell Bench Press - Medium Grip',
+      description: 'Upper body pressing exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 1, name: 'Pectoralis Major' }, { id: 13, name: 'Triceps' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Arms', 'Shoulders'],
+    },
+    {
+      id: '600',
+      name: 'Pullups',
+      description: 'Upper body pulling exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Pull-up bar',
+      category: 'Strength',
+      muscles: [{ id: 19, name: 'Lats' }, { id: 16, name: 'Biceps' }, { id: 14, name: 'Middle Back' }],
+      muscle_groups: ['Back', 'Arms'],
+    },
+    {
+      id: '6',
       name: 'Push-ups',
       description: 'Upper body bodyweight exercise',
       default_intensity_unit: 1, // bodyweight
       times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Bodyweight',
+      muscles: [{ id: 9, name: 'Chest' }, { id: 13, name: 'Triceps' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Arms', 'Shoulders'],
+    },
+    
+    // Upper Body Push
+    {
+      id: '100',
+      name: 'Barbell Shoulder Press',
+      description: 'Standing shoulder press',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 15, name: 'Shoulders' }, { id: 13, name: 'Triceps' }, { id: 9, name: 'Chest' }],
+      muscle_groups: ['Shoulders', 'Arms', 'Chest'],
     },
     {
-      id: generateId(),
-      name: 'Squats',
-      description: 'Lower body bodyweight exercise',
+      id: '262',
+      name: 'Dumbbell Bench Press',
+      description: 'Chest press with dumbbells',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Strength',
+      muscles: [{ id: 9, name: 'Chest' }, { id: 13, name: 'Triceps' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Arms', 'Shoulders'],
+    },
+    {
+      id: '94',
+      name: 'Barbell Incline Bench Press - Medium Grip',
+      description: 'Upper chest focus bench press',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 9, name: 'Chest' }, { id: 13, name: 'Triceps' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Arms', 'Shoulders'],
+    },
+    {
+      id: '577',
+      name: 'Parallel Bar Dip',
+      description: 'Bodyweight tricep and chest exercise',
       default_intensity_unit: 1, // bodyweight
       times_used: 0,
+      equipment: 'Parallel bars',
+      category: 'Bodyweight',
+      muscles: [{ id: 13, name: 'Triceps' }, { id: 9, name: 'Chest' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Arms', 'Chest', 'Shoulders'],
+    },
+    
+    // Upper Body Pull
+    {
+      id: '121',
+      name: 'Bent Over Barbell Row',
+      description: 'Bent over rowing exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 19, name: 'Lats' }, { id: 14, name: 'Middle Back' }, { id: 16, name: 'Biceps' }],
+      muscle_groups: ['Back', 'Arms'],
     },
     {
       id: generateId(),
-      name: 'Bench Press',
-      description: 'Upper body strength exercise',
+      name: 'T-Bar Rows',
+      description: 'T-bar rowing exercise',
       default_intensity_unit: 2, // kg
       times_used: 0,
+      equipment: 'T-bar',
+      category: 'Strength',
+      muscles: [{ id: 19, name: 'Lats' }, { id: 14, name: 'Middle Back' }, { id: 16, name: 'Biceps' }],
+      muscle_groups: ['Back', 'Arms'],
+    },
+    {
+      id: '897',
+      name: 'Wide-Grip Lat Pulldown',
+      description: 'Cable lat pulldown',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Cable machine',
+      category: 'Strength',
+      muscles: [{ id: 19, name: 'Lats' }, { id: 16, name: 'Biceps' }, { id: 14, name: 'Middle Back' }],
+      muscle_groups: ['Back', 'Arms'],
+    },
+    {
+      id: '200',
+      name: 'Chin-Up',
+      description: 'Underhand grip pull-ups',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Pull-up bar',
+      category: 'Bodyweight',
+      muscles: [{ id: 16, name: 'Biceps' }, { id: 19, name: 'Lats' }, { id: 14, name: 'Middle Back' }],
+      muscle_groups: ['Arms', 'Back'],
+    },
+    
+    // Leg Exercises
+    {
+      id: '645',
+      name: 'Romanian Deadlift',
+      description: 'Hip hinge deadlift variation',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 7, name: 'Hamstrings' }, { id: 23, name: 'Glutes' }, { id: 24, name: 'Lower Back' }],
+      muscle_groups: ['Legs', 'Back'],
+    },
+    {
+      id: '775',
+      name: 'Split Squats',
+      description: 'Single leg squat variation',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Strength',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '455',
+      name: 'Leg Press',
+      description: 'Machine leg press',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Leg press machine',
+      category: 'Strength',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '271',
+      name: 'Dumbbell Lunges',
+      description: 'Forward stepping leg exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Strength',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '686',
+      name: 'Seated Leg Curl',
+      description: 'Hamstring isolation exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Machine',
+      category: 'Isolation',
+      muscles: [{ id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '453',
+      name: 'Leg Extensions',
+      description: 'Quadriceps isolation exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Machine',
+      category: 'Isolation',
+      muscles: [{ id: 6, name: 'Quadriceps' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '177',
+      name: 'Calf Press',
+      description: 'Standing calf exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Machine or bodyweight',
+      category: 'Isolation',
+      muscles: [{ id: 11, name: 'Calves' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: '93',
+      name: 'Barbell Hip Thrust',
+      description: 'Glute focused exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    
+    // Arm Exercises
+    {
+      id: '85',
+      name: 'Barbell Curl',
+      description: 'Bicep isolation exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Isolation',
+      muscles: [{ id: 16, name: 'Biceps' }, { id: 17, name: 'Forearms' }],
+      muscle_groups: ['Arms'],
+    },
+    {
+      id: '52',
+      name: 'Alternate Incline Dumbbell Curl',
+      description: 'Dumbbell bicep curls',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 16, name: 'Biceps' }, { id: 17, name: 'Forearms' }],
+      muscle_groups: ['Arms'],
+    },
+    {
+      id: '354',
+      name: 'Hammer Curls',
+      description: 'Neutral grip dumbbell curls',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 16, name: 'Biceps' }, { id: 17, name: 'Forearms' }],
+      muscle_groups: ['Arms'],
     },
     {
       id: generateId(),
-      name: 'Deadlift',
-      description: 'Full body strength exercise',
+      name: 'Close Grip Bench Press',
+      description: 'Tricep focused bench press',
       default_intensity_unit: 2, // kg
       times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 13, name: 'Triceps' }, { id: 9, name: 'Chest' }],
+      muscle_groups: ['Arms', 'Chest'],
+    },
+    {
+      id: '798',
+      name: 'Standing Dumbbell Triceps Extension',
+      description: 'Overhead tricep exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 13, name: 'Triceps' }],
+      muscle_groups: ['Arms'],
+    },
+    {
+      id: generateId(),
+      name: 'Cable Tricep Pushdowns',
+      description: 'Cable tricep isolation',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Cable machine',
+      category: 'Isolation',
+      muscles: [{ id: 13, name: 'Triceps' }],
+      muscle_groups: ['Arms'],
+    },
+    
+    // Shoulder Exercises
+    {
+      id: '707',
+      name: 'Side Lateral Raise',
+      description: 'Side shoulder raise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Shoulders'],
+    },
+    {
+      id: '334',
+      name: 'Front Dumbbell Raise',
+      description: 'Front shoulder raise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Shoulders'],
+    },
+    {
+      id: '630',
+      name: 'Reverse Flyes',
+      description: 'Rear deltoid isolation',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 15, name: 'Shoulders' }, { id: 14, name: 'Middle Back' }],
+      muscle_groups: ['Shoulders', 'Back'],
+    },
+    {
+      id: generateId(),
+      name: 'Upright Rows',
+      description: 'Vertical pulling exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Barbell',
+      category: 'Strength',
+      muscles: [{ id: 15, name: 'Shoulders' }, { id: 10, name: 'Traps' }],
+      muscle_groups: ['Shoulders', 'Back'],
+    },
+    {
+      id: '286',
+      name: 'Dumbbell Shrug',
+      description: 'Trapezius exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Isolation',
+      muscles: [{ id: 10, name: 'Traps' }, { id: 22, name: 'Neck' }],
+      muscle_groups: ['Back'],
+    },
+    
+    // Core Exercises
+    {
+      id: '581',
+      name: 'Plank',
+      description: 'Isometric core exercise',
+      default_intensity_unit: 4, // time
+      times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Core',
+      muscles: [{ id: 21, name: 'Abdominals' }, { id: 24, name: 'Lower Back' }],
+      muscle_groups: ['Core'],
+    },
+    {
+      id: '229',
+      name: 'Crunches',
+      description: 'Basic abdominal exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Core',
+      muscles: [{ id: 21, name: 'Abdominals' }],
+      muscle_groups: ['Core'],
+    },
+    {
+      id: '655',
+      name: 'Russian Twist',
+      description: 'Rotational core exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Core',
+      muscles: [{ id: 21, name: 'Abdominals' }],
+      muscle_groups: ['Core'],
+    },
+    {
+      id: generateId(),
+      name: 'Mountain Climbers',
+      description: 'Dynamic core and cardio exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Cardio',
+      muscles: [{ id: 21, name: 'Abdominals' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Core', 'Shoulders'],
+    },
+    {
+      id: generateId(),
+      name: 'Hanging Leg Raises',
+      description: 'Advanced core exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Pull-up bar',
+      category: 'Core',
+      muscles: [{ id: 21, name: 'Abdominals' }, { id: 17, name: 'Forearms' }],
+      muscle_groups: ['Core', 'Arms'],
+    },
+    {
+      id: '43',
+      name: 'Ab Roller',
+      description: 'Advanced core strengthening',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Ab wheel',
+      category: 'Core',
+      muscles: [{ id: 21, name: 'Abdominals' }, { id: 24, name: 'Lower Back' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Core', 'Shoulders'],
+    },
+    
+    // Cardio/Functional
+    {
+      id: generateId(),
+      name: 'Burpees',
+      description: 'Full body conditioning exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Bodyweight',
+      category: 'Cardio',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 9, name: 'Chest' }, { id: 21, name: 'Abdominals' }],
+      muscle_groups: ['Legs', 'Chest', 'Core'],
+    },
+    {
+      id: generateId(),
+      name: 'Kettlebell Swings',
+      description: 'Hip hinge power exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Kettlebell',
+      category: 'Functional',
+      muscles: [{ id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Legs', 'Shoulders'],
+    },
+    {
+      id: generateId(),
+      name: 'Thrusters',
+      description: 'Squat to press combination',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Functional',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 15, name: 'Shoulders' }, { id: 21, name: 'Abdominals' }],
+      muscle_groups: ['Legs', 'Shoulders', 'Core'],
+    },
+    {
+      id: generateId(),
+      name: 'Farmer\'s Walk',
+      description: 'Loaded carry exercise',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Dumbbells',
+      category: 'Functional',
+      muscles: [{ id: 17, name: 'Forearms' }, { id: 10, name: 'Traps' }, { id: 21, name: 'Abdominals' }],
+      muscle_groups: ['Arms', 'Back', 'Core'],
+    },
+    {
+      id: generateId(),
+      name: 'Box Jumps',
+      description: 'Plyometric leg exercise',
+      default_intensity_unit: 1, // bodyweight
+      times_used: 0,
+      equipment: 'Plyo box',
+      category: 'Plyometric',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 11, name: 'Calves' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: generateId(),
+      name: 'Battle Ropes',
+      description: 'High intensity conditioning',
+      default_intensity_unit: 4, // time
+      times_used: 0,
+      equipment: 'Battle ropes',
+      category: 'Cardio',
+      muscles: [{ id: 15, name: 'Shoulders' }, { id: 21, name: 'Abdominals' }, { id: 17, name: 'Forearms' }],
+      muscle_groups: ['Shoulders', 'Core', 'Arms'],
+    },
+    
+    // Machine/Cable Exercises
+    {
+      id: generateId(),
+      name: 'Cable Flyes',
+      description: 'Cable chest isolation',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Cable machine',
+      category: 'Isolation',
+      muscles: [{ id: 9, name: 'Chest' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Shoulders'],
+    },
+    {
+      id: generateId(),
+      name: 'Cable Rows',
+      description: 'Seated cable rowing',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Cable machine',
+      category: 'Strength',
+      muscles: [{ id: 19, name: 'Lats' }, { id: 14, name: 'Middle Back' }, { id: 16, name: 'Biceps' }],
+      muscle_groups: ['Back', 'Arms'],
+    },
+    {
+      id: generateId(),
+      name: 'Machine Shoulder Press',
+      description: 'Seated shoulder press machine',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Machine',
+      category: 'Strength',
+      muscles: [{ id: 15, name: 'Shoulders' }, { id: 13, name: 'Triceps' }],
+      muscle_groups: ['Shoulders', 'Arms'],
+    },
+    {
+      id: '4',
+      name: 'Machine Chest Press',
+      description: 'Machine chest press',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Machine',
+      category: 'Strength',
+      muscles: [{ id: 9, name: 'Chest' }, { id: 13, name: 'Triceps' }, { id: 15, name: 'Shoulders' }],
+      muscle_groups: ['Chest', 'Arms', 'Shoulders'],
+    },
+    {
+      id: generateId(),
+      name: 'Smith Machine Squats',
+      description: 'Guided barbell squats',
+      default_intensity_unit: 2, // kg
+      times_used: 0,
+      equipment: 'Smith machine',
+      category: 'Strength',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
+      muscle_groups: ['Legs'],
+    },
+    
+    // Stretching/Mobility
+    {
+      id: '39',
+      name: 'Walking',
+      description: 'Low intensity cardio',
+      default_intensity_unit: 4, // time
+      times_used: 0,
+      equipment: 'None',
+      category: 'Cardio',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 7, name: 'Hamstrings' }, { id: 11, name: 'Calves' }],
+      muscle_groups: ['Legs'],
+    },
+    {
+      id: generateId(),
+      name: 'Running',
+      description: 'Cardiovascular exercise',
+      default_intensity_unit: 4, // time
+      times_used: 0,
+      equipment: 'None',
+      category: 'Cardio',
+      muscles: [{ id: 6, name: 'Quadriceps' }, { id: 7, name: 'Hamstrings' }, { id: 11, name: 'Calves' }],
+      muscle_groups: ['Legs'],
     },
   ],
   workoutTypes: [
