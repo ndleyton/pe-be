@@ -36,7 +36,6 @@ const OAuthCallbackPage: React.FC = () => {
           throw new Error('No authorization code received');
         }
 
-        console.log('Processing OAuth callback with code:', code);
 
         // Exchange code for token
         const { data: tokenData } = await api.post('/auth/google/callback', {
@@ -49,7 +48,6 @@ const OAuthCallbackPage: React.FC = () => {
         // Check if there's guest data to sync
         if (workouts.length > 0) {
           setSyncStatus('syncing');
-          console.log('Syncing guest data to server...');
           
           const syncResult = await syncGuestDataToServer({ 
             workouts, 
@@ -65,7 +63,6 @@ const OAuthCallbackPage: React.FC = () => {
             throw new Error(syncResult.error || 'Failed to sync guest data');
           }
         } else {
-          console.log('No guest data to sync');
           setSyncStatus('complete');
         }
 
