@@ -193,6 +193,26 @@ const WorkoutPage: React.FC = () => {
     // For guest mode, the data is already updated via the context
   };
 
+  // Handle exercise updates (sets added/modified)
+  const handleExerciseUpdate = (updatedExercise: Exercise) => {
+    if (isAuthenticated) {
+      // For authenticated users, invalidate the query to refetch
+      queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+    } else {
+      // For guest mode, update the local exercise data
+      // Convert ExerciseSet[] to GuestExerciseSet[] by ensuring all IDs are strings
+      const guestExerciseSets = updatedExercise.exercise_sets.map(set => ({
+        ...set,
+        id: String(set.id),
+        exercise_id: String(set.exercise_id)
+      }));
+      
+      guestActions.updateExercise(String(updatedExercise.id), {
+        exercise_sets: guestExerciseSets
+      });
+    }
+  };
+
   const handleFinishWorkout = () => {
     console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
@@ -265,6 +285,7 @@ const WorkoutPage: React.FC = () => {
           isLoading={isAuthenticated && exercisesLoading} 
           error={isAuthenticated ? exercisesError : null} 
           workoutId={workoutId}
+          onExerciseUpdate={handleExerciseUpdate}
         />
       </div>
       
@@ -290,6 +311,7 @@ const WorkoutPage: React.FC = () => {
         onClose={() => setShowSaveRecipeModal(false)}
         workoutName={workoutName || 'My Recipe'}
         exercises={exercises}
+        workoutId={workoutId}
       />
     </>
   );

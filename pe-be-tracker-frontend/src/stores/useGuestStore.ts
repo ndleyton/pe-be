@@ -33,6 +33,8 @@ export interface GuestExerciseSet {
   exercise_id: string;
   rest_time_seconds: number | null;
   done: boolean;
+  notes?: string | null;
+  type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +76,8 @@ export interface GuestRecipeSet {
   intensity: number | null;
   intensity_unit_id: number;
   rest_time_seconds: number | null;
+  notes?: string | null;
+  type?: string | null;
 }
 
 export interface GuestRecipeExercise {
