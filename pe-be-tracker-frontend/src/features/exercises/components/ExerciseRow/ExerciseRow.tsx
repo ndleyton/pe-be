@@ -298,7 +298,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           exercise_id: exerciseId,
           rest_time_seconds: 0, // TODO: Add rest time to the API
           done: false,
-          notes: null,
+          notes: undefined,
           type: exerciseSets.length === 0 ? 'warmup' : 'working'
         };
         
