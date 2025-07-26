@@ -194,10 +194,18 @@ const WorkoutPage: React.FC = () => {
   };
 
   // Handle exercise updates (sets added/modified)
-  const handleExerciseUpdate = (updatedExercise: Exercise) => {
-    if (isAuthenticated) {
-      // For authenticated users, invalidate the query to refetch
+  const handleExerciseUpdate = (updatedExercise: Exercise, shouldInvalidateQuery: boolean = false) => {
+    if (isAuthenticated && shouldInvalidateQuery) {
+      // Only invalidate query when necessary (e.g., for structural changes, not notes)
       queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+    } else if (isAuthenticated) {
+      // For optimistic updates (like notes), just update the query data directly
+      queryClient.setQueryData(['exercises', workoutId], (oldData: Exercise[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(exercise => 
+          exercise.id === updatedExercise.id ? updatedExercise : exercise
+        );
+      });
     } else {
       // For guest mode, update the local exercise data
       // Convert ExerciseSet[] to GuestExerciseSet[] by ensuring all IDs are strings

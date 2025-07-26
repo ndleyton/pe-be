@@ -45,6 +45,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const debouncedExerciseNotes = useDebounce(exerciseNotes, 1000); // 1 second delay
   const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
   const [setNotesValue, setSetNotesValue] = useState<string>('');
+  const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -69,7 +70,18 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         notes: debouncedExerciseNotes
       });
     }
-  }, [debouncedExerciseNotes, exercise, onExerciseUpdate]);
+  }, [debouncedExerciseNotes, exercise.notes, onExerciseUpdate]);
+
+  // Effect to update set notes when debounced value changes
+  useEffect(() => {
+    if (notesModal && debouncedSetNotesValue !== undefined) {
+      // Find the current set to check if notes actually changed
+      const currentSet = exerciseSets.find(set => set.id === notesModal.setId);
+      if (currentSet && debouncedSetNotesValue !== (currentSet.notes || '')) {
+        updateSetNotes(notesModal.exerciseId, notesModal.setId, debouncedSetNotesValue);
+      }
+    }
+  }, [debouncedSetNotesValue, notesModal, exerciseSets]);
 
   // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
   const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
@@ -439,7 +451,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                       value={setNotesValue}
                       onChange={(e) => {
                         setSetNotesValue(e.target.value);
-                        updateSetNotes(exercise.id, set.id, e.target.value);
                       }}
                       className="min-h-[100px]"
                     />
