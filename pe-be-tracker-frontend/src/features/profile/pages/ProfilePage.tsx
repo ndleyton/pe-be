@@ -23,9 +23,9 @@ const ProfilePage: React.FC = () => {
   const guestWorkouts = useGuestStore((state) => state.workouts);
   
   const { data: serverWorkouts = [], isLoading, error } = useQuery({
-    queryKey: ['workouts'],
+    queryKey: ['profile-workouts'],
     queryFn: fetchWorkouts,
-    // Wait for auth to finish loading AND user to be authenticated
+    // Only fetch server workouts if user is authenticated
     enabled: !loading && isAuthenticated,
     retry: (failureCount, error: unknown) => {
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
@@ -35,9 +35,16 @@ const ProfilePage: React.FC = () => {
     },
   });
 
-  const workouts: Workout[] = isAuthenticated 
-    ? (Array.isArray(serverWorkouts) ? serverWorkouts : [])
-    : (Array.isArray(guestWorkouts) ? guestWorkouts.map(gw => ({
+  const workouts: Workout[] = React.useMemo(() => {
+    // Don't compute workouts until auth loading is complete
+    if (loading) return [];
+    
+    if (isAuthenticated) {
+      // For authenticated users, use server data (will be empty array until loaded)
+      return Array.isArray(serverWorkouts) ? serverWorkouts : [];
+    } else {
+      // For guest users, use guest data immediately
+      return Array.isArray(guestWorkouts) ? guestWorkouts.map(gw => ({
         id: gw.id,
         name: gw.name,
         notes: gw.notes,
@@ -45,7 +52,9 @@ const ProfilePage: React.FC = () => {
         end_time: gw.end_time,
         created_at: gw.created_at || new Date().toISOString(),
         updated_at: gw.updated_at || new Date().toISOString(),
-      })) : []);
+      })) : [];
+    }
+  }, [loading, isAuthenticated, serverWorkouts, guestWorkouts]);
 
   // defensive programming to ensure arrays are always arrays
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];

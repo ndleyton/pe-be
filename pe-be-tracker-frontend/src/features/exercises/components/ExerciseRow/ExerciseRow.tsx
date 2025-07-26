@@ -1,9 +1,22 @@
-import React, { useState } from 'react';
-import { Exercise, ExerciseSet } from '@/features/exercises/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
-import { ExerciseSetRow, AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { useAuthStore } from '@/stores';
+import { AddExerciseSetForm } from '@/features/exercise-sets/components';
+import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
+import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
+import { MoreVertical, Timer, StickyNote, Plus, Minus, Check } from 'lucide-react';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';
+import { useDebounce } from '@/shared/hooks';
+
+// Guest intensity unit type (simplified)
+interface GuestIntensityUnit {
+  id: number;
+  name: string;
+  abbreviation: string;
+}
 
 interface ExerciseRowProps {
   exercise: Exercise;
@@ -11,10 +24,61 @@ interface ExerciseRowProps {
   workoutId?: string;
 }
 
+
+interface RestTimer {
+  minutes: number;
+  seconds: number;
+}
+
+interface NotesModalState {
+  exerciseId: string | number;
+  setId: string | number;
+}
+
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
+  const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
+  const debouncedExerciseNotes = useDebounce(exerciseNotes, 1000); // 1 second delay
+  const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
+  const [setNotesValue, setSetNotesValue] = useState<string>('');
+  const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  
+  // Default intensity unit based on exercise type or fallback
+  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>(() => {
+    // Try to get from exercise type default, otherwise fallback to kg
+    return {
+      id: 2,
+      name: 'Kilograms',
+      abbreviation: 'kg'
+    };
+  });
+  
+  // Helper function to get set type
+  const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
+
+  // Effect to update parent when exercise notes change (debounced)
+  useEffect(() => {
+    if (debouncedExerciseNotes !== exercise.notes && onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        notes: debouncedExerciseNotes
+      });
+    }
+  }, [debouncedExerciseNotes, exercise, onExerciseUpdate]);
+
+  // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
+  const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
+    return sets.map(set => ({
+      ...set,
+      id: String(set.id),
+      exercise_id: String(set.exercise_id)
+    }));
+  };
 
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
@@ -25,140 +89,420 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
   };
 
-  const handleSetUpdate = (updatedSet: ExerciseSet) => {
-    const updatedSets = exerciseSets.map(set => 
-      set.id === updatedSet.id ? updatedSet : set
-    );
+  const updateSet = async (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
+    // Optimistic update: Update local state immediately
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          [field === 'weight' ? 'intensity' : 'reps']: value
+        };
+      }
+      return set;
+    });
     setExerciseSets(updatedSets);
     
     // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
+    }
+
+    if (isAuthenticated) {
+      try {
+        // Call API to persist the change
+        const updateData: UpdateExerciseSetData = {};
+        if (field === 'weight') {
+          updateData.intensity = value;
+        } else {
+          updateData.reps = value;
+        }
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to update exercise set:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
     }
   };
 
-  const handleSetDelete = (setId: number | string) => {
-    const updatedSets = exerciseSets.filter(set => set.id !== setId);
+  const incrementReps = (exerciseId: string | number, setId: string | number) => {
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    const newReps = (currentSet?.reps || 0) + 1;
+    updateSet(exerciseId, setId, 'reps', newReps);
+  };
+
+  const decrementReps = (exerciseId: string | number, setId: string | number) => {
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    const newReps = Math.max((currentSet?.reps || 0) - 1, 0);
+    updateSet(exerciseId, setId, 'reps', newReps);
+  };
+
+  const toggleSetCompletion = async (exerciseId: string | number, setId: string | number) => {
+    // Find the current set to get its completion status
+    const currentSet = exerciseSets.find(set => set.id === setId);
+    if (!currentSet) return;
+    
+    // Optimistic update: Update local state immediately
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          done: !set.done
+        };
+      }
+      return set;
+    });
     setExerciseSets(updatedSets);
     
     // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        exercise_sets: updatedSets
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
       });
     }
+
+    if (isAuthenticated) {
+      try {
+        const updateData: UpdateExerciseSetData = {
+          done: !currentSet.done
+        };
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to toggle exercise set completion:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
+  };
+
+  const updateSetNotes = async (exerciseId: string | number, setId: string | number, notes: string) => {
+    // Optimistic update: Update local state immediately
+    const updatedSets = exerciseSets.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          notes: notes
+        };
+      }
+      return set;
+    });
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
+      });
+    }
+
+    if (isAuthenticated) {
+      try {
+        const updateData: UpdateExerciseSetData = {
+          notes: notes
+        };
+        
+        await updateExerciseSet(setId, updateData);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to update exercise set notes:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
+  };
+
+  const addSet = async (exerciseId: string | number) => {
+    const lastSet = exerciseSets[exerciseSets.length - 1];
+    
+    // Create optimistic new set with temporary ID
+    const tempId = `temp-${Date.now()}`;
+    const newExerciseSet: ExerciseSet = {
+      id: tempId,
+      reps: lastSet?.reps || 0,
+      intensity: lastSet?.intensity || 0,
+      intensity_unit_id: currentIntensityUnit.id,
+      exercise_id: exerciseId,
+      rest_time_seconds: null,
+      done: false,
+      notes: null,
+      type: exerciseSets.length === 0 ? 'warmup' : 'working',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    // Optimistic update: Add new set to local state immediately
+    const updatedSets = [...exerciseSets, newExerciseSet];
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
+      });
+    }
+
+    if (isAuthenticated) {
+      try {
+        const newSetData: CreateExerciseSetData = {
+          reps: lastSet?.reps || 0,
+          intensity: lastSet?.intensity || 0,
+          intensity_unit_id: currentIntensityUnit.id,
+          exercise_id: exerciseId,
+          rest_time_seconds: 0, // TODO: Add rest time to the API
+          done: false,
+          notes: undefined,
+          type: exerciseSets.length === 0 ? 'warmup' : 'working'
+        };
+        
+        const createdSet = await createExerciseSet(newSetData);
+        
+        // Replace the temporary set with the real one from the API
+        const finalUpdatedSets = updatedSets.map(set => 
+          set.id === tempId ? createdSet : set
+        );
+        setExerciseSets(finalUpdatedSets);
+        
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: finalUpdatedSets
+          });
+        }
+      } catch (error) {
+        console.error('Failed to create exercise set:', error);
+        
+        // Rollback: Remove the optimistic set
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
+  };
+
+  const handleIntensityUnitChange = (unit: IntensityUnit | GuestIntensityUnit) => {
+    setCurrentIntensityUnit(unit);
+    setShowExerciseModal(false);
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      {/* Exercise Header */}
-      <div className="p-4 hover:bg-accent transition-colors">
+    <Card key={exercise.id}>
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
-                  {exercise.exercise_type.name.charAt(0).toUpperCase()}
-                </span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-gray-600 rounded"></div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-rose-700">
+                {exercise.exercise_type.name} 
+              </h3>
+            </div>
+          </div>
+          <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Exercise Settings</DialogTitle>
+              </DialogHeader>
+              <ExerciseTypeMore
+                currentIntensityUnit={currentIntensityUnit}
+                onIntensityUnitChange={handleIntensityUnitChange}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Textarea
+          placeholder="Add notes here..."
+          className="mt-2 text-sm"
+          value={exerciseNotes}
+          onChange={(e) => setExerciseNotes(e.target.value)}
+        />
+
+        {/* Rest Timer */}
+        <div className="flex items-center gap-2 mt-2">
+          <Timer className="w-4 h-4 text-blue-500" />
+          <span className="text-sm text-blue-500">
+            Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
+          </span>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0">
+        {/* Sets Table Header */}
+        <div className="grid gap-4 text-xs font-medium text-gray-500 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
+          <div>SET</div>
+          <div>NOTES</div>
+          <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
+          <div>REPS</div>
+          <div className="text-right">DONE</div>
+        </div>
+
+        {/* Sets */}
+        <div className="space-y-2">
+          {exerciseSets.map((set, index) => (
+            <div
+              key={set.id}
+              className={`grid gap-4 items-center p-2 rounded ${
+                set.done ? "bg-green-100" : "bg-white"
+              }`}
+              style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
+            >
+              <div className="font-medium">
+                {getSetType(index) === "warmup" ? (
+                  <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700">
+                    W
+                  </Badge>
+                ) : (
+                  <span>{index + 1}</span>
+                )}
+              </div>
+              <div className="text-sm text-gray-500">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setNotesModal({ exerciseId: exercise.id, setId: set.id });
+                        setSetNotesValue(set.notes || '');
+                      }}
+                    >
+                      <StickyNote className="w-3 h-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Set Notes</DialogTitle>
+                    </DialogHeader>
+                    <Textarea
+                      placeholder="Add notes for this set..."
+                      value={setNotesValue}
+                      onChange={(e) => {
+                        setSetNotesValue(e.target.value);
+                        updateSetNotes(exercise.id, set.id, e.target.value);
+                      }}
+                      className="min-h-[100px]"
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
               <div>
-                <h4 className="text-foreground font-medium">
-                  {exercise.exercise_type.name}
-                </h4>
-                {truncateWords(exercise.exercise_type.description, 4) && (
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    {truncateWords(exercise.exercise_type.description, 4)}
-                  </p>
-                )}
-                {exercise.notes && (
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {exercise.notes}
-                  </p>
-                )}
+                <Input
+                  type="number"
+                  value={set.intensity || ""}
+                  onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
+                  className="h-8 text-center"
+                  disabled={set.done}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 w-6 p-0 bg-transparent"
+                  onClick={() => decrementReps(exercise.id, set.id)}
+                  disabled={set.done}
+                >
+                  <Minus className="w-3 h-3" />
+                </Button>
+                <Input
+                  type="number"
+                  value={set.reps || ""}
+                  onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
+                  className="h-8 text-center flex-1 min-w-0"
+                  disabled={set.done}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 w-6 p-0 bg-transparent"
+                  onClick={() => incrementReps(exercise.id, set.id)}
+                  disabled={set.done}
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant={set.done ? "default" : "outline"}
+                  size="sm"
+                  className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600" : ""}`}
+                  onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
               </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-right text-sm text-muted-foreground">
-              {exercise.timestamp ? (
-                <div>
-                  {formatDisplayDate(exercise.timestamp, { timeStyle: 'short', includeTimezone: false })}
-                </div>
-              ) : (
-                <div>
-                  Created: {formatDisplayDate(exercise.created_at, { timeStyle: 'short', includeTimezone: false })}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              {exerciseSets.length > 0 && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-muted-foreground hover:text-foreground text-sm"
-                >
-                  {isExpanded ? '▲' : `▼ ${exerciseSets.length} sets`}
-                </button>
-              )}
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center text-primary-foreground transition-colors"
-                title="Add set"
-              >
-                +
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
 
-      {/* Exercise Sets Section */}
-      {(isExpanded || showAddForm) && (
-        <div className="border-t border-border bg-background/50">
-          {/* Add Set Form */}
-          {showAddForm && (
-            <div className="p-4 border-b border-border">
-              <AddExerciseSetForm
-                exerciseId={exercise.id}
-                onSetAdded={handleSetAdded}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          )}
-
-          {/* Exercise Sets List */}
-          {isExpanded && exerciseSets.length > 0 && (
-            <div className="p-4 space-y-2">
-              <h5 className="text-muted-foreground text-sm font-medium mb-2">Sets ({exerciseSets.length})</h5>
-              {exerciseSets.map((set) => (
-                <ExerciseSetRow
-                  key={set.id}
-                  exerciseSet={set}
-                  onUpdate={handleSetUpdate}
-                  onDelete={handleSetDelete}
-                  workoutId={workoutId}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Empty state when expanded but no sets */}
-          {isExpanded && exerciseSets.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              No sets added yet. Click the + button to add your first set.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+        {/* Add Set Button */}
+        <Button variant="outline" className="w-full mt-4 bg-transparent" onClick={() => addSet(exercise.id)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Set
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

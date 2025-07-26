@@ -21,6 +21,8 @@ export interface ExerciseSet {
   exercise_id: number | string;
   rest_time_seconds: number | null;
   done: boolean;
+  notes?: string | null;
+  type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +89,8 @@ export interface CreateExerciseSetData {
   exercise_id: string | number;
   rest_time_seconds?: number;
   done?: boolean;
+  notes?: string;
+  type?: string;
 }
 
 export interface UpdateExerciseSetData {
@@ -95,6 +99,8 @@ export interface UpdateExerciseSetData {
   intensity_unit_id?: number;
   rest_time_seconds?: number;
   done?: boolean;
+  notes?: string;
+  type?: string;
 }
 
 // Create a new exercise set
