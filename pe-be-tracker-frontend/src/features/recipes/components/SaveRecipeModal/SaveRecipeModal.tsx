@@ -111,17 +111,14 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
                   intensity: set.intensity || 0,
                   intensity_unit_id: set.intensity_unit_id,
                 };
-                console.log('Creating set template:', setTemplate);
                 return setTemplate;
               }),
             };
           }),
         };
         
-        console.log('Final recipe data:', JSON.stringify(recipeData, null, 2));
         
         const createdRecipe = await createRecipe(recipeData);
-        console.log('Recipe created successfully:', createdRecipe);
         
         // Invalidate recipes query to refresh the list
         queryClient.invalidateQueries({ queryKey: ['recipes'] });

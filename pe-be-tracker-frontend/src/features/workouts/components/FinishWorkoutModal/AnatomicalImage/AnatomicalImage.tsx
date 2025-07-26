@@ -32,7 +32,6 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
   const processedSvgContent = useMemo(() => {
     if (!rawSvgContent) return null;
 
-    console.log('🎨 Processing SVG with muscle groups:', muscleGroupSummary);
 
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(rawSvgContent, 'image/svg+xml');
@@ -55,12 +54,10 @@ const AnatomicalImage: React.FC<AnatomicalImageProps> = ({ muscleGroupSummary })
 
       const svgMuscleIds = MUSCLE_GROUP_MAPPING[group.name];
       if (svgMuscleIds) {
-        console.log(`Coloring muscle group "${group.name}" with intensity ${intensity.toFixed(2)} (${group.setCount}/${maxSets} sets) - color: ${color}`);
         svgMuscleIds.forEach(id => {
           const musclePath = svgElement.querySelector(`#${id}`);
           if (musclePath) {
             musclePath.style.fill = color;
-            console.log(`  - Colored SVG element #${id} with style.fill = ${color}`);
           } else {
             console.warn(`  - SVG element #${id} not found in anatomy SVG`);
           }

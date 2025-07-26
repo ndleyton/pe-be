@@ -11,14 +11,12 @@ import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } f
 import { getCurrentUTCTimestamp } from '@/utils/date';
 
 const updateWorkoutEndTime = async (workoutId: string) => {
-  console.log('Updating workout end time for ID:', workoutId);
   const response = await api.patch(
     `/workouts/${workoutId}`,
     {
       end_time: getCurrentUTCTimestamp(),
     },
   );
-  console.log('Workout updated successfully:', response.data);
   return response.data;
 };
 
@@ -66,7 +64,6 @@ const WorkoutPage: React.FC = () => {
   // Use guest data if not authenticated, server data if authenticated
   const exercises: Exercise[] = React.useMemo(() => {
     if (isAuthenticated) {
-      console.log('Authenticated user: serverExercises', serverExercises);
       return Array.isArray(serverExercises) ? serverExercises : [];
     } else {
       const guestWorkout = guestData.workouts.find(w => w.id === workoutId);
@@ -177,7 +174,6 @@ const WorkoutPage: React.FC = () => {
       if (isAuthenticated) {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
-        console.log('Would create recipe from workout for authenticated user:', recipe.name);
       } else {
         // For guest users, create exercises from the recipe
         guestActions.createExercisesFromRecipe(recipe, workoutId);
@@ -222,7 +218,6 @@ const WorkoutPage: React.FC = () => {
   };
 
   const handleFinishWorkout = () => {
-    console.log('handleFinishWorkout called with workoutId:', workoutId);
     if (workoutId) {
       if (isAuthenticated) {
         finishWorkoutMutation.mutate(workoutId, {
