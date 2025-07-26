@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '@/test/utils';
 import ExerciseRow from './ExerciseRow';
@@ -153,15 +153,28 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow {...defaultProps} />);
 
     expect(screen.getByText('Bench Press')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/add notes here/i)).toBeInTheDocument();
     expect(screen.getByText(/Rest Timer: 2min 30s/)).toBeInTheDocument();
+    // Exercise notes are now accessible via the sticky note icon next to the exercise name
+    const stickyNoteIcons = screen.getAllByTestId('sticky-note-icon');
+    expect(stickyNoteIcons.length).toBeGreaterThan(0); // Should have at least the exercise notes sticky note
   });
 
-  it('displays exercise notes in textarea', () => {
+  it('displays exercise notes in sticky note and dialog', async () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    const notesTextarea = screen.getByPlaceholderText(/add notes here/i);
-    expect(notesTextarea).toHaveValue('Great workout!');
+    // Get the sticky note icons and click the first one (exercise notes)
+    const stickyNoteIcons = screen.getAllByTestId('sticky-note-icon');
+    const exerciseNotesButton = stickyNoteIcons[0].closest('button');
+    expect(exerciseNotesButton).toBeInTheDocument();
+    
+    // Click the sticky note to open the dialog
+    fireEvent.click(exerciseNotesButton!);
+    
+    // The dialog should open with the notes in a textarea
+    await waitFor(() => {
+      const notesTextarea = screen.getByPlaceholderText(/add notes for this exercise/i);
+      expect(notesTextarea).toHaveValue('Great workout!');
+    });
   });
 
   it('shows table headers for sets', () => {
@@ -201,7 +214,18 @@ describe('ExerciseRow', () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
 
-    const notesTextarea = screen.getByPlaceholderText(/add notes here/i);
+    // Click the exercise notes sticky note to open dialog
+    const stickyNoteIcons = screen.getAllByTestId('sticky-note-icon');
+    const exerciseNotesButton = stickyNoteIcons[0].closest('button');
+    await user.click(exerciseNotesButton!);
+    
+    // Wait for dialog to open and find textarea
+    await waitFor(() => {
+      const notesTextarea = screen.getByPlaceholderText(/add notes for this exercise/i);
+      expect(notesTextarea).toBeInTheDocument();
+    });
+    
+    const notesTextarea = screen.getByPlaceholderText(/add notes for this exercise/i);
     await user.clear(notesTextarea);
     await user.type(notesTextarea, 'Updated notes');
 
@@ -366,11 +390,13 @@ describe('ExerciseRow', () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
 
+    // Get all sticky note icons and find the one in the set row (not the exercise header)
     const notesButtons = screen.getAllByTestId('sticky-note-icon');
-    const firstNotesButton = notesButtons[0].closest('button');
+    // The first one is for exercise notes, the second one should be for the first set
+    const setNotesButton = notesButtons[1].closest('button');
     
-    if (firstNotesButton) {
-      await user.click(firstNotesButton);
+    if (setNotesButton) {
+      await user.click(setNotesButton);
       
       expect(screen.getByText('Set Notes')).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/add notes for this set/i)).toBeInTheDocument();
@@ -402,8 +428,9 @@ describe('ExerciseRow', () => {
 
     render(<ExerciseRow exercise={exerciseWithoutNotes} onExerciseUpdate={mockOnExerciseUpdate} />);
 
-    const notesTextarea = screen.getByPlaceholderText(/add notes here/i);
-    expect(notesTextarea).toHaveValue('');
+    // Should still show the sticky note icon for adding notes
+    const stickyNoteIcons = screen.getAllByTestId('sticky-note-icon');
+    expect(stickyNoteIcons.length).toBeGreaterThan(0);
   });
 
   it('works without onExerciseUpdate callback', () => {

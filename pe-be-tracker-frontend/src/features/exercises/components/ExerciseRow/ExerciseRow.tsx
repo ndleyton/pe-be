@@ -41,11 +41,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [exerciseNotes, setExerciseNotes] = useState<string>(exercise.notes || '');
-  const debouncedExerciseNotes = useDebounce(exerciseNotes, 1000); // 1 second delay
+  const [exerciseNotesModal, setExerciseNotesModal] = useState(false);
+  const [exerciseNotesValue, setExerciseNotesValue] = useState<string>('');
   const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
   const [setNotesValue, setSetNotesValue] = useState<string>('');
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
+  const [initialSetNotesValue, setInitialSetNotesValue] = useState<string>('');
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -62,26 +63,26 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   // Helper function to get set type
   const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
 
-  // Effect to update parent when exercise notes change (debounced)
-  useEffect(() => {
-    if (debouncedExerciseNotes !== exercise.notes && onExerciseUpdate) {
+  // Helper function to update exercise notes
+  const updateExerciseNotes = (notes: string) => {
+    if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
-        notes: debouncedExerciseNotes
+        notes: notes
       });
     }
-  }, [debouncedExerciseNotes, exercise.notes, onExerciseUpdate]);
+  };
 
   // Effect to update set notes when debounced value changes
   useEffect(() => {
-    if (notesModal && debouncedSetNotesValue !== undefined) {
+    if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
       const currentSet = exerciseSets.find(set => set.id === notesModal.setId);
       if (currentSet && debouncedSetNotesValue !== (currentSet.notes || '')) {
         updateSetNotes(notesModal.exerciseId, notesModal.setId, debouncedSetNotesValue);
       }
     }
-  }, [debouncedSetNotesValue, notesModal, exerciseSets]);
+  }, [debouncedSetNotesValue, notesModal, exerciseSets, initialSetNotesValue]);
 
   // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
   const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
@@ -355,13 +356,62 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-              <div className="w-4 h-4 bg-gray-600 rounded"></div>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">
+                {exercise.exercise_type.name.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div>
-              <h3 className="font-semibold text-rose-700">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">
                 {exercise.exercise_type.name} 
               </h3>
+              <Dialog open={exerciseNotesModal} onOpenChange={(open) => {
+                setExerciseNotesModal(open);
+                if (!open) {
+                  setExerciseNotesValue('');
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-6 h-6 p-0 hover:bg-gray-100"
+                    onClick={() => {
+                      setExerciseNotesValue(exercise.notes || '');
+                      setExerciseNotesModal(true);
+                    }}
+                  >
+                    <StickyNote className="w-4 h-4 text-gray-600" />
+                  </Button>
+                </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Exercise Notes</DialogTitle>
+                </DialogHeader>
+                <Textarea
+                  placeholder="Add notes for this exercise..."
+                  value={exerciseNotesValue}
+                  onChange={(e) => setExerciseNotesValue(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setExerciseNotesModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      updateExerciseNotes(exerciseNotesValue);
+                      setExerciseNotesModal(false);
+                    }}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </DialogContent>
+              </Dialog>
             </div>
           </div>
           <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
@@ -382,12 +432,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           </Dialog>
         </div>
 
-        <Textarea
-          placeholder="Add notes here..."
-          className="mt-2 text-sm"
-          value={exerciseNotes}
-          onChange={(e) => setExerciseNotes(e.target.value)}
-        />
 
         {/* Rest Timer */}
         <div className="flex items-center gap-2 mt-2">
@@ -428,15 +472,23 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 )}
               </div>
               <div className="text-sm text-gray-500">
-                <Dialog>
+                <Dialog onOpenChange={(open) => {
+                  if (!open) {
+                    setNotesModal(null);
+                    setSetNotesValue('');
+                    setInitialSetNotesValue('');
+                  }
+                }}>
                   <DialogTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
                       onClick={() => {
+                        const initialNotes = set.notes || '';
                         setNotesModal({ exerciseId: exercise.id, setId: set.id });
-                        setSetNotesValue(set.notes || '');
+                        setSetNotesValue(initialNotes);
+                        setInitialSetNotesValue(initialNotes);
                       }}
                     >
                       <StickyNote className="w-3 h-3" />
