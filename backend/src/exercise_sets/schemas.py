@@ -12,6 +12,8 @@ class ExerciseSetBase(BaseModel):
     exercise_id: int
     rest_time_seconds: Optional[int] = None
     done: bool = False
+    notes: Optional[str] = None
+    type: Optional[str] = None
 
 
 class ExerciseSetCreate(ExerciseSetBase):
@@ -28,6 +30,8 @@ class ExerciseSetUpdate(BaseModel):
     intensity_unit_id: Optional[int] = None
     rest_time_seconds: Optional[int] = None
     done: Optional[bool] = None
+    notes: Optional[str] = None
+    type: Optional[str] = None
 
 
 class ExerciseSetRead(ExerciseSetBase):
