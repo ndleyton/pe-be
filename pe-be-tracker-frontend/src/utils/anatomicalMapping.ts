@@ -84,6 +84,13 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
   'Neck': [
     'anterior-left-neck',
     'anterior-right-neck'
+  ],
+  'General': [
+    // For general/full-body exercises, we can highlight core areas
+    'anterior-left-abs-1',
+    'anterior-left-abs-2',
+    'anterior-right-abs-1',
+    'anterior-right-abs-2'
   ]
 };
 

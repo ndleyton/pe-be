@@ -94,11 +94,9 @@ export async function syncGuestDataToServer(
   let syncedSets = 0;
 
   try {
-    console.log('Initiating guest data sync with data:', JSON.stringify(guestData, null, 2));
 
     // If no guest data to sync, return early
     if (guestData.workouts.length === 0) {
-      console.log('No guest data to sync');
       return {
         success: true,
         syncedWorkouts: 0,
@@ -122,10 +120,8 @@ export async function syncGuestDataToServer(
     });
 
     for (const [guestId, exerciseType] of uniqueExerciseTypes) {
-      console.log(`Syncing exercise type: ${exerciseType.name} (Guest ID: ${guestId})`);
       const serverId = await findOrCreateExerciseType(exerciseType);
       exerciseTypeIdMap.set(guestId, serverId);
-      console.log(`Mapped exercise type ${exerciseType.name} to Server ID: ${serverId}`);
     }
 
     // Then, sync all unique workout types
@@ -137,16 +133,13 @@ export async function syncGuestDataToServer(
     });
 
     for (const [guestId, workoutType] of uniqueWorkoutTypes) {
-      console.log(`Syncing workout type: ${workoutType.name} (Guest ID: ${guestId})`);
       const serverId = await findOrCreateWorkoutType(workoutType);
       workoutTypeIdMap.set(guestId, serverId);
-      console.log(`Mapped workout type ${workoutType.name} to Server ID: ${serverId}`);
     }
 
     // Now sync each workout
     for (const guestWorkout of guestData.workouts) {
       try {
-        console.log(`Syncing workout: ${guestWorkout.name || 'Unnamed'}`);
         
         const serverWorkoutTypeId = workoutTypeIdMap.get(guestWorkout.workout_type_id);
         if (!serverWorkoutTypeId) {
@@ -160,11 +153,9 @@ export async function syncGuestDataToServer(
           end_time: guestWorkout.end_time ? toUTCISOString(guestWorkout.end_time) : null,
           workout_type_id: serverWorkoutTypeId,
         };
-        console.log('Creating workout on server with payload:', workoutPayload);
         const { data: createdWorkout } = await api.post('/workouts/', workoutPayload);
 
         syncedWorkouts++;
-        console.log(`Created workout on server with ID: ${createdWorkout.id}`);
 
         // Sync exercises for this workout
         for (const guestExercise of guestWorkout.exercises) {
@@ -180,11 +171,9 @@ export async function syncGuestDataToServer(
               timestamp: guestExercise.timestamp ? toUTCISOString(guestExercise.timestamp) : null,
               notes: guestExercise.notes,
             };
-            console.log('Creating exercise on server with payload:', exercisePayload);
             const { data: createdExercise } = await api.post('/exercises/', exercisePayload);
 
             syncedExercises++;
-            console.log(`Created exercise on server with ID: ${createdExercise.id}`);
 
             // Sync exercise sets for this exercise
             for (const guestSet of guestExercise.exercise_sets) {
@@ -197,7 +186,6 @@ export async function syncGuestDataToServer(
                   rest_time_seconds: guestSet.rest_time_seconds,
                   done: guestSet.done,
                 };
-                console.log('Creating exercise set on server with payload:', setPayload);
                 await api.post('/exercise-sets/', setPayload);
 
                 syncedSets++;
@@ -220,11 +208,6 @@ export async function syncGuestDataToServer(
     // Clear guest data after successful sync
     clearGuestData();
     
-    console.log('Guest data sync completed successfully', {
-      syncedWorkouts,
-      syncedExercises,
-      syncedSets,
-    });
 
     return {
       success: true,
@@ -254,7 +237,6 @@ export const showSyncSuccessToast = (result: SyncResult) => {
   const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? 's' : ''}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? 's' : ''}, and ${result.syncedSets} set${result.syncedSets !== 1 ? 's' : ''} to your account!`;
   
   // TODO: Replace with proper toast notification system
-  console.log('Sync success:', message);
 };
 
 export const showSyncErrorToast = (error: string) => {

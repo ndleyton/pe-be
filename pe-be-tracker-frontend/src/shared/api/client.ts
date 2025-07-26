@@ -21,7 +21,7 @@ apiClient.interceptors.request.use(
     // Log outgoing requests in development
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
-      console.log('[API REQUEST]', request);
+      // console.log('[API REQUEST]', request);
     }
     return request;
   },
@@ -33,7 +33,7 @@ apiClient.interceptors.response.use(
   (response) => {
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
-      console.log('[API RESPONSE]', response);
+      // console.log('[API RESPONSE]', response);
     }
     return response;
   },
