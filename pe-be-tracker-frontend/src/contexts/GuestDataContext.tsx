@@ -343,10 +343,10 @@ const getInitialGuestData = (): GuestData => ({
       id: '271',
       name: 'Dumbbell Lunges',
       description: 'Forward stepping leg exercise',
-      default_intensity_unit: 1, // bodyweight
+      default_intensity_unit: 2, // kg
       times_used: 0,
-      equipment: 'Bodyweight',
-      category: 'Bodyweight',
+      equipment: 'Dumbbells',
+      category: 'Strength',
       muscles: [{ id: 6, name: 'Quadriceps' }, { id: 23, name: 'Glutes' }, { id: 7, name: 'Hamstrings' }],
       muscle_groups: ['Legs'],
     },
