@@ -66,6 +66,15 @@ const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => 
   return response.data;
 };
 
+// Send chat message to general chat endpoint
+const sendChatMessage = async (messages: Array<{ role: string; content: string }>, conversationId?: number): Promise<{ message: string; conversation_id: number }> => {
+  const response = await api.post('/api/v1/chat', { 
+    messages, 
+    conversation_id: conversationId 
+  });
+  return response.data;
+};
+
 // Get workout types
 const fetchWorkoutTypes = async () => {
   const response = await api.get('/workouts/workout-types');
@@ -135,6 +144,7 @@ const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<number | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const examplePrompts = [
@@ -161,6 +171,77 @@ const ChatPage: React.FC = () => {
     queryKey: ['intensity-units'],
     queryFn: fetchIntensityUnits,
     enabled: isAuthenticated,
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: ({ messages: chatMessages, conversationId: convId }: { messages: Array<{ role: string; content: string }>, conversationId?: number }) => 
+      sendChatMessage(chatMessages, convId),
+    onSuccess: (response) => {
+      // Set conversation ID from response
+      if (response.conversation_id && !conversationId) {
+        setConversationId(response.conversation_id);
+      }
+      
+      // Check if response contains workout data by looking for structured markers
+      const responseContent = response.message;
+      
+      // Try to extract workout data if the response indicates successful parsing
+      const workoutDataMatch = responseContent.match(/WORKOUT_DATA_START(.*)WORKOUT_DATA_END/s);
+      
+      if (workoutDataMatch) {
+        try {
+          const workoutData = JSON.parse(workoutDataMatch[1]);
+          const workoutTypeName = workoutTypes.find(wt => wt.id === workoutData.workout_type_id)?.name || 'Unknown Type';
+          
+          const assistantMessage: ChatMessage = {
+            id: Date.now().toString() + '-assistant',
+            role: 'assistant',
+            content: `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})\n${workoutData.notes ? `\n_${workoutData.notes}_\n` : ''}${workoutData.exercises.map((ex: any) => 
+              `\n• **${ex.exercise_type_name}**${ex.notes ? ` - ${ex.notes}` : ''}:\n${ex.sets.map((set: any, idx: number) => `  ${idx + 1}. ${set.reps || '?'} reps${set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : ''}${set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : ''}`).join('\n')}`
+            ).join('\n')}\n\nWould you like me to save this workout to your account?`,
+            timestamp: new Date(),
+            workoutData: workoutData,
+            showSaveButton: true,
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+        } catch (error) {
+          // If parsing fails, just show the regular response
+          const assistantMessage: ChatMessage = {
+            id: Date.now().toString() + '-assistant',
+            role: 'assistant',
+            content: responseContent.replace(/WORKOUT_DATA_START.*WORKOUT_DATA_END/s, '').trim(),
+            timestamp: new Date(),
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+      } else {
+        // Regular conversational response
+        const assistantMessage: ChatMessage = {
+          id: Date.now().toString() + '-assistant',
+          role: 'assistant',
+          content: responseContent,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+      
+      setIsLoading(false);
+    },
+    onError: (error) => {
+      console.error('Failed to send chat message:', error);
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString() + '-error',
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your message. Please try again.',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      setIsLoading(false);
+    },
   });
 
   const parseWorkoutMutation = useMutation({
@@ -304,27 +385,38 @@ const ChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Check if this looks like a workout description
-    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(messageContent);
-    
-    if (looksLikeWorkout && isAuthenticated) {
-      // Parse the workout
-      parseWorkoutMutation.mutate(messageContent);
-    } else {
-      // Simple response for now
+    if (!isAuthenticated) {
+      // Handle non-authenticated users
       setTimeout(() => {
         const response: ChatMessage = {
           id: Date.now().toString() + '-response',
           role: 'assistant',
-          content: isAuthenticated 
-            ? 'That doesn\'t look like a workout description. Try describing your exercises with sets, reps, and weights!'
-            : 'Please sign in to use the workout parsing feature.',
+          content: 'Please sign in to use the AI fitness coach features.',
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, response]);
         setIsLoading(false);
       }, 1000);
+      return;
     }
+
+    // Build conversation history for context
+    const conversationMessages = messages.map(msg => ({
+      role: msg.role === 'system' ? 'assistant' : msg.role,
+      content: msg.content
+    }));
+    
+    // Add the new user message
+    conversationMessages.push({
+      role: 'user',
+      content: messageContent
+    });
+
+    // Send to general chat endpoint
+    chatMutation.mutate({ 
+      messages: conversationMessages, 
+      conversationId 
+    });
   };
 
   const handleSendMessage = async () => {

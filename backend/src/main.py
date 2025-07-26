@@ -11,6 +11,7 @@ from src.exercise_sets.router import router as exercise_sets_router
 from src.recipes.router import router as recipes_router
 from src.admin.router import router as admin_router
 from src.health.router import router as health_router
+from src.chat.router import router as chat_router
 
 
 def create_app() -> FastAPI:
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
         tags=["exercise-sets"],
     )
     app.include_router(recipes_router, prefix=f"{api_prefix}/recipes", tags=["recipes"])
+    app.include_router(chat_router, prefix=f"{api_prefix}", tags=["chat"])
     app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
     app.include_router(health_router, tags=["health"])
 
