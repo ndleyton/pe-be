@@ -1,7 +1,8 @@
-import openai
 from typing import Optional, List, Dict, Any
 from langfuse import Langfuse
 from sqlalchemy.ext.asyncio import AsyncSession
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from src.core.config import settings
 from src.chat.crud import (
     get_or_create_active_conversation,
@@ -70,9 +71,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         conversation_id: Optional[int] = None,
         save_to_db: bool = True
     ) -> Dict[str, Any]:
-        """Generate a response from the LLM, with Langfuse tracing and optional DB persistence."""
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OpenAI API key not configured")
+        """Generate a response from Gemini 2.0 Flash Experimental, with Langfuse tracing and optional DB persistence."""
+        if not settings.GOOGLE_AI_KEY:
+            raise ValueError("Google AI API key not configured")
 
         # Handle conversation persistence
         conversation = None
@@ -101,31 +102,40 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 name="fitness-chat-conversation",
                 user_id=str(self.user_id),
                 metadata={
-                    "model": "gpt-3.5-turbo",
+                    "model": "gemini-2.0-flash-exp",
                     "conversation_id": conversation.id if conversation else None
                 }
             )
 
-        system_prompt = self._get_system_prompt()
-        full_messages = [{"role": "system", "content": system_prompt}] + messages
-
         try:
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-            
-            generation = trace.generation(
-                name="user-query-generation",
-                input=full_messages,
-                model="gpt-3.5-turbo",
-            ) if trace else None
-
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=full_messages,
+            # Initialize Gemini model
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash-exp",
+                google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
                 max_tokens=800,
             )
             
-            response_text = response.choices[0].message.content.strip()
+            # Convert messages to LangChain format
+            system_prompt = self._get_system_prompt()
+            langchain_messages = [SystemMessage(content=system_prompt)]
+            
+            for message in messages:
+                if message["role"] == "user":
+                    langchain_messages.append(HumanMessage(content=message["content"]))
+                elif message["role"] == "assistant":
+                    langchain_messages.append(AIMessage(content=message["content"]))
+
+            generation = trace.generation(
+                name="user-query-generation",
+                input=[{"role": msg.type if hasattr(msg, 'type') else msg.__class__.__name__.lower(), 
+                       "content": msg.content} for msg in langchain_messages],
+                model="gemini-2.0-flash-exp",
+            ) if trace else None
+
+            # Get response from Gemini
+            response = await llm.ainvoke(langchain_messages)
+            response_text = response.content.strip()
 
             if generation:
                 generation.end(output=response_text)
@@ -164,7 +174,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         except Exception as e:
             if trace:
                 trace.update(metadata={"status": "error", "error": str(e)})
-            raise ValueError(f"Error generating response: {e}")
+            raise ValueError(f"Error generating response with Gemini: {e}")
 
     async def load_conversation_history(self, conversation_id: int) -> List[Dict[str, Any]]:
         """Load conversation history from database."""
