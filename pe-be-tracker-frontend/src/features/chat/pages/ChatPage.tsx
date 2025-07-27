@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import api from '@/shared/api/client';
 import { useGuestStore, useAuthStore } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
@@ -229,6 +231,11 @@ const ChatPage: React.FC = () => {
       }
       
       setIsLoading(false);
+      
+      // Force scroll after a short delay to ensure content has rendered
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
     },
     onError: (error) => {
       console.error('Failed to send chat message:', error);
@@ -368,8 +375,13 @@ const ChatPage: React.FC = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Use a slight delay to ensure DOM has updated
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [messages, isLoading]);
 
   const processMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
@@ -531,7 +543,48 @@ const ChatPage: React.FC = () => {
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap">
+                        {message.role === 'assistant' ? (
+                          <div className="space-y-2">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                p: ({ children, ...props }) => <p className="mb-2 last:mb-0" {...props}>{children}</p>,
+                                ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
+                                ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
+                                li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
+                                strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
+                                em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
+                                code: ({ children, inline, ...props }) => 
+                                  inline ? (
+                                    <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
+                                      {children}
+                                    </code>
+                                  ) : (
+                                    <code {...props}>{children}</code>
+                                  ),
+                                pre: ({ children, ...props }) => (
+                                  <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
+                                    {children}
+                                  </pre>
+                                ),
+                                h1: ({ children, ...props }) => <h1 className="text-lg font-bold mb-2" {...props}>{children}</h1>,
+                                h2: ({ children, ...props }) => <h2 className="text-base font-bold mb-2" {...props}>{children}</h2>,
+                                h3: ({ children, ...props }) => <h3 className="text-sm font-bold mb-1" {...props}>{children}</h3>,
+                                blockquote: ({ children, ...props }) => (
+                                  <blockquote className="border-l-4 border-muted pl-4 italic mb-2" {...props}>
+                                    {children}
+                                  </blockquote>
+                                ),
+                              }}
+                            >
+                              {message.content || ''}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          message.content
+                        )}
+                      </div>
                       {message.showSaveButton && message.workoutData && (
                         <div className="mt-3 flex gap-2">
                           <Button
