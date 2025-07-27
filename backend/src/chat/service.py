@@ -3,6 +3,8 @@ from langfuse import Langfuse
 from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.rate_limiters import InMemoryRateLimiter
+
 from src.core.config import settings
 from src.chat.crud import (
     get_or_create_active_conversation,
@@ -20,6 +22,11 @@ class ChatService:
         self.user_id = user_id
         self.session = session
         self.langfuse = self._get_langfuse_client()
+        self.rate_limiter = InMemoryRateLimiter(
+            requests_per_second=3,
+            check_every_n_seconds=0.1,
+            max_bucket_size=10,
+        )
 
     def _get_langfuse_client(self) -> Optional[Langfuse]:
         """Initialize Langfuse client if configured."""
@@ -113,12 +120,12 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             )
 
         try:
-            # Initialize Gemini model
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash-exp",
                 google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
                 max_tokens=800,
+                rate_limiter=self.rate_limiter,
             )
 
             # Convert messages to LangChain format
