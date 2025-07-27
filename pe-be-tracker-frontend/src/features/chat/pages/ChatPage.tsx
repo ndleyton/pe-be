@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
+import { Dumbbell, MessageCircle, User, Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import api from '@/shared/api/client';
-import { useGuestStore, useAuthStore } from '@/stores';
+import { useAuthStore } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import { ModeToggle } from '@/shared/components/theme/mode-toggle';
 
 interface ChatMessage {
   id: string;
@@ -470,17 +468,6 @@ const ChatPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 px-2 py-4 sm:p-4 pb-20">
       <div className="max-w-4xl mx-auto">
-        {/* Navigation header */}
-        <div className="flex items-center justify-between mb-4">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-          <ModeToggle />
-        </div>
-
         <Card className="h-[calc(90vh-5rem)] flex flex-col border-border">
           <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
