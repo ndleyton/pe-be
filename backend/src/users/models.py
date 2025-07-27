@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from src.workouts.models import Workout
 from src.recipes.models import Recipe
@@ -11,6 +11,9 @@ from fastapi_users_db_sqlalchemy import (
 )
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.chat.models import Conversation
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):
@@ -44,3 +47,6 @@ class User(SQLAlchemyBaseUserTable[int], Base):
 
     # Forward reference for recipes (will be imported by recipes domain)
     recipes: Mapped[List["Recipe"]] = relationship(back_populates="creator")
+
+    # Forward reference for conversations (will be imported by chat domain)
+    conversations: Mapped[List["Conversation"]] = relationship(back_populates="user")
