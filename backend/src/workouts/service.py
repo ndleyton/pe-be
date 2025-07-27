@@ -195,7 +195,10 @@ class WorkoutParsingService:
             if langfuse:
                 trace = langfuse.trace(
                     name="workout-parsing",
-                    metadata={"model": "gemini-2.0-flash-exp", "service": "parser-to-json"},
+                    metadata={
+                        "model": "gemini-2.0-flash-exp",
+                        "service": "parser-to-json",
+                    },
                 )
 
             # Get prompt from Langfuse if available, otherwise use hardcoded prompt

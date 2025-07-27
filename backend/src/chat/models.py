@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 
 class Conversation(Base):
     """Conversation model for chat sessions"""
-    
+
     __tablename__ = "conversations"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     user_id: Mapped[int] = mapped_column(
@@ -24,31 +24,43 @@ class Conversation(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    
+
     # Relationships
     messages: Mapped[List["ConversationMessage"]] = relationship(
-        "ConversationMessage", back_populates="conversation", cascade="all, delete-orphan"
+        "ConversationMessage",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
     )
     user: Mapped["User"] = relationship("User", back_populates="conversations")
 
 
 class ConversationMessage(Base):
     """Individual message within a conversation"""
-    
+
     __tablename__ = "conversation_messages"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     conversation_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("conversations.id", ondelete="cascade"), nullable=False, index=True
+        Integer,
+        ForeignKey("conversations.id", ondelete="cascade"),
+        nullable=False,
+        index=True,
     )
-    role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'user' or 'assistant'
+    role: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # 'user' or 'assistant'
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    
+
     # Relationships
-    conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")
+    conversation: Mapped["Conversation"] = relationship(
+        "Conversation", back_populates="messages"
+    )
