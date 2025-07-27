@@ -62,6 +62,27 @@ interface WorkoutType {
   name: string;
 }
 
+// Format workout data for display
+const formatWorkoutDisplay = (workoutData: ParsedWorkout, workoutTypes: WorkoutType[]): string => {
+  const workoutTypeName = workoutTypes.find(wt => wt.id === workoutData.workout_type_id)?.name || 'Unknown Type';
+  
+  const exercisesText = workoutData.exercises.map(ex => {
+    const setsText = ex.sets.map((set, idx) => {
+      const repsText = set.reps || '?';
+      const intensityText = set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : '';
+      const restText = set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : '';
+      return `  ${idx + 1}. ${repsText} reps${intensityText}${restText}`;
+    }).join('\n');
+    
+    const exerciseNotes = ex.notes ? ` - ${ex.notes}` : '';
+    return `\n• **${ex.exercise_type_name}**${exerciseNotes}:\n${setsText}`;
+  }).join('\n');
+  
+  const notesText = workoutData.notes ? `\n_${workoutData.notes}_\n` : '';
+  
+  return `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})${notesText}${exercisesText}\n\nWould you like me to save this workout to your account?`;
+};
+
 // Parse workout text using LLM
 const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => {
   const response = await api.post('/workouts/parse', { workout_text: workoutText });
@@ -193,14 +214,11 @@ const ChatPage: React.FC = () => {
       if (workoutDataMatch) {
         try {
           const workoutData = JSON.parse(workoutDataMatch[1]);
-          const workoutTypeName = workoutTypes.find(wt => wt.id === workoutData.workout_type_id)?.name || 'Unknown Type';
           
           const assistantMessage: ChatMessage = {
             id: Date.now().toString() + '-assistant',
             role: 'assistant',
-            content: `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})\n${workoutData.notes ? `\n_${workoutData.notes}_\n` : ''}${workoutData.exercises.map((ex: any) => 
-              `\n• **${ex.exercise_type_name}**${ex.notes ? ` - ${ex.notes}` : ''}:\n${ex.sets.map((set: any, idx: number) => `  ${idx + 1}. ${set.reps || '?'} reps${set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : ''}${set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : ''}`).join('\n')}`
-            ).join('\n')}\n\nWould you like me to save this workout to your account?`,
+            content: formatWorkoutDisplay(workoutData, workoutTypes),
             timestamp: new Date(),
             workoutData: workoutData,
             showSaveButton: true,
@@ -255,14 +273,10 @@ const ChatPage: React.FC = () => {
     mutationFn: parseWorkoutText,
     onSuccess: (parsedWorkout) => {
       // Add assistant response showing the parsed workout
-      const workoutTypeName = workoutTypes.find(wt => wt.id === parsedWorkout.workout_type_id)?.name || 'Unknown Type';
-      
       const assistantMessage: ChatMessage = {
         id: Date.now().toString() + '-assistant',
         role: 'assistant',
-        content: `I've parsed your workout! Here's what I found:\n\n**${parsedWorkout.name}** (${workoutTypeName})\n${parsedWorkout.notes ? `\n_${parsedWorkout.notes}_\n` : ''}${parsedWorkout.exercises.map(ex => 
-          `\n• **${ex.exercise_type_name}**${ex.notes ? ` - ${ex.notes}` : ''}:\n${ex.sets.map((set, idx) => `  ${idx + 1}. ${set.reps || '?'} reps${set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : ''}${set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : ''}`).join('\n')}`
-        ).join('\n')}\n\nWould you like me to save this workout to your account?`,
+        content: formatWorkoutDisplay(parsedWorkout, workoutTypes),
         timestamp: new Date(),
         workoutData: parsedWorkout,
         showSaveButton: true,

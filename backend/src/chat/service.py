@@ -126,9 +126,16 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 elif message["role"] == "assistant":
                     langchain_messages.append(AIMessage(content=message["content"]))
 
+            # Map LangChain message types to role names for Langfuse
+            message_type_mapping = {
+                SystemMessage: 'system',
+                HumanMessage: 'user', 
+                AIMessage: 'assistant'
+            }
+            
             generation = trace.generation(
                 name="user-query-generation",
-                input=[{"role": msg.type if hasattr(msg, 'type') else msg.__class__.__name__.lower(), 
+                input=[{"role": message_type_mapping.get(type(msg), 'unknown'), 
                        "content": msg.content} for msg in langchain_messages],
                 model="gemini-2.0-flash-exp",
             ) if trace else None
