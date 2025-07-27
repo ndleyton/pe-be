@@ -68,7 +68,7 @@ const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => 
 
 // Send chat message to general chat endpoint
 const sendChatMessage = async (messages: Array<{ role: string; content: string }>, conversationId?: number): Promise<{ message: string; conversation_id: number }> => {
-  const response = await api.post('/api/v1/chat', { 
+  const response = await api.post('/chat', { 
     messages, 
     conversation_id: conversationId 
   });

@@ -1,7 +1,8 @@
 from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
-import openai
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
 from datetime import datetime, timezone, date
 from langfuse import Langfuse
 
@@ -182,9 +183,9 @@ class WorkoutParsingService:
 
     @staticmethod
     async def parse_workout_text(workout_text: str) -> WorkoutParseResponse:
-        """Parse raw workout text using OpenAI LLM with Langfuse observability"""
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OpenAI API key not configured")
+        """Parse raw workout text using Gemini LLM with Langfuse observability"""
+        if not settings.GOOGLE_AI_KEY:
+            raise ValueError("Google AI API key not configured")
 
         langfuse = WorkoutParsingService._get_langfuse_client()
         trace = None
@@ -194,7 +195,7 @@ class WorkoutParsingService:
             if langfuse:
                 trace = langfuse.trace(
                     name="workout-parsing",
-                    metadata={"model": "gpt-3.5-turbo", "service": "parser-to-json"},
+                    metadata={"model": "gemini-2.0-flash-exp", "service": "parser-to-json"},
                 )
 
             # Get prompt from Langfuse if available, otherwise use hardcoded prompt
@@ -220,31 +221,29 @@ class WorkoutParsingService:
             else:
                 system_prompt = WorkoutParsingService._get_fallback_prompt()
 
-            # Set up OpenAI client
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-
-            # Call OpenAI API
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": f"Parse this workout:\n\n{workout_text}",
-                    },
-                ],
+            # Set up Gemini client
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash-exp",
+                google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.1,
                 max_tokens=1000,
             )
 
-            # Parse the response
-            response_text = response.choices[0].message.content.strip()
+            # Prepare messages for Gemini
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"Parse this workout:\n\n{workout_text}"),
+            ]
+
+            # Call Gemini API
+            response = await llm.ainvoke(messages)
+            response_text = response.content.strip()
 
             # Log generation to Langfuse
             if trace:
                 trace.generation(
                     name="workout-parsing-generation",
-                    model="gpt-3.5-turbo",
+                    model="gemini-2.0-flash-exp",
                     input=[
                         {"role": "system", "content": system_prompt},
                         {
@@ -256,11 +255,6 @@ class WorkoutParsingService:
                     metadata={
                         "temperature": 0.1,
                         "max_tokens": 1000,
-                        "usage": {
-                            "prompt_tokens": response.usage.prompt_tokens,
-                            "completion_tokens": response.usage.completion_tokens,
-                            "total_tokens": response.usage.total_tokens,
-                        },
                     },
                 )
 
@@ -292,13 +286,8 @@ class WorkoutParsingService:
             if trace:
                 trace.update(metadata={"status": "error", "error": error_msg})
             raise ValueError(error_msg)
-        except openai.OpenAIError as e:
-            error_msg = f"OpenAI API error: {e}"
-            if trace:
-                trace.update(metadata={"status": "error", "error": error_msg})
-            raise ValueError(error_msg)
         except Exception as e:
-            error_msg = f"Error parsing workout: {e}"
+            error_msg = f"Error parsing workout with Gemini: {e}"
             if trace:
                 trace.update(metadata={"status": "error", "error": error_msg})
             raise ValueError(error_msg)
