@@ -1,10 +1,13 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.users.models import User
 
 
 class Conversation(Base):

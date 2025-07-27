@@ -555,14 +555,17 @@ const ChatPage: React.FC = () => {
                                 li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
                                 strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
                                 em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
-                                code: ({ children, inline, ...props }) => 
-                                  inline ? (
+                                code: ({ children, ...props }) => {
+                                  // Check if this is inline code by looking at the props
+                                  const isInline = !props.className?.includes('language-');
+                                  return isInline ? (
                                     <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
                                       {children}
                                     </code>
                                   ) : (
                                     <code {...props}>{children}</code>
-                                  ),
+                                  );
+                                },
                                 pre: ({ children, ...props }) => (
                                   <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
                                     {children}
