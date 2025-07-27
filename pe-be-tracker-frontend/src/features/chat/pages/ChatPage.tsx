@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, MessageCircle, User, Bot, ArrowLeft } from 'lucide-react';
+import { Dumbbell, MessageCircle, User, Bot } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import api from '@/shared/api/client';
-import { useGuestStore, useAuthStore } from '@/stores';
+import { useAuthStore } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import { ModeToggle } from '@/shared/components/theme/mode-toggle';
 
 interface ChatMessage {
   id: string;
@@ -60,9 +60,39 @@ interface WorkoutType {
   name: string;
 }
 
+// Format workout data for display
+const formatWorkoutDisplay = (workoutData: ParsedWorkout, workoutTypes: WorkoutType[]): string => {
+  const workoutTypeName = workoutTypes.find(wt => wt.id === workoutData.workout_type_id)?.name || 'Unknown Type';
+  
+  const exercisesText = workoutData.exercises.map(ex => {
+    const setsText = ex.sets.map((set, idx) => {
+      const repsText = set.reps || '?';
+      const intensityText = set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : '';
+      const restText = set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : '';
+      return `  ${idx + 1}. ${repsText} reps${intensityText}${restText}`;
+    }).join('\n');
+    
+    const exerciseNotes = ex.notes ? ` - ${ex.notes}` : '';
+    return `\n• **${ex.exercise_type_name}**${exerciseNotes}:\n${setsText}`;
+  }).join('\n');
+  
+  const notesText = workoutData.notes ? `\n_${workoutData.notes}_\n` : '';
+  
+  return `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})${notesText}${exercisesText}\n\nWould you like me to save this workout to your account?`;
+};
+
 // Parse workout text using LLM
 const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => {
   const response = await api.post('/workouts/parse', { workout_text: workoutText });
+  return response.data;
+};
+
+// Send chat message to general chat endpoint
+const sendChatMessage = async (messages: Array<{ role: string; content: string }>, conversationId?: number): Promise<{ message: string; conversation_id: number }> => {
+  const response = await api.post('/chat', { 
+    messages, 
+    conversation_id: conversationId 
+  });
   return response.data;
 };
 
@@ -135,6 +165,7 @@ const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<number | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const examplePrompts = [
@@ -163,18 +194,87 @@ const ChatPage: React.FC = () => {
     enabled: isAuthenticated,
   });
 
+  const chatMutation = useMutation({
+    mutationFn: ({ messages: chatMessages, conversationId: convId }: { messages: Array<{ role: string; content: string }>, conversationId?: number }) => 
+      sendChatMessage(chatMessages, convId),
+    onSuccess: (response) => {
+      // Set conversation ID from response
+      if (response.conversation_id && !conversationId) {
+        setConversationId(response.conversation_id);
+      }
+      
+      // Check if response contains workout data by looking for structured markers
+      const responseContent = response.message;
+      
+      // Try to extract workout data if the response indicates successful parsing
+      const workoutDataMatch = responseContent.match(/WORKOUT_DATA_START(.*)WORKOUT_DATA_END/s);
+      
+      if (workoutDataMatch) {
+        try {
+          const workoutData = JSON.parse(workoutDataMatch[1]);
+          
+          const assistantMessage: ChatMessage = {
+            id: Date.now().toString() + '-assistant',
+            role: 'assistant',
+            content: formatWorkoutDisplay(workoutData, workoutTypes),
+            timestamp: new Date(),
+            workoutData: workoutData,
+            showSaveButton: true,
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+        } catch (error) {
+          // If parsing fails, just show the regular response
+          const assistantMessage: ChatMessage = {
+            id: Date.now().toString() + '-assistant',
+            role: 'assistant',
+            content: responseContent.replace(/WORKOUT_DATA_START.*WORKOUT_DATA_END/s, '').trim(),
+            timestamp: new Date(),
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+      } else {
+        // Regular conversational response
+        const assistantMessage: ChatMessage = {
+          id: Date.now().toString() + '-assistant',
+          role: 'assistant',
+          content: responseContent,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+      
+      setIsLoading(false);
+      
+      // Force scroll after a short delay to ensure content has rendered
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+    },
+    onError: (error) => {
+      console.error('Failed to send chat message:', error);
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString() + '-error',
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your message. Please try again.',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      setIsLoading(false);
+    },
+  });
+
   const parseWorkoutMutation = useMutation({
     mutationFn: parseWorkoutText,
     onSuccess: (parsedWorkout) => {
       // Add assistant response showing the parsed workout
-      const workoutTypeName = workoutTypes.find(wt => wt.id === parsedWorkout.workout_type_id)?.name || 'Unknown Type';
-      
       const assistantMessage: ChatMessage = {
         id: Date.now().toString() + '-assistant',
         role: 'assistant',
-        content: `I've parsed your workout! Here's what I found:\n\n**${parsedWorkout.name}** (${workoutTypeName})\n${parsedWorkout.notes ? `\n_${parsedWorkout.notes}_\n` : ''}${parsedWorkout.exercises.map(ex => 
-          `\n• **${ex.exercise_type_name}**${ex.notes ? ` - ${ex.notes}` : ''}:\n${ex.sets.map((set, idx) => `  ${idx + 1}. ${set.reps || '?'} reps${set.intensity ? ` @ ${set.intensity}${set.intensity_unit}` : ''}${set.rest_time_seconds ? ` (${set.rest_time_seconds}s rest)` : ''}`).join('\n')}`
-        ).join('\n')}\n\nWould you like me to save this workout to your account?`,
+        content: formatWorkoutDisplay(parsedWorkout, workoutTypes),
         timestamp: new Date(),
         workoutData: parsedWorkout,
         showSaveButton: true,
@@ -287,8 +387,13 @@ const ChatPage: React.FC = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Use a slight delay to ensure DOM has updated
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [messages, isLoading]);
 
   const processMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
@@ -304,27 +409,38 @@ const ChatPage: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Check if this looks like a workout description
-    const looksLikeWorkout = /\b(bench|squat|deadlift|press|curl|row|pull|push|rep|set|lb|kg|x\d+)\b/i.test(messageContent);
-    
-    if (looksLikeWorkout && isAuthenticated) {
-      // Parse the workout
-      parseWorkoutMutation.mutate(messageContent);
-    } else {
-      // Simple response for now
+    if (!isAuthenticated) {
+      // Handle non-authenticated users
       setTimeout(() => {
         const response: ChatMessage = {
           id: Date.now().toString() + '-response',
           role: 'assistant',
-          content: isAuthenticated 
-            ? 'That doesn\'t look like a workout description. Try describing your exercises with sets, reps, and weights!'
-            : 'Please sign in to use the workout parsing feature.',
+          content: 'Please sign in to use the AI fitness coach features.',
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, response]);
         setIsLoading(false);
       }, 1000);
+      return;
     }
+
+    // Build conversation history for context
+    const conversationMessages = messages.map(msg => ({
+      role: msg.role === 'system' ? 'assistant' : msg.role,
+      content: msg.content
+    }));
+    
+    // Add the new user message
+    conversationMessages.push({
+      role: 'user',
+      content: messageContent
+    });
+
+    // Send to general chat endpoint
+    chatMutation.mutate({ 
+      messages: conversationMessages, 
+      conversationId 
+    });
   };
 
   const handleSendMessage = async () => {
@@ -352,17 +468,6 @@ const ChatPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 px-2 py-4 sm:p-4 pb-20">
       <div className="max-w-4xl mx-auto">
-        {/* Navigation header */}
-        <div className="flex items-center justify-between mb-4">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-          <ModeToggle />
-        </div>
-
         <Card className="h-[calc(90vh-5rem)] flex flex-col border-border">
           <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
@@ -439,7 +544,51 @@ const ChatPage: React.FC = () => {
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap">
+                        {message.role === 'assistant' ? (
+                          <div className="space-y-2">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                p: ({ children, ...props }) => <p className="mb-2 last:mb-0" {...props}>{children}</p>,
+                                ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
+                                ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
+                                li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
+                                strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
+                                em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
+                                code: ({ children, ...props }) => {
+                                  // Check if this is inline code by looking at the props
+                                  const isInline = !props.className?.includes('language-');
+                                  return isInline ? (
+                                    <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
+                                      {children}
+                                    </code>
+                                  ) : (
+                                    <code {...props}>{children}</code>
+                                  );
+                                },
+                                pre: ({ children, ...props }) => (
+                                  <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
+                                    {children}
+                                  </pre>
+                                ),
+                                h1: ({ children, ...props }) => <h1 className="text-lg font-bold mb-2" {...props}>{children}</h1>,
+                                h2: ({ children, ...props }) => <h2 className="text-base font-bold mb-2" {...props}>{children}</h2>,
+                                h3: ({ children, ...props }) => <h3 className="text-sm font-bold mb-1" {...props}>{children}</h3>,
+                                blockquote: ({ children, ...props }) => (
+                                  <blockquote className="border-l-4 border-muted pl-4 italic mb-2" {...props}>
+                                    {children}
+                                  </blockquote>
+                                ),
+                              }}
+                            >
+                              {message.content || ''}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          message.content
+                        )}
+                      </div>
                       {message.showSaveButton && message.workoutData && (
                         <div className="mt-3 flex gap-2">
                           <Button
