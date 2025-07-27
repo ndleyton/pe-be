@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 
 from src.core.database import get_async_session
 from src.chat.schemas import (
@@ -15,6 +14,7 @@ from src.chat.service import ChatService
 from src.chat.crud import (
     get_conversation_by_id,
     get_user_conversations,
+    count_user_conversations,
     create_conversation,
     update_conversation,
     delete_conversation,
@@ -50,7 +50,7 @@ async def handle_chat(
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 @router.get("/conversations", response_model=ConversationListResponse)
@@ -66,8 +66,8 @@ async def get_conversations(
             session, user.id, limit, offset, include_messages=False
         )
         
-        # Get total count (for pagination info)
-        total = len(await get_user_conversations(session, user.id, limit=1000, offset=0))
+        # Get total count efficiently using a separate COUNT query
+        total = await count_user_conversations(session, user.id)
         
         return ConversationListResponse(
             conversations=[ConversationResponse.model_validate(conv) for conv in conversations],
@@ -76,7 +76,7 @@ async def get_conversations(
             offset=offset
         )
         
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to retrieve conversations")
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -96,7 +96,7 @@ async def get_conversation(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to retrieve conversation")
 
 @router.post("/conversations", response_model=ConversationResponse)
@@ -110,7 +110,7 @@ async def create_new_conversation(
         conversation = await create_conversation(session, request, user.id)
         return ConversationResponse.model_validate(conversation)
         
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to create conversation")
 
 @router.put("/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -131,7 +131,7 @@ async def update_conversation_endpoint(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to update conversation")
 
 @router.delete("/conversations/{conversation_id}")
@@ -151,5 +151,5 @@ async def delete_conversation_endpoint(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to delete conversation")

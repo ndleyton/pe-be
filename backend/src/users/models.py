@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from src.workouts.models import Workout
 from src.recipes.models import Recipe
@@ -11,6 +11,9 @@ from fastapi_users_db_sqlalchemy import (
 )
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.chat.models import Conversation
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):

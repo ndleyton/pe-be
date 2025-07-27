@@ -1,6 +1,7 @@
 from typing import List, Optional
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.orm import selectinload
 
 from src.chat.models import Conversation, ConversationMessage
@@ -33,7 +34,7 @@ async def get_conversation_by_id(
             and_(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
     )
@@ -51,7 +52,7 @@ async def get_user_conversations(
     query = select(Conversation).where(
         and_(
             Conversation.user_id == user_id,
-            Conversation.is_active == True,
+            Conversation.is_active,
         )
     ).order_by(desc(Conversation.updated_at)).limit(limit).offset(offset)
     
@@ -60,6 +61,22 @@ async def get_user_conversations(
     
     result = await session.execute(query)
     return list(result.scalars().all())
+
+
+async def count_user_conversations(
+    session: AsyncSession,
+    user_id: int,
+) -> int:
+    """Get the total count of conversations for a user."""
+    result = await session.execute(
+        select(func.count(Conversation.id)).where(
+            and_(
+                Conversation.user_id == user_id,
+                Conversation.is_active,
+            )
+        )
+    )
+    return result.scalar()
 
 
 async def update_conversation(
@@ -74,7 +91,7 @@ async def update_conversation(
             and_(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
     )
@@ -100,7 +117,7 @@ async def delete_conversation(
             and_(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
     )
@@ -127,7 +144,7 @@ async def add_message_to_conversation(
             and_(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
     )
@@ -145,8 +162,7 @@ async def add_message_to_conversation(
     session.add(db_message)
     
     # Update conversation's updated_at timestamp
-    from sqlalchemy.sql import func
-    conversation.updated_at = func.now()
+    conversation.updated_at = datetime.now(timezone.utc)
     
     await session.commit()
     await session.refresh(db_message)
@@ -167,7 +183,7 @@ async def get_conversation_messages(
             and_(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
     )
@@ -197,7 +213,7 @@ async def get_or_create_active_conversation(
         .where(
             and_(
                 Conversation.user_id == user_id,
-                Conversation.is_active == True,
+                Conversation.is_active,
             )
         )
         .order_by(desc(Conversation.updated_at))
