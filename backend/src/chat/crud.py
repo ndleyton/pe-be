@@ -5,7 +5,11 @@ from sqlalchemy import select, and_, desc, func
 from sqlalchemy.orm import selectinload
 
 from src.chat.models import Conversation, ConversationMessage
-from src.chat.schemas import ConversationCreate, ConversationUpdate, ConversationMessageCreate
+from src.chat.schemas import (
+    ConversationCreate,
+    ConversationUpdate,
+    ConversationMessageCreate,
+)
 
 
 async def create_conversation(
@@ -49,16 +53,22 @@ async def get_user_conversations(
     include_messages: bool = False,
 ) -> List[Conversation]:
     """Get conversations for a user with pagination."""
-    query = select(Conversation).where(
-        and_(
-            Conversation.user_id == user_id,
-            Conversation.is_active,
+    query = (
+        select(Conversation)
+        .where(
+            and_(
+                Conversation.user_id == user_id,
+                Conversation.is_active,
+            )
         )
-    ).order_by(desc(Conversation.updated_at)).limit(limit).offset(offset)
-    
+        .order_by(desc(Conversation.updated_at))
+        .limit(limit)
+        .offset(offset)
+    )
+
     if include_messages:
         query = query.options(selectinload(Conversation.messages))
-    
+
     result = await session.execute(query)
     return list(result.scalars().all())
 
@@ -96,13 +106,13 @@ async def update_conversation(
         )
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         return None
-    
+
     for field, value in conversation_data.model_dump(exclude_unset=True).items():
         setattr(conversation, field, value)
-    
+
     await session.commit()
     await session.refresh(conversation)
     return conversation
@@ -122,10 +132,10 @@ async def delete_conversation(
         )
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         return False
-    
+
     conversation.is_active = False
     await session.commit()
     return True
@@ -149,10 +159,10 @@ async def add_message_to_conversation(
         )
     )
     conversation = conversation_result.scalar_one_or_none()
-    
+
     if not conversation:
         return None
-    
+
     # Create the message
     db_message = ConversationMessage(
         conversation_id=conversation_id,
@@ -160,10 +170,10 @@ async def add_message_to_conversation(
         content=message_data.content,
     )
     session.add(db_message)
-    
+
     # Update conversation's updated_at timestamp
     conversation.updated_at = datetime.now(timezone.utc)
-    
+
     await session.commit()
     await session.refresh(db_message)
     return db_message
@@ -188,10 +198,10 @@ async def get_conversation_messages(
         )
     )
     conversation = conversation_result.scalar_one_or_none()
-    
+
     if not conversation:
         return []
-    
+
     # Get messages
     result = await session.execute(
         select(ConversationMessage)
@@ -219,12 +229,12 @@ async def get_or_create_active_conversation(
         .order_by(desc(Conversation.updated_at))
         .limit(1)
     )
-    
+
     existing_conversation = result.scalar_one_or_none()
-    
+
     if existing_conversation:
         return existing_conversation
-    
+
     # Create a new conversation if none exists
     conversation_data = ConversationCreate(title=title or "New Chat")
     return await create_conversation(session, conversation_data, user_id)
