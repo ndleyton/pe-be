@@ -173,15 +173,17 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             )
 
         try:
-            # Initialize Gemini model with tools
+            # Initialize Gemini model
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash-exp",
                 google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
                 max_tokens=800,
                 rate_limiter=self.rate_limiter,
-                tools=self._get_tools(),  # Pass the tools to the LLM
             )
+            
+            # Bind tools using the correct method for Gemini integration
+            llm = llm.bind_tools(self._get_tools())
 
             # Convert messages to LangChain format
             system_prompt = self._get_system_prompt()
