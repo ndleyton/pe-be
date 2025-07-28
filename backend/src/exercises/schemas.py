@@ -1,6 +1,6 @@
 from typing import Optional, List, TYPE_CHECKING, Any
 from datetime import datetime, timezone, date
-from pydantic import field_validator, BaseModel, Field, computed_field, model_validator
+from pydantic import ConfigDict, field_validator, BaseModel, Field, computed_field, model_validator
 import json
 from src.core.config import settings
 
@@ -40,9 +40,7 @@ class ExerciseRead(ExerciseBase):
     updated_at: datetime
     exercise_type: "ExerciseTypeRead"
     exercise_sets: List["ExerciseSetRead"] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExerciseTypeCreate(BaseModel):
@@ -76,9 +74,7 @@ class MuscleGroupRead(BaseModel):
     name: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MuscleRead(BaseModel):
@@ -90,9 +86,7 @@ class MuscleRead(BaseModel):
     muscle_group: MuscleGroupRead
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExerciseTypeRead(BaseModel):
@@ -188,9 +182,7 @@ class ExerciseTypeRead(BaseModel):
             return processed_images
         except (json.JSONDecodeError, TypeError):
             return []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class IntensityUnitRead(BaseModel):
@@ -201,9 +193,7 @@ class IntensityUnitRead(BaseModel):
     abbreviation: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 if TYPE_CHECKING:
@@ -224,9 +214,7 @@ class ProgressiveOverloadStat(BaseModel):
     max_weight: float = Field(..., alias="maxWeight")
     total_volume: float = Field(..., alias="totalVolume")
     reps: int
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class LastWorkoutStat(BaseModel):
@@ -237,9 +225,7 @@ class LastWorkoutStat(BaseModel):
     total_reps: int = Field(..., alias="totalReps")
     max_weight: float = Field(..., alias="maxWeight")
     total_volume: float = Field(..., alias="totalVolume")
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class PersonalBestStat(BaseModel):
@@ -249,9 +235,7 @@ class PersonalBestStat(BaseModel):
     weight: float
     reps: int
     volume: float
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class IntensityUnitSummary(BaseModel):
@@ -260,9 +244,7 @@ class IntensityUnitSummary(BaseModel):
     id: int
     name: str
     abbreviation: str
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ExerciseTypeStats(BaseModel):
@@ -275,9 +257,7 @@ class ExerciseTypeStats(BaseModel):
     personal_best: Optional[PersonalBestStat] = Field(None, alias="personalBest")
     total_sets: int = Field(..., alias="totalSets")
     intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias="intensityUnit")
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class PaginatedExerciseTypesResponse(BaseModel):
@@ -285,6 +265,4 @@ class PaginatedExerciseTypesResponse(BaseModel):
 
     data: List[ExerciseTypeRead]
     next_cursor: Optional[int] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
