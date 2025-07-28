@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime, timezone
-from pydantic import validator, BaseModel, Field
+from pydantic import field_validator, ConfigDict, BaseModel, Field
 
 
 class WorkoutBase(BaseModel):
@@ -12,7 +12,8 @@ class WorkoutBase(BaseModel):
     end_time: Optional[datetime] = None
     workout_type_id: int
 
-    @validator("start_time", "end_time", pre=True, always=True)
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
     def ensure_utc(cls, v):
         if v is None:
             return v
@@ -43,9 +44,7 @@ class WorkoutRead(WorkoutBase):
     owner_id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkoutTypeRead(BaseModel):
@@ -56,9 +55,7 @@ class WorkoutTypeRead(BaseModel):
     description: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkoutTypeCreate(BaseModel):
@@ -67,7 +64,8 @@ class WorkoutTypeCreate(BaseModel):
     name: str = Field(..., min_length=1, description="Human-readable workout type name")
     description: str = "Custom workout type"
 
-    @validator("name", pre=True)
+    @field_validator("name", mode="before")
+    @classmethod
     def validate_and_strip_name(cls, v):
         if v is None:
             raise ValueError("Name cannot be empty")
