@@ -1,6 +1,13 @@
 from typing import Optional, List, TYPE_CHECKING, Any
 from datetime import datetime, timezone, date
-from pydantic import ConfigDict, field_validator, BaseModel, Field, computed_field, model_validator
+from pydantic import (
+    ConfigDict,
+    field_validator,
+    BaseModel,
+    Field,
+    computed_field,
+    model_validator,
+)
 import json
 from src.core.config import settings
 
@@ -182,6 +189,7 @@ class ExerciseTypeRead(BaseModel):
             return processed_images
         except (json.JSONDecodeError, TypeError):
             return []
+
     model_config = ConfigDict(from_attributes=True)
 
 
