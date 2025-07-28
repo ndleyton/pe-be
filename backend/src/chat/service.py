@@ -1,8 +1,10 @@
+
 from typing import Optional, List, Dict, Any
 from langfuse import Langfuse
 from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool, Tool
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 from src.core.config import settings
@@ -13,9 +15,60 @@ from src.chat.crud import (
     get_user_conversations,
 )
 from src.chat.schemas import ConversationMessageCreate
+from src.exercises.crud import get_exercise_types, get_exercise_type_stats
+from src.workouts.service import WorkoutParsingService
 
 
 class ChatService:
+    async def _get_last_exercise_performance(self, exercise_name: str) -> str:
+        """
+        Retrieves the last recorded performance for a given exercise for the current user.
+
+        Args:
+            exercise_name: The name of the exercise (e.g., "deadlift", "bench press").
+
+        Returns:
+            A string describing the last performance, or a message indicating no data found.
+        """
+        if not self.session:
+            return "Database session not available."
+
+        # Find the exercise type by name
+        exercise_types_response = await get_exercise_types(self.session, name=exercise_name, limit=1)
+        if not exercise_types_response.data:
+            return f"No exercise named '{exercise_name}' found."
+        
+        exercise_type = exercise_types_response.data[0]
+
+        # Get stats for the exercise type
+        stats = await get_exercise_type_stats(self.session, exercise_type.id)
+
+        if not stats or not stats.get("lastWorkout"):
+            return f"No workout data found for {exercise_name}."
+
+        last_workout = stats["lastWorkout"]
+        intensity_unit = stats.get("intensityUnit")
+        unit_abbr = intensity_unit["abbreviation"] if intensity_unit else ""
+
+        return f"On your last {exercise_name} workout on {last_workout['date']}, you did {last_workout['sets']} sets with a max weight of {last_workout['maxWeight']} {unit_abbr}."
+
+    def _get_tools(self) -> List[Tool]:
+        """
+        Returns a list of LangChain tools available to the LLM.
+        """
+        return [
+            Tool(
+                name="get_last_exercise_performance",
+                func=self._get_last_exercise_performance,
+                description="Useful for when you need to find out the user's last recorded performance for a specific exercise. Input should be the exact name of the exercise.",
+            ),
+            Tool(
+                name="parse_workout",
+                func=WorkoutParsingService.parse_workout_text,
+                description="Useful for when you need to parse a workout from a text description. Input should be the full text description of the workout.",
+            ),
+        ]
+
     """Service for handling chat interactions with Langfuse observability."""
 
     def __init__(self, user_id: int, session: Optional[AsyncSession] = None):
@@ -120,12 +173,14 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             )
 
         try:
+            # Initialize Gemini model with tools
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash-exp",
                 google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
                 max_tokens=800,
                 rate_limiter=self.rate_limiter,
+                tools=self._get_tools(),  # Pass the tools to the LLM
             )
 
             # Convert messages to LangChain format
@@ -138,11 +193,41 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 elif message["role"] == "assistant":
                     langchain_messages.append(AIMessage(content=message["content"]))
 
+            # Tool calling loop
+            while True:
+                # Get response from Gemini
+                response = await llm.ainvoke(langchain_messages)
+
+                if response.tool_calls:
+                    # If the LLM wants to call a tool, execute it
+                    tool_outputs = []
+                    for tool_call in response.tool_calls:
+                        tool_name = tool_call.name
+                        tool_args = tool_call.args
+                        
+                        # Find the tool function by name
+                        tool_func = next((t.func for t in self._get_tools() if t.name == tool_name), None)
+                        if tool_func:
+                            # Execute the tool function
+                            output = await tool_func(**tool_args)
+                            tool_outputs.append(ToolMessage(tool_call_id=tool_call.id, content=output))
+                        else:
+                            tool_outputs.append(ToolMessage(tool_call_id=tool_call.id, content=f"Error: Tool {tool_name} not found."))
+                    
+                    langchain_messages.append(response) # Add the tool_call message from the LLM
+                    langchain_messages.extend(tool_outputs) # Add the tool output messages
+
+                else:
+                    # If no tool call, this is the final response
+                    response_text = response.content.strip()
+                    break
+
             # Map LangChain message types to role names for Langfuse
             message_type_mapping = {
                 SystemMessage: "system",
                 HumanMessage: "user",
                 AIMessage: "assistant",
+                ToolMessage: "tool", # Add ToolMessage to mapping
             }
 
             generation = (
@@ -160,10 +245,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 if trace
                 else None
             )
-
-            # Get response from Gemini
-            response = await llm.ainvoke(langchain_messages)
-            response_text = response.content.strip()
 
             if generation:
                 generation.end(output=response_text)
