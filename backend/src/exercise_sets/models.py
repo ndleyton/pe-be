@@ -7,6 +7,7 @@ from src.core.database import Base
 
 if TYPE_CHECKING:
     from src.exercises.models import Exercise
+    from src.exercises.models import IntensityUnit
 
 
 class ExerciseSet(Base):
@@ -27,3 +28,4 @@ class ExerciseSet(Base):
 
     # Relationships
     exercise: Mapped["Exercise"] = relationship(back_populates="exercise_sets")
+    intensity_unit: Mapped["IntensityUnit"] = relationship()
