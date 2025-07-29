@@ -54,7 +54,9 @@ async def get_exercises_for_workout(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets).selectinload(ExerciseSet.intensity_unit),
+            selectinload(Exercise.exercise_sets).selectinload(
+                ExerciseSet.intensity_unit
+            ),
         )
         .where(Exercise.workout_id == workout_id)
         .order_by(Exercise.id.asc())
