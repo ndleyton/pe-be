@@ -64,7 +64,7 @@ class ChatService:
             A string summarizing the last workout, or a message indicating no data found.
         """
         print(f"DEBUG: _get_last_workout_summary called for user {self.user_id}")
-        
+
         if not self.session:
             print("DEBUG: No database session available")
             return "Database session not available."
@@ -98,12 +98,20 @@ class ChatService:
                 for s in exercise.exercise_sets:
                     # Handle intensity display safely
                     intensity_display = ""
-                    if s.intensity and hasattr(s, 'intensity_unit') and s.intensity_unit:
-                        intensity_display = f" at {s.intensity} {s.intensity_unit.abbreviation}"
+                    if (
+                        s.intensity
+                        and hasattr(s, "intensity_unit")
+                        and s.intensity_unit
+                    ):
+                        intensity_display = (
+                            f" at {s.intensity} {s.intensity_unit.abbreviation}"
+                        )
                     elif s.intensity:
                         intensity_display = f" at {s.intensity}"
-                    
-                    summary += f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
+
+                    summary += (
+                        f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
+                    )
 
             print(f"DEBUG: Generated summary: {summary}")
             return summary
@@ -312,11 +320,13 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
                 if response.tool_calls:
                     # If the LLM wants to call a tool, execute it
-                    print(f"DEBUG: Tool calls detected: {response.tool_calls}")  # Debug logging
+                    print(
+                        f"DEBUG: Tool calls detected: {response.tool_calls}"
+                    )  # Debug logging
                     tool_outputs = []
                     for tool_call in response.tool_calls:
                         # Handle both object and dictionary formats
-                        if hasattr(tool_call, 'name'):
+                        if hasattr(tool_call, "name"):
                             # Object format
                             tool_name = tool_call.name
                             tool_args = tool_call.args
@@ -326,8 +336,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                             tool_name = tool_call.get("name")
                             tool_args = tool_call.get("args", {})
                             tool_call_id = tool_call.get("id")
-                        
-                        print(f"DEBUG: Calling tool {tool_name} with args: {tool_args}")  # Debug logging
+
+                        print(
+                            f"DEBUG: Calling tool {tool_name} with args: {tool_args}"
+                        )  # Debug logging
 
                         # Find the tool function by name
                         tool_func = next(
@@ -339,24 +351,30 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                             try:
                                 # Check if the function accepts arguments
                                 import inspect
+
                                 sig = inspect.signature(tool_func)
-                                
+
                                 # Filter args to only include ones the function accepts
                                 if len(sig.parameters) > 1:  # More than just 'self'
-                                    filtered_args = {k: v for k, v in tool_args.items() 
-                                                   if k in sig.parameters}
+                                    filtered_args = {
+                                        k: v
+                                        for k, v in tool_args.items()
+                                        if k in sig.parameters
+                                    }
                                     output = await tool_func(**filtered_args)
                                 else:
                                     # Function takes no arguments (other than self)
                                     output = await tool_func()
-                                
+
                                 print(f"DEBUG: Tool {tool_name} output: {output}")
                             except Exception as e:
                                 print(f"DEBUG: Exception in tool {tool_name}: {str(e)}")
                                 output = f"Error executing tool {tool_name}: {str(e)}"
-                            
+
                             tool_outputs.append(
-                                ToolMessage(tool_call_id=tool_call_id, content=str(output))
+                                ToolMessage(
+                                    tool_call_id=tool_call_id, content=str(output)
+                                )
                             )
                         else:
                             tool_outputs.append(

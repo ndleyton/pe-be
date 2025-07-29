@@ -13,7 +13,11 @@ async def get_workout_by_date(
     """Get a workout by a specific date for a user."""
     result = await session.execute(
         select(Workout)
-        .where(Workout.owner_id == user_id, Workout.start_time >= workout_date, Workout.start_time < workout_date + timedelta(days=1))
+        .where(
+            Workout.owner_id == user_id,
+            Workout.start_time >= workout_date,
+            Workout.start_time < workout_date + timedelta(days=1),
+        )
         .order_by(Workout.start_time.desc())
         .limit(1)
     )
