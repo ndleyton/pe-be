@@ -8,15 +8,12 @@ from src.workouts.schemas import (
     WorkoutUpdate,
     WorkoutTypeRead,
     WorkoutTypeCreate,
-    WorkoutParseRequest,
-    WorkoutParseResponse,
     AddExerciseRequest,
     PaginatedWorkouts,
 )
 from src.workouts.service import (
     WorkoutService,
     WorkoutTypeService,
-    WorkoutParsingService,
 )
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -56,25 +53,6 @@ async def create_workout(
 ):
     """Create a new workout"""
     return await WorkoutService.create_new_workout(session, workout_in, user.id)
-
-
-@router.post("/parse", response_model=WorkoutParseResponse)
-async def parse_workout_text(
-    parse_request: WorkoutParseRequest,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-):
-    """Parse raw workout text using LLM"""
-    try:
-        return await WorkoutParsingService.parse_workout_text(
-            parse_request.workout_text
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(
-            status_code=500, detail="Internal server error while parsing workout"
-        )
 
 
 # ----- Workout types sub-router -----
