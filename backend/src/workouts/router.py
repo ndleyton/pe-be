@@ -8,15 +8,12 @@ from src.workouts.schemas import (
     WorkoutUpdate,
     WorkoutTypeRead,
     WorkoutTypeCreate,
-    WorkoutParseRequest,
-    WorkoutParseResponse,
     AddExerciseRequest,
     PaginatedWorkouts,
 )
 from src.workouts.service import (
     WorkoutService,
     WorkoutTypeService,
-    WorkoutParsingService,
 )
 from src.core.database import get_async_session
 from src.users.router import current_active_user

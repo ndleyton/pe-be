@@ -4,7 +4,7 @@ from langfuse import Langfuse
 from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from langchain_core.tools import tool, Tool
+from langchain_core.tools import Tool
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 from src.core.config import settings
