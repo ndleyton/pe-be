@@ -158,7 +158,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # Remove seeded reference data in reverse dependency order using table constructs
-    from sqlalchemy.sql import table, column
     
     connection = op.get_bind()
     inspector = sa.inspect(connection)

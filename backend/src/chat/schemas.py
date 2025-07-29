@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 from typing import List, Optional
 from datetime import datetime
 
@@ -38,21 +38,17 @@ class ConversationMessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConversationResponse(BaseModel):
     id: int
-    title: Optional[str]
+    title: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     is_active: bool
     messages: Optional[List[ConversationMessageResponse]] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConversationListResponse(BaseModel):

@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class ExerciseTypeRead(BaseModel):
@@ -11,9 +11,7 @@ class ExerciseTypeRead(BaseModel):
     description: Optional[str] = None
     default_intensity_unit: int
     times_used: int
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class IntensityUnitRead(BaseModel):
@@ -22,9 +20,7 @@ class IntensityUnitRead(BaseModel):
     id: int
     name: str
     abbreviation: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SetTemplateBase(BaseModel):
@@ -48,9 +44,7 @@ class SetTemplateRead(SetTemplateBase):
     created_at: datetime
     updated_at: datetime
     intensity_unit: Optional[IntensityUnitRead] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExerciseTemplateBase(BaseModel):
@@ -73,9 +67,7 @@ class ExerciseTemplateRead(ExerciseTemplateBase):
     updated_at: datetime
     exercise_type: Optional[ExerciseTypeRead] = None
     set_templates: List[SetTemplateRead] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RecipeBase(BaseModel):
@@ -100,9 +92,7 @@ class RecipeRead(RecipeBase):
     created_at: datetime
     updated_at: datetime
     exercise_templates: List[ExerciseTemplateRead] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RecipeUpdate(BaseModel):
