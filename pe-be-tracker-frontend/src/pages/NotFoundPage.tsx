@@ -19,8 +19,9 @@ const NotFoundPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
+    <div className="max-w-5xl mx-auto p-8 text-center">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
         {/* Error Icon */}
         <div className="flex justify-center mb-6">
           <div className="rounded-full bg-destructive/10 p-6">
@@ -88,6 +89,7 @@ const NotFoundPage: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };
