@@ -96,7 +96,14 @@ class ChatService:
             for exercise in exercises:
                 summary += f"- {exercise.exercise_type.name}\n"
                 for s in exercise.exercise_sets:
-                    summary += f"  - Set {s.id}: {s.reps} reps at {s.intensity} {s.intensity_unit.abbreviation}\n"
+                    # Handle intensity display safely
+                    intensity_display = ""
+                    if s.intensity and hasattr(s, 'intensity_unit') and s.intensity_unit:
+                        intensity_display = f" at {s.intensity} {s.intensity_unit.abbreviation}"
+                    elif s.intensity:
+                        intensity_display = f" at {s.intensity}"
+                    
+                    summary += f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
 
             print(f"DEBUG: Generated summary: {summary}")
             return summary
