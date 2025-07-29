@@ -58,9 +58,6 @@ async def create_workout(
     return await WorkoutService.create_new_workout(session, workout_in, user.id)
 
 
-
-
-
 # ----- Workout types sub-router -----
 
 workout_types_router = APIRouter(prefix="/workout-types", tags=["workout-types"])

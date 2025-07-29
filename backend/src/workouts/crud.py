@@ -1,9 +1,23 @@
 from typing import Optional, List
+from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
+
+
+async def get_workout_by_date(
+    session: AsyncSession, user_id: int, workout_date: date
+) -> Optional[Workout]:
+    """Get a workout by a specific date for a user."""
+    result = await session.execute(
+        select(Workout)
+        .where(Workout.owner_id == user_id, Workout.start_time >= workout_date, Workout.start_time < workout_date + timedelta(days=1))
+        .order_by(Workout.start_time.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_workout_by_id(
