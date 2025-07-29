@@ -1,8 +1,10 @@
 from typing import Optional, List, Dict, Any
+from datetime import date
 from langfuse import Langfuse
 from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.tools import Tool
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 from src.core.config import settings
@@ -13,9 +15,178 @@ from src.chat.crud import (
     get_user_conversations,
 )
 from src.chat.schemas import ConversationMessageCreate
+from src.exercises.crud import get_exercise_types, get_exercise_type_stats
+from src.workouts.service import WorkoutParsingService
+from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
+from src.exercises.crud import get_exercises_for_workout
 
 
 class ChatService:
+    async def _get_last_exercise_performance(self, exercise_name: str) -> str:
+        """
+        Retrieves the last recorded performance for a given exercise for the current user.
+
+        Args:
+            exercise_name: The name of the exercise (e.g., "deadlift", "bench press").
+
+        Returns:
+            A string describing the last performance, or a message indicating no data found.
+        """
+        if not self.session:
+            return "Database session not available."
+
+        # Find the exercise type by name
+        exercise_types_response = await get_exercise_types(
+            self.session, name=exercise_name, limit=1
+        )
+        if not exercise_types_response.data:
+            return f"No exercise named '{exercise_name}' found."
+
+        exercise_type = exercise_types_response.data[0]
+
+        # Get stats for the exercise type
+        stats = await get_exercise_type_stats(self.session, exercise_type.id)
+
+        if not stats or not stats.get("lastWorkout"):
+            return f"No workout data found for {exercise_name}."
+
+        last_workout = stats["lastWorkout"]
+        intensity_unit = stats.get("intensityUnit")
+        unit_abbr = intensity_unit["abbreviation"] if intensity_unit else ""
+
+        return f"On your last {exercise_name} workout on {last_workout['date']}, you did {last_workout['sets']} sets with a max weight of {last_workout['maxWeight']} {unit_abbr}."
+
+    async def _get_last_workout_summary(self) -> str:
+        """
+        Retrieves a summary of the last recorded workout for the current user.
+
+        Returns:
+            A string summarizing the last workout, or a message indicating no data found.
+        """
+        print(f"DEBUG: _get_last_workout_summary called for user {self.user_id}")
+
+        if not self.session:
+            print("DEBUG: No database session available")
+            return "Database session not available."
+
+        try:
+            workout = await get_latest_workout_for_user(self.session, self.user_id)
+            print(f"DEBUG: Found workout: {workout}")
+        except Exception as e:
+            print(f"DEBUG: Error getting latest workout: {e}")
+            return f"Error retrieving workout: {str(e)}"
+
+        if not workout:
+            print("DEBUG: No workout found")
+            return "No workout history found."
+
+        try:
+            exercises = await get_exercises_for_workout(self.session, workout.id)
+            print(f"DEBUG: Found {len(exercises) if exercises else 0} exercises")
+        except Exception as e:
+            print(f"DEBUG: Error getting exercises: {e}")
+            return f"Error retrieving exercises: {str(e)}"
+
+        if not exercises:
+            return f"Your last workout was '{workout.name}' on {workout.start_time.strftime('%Y-%m-%d')}, but it doesn't have any exercises logged."
+
+        try:
+            summary = f"Your last workout was '{workout.name}' on {workout.start_time.strftime('%Y-%m-%d')}. You did the following exercises:\n"
+
+            for exercise in exercises:
+                summary += f"- {exercise.exercise_type.name}\n"
+                for s in exercise.exercise_sets:
+                    # Handle intensity display safely
+                    intensity_display = ""
+                    if (
+                        s.intensity
+                        and hasattr(s, "intensity_unit")
+                        and s.intensity_unit
+                    ):
+                        intensity_display = (
+                            f" at {s.intensity} {s.intensity_unit.abbreviation}"
+                        )
+                    elif s.intensity:
+                        intensity_display = f" at {s.intensity}"
+
+                    summary += (
+                        f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
+                    )
+
+            print(f"DEBUG: Generated summary: {summary}")
+            return summary
+        except Exception as e:
+            print(f"DEBUG: Error generating summary: {e}")
+            return f"Error generating summary: {str(e)}"
+
+    async def _get_workout_summary_by_date(self, workout_date: str) -> str:
+        """
+        Retrieves a summary of a workout for a given date for the current user.
+
+        Args:
+            workout_date: The date of the workout in YYYY-MM-DD format.
+
+        Returns:
+            A string summarizing the workout, or a message indicating no data found.
+        """
+        if not self.session:
+            return "Database session not available."
+
+        try:
+            parsed_date = date.fromisoformat(workout_date)
+        except ValueError:
+            return "Invalid date format. Please use YYYY-MM-DD."
+
+        workout = await get_workout_by_date(self.session, self.user_id, parsed_date)
+
+        if not workout:
+            return f"No workout found on {workout_date}."
+
+        exercises = await get_exercises_for_workout(self.session, workout.id)
+
+        if not exercises:
+            return f"Your workout on {workout_date} ('{workout.name}') doesn't have any exercises logged."
+
+        summary = f"On your workout on {workout_date} ('{workout.name}'), you did the following exercises:\n"
+
+        for exercise in exercises:
+            summary += f"- {exercise.exercise_type.name}\n"
+            for s in exercise.exercise_sets:
+                summary += f"  - Set {s.id}: {s.reps} reps at {s.intensity} {s.intensity_unit.abbreviation}\n"
+
+        return summary
+
+    async def _parse_workout_and_return_json(self, workout_text: str) -> str:
+        parsed_workout = await WorkoutParsingService.parse_workout_text(workout_text)
+        return parsed_workout.model_dump_json()
+
+    def _get_tools(self) -> List[Tool]:
+        """
+        Returns a list of LangChain tools available to the LLM.
+        """
+        return [
+            Tool(
+                name="get_last_exercise_performance",
+                func=self._get_last_exercise_performance,
+                description="Useful for when you need to find out the user's last recorded performance for a specific exercise. Input should be the exact name of the exercise.",
+            ),
+            Tool(
+                name="parse_workout",
+                func=self._parse_workout_and_return_json,
+                description="Use this tool only when the user provides a detailed text description of a workout they want to log or analyze. Do not use this for general questions about workout history. Input should be the full text description of the workout.",
+            ),
+            Tool(
+                name="get_last_workout_summary",
+                func=self._get_last_workout_summary,
+                description="Use this tool when the user asks a general question about their most recent or last workout, like 'what did I do last time?' or 'give me my last workout'. This tool does not require any input.",
+            ),
+            Tool(
+                name="get_workout_summary_by_date",
+                func=self._get_workout_summary_by_date,
+                description="Useful for when you need to find out what the user did in their workout on a specific date. Input should be the date in YYYY-MM-DD format.",
+            ),
+        ]
+
     """Service for handling chat interactions with Langfuse observability."""
 
     def __init__(self, user_id: int, session: Optional[AsyncSession] = None):
@@ -81,7 +252,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         conversation_id: Optional[int] = None,
         save_to_db: bool = True,
     ) -> Dict[str, Any]:
-        """Generate a response from Gemini 2.0 Flash Experimental, with Langfuse tracing and optional DB persistence."""
+        """Generate a response from Gemini 2.5 Flash, with Langfuse tracing and optional DB persistence."""
         if not settings.GOOGLE_AI_KEY:
             raise ValueError("Google AI API key not configured")
 
@@ -114,19 +285,23 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 name="fitness-chat-conversation",
                 user_id=str(self.user_id),
                 metadata={
-                    "model": "gemini-2.0-flash-exp",
+                    "model": "gemini-2.5-flash",
                     "conversation_id": conversation.id if conversation else None,
                 },
             )
 
         try:
+            # Initialize Gemini model
             llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash-exp",
+                model="gemini-2.5-flash",
                 google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
                 max_tokens=800,
                 rate_limiter=self.rate_limiter,
             )
+
+            # Bind tools using the correct method for Gemini integration
+            llm = llm.bind_tools(self._get_tools())
 
             # Convert messages to LangChain format
             system_prompt = self._get_system_prompt()
@@ -138,11 +313,95 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 elif message["role"] == "assistant":
                     langchain_messages.append(AIMessage(content=message["content"]))
 
+            # Tool calling loop
+            while True:
+                # Get response from Gemini
+                response = await llm.ainvoke(langchain_messages)
+
+                if response.tool_calls:
+                    # If the LLM wants to call a tool, execute it
+                    print(
+                        f"DEBUG: Tool calls detected: {response.tool_calls}"
+                    )  # Debug logging
+                    tool_outputs = []
+                    for tool_call in response.tool_calls:
+                        # Handle both object and dictionary formats
+                        if hasattr(tool_call, "name"):
+                            # Object format
+                            tool_name = tool_call.name
+                            tool_args = tool_call.args
+                            tool_call_id = tool_call.id
+                        else:
+                            # Dictionary format
+                            tool_name = tool_call.get("name")
+                            tool_args = tool_call.get("args", {})
+                            tool_call_id = tool_call.get("id")
+
+                        print(
+                            f"DEBUG: Calling tool {tool_name} with args: {tool_args}"
+                        )  # Debug logging
+
+                        # Find the tool function by name
+                        tool_func = next(
+                            (t.func for t in self._get_tools() if t.name == tool_name),
+                            None,
+                        )
+                        if tool_func:
+                            # Execute the tool function
+                            try:
+                                # Check if the function accepts arguments
+                                import inspect
+
+                                sig = inspect.signature(tool_func)
+
+                                # Filter args to only include ones the function accepts
+                                if len(sig.parameters) > 1:  # More than just 'self'
+                                    filtered_args = {
+                                        k: v
+                                        for k, v in tool_args.items()
+                                        if k in sig.parameters
+                                    }
+                                    output = await tool_func(**filtered_args)
+                                else:
+                                    # Function takes no arguments (other than self)
+                                    output = await tool_func()
+
+                                print(f"DEBUG: Tool {tool_name} output: {output}")
+                            except Exception as e:
+                                print(f"DEBUG: Exception in tool {tool_name}: {str(e)}")
+                                output = f"Error executing tool {tool_name}: {str(e)}"
+
+                            tool_outputs.append(
+                                ToolMessage(
+                                    tool_call_id=tool_call_id, content=str(output)
+                                )
+                            )
+                        else:
+                            tool_outputs.append(
+                                ToolMessage(
+                                    tool_call_id=tool_call_id,
+                                    content=f"Error: Tool {tool_name} not found.",
+                                )
+                            )
+
+                    langchain_messages.append(
+                        response
+                    )  # Add the tool_call message from the LLM
+                    langchain_messages.extend(
+                        tool_outputs
+                    )  # Add the tool output messages
+
+                else:
+                    # If no tool call, this is the final response
+                    response_text = response.content.strip()
+                    break
+
             # Map LangChain message types to role names for Langfuse
             message_type_mapping = {
                 SystemMessage: "system",
                 HumanMessage: "user",
                 AIMessage: "assistant",
+                ToolMessage: "tool",  # Add ToolMessage to mapping
             }
 
             generation = (
@@ -160,10 +419,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 if trace
                 else None
             )
-
-            # Get response from Gemini
-            response = await llm.ainvoke(langchain_messages)
-            response_text = response.content.strip()
 
             if generation:
                 generation.end(output=response_text)

@@ -81,11 +81,7 @@ const formatWorkoutDisplay = (workoutData: ParsedWorkout, workoutTypes: WorkoutT
   return `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})${notesText}${exercisesText}\n\nWould you like me to save this workout to your account?`;
 };
 
-// Parse workout text using LLM
-const parseWorkoutText = async (workoutText: string): Promise<ParsedWorkout> => {
-  const response = await api.post('/workouts/parse', { workout_text: workoutText });
-  return response.data;
-};
+
 
 // Send chat message to general chat endpoint
 const sendChatMessage = async (messages: Array<{ role: string; content: string }>, conversationId?: number): Promise<{ message: string; conversation_id: number }> => {
@@ -203,48 +199,15 @@ const ChatPage: React.FC = () => {
         setConversationId(response.conversation_id);
       }
       
-      // Check if response contains workout data by looking for structured markers
-      const responseContent = response.message;
+      // Regular conversational response
+      const assistantMessage: ChatMessage = {
+        id: Date.now().toString() + '-assistant',
+        role: 'assistant',
+        content: response.message,
+        timestamp: new Date(),
+      };
       
-      // Try to extract workout data if the response indicates successful parsing
-      const workoutDataMatch = responseContent.match(/WORKOUT_DATA_START(.*)WORKOUT_DATA_END/s);
-      
-      if (workoutDataMatch) {
-        try {
-          const workoutData = JSON.parse(workoutDataMatch[1]);
-          
-          const assistantMessage: ChatMessage = {
-            id: Date.now().toString() + '-assistant',
-            role: 'assistant',
-            content: formatWorkoutDisplay(workoutData, workoutTypes),
-            timestamp: new Date(),
-            workoutData: workoutData,
-            showSaveButton: true,
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-        } catch (error) {
-          // If parsing fails, just show the regular response
-          const assistantMessage: ChatMessage = {
-            id: Date.now().toString() + '-assistant',
-            role: 'assistant',
-            content: responseContent.replace(/WORKOUT_DATA_START.*WORKOUT_DATA_END/s, '').trim(),
-            timestamp: new Date(),
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-      } else {
-        // Regular conversational response
-        const assistantMessage: ChatMessage = {
-          id: Date.now().toString() + '-assistant',
-          role: 'assistant',
-          content: responseContent,
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-      }
+      setMessages(prev => [...prev, assistantMessage]);
       
       setIsLoading(false);
       
@@ -267,35 +230,7 @@ const ChatPage: React.FC = () => {
     },
   });
 
-  const parseWorkoutMutation = useMutation({
-    mutationFn: parseWorkoutText,
-    onSuccess: (parsedWorkout) => {
-      // Add assistant response showing the parsed workout
-      const assistantMessage: ChatMessage = {
-        id: Date.now().toString() + '-assistant',
-        role: 'assistant',
-        content: formatWorkoutDisplay(parsedWorkout, workoutTypes),
-        timestamp: new Date(),
-        workoutData: parsedWorkout,
-        showSaveButton: true,
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    },
-    onError: (error) => {
-      console.error('Failed to parse workout:', error);
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString() + '-error',
-        role: 'assistant',
-        content: 'Sorry, I had trouble parsing that workout. Could you try rephrasing it or providing more details about the exercises and sets?',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-      setIsLoading(false);
-    },
-  });
+  
 
   const saveWorkoutMutation = useMutation({
     mutationFn: async (parsedWorkout: ParsedWorkout) => {

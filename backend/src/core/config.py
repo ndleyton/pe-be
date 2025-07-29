@@ -1,3 +1,4 @@
+import os
 from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -84,7 +85,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
 
     model_config = SettingsConfigDict(
-        env_file=".env", extra="ignore", env_prefix="", case_sensitive=True
+        env_file=os.getenv("ENV_FILE", ".env"),
+        extra="ignore",
+        env_prefix="",
+        case_sensitive=True,
     )
 
     @field_validator("DATABASE_URL")
