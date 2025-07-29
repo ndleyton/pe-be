@@ -71,7 +71,7 @@ class Settings(BaseSettings):
         env_file=os.getenv("ENV_FILE", ".env"),
         extra="ignore",
         env_prefix="",
-        case_sensitive=True
+        case_sensitive=True,
     )
 
     @field_validator("DATABASE_URL")

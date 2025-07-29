@@ -12,6 +12,7 @@ from src.exercises.models import (
     Muscle,
     ExerciseMuscle,
 )
+from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
@@ -53,7 +54,7 @@ async def get_exercises_for_workout(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets),
+            selectinload(Exercise.exercise_sets).selectinload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.workout_id == workout_id)
         .order_by(Exercise.id.asc())
