@@ -2,7 +2,6 @@ import { useAuthStore } from '@/stores';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
-;
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,8 +18,8 @@ const NotFoundPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
+    <div className="max-w-5xl mx-auto p-8 text-center min-h-screen bg-background flex items-center justify-center">
+      <div className="max-w-md w-full">
         {/* Error Icon */}
         <div className="flex justify-center mb-6">
           <div className="rounded-full bg-destructive/10 p-6">

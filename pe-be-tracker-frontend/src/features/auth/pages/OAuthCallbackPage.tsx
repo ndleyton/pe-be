@@ -131,7 +131,7 @@ const OAuthCallbackPage: React.FC = () => {
         <HomeLogo />
       </div>
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
+        <div className="max-w-5xl mx-auto p-8 text-center">
           {statusContent.icon}
           <h2 className="mt-4 text-xl font-semibold text-foreground">{statusContent.title}</h2>
           {statusContent.description && (
