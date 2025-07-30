@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Image } from 'lucide-react';
+import Fade from 'embla-carousel-fade';
 import { getExerciseTypeById, getExerciseTypeStats } from '@/features/exercises/api';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
 import { LastWorkoutInfo, PersonalBestInfo } from '@/features/exercises/components';
@@ -138,7 +139,15 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                   
                   if (validImages.length > 0) {
                     return (
-                      <Carousel className="w-full h-full">
+                      <Carousel 
+                        className="w-full h-full" 
+                        opts={{ 
+                          loop: true,
+                          align: 'center',
+                          containScroll: false
+                        }}
+                        plugins={[Fade()]}
+                      >
                         <CarouselContent>
                           {validImages.map((imageUrl, index) => (
                             <CarouselItem key={imageUrl}>
