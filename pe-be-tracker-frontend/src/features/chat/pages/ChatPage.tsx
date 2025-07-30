@@ -343,9 +343,10 @@ const ChatPage: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    
+    setInputValue('');
 
     if (!isAuthenticated) {
-      // Handle non-authenticated users
       setTimeout(() => {
         const response: ChatMessage = {
           id: Date.now().toString() + '-response',
@@ -371,7 +372,6 @@ const ChatPage: React.FC = () => {
       content: messageContent
     });
 
-    // Send to general chat endpoint
     chatMutation.mutate({ 
       messages: conversationMessages, 
       conversationId 
@@ -379,8 +379,8 @@ const ChatPage: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    await processMessage(inputValue);
-    setInputValue('');
+    const messageToSend = inputValue;
+    await processMessage(messageToSend);
   };
 
   const handleExamplePrompt = async (prompt: string) => {
@@ -388,7 +388,6 @@ const ChatPage: React.FC = () => {
     // Auto-submit the example prompt
     setTimeout(async () => {
       await processMessage(prompt);
-      setInputValue('');
     }, 100);
   };
 
