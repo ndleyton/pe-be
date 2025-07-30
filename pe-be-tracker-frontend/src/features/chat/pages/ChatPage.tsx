@@ -388,6 +388,7 @@ const ChatPage: React.FC = () => {
     // Auto-submit the example prompt
     setTimeout(async () => {
       await processMessage(prompt);
+      setInputValue('');
     }, 100);
   };
 
