@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GoogleSignInButton } from "./features/auth/components";
-import { HomeLogo } from "./shared/components/layout";
+import { GoogleSignInButton } from "@/features/auth/components";
+import { HomeLogo } from "@/shared/components/layout";
 
-const App: React.FC = () => {
+const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleTryAsGuest = () => {
@@ -48,4 +48,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default LoginPage;

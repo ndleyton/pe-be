@@ -1,9 +1,10 @@
 import React, { Suspense } from 'react';
 import { type RouteObject } from 'react-router-dom';
-import App from './App';
 import AppLayout from './layouts/AppLayout';
 import NotFoundPage from './pages/NotFoundPage';
 import { PageErrorBoundary } from '@/shared/components/error';
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
 
 // Lazy load components with error boundaries
 const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
@@ -37,7 +38,11 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const routes: RouteObject[] = [
   {
     path: '/',
-    element: <App />,
+    element: <LandingPage />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
   },
   {
     path: '/oauth/callback',

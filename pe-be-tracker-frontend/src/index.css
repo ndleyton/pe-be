@@ -71,6 +71,7 @@
     --warning: rgb(255, 165, 0);
     --warning-foreground: rgb(242, 242, 242);
     --radius: 1.0rem;
+    --font-sans: 'Inter', sans-serif;
   }
   
   .dark {
@@ -108,6 +109,7 @@
     --chart-5: rgb(255, 122, 143);
     --warning: rgb(255, 190, 77);
     --warning-foreground: rgb(25, 20, 5);
+    --font-sans: 'Inter', sans-serif;
   }
 }
 
@@ -117,6 +119,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
   }
   #root {
     max-width: 1280px;
