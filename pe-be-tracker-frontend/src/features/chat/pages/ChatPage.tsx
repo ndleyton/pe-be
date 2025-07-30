@@ -343,9 +343,10 @@ const ChatPage: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    
+    setInputValue('');
 
     if (!isAuthenticated) {
-      // Handle non-authenticated users
       setTimeout(() => {
         const response: ChatMessage = {
           id: Date.now().toString() + '-response',
@@ -371,7 +372,6 @@ const ChatPage: React.FC = () => {
       content: messageContent
     });
 
-    // Send to general chat endpoint
     chatMutation.mutate({ 
       messages: conversationMessages, 
       conversationId 
@@ -379,8 +379,8 @@ const ChatPage: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    await processMessage(inputValue);
-    setInputValue('');
+    const messageToSend = inputValue;
+    await processMessage(messageToSend);
   };
 
   const handleExamplePrompt = async (prompt: string) => {
@@ -401,206 +401,207 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 px-2 py-4 sm:p-4 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <Card className="h-[calc(90vh-5rem)] flex flex-col border-border">
-          <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-background to-secondary/20">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-2 sm:p-4 min-h-0">
+        <div className="flex-1 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
+          {/* Header - Fixed */}
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-1">
               <Dumbbell className="h-6 w-6" />
-              Fitness Coach AI
-            </CardTitle>
+              <h1 className="text-xl font-semibold">Fitness Coach AI</h1>
+            </div>
             <p className="text-primary-foreground/80 text-sm">
               Log your workouts or get personalized fitness advice
             </p>
-          </CardHeader>
+          </div>
 
-          <CardContent className="flex-1 flex flex-col p-0 bg-background">
-            <ScrollArea className="flex-1 p-2 sm:p-4">
-              {messages.length === 0 && (
-                <div className="text-center py-8">
-                  <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Welcome to your Fitness Coach!
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    I can help you log workouts and provide personalized fitness advice.
-                  </p>
-                  <div className="grid gap-2 max-w-2xl mx-auto">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Try these examples:</p>
-                    {examplePrompts.map((prompt, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleExamplePrompt(prompt)}
-                        className="text-left p-3 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors text-secondary-foreground"
-                      >
-                        "{prompt}"
-                      </button>
-                    ))}
-                  </div>
-                  {!isAuthenticated && (
-                    <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">
-                        ⚠️ You need to be signed in to parse and save workouts
-                      </p>
-                    </div>
-                  )}
+          {/* Messages - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-background min-h-0">
+            {messages.length === 0 && (
+              <div className="text-center py-8">
+                <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Welcome to your Fitness Coach!
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  I can help you log workouts and provide personalized fitness advice.
+                </p>
+                <div className="grid gap-2 max-w-2xl mx-auto">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Try these examples:</p>
+                  {examplePrompts.map((prompt, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleExamplePrompt(prompt)}
+                      className="text-left p-3 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors text-secondary-foreground"
+                    >
+                      "{prompt}"
+                    </button>
+                  ))}
                 </div>
-              )}
+                {!isAuthenticated && (
+                  <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-destructive text-sm">
+                      ⚠️ You need to be signed in to parse and save workouts
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
-              {messages.map((message) => (
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex gap-3 max-w-[85%] sm:max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                 >
                   <div
-                    className={`flex gap-3 max-w-[85%] sm:max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : message.role === "system"
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
                   >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : message.role === "system"
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {message.role === "user" ? (
-                        <User className="h-4 w-4" />
-                      ) : (
-                        <Bot className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div
-                      className={`p-3 rounded-lg ${
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : message.role === "system"
-                          ? "bg-accent/50 text-accent-foreground border border-accent"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap">
-                        {message.role === 'assistant' ? (
-                          <div className="space-y-2">
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                p: ({ children, ...props }) => <p className="mb-2 last:mb-0" {...props}>{children}</p>,
-                                ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
-                                ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
-                                li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
-                                strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
-                                em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
-                                code: ({ children, ...props }) => {
-                                  // Check if this is inline code by looking at the props
-                                  const isInline = !props.className?.includes('language-');
-                                  return isInline ? (
-                                    <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
-                                      {children}
-                                    </code>
-                                  ) : (
-                                    <code {...props}>{children}</code>
-                                  );
-                                },
-                                pre: ({ children, ...props }) => (
-                                  <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
+                    {message.role === "user" ? (
+                      <User className="h-4 w-4" />
+                    ) : (
+                      <Bot className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div
+                    className={`p-3 rounded-lg ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : message.role === "system"
+                        ? "bg-accent/50 text-accent-foreground border border-accent"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap">
+                      {message.role === 'assistant' ? (
+                        <div className="space-y-2">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: ({ children, ...props }) => <p className="mb-2 last:mb-0" {...props}>{children}</p>,
+                              ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
+                              ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
+                              li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
+                              strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
+                              em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
+                              code: ({ children, ...props }) => {
+                                // Check if this is inline code by looking at the props
+                                const isInline = !props.className?.includes('language-');
+                                return isInline ? (
+                                  <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
                                     {children}
-                                  </pre>
-                                ),
-                                h1: ({ children, ...props }) => <h1 className="text-lg font-bold mb-2" {...props}>{children}</h1>,
-                                h2: ({ children, ...props }) => <h2 className="text-base font-bold mb-2" {...props}>{children}</h2>,
-                                h3: ({ children, ...props }) => <h3 className="text-sm font-bold mb-1" {...props}>{children}</h3>,
-                                blockquote: ({ children, ...props }) => (
-                                  <blockquote className="border-l-4 border-muted pl-4 italic mb-2" {...props}>
-                                    {children}
-                                  </blockquote>
-                                ),
-                              }}
-                            >
-                              {message.content || ''}
-                            </ReactMarkdown>
-                          </div>
-                        ) : (
-                          message.content
-                        )}
-                      </div>
-                      {message.showSaveButton && message.workoutData && (
-                        <div className="mt-3 flex gap-2">
-                          <Button
-                            size="sm"
-                            className="bg-accent hover:bg-accent/80 text-accent-foreground"
-                            onClick={() => handleSaveWorkout(message.workoutData!)}
-                            disabled={saveWorkoutMutation.isPending}
-                          >
-                            {saveWorkoutMutation.isPending ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                Saving...
-                              </div>
-                            ) : (
-                              '💾 Save Workout'
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setMessages(prev => prev.map(msg => 
-                                msg.id === message.id 
-                                  ? { ...msg, showSaveButton: false }
-                                  : msg
-                              ));
+                                  </code>
+                                ) : (
+                                  <code {...props}>{children}</code>
+                                );
+                              },
+                              pre: ({ children, ...props }) => (
+                                <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
+                                  {children}
+                                </pre>
+                              ),
+                              h1: ({ children, ...props }) => <h1 className="text-lg font-bold mb-2" {...props}>{children}</h1>,
+                              h2: ({ children, ...props }) => <h2 className="text-base font-bold mb-2" {...props}>{children}</h2>,
+                              h3: ({ children, ...props }) => <h3 className="text-sm font-bold mb-1" {...props}>{children}</h3>,
+                              blockquote: ({ children, ...props }) => (
+                                <blockquote className="border-l-4 border-muted pl-4 italic mb-2" {...props}>
+                                  {children}
+                                </blockquote>
+                              ),
                             }}
                           >
-                            Cancel
-                          </Button>
+                            {message.content || ''}
+                          </ReactMarkdown>
                         </div>
+                      ) : (
+                        message.content
                       )}
                     </div>
+                    {message.showSaveButton && message.workoutData && (
+                      <div className="mt-3 flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-accent hover:bg-accent/80 text-accent-foreground"
+                          onClick={() => handleSaveWorkout(message.workoutData!)}
+                          disabled={saveWorkoutMutation.isPending}
+                        >
+                          {saveWorkoutMutation.isPending ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                              Saving...
+                            </div>
+                          ) : (
+                            '💾 Save Workout'
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setMessages(prev => prev.map(msg => 
+                              msg.id === message.id 
+                                ? { ...msg, showSaveButton: false }
+                                : msg
+                            ));
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
 
-              {isLoading && (
-                <div className="flex gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="bg-muted p-3 rounded-lg">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
+            {isLoading && (
+              <div className="flex gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              <div ref={messagesEndRef} />
-            </ScrollArea>
-
-            <div className="border-t border-border p-2 sm:p-4 bg-background">
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Describe your workout or ask for fitness advice..."
-                  className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
-                  disabled={isLoading}
-                />
-                <Button type="submit" disabled={isLoading || !inputValue.trim()}>
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
-          </CardContent>
-        </Card>
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Input - Fixed at bottom */}
+          <div className="border-t border-border p-2 sm:p-4 bg-background flex-shrink-0">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Describe your workout or ask for fitness advice..."
+                className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
+                disabled={isLoading}
+              />
+              <Button type="submit" disabled={isLoading || !inputValue.trim()}>
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
