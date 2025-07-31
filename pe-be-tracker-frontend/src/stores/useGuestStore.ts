@@ -190,6 +190,11 @@ const getInitialGuestData = (): GuestData => ({
       name: 'Bodyweight',
       description: 'Exercises using your own body weight',
     },
+    {
+      id: '8',
+      name: 'Other',
+      description: 'General workout session',
+    },
   ],
   recipes: [],
 });
