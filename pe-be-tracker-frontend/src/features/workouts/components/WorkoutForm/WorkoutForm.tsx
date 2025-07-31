@@ -57,11 +57,23 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     defaultValues: {
       name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       start_time: new Date().toISOString().slice(0, 16),
+      workout_type_id: 8,
     },
   });
 
   const nameField = watch('name');
   const datePrefix = useMemo(() => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), []);
+
+  // Set initial workout type based on default form value
+  useEffect(() => {
+    if (!selectedWorkoutType) {
+      const workoutTypes = isAuthenticated ? [] : guestData.workoutTypes;
+      const defaultWorkoutType = workoutTypes.find(wt => wt.id === 8 || wt.id === '8');
+      if (defaultWorkoutType) {
+        setSelectedWorkoutType(defaultWorkoutType);
+      }
+    }
+  }, [selectedWorkoutType, isAuthenticated, guestData.workoutTypes]);
 
   useEffect(() => {
     if (selectedWorkoutType && (!formState.dirtyFields.name || nameField === datePrefix)) {
