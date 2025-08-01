@@ -8,7 +8,7 @@ import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 
-const DEFAULT_WORKOUT_TYPE_ID = 8;
+const DEFAULT_WORKOUT_TYPE_ID = '8';
 
 interface WorkoutFormData {
   name?: string;
@@ -70,7 +70,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   useEffect(() => {
     if (!selectedWorkoutType) {
       const workoutTypes = isAuthenticated ? [] : guestData.workoutTypes;
-      const defaultWorkoutType = workoutTypes.find(wt => String(wt.id) === String(DEFAULT_WORKOUT_TYPE_ID));
+      const defaultWorkoutType = workoutTypes.find(wt => wt.id === DEFAULT_WORKOUT_TYPE_ID);
       if (defaultWorkoutType) {
         setSelectedWorkoutType(defaultWorkoutType);
       }
