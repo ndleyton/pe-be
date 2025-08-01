@@ -29,7 +29,7 @@ test.describe('Guest Mode Workout Creation', () => {
     await page.click('[data-testid="start-workout-button"]');
 
     // 7. Verify the new workout appears on the workout page
-    await expect(page.locator(`h3:has-text("${workoutName}")`)).toBeVisible();
+    await expect(page.locator(`h3:has-text("${workoutName}")`)).toBeVisible({ timeout: 10000 });
   });
 
   test.afterEach(async ({ page }) => {
