@@ -1,4 +1,5 @@
 import React from 'react';
+import { Flame } from 'lucide-react';
 
 interface Workout {
   id: number | string;
@@ -66,13 +67,7 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '' })
                 title={`${date.toLocaleDateString()}: ${hasWorkout ? 'Workout completed' : 'No workout'}`}
               >
                 {hasWorkout ? (
-                  <span
-                    role="img"
-                    aria-label="Workout logged"
-                    className="text-lg leading-none select-none"
-                  >
-                    🔥
-                  </span>
+                  <Flame className="w-5 h-5 text-orange-500" />
                 ) : (
                   <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                 )}

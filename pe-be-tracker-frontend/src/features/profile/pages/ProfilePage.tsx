@@ -10,6 +10,7 @@ import {
   AlertTitle,
 } from '@/shared/components/ui/alert';
 import { ModeToggle } from '@/shared/components/theme/mode-toggle';
+import { Dumbbell, Check, Timer } from 'lucide-react';
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
   const { data } = await getMyWorkouts(undefined, 100);
@@ -118,7 +119,7 @@ const ProfilePage: React.FC = () => {
                 <p className="text-2xl font-bold text-primary">{totalWorkouts}</p>
               </div>
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl">💪</span>
+                <Dumbbell className="w-6 h-6 text-primary" />
               </div>
             </div>
           </div>
@@ -130,7 +131,7 @@ const ProfilePage: React.FC = () => {
                 <p className="text-2xl font-bold text-secondary">{completedWorkouts.length}</p>
               </div>
               <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl">✅</span>
+                <Check className="w-6 h-6 text-primary" />
               </div>
             </div>
           </div>
@@ -144,7 +145,7 @@ const ProfilePage: React.FC = () => {
                 </p>
               </div>
               <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl">⏱️</span>
+                <Timer className="w-6 h-6 text-primary" />
               </div>
             </div>
           </div>
