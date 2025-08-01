@@ -8,7 +8,7 @@ import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 
-const DEFAULT_WORKOUT_TYPE_ID = 8;
+const DEFAULT_WORKOUT_TYPE_ID = '8';
 
 interface WorkoutFormData {
   name?: string;
@@ -70,7 +70,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   useEffect(() => {
     if (!selectedWorkoutType) {
       const workoutTypes = isAuthenticated ? [] : guestData.workoutTypes;
-      const defaultWorkoutType = workoutTypes.find(wt => String(wt.id) === String(DEFAULT_WORKOUT_TYPE_ID));
+      const defaultWorkoutType = workoutTypes.find(wt => wt.id === DEFAULT_WORKOUT_TYPE_ID);
       if (defaultWorkoutType) {
         setSelectedWorkoutType(defaultWorkoutType);
       }
@@ -219,6 +219,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
           <div
             onClick={() => setShowModal(true)}
             className="bg-background rounded-lg p-4 border border-border cursor-pointer hover:bg-accent transition-colors"
+            data-testid="open-workout-type-modal"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">

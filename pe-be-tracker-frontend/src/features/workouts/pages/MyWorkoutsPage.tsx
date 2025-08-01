@@ -10,6 +10,7 @@ import { RecipesSection } from '@/features/recipes/components/RecipesSection/Rec
 import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
+import { Dumbbell } from 'lucide-react';
 
 
 const MyWorkoutsPage = () => {
@@ -155,7 +156,7 @@ const MyWorkoutsPage = () => {
                   >
                     <div className="flex items-center space-x-4">
                       <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                        <span className="text-primary-foreground font-bold text-lg">💪</span>
+                        <Dumbbell className="w-5 h-5 text-primary-foreground" />
                       </div>
                       <div>
                         <h3 className="text-foreground font-medium">

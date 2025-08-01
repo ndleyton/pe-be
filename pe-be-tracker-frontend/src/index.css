@@ -31,6 +31,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-done: var(--done);
+  --color-done-foreground: var(--done-foreground);
   --radius: var(--radius);
 }
 
@@ -71,6 +73,8 @@
     --warning: rgb(255, 165, 0);
     --warning-foreground: rgb(242, 242, 242);
     --radius: 1.0rem;
+    --done: #00D6A1;
+    --done-foreground: rgb(25, 20, 5);
   }
   
   .dark {
@@ -108,6 +112,8 @@
     --chart-5: rgb(255, 122, 143);
     --warning: rgb(255, 190, 77);
     --warning-foreground: rgb(25, 20, 5);
+    --done: rgb(179, 255, 236);
+    --done-foreground: rgb(25, 20, 5);
   }
 }
 

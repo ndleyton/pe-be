@@ -44,18 +44,18 @@ describe('WorkoutForm', () => {
   it('renders the form with all required fields', () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    expect(screen.getByText(/select workout type/i)).toBeInTheDocument();
+    expect(screen.getByText(/general workout session/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start workout/i })).toBeInTheDocument();
   });
 
-  it('opens workout type modal when clicking select workout type', async () => {
+  it('opens workout type modal when clicking workout type card', async () => {
     const user = userEvent.setup();
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    const selectButton = screen.getByText(/select workout type/i);
-    await user.click(selectButton);
+    const workoutTypeCard = screen.getByText(/general workout session/i).closest('div');
+    await user.click(workoutTypeCard!);
 
     expect(screen.getByTestId('workout-type-modal')).toBeInTheDocument();
   });
