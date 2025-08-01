@@ -219,6 +219,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
           <div
             onClick={() => setShowModal(true)}
             className="bg-background rounded-lg p-4 border border-border cursor-pointer hover:bg-accent transition-colors"
+            data-testid="open-workout-type-modal"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
