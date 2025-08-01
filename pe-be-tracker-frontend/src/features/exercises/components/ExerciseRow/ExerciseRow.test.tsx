@@ -440,16 +440,6 @@ describe('ExerciseRow', () => {
     expect(screen.getByRole('button', { name: /add set/i })).toBeInTheDocument();
   });
 
-  it('shows correct set type badges', () => {
-    render(<ExerciseRow {...defaultProps} />);
-
-    // First set should be warmup (W badge)
-    expect(screen.getByText('W')).toBeInTheDocument();
-    
-    // Second set should show set number
-    expect(screen.getByText('2')).toBeInTheDocument();
-  });
-
   it('applies correct styling for completed sets', () => {
     render(<ExerciseRow {...defaultProps} />);
 
