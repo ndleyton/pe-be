@@ -8,6 +8,8 @@ import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 
+const DEFAULT_WORKOUT_TYPE_ID = 8;
+
 interface WorkoutFormData {
   name?: string;
   notes?: string;
@@ -57,7 +59,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     defaultValues: {
       name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       start_time: new Date().toISOString().slice(0, 16),
-      workout_type_id: 8,
+      workout_type_id: DEFAULT_WORKOUT_TYPE_ID,
     },
   });
 
@@ -68,7 +70,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   useEffect(() => {
     if (!selectedWorkoutType) {
       const workoutTypes = isAuthenticated ? [] : guestData.workoutTypes;
-      const defaultWorkoutType = workoutTypes.find(wt => wt.id === 8 || wt.id === '8');
+      const defaultWorkoutType = workoutTypes.find(wt => String(wt.id) === String(DEFAULT_WORKOUT_TYPE_ID));
       if (defaultWorkoutType) {
         setSelectedWorkoutType(defaultWorkoutType);
       }
