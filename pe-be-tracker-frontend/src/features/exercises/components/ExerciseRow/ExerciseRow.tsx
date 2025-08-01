@@ -60,8 +60,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     };
   });
   
-  // Helper function to get set type
-  const getSetType = (index: number) => index === 0 ? 'warmup' : 'working';
 
   // Helper function to update exercise notes
   const updateExerciseNotes = (notes: string) => {
@@ -463,13 +461,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
             >
               <div className="font-medium">
-                {getSetType(index) === "warmup" ? (
-                  <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700">
-                    W
-                  </Badge>
-                ) : (
-                  <span>{index + 1}</span>
-                )}
+                <span>{index + 1}</span>
               </div>
               <div className="text-sm text-gray-500">
                 <Dialog onOpenChange={(open) => {
