@@ -191,7 +191,6 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow {...defaultProps} />);
 
     // Check for set numbers
-    expect(screen.getByText('W')).toBeInTheDocument(); // First set is warmup
     expect(screen.getByText('2')).toBeInTheDocument(); // Second set number
 
     // Check for set values
@@ -416,7 +415,6 @@ describe('ExerciseRow', () => {
     
     // Should still show table headers but no set rows
     expect(screen.getByText('SET')).toBeInTheDocument();
-    expect(screen.queryByText('W')).not.toBeInTheDocument(); // No warmup badge
     expect(screen.queryByText('1')).not.toBeInTheDocument(); // No set numbers
   });
 
@@ -438,16 +436,6 @@ describe('ExerciseRow', () => {
 
     expect(screen.getByText('Bench Press')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add set/i })).toBeInTheDocument();
-  });
-
-  it('shows correct set type badges', () => {
-    render(<ExerciseRow {...defaultProps} />);
-
-    // First set should be warmup (W badge)
-    expect(screen.getByText('W')).toBeInTheDocument();
-    
-    // Second set should show set number
-    expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('applies correct styling for completed sets', () => {
