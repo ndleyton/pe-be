@@ -59,7 +59,6 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     defaultValues: {
       name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       start_time: new Date().toISOString().slice(0, 16),
-      workout_type_id: DEFAULT_WORKOUT_TYPE_ID,
     },
   });
 

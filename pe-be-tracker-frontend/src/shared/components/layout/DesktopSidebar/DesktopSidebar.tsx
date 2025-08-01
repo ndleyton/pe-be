@@ -1,10 +1,32 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
-import { navItems } from '@/shared/navigation/navItems';
+import { navItems, NavItem } from '@/shared/navigation/navItems';
 import { Button } from '@/shared/components/ui/button';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
+import usePersistentNav from '@/shared/hooks/usePersistentNav';
+
+const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
+  const lastVisited = usePersistentNav(item.key, item.to);
+  const IconComponent = item.icon;
+
+  return (
+    <NavLink
+      to={lastVisited}
+      className={({ isActive }) =>
+        `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
+          isActive
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+        }`
+      }
+    >
+      <IconComponent className="w-5 h-5 mr-3" />
+      {item.label}
+    </NavLink>
+  );
+};
 
 const DesktopSidebar: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
@@ -18,25 +40,9 @@ const DesktopSidebar: React.FC = () => {
           <HomeLogo />
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2" aria-label="Sidebar navigation">
-          {navItems.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`
-                }
-              >
-                <IconComponent className="w-5 h-5 mr-3" />
-                {item.label}
-              </NavLink>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavItemLink key={item.key} item={item} />
+          ))}
         </nav>
         <div className="p-4 border-t">
           {isAuthenticated ? (

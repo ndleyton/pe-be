@@ -1,7 +1,27 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { navItems } from '@/shared/navigation/navItems';
-import { Button } from '@/shared/components/ui/button';
+import { navItems, NavItem } from '@/shared/navigation/navItems';
+import usePersistentNav from '@/shared/hooks/usePersistentNav';
+
+const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
+  const lastVisited = usePersistentNav(item.key, item.to);
+  const IconComponent = item.icon;
+
+  return (
+    <NavLink
+      to={lastVisited}
+      aria-label={item.label}
+      className={({ isActive }) =>
+        `flex flex-col items-center justify-center gap-0.5 w-full h-full py-2 ${
+          isActive ? 'text-primary' : 'text-muted-foreground'
+        }`
+      }
+    >
+      <IconComponent className="w-6 h-6" />
+      <span className="text-xs">{item.label}</span>
+    </NavLink>
+  );
+};
 
 const BottomNav: React.FC = () => (
   <nav
@@ -9,20 +29,8 @@ const BottomNav: React.FC = () => (
     style={{ bottom: 'env(safe-area-inset-bottom)' }}
     aria-label="Bottom navigation"
   >
-    {navItems.map(({ to, icon: Icon, label }) => (
-      <NavLink
-        key={to}
-        to={to}
-        aria-label={label}
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center gap-0.5 w-full h-full py-2 ${
-            isActive ? 'text-primary' : 'text-muted-foreground'
-          }`
-        }
-      >
-        <Icon className="w-6 h-6" />
-        <span className="text-xs">{label}</span>
-      </NavLink>
+    {navItems.map((item) => (
+      <NavItemLink key={item.key} item={item} />
     ))}
   </nav>
 );
