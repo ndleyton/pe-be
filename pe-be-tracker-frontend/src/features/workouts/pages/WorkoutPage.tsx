@@ -275,9 +275,9 @@ const WorkoutPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto p-8 text-center">
-      <div className="max-w-2xl mx-auto p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-8">
-        <div className="mb-6">
+    <div className="max-w-5xl mx-auto p-2 sm:p-4 md:p-6 lg:p-8 text-center">
+      <div className="max-w-2xl mx-auto p-3 sm:p-4 md:p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-2 sm:mt-4 md:mt-8">
+        <div className="mb-3 sm:mb-4 md:mb-6">
           <h2 className="text-2xl font-bold">
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
