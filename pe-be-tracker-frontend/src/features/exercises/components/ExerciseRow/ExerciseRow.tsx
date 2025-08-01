@@ -350,7 +350,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   };
 
   return (
-    <Card key={exercise.id}>
+    <Card key={exercise.id} className="border-input">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -373,13 +373,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-6 h-6 p-0 hover:bg-gray-100"
+                    className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
                     onClick={() => {
                       setExerciseNotesValue(exercise.notes || '');
                       setExerciseNotesModal(true);
                     }}
                   >
-                    <StickyNote className="w-4 h-4 text-gray-600" />
+                    <StickyNote className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   </Button>
                 </DialogTrigger>
               <DialogContent>
@@ -433,8 +433,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
         {/* Rest Timer */}
         <div className="flex items-center gap-2 mt-2">
-          <Timer className="w-4 h-4 text-blue-500" />
-          <span className="text-sm text-blue-500">
+          <Timer className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+          <span className="text-sm text-blue-500 dark:text-blue-400">
             Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
           </span>
         </div>
@@ -442,7 +442,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
       <CardContent className="p-4 pt-0">
         {/* Sets Table Header */}
-        <div className="grid gap-4 text-xs font-medium text-gray-500 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
+        <div className="grid gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
           <div>SET</div>
           <div>NOTES</div>
           <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
@@ -456,14 +456,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
             <div
               key={set.id}
               className={`grid gap-4 items-center p-2 rounded ${
-                set.done ? "bg-green-100" : "bg-white"
+                set.done ? "bg-done" : "bg-secondary"
               }`}
               style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
             >
-              <div className="font-medium">
+              <div className="font-medium text-muted-foreground">
                 <span>{index + 1}</span>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 <Dialog onOpenChange={(open) => {
                   if (!open) {
                     setNotesModal(null);
@@ -475,7 +475,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
                       onClick={() => {
                         const initialNotes = set.notes || '';
                         setNotesModal({ exerciseId: exercise.id, setId: set.id });
@@ -483,7 +483,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                         setInitialSetNotesValue(initialNotes);
                       }}
                     >
-                      <StickyNote className="w-3 h-3" />
+                      <StickyNote className="w-3 h-3 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -506,7 +506,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.intensity || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center"
+                  className="h-8 text-center input"
                   disabled={set.done}
                 />
               </div>
@@ -514,7 +514,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 w-6 p-0 bg-transparent"
+                  className="h-6 w-6 p-0 bg-transparent border border-input"
                   onClick={() => decrementReps(exercise.id, set.id)}
                   disabled={set.done}
                 >
@@ -524,13 +524,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.reps || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center flex-1 min-w-0"
+                  className="h-8 text-center flex-1 min-w-0 input"
                   disabled={set.done}
                 />
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 w-6 p-0 bg-transparent"
+                  className="h-6 w-6 p-0 bg-transparent border border-input"
                   onClick={() => incrementReps(exercise.id, set.id)}
                   disabled={set.done}
                 >
@@ -541,7 +541,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 <Button
                   variant={set.done ? "default" : "outline"}
                   size="sm"
-                  className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600" : ""}`}
+                  className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800" : "border border-input dark:border-gray-600"}`}
                   onClick={() => toggleSetCompletion(exercise.id, set.id)}
                 >
                   <Check className="w-4 h-4" />
@@ -552,7 +552,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         </div>
 
         {/* Add Set Button */}
-        <Button variant="outline" className="w-full mt-4 bg-transparent" onClick={() => addSet(exercise.id)}>
+        <Button variant="outline" className="w-full mt-4 bg-transparent border-input" onClick={() => addSet(exercise.id)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Set
         </Button>
