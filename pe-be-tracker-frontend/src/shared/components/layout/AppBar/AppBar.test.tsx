@@ -71,7 +71,7 @@ vi.mock('./DesktopNav', () => ({
 // Test wrapper
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
-    <MemoryRouter initialEntries={['/dashboard']}>
+    <MemoryRouter initialEntries={['/workouts']}>
       {children}
     </MemoryRouter>
   );

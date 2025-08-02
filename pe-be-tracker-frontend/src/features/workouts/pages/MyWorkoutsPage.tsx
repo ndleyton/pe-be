@@ -65,7 +65,7 @@ const MyWorkoutsPage = () => {
 
 
   const handleWorkoutClick = (workoutId: number | string) => {
-    navigate(`/workout/${workoutId}`);
+    navigate(`/workouts/${workoutId}`);
   };
 
   const [selectedRecipe, setSelectedRecipe] = React.useState<GuestRecipe | null>(null);
@@ -123,7 +123,7 @@ const MyWorkoutsPage = () => {
                   setShowWorkoutForm(false);
                   setSelectedRecipe(null);
                   if (selectedRecipe) {
-                    navigate(`/workout/${workoutId}`, { state: { recipe: selectedRecipe } });
+                    navigate(`/workouts/${workoutId}`, { state: { recipe: selectedRecipe } });
                   }
                 }} 
               />

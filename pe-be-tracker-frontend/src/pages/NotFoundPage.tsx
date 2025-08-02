@@ -2,14 +2,15 @@ import { useAuthStore } from '@/stores';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { NAV_PATHS } from '@/shared/navigation/constants';
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   const handleGoHome = () => {
-    // Navigate to dashboard if authenticated, otherwise to landing page
-    navigate(isAuthenticated ? '/dashboard' : '/');
+    // Navigate to workouts if authenticated, otherwise to landing page
+    navigate(isAuthenticated ? NAV_PATHS.WORKOUTS : '/');
   };
 
   const handleGoBack = () => {
@@ -47,7 +48,7 @@ const NotFoundPage: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
           >
             <Home className="h-5 w-5" />
-            {isAuthenticated ? 'Go to Dashboard' : 'Go to Home'}
+            {isAuthenticated ? 'Go to Workouts' : 'Go to Home'}
           </button>
           
           <button
@@ -64,21 +65,21 @@ const NotFoundPage: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-4">Need help? Try these:</p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(NAV_PATHS.WORKOUTS)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >
-              Dashboard
+              Workouts
             </button>
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(NAV_PATHS.EXERCISES)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >
-              My Workouts
+              Exercises
             </button>
             <button
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate(NAV_PATHS.CHAT)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >

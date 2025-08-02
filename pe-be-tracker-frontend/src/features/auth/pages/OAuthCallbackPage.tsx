@@ -5,6 +5,7 @@ import { useGuestStore } from '@/stores';
 import { useShallow } from 'zustand/react/shallow';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 import api from '@/shared/api/client';
+import { NAV_PATHS } from '@/shared/navigation/constants';
 
 const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -68,7 +69,7 @@ const OAuthCallbackPage: React.FC = () => {
 
         // Wait a moment to show success state, then redirect
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
+          navigate(NAV_PATHS.WORKOUTS, { replace: true });
         }, 2000);
 
       } catch (error) {
