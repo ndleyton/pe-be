@@ -191,7 +191,8 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow {...defaultProps} />);
 
     // Check for set numbers
-    expect(screen.getByText('2')).toBeInTheDocument(); // Second set number
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
 
     // Check for set values
     const intensityInputs = screen.getAllByRole('spinbutton');
@@ -436,6 +437,13 @@ describe('ExerciseRow', () => {
 
     expect(screen.getByText('Bench Press')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add set/i })).toBeInTheDocument();
+  });
+
+  it('shows correct set type badges', () => {
+    render(<ExerciseRow {...defaultProps} />);
+
+    expect(screen.getByText('1')).toBeInTheDocument();    
+    expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('applies correct styling for completed sets', () => {

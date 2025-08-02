@@ -55,7 +55,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       // Invalidate queries to avoid cache issues on redirect
       queryClient.invalidateQueries({ queryKey: ['workout', workout.id.toString()] });
       queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
-      navigate(`/workout/${workout.id}`);
+      navigate(`/workouts/${workout.id}`);
     },
     onError: (error) => {
       alert(`An error occurred: ${error.message}`);
