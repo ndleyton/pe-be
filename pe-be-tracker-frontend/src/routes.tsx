@@ -52,14 +52,6 @@ const routes: RouteObject[] = [
     element: <AppLayout />,
     children: [
       {
-        path: 'dashboard',
-        element: (
-          <PageWrapper>
-            <MyWorkoutsPage />
-          </PageWrapper>
-        ),
-      },
-      {
         path: 'workouts',
         element: (
           <PageWrapper>

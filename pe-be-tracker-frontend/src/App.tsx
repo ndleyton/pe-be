@@ -7,7 +7,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   const handleTryAsGuest = () => {
-    navigate('/dashboard');
+    navigate('/workouts');
   };
 
   return (

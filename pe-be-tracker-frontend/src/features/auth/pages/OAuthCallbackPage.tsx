@@ -68,7 +68,7 @@ const OAuthCallbackPage: React.FC = () => {
 
         // Wait a moment to show success state, then redirect
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
+          navigate('/workouts', { replace: true });
         }, 2000);
 
       } catch (error) {
