@@ -2,12 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleSignInButton } from "./features/auth/components";
 import { HomeLogo } from "./shared/components/layout";
+import { NAV_PATHS } from "./shared/navigation/constants";
 
 const App: React.FC = () => {
   const navigate = useNavigate();
 
   const handleTryAsGuest = () => {
-    navigate('/workouts');
+    navigate(NAV_PATHS.WORKOUTS);
   };
 
   return (

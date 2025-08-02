@@ -2,6 +2,7 @@ import { useAuthStore } from '@/stores';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { NAV_PATHS } from '@/shared/navigation/constants';
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ const NotFoundPage: React.FC = () => {
 
   const handleGoHome = () => {
     // Navigate to workouts if authenticated, otherwise to landing page
-    navigate(isAuthenticated ? '/workouts' : '/');
+    navigate(isAuthenticated ? NAV_PATHS.WORKOUTS : '/');
   };
 
   const handleGoBack = () => {
@@ -64,21 +65,21 @@ const NotFoundPage: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-4">Need help? Try these:</p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <button
-              onClick={() => navigate('/workouts')}
+              onClick={() => navigate(NAV_PATHS.WORKOUTS)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >
               Workouts
             </button>
             <button
-              onClick={() => navigate('/exercise-types')}
+              onClick={() => navigate(NAV_PATHS.EXERCISES)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >
               Exercises
             </button>
             <button
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate(NAV_PATHS.CHAT)}
               className="text-primary hover:text-primary/90 hover:underline"
               disabled={!isAuthenticated}
             >

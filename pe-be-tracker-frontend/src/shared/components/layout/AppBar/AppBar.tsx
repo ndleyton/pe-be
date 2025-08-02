@@ -5,6 +5,7 @@ import { useUIStore, useAuthStore } from '@/stores';
 import HomeLogo from '../HomeLogo';
 import { useGoogleSignIn } from '@/features/auth/hooks';
 import { Button } from '@/shared/components/ui/button';
+import { NAV_PATHS } from '@/shared/navigation/constants';
 
 const AppBar: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const AppBar: React.FC = () => {
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated) {
-      navigate('/workouts');
+      navigate(NAV_PATHS.WORKOUTS);
     } else {
       navigate('/');
     }

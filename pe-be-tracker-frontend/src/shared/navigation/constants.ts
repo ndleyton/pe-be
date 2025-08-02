@@ -1,0 +1,31 @@
+/**
+ * Navigation key constants used for persistence and routing
+ * These should match the 'key' values in navItems configuration
+ */
+export const NAV_KEYS = {
+  WORKOUTS: 'workouts',
+  EXERCISES: 'exercises', 
+  PROFILE: 'profile',
+  CHAT: 'chat',
+} as const;
+
+/**
+ * Type for navigation keys to ensure type safety
+ */
+export type NavKey = typeof NAV_KEYS[keyof typeof NAV_KEYS];
+
+/**
+ * Navigation paths constants
+ */
+export const NAV_PATHS = {
+  WORKOUTS: '/workouts',
+  WORKOUT_DETAIL: '/workout', // for /workout/:id pattern
+  EXERCISES: '/exercise-types',
+  PROFILE: '/profile', 
+  CHAT: '/chat',
+} as const;
+
+/**
+ * Type for navigation paths to ensure type safety
+ */
+export type NavPath = typeof NAV_PATHS[keyof typeof NAV_PATHS];
