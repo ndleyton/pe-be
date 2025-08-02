@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { type NavKey } from '@/shared/navigation/constants';
 
 interface NavigationState {
-  lastVisitedPaths: Record<string, string>;
+  lastVisitedPaths: Record<NavKey, string>;
 }
 
 interface NavigationActions {
-  setLastVisitedPath: (navKey: string, path: string) => void;
-  getLastVisitedPath: (navKey: string, defaultPath: string) => string;
+  setLastVisitedPath: (navKey: NavKey, path: string) => void;
+  getLastVisitedPath: (navKey: NavKey, defaultPath: string) => string;
 }
 
 type NavigationStore = NavigationState & NavigationActions;
