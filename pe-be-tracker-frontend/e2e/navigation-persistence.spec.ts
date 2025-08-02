@@ -8,12 +8,12 @@ test.describe('Navigation Persistence', () => {
     // Wait for the page to load
     await expect(page).toHaveTitle(/PersonalBestie/);
 
-    // Navigate to dashboard (should go to /dashboard by default)
-    await page.getByRole('link', { name: 'Dashboard' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    // Navigate to workouts (should go to /workouts by default)
+    await page.getByRole('link', { name: 'Workouts' }).click();
+    await expect(page).toHaveURL('/workouts');
 
-    // Navigate to a specific dashboard sub-path (if it exists, otherwise just dashboard)
-    // For now, let's assume we stay at dashboard
+    // Navigate to a specific workouts sub-path (if it exists, otherwise just workouts)
+    // For now, let's assume we stay at workouts
     
     // Navigate to exercises section
     await page.getByRole('link', { name: 'Exercises' }).click();
@@ -37,13 +37,13 @@ test.describe('Navigation Persistence', () => {
     await page.getByRole('link', { name: 'Exercises' }).click();
     await expect(page).toHaveURL('/exercise-types');
 
-    // Navigate back to dashboard - should remember last visited dashboard path  
-    await page.getByRole('link', { name: 'Dashboard' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    // Navigate back to workouts - should remember last visited workouts path  
+    await page.getByRole('link', { name: 'Workouts' }).click();
+    await expect(page).toHaveURL('/workouts');
 
     // Test persistence after page refresh
     await page.reload();
-    await expect(page).toHaveURL('/dashboard');
+    await expect(page).toHaveURL('/workouts');
   });
 
   test('should persist navigation state across browser sessions', async ({ page, context }) => {
@@ -82,8 +82,8 @@ test.describe('Navigation Persistence', () => {
     await page.goto('/');
 
     // Navigate using desktop sidebar
-    await page.getByRole('link', { name: 'Dashboard' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    await page.getByRole('link', { name: 'Workouts' }).click();
+    await expect(page).toHaveURL('/workouts');
 
     // Navigate to exercises via desktop sidebar
     await page.getByRole('link', { name: 'Exercises' }).click();
@@ -126,8 +126,8 @@ test.describe('Navigation Persistence', () => {
     await page.goto('/');
 
     // Navigation should still work, just without persistence
-    await page.getByRole('link', { name: 'Dashboard' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    await page.getByRole('link', { name: 'Workouts' }).click();
+    await expect(page).toHaveURL('/workouts');
 
     await page.getByRole('link', { name: 'Exercises' }).click();
     await expect(page).toHaveURL('/exercise-types');
@@ -135,8 +135,8 @@ test.describe('Navigation Persistence', () => {
     // After reload, should go to default paths (no persistence)
     await page.reload();
     
-    // Navigate to dashboard - should go to default /dashboard (not persisted path)
-    await page.getByRole('link', { name: 'Dashboard' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    // Navigate to workouts - should go to default /workouts (not persisted path)
+    await page.getByRole('link', { name: 'Workouts' }).click();
+    await expect(page).toHaveURL('/workouts');
   });
 });

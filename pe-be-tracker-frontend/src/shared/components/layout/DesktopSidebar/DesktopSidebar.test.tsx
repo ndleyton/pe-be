@@ -91,7 +91,7 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /workouts/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /exercises/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByRole('link', { name: /workouts/i })).toHaveAttribute('href', '/workouts');
       expect(screen.getByRole('link', { name: /exercises/i })).toHaveAttribute('href', '/exercise-types');
       expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
       expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat');
@@ -114,18 +114,18 @@ describe('DesktopSidebar', () => {
   describe('Navigation States', () => {
     it('should highlight the active navigation item', () => {
       render(
-        <TestWrapper initialEntries={['/dashboard']}>
+        <TestWrapper initialEntries={['/workouts']}>
           <DesktopSidebar />
         </TestWrapper>
       );
 
-      const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
-      expect(dashboardLink).toHaveClass('bg-primary', 'text-primary-foreground');
+      const workoutsLink = screen.getByRole('link', { name: /workouts/i });
+      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-foreground');
     });
 
     it('should not highlight inactive navigation items', () => {
       render(
-        <TestWrapper initialEntries={['/dashboard']}>
+        <TestWrapper initialEntries={['/workouts']}>
           <DesktopSidebar />
         </TestWrapper>
       );

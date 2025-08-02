@@ -13,7 +13,7 @@ const AppBar: React.FC = () => {
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/workouts');
     } else {
       navigate('/');
     }

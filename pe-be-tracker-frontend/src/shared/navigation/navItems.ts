@@ -9,7 +9,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { to: '/dashboard', key: 'dashboard', icon: Home, label: 'Dashboard' },
+  { to: '/workouts', key: 'workouts', icon: Home, label: 'Workouts' },
   { to: '/exercise-types', key: 'exercises', icon: Grid3X3, label: 'Exercises' },
   { to: '/profile', key: 'profile', icon: User, label: 'Profile' },
   { to: '/chat', key: 'chat', icon: MessageCircle, label: 'Chat' },
