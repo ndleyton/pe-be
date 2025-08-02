@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Frontend URL - used for CORS and post-login redirects
     FRONTEND_URL: str = Field("http://localhost:5173", validation_alias="FRONTEND_URL")
     FRONTEND_POST_LOGIN_PATH: str = Field(
-        "/dashboard", validation_alias="FRONTEND_POST_LOGIN_PATH"
+        "/workouts", validation_alias="FRONTEND_POST_LOGIN_PATH"
     )
     DATABASE_URL: str = Field(
         "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
