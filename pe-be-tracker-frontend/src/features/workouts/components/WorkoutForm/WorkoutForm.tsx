@@ -97,7 +97,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
       const newWorkoutId = data.id;
       resetForm();
       onWorkoutCreated(newWorkoutId);
-      navigate(`/workout/${newWorkoutId}`);
+      navigate(`/workouts/${newWorkoutId}`);
     },
   });
 
@@ -130,7 +130,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
 
       resetForm();
       onWorkoutCreated(newWorkoutId);
-      navigate(`/workout/${newWorkoutId}`);
+      navigate(`/workouts/${newWorkoutId}`);
     }
   };
 
