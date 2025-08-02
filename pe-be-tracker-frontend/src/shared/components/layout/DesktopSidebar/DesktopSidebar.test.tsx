@@ -195,7 +195,7 @@ describe('DesktopSidebar', () => {
 
       // Tab through navigation items
       await user.tab();
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveFocus();
+      expect(screen.getByRole('link', { name: /workouts/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByRole('link', { name: /exercises/i })).toHaveFocus();
