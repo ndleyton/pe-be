@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { type NavKey } from '@/shared/navigation/constants';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { type NavKey, NAV_PATHS } from '@/shared/navigation/constants';
 
 interface NavigationState {
-  lastVisitedPaths: Record<NavKey, string>;
+  lastVisitedPaths: Partial<Record<NavKey, string>>;
 }
 
 interface NavigationActions {
@@ -16,9 +16,14 @@ type NavigationStore = NavigationState & NavigationActions;
 export const useNavigationStore = create<NavigationStore>()(
   persist(
     (set, get) => ({
-      lastVisitedPaths: {},
+      lastVisitedPaths: {
+        workouts: NAV_PATHS.WORKOUTS,
+        exercises: NAV_PATHS.EXERCISES,
+        profile: NAV_PATHS.PROFILE,
+        chat: NAV_PATHS.CHAT,
+      },
 
-      setLastVisitedPath: (navKey: string, path: string) => {
+      setLastVisitedPath: (navKey: NavKey, path: string) => {
         set(state => ({
           lastVisitedPaths: {
             ...state.lastVisitedPaths,
@@ -27,18 +32,19 @@ export const useNavigationStore = create<NavigationStore>()(
         }));
       },
 
-      getLastVisitedPath: (navKey: string, defaultPath: string) => {
+      getLastVisitedPath: (navKey: NavKey, defaultPath: string) => {
         const { lastVisitedPaths } = get();
         return lastVisitedPaths[navKey] || defaultPath;
       },
     }),
     {
       name: 'navigation-storage',
-      storage: {
+      storage: createJSONStorage(() => ({
         getItem: (name) => {
           try {
-            return localStorage.getItem(name) || null;
-          } catch {
+            return localStorage.getItem(name);
+          } catch (error) {
+            console.warn('Failed to read navigation state:', error);
             return null;
           }
         },
@@ -52,11 +58,11 @@ export const useNavigationStore = create<NavigationStore>()(
         removeItem: (name) => {
           try {
             localStorage.removeItem(name);
-          } catch {
-            // ignore
+          } catch (error) {
+            console.warn('Failed to remove navigation state:', error);
           }
         },
-      },
+      })),
     }
   )
 );
