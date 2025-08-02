@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { navItems, NavItem } from '@/shared/navigation/navItems';
-import usePersistentNav from '@/shared/hooks/usePersistentNav';
+import { useNavigation } from '@/shared/hooks/useNavigation';
 
 const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
-  const lastVisited = usePersistentNav(item.key, item.to);
+  const lastVisited = useNavigation(item.key, item.to);
   const IconComponent = item.icon;
 
   return (
