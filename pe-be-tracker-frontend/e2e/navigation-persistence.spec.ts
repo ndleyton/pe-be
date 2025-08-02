@@ -15,8 +15,8 @@ test.describe('Navigation Persistence', () => {
     expect(storage?.state?.lastVisitedPaths?.workouts).toBe('/workouts');
 
     // Test: Navigate to individual workout page 
-    await page.goto('/workout/123');
-    await expect(page).toHaveURL('/workout/123');
+    await page.goto('/workouts/123');
+    await expect(page).toHaveURL('/workouts/123');
     await page.waitForTimeout(1000);
 
     // Check storage now has individual workout path
@@ -24,15 +24,15 @@ test.describe('Navigation Persistence', () => {
       const item = localStorage.getItem('navigation-storage');
       return item ? JSON.parse(item) : null;
     });
-    expect(storage?.state?.lastVisitedPaths?.workouts).toBe('/workout/123');
+    expect(storage?.state?.lastVisitedPaths?.workouts).toBe('/workouts/123');
 
     // Test: Navigate away and back via navigation
     await page.goto('/profile');
     await page.goto('/');
     
-    // Should return to the last workout page (/workout/123), not /workouts
+    // Should return to the last workout page (/workouts/123), not /workouts
     await page.getByRole('link', { name: 'Workouts' }).click();
-    await expect(page).toHaveURL('/workout/123');
+    await expect(page).toHaveURL('/workouts/123');
   });
 
   test('should persist last visited path within navigation sections', async ({ page }) => {

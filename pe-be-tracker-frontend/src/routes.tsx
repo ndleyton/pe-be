@@ -60,7 +60,7 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'workout/:workoutId',
+        path: 'workouts/:workoutId',
         element: (
           <PageWrapper>
             <WorkoutPage />

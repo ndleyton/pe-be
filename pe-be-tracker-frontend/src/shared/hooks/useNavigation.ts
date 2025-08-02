@@ -8,9 +8,9 @@ export const useNavigation = (navKey: NavKey, defaultPath: string) => {
   const { setLastVisitedPath, getLastVisitedPath } = useNavigationStore();
 
   useEffect(() => {
-    // Handle special case for workouts section - match both /workouts and /workout/:id
+    // Handle workouts section - match both /workouts and /workouts/:id
     if (navKey === NAV_KEYS.WORKOUTS) {
-      if (location.pathname === NAV_PATHS.WORKOUTS || location.pathname.startsWith(NAV_PATHS.WORKOUT_DETAIL + '/')) {
+      if (location.pathname.startsWith(NAV_PATHS.WORKOUTS)) {
         setLastVisitedPath(navKey, location.pathname);
       }
     } else if (location.pathname.startsWith(defaultPath)) {

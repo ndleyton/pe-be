@@ -19,7 +19,6 @@ export type NavKey = typeof NAV_KEYS[keyof typeof NAV_KEYS];
  */
 export const NAV_PATHS = {
   WORKOUTS: '/workouts',
-  WORKOUT_DETAIL: '/workout', // for /workout/:id pattern
   EXERCISES: '/exercise-types',
   PROFILE: '/profile', 
   CHAT: '/chat',
