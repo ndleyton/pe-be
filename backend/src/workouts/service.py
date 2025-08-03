@@ -13,8 +13,8 @@ from src.workouts.crud import (
     delete_workout,
     get_workout_types,
     create_workout_type,
-    get_latest_workout_for_user,
     get_user_workouts,
+    get_workout_by_date,
 )
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import (
@@ -98,15 +98,11 @@ class WorkoutService:
         4. Optionally add initial set data.
         5. Return the workout with relationships loaded (reusing get_workout).
         """
-        # 1. Get latest workout
-        workout = await get_latest_workout_for_user(session, user_id)
-
+        # 1. Get today's workout if it exists
         today = date.today()
-        if (
-            not workout
-            or workout.start_time is None
-            or workout.start_time.date() != today
-        ):
+        workout = await get_workout_by_date(session, user_id, today)
+
+        if not workout:
             # Need to create a new workout for today
             workout_create = WorkoutCreate(
                 name=today.strftime("Workout %Y-%m-%d"),

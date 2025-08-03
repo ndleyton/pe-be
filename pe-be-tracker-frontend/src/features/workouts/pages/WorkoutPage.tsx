@@ -55,7 +55,7 @@ const WorkoutPage: React.FC = () => {
   });
 
   // Fetch exercises for this workout (only when authenticated)
-  const { data: serverExercises = [], isLoading: exercisesLoading, error: exercisesError } = useQuery({
+  const { data: serverExercises, isLoading: exercisesLoading, error: exercisesError } = useQuery({
     queryKey: ['exercises', workoutId],
     queryFn: () => getExercisesInWorkout(workoutId as string),
     enabled: !!workoutId && isAuthenticated, // Only fetch when authenticated
@@ -170,7 +170,7 @@ const WorkoutPage: React.FC = () => {
 
   // Auto-create exercises from recipe when page loads
   useEffect(() => {
-    if (recipe && workoutId && exercises.length === 0) {
+    if (recipe && workoutId && exercises?.length === 0) {
       if (isAuthenticated) {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
@@ -179,7 +179,7 @@ const WorkoutPage: React.FC = () => {
         guestActions.createExercisesFromRecipe(recipe, workoutId);
       }
     }
-  }, [recipe, workoutId, exercises.length, isAuthenticated, guestActions]);
+  }, [recipe, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
   // Invalidate exercises query when a new exercise is created (only for authenticated users)
   const handleExerciseCreated = () => {
