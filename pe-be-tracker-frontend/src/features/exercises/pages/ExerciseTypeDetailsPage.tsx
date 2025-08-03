@@ -29,6 +29,7 @@ import {
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -51,14 +52,25 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       addExerciseToCurrentWorkout({
         exercise_type_id: Number(exerciseTypeId),
       }),
+    onMutate: async () => {
+      // Clear any previous error
+      setAddExerciseError(null);
+      return {};
+    },
     onSuccess: (workout) => {
-      // Invalidate queries to avoid cache issues on redirect
-      queryClient.invalidateQueries({ queryKey: ['workout', workout.id.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
       navigate(`/workouts/${workout.id}`);
+      
+      // Update cache with real data and invalidate exercises to refresh
+      queryClient.setQueryData(['workout', workout.id.toString()], workout);
+      queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
     },
     onError: (error) => {
-      alert(`An error occurred: ${error.message}`);
+      console.error('Failed to add exercise to workout:', error);
+      setAddExerciseError(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to add exercise to workout. Please try again.'
+      );
     }
   });
 
@@ -123,6 +135,15 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             Error loading exercise statistics. Please try again later.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {addExerciseError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Error Adding Exercise</AlertTitle>
+          <AlertDescription>
+            {addExerciseError}
           </AlertDescription>
         </Alert>
       )}
