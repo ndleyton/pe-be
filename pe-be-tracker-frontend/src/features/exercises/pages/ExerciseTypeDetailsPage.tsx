@@ -57,7 +57,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       return {};
     },
     onSuccess: (workout) => {
-      // Navigate to the workout page with the real workout ID
       navigate(`/workouts/${workout.id}`);
       
       // Update cache with real data and invalidate exercises to refresh
