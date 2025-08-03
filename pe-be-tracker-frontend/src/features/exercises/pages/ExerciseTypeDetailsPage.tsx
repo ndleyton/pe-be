@@ -51,14 +51,21 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       addExerciseToCurrentWorkout({
         exercise_type_id: Number(exerciseTypeId),
       }),
+    onMutate: async () => {
+      // Start the navigation but let the backend call complete first
+      // This avoids the race condition with undefined data
+      return {};
+    },
     onSuccess: (workout) => {
-      // Invalidate queries to avoid cache issues on redirect
-      queryClient.invalidateQueries({ queryKey: ['workout', workout.id.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
+      // Navigate to the workout page with the real workout ID
       navigate(`/workouts/${workout.id}`);
+      
+      // Update cache with real data and invalidate exercises to refresh
+      queryClient.setQueryData(['workout', workout.id.toString()], workout);
+      queryClient.invalidateQueries({ queryKey: ['exercises', workout.id.toString()] });
     },
     onError: (error) => {
-      alert(`An error occurred: ${error.message}`);
+      console.error('Failed to add exercise to workout:', error);
     }
   });
 
