@@ -29,6 +29,7 @@ import {
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -52,8 +53,8 @@ const ExerciseTypeDetailsPage: React.FC = () => {
         exercise_type_id: Number(exerciseTypeId),
       }),
     onMutate: async () => {
-      // Start the navigation but let the backend call complete first
-      // This avoids the race condition with undefined data
+      // Clear any previous error
+      setAddExerciseError(null);
       return {};
     },
     onSuccess: (workout) => {
@@ -65,6 +66,11 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     },
     onError: (error) => {
       console.error('Failed to add exercise to workout:', error);
+      setAddExerciseError(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to add exercise to workout. Please try again.'
+      );
     }
   });
 
@@ -129,6 +135,15 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             Error loading exercise statistics. Please try again later.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {addExerciseError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Error Adding Exercise</AlertTitle>
+          <AlertDescription>
+            {addExerciseError}
           </AlertDescription>
         </Alert>
       )}
