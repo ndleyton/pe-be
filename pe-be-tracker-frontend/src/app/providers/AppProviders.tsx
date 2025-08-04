@@ -56,7 +56,6 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
           apiKey={config.posthogApiKey}
           options={{
             api_host: config.posthogHost,
-            defaults: '2025-05-24',
             capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
             debug: config.isDevelopment,
           }}
