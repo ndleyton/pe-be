@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PersonalBestie - AI Fitness Companion</title>
+    <meta name="description" content="Reach your personal best with an AI-powered fitness companion. Track workouts, get personalized insights, and chat with your fitness AI.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: rgb(32, 29, 29);
+            --foreground: rgb(242, 240, 240);
+            --primary: rgb(255, 51, 102);
+            --secondary: rgb(56, 45, 45);
+            --border: rgb(62, 48, 48);
+            --ring: rgb(80, 47, 47);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex flex-col min-h-screen">
+
+        <!-- Header -->
+        <header class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div data-testid="home-logo" class="flex items-center gap-2 text-lg font-bold text-foreground  "><img alt="PBestie Logo" class="w-8 h-8" src="./assets/logo.svg"><div class="flex flex-col leading-none items-start text-left text-base text-rose-400"><span>Personal</span><span>Bestie</span></div></div>
+                <a href="https://app.personalbestie.com" class="px-4 py-2 text-sm font-medium rounded-md hover:bg-opacity-90" style="background-color: var(--primary); color: var(--foreground);">
+                    Log In
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-16 md:py-24">
+                <div class="max-w-3xl mx-auto">
+                    <h2 class="text-4xl md:text-6xl font-bold tracking-tight">Reach Your<br><span style="color: var(--primary);">Personal Best</span></h2>
+                    <p class="mt-4 text-lg md:text-xl max-w-2xl mx-auto" style="color: rgb(161, 147, 147);">
+                        Stop guessing. Start improving. PersonalBestie is your AI-powered companion for smarter workout tracking and personalized insights.
+                    </p>
+                    <div class="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <a href="https://app.personalbestie.com" class="w-full sm:w-auto px-8 py-3 text-lg font-semibold rounded-lg" style="background-color: var(--primary); color: var(--foreground);">
+                            Start Training
+                        </a>
+                        <a href="https://app.personalbestie.com" class="w-full sm:w-auto px-8 py-3 text-lg font-semibold rounded-lg" style="background-color: var(--secondary); color: var(--foreground);">
+                            Try as Guest
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Feature Section -->
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+                <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                    <div class="md:w-1/2">
+                        <div class="p-4 rounded-lg" style="background-color: var(--secondary);">
+                            <div class="text-left text-sm space-y-3">
+                                <p class="p-3 rounded-lg" style="background-color: var(--background);">Hey! I'm your AI assistant. How can I help you crush your goals today?</p>
+                                <p class="p-3 rounded-lg ml-8" style="background-color: var(--primary); color: var(--foreground);">Suggest a 3-day workout split for building muscle.</p>
+                                <p class="p-3 rounded-lg" style="background-color: var(--background);">Of course! How about a Push/Pull/Legs split? Day 1: Chest, Shoulders, Triceps. Day 2: Back, Biceps. Day 3: Quads, Hamstrings, Calves. I can create the full plan for you.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 text-center md:text-left">
+                        <h3 class="text-3xl md:text-4xl font-bold">Chat Your Way to a Better Workout</h3>
+                        <p class="mt-4 text-lg" style="color: rgb(161, 147, 147);">
+                            Get instant advice on your form, ask for exercise alternatives, or generate a complete workout plan tailored to you. It's like having a personal trainer in your pocket.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-12">
+            <div class="text-center" style="color: rgb(161, 147, 147);">
+                <p>&copy; 2025 PersonalBestie. All rights reserved.</p>
+                <p class="mt-2">Contact: <a href="mailto:ndleyton@uc.cl" class="hover:underline" style="color: var(--primary);">ndleyton@uc.cl</a></p>
+            </div>
+        </footer>
+
+    </div>
+</body>
+</html>
