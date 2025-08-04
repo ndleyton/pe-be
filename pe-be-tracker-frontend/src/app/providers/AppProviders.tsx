@@ -41,6 +41,9 @@ const handleGlobalError = (error: Error, errorInfo: ErrorInfo) => {
 };
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Only render PostHogProvider if PostHog is properly configured
+  const isPostHogConfigured = config.posthogApiKey && config.posthogHost;
+
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
@@ -52,18 +55,24 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <PostHogProvider
-          apiKey={config.posthogApiKey}
-          options={{
-            api_host: config.posthogHost,
-            capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
-            debug: config.isDevelopment,
-          }}
-        >
+        {isPostHogConfigured ? (
+          <PostHogProvider
+            apiKey={config.posthogApiKey}
+            options={{
+              api_host: config.posthogHost,
+              capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
+              debug: config.isDevelopment,
+            }}
+          >
+            <StoreInitializer>
+              {children}
+            </StoreInitializer>
+          </PostHogProvider>
+        ) : (
           <StoreInitializer>
             {children}
           </StoreInitializer>
-        </PostHogProvider>
+        )}
         {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>
