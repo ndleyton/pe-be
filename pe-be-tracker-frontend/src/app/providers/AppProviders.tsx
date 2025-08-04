@@ -2,6 +2,7 @@ import React, { ErrorInfo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
+import { PostHogProvider } from 'posthog-js/react';
 import { config } from '@/app/config/env';
 import { ErrorFallback } from '@/shared/components/error';
 import { StoreInitializer } from '@/stores';
@@ -51,9 +52,19 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <StoreInitializer>
-          {children}
-        </StoreInitializer>
+        <PostHogProvider
+          apiKey={config.posthogApiKey}
+          options={{
+            api_host: config.posthogHost,
+            defaults: '2025-05-24',
+            capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
+            debug: config.isDevelopment,
+          }}
+        >
+          <StoreInitializer>
+            {children}
+          </StoreInitializer>
+        </PostHogProvider>
         {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>
