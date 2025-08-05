@@ -2,14 +2,16 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
-    await page.goto('/workouts');
+    await page.goto('/');
 
-    // 1. Navigate to the workouts page
-    await page.click('text=Workouts');
+    // 1. Click the "Try as Guest" button to enter the app
+    await page.click('text=Try as Guest');
     await expect(page).toHaveURL('/workouts');
 
     // 2. Click the floating action button to show the workout form
-    await page.click('[data-testid="fab-add-workout"]');
+    const fab = page.locator('[data-testid="fab-add-workout"]');
+    await fab.waitFor({ state: 'visible', timeout: 10000 });
+    await fab.click();
 
     // 3. Click to edit the workout name
     await page.locator('form').getByRole('heading', { level: 2 }).click();
@@ -28,8 +30,9 @@ test.describe('Guest Mode Workout Creation', () => {
     // 6. Submit the form
     await page.click('[data-testid="start-workout-button"]');
 
-    // 7. Verify the new workout appears on the workout page
-    await expect(page.locator(`h3:has-text("${workoutName}")`)).toBeVisible({ timeout: 10000 });
+    // 7. Verify the app navigates to the new workout's page
+    await expect(page).toHaveURL(new RegExp('/workouts/.+'), { timeout: 10000 });
+    await expect(page.locator(`h2:has-text("${workoutName}")`)).toBeVisible();
   });
 
   test.afterEach(async ({ page }) => {
