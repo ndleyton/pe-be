@@ -57,12 +57,9 @@ jobs:
 
       - name: Run E2E tests
         run: |
-          npm run dev &
+          npm run dev:test &
           npx wait-on http://localhost:5173
           npm run test:e2e
-        env:
-          VITE_POSTHOG_API_KEY: ''
-          VITE_POSTHOG_HOST: ''
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
