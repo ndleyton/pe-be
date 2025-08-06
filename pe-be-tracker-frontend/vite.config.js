@@ -6,31 +6,37 @@ import { fileURLToPath, URL } from 'node:url'
 
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@/shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
-      '@/features': fileURLToPath(new URL('./src/features', import.meta.url)),
-      '@/app': fileURLToPath(new URL('./src/app', import.meta.url)),
-      '@/utils': fileURLToPath(new URL('./src/utils', import.meta.url)),
-      '@/contexts': fileURLToPath(new URL('./src/contexts', import.meta.url)),
-    }
-  },
-  ...((process.env.VITEST === 'true') ? { test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    globals: true,
-    exclude: [
-      'e2e/**',
-      'node_modules/**',
-      'playwright-report/**',
-      'test-results/**',
+export default defineConfig(({ mode }) => {
+  const config = {
+    plugins: [
+      react(),
+      tailwindcss(),
     ],
-  }} : {}),
-})
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@/shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
+        '@/features': fileURLToPath(new URL('./src/features', import.meta.url)),
+        '@/app': fileURLToPath(new URL('./src/app', import.meta.url)),
+        '@/utils': fileURLToPath(new URL('./src/utils', import.meta.url)),
+        '@/contexts': fileURLToPath(new URL('./src/contexts', import.meta.url)),
+      }
+    },
+  };
+
+  if (mode === 'test') {
+    config.test = {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      globals: true,
+      exclude: [
+        'e2e/**',
+        'node_modules/**',
+        'playwright-report/**',
+        'test-results/**',
+      ],
+    };
+  }
+
+  return config;
+});
