@@ -25,6 +25,7 @@ export interface ExerciseSet {
   type?: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
 }
 
 export interface Exercise {

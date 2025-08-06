@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey, Text, String
+from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey, Text, String, DateTime
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -25,6 +25,7 @@ class ExerciseSet(Base):
     done = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)
     type = Column(String, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     exercise: Mapped["Exercise"] = relationship(back_populates="exercise_sets")
