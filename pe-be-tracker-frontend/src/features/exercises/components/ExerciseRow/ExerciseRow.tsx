@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { AddExerciseSetForm } from '@/features/exercise-sets/components';
@@ -290,8 +290,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
     if (isAuthenticated) {
       try {
-        // TODO: Add API call to delete exercise set when available
-        // await deleteExerciseSet(setId);
+        // Call API to delete the exercise set
+        await deleteExerciseSet(setId);
         
         // Optionally invalidate queries to ensure consistency (but UI already updated)
         // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
