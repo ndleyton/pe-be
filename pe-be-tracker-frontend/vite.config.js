@@ -22,7 +22,7 @@ export default defineConfig({
       '@/contexts': fileURLToPath(new URL('./src/contexts', import.meta.url)),
     }
   },
-  test: {
+  ...((process.env.VITEST === 'true') ? { test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
@@ -32,5 +32,5 @@ export default defineConfig({
       'playwright-report/**',
       'test-results/**',
     ],
-  },
+  }} : {}),
 })

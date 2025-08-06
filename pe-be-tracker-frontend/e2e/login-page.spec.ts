@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Login Page', () => {
   test('should render the login page correctly for a guest user', async ({ page }) => {
+    // Log all console messages from the browser to the terminal
+    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
     // Mock the /users/me API call to simulate a guest user
     await page.route('**/users/me', route => {
       route.fulfill({
