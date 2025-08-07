@@ -22,6 +22,11 @@ const MyWorkoutsPage = () => {
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   
+  // Temporary debugging for CI
+  React.useEffect(() => {
+    console.log('[DEBUG] showWorkoutForm state changed to:', showWorkoutForm);
+  }, [showWorkoutForm]);
+  
   const {
     data: serverWorkouts,
     isLoading,
@@ -114,6 +119,7 @@ const MyWorkoutsPage = () => {
           
           {showWorkoutForm && (
             <div className="mb-6">
+              {console.log('[DEBUG] Rendering WorkoutForm component')}
               <WorkoutForm 
                 recipe={selectedRecipe}
                 onWorkoutCreated={(workoutId) => {
@@ -194,7 +200,10 @@ const MyWorkoutsPage = () => {
       
       {!showWorkoutForm && (
         <FloatingActionButton
-          onClick={() => setShowWorkoutForm(true)}
+          onClick={() => {
+            console.log('[DEBUG] FAB clicked - setting showWorkoutForm to true');
+            setShowWorkoutForm(true);
+          }}
           dataTestId="fab-add-workout"
         >
           <span className="text-lg">+</span>
