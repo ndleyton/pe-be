@@ -41,8 +41,8 @@ const handleGlobalError = (error: Error, errorInfo: ErrorInfo) => {
 };
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Only render PostHogProvider if PostHog is properly configured
-  const isPostHogConfigured = config.posthogApiKey && config.posthogHost;
+  // Only render PostHogProvider if PostHog is properly configured and not in test mode
+  const isPostHogConfigured = !config.isTest && config.posthogApiKey && config.posthogHost;
 
   return (
     <ErrorBoundary
