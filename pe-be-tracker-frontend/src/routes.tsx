@@ -48,7 +48,6 @@ const routes: RouteObject[] = [
     ),
   },
   {
-    path: '/',
     element: <AppLayout />,
     children: [
       {

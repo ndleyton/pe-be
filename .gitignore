@@ -84,6 +84,7 @@ coverage.xml
 /backend/.env
 # Frontend environment files
 pe-be-tracker-frontend/.env*
+!pe-be-tracker-frontend/.env.test
 
 # Docker
 Dockerfile.dev

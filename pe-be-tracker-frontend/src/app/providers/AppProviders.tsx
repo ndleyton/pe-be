@@ -2,6 +2,7 @@ import React, { ErrorInfo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
+import { PostHogProvider } from 'posthog-js/react';
 import { config } from '@/app/config/env';
 import { ErrorFallback } from '@/shared/components/error';
 import { StoreInitializer } from '@/stores';
@@ -40,6 +41,9 @@ const handleGlobalError = (error: Error, errorInfo: ErrorInfo) => {
 };
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Only render PostHogProvider if PostHog is properly configured and not in test mode
+  const isPostHogConfigured = !config.isTest && config.posthogApiKey && config.posthogHost;
+
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
@@ -51,10 +55,25 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <StoreInitializer>
-          {children}
-        </StoreInitializer>
-        {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+        {isPostHogConfigured ? (
+          <PostHogProvider
+            apiKey={config.posthogApiKey}
+            options={{
+              api_host: config.posthogHost,
+              capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
+              debug: config.isDevelopment,
+            }}
+          >
+            <StoreInitializer>
+              {children}
+            </StoreInitializer>
+          </PostHogProvider>
+        ) : (
+          <StoreInitializer>
+            {children}
+          </StoreInitializer>
+        )}
+        {config.isDevelopment && !config.isTest && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>
   );

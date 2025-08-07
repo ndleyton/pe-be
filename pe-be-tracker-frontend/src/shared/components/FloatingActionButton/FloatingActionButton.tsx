@@ -23,7 +23,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       disabled={disabled}
       size="icon"
       className={`
-        fixed bottom-20 md:bottom-6 right-6 z-40 h-12 w-12
+        fixed bottom-20 md:bottom-6 right-6 z-50 h-12 w-12
         shadow-lg hover:shadow-xl
         transition-all duration-200
         ${className}
