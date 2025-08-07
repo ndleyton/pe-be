@@ -181,7 +181,6 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow {...defaultProps} />);
 
     expect(screen.getByText('SET')).toBeInTheDocument();
-    expect(screen.getByText('NOTES')).toBeInTheDocument();
     expect(screen.getByText('KG')).toBeInTheDocument(); // Default intensity unit
     expect(screen.getByText('REPS')).toBeInTheDocument();
     expect(screen.getByText('DONE')).toBeInTheDocument();
@@ -357,9 +356,11 @@ describe('ExerciseRow', () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
 
-    const moreButton = screen.getByTestId('more-vertical-icon').closest('button');
-    if (moreButton) {
-      await user.click(moreButton);
+    // Get all more-vertical icons and find the one in the exercise header (not in set rows)
+    const moreButtons = screen.getAllByTestId('more-vertical-icon');
+    const exerciseSettingsButton = moreButtons[0].closest('button'); // First one is exercise settings
+    if (exerciseSettingsButton) {
+      await user.click(exerciseSettingsButton);
       
       expect(screen.getByText('Exercise Settings')).toBeInTheDocument();
       expect(screen.getByTestId('exercise-type-more')).toBeInTheDocument();
@@ -371,9 +372,10 @@ describe('ExerciseRow', () => {
     render(<ExerciseRow {...defaultProps} />);
 
     // Open settings modal
-    const moreButton = screen.getByTestId('more-vertical-icon').closest('button');
-    if (moreButton) {
-      await user.click(moreButton);
+    const moreButtons = screen.getAllByTestId('more-vertical-icon');
+    const exerciseSettingsButton = moreButtons[0].closest('button'); // First one is exercise settings
+    if (exerciseSettingsButton) {
+      await user.click(exerciseSettingsButton);
       
       // Change unit
       const changeUnitButton = screen.getByTestId('change-unit-button');
@@ -390,15 +392,14 @@ describe('ExerciseRow', () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
 
-    // Get all sticky note icons and find the one in the set row (not the exercise header)
-    const notesButtons = screen.getAllByTestId('sticky-note-icon');
-    // The first one is for exercise notes, the second one should be for the first set
-    const setNotesButton = notesButtons[1].closest('button');
+    // Get all more-vertical icons and find the one in the first set row (second one)
+    const moreButtons = screen.getAllByTestId('more-vertical-icon');
+    const setNotesButton = moreButtons[1].closest('button'); // Second one is for the first set
     
     if (setNotesButton) {
       await user.click(setNotesButton);
       
-      expect(screen.getByText('Set Notes')).toBeInTheDocument();
+      expect(screen.getByText('Set Notes & Options')).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/add notes for this set/i)).toBeInTheDocument();
     }
   });

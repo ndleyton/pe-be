@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
-import { MoreVertical, Timer, StickyNote, Plus, Minus, Check } from 'lucide-react';
+import { MoreVertical, Timer, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
 import { formatDisplayDate } from '@/utils/date';
 import { truncateWords } from '@/utils/text';
 import { useDebounce } from '@/shared/hooks';
@@ -35,6 +35,11 @@ interface NotesModalState {
   setId: string | number;
 }
 
+interface MoreMenuModalState {
+  exerciseId: string | number;
+  setId: string | number;
+}
+
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
@@ -47,6 +52,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [setNotesValue, setSetNotesValue] = useState<string>('');
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
   const [initialSetNotesValue, setInitialSetNotesValue] = useState<string>('');
+  const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -75,7 +81,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   useEffect(() => {
     if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
-      const currentSet = exerciseSets.find(set => set.id === notesModal.setId);
+      const currentSet = exerciseSets.find(set => String(set.id) === String(notesModal.setId));
       if (currentSet && debouncedSetNotesValue !== (currentSet.notes || '')) {
         updateSetNotes(notesModal.exerciseId, notesModal.setId, debouncedSetNotesValue);
       }
@@ -108,7 +114,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const updateSet = async (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           [field === 'weight' ? 'intensity' : 'reps']: value
@@ -158,25 +164,25 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   };
 
   const incrementReps = (exerciseId: string | number, setId: string | number) => {
-    const currentSet = exerciseSets.find(s => s.id === setId);
+    const currentSet = exerciseSets.find(s => String(s.id) === String(setId));
     const newReps = (currentSet?.reps || 0) + 1;
     updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const decrementReps = (exerciseId: string | number, setId: string | number) => {
-    const currentSet = exerciseSets.find(s => s.id === setId);
+    const currentSet = exerciseSets.find(s => String(s.id) === String(setId));
     const newReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const toggleSetCompletion = async (exerciseId: string | number, setId: string | number) => {
     // Find the current set to get its completion status
-    const currentSet = exerciseSets.find(set => set.id === setId);
+    const currentSet = exerciseSets.find(set => String(set.id) === String(setId));
     if (!currentSet) return;
     
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           done: !set.done
@@ -224,7 +230,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const updateSetNotes = async (exerciseId: string | number, setId: string | number, notes: string) => {
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           notes: notes
@@ -254,6 +260,43 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
       } catch (error) {
         console.error('Failed to update exercise set notes:', error);
+        
+        // Rollback: Revert to original state
+        setExerciseSets(exercise.exercise_sets || []);
+        if (onExerciseUpdate) {
+          onExerciseUpdate({
+            ...exercise,
+            exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
+          });
+        }
+        
+        // TODO: Add toast notification when available
+      }
+    }
+  };
+
+  const deleteSet = async (exerciseId: string | number, setId: string | number) => {
+    // Optimistic update: Remove set from local state immediately
+    const updatedSets = exerciseSets.filter(set => String(set.id) !== String(setId));
+    setExerciseSets(updatedSets);
+    
+    // Update the parent with the updated exercise
+    if (onExerciseUpdate) {
+      onExerciseUpdate({
+        ...exercise,
+        exercise_sets: isAuthenticated ? updatedSets : convertToGuestExerciseSets(updatedSets)
+      });
+    }
+
+    if (isAuthenticated) {
+      try {
+        // Call API to delete the exercise set
+        await deleteExerciseSet(setId);
+        
+        // Optionally invalidate queries to ensure consistency (but UI already updated)
+        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      } catch (error) {
+        console.error('Failed to delete exercise set:', error);
         
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
@@ -317,7 +360,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         
         // Replace the temporary set with the real one from the API
         const finalUpdatedSets = updatedSets.map(set => 
-          set.id === tempId ? createdSet : set
+          String(set.id) === String(tempId) ? createdSet : set
         );
         setExerciseSets(finalUpdatedSets);
         
@@ -442,12 +485,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
       <CardContent className="p-4 pt-0">
         {/* Sets Table Header */}
-        <div className="grid gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}>
+        <div className="grid gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "40px 80px 1fr 40px 32px" }}>
           <div>SET</div>
-          <div>NOTES</div>
           <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
           <div>REPS</div>
           <div className="text-right">DONE</div>
+          <div></div>
         </div>
 
         {/* Sets */}
@@ -458,48 +501,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               className={`grid gap-4 items-center p-2 rounded ${
                 set.done ? "bg-done" : "bg-secondary"
               }`}
-              style={{ gridTemplateColumns: "auto 60px 1fr 2fr auto" }}
+              style={{ gridTemplateColumns: "40px 80px 1fr 40px 32px" }}
             >
               <div className="font-medium text-muted-foreground">
                 <span>{index + 1}</span>
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <Dialog onOpenChange={(open) => {
-                  if (!open) {
-                    setNotesModal(null);
-                    setSetNotesValue('');
-                    setInitialSetNotesValue('');
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
-                      onClick={() => {
-                        const initialNotes = set.notes || '';
-                        setNotesModal({ exerciseId: exercise.id, setId: set.id });
-                        setSetNotesValue(initialNotes);
-                        setInitialSetNotesValue(initialNotes);
-                      }}
-                    >
-                      <StickyNote className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Set Notes</DialogTitle>
-                    </DialogHeader>
-                    <Textarea
-                      placeholder="Add notes for this set..."
-                      value={setNotesValue}
-                      onChange={(e) => {
-                        setSetNotesValue(e.target.value);
-                      }}
-                      className="min-h-[100px]"
-                    />
-                  </DialogContent>
-                </Dialog>
               </div>
               <div>
                 <Input
@@ -546,6 +551,71 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 >
                   <Check className="w-4 h-4" />
                 </Button>
+              </div>
+              <div className="flex justify-end">
+                <Dialog open={moreMenuModal?.setId === set.id} onOpenChange={(open) => {
+                  if (!open) {
+                    setMoreMenuModal(null);
+                    setSetNotesValue('');
+                    setInitialSetNotesValue('');
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
+                      onClick={() => {
+                        const initialNotes = set.notes || '';
+                        setMoreMenuModal({ exerciseId: exercise.id, setId: set.id });
+                        setSetNotesValue(initialNotes);
+                        setInitialSetNotesValue(initialNotes);
+                      }}
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Set Notes & Options</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                          Notes for Set {exerciseSets.findIndex(s => String(s.id) === String(set.id)) + 1}
+                        </label>
+                        <Textarea
+                          placeholder="Add notes for this set..."
+                          value={setNotesValue}
+                          onChange={(e) => {
+                            setSetNotesValue(e.target.value);
+                          }}
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          onClick={() => {
+                            deleteSet(exercise.id, set.id);
+                            setMoreMenuModal(null);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Set
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setMoreMenuModal(null);
+                          }}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           ))}

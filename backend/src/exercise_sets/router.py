@@ -33,7 +33,7 @@ async def get_exercise_sets(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get all exercise sets for a specific exercise"""
+    """Get all exercise sets for a specific exercise (excluding soft-deleted)"""
     return await ExerciseSetService.get_exercise_sets_for_exercise(
         session, exercise_id, user.id
     )
@@ -61,7 +61,7 @@ async def delete_exercise_set(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Delete an exercise set"""
+    """Soft delete an exercise set (sets deleted_at timestamp)"""
     success = await ExerciseSetService.remove_exercise_set(
         session, exercise_set_id, user.id
     )
