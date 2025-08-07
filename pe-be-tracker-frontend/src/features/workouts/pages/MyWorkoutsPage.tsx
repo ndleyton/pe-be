@@ -22,11 +22,6 @@ const MyWorkoutsPage = () => {
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
   
-  // Temporary debugging for CI
-  React.useEffect(() => {
-    console.log('[DEBUG] showWorkoutForm state changed to:', showWorkoutForm);
-  }, [showWorkoutForm]);
-  
   const {
     data: serverWorkouts,
     isLoading,

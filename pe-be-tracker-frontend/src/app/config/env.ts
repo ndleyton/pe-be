@@ -11,18 +11,6 @@ export const config = {
   isTest: import.meta.env.MODE === 'test',
 } as const;
 
-// Debug environment variables in development
-if (import.meta.env.DEV) {
-  console.log('[CONFIG] Environment debug:', {
-    MODE: import.meta.env.MODE,
-    VITE_ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT,
-    VITE_PUBLIC_POSTHOG_KEY: import.meta.env.VITE_PUBLIC_POSTHOG_KEY,
-    VITE_PUBLIC_POSTHOG_HOST: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-    isTest: config.isTest,
-    posthogApiKey: config.posthogApiKey,
-    posthogHost: config.posthogHost
-  });
-}
 
 // Validate required environment variables early to fail fast
 if (!config.apiBaseUrl) {
