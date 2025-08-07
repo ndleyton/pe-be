@@ -58,7 +58,7 @@ test.describe('Guest Mode Workout Creation', () => {
     }
 
     // 3. Click to edit the workout name
-    await page.locator('form').getByRole('heading', { level: 2 }).click();
+    await page.locator('form h2').click();
 
     // 4. Fill out the workout form
     const workoutName = `Test Workout ${Date.now()}`;
