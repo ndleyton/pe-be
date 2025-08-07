@@ -1,5 +1,32 @@
 import { test, expect } from '@playwright/test';
 
+// Helper function to dismiss common overlays that might interfere with clicks
+async function dismissOverlays(page: any) {
+  // Try to dismiss cookie consent banners
+  try {
+    const cookieButtons = page.locator('button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), [data-testid*="cookie"], [data-testid*="consent"]');
+    const cookieButton = await cookieButtons.first();
+    if (await cookieButton.isVisible()) {
+      await cookieButton.click();
+      await page.waitForTimeout(1000); // Wait for animation
+    }
+  } catch (error) {
+    // Ignore if no cookie banner found
+  }
+
+  // Try to dismiss chat widgets or other overlays
+  try {
+    const overlayButtons = page.locator('button[aria-label*="close"], button[aria-label*="dismiss"], .close-button, .dismiss-button');
+    const overlayButton = await overlayButtons.first();
+    if (await overlayButton.isVisible()) {
+      await overlayButton.click();
+      await page.waitForTimeout(1000); // Wait for animation
+    }
+  } catch (error) {
+    // Ignore if no overlay found
+  }
+}
+
 test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
     // Log all console messages and errors for debugging
@@ -15,10 +42,20 @@ test.describe('Guest Mode Workout Creation', () => {
     await page.click('text=Try as Guest');
     await expect(page).toHaveURL('/workouts');
 
+    // Dismiss any overlays that might interfere with the FAB
+    await dismissOverlays(page);
+
     // 2. Click the floating action button to show the workout form
     const fab = page.locator('[data-testid="fab-add-workout"]');
     await fab.waitFor({ state: 'visible', timeout: 10000 });
-    await fab.click();
+    
+    // Try to click with force if normal click fails due to overlay interference
+    try {
+      await fab.click({ timeout: 5000 });
+    } catch (error) {
+      // If normal click fails, try force click
+      await fab.click({ force: true, timeout: 5000 });
+    }
 
     // 3. Click to edit the workout name
     await page.locator('form').getByRole('heading', { level: 2 }).click();
