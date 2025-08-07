@@ -2,7 +2,7 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.exercise_sets.models import ExerciseSet
 from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetUpdate
@@ -66,7 +66,7 @@ async def soft_delete_exercise_set(session: AsyncSession, exercise_set_id: int) 
     if not exercise_set:
         return False
 
-    exercise_set.deleted_at = datetime.utcnow()
+    exercise_set.deleted_at = datetime.now(timezone.utc)
     await session.commit()
     return True
 
