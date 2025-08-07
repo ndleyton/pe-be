@@ -119,7 +119,6 @@ const MyWorkoutsPage = () => {
           
           {showWorkoutForm && (
             <div className="mb-6">
-              {console.log('[DEBUG] Rendering WorkoutForm component')}
               <WorkoutForm 
                 recipe={selectedRecipe}
                 onWorkoutCreated={(workoutId) => {
@@ -200,10 +199,7 @@ const MyWorkoutsPage = () => {
       
       {!showWorkoutForm && (
         <FloatingActionButton
-          onClick={() => {
-            console.log('[DEBUG] FAB clicked - setting showWorkoutForm to true');
-            setShowWorkoutForm(true);
-          }}
+          onClick={() => setShowWorkoutForm(true)}
           dataTestId="fab-add-workout"
         >
           <span className="text-lg">+</span>
