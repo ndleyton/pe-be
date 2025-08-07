@@ -73,7 +73,7 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
             {children}
           </StoreInitializer>
         )}
-        {config.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+        {config.isDevelopment && !config.isTest && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>
   );
