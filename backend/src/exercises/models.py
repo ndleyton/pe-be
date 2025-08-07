@@ -9,7 +9,6 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
     Boolean,
-    and_,
 )
 from sqlalchemy.orm import relationship, Mapped
 
@@ -60,10 +59,7 @@ class Exercise(Base):
     )
     workout: Mapped["Workout"] = relationship(back_populates="exercises")
     exercise_sets: Mapped[List["ExerciseSet"]] = relationship(
-        back_populates="exercise",
-        primaryjoin=lambda: and_(
-            Exercise.id == ExerciseSet.exercise_id, ExerciseSet.deleted_at.is_(None)
-        ),
+        back_populates="exercise"
     )
 
 
