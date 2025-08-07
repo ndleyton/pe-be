@@ -57,11 +57,56 @@ test.describe('Guest Mode Workout Creation', () => {
       await fab.click({ force: true, timeout: 5000 });
     }
 
-    // Wait for the form to appear and be visible
-    await page.waitForSelector('form', { timeout: 10000 });
+    // Add debugging to see what happens after FAB click
+    await page.waitForTimeout(2000); // Give React time to update state
+    
+    // Take a screenshot after FAB click for debugging
+    await page.screenshot({ path: 'test-results/after-fab-click.png' });
+    
+    // Log the page content to see if form is actually rendered
+    const pageContent = await page.content();
+    console.log('Page content after FAB click (length):', pageContent.length);
+    
+    // Try multiple selectors to find the form
+    let formFound = false;
+    
+    // Option 1: Wait for the specific test ID that should appear when form shows
+    try {
+      await page.waitForSelector('[data-testid="workout-name-heading"]', { timeout: 10000 });
+      formFound = true;
+      console.log('Found form via workout-name-heading test ID');
+    } catch (error) {
+      console.log('workout-name-heading not found, trying form selector...');
+    }
+    
+    // Option 2: If test ID didn't work, try form selector
+    if (!formFound) {
+      try {
+        await page.waitForSelector('form', { timeout: 10000 });
+        formFound = true;
+        console.log('Found form via form selector');
+      } catch (error) {
+        console.log('form selector also failed');
+      }
+    }
+    
+    // Option 3: If neither worked, try waiting for any form-related content
+    if (!formFound) {
+      try {
+        await page.waitForSelector('input[data-testid="workout-name-input"], button[data-testid="start-workout-button"]', { timeout: 5000 });
+        formFound = true;
+        console.log('Found form via input/button selectors');
+      } catch (error) {
+        console.log('No form elements found at all');
+        // Take another screenshot for debugging
+        await page.screenshot({ path: 'test-results/no-form-found.png' });
+        throw new Error('Workout form did not appear after clicking FAB');
+      }
+    }
     
     // Wait for the workout name heading to be visible and click it
-    await page.locator('[data-testid="workout-name-heading"]').waitFor({ state: 'visible', timeout: 10000 });
+    // (This might already be visible from our checks above, but ensure it's clickable)
+    await page.locator('[data-testid="workout-name-heading"]').waitFor({ state: 'visible', timeout: 5000 });
     await page.locator('[data-testid="workout-name-heading"]').click();
 
     // 4. Fill out the workout form
