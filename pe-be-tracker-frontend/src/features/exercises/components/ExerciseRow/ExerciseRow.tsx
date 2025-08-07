@@ -81,7 +81,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   useEffect(() => {
     if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
-      const currentSet = exerciseSets.find(set => set.id === notesModal.setId);
+      const currentSet = exerciseSets.find(set => String(set.id) === String(notesModal.setId));
       if (currentSet && debouncedSetNotesValue !== (currentSet.notes || '')) {
         updateSetNotes(notesModal.exerciseId, notesModal.setId, debouncedSetNotesValue);
       }
@@ -114,7 +114,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const updateSet = async (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           [field === 'weight' ? 'intensity' : 'reps']: value
@@ -164,25 +164,25 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   };
 
   const incrementReps = (exerciseId: string | number, setId: string | number) => {
-    const currentSet = exerciseSets.find(s => s.id === setId);
+    const currentSet = exerciseSets.find(s => String(s.id) === String(setId));
     const newReps = (currentSet?.reps || 0) + 1;
     updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const decrementReps = (exerciseId: string | number, setId: string | number) => {
-    const currentSet = exerciseSets.find(s => s.id === setId);
+    const currentSet = exerciseSets.find(s => String(s.id) === String(setId));
     const newReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSet(exerciseId, setId, 'reps', newReps);
   };
 
   const toggleSetCompletion = async (exerciseId: string | number, setId: string | number) => {
     // Find the current set to get its completion status
-    const currentSet = exerciseSets.find(set => set.id === setId);
+    const currentSet = exerciseSets.find(set => String(set.id) === String(setId));
     if (!currentSet) return;
     
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           done: !set.done
@@ -230,7 +230,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const updateSetNotes = async (exerciseId: string | number, setId: string | number, notes: string) => {
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
-      if (set.id === setId) {
+      if (String(set.id) === String(setId)) {
         return {
           ...set,
           notes: notes
@@ -277,7 +277,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
   const deleteSet = async (exerciseId: string | number, setId: string | number) => {
     // Optimistic update: Remove set from local state immediately
-    const updatedSets = exerciseSets.filter(set => set.id !== setId);
+    const updatedSets = exerciseSets.filter(set => String(set.id) !== String(setId));
     setExerciseSets(updatedSets);
     
     // Update the parent with the updated exercise
@@ -360,7 +360,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         
         // Replace the temporary set with the real one from the API
         const finalUpdatedSets = updatedSets.map(set => 
-          set.id === tempId ? createdSet : set
+          String(set.id) === String(tempId) ? createdSet : set
         );
         setExerciseSets(finalUpdatedSets);
         
@@ -582,7 +582,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                          Notes for Set {exerciseSets.findIndex(s => s.id === set.id) + 1}
+                          Notes for Set {exerciseSets.findIndex(s => String(s.id) === String(set.id)) + 1}
                         </label>
                         <Textarea
                           placeholder="Add notes for this set..."

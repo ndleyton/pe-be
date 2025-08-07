@@ -20,7 +20,7 @@ def upgrade() -> None:
     """Add 'Other' workout type."""
     import datetime
     
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     
     # Use raw SQL with ON CONFLICT to handle existing records
     op.execute(f"""
