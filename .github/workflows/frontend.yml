@@ -55,13 +55,17 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # Run end-to-end tests with Playwright
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: |
+          npm run dev:test &
+          npx wait-on http://localhost:5173
+          npm run test:e2e
         env:
-          VITE_API_BASE_URL: http://localhost:8000
+          VITE_API_BASE_URL: http://localhost:8000/api/v1
           VITE_API_TIMEOUT: 10000
           VITE_ENABLE_LOGGING: false
+          VITE_PUBLIC_POSTHOG_KEY: ""
+          VITE_PUBLIC_POSTHOG_HOST: ""
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -103,7 +107,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.ref == 'refs/heads/develop'
-    environment: staging
     
     steps:
 #      - name: Download build artifacts
@@ -118,12 +121,11 @@ jobs:
           echo "Build files available in ./dist"
           # Add your staging deployment commands here
           # Example: rsync, AWS S3, Netlify, Vercel, etc.
-        
+
   deploy-production:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.ref == 'refs/heads/main'
-    environment: production
     
     steps:
 #      - name: Download build artifacts

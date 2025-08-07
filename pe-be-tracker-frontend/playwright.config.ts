@@ -11,6 +11,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
+  
   projects: [
     {
       name: 'chromium',
@@ -25,9 +26,5 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-  },
+  
 });
