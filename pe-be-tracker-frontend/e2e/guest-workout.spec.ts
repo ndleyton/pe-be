@@ -29,14 +29,98 @@ async function dismissOverlays(page: any) {
 
 test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
-    // Log all console messages and errors for debugging
-    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
-    page.on('pageerror', error => console.log(`PAGE ERROR: ${error.message}`));
+    // Enhanced error logging to catch React loading issues
+    const jsErrors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        console.log(`BROWSER ERROR: ${msg.text()}`);
+        jsErrors.push(msg.text());
+      } else {
+        console.log(`BROWSER LOG: ${msg.text()}`);
+      }
+    });
+    page.on('pageerror', error => {
+      console.log(`PAGE ERROR: ${error.message}`);
+      console.log(`PAGE ERROR STACK: ${error.stack}`);
+      jsErrors.push(`PAGE ERROR: ${error.message}`);
+    });
+    page.on('requestfailed', request => {
+      const failure = request.failure();
+      if (failure) {
+        console.log(`REQUEST FAILED: ${request.method()} ${request.url()} - ${failure.errorText}`);
+        jsErrors.push(`REQUEST FAILED: ${request.url()} - ${failure.errorText}`);
+      }
+    });
     
     await page.goto('/');
 
     // Wait for the page to be fully loaded
     await page.waitForLoadState('networkidle');
+    
+    // Check if React loaded properly
+    const reactStatus = await page.evaluate(() => {
+      return {
+        hasReact: typeof window.React !== 'undefined',
+        reactVersion: window.React?.version || 'not found',
+        hasReactDOM: typeof window.ReactDOM !== 'undefined',
+        rootElement: !!document.getElementById('root'),
+        rootHasChildren: document.getElementById('root')?.children.length || 0,
+        scripts: Array.from(document.scripts).map(s => ({
+          src: s.src,
+          loaded: !s.src || s.readyState === 'complete' || s.readyState === 'loaded'
+        })),
+        errorCount: window.jsErrors?.length || 0
+      };
+    });
+    console.log('React initialization status:', JSON.stringify(reactStatus, null, 2));
+    
+    // Report any JavaScript errors that might prevent React from loading
+    if (jsErrors.length > 0) {
+      console.log('JavaScript errors detected during page load:', jsErrors);
+    }
+    
+    // Wait for the React app to be interactive - check for actual React content
+    console.log('Waiting for React app to be interactive...');
+    let reactReady = false;
+    for (let i = 0; i < 15; i++) {
+      const appStatus = await page.evaluate(() => {
+        // Check multiple signs that React has loaded
+        const rootEl = document.getElementById('root');
+        const hasContent = rootEl && rootEl.children.length > 0;
+        const hasReactFiber = rootEl && Object.keys(rootEl).some(key => key.startsWith('__reactFiber') || key.startsWith('_reactInternalInstance'));
+        const hasEventListeners = rootEl && Object.keys(rootEl).some(key => key.startsWith('__reactEventHandlers'));
+        
+        return {
+          hasWindow: typeof window !== 'undefined',
+          hasRoot: !!rootEl,
+          hasContent: hasContent,
+          hasReactFiber: hasReactFiber,
+          hasEventHandlers: hasEventListeners,
+          rootInnerHTML: rootEl?.innerHTML?.length || 0,
+          // Check for specific elements that should be rendered
+          hasTryGuestButton: !!document.querySelector('text=Try as Guest') || document.body.textContent.includes('Try as Guest'),
+          hasPersonalBestie: document.body.textContent.includes('PersonalBestie')
+        };
+      });
+      
+      console.log(`App status check ${i + 1}:`, JSON.stringify(appStatus, null, 2));
+      
+      // Consider React ready if we have content and the specific elements we need
+      if (appStatus.hasContent && appStatus.hasTryGuestButton) {
+        console.log(`React app ready after ${i * 1000}ms`);
+        reactReady = true;
+        break;
+      }
+      await page.waitForTimeout(1000);
+    }
+    
+    if (!reactReady) {
+      console.log('React app never became interactive');
+      const finalContent = await page.content();
+      console.log('Final page HTML length:', finalContent.length);
+      console.log('Body text:', await page.evaluate(() => document.body.textContent.slice(0, 500)));
+      throw new Error('React app failed to become interactive - tests will fail');
+    }
 
     // 1. Click the "Try as Guest" button to enter the app
     await page.click('text=Try as Guest');
