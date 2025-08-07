@@ -1,6 +1,15 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, Float, Boolean, ForeignKey, Text, String, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    Float,
+    Boolean,
+    ForeignKey,
+    Text,
+    String,
+    DateTime,
+)
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
