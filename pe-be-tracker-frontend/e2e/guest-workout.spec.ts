@@ -30,7 +30,7 @@ async function dismissOverlays(page: any) {
 test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
     // Enhanced error logging to catch React loading issues
-    const jsErrors = [];
+    const jsErrors: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'error') {
         console.log(`BROWSER ERROR: ${msg.text()}`);
@@ -60,16 +60,16 @@ test.describe('Guest Mode Workout Creation', () => {
     // Check if React loaded properly
     const reactStatus = await page.evaluate(() => {
       return {
-        hasReact: typeof window.React !== 'undefined',
-        reactVersion: window.React?.version || 'not found',
-        hasReactDOM: typeof window.ReactDOM !== 'undefined',
+        hasReact: typeof (window as any).React !== 'undefined',
+        reactVersion: (window as any).React?.version || 'not found',
+        hasReactDOM: typeof (window as any).ReactDOM !== 'undefined',
         rootElement: !!document.getElementById('root'),
         rootHasChildren: document.getElementById('root')?.children.length || 0,
         scripts: Array.from(document.scripts).map(s => ({
           src: s.src,
-          loaded: !s.src || s.readyState === 'complete' || s.readyState === 'loaded'
+          loaded: !s.src || (s as any).readyState === 'complete' || (s as any).readyState === 'loaded'
         })),
-        errorCount: window.jsErrors?.length || 0
+        errorCount: (window as any).jsErrors?.length || 0
       };
     });
     console.log('React initialization status:', JSON.stringify(reactStatus, null, 2));
@@ -98,8 +98,8 @@ test.describe('Guest Mode Workout Creation', () => {
           hasEventHandlers: hasEventListeners,
           rootInnerHTML: rootEl?.innerHTML?.length || 0,
           // Check for specific elements that should be rendered
-          hasTryGuestButton: !!document.querySelector('text=Try as Guest') || document.body.textContent.includes('Try as Guest'),
-          hasPersonalBestie: document.body.textContent.includes('PersonalBestie')
+          hasTryGuestButton: document.body.textContent?.includes('Try as Guest') ?? false,
+          hasPersonalBestie: document.body.textContent?.includes('PersonalBestie') ?? false
         };
       });
       
@@ -118,7 +118,7 @@ test.describe('Guest Mode Workout Creation', () => {
       console.log('React app never became interactive');
       const finalContent = await page.content();
       console.log('Final page HTML length:', finalContent.length);
-      console.log('Body text:', await page.evaluate(() => document.body.textContent.slice(0, 500)));
+      console.log('Body text:', await page.evaluate(() => document.body.textContent?.slice(0, 500) ?? 'No body text'));
       throw new Error('React app failed to become interactive - tests will fail');
     }
 
@@ -184,7 +184,7 @@ test.describe('Guest Mode Workout Creation', () => {
       '[data-testid="start-workout-button"]'
     ];
     
-    let formElement = null;
+    let formElement: any = null;
     for (const selector of selectors) {
       try {
         const element = page.locator(selector);
@@ -204,8 +204,8 @@ test.describe('Guest Mode Workout Creation', () => {
       // Final debugging before failure
       const finalState = await page.evaluate(() => ({
         fullHTML: document.documentElement.innerHTML.length,
-        hasReact: typeof window.React !== 'undefined',
-        reactVersion: window.React?.version || 'not found'
+        hasReact: typeof (window as any).React !== 'undefined',
+        reactVersion: (window as any).React?.version || 'not found'
       }));
       console.log('Final debugging state:', JSON.stringify(finalState, null, 2));
       
