@@ -2,7 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Guest Mode Workout Creation', () => {
   test('should allow a guest user to create a workout', async ({ page }) => {
+    // Log all console messages and errors for debugging
+    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
+    page.on('pageerror', error => console.log(`PAGE ERROR: ${error.message}`));
+    
     await page.goto('/');
+
+    // Wait for the page to be fully loaded
+    await page.waitForLoadState('networkidle');
 
     // 1. Click the "Try as Guest" button to enter the app
     await page.click('text=Try as Guest');

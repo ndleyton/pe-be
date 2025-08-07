@@ -57,7 +57,7 @@ jobs:
 
       - name: Run E2E tests
         run: |
-          VITE_POSTHOG_API_KEY="" VITE_POSTHOG_HOST="" VITE_API_BASE_URL="" npm run dev:test &
+          npm run dev:test &
           npx wait-on http://localhost:5173
           npm run test:e2e
 
@@ -101,7 +101,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.ref == 'refs/heads/develop'
-    environment: staging
     
     steps:
 #      - name: Download build artifacts
@@ -116,12 +115,11 @@ jobs:
           echo "Build files available in ./dist"
           # Add your staging deployment commands here
           # Example: rsync, AWS S3, Netlify, Vercel, etc.
-        
+
   deploy-production:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.ref == 'refs/heads/main'
-    environment: production
     
     steps:
 #      - name: Download build artifacts
