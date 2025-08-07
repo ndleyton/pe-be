@@ -57,10 +57,7 @@ test.describe('Guest Mode Workout Creation', () => {
       await fab.click({ force: true, timeout: 5000 });
     }
 
-    // Wait for the form to appear and be visible
-    await page.waitForSelector('form', { timeout: 10000 });
-    
-    // Wait for the workout name heading to be visible and click it
+    // Wait for the workout form to appear and click the heading to edit name
     await page.locator('[data-testid="workout-name-heading"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('[data-testid="workout-name-heading"]').click();
 
