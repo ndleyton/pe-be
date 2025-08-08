@@ -43,14 +43,14 @@ jobs:
         run: |
           cat > backend/.env.test <<'EOF'
           ENVIRONMENT=development
-          DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/pe_be_test
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test
           FRONTEND_URL=http://127.0.0.1:5173
           EOF
 
       - name: Run migrations
         working-directory: backend
         env:
-          DATABASE_URL: postgresql://postgres:postgres@postgres:5432/pe_be_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
         run: poetry run alembic upgrade head
 
       - name: Start backend
