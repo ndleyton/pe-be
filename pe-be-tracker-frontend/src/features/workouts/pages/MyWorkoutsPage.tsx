@@ -18,6 +18,7 @@ const MyWorkoutsPage = () => {
   
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const setUser = useAuthStore(state => state.setUser);
   const guestData = useGuestStore();
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
@@ -75,27 +76,41 @@ const MyWorkoutsPage = () => {
     setShowWorkoutForm(true);
   };
 
+  // Track if we've detected an auth error to keep showing the message
+  const [sessionExpired, setSessionExpired] = React.useState(false);
+
+  React.useEffect(() => {
+    const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
+    if (isAuthenticated && isAuthError) {
+      // Mark user as signed out so header logo routes to login
+      if (typeof setUser === 'function') {
+        setUser(null);
+      }
+      // Preserve session expired UI state on this page
+      setSessionExpired(true);
+    }
+  }, [isAuthenticated, error, setUser]);
+
   if (isAuthenticated && isLoading) return <p className="text-muted-foreground">Loading workouts...</p>;
-  
+
+  if (sessionExpired) {
+    const errorMessage = getErrorMessage(error);
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-destructive text-2xl">⚠</span>
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
+          <p className="mb-4 text-muted-foreground">{errorMessage}</p>
+          <p className="text-sm text-muted-foreground">Click the logo above to return to login</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isAuthenticated && error) {
     const errorMessage = getErrorMessage(error);
-    const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
-    
-    if (isAuthError) {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-destructive text-2xl">⚠</span>
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
-            <p className="mb-4 text-muted-foreground">{errorMessage}</p>
-            <p className="text-sm text-muted-foreground">Click the logo above to return to login</p>
-          </div>
-        </div>
-      );
-    }
-    
     return <p className="text-destructive">{errorMessage}</p>;
   }
 
