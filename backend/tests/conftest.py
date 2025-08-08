@@ -7,6 +7,31 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
+from urllib.parse import urlsplit
+from pathlib import Path
+
+# Ensure test environment variables are loaded from a safe test dotenv file
+try:
+    from dotenv import load_dotenv
+
+    backend_dir = Path(__file__).resolve().parent.parent
+    # Priority: ENV_FILE if set; else .env.test in backend dir
+    env_file_from_env = os.getenv("ENV_FILE")
+    candidate_paths = []
+    if env_file_from_env:
+        env_path = Path(env_file_from_env)
+        if not env_path.is_absolute():
+            env_path = backend_dir / env_path
+        candidate_paths.append(env_path)
+    candidate_paths.append(backend_dir / ".env.test")
+
+    for path in candidate_paths:
+        if path.exists():
+            load_dotenv(path, override=False)
+            break
+except Exception:
+    # Best-effort: if python-dotenv is missing or any error occurs, continue
+    pass
 
 from src.main import app
 from src.core.database import get_async_session, Base
@@ -45,6 +70,30 @@ test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
 TestSessionLocal = sessionmaker(
     test_engine, class_=AsyncSession, expire_on_commit=False
 )
+
+
+def _assert_safe_test_database_url(db_url: str) -> None:
+    """Fail fast if DATABASE_URL doesn't clearly point to a test database.
+
+    We require the database name to contain the substring 'test' to reduce the
+    risk of accidental data loss when running pytest.
+    """
+    try:
+        parsed = urlsplit(db_url)
+        db_name = (parsed.path or "").lstrip("/")
+    except Exception:
+        db_name = ""
+
+    if not db_name or "test" not in db_name.lower():
+        raise RuntimeError(
+            "Refusing to run destructive test setup against a non-test database. "
+            "Set DATABASE_URL to a dedicated test database whose name contains 'test'. "
+            f"Current database name detected: '{db_name or '[empty]'}'"
+        )
+
+
+# Enforce safety immediately on import
+_assert_safe_test_database_url(TEST_DATABASE_URL)
 
 
 @pytest_asyncio.fixture(scope="function")
