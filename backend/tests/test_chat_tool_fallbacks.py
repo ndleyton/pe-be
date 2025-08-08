@@ -5,6 +5,9 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch):
+    # Ensure model key is present to bypass early guard
+    monkeypatch.setattr("src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False)
+
     svc = ChatService(user_id=1, session=None)
 
     # Prepare a dummy tool list with a simple tool
