@@ -1,0 +1,101 @@
+name: Frontend E2E (with Backend)
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pe_be_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Create backend .env.test
+        run: |
+          cat > backend/.env.test <<'EOF'
+          ENVIRONMENT=development
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be_test
+          FRONTEND_URL=http://127.0.0.1:5173
+          EOF
+
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pe_be_test
+        run: poetry run alembic upgrade head
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          ENV_FILE: .env.test
+        run: |
+          nohup poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 >/tmp/backend.log 2>&1 &
+          sleep 3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pe-be-tracker-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: pe-be-tracker-frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: pe-be-tracker-frontend
+        run: npx playwright install --with-deps
+
+      - name: Start frontend dev server
+        working-directory: pe-be-tracker-frontend
+        env:
+          VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
+        run: |
+          npm run dev:test &
+          npx wait-on http://localhost:5173
+
+      - name: Run frontend E2E tests
+        working-directory: pe-be-tracker-frontend
+        env:
+          VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: pe-be-tracker-frontend/playwright-report
+          if-no-files-found: ignore
+
+

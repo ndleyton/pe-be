@@ -115,7 +115,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Reps"
           value={editData.reps || ''}
           onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="w-20 p-2 bg-background border border-border rounded text-foreground text-sm"
+          className="p-2 bg-background border border-border rounded text-foreground text-sm text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
         />
         <input
           type="number"
@@ -123,7 +123,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Weight"
           value={editData.intensity || ''}
           onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-24 p-2 bg-background border border-border rounded text-foreground text-sm"
+          className="p-2 bg-background border border-border rounded text-foreground text-sm text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
         />
         <input
           type="number"
