@@ -8,6 +8,7 @@ from sqlalchemy.engine import Connection  # Import Connection for type hint
 from sqlalchemy.ext.asyncio import create_async_engine  # Use async engine
 
 from alembic import context
+from urllib.parse import urlsplit, urlunsplit
 
 # --- Ensure correct path to import app ---
 # Assuming alembic directory is at the same level as the 'app' directory
@@ -60,6 +61,53 @@ def get_async_url():
         return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
     return db_url
 
+# --- URL utilities and safety checks ---
+def _redact_url_password(db_url: str) -> str:
+    """Return the URL with password redacted for logging."""
+    try:
+        p = urlsplit(db_url)
+        hostname = p.hostname or ""
+        port_part = f":{p.port}" if p.port else ""
+        if p.username:
+            auth = f"{p.username}:{'***' if p.password else ''}@"
+        else:
+            auth = ""
+        safe_netloc = f"{auth}{hostname}{port_part}"
+        return urlunsplit((p.scheme, safe_netloc, p.path, p.query, p.fragment))
+    except Exception:
+        # Fallback to original if parsing fails
+        return db_url
+
+def _extract_host(db_url: str) -> str:
+    try:
+        return urlsplit(db_url).hostname or ""
+    except Exception:
+        return ""
+
+def _log_and_validate_db_url(db_url: str) -> None:
+    """Log the effective DB URL (redacted) and fail fast if host looks malformed in prod/staging."""
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    redacted = _redact_url_password(db_url)
+    host = _extract_host(db_url)
+
+    print(f"Alembic using DATABASE_URL (redacted): {redacted}")
+    print(f"Alembic DB host resolved: {host or '[empty]'}")
+
+    # Allow short hostnames in local/dev and typical docker-compose service names
+    allowed_no_dot_hosts = {"localhost", "db"}
+
+    # In production/staging, require a fully-qualified domain name
+    if env in {"production", "staging"}:
+        if not host:
+            raise RuntimeError(
+                "DATABASE_URL host is empty. Please set a valid DATABASE_URL (e.g., from your DB provider)."
+            )
+        if "." not in host and host not in allowed_no_dot_hosts:
+            raise RuntimeError(
+                "DATABASE_URL host appears malformed (no dot). Expected a fully-qualified domain name "
+                "like '...render.com' or your provider's FQDN. Current host: '" + host + "'"
+            )
+
 # --- Offline Mode ---
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -104,6 +152,9 @@ def run_migrations_online() -> None:
     elif db_url.startswith("postgres+asyncpg://"):
         db_url = db_url.replace("postgres+asyncpg://", "postgres://", 1)
     
+    # Log and validate before connecting
+    _log_and_validate_db_url(db_url)
+    
     connectable = create_engine(
         db_url,
         poolclass=pool.NullPool,
@@ -117,8 +168,12 @@ def run_migrations_online() -> None:
 
 async def run_migrations_online_async() -> None:
     """Run migrations in 'online' mode using an async engine."""
+    async_db_url = get_async_url()
+    # Log and validate before connecting
+    _log_and_validate_db_url(async_db_url)
+
     connectable = create_async_engine(
-        get_async_url(),
+        async_db_url,
         poolclass=pool.NullPool,
         future=True, # Recommended for SQLAlchemy 2.0 style
     )

@@ -7,8 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase
 
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+# Load dotenv with respect for ENV_FILE if provided, otherwise default to .env
+env_file = os.getenv("ENV_FILE", ".env")
+try:
+    env_path = Path(env_file)
+    if not env_path.is_absolute():
+        # Assume backend root is one level up from src
+        env_path = Path(__file__).resolve().parents[2] / env_file
+    load_dotenv(env_path, override=False)
+except Exception:
+    # Fallback to default behavior
+    load_dotenv()
 
 # Explicitly create MetaData
 metadata_obj = MetaData()
