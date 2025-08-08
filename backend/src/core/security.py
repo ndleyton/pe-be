@@ -77,7 +77,7 @@ class CookieTransportWithRedirect(CookieTransport):
 
 def get_jwt_strategy() -> JWTStrategy:
     """JWT strategy for authentication"""
-    return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
+    return JWTStrategy(secret=SECRET, lifetime_seconds=settings.JWT_LIFETIME_SECONDS)
 
 
 # Authentication backend

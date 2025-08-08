@@ -88,6 +88,13 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: str = Field("lax", validation_alias="COOKIE_SAMESITE")
     COOKIE_DOMAIN: str | None = Field(None, validation_alias="COOKIE_DOMAIN")
 
+    # JWT lifetime configuration (in seconds)
+    JWT_LIFETIME_SECONDS: int = Field(
+        3600 * 24 * 7,
+        validation_alias="JWT_LIFETIME_SECONDS",
+        description="JWT token lifetime in seconds (default: 7 days)",
+    )
+
     # Environment indicator
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
 
