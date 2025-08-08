@@ -25,9 +25,14 @@ from src.workouts.schemas import (
     AddExerciseRequest,
 )
 from src.core.config import settings
-from src.exercises.crud import create_exercise
+from src.exercises.crud import (
+    create_exercise,
+    get_exercise_types,
+    create_exercise_type,
+    get_intensity_units,
+)
 from src.exercise_sets.crud import create_exercise_set
-from src.exercises.schemas import ExerciseCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
 from src.exercises.crud import get_exercises_for_workout
 
@@ -145,6 +150,141 @@ class WorkoutService:
         # 5. Return the workout with fresh relationships
         return await get_workout_by_id(session, workout.id, user_id)
 
+    @staticmethod
+    async def create_workout_from_parsed(
+        session: AsyncSession, user_id: int, parsed: WorkoutParseResponse
+    ) -> Workout:
+        """Create a full workout (workout + exercises + sets) from a parsed payload.
+
+        - Creates a new workout using parsed name/notes/type
+        - For each parsed exercise:
+          - Finds or creates the exercise type by name
+          - Creates the exercise attached to the workout
+          - Creates its sets, mapping intensity_unit (string) to intensity_unit_id
+        """
+        # 1) Create the workout
+        workout_create = WorkoutCreate(
+            name=parsed.name,
+            notes=parsed.notes,
+            start_time=datetime.now(timezone.utc),
+            workout_type_id=parsed.workout_type_id,
+        )
+        workout = await create_workout(session, workout_create, user_id)
+
+        # Preload intensity units for mapping
+        intensity_units = await get_intensity_units(session)
+
+        def resolve_intensity_unit_id(unit_text: Optional[str]) -> Optional[int]:
+            if not unit_text:
+                return None
+            text = unit_text.strip().lower()
+
+            # Simple normalization / synonyms
+            synonyms = {
+                "min": "time-based",
+                "mins": "time-based",
+                "minute": "time-based",
+                "minutes": "time-based",
+                "sec": "time-based",
+                "secs": "time-based",
+                "second": "time-based",
+                "seconds": "time-based",
+                "hr": "time-based",
+                "hour": "time-based",
+                "hours": "time-based",
+                # Common weight units
+                "kg": "kg",
+                "kilograms": "kg",
+                "lbs": "lbs",
+                "pounds": "lbs",
+                # Distance (if present in your units)
+                "miles": "miles",
+                "mile": "miles",
+                "km": "km",
+                "kilometers": "km",
+                # Speed (if present)
+                "mph": "mph",
+                "km/h": "km/h",
+                # Bodyweight
+                "bw": "bodyweight",
+                "bodyweight": "bodyweight",
+                # Generic
+                "time": "time-based",
+            }
+
+            canonical = synonyms.get(text, text)
+
+            # Match by name OR abbreviation
+            for unit in intensity_units:
+                if unit.name.lower() == canonical or unit.abbreviation.lower() == canonical:
+                    return unit.id
+
+            # Fallback: try to find time-based if minutes-like
+            if canonical in {"time-based", "minutes", "minute", "min", "mins", "seconds", "second", "sec", "secs", "hour", "hours"}:
+                for unit in intensity_units:
+                    if unit.name.lower() == "time-based":
+                        return unit.id
+
+            # As a last resort, return the first unit to avoid NULL constraint issues
+            return intensity_units[0].id if intensity_units else None
+
+        # 2) Create exercises and sets
+        for parsed_ex in parsed.exercises:
+            # Attempt to find an existing exercise type (fuzzy search already supported)
+            exercise_types = await get_exercise_types(
+                session, name=parsed_ex.exercise_type_name, limit=1
+            )
+            exercise_type = None
+            if exercise_types.data:
+                # Prefer exact case-insensitive match if available among returned
+                exact = next(
+                    (et for et in exercise_types.data if et.name.lower() == parsed_ex.exercise_type_name.lower()),
+                    None,
+                )
+                exercise_type = exact or exercise_types.data[0]
+            else:
+                # Need to create a new exercise type. Use the first set's unit as default if available
+                first_unit_id = None
+                if parsed_ex.sets:
+                    first_unit_id = resolve_intensity_unit_id(parsed_ex.sets[0].intensity_unit)
+                if first_unit_id is None:
+                    # fallback to a reasonable default
+                    first_unit_id = intensity_units[0].id if intensity_units else 1
+
+                exercise_type = await create_exercise_type(
+                    session,
+                    ExerciseTypeCreate(
+                        name=parsed_ex.exercise_type_name,
+                        description="Created from chat parsed workout",
+                        default_intensity_unit=first_unit_id,
+                    ),
+                )
+
+            # Create the exercise row
+            exercise_create = ExerciseCreate(
+                timestamp=datetime.now(timezone.utc),
+                notes=parsed_ex.notes,
+                exercise_type_id=exercise_type.id,
+                workout_id=workout.id,
+            )
+            exercise = await create_exercise(session, exercise_create)
+
+            # Create sets
+            for parsed_set in parsed_ex.sets:
+                unit_id = resolve_intensity_unit_id(parsed_set.intensity_unit)
+                set_create = ExerciseSetCreate(
+                    reps=parsed_set.reps,
+                    intensity=parsed_set.intensity,
+                    intensity_unit_id=unit_id if unit_id is not None else intensity_units[0].id,
+                    rest_time_seconds=parsed_set.rest_time_seconds,
+                    exercise_id=exercise.id,
+                    done=True,
+                )
+                await create_exercise_set(session, set_create)
+
+        # Return the completed workout with relationships
+        return await get_workout_by_id(session, workout.id, user_id)
+
 
 class WorkoutTypeService:
     """Service layer for workout type business logic"""
@@ -203,11 +343,11 @@ class WorkoutParsingService:
                     prompt = langfuse.get_prompt("parser-to-json", label="production")
                     system_prompt = prompt.prompt
 
-                    # Log prompt usage
+                    # Log prompt usage. Pass the Prompt object, not its internal content list/string
                     if trace:
                         trace.generation(
                             name="prompt-fetch",
-                            prompt=prompt.prompt,
+                            prompt=prompt,
                             metadata={
                                 "prompt_name": "parser-to-json",
                                 "label": "production",
