@@ -216,11 +216,26 @@ class WorkoutService:
 
             # Match by name OR abbreviation
             for unit in intensity_units:
-                if unit.name.lower() == canonical or unit.abbreviation.lower() == canonical:
+                if (
+                    unit.name.lower() == canonical
+                    or unit.abbreviation.lower() == canonical
+                ):
                     return unit.id
 
             # Fallback: try to find time-based if minutes-like
-            if canonical in {"time-based", "minutes", "minute", "min", "mins", "seconds", "second", "sec", "secs", "hour", "hours"}:
+            if canonical in {
+                "time-based",
+                "minutes",
+                "minute",
+                "min",
+                "mins",
+                "seconds",
+                "second",
+                "sec",
+                "secs",
+                "hour",
+                "hours",
+            }:
                 for unit in intensity_units:
                     if unit.name.lower() == "time-based":
                         return unit.id
@@ -238,7 +253,11 @@ class WorkoutService:
             if exercise_types.data:
                 # Prefer exact case-insensitive match if available among returned
                 exact = next(
-                    (et for et in exercise_types.data if et.name.lower() == parsed_ex.exercise_type_name.lower()),
+                    (
+                        et
+                        for et in exercise_types.data
+                        if et.name.lower() == parsed_ex.exercise_type_name.lower()
+                    ),
                     None,
                 )
                 exercise_type = exact or exercise_types.data[0]
@@ -246,7 +265,9 @@ class WorkoutService:
                 # Need to create a new exercise type. Use the first set's unit as default if available
                 first_unit_id = None
                 if parsed_ex.sets:
-                    first_unit_id = resolve_intensity_unit_id(parsed_ex.sets[0].intensity_unit)
+                    first_unit_id = resolve_intensity_unit_id(
+                        parsed_ex.sets[0].intensity_unit
+                    )
                 if first_unit_id is None:
                     # fallback to a reasonable default
                     first_unit_id = intensity_units[0].id if intensity_units else 1
@@ -275,7 +296,9 @@ class WorkoutService:
                 set_create = ExerciseSetCreate(
                     reps=parsed_set.reps,
                     intensity=parsed_set.intensity,
-                    intensity_unit_id=unit_id if unit_id is not None else intensity_units[0].id,
+                    intensity_unit_id=unit_id
+                    if unit_id is not None
+                    else intensity_units[0].id,
                     rest_time_seconds=parsed_set.rest_time_seconds,
                     exercise_id=exercise.id,
                     done=True,
@@ -305,6 +328,58 @@ class WorkoutTypeService:
 
 class WorkoutParsingService:
     """Service layer for workout text parsing using LLM with Langfuse observability"""
+
+    @staticmethod
+    def _prompt_to_string(prompt_obj) -> str:
+        """Normalize Langfuse Prompt object or arbitrary structure to a plain string.
+
+        Handles:
+        - Prompt objects with a `.to_string()` helper
+        - `.prompt` attribute containing str/list/dict
+        - lists of parts with nested {type: "text", text: "..."}
+        - generic str() fallback
+        """
+        try:
+            # Prefer a dedicated conversion if present
+            if hasattr(prompt_obj, "to_string") and callable(prompt_obj.to_string):
+                return prompt_obj.to_string()
+
+            raw = getattr(prompt_obj, "prompt", prompt_obj)
+            if isinstance(raw, str):
+                return raw
+
+            if isinstance(raw, list):
+                parts: List[str] = []
+                for part in raw:
+                    if isinstance(part, dict):
+                        content = part.get("content")
+                        if isinstance(content, str):
+                            parts.append(content)
+                        elif isinstance(content, list):
+                            for item in content:
+                                if (
+                                    isinstance(item, dict)
+                                    and item.get("type") == "text"
+                                    and "text" in item
+                                ):
+                                    parts.append(item["text"])
+                                elif isinstance(item, str):
+                                    parts.append(item)
+                    elif isinstance(part, str):
+                        parts.append(part)
+                return "\n".join(parts)
+
+            # Handle dict with content field
+            if isinstance(raw, dict):
+                content = raw.get("content")
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    return "\n".join(str(x) for x in content)
+
+            return str(raw)
+        except Exception:
+            return str(prompt_obj)
 
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
@@ -341,7 +416,7 @@ class WorkoutParsingService:
             if langfuse:
                 try:
                     prompt = langfuse.get_prompt("parser-to-json", label="production")
-                    system_prompt = prompt.prompt
+                    system_prompt = WorkoutParsingService._prompt_to_string(prompt)
 
                     # Log prompt usage. Pass the Prompt object, not its internal content list/string
                     if trace:
