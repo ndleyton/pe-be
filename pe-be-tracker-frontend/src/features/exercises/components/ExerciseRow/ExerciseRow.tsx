@@ -511,7 +511,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.intensity || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center input w-[5ch] min-w-[3ch] max-w-[5ch]"
+                  className="h-8 text-center input min-w-[6ch] max-w-[10ch]"
                   disabled={set.done}
                 />
               </div>
@@ -529,7 +529,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.reps || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center input w-[5ch] min-w-[3ch] max-w-[5ch]"
+                  className="h-8 text-center input min-w-[8ch] max-w-[10ch]"
                   disabled={set.done}
                 />
                 <Button
