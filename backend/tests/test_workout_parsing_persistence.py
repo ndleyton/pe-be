@@ -94,3 +94,44 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
     # Final return comes from get_workout_by_id
     assert result.name == "Walking"
 
+
+@pytest.mark.asyncio
+async def test_create_workout_from_parsed_raises_when_no_intensity_units(monkeypatch):
+    parsed = WorkoutParseResponse(
+        name="Test",
+        notes=None,
+        workout_type_id=2,
+        exercises=[
+            ParsedExercise(
+                exercise_type_name="TestEx",
+                notes=None,
+                sets=[ParsedExerciseSet(reps=None, intensity=10.0, intensity_unit="minutes", rest_time_seconds=None)],
+            )
+        ],
+    )
+
+    # Stubs forcing no intensity units
+    async def fake_create_workout(session, workout_create, user_id):
+        return SimpleNamespace(id=1)
+
+    async def fake_get_intensity_units(session):
+        return []
+
+    async def fake_get_exercise_types(session, name=None, order_by="usage", offset=0, limit=100):
+        return SimpleNamespace(data=[], next_cursor=None)
+
+    async def fake_create_exercise_type(session, exercise_type_create):
+        return SimpleNamespace(id=2, name=exercise_type_create.name)
+
+    async def fake_create_exercise(session, exercise_create):
+        return SimpleNamespace(id=3)
+
+    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
+    monkeypatch.setattr("src.workouts.service.get_intensity_units", fake_get_intensity_units)
+    monkeypatch.setattr("src.workouts.service.get_exercise_types", fake_get_exercise_types)
+    monkeypatch.setattr("src.workouts.service.create_exercise_type", fake_create_exercise_type)
+    monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
+
+    with pytest.raises(ValueError):
+        await WorkoutService.create_workout_from_parsed(session=object(), user_id=1, parsed=parsed)
+

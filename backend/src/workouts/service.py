@@ -173,6 +173,8 @@ class WorkoutService:
 
         # Preload intensity units for mapping
         intensity_units = await get_intensity_units(session)
+        if intensity_units is None:
+            intensity_units = []
 
         def resolve_intensity_unit_id(unit_text: Optional[str]) -> Optional[int]:
             if not unit_text:
@@ -269,8 +271,13 @@ class WorkoutService:
                         parsed_ex.sets[0].intensity_unit
                     )
                 if first_unit_id is None:
-                    # fallback to a reasonable default
-                    first_unit_id = intensity_units[0].id if intensity_units else 1
+                    # fallback to a reasonable default if available, otherwise fail fast
+                    if intensity_units:
+                        first_unit_id = intensity_units[0].id
+                    else:
+                        raise ValueError(
+                            "Cannot create exercise type: no intensity units are configured in the database."
+                        )
 
                 exercise_type = await create_exercise_type(
                     session,
@@ -293,12 +300,17 @@ class WorkoutService:
             # Create sets
             for parsed_set in parsed_ex.sets:
                 unit_id = resolve_intensity_unit_id(parsed_set.intensity_unit)
+                if unit_id is None:
+                    if not intensity_units:
+                        raise ValueError(
+                            "Cannot create exercise set: no intensity units are configured in the database."
+                        )
+                    unit_id = intensity_units[0].id
+
                 set_create = ExerciseSetCreate(
                     reps=parsed_set.reps,
                     intensity=parsed_set.intensity,
-                    intensity_unit_id=unit_id
-                    if unit_id is not None
-                    else intensity_units[0].id,
+                    intensity_unit_id=unit_id,
                     rest_time_seconds=parsed_set.rest_time_seconds,
                     exercise_id=exercise.id,
                     done=True,
