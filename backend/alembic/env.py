@@ -95,14 +95,17 @@ def _log_and_validate_db_url(db_url: str) -> None:
 
     # Allow short hostnames in local/dev and typical docker-compose service names
     allowed_no_dot_hosts = {"localhost", "db"}
+    
+    # Allow Render's internal database hostnames (format: dpg-xxxxx-a)
+    is_render_host = host.startswith("dpg-") and host.count("-") >= 2
 
-    # In production/staging, require a fully-qualified domain name
+    # In production/staging, require a fully-qualified domain name or Render hostname
     if env in {"production", "staging"}:
         if not host:
             raise RuntimeError(
                 "DATABASE_URL host is empty. Please set a valid DATABASE_URL (e.g., from your DB provider)."
             )
-        if "." not in host and host not in allowed_no_dot_hosts:
+        if "." not in host and host not in allowed_no_dot_hosts and not is_render_host:
             raise RuntimeError(
                 "DATABASE_URL host appears malformed (no dot). Expected a fully-qualified domain name "
                 "like '...render.com' or your provider's FQDN. Current host: '" + host + "'"

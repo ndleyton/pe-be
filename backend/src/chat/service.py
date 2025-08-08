@@ -364,7 +364,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     langchain_messages.append(AIMessage(content=message["content"]))
 
             # Tool calling loop with safety limits
-            max_tool_iterations = 3
+            max_tool_iterations = settings.CHAT_MAX_TOOL_ITERATIONS
             iteration_count = 0
             last_tool_outputs_texts: List[str] = []
             response_text = ""
@@ -434,6 +434,11 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                                             kwargs[name] = tool_args[name]
 
                                     # Second pass: single-arg fallback mapping
+                                    # Some model/tooling stacks (incl. Gemini via LangChain) may emit a
+                                    # positional-only argument as a synthetic key like '__arg1'. When the
+                                    # tool function accepts a single parameter and the model didn't name
+                                    # it correctly, accept that value as the sole argument. As a last
+                                    # resort, accept the first provided value regardless of key.
                                     if (
                                         len(kwargs) == 0
                                         and len(param_names) == 1
