@@ -22,7 +22,7 @@ services:
       - pe-be-network
 
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: pe-be-postgres
     environment:
       - POSTGRES_USER=postgres
@@ -30,7 +30,7 @@ services:
       - POSTGRES_DB=pe_be
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
