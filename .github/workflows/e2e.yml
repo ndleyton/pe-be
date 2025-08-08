@@ -76,6 +76,14 @@ jobs:
         working-directory: pe-be-tracker-frontend
         run: npx playwright install --with-deps
 
+      - name: Start frontend dev server
+        working-directory: pe-be-tracker-frontend
+        env:
+          VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
+        run: |
+          npm run dev:test &
+          npx wait-on http://localhost:5173
+
       - name: Run frontend E2E tests
         working-directory: pe-be-tracker-frontend
         env:
