@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field("", validation_alias="OPENAI_API_KEY")
     GOOGLE_AI_KEY: str = Field("", validation_alias="GOOGLE_AI_KEY")
 
+    # Chat/tool calling safety
+    CHAT_MAX_TOOL_ITERATIONS: int = Field(
+        3,
+        validation_alias="CHAT_MAX_TOOL_ITERATIONS",
+        description="Max number of tool-calling iterations in chat loop",
+    )
+
     # Langfuse configuration
     LANGFUSE_PUBLIC_KEY: str = Field("", validation_alias="LANGFUSE_PUBLIC_KEY")
     LANGFUSE_SECRET_KEY: str = Field("", validation_alias="LANGFUSE_SECRET_KEY")

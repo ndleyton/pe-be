@@ -25,9 +25,9 @@ async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch)
 
     # First return a tool call, then a response without content
     calls = [
-        FakeResponse([
-            {"name": "dummy_tool", "args": {}, "id": "1", "type": "tool_call"}
-        ]),
+        FakeResponse(
+            [{"name": "dummy_tool", "args": {}, "id": "1", "type": "tool_call"}]
+        ),
         FakeResponse([]),
     ]
 
@@ -47,6 +47,7 @@ async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch)
 
     monkeypatch.setattr("src.chat.service.ChatGoogleGenerativeAI", fake_llm)
 
-    result = await svc.generate_response(messages=[{"role": "user", "content": "hi"}], save_to_db=False)
+    result = await svc.generate_response(
+        messages=[{"role": "user", "content": "hi"}], save_to_db=False
+    )
     assert "Here is the result from the requested tool" in result["message"]
-
