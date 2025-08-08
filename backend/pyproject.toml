@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fitness-tracker-backend"
-version = "0.1.0"
+version = "0.2.0"
 description = "FastAPI backend for fitness tracker app"
 authors = ["Nicolas Leyton <ndleyton@uc.cl>"]
 readme = "README.md"
