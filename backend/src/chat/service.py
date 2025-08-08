@@ -232,7 +232,41 @@ class ChatService:
                 prompt = self.langfuse.get_prompt(
                     "fitness-chat-agent", label="production"
                 )
-                return prompt.prompt
+
+                # Normalize to plain string for the LLM
+                raw_prompt = getattr(prompt, "prompt", prompt)
+
+                # Prefer dedicated conversion if available
+                if hasattr(prompt, "to_string") and callable(prompt.to_string):
+                    return prompt.to_string()
+
+                # Handle common prompt structures (lists of parts/messages)
+                if isinstance(raw_prompt, str):
+                    return raw_prompt
+
+                if isinstance(raw_prompt, list):
+                    collected_parts = []
+                    for part in raw_prompt:
+                        if isinstance(part, dict):
+                            content = part.get("content")
+                            if isinstance(content, str):
+                                collected_parts.append(content)
+                            elif isinstance(content, list):
+                                for item in content:
+                                    if (
+                                        isinstance(item, dict)
+                                        and item.get("type") == "text"
+                                        and "text" in item
+                                    ):
+                                        collected_parts.append(item["text"])
+                                    elif isinstance(item, str):
+                                        collected_parts.append(item)
+                        elif isinstance(part, str):
+                            collected_parts.append(part)
+                    return "\n".join(collected_parts)
+
+                # Fallback: best-effort string conversion
+                return str(raw_prompt)
             except Exception as e:
                 print(f"Warning: Could not fetch prompt from Langfuse: {e}")
 
@@ -341,8 +375,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     # Safety break to avoid being stuck in a tool-call loop
                     if last_tool_outputs_texts:
                         response_text = (
-                            "Here is the result from the requested tool:\n" +
-                            "\n\n".join(last_tool_outputs_texts)
+                            "Here is the result from the requested tool:\n"
+                            + "\n\n".join(last_tool_outputs_texts)
                         )
                     else:
                         response_text = "I completed the requested operation."
@@ -509,8 +543,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             if not final_message:
                 if last_tool_outputs_texts:
                     final_message = (
-                        "Here is the result from the requested tool:\n" +
-                        "\n\n".join(last_tool_outputs_texts)
+                        "Here is the result from the requested tool:\n"
+                        + "\n\n".join(last_tool_outputs_texts)
                     )
                 else:
                     final_message = "I completed the requested operation."
