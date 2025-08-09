@@ -9,10 +9,10 @@ class RecipeService:
     """Service layer for recipe operations"""
 
     async def get_user_recipes(
-        self, session: AsyncSession, user_id: int
+        self, session: AsyncSession, user_id: int, offset: int, limit: int
     ) -> List[RecipeRead]:
-        """Get all recipes for a user"""
-        recipes = await crud.get_user_recipes(session, user_id)
+        """Get all recipes for a user with pagination"""
+        recipes = await crud.get_user_recipes(session, user_id, offset, limit)
         return [RecipeRead.from_orm(recipe) for recipe in recipes]
 
     async def get_recipe(

@@ -12,6 +12,8 @@ const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then
 const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
 const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
 const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
+const RoutinesPage = React.lazy(() => import('./features/routines/pages/RoutinesPage'));
+const RoutineDetailsPage = React.lazy(() => import('./features/routines/pages/RoutineDetailsPage'));
 const ChatPage = React.lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
 const ProfilePage = React.lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
 const SettingsPage = React.lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
@@ -100,6 +102,22 @@ const routes: RouteObject[] = [
         element: (
           <PageWrapper>
             <ExerciseTypeDetailsPage />
+          </PageWrapper>
+        ),
+      },
+      {
+        path: 'routines',
+        element: (
+          <PageWrapper>
+            <RoutinesPage />
+          </PageWrapper>
+        ),
+      },
+      {
+        path: 'routines/:routineId',
+        element: (
+          <PageWrapper>
+            <RoutineDetailsPage />
           </PageWrapper>
         ),
       },
