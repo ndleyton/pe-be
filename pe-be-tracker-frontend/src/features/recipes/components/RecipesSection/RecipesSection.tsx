@@ -1,10 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { getRecipes, deleteRecipe, Recipe } from '@/features/recipes/api';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
+import { Button } from '@/shared/components/ui/button';
 
 interface RecipesSectionProps {
   onStartWorkout: (recipe: GuestRecipe) => void;
@@ -116,9 +118,9 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Quick Start Routines</h2>
-        <span className="text-sm text-muted-foreground">
-          {recipes.length} routine{recipes.length !== 1 ? 's' : ''}
-        </span>
+        <Button asChild variant="link" size="sm">
+          <Link to="/routines" aria-label="Browse all routines">More</Link>
+        </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {recipes.map((recipe) => (

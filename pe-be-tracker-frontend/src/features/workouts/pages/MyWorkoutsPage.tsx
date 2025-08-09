@@ -6,7 +6,7 @@ import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { WeekTracking } from '@/shared/components/WeekTracking';
-import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
+import { RoutinesSection } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
@@ -153,7 +153,7 @@ const MyWorkoutsPage = () => {
           </div>
           <WeekTracking workouts={workouts} loading={isAuthenticated && isLoading} className="mb-6" />
           
-          <RecipesSection onStartWorkout={handleStartWorkoutFromRecipe} />
+          <RoutinesSection onStartWorkout={handleStartWorkoutFromRecipe} />
           
           {showWorkoutForm && (
             <div className="mb-6">

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { getRoutines, type Routine } from '@/features/routines/api';
+import { getRoutines } from '@/features/routines/api';
+import type { Routine } from '@/features/routines/types';
 import { RoutineCard } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
