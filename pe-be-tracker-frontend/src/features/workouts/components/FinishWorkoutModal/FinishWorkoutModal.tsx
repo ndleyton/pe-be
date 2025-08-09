@@ -6,6 +6,14 @@ import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
 import { toPng } from 'html-to-image';
 import { useUIStore } from '@/stores';
 
+// Constants
+const LAYOUT_STABILIZATION_DELAY_MS = 50;
+const DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK = 1;
+const MIN_EXPORT_PIXEL_RATIO = 2;
+const DEFAULT_EXPORT_BACKGROUND = '#ffffff';
+const DATE_LABEL_LOCALE = 'en-US';
+const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit' };
+
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
   exercise_sets: Array<{ done?: boolean }>;
@@ -41,11 +49,15 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
     (async () => {
       try {
         const res = await fetch('/assets/logo.svg', { cache: 'force-cache' });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch logo.svg (status ${res.status})`);
+        }
         const svg = await res.text();
         if (!isMounted) return;
         const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         setLogoDataUrl(dataUrl);
-      } catch (_) {
+      } catch (error) {
+        console.error('Error preloading logo SVG:', error);
         setLogoDataUrl(null);
       }
     })();
@@ -65,7 +77,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
       // Ensure layout and any async assets are fully ready
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, LAYOUT_STABILIZATION_DELAY_MS));
 
       // NOTE: Avoid forcing foreignObject rendering or manual inlining, which can cause blank canvases
 
@@ -93,19 +105,22 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
             resolvedBackground = varBg;
           }
         }
-      } catch (_) {
-        // ignore and fall back to default below
+      } catch (error) {
+        console.warn('Could not resolve computed background color; defaulting to white.', error);
       }
 
       const image = await toPng(node, {
-        backgroundColor: resolvedBackground || '#ffffff',
+        backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
         cacheBust: true,
-        pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
+        pixelRatio: Math.max(
+          window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
+          MIN_EXPORT_PIXEL_RATIO
+        ),
       });
 
       // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
       const now = new Date();
-      const label = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(now);
+      const label = new Intl.DateTimeFormat(DATE_LABEL_LOCALE, DATE_LABEL_OPTIONS).format(now);
       const filename = `Workout Summary ${label}.png`;
 
       const link = document.createElement('a');
