@@ -27,7 +27,8 @@ const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
       } ${className}`}
       aria-label={isInteractive ? "Go to home page" : undefined}
     >
-      <img src="/assets/logo.svg" alt="PBestie Logo" className="w-8 h-8" />
+      {/* Reserve logo space to avoid CLS */}
+      <img src="/assets/logo.svg" alt="PBestie Logo" className="w-8 h-8" width={32} height={32} />
       <div className="flex flex-col leading-none items-start text-left text-base text-rose-400">
         <span>Personal</span>
         <span>Bestie</span>
