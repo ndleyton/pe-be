@@ -61,6 +61,10 @@ test.describe('Routines quick-start navigation', () => {
     const heading = page.getByRole('heading', { name: 'Quick Start Routines' });
     await expect(heading).toBeVisible({ timeout: 15000 });
 
+    // Open the accordion to reveal the More link
+    const accordionTrigger = page.getByRole('button', { name: 'Quick Start Routines' });
+    await accordionTrigger.click();
+
     // Click the "More" link button (locate by href for robustness)
     const moreLink = page.locator('a[href="/routines"]').first();
     await expect(moreLink).toBeVisible({ timeout: 10000 });

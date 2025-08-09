@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/shared/api/client';
 import { getExercisesInWorkout, Exercise } from '@/features/exercises/api';
 import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
+import { Button } from '@/shared/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import { SaveRoutineModal } from '@/features/routines/components/SaveRoutineModal/SaveRoutineModal';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } from '@/stores';
@@ -277,7 +279,12 @@ const WorkoutPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto p-2 sm:p-4 md:p-6 lg:p-8 text-center">
       <div className="max-w-2xl mx-auto p-3 sm:p-4 md:p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-2 sm:mt-4 md:mt-8">
-        <div className="mb-3 sm:mb-4 md:mb-6">
+        <div className="flex items-center gap-4 mb-3 sm:mb-4 md:mb-6 text-left">
+          <Button variant="ghost" size="icon" asChild aria-label="Go back">
+            <Link to="/workouts">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
           <h2 className="text-2xl font-bold">
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>

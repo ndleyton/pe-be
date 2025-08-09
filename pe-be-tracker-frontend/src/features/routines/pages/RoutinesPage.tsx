@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ArrowLeft } from 'lucide-react';
 import { getRoutines, startWorkoutFromRoutine } from '@/features/routines/api';
 import type { Routine } from '@/features/routines/types';
 import { RoutineQuickStartCard } from '@/features/routines/components';
@@ -19,7 +19,7 @@ import {
   AlertTitle,
 } from '@/shared/components/ui/alert';
 import { useInfiniteScroll } from '@/shared/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '@/shared/api/client';
 
 const RoutinesPage: React.FC = () => {
@@ -125,8 +125,14 @@ const RoutinesPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto p-8 text-center">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-4">Routines</h1>
-        
+        <div className="flex items-center gap-4 mb-4 text-left">
+          <Button variant="ghost" size="icon" asChild aria-label="Go back">
+            <Link to="/workouts">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold">Routines</h1>
+        </div>
         {/* Search and Filter Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
