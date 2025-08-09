@@ -7,7 +7,7 @@ const RoutineDetailsPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto p-8">
       <div className="flex items-center gap-4 mb-6 text-left">
-        <Button variant="ghost" size="icon" asChild aria-label="Go back">
+        <Button variant="ghost" size="icon" asChild aria-label="Go back" className="lg:hidden">
           <Link to="/routines">
             <ArrowLeft className="h-5 w-5" />
           </Link>
