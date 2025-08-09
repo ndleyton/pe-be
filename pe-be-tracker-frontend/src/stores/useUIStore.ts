@@ -5,6 +5,8 @@ interface WorkoutTimer {
   elapsedSeconds: number;
   paused: boolean;
   intervalId: number | null;
+  /** Timestamp when the timer was paused. Used to adjust startTime on resume */
+  pausedAt: Date | null;
 }
 
 interface UIState {
@@ -44,6 +46,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
     elapsedSeconds: 0,
     paused: false,
     intervalId: null,
+    pausedAt: null,
   },
 
   openDrawer: () => set({ isDrawerOpen: true }),
@@ -81,30 +84,54 @@ export const useUIStore = create<UIStore>((set, get) => ({
     set({
       workoutTimer: {
         startTime,
-        elapsedSeconds: 0,
+        elapsedSeconds: Math.max(0, Math.floor((Date.now() - startTime.getTime()) / 1000)),
         paused: false,
         intervalId,
+        pausedAt: null,
       }
     });
   },
 
   pauseWorkoutTimer: () => {
     set(state => ({
-      workoutTimer: { ...state.workoutTimer, paused: true }
+      workoutTimer: { ...state.workoutTimer, paused: true, pausedAt: new Date() }
     }));
   },
 
   resumeWorkoutTimer: () => {
-    set(state => ({
-      workoutTimer: { ...state.workoutTimer, paused: false }
-    }));
+    set(state => {
+      const { workoutTimer } = state;
+      if (workoutTimer.startTime && workoutTimer.pausedAt) {
+        const pauseDurationMs = Date.now() - workoutTimer.pausedAt.getTime();
+        const adjustedStartTime = new Date(workoutTimer.startTime.getTime() + pauseDurationMs);
+        return {
+          workoutTimer: {
+            ...workoutTimer,
+            startTime: adjustedStartTime,
+            paused: false,
+            pausedAt: null,
+          }
+        };
+      }
+      return { workoutTimer: { ...workoutTimer, paused: false, pausedAt: null } };
+    });
   },
 
   toggleWorkoutTimer: () => {
     const { workoutTimer } = get();
-    set({
-      workoutTimer: { ...workoutTimer, paused: !workoutTimer.paused }
-    });
+    if (!workoutTimer.paused) {
+      // Going from running -> paused
+      set({ workoutTimer: { ...workoutTimer, paused: true, pausedAt: new Date() } });
+    } else {
+      // Going from paused -> running; adjust startTime so elapsed excludes paused duration
+      if (workoutTimer.startTime && workoutTimer.pausedAt) {
+        const pauseDurationMs = Date.now() - workoutTimer.pausedAt.getTime();
+        const adjustedStartTime = new Date(workoutTimer.startTime.getTime() + pauseDurationMs);
+        set({ workoutTimer: { ...workoutTimer, paused: false, pausedAt: null, startTime: adjustedStartTime } });
+      } else {
+        set({ workoutTimer: { ...workoutTimer, paused: false, pausedAt: null } });
+      }
+    }
   },
 
   stopWorkoutTimer: () => {
@@ -121,6 +148,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
         elapsedSeconds: 0,
         paused: false,
         intervalId: null,
+        pausedAt: null,
       }
     });
   },
