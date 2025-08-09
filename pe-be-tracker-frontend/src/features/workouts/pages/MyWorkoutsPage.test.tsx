@@ -15,6 +15,16 @@ vi.mock('@/features/workouts', () => ({
   getMyWorkouts: vi.fn(),
 }));
 
+// Mock API client
+vi.mock('@/shared/api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
 vi.mock('axios', async () => {
   const actual = await vi.importActual('axios');
   return {

@@ -62,7 +62,11 @@ async def update_recipe(
     return recipe
 
 
-@router.post("/{recipe_id}/start", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{recipe_id}/start",
+    response_model=WorkoutRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def start_workout_from_recipe(
     recipe_id: int,
     user: User = Depends(current_active_user),
@@ -70,7 +74,9 @@ async def start_workout_from_recipe(
 ):
     """Create a workout from a saved routine (recipe) and return it."""
     try:
-        workout = await recipe_service.create_workout_from_recipe(session, user.id, recipe_id)
+        workout = await recipe_service.create_workout_from_recipe(
+            session, user.id, recipe_id
+        )
         return workout
     except ValueError:
         raise HTTPException(status_code=404, detail="Routine not found")
