@@ -14,7 +14,7 @@ const GuestModeBanner: React.FC = () => {
   }
 
   return (
-    <div className="bg-accent border-l-4 border-primary p-4">
+    <div className="bg-accent border-l-4 border-primary p-4 min-h-16">
       <div className="flex">
         <div className="flex-shrink-0">
           <svg 

@@ -93,13 +93,21 @@ const OAuthCallbackPage: React.FC = () => {
     switch (syncStatus) {
       case 'processing':
         return {
-          icon: <div className="loading loading-spinner loading-lg"></div>,
+          icon: (
+            <div className="space-y-3" role="status" aria-live="polite" aria-busy="true">
+              <div className="loading loading-spinner loading-lg mx-auto"></div>
+            </div>
+          ),
           title: 'Signing you in...',
           description: 'Processing your authentication'
         };
       case 'syncing':
         return {
-          icon: <div className="loading loading-spinner loading-lg text-blue-500"></div>,
+          icon: (
+            <div className="space-y-3" role="status" aria-live="polite" aria-busy="true">
+              <div className="loading loading-spinner loading-lg text-blue-500 mx-auto"></div>
+            </div>
+          ),
           title: 'Syncing your data...',
           description: `Uploading ${workouts.length} workout${workouts.length !== 1 ? 's' : ''} to your account`
         };
@@ -132,8 +140,9 @@ const OAuthCallbackPage: React.FC = () => {
         <HomeLogo />
       </div>
       <div className="flex-1 flex items-center justify-center">
-        <div className="max-w-5xl mx-auto p-8 text-center">
+        <div className="w-full max-w-3xl mx-auto p-8 text-center">
           {statusContent.icon}
+          <h1 className="sr-only">OAuth Callback</h1>
           <h2 className="mt-4 text-xl font-semibold text-foreground">{statusContent.title}</h2>
           {statusContent.description && (
             <p className="mt-2 text-muted-foreground">{statusContent.description}</p>

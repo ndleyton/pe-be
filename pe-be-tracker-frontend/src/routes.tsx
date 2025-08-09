@@ -4,6 +4,8 @@ import App from './App';
 import AppLayout from './layouts/AppLayout';
 import NotFoundPage from './pages/NotFoundPage';
 import { PageErrorBoundary } from '@/shared/components/error';
+import { Skeleton } from '@/shared/components/ui/skeleton';
+import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
 // Lazy load components with error boundaries
 const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
@@ -15,12 +17,31 @@ const ProfilePage = React.lazy(() => import('./features/profile/pages').then(mod
 const SettingsPage = React.lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
 const OAuthCallbackPage = React.lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
 
-// Enhanced loading component with error handling
+// Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[200px]">
-    <div className="text-center">
-      <div className="loading loading-spinner loading-lg mb-2"></div>
-      <div className="text-muted-foreground">Loading...</div>
+  <div className="flex items-center justify-center min-h-[60vh]" aria-busy="true" aria-live="polite">
+    <div className="w-full max-w-4xl px-6">
+      {/* Page title skeleton */}
+      <Skeleton className="h-8 w-48 mb-6 mx-auto" />
+      {/* Content skeleton grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
+          <div key={i} className="bg-card rounded-lg p-4 border border-border">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-10 w-10 rounded" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Keep a spinner for SR and visual cue */}
+      <div className="flex justify-center py-4" role="status">
+        <div className="loading loading-spinner loading-lg" aria-label="Loading"></div>
+      </div>
     </div>
   </div>
 );
