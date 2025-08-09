@@ -357,7 +357,8 @@ describe('FinishWorkoutModal', () => {
         />
       );
       
-      expect(screen.getByText('🎉 Great work! You trained:')).toBeInTheDocument();
+      // The heading now shows the workout name (or default)
+      expect(screen.getByText('Great Training Session!')).toBeInTheDocument();
       expect(screen.getByText('Legs')).toBeInTheDocument();
       expect(screen.getByText('Chest')).toBeInTheDocument();
       expect(screen.getByText('Total Sets Completed:')).toBeInTheDocument();
@@ -372,7 +373,8 @@ describe('FinishWorkoutModal', () => {
         />
       );
       
-      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      // The summary block (and heading) should not render when there are no exercises
+      expect(screen.queryByText('Great Training Session!')).not.toBeInTheDocument();
       expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
     });
 
@@ -394,14 +396,14 @@ describe('FinishWorkoutModal', () => {
         />
       );
       
-      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Great Training Session!')).not.toBeInTheDocument();
       expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
     });
 
     it('should handle exercises prop defaulting to empty array', () => {
       render(<FinishWorkoutModal {...defaultProps} />);
       
-      expect(screen.queryByText('🎉 Great work! You trained:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Great Training Session!')).not.toBeInTheDocument();
       expect(screen.queryByText('Total Sets Completed:')).not.toBeInTheDocument();
     });
 

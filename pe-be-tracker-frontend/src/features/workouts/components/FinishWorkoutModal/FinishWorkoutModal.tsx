@@ -1,9 +1,17 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscles } from '@/utils/muscleGroups';
 import { Button } from '@/shared/components/ui/button';
 import AnatomicalImage from './AnatomicalImage';
 import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
+import { useUIStore } from '@/stores';
+
+const LAYOUT_STABILIZATION_DELAY_MS = 50;
+const DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK = 1;
+const MIN_EXPORT_PIXEL_RATIO = 2;
+const DEFAULT_EXPORT_BACKGROUND = '#ffffff';
+const DATE_LABEL_LOCALE = 'en-US';
+const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit' };
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -31,6 +39,29 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 }) => {
   const shareContentRef = useRef<HTMLDivElement>(null);
   const downloadAreaRef = useRef<HTMLDivElement>(null);
+  const formattedDuration = useUIStore(state => state.getFormattedWorkoutTime());
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+
+  // Preload logo as data URL to avoid CORS/taint issues in html2canvas
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/assets/logo.svg', { cache: 'force-cache' });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch logo.svg (status ${res.status})`);
+        }
+        const svg = await res.text();
+        if (!isMounted) return;
+        const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        setLogoDataUrl(dataUrl);
+      } catch (error) {
+        console.error('Error preloading logo SVG:', error);
+        setLogoDataUrl(null);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -39,26 +70,65 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
 
   const handleDownload = async () => {
-    if (downloadAreaRef.current) {
-      try {
-        const canvas = await html2canvas(downloadAreaRef.current, {
-          useCORS: true, // Important for handling images loaded from different origins
-          allowTaint: true, // Allow tainting the canvas
-          backgroundColor: '#ffffff', // Use solid white background
-          scale: 2, // Higher resolution for better quality
-        });
-        const image = canvas.toDataURL('image/png');
+    const node = downloadAreaRef.current;
+    if (!node) return;
+    try {
+      // Ensure layout and any async assets are fully ready
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      await new Promise(resolve => setTimeout(resolve, LAYOUT_STABILIZATION_DELAY_MS));
 
-        const link = document.createElement('a');
-        link.href = image;
-        link.download = 'workout-summary.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Error downloading workout summary:', error);
-        alert('Failed to download workout summary.');
+      const rect = node.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        throw new Error('Share area has zero size');
       }
+
+      // Ensure fonts are loaded to prevent baseline/centering shifts
+      if ('fonts' in document && (document as any).fonts?.ready) {
+        await (document as any).fonts.ready;
+      }
+
+      // Resolve background to match Tailwind's bg-background (theme-aware)
+      let resolvedBackground: string | undefined;
+      try {
+        const nodeBg = window.getComputedStyle(node).backgroundColor;
+        if (nodeBg && nodeBg !== 'rgba(0, 0, 0, 0)' && nodeBg !== 'transparent') {
+          resolvedBackground = nodeBg;
+        } else {
+          // Fallback to CSS variable on :root (respects light/dark theme)
+          const rootStyles = window.getComputedStyle(document.documentElement);
+          const varBg = rootStyles.getPropertyValue('--background').trim();
+          if (varBg) {
+            resolvedBackground = varBg;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not resolve computed background color; defaulting to white.', error);
+      }
+
+      const image = await toPng(node, {
+        backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
+        cacheBust: true,
+        pixelRatio: Math.max(
+          window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
+          MIN_EXPORT_PIXEL_RATIO
+        ),
+      });
+
+      // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
+      const now = new Date();
+      const label = new Intl.DateTimeFormat(DATE_LABEL_LOCALE, DATE_LABEL_OPTIONS).format(now);
+      const filename = `Workout Summary ${label}.png`;
+
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading workout summary:', error);
+      alert('Failed to download workout summary.');
     }
   };
 
@@ -72,9 +142,27 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
         {muscleGroupSummary.length > 0 && (
           <div ref={downloadAreaRef} className="mb-6 p-4 bg-background rounded-lg">
-            <h3 className="text-lg font-semibold mb-3 text-primary">
-              🎉 Great work! You trained:
-            </h3>
+            {/* Header: Logo and Duration for shareable image */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1">
+                <img
+                  src={logoDataUrl ?? '/assets/logo.svg'}
+                  alt="Personal Bestie Logo"
+                  className="w-8 h-8"
+                  crossOrigin="anonymous"
+                />
+                <div className="flex flex-col leading-none items-start text-left text-base font-bold text-primary">
+                  <span>Personal</span>
+                  <span>Bestie.com</span>
+                </div>
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                Workout Duration: <span className="text-primary">{formattedDuration}</span>
+              </div>
+            </div>
+              <h3 className="text-primary mb-1 text-lg font-bold">
+                {workoutName ?? 'Great Training Session!'}
+              </h3>
             <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
             <div className="space-y-2">
               {muscleGroupSummary.map((group) => (
