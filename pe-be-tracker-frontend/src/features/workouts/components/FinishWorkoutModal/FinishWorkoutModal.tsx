@@ -38,17 +38,17 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   // Preload logo as data URL to avoid CORS/taint issues in html2canvas
   useEffect(() => {
     let isMounted = true;
-    fetch('/assets/logo.svg')
-      .then(res => res.text())
-      .then(svg => {
+    (async () => {
+      try {
+        const res = await fetch('/assets/logo.svg', { cache: 'force-cache' });
+        const svg = await res.text();
         if (!isMounted) return;
         const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         setLogoDataUrl(dataUrl);
-      })
-      .catch(() => {
-        // Fallback will use the relative path, which should still work if same-origin
+      } catch (_) {
         setLogoDataUrl(null);
-      });
+      }
+    })();
     return () => { isMounted = false; };
   }, []);
 
@@ -67,29 +67,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
       await new Promise(requestAnimationFrame);
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      // Inline any images within the node to avoid CORS/tainting
-      const images = Array.from(node.querySelectorAll('img')) as HTMLImageElement[];
-      await Promise.all(images.map(async (img) => {
-        try {
-          const src = img.getAttribute('src');
-          if (!src) return;
-          // Skip data URLs
-          if (src.startsWith('data:')) return;
-          // Resolve absolute URL relative to current origin
-          const absUrl = new URL(src, window.location.origin).href;
-          const res = await fetch(absUrl, { mode: 'cors' });
-          const blob = await res.blob();
-          const reader = new FileReader();
-          const dataUrl: string = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          img.setAttribute('src', dataUrl);
-          img.setAttribute('crossorigin', 'anonymous');
-        } catch (_) {
-          // Best-effort; ignore failures and let html2canvas try
-        }
-      }));
+      // NOTE: Avoid forcing foreignObject rendering or manual inlining, which can cause blank canvases
 
       const rect = node.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
@@ -98,10 +76,8 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
       const canvas = await html2canvas(node, {
         useCORS: true,
-        allowTaint: true,
         backgroundColor: '#ffffff',
         scale: Math.max(window.devicePixelRatio || 1, 2),
-        foreignObjectRendering: true,
         imageTimeout: 15000,
         logging: false,
       });
@@ -143,7 +119,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
                   className="w-8 h-8"
                   crossOrigin="anonymous"
                 />
-                <div className="flex flex-col leading-none items-start text-left text-base font-bold text-rose-400">
+                <div className="flex flex-col leading-none items-start text-left text-base font-bold text-primary">
                   <span>Personal</span>
                   <span>Bestie.com</span>
                 </div>
@@ -152,8 +128,8 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
                 Workout Duration: <span className="text-primary">{formattedDuration}</span>
               </div>
             </div>
-            <h3 className="text-lg font-semibold mb-3 text-primary">
-              🎉 Great work! You trained:
+            <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
+              {workoutName ?? 'Great Training Session!'}
             </h3>
             <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
             <div className="space-y-2">
