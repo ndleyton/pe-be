@@ -68,11 +68,11 @@ const AppBar: React.FC = () => {
             <span className="font-mono text-sm" aria-label="Workout timer">
               {formatted}
             </span>
-            {/* Icon hidden on small screens to save space */}
+            {/* Always show icon */}
             {paused ? (
-              <Play className="hidden sm:block h-5 w-5" />
+              <Play className="h-5 w-5" />
             ) : (
-              <Pause className="hidden sm:block h-5 w-5" />
+              <Pause className="h-5 w-5" />
             )}
           </button>
         )}

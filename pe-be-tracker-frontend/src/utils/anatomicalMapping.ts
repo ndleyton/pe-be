@@ -7,7 +7,16 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
   ],
   'Back': [
     'posterior-left-shoulder',
-    'posterior-right-shoulder'
+    'posterior-right-shoulder',
+    // Upper/Mid back
+    'posterior-trapezius',
+    // Lats and teres major
+    'posterior-left-latissimus-dorsi',
+    'posterior-right-latissimus-dorsi',
+    'posterior-left-teres-major',
+    'posterior-right-teres-major',
+    // Lower back
+    'posterior-erector-spinae'
   ],
   'Shoulders': [
     'anterior-left-deltoid',
@@ -23,7 +32,15 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
     'anterior-left-triceps',
     'anterior-right-triceps',
     'posterior-left-triceps-1',
-    'posterior-left-triceps-2'
+    'posterior-left-triceps-2',
+    'posterior-left-triceps-3',
+    'posterior-left-triceps-4',
+    // Posterior Right Triceps (ids use singular "tricep")
+    'posterior-right-tricep-1',
+    'posterior-right-tricep-2',
+    // Additional right triceps ids use plural "triceps"
+    'posterior-right-triceps-3',
+    'posterior-right-triceps-4'
   ],
   'Forearms': [
     'anterior-left-forearm-1',
@@ -34,7 +51,11 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
     'anterior-right-brachialis',
     'posterior-left-forearm-1',
     'posterior-left-forearm-2',
-    'posterior-left-brachialis'
+    'posterior-left-brachialis',
+    // Posterior Right Forearm/Brachialis
+    'posterior-right-forearm-1',
+    'posterior-right-forearm-2',
+    'posterior-right-brachialis'
   ],
   'Core': [
     'anterior-left-abs-1',
@@ -85,13 +106,6 @@ export const MUSCLE_GROUP_MAPPING: Record<string, string[]> = {
     'anterior-left-neck',
     'anterior-right-neck'
   ],
-  'General': [
-    // For general/full-body exercises, we can highlight core areas
-    'anterior-left-abs-1',
-    'anterior-left-abs-2',
-    'anterior-right-abs-1',
-    'anterior-right-abs-2'
-  ]
 };
 
 export const getMuscleGroupColor = (intensity: number): string => {

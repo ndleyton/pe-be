@@ -1,9 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscles } from '@/utils/muscleGroups';
 import { Button } from '@/shared/components/ui/button';
 import AnatomicalImage from './AnatomicalImage';
 import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
 import html2canvas from 'html2canvas';
+import { useUIStore } from '@/stores';
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -31,6 +32,25 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 }) => {
   const shareContentRef = useRef<HTMLDivElement>(null);
   const downloadAreaRef = useRef<HTMLDivElement>(null);
+  const formattedDuration = useUIStore(state => state.getFormattedWorkoutTime());
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+
+  // Preload logo as data URL to avoid CORS/taint issues in html2canvas
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/assets/logo.svg')
+      .then(res => res.text())
+      .then(svg => {
+        if (!isMounted) return;
+        const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        setLogoDataUrl(dataUrl);
+      })
+      .catch(() => {
+        // Fallback will use the relative path, which should still work if same-origin
+        setLogoDataUrl(null);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -39,26 +59,68 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   const totalSets = muscleGroupSummary.reduce((sum, group) => sum + group.setCount, 0);
 
   const handleDownload = async () => {
-    if (downloadAreaRef.current) {
-      try {
-        const canvas = await html2canvas(downloadAreaRef.current, {
-          useCORS: true, // Important for handling images loaded from different origins
-          allowTaint: true, // Allow tainting the canvas
-          backgroundColor: '#ffffff', // Use solid white background
-          scale: 2, // Higher resolution for better quality
-        });
-        const image = canvas.toDataURL('image/png');
+    const node = downloadAreaRef.current;
+    if (!node) return;
+    try {
+      // Ensure layout and any async assets are fully ready
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-        const link = document.createElement('a');
-        link.href = image;
-        link.download = 'workout-summary.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Error downloading workout summary:', error);
-        alert('Failed to download workout summary.');
+      // Inline any images within the node to avoid CORS/tainting
+      const images = Array.from(node.querySelectorAll('img')) as HTMLImageElement[];
+      await Promise.all(images.map(async (img) => {
+        try {
+          const src = img.getAttribute('src');
+          if (!src) return;
+          // Skip data URLs
+          if (src.startsWith('data:')) return;
+          // Resolve absolute URL relative to current origin
+          const absUrl = new URL(src, window.location.origin).href;
+          const res = await fetch(absUrl, { mode: 'cors' });
+          const blob = await res.blob();
+          const reader = new FileReader();
+          const dataUrl: string = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          img.setAttribute('src', dataUrl);
+          img.setAttribute('crossorigin', 'anonymous');
+        } catch (_) {
+          // Best-effort; ignore failures and let html2canvas try
+        }
+      }));
+
+      const rect = node.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        throw new Error('Share area has zero size');
       }
+
+      const canvas = await html2canvas(node, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scale: Math.max(window.devicePixelRatio || 1, 2),
+        foreignObjectRendering: true,
+        imageTimeout: 15000,
+        logging: false,
+      });
+      const image = canvas.toDataURL('image/png');
+
+      // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
+      const now = new Date();
+      const label = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(now);
+      const filename = `Workout Summary ${label}.png`;
+
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading workout summary:', error);
+      alert('Failed to download workout summary.');
     }
   };
 
@@ -72,6 +134,24 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
 
         {muscleGroupSummary.length > 0 && (
           <div ref={downloadAreaRef} className="mb-6 p-4 bg-background rounded-lg">
+            {/* Header: Logo and Duration for shareable image */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1">
+                <img
+                  src={logoDataUrl ?? '/assets/logo.svg'}
+                  alt="Personal Bestie Logo"
+                  className="w-8 h-8"
+                  crossOrigin="anonymous"
+                />
+                <div className="flex flex-col leading-none items-start text-left text-base font-bold text-rose-400">
+                  <span>Personal</span>
+                  <span>Bestie.com</span>
+                </div>
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                Workout Duration: <span className="text-primary">{formattedDuration}</span>
+              </div>
+            </div>
             <h3 className="text-lg font-semibold mb-3 text-primary">
               🎉 Great work! You trained:
             </h3>
