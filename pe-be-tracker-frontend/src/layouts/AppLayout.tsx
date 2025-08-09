@@ -2,8 +2,11 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
 import { GuestModeBanner } from '../shared/components/feedback';
+import { useAuthStore } from '@/stores';
 
 const AppLayout: React.FC = () => {
+  const authLoading = useAuthStore(state => state.loading);
+
   return (
     <div className="min-h-screen bg-background flex">
         {/* Skip to content link for accessibility */}
@@ -22,8 +25,10 @@ const AppLayout: React.FC = () => {
           {/* Top App Bar */}
           <AppBar />
           
-          {/* Guest Mode Banner */}
-          <GuestModeBanner />
+          {/* Guest Mode Banner with placeholder height during auth loading to prevent CLS */}
+          <div className={authLoading ? 'min-h-16' : ''}>
+            <GuestModeBanner />
+          </div>
           
           {/* Side Drawer (mobile/tablet) */}
           <SideDrawer />
@@ -33,6 +38,7 @@ const AppLayout: React.FC = () => {
             id="main-content" 
             className="flex-1 pb-16 md:pb-0"
             role="main"
+            style={{ minHeight: 'calc(100vh - 4rem)' }}
           >
             <Outlet />
           </main>
