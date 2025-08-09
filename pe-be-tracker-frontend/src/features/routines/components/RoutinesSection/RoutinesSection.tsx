@@ -6,6 +6,7 @@ import { RoutineQuickStartCard } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/components/ui/accordion';
 import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: GuestRecipe) => void;
@@ -78,30 +79,34 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden min-w-0">
+    <div className="w-full max-w-full overflow-x-hidden min-w-0 mb-6">
       <Accordion type="single" collapsible>
         <AccordionItem value="quick-start-routines">
-          <AccordionTrigger className="py-0">
-            <h2 className="text-md font-semibold text-muted-foreground">Quick Start Routines</h2>
+          <AccordionTrigger className="py-0 justify-start gap-2">
+            <h2 className="text-lg font-semibold text-muted-foreground">Quick Start Routines</h2>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="w-full max-w-full overflow-x-auto min-w-0">
-              <div className="flex flex-nowrap gap-2 px-1 sm:px-3 py-1">
-                {routines.map((routine) => (
-                  <div key={routine.id}>
-                    <RoutineQuickStartCard
-                      routine={routine}
-                      onStartWorkout={onStartWorkout}
-                    />
+            <div className="w-full px-1 sm:px-3">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0 overflow-x-auto">
+                  <div className="flex flex-nowrap gap-2 py-1">
+                    {routines.map((routine) => (
+                      <div key={routine.id}>
+                        <RoutineQuickStartCard
+                          routine={routine}
+                          onStartWorkout={onStartWorkout}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <Button asChild size="icon" variant="ghost" aria-label="Browse all routines">
+                  <Link to="/routines">
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </Link>
+                </Button>
               </div>
-            </div>
-            <div className="flex justify-end px-1 sm:px-3">
-              <Button asChild variant="link" size="sm">
-                <Link to="/routines" aria-label="Browse all routines">More</Link>
-              </Button>
-            </div>
+            </div>  
           </AccordionContent>
         </AccordionItem>
       </Accordion>
