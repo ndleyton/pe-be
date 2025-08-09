@@ -5,7 +5,6 @@ import { getRoutines, deleteRoutine } from '@/features/routines/api';
 import { RoutineQuickStartCard } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ScrollArea, ScrollBar } from "@/shared/components/ui/scroll-area"
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: GuestRecipe) => void;
@@ -92,26 +91,25 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
   }
 
   return (
-    <div>
+    <div className="mb-6 w-full max-w-full overflow-x-hidden min-w-0">
         <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Quick Start Routines</h2>
             <Button asChild variant="link" size="sm">
             <Link to="/routines" aria-label="Browse all routines">More</Link>
             </Button>
         </div>
-        <ScrollArea className="w-96 rounded-md whitespace-nowrap">
-            <div className="flex w-max space-x-4 p-4">
+        <div className="w-full max-w-full overflow-x-auto min-w-0">
+            <div className="flex flex-nowrap gap-3 px-1 sm:px-3 py-1">
                 {routines.map((routine) => (
-                <RoutineQuickStartCard
-                    key={routine.id}
-                    routine={routine}
-                    onStartWorkout={onStartWorkout}
-                    onDelete={handleDeleteRoutine}
-                />
+                <div key={routine.id} className="flex-none w-[12rem] sm:w-[14rem] md:w-[16rem]">
+                    <RoutineQuickStartCard
+                        routine={routine}
+                        onStartWorkout={onStartWorkout}
+                    />
+                </div>
                 ))}
             </div>
-        <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
     </div>
   );
 };
