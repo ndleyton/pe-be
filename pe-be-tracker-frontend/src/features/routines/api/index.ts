@@ -1,4 +1,4 @@
-import apiClient from '@/shared/api';
+import api from '@/shared/api/client';
 import { Routine } from '@/features/routines/types';
 
 // Create/Update payload types for routines
@@ -28,7 +28,7 @@ export const getRoutines = async (
   limit: number = 100
 ): Promise<{ data: Routine[]; next_cursor?: number | null }> => {
   const currentOffset = cursor ?? 0;
-  const response = await apiClient.get('/routines/', {
+  const response = await api.get('/routines/', {
     params: {
       // Backend currently ignores order_by; safe to pass for future-proofing
       order_by: orderBy,
@@ -42,25 +42,25 @@ export const getRoutines = async (
 };
 
 export const getRoutine = async (id: number): Promise<Routine> => {
-  const response = await apiClient.get(`/routines/${id}`);
+  const response = await api.get(`/routines/${id}`);
   return response.data;
 };
 
 export const createRoutine = async (routineData: CreateRoutineData): Promise<Routine> => {
-  const response = await apiClient.post('/routines', routineData);
+  const response = await api.post('/routines', routineData);
   return response.data;
 };
 
 export const updateRoutine = async (routineId: string | number, updateData: UpdateRoutineData): Promise<Routine> => {
-  const response = await apiClient.put(`/routines/${routineId}`, updateData);
+  const response = await api.put(`/routines/${routineId}`, updateData);
   return response.data;
 };
 
 export const deleteRoutine = async (routineId: string | number): Promise<void> => {
-  await apiClient.delete(`/routines/${routineId}`);
+  await api.delete(`/routines/${routineId}`);
 };
 
 export const startWorkoutFromRoutine = async (routineId: number | string): Promise<{ id: number }> => {
-  const response = await apiClient.post(`/routines/${routineId}/start`);
+  const response = await api.post(`/routines/${routineId}/start`);
   return response.data;
 };
