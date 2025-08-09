@@ -3,7 +3,7 @@ import { calculateMuscleGroupSummary, MuscleGroupSummary, ExerciseTypeWithMuscle
 import { Button } from '@/shared/components/ui/button';
 import AnatomicalImage from './AnatomicalImage';
 import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { useUIStore } from '@/stores';
 
 interface Exercise {
@@ -74,14 +74,34 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         throw new Error('Share area has zero size');
       }
 
-      const canvas = await html2canvas(node, {
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        scale: Math.max(window.devicePixelRatio || 1, 2),
-        imageTimeout: 15000,
-        logging: false,
+      // Ensure fonts are loaded to prevent baseline/centering shifts
+      if ('fonts' in document && (document as any).fonts?.ready) {
+        await (document as any).fonts.ready;
+      }
+
+      // Resolve background to match Tailwind's bg-background (theme-aware)
+      let resolvedBackground: string | undefined;
+      try {
+        const nodeBg = window.getComputedStyle(node).backgroundColor;
+        if (nodeBg && nodeBg !== 'rgba(0, 0, 0, 0)' && nodeBg !== 'transparent') {
+          resolvedBackground = nodeBg;
+        } else {
+          // Fallback to CSS variable on :root (respects light/dark theme)
+          const rootStyles = window.getComputedStyle(document.documentElement);
+          const varBg = rootStyles.getPropertyValue('--background').trim();
+          if (varBg) {
+            resolvedBackground = varBg;
+          }
+        }
+      } catch (_) {
+        // ignore and fall back to default below
+      }
+
+      const image = await toPng(node, {
+        backgroundColor: resolvedBackground || '#ffffff',
+        cacheBust: true,
+        pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
       });
-      const image = canvas.toDataURL('image/png');
 
       // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
       const now = new Date();
@@ -128,9 +148,9 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
                 Workout Duration: <span className="text-primary">{formattedDuration}</span>
               </div>
             </div>
-            <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
-              {workoutName ?? 'Great Training Session!'}
-            </h3>
+              <h3 className="text-primary mb-1 text-lg font-bold">
+                {workoutName ?? 'Great Training Session!'}
+              </h3>
             <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
             <div className="space-y-2">
               {muscleGroupSummary.map((group) => (
