@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { getRoutines } from '@/features/routines/api';
 import type { Routine } from '@/features/routines/types';
-import { RoutineCard } from '@/features/routines/components';
+import { RoutineQuickStartCard } from '@/features/routines/components';
+import type { GuestRecipe } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {
@@ -43,6 +44,41 @@ const RoutinesPage: React.FC = () => {
       (routine.description && routine.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [routines, searchTerm]);
+
+  const convertToGuestRecipe = (routine: Routine): GuestRecipe => ({
+    id: String(routine.id),
+    name: routine.name,
+    description: routine.description,
+    exercises: (routine.exercise_templates || []).map((t: any) => ({
+      id: String(t.id),
+      exercise_type_id: String(t.exercise_type_id),
+      exercise_type: t.exercise_type
+        ? {
+            id: String(t.exercise_type.id),
+            name: t.exercise_type.name,
+            description: t.exercise_type.description || '',
+            default_intensity_unit: t.exercise_type.default_intensity_unit,
+            times_used: t.exercise_type.times_used,
+          }
+        : {
+            id: String(t.exercise_type_id),
+            name: 'Unknown Exercise',
+            description: '',
+            default_intensity_unit: 1,
+            times_used: 0,
+          },
+      sets: (t.set_templates || []).map((s: any) => ({
+        id: String(s.id),
+        reps: s.reps ?? null,
+        intensity: s.intensity ?? null,
+        intensity_unit_id: s.intensity_unit_id,
+        rest_time_seconds: null,
+      })),
+      notes: null,
+    })),
+    created_at: routine.created_at,
+    updated_at: routine.updated_at,
+  });
 
   if (error) {
     return (
@@ -104,7 +140,11 @@ const RoutinesPage: React.FC = () => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRoutines.map((routine) => (
-              <RoutineCard key={routine.id} routine={routine} />
+              <RoutineQuickStartCard
+                key={routine.id}
+                routine={convertToGuestRecipe(routine)}
+                onStartWorkout={() => {}}
+              />
             ))}
           </div>
           
