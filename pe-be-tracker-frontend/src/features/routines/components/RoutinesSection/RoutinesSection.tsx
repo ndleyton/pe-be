@@ -71,7 +71,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
         console.error('Error deleting routine:', error);
       }
     } else {
-      guestActions.deleteRecipe(routineId);
+      guestActions.deleteRoutine(routineId);
     }
   };
 

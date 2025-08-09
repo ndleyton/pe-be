@@ -99,7 +99,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
         }
       } else {
         const guestExercises = convertToGuestExercises(exercises);
-        guestActions.createRecipeFromWorkout(routineName, guestExercises);
+        guestActions.createRoutineFromWorkout(routineName, guestExercises);
       }
       onClose();
       setRoutineName('');
