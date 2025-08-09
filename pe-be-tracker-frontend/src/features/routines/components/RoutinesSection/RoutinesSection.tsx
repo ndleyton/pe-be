@@ -95,7 +95,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Quick Start Routines</h2>
         <Button asChild variant="link" size="sm">
-          <Link to="/routines" aria-label="Browse all routines">Browse all</Link>
+          <Link to="/routines" aria-label="Browse all routines">More</Link>
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
