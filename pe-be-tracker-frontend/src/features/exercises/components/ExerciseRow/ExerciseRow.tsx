@@ -474,13 +474,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
         </div>
 
 
-        {/* Rest Timer */}
-        <div className="flex items-center gap-2 mt-2">
+        {/* Rest Timer   // TODO: Add rest timer with functionality with zustand */}
+        {/* <div className="flex items-center gap-2 mt-2">
           <Timer className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           <span className="text-sm text-blue-500 dark:text-blue-400">
             Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
           </span>
-        </div>
+        </div> */}
       </CardHeader>
 
       <CardContent className="p-4 pt-0">
