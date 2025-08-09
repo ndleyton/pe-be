@@ -51,7 +51,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
 
   // Fetch recipes from backend for authenticated users
   const { data: serverRecipes = [], isLoading, error } = useQuery({
-    queryKey: ['recipes'],
+    queryKey: ['routines'],
     queryFn: getRecipes,
     enabled: isAuthenticated, // Only fetch when authenticated
   });
@@ -67,7 +67,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
       try {
         await deleteRecipe(recipeId);
         // Invalidate recipes query to refresh the list
-        queryClient.invalidateQueries({ queryKey: ['recipes'] });
+        queryClient.invalidateQueries({ queryKey: ['routines'] });
       } catch (error) {
         console.error('Error deleting recipe:', error);
       }
@@ -81,7 +81,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
     return (
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Quick Start Recipes</h2>
+          <h2 className="text-lg font-semibold">Quick Start Routines</h2>
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
       </div>
@@ -95,9 +95,9 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Quick Start Recipes</h2>
+        <h2 className="text-lg font-semibold">Quick Start Routines</h2>
         <span className="text-sm text-muted-foreground">
-          {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
+          {recipes.length} routine{recipes.length !== 1 ? 's' : ''}
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
