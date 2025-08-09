@@ -27,6 +27,7 @@ import {
   CarouselPrevious,
 } from '@/shared/components/ui/carousel';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -115,7 +116,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </div>
           </div>
           <div className="space-y-6">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-6 border border-border">
                 <Skeleton className="h-6 w-56 mb-4" />
                 <Skeleton className="h-40 w-full" />
