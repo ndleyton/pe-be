@@ -1,9 +1,10 @@
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
-import { getRoutines, deleteRoutine } from '@/features/routines/api';
+import { getRoutines } from '@/features/routines/api';
 import { RoutineQuickStartCard } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/components/ui/accordion';
 import { Link } from 'react-router-dom';
 
 interface RoutinesSectionProps {
@@ -13,14 +14,12 @@ interface RoutinesSectionProps {
 export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestData = useGuestStore();
-  const guestActions = useGuestStore();
-  const queryClient = useQueryClient();
 
   // Fetch routines from backend for authenticated users
   const { data: serverRoutines = [], isLoading } = useQuery({
-    queryKey: ['routines', 'quickstart'],
+    queryKey: ['routines', 'quickstart', 2],
     queryFn: async () => {
-      const result = await getRoutines('createdAt', 0, 100);
+      const result = await getRoutines('createdAt', 0, 2);
       return result.data;
     },
     enabled: isAuthenticated,
@@ -62,24 +61,12 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
       })) : [])
     : (Array.isArray(guestData.recipes) ? guestData.recipes : []);
 
-  const handleDeleteRoutine = async (routineId: string) => {
-    if (isAuthenticated) {
-      try {
-        await deleteRoutine(routineId);
-        queryClient.invalidateQueries({ queryKey: ['routines'] });
-      } catch (error) {
-        console.error('Error deleting routine:', error);
-      }
-    } else {
-      guestActions.deleteRoutine(routineId);
-    }
-  };
 
   if (isLoading) {
     return (
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Quick Start Routines</h2>
+          <h3 className="text-md font-semibold text-muted-foreground">Quick Start Routines</h3>
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
       </div>
@@ -91,25 +78,33 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
   }
 
   return (
-    <div className="mb-6 w-full max-w-full overflow-x-hidden min-w-0">
-        <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Quick Start Routines</h2>
-            <Button asChild variant="link" size="sm">
-            <Link to="/routines" aria-label="Browse all routines">More</Link>
-            </Button>
-        </div>
-        <div className="w-full max-w-full overflow-x-auto min-w-0">
-            <div className="flex flex-nowrap gap-3 px-1 sm:px-3 py-1">
+    <div className="w-full max-w-full overflow-x-hidden min-w-0">
+      <Accordion type="single" collapsible>
+        <AccordionItem value="quick-start-routines">
+          <AccordionTrigger className="py-0">
+            <h2 className="text-md font-semibold text-muted-foreground">Quick Start Routines</h2>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="w-full max-w-full overflow-x-auto min-w-0">
+              <div className="flex flex-nowrap gap-2 px-1 sm:px-3 py-1">
                 {routines.map((routine) => (
-                <div key={routine.id} className="flex-none w-[12rem] sm:w-[14rem] md:w-[16rem]">
+                  <div key={routine.id}>
                     <RoutineQuickStartCard
-                        routine={routine}
-                        onStartWorkout={onStartWorkout}
+                      routine={routine}
+                      onStartWorkout={onStartWorkout}
                     />
-                </div>
+                  </div>
                 ))}
+              </div>
             </div>
-        </div>
+            <div className="flex justify-end px-1 sm:px-3">
+              <Button asChild variant="link" size="sm">
+                <Link to="/routines" aria-label="Browse all routines">More</Link>
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 };
