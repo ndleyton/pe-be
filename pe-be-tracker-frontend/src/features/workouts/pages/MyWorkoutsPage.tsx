@@ -1,6 +1,5 @@
 import React from 'react';
 import axios from 'axios';
-import api from '@/shared/api/client';
 import { startWorkoutFromRoutine } from '@/features/routines/api';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';

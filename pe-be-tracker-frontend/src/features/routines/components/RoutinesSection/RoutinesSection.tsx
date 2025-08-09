@@ -5,6 +5,7 @@ import { getRoutines, deleteRoutine } from '@/features/routines/api';
 import { RoutineQuickStartCard } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { Link } from 'react-router-dom';
+import { ScrollArea, ScrollBar } from "@/shared/components/ui/scroll-area"
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: GuestRecipe) => void;
@@ -91,23 +92,26 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
   }
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Quick Start Routines</h2>
-        <Button asChild variant="link" size="sm">
-          <Link to="/routines" aria-label="Browse all routines">More</Link>
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {routines.map((routine) => (
-          <RoutineQuickStartCard
-            key={routine.id}
-            routine={routine}
-            onStartWorkout={onStartWorkout}
-            onDelete={handleDeleteRoutine}
-          />
-        ))}
-      </div>
+    <div>
+        <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Quick Start Routines</h2>
+            <Button asChild variant="link" size="sm">
+            <Link to="/routines" aria-label="Browse all routines">More</Link>
+            </Button>
+        </div>
+        <ScrollArea className="w-96 rounded-md whitespace-nowrap">
+            <div className="flex w-max space-x-4 p-4">
+                {routines.map((routine) => (
+                <RoutineQuickStartCard
+                    key={routine.id}
+                    routine={routine}
+                    onStartWorkout={onStartWorkout}
+                    onDelete={handleDeleteRoutine}
+                />
+                ))}
+            </div>
+        <ScrollBar orientation="horizontal" />
+        </ScrollArea>
     </div>
   );
 };
