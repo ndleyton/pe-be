@@ -126,7 +126,7 @@ const RoutinesPage: React.FC = () => {
     <div className="max-w-5xl mx-auto p-8 text-center">
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-4 text-left">
-          <Button variant="ghost" size="icon" asChild aria-label="Go back">
+          <Button variant="ghost" size="icon" asChild aria-label="Go back" className="lg:hidden">
             <Link to="/workouts">
               <ArrowLeft className="h-5 w-5" />
             </Link>
