@@ -127,17 +127,11 @@ interface GuestActions {
   addWorkoutType: (workoutType: Omit<GuestWorkoutType, 'id'>) => string;
   updateWorkoutType: (id: string, updates: Partial<GuestWorkoutType>) => void;
   
-  // New routine-named actions
+  // Routine-named actions
   addRoutine: (routine: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
   deleteRoutine: (id: string) => void;
   createRoutineFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
   createExercisesFromRoutine: (routine: GuestRecipe, workoutId: string) => string[];
-
-  // Backward-compatible aliases (to be removed later)
-  addRecipe: (recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
-  deleteRecipe: (id: string) => void;
-  createRecipeFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
-  createExercisesFromRecipe: (recipe: GuestRecipe, workoutId: string) => string[];
   
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
@@ -493,7 +487,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       });
     },
 
-    // New routine-named implementation (and alias addRecipe)
+    // Routine-named implementation
     addRoutine: (routine) => {
       const id = generateRandomId();
       const now = getCurrentUTCTimestamp();
@@ -515,9 +509,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       
       return id;
     },
-    addRecipe: (recipe) => get().addRoutine(recipe),
-
-    // New routine-named implementation (and alias deleteRecipe)
+    // Routine-named implementation
     deleteRoutine: (id) => {
       set((state) => {
         const newState = {
@@ -528,9 +520,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         return newState;
       });
     },
-    deleteRecipe: (id) => get().deleteRoutine(id),
-
-    // New routine-named implementation (and alias createRecipeFromWorkout)
+    // Routine-named implementation
     createRoutineFromWorkout: (workoutName, exercises) => {
       const id = generateRandomId();
       const now = getCurrentUTCTimestamp();
@@ -568,9 +558,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       
       return id;
     },
-    createRecipeFromWorkout: (workoutName, exercises) => get().createRoutineFromWorkout(workoutName, exercises),
-
-    // New routine-named implementation (and alias createExercisesFromRecipe)
+    // Routine-named implementation
     createExercisesFromRoutine: (recipe, workoutId) => {
       const exerciseIds: string[] = [];
       const { addExercise, addExerciseSet } = get();
@@ -600,7 +588,6 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       
       return exerciseIds;
     },
-    createExercisesFromRecipe: (recipe, workoutId) => get().createExercisesFromRoutine(recipe, workoutId),
 
     clear: () => {
       const initialData = getInitialGuestData();
