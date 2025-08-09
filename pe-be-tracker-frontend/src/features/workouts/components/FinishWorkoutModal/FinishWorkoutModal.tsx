@@ -6,7 +6,6 @@ import DownloadImageButton from './DownloadImageButton/DownloadImageButton';
 import { toPng } from 'html-to-image';
 import { useUIStore } from '@/stores';
 
-// Constants
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
 const DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK = 1;
 const MIN_EXPORT_PIXEL_RATIO = 2;
@@ -78,8 +77,6 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
       await new Promise(resolve => setTimeout(resolve, LAYOUT_STABILIZATION_DELAY_MS));
-
-      // NOTE: Avoid forcing foreignObject rendering or manual inlining, which can cause blank canvases
 
       const rect = node.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
