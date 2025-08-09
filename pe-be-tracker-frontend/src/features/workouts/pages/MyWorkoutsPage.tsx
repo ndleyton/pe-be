@@ -12,6 +12,7 @@ import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 import { Dumbbell } from 'lucide-react';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
 
 const MyWorkoutsPage = () => {
@@ -99,7 +100,7 @@ const MyWorkoutsPage = () => {
           {/* Keep text for tests while adding skeletons */}
           <p className="text-muted-foreground mb-4">Loading workouts...</p>
           <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-4 border border-border">
                 <div className="flex items-center space-x-4">
                   <Skeleton className="w-10 h-10 rounded-lg" />

@@ -5,6 +5,7 @@ import AppLayout from './layouts/AppLayout';
 import NotFoundPage from './pages/NotFoundPage';
 import { PageErrorBoundary } from '@/shared/components/error';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
 // Lazy load components with error boundaries
 const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
@@ -24,7 +25,7 @@ const LoadingFallback = () => (
       <Skeleton className="h-8 w-48 mb-6 mx-auto" />
       {/* Content skeleton grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
           <div key={i} className="bg-card rounded-lg p-4 border border-border">
             <div className="flex items-start gap-4">
               <Skeleton className="h-10 w-10 rounded" />

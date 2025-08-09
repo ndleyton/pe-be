@@ -4,6 +4,7 @@ import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { getRecipes, deleteRecipe, Recipe } from '@/features/recipes/api';
 import { RecipeCard } from '../RecipeCard/RecipeCard';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
 interface RecipesSectionProps {
   onStartWorkout: (recipe: GuestRecipe) => void;
@@ -86,7 +87,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({ onStartWorkout }
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
             <div key={i} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex items-start gap-4">
                 <Skeleton className="h-10 w-10 rounded" />
