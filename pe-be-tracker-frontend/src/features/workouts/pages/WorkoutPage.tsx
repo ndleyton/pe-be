@@ -5,7 +5,7 @@ import api from '@/shared/api/client';
 import { getExercisesInWorkout, Exercise } from '@/features/exercises/api';
 import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
-import { SaveRecipeModal } from '@/features/recipes/components/SaveRecipeModal/SaveRecipeModal';
+import { SaveRoutineModal } from '@/features/routines/components/SaveRoutineModal/SaveRoutineModal';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { useGuestStore, useAuthStore, useUIStore, GuestExercise, GuestRecipe } from '@/stores';
 import { getCurrentUTCTimestamp } from '@/utils/date';
@@ -309,7 +309,7 @@ const WorkoutPage: React.FC = () => {
         workoutName={workoutName || undefined}
       />
       
-      <SaveRecipeModal
+      <SaveRoutineModal
         isOpen={showSaveRecipeModal}
         onClose={() => setShowSaveRecipeModal(false)}
         workoutName={workoutName || 'My Recipe'}

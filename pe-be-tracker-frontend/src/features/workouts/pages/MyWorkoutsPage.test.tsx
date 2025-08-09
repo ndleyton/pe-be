@@ -78,11 +78,11 @@ vi.mock('@/shared/components/WeekTracking', () => ({
   ),
 }));
 
-vi.mock('@/features/recipes/components/RecipesSection/RecipesSection', () => ({
-  RecipesSection: ({ onStartWorkout }: any) => (
+vi.mock('@/features/routines/components/RoutinesSection/RoutinesSection', () => ({
+  RoutinesSection: ({ onStartWorkout }: any) => (
     <div data-testid="recipes-section">
       <button onClick={() => onStartWorkout({ id: 'test-recipe' })}>
-        Start from recipe
+        Start from routine
       </button>
     </div>
   ),
@@ -289,8 +289,8 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
       expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
     });
 
-    const startFromRecipeButton = screen.getByText('Start from recipe');
-    await userEvent.click(startFromRecipeButton);
+    const startFromRoutineButton = screen.getByText('Start from routine');
+    await userEvent.click(startFromRoutineButton);
 
     await waitFor(() => {
       expect(screen.getByTestId('workout-form')).toBeInTheDocument();
