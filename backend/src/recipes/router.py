@@ -8,7 +8,9 @@ from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User
 
-router = APIRouter(tags=["recipes"])
+# NOTE: Recipes are exposed to users as "Routines" in the API and UI
+# The database table and model names remain as "recipes" for consistency
+router = APIRouter(tags=["routines"])
 
 
 @router.get("/", response_model=List[RecipeRead])
@@ -16,7 +18,7 @@ async def get_user_recipes(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get all recipes for the authenticated user"""
+    """Get all routines for the authenticated user"""
     return await recipe_service.get_user_recipes(session, user.id)
 
 
@@ -26,10 +28,10 @@ async def get_recipe(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get a specific recipe by ID"""
+    """Get a specific routine by ID"""
     recipe = await recipe_service.get_recipe(session, recipe_id, user.id)
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Routine not found")
     return recipe
 
 
@@ -39,7 +41,7 @@ async def create_recipe(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Create a new recipe"""
+    """Create a new routine"""
     return await recipe_service.create_recipe(session, recipe_in, user.id)
 
 
@@ -50,10 +52,10 @@ async def update_recipe(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Update an existing recipe"""
+    """Update an existing routine"""
     recipe = await recipe_service.update_recipe(session, recipe_id, recipe_in, user.id)
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Routine not found")
     return recipe
 
 
@@ -63,7 +65,7 @@ async def delete_recipe(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Delete a recipe"""
+    """Delete a routine"""
     success = await recipe_service.delete_recipe(session, recipe_id, user.id)
     if not success:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Routine not found")
