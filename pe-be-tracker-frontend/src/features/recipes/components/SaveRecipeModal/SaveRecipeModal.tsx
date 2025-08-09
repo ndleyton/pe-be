@@ -63,7 +63,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestActions = useGuestStore();
   const queryClient = useQueryClient();
-  const [recipeName, setRecipeName] = useState(workoutName || 'My Recipe');
+  const [recipeName, setRecipeName] = useState(workoutName || 'My Routine');
   const [isLoading, setIsLoading] = useState(false);
 
   // Helper function to update exercise sets done status
@@ -120,8 +120,8 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
         
         const createdRecipe = await createRecipe(recipeData);
         
-        // Invalidate recipes query to refresh the list
-        queryClient.invalidateQueries({ queryKey: ['recipes'] });
+        // Invalidate routines query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['routines'] });
         // Invalidate exercises query to refresh the workout exercises
         if (workoutId) {
           queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
@@ -144,7 +144,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
 
   const handleCancel = () => {
     onClose();
-    setRecipeName(workoutName || 'My Recipe');
+    setRecipeName(workoutName || 'My Routine');
   };
 
   const exerciseCount = exercises.length;
@@ -154,19 +154,19 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
     <Sheet open={isOpen} onOpenChange={handleCancel}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Save as Recipe</SheetTitle>
+          <SheetTitle>Save as Routine</SheetTitle>
           <SheetDescription>
-            Create a reusable recipe from this workout with {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''} and {totalSets} set{totalSets !== 1 ? 's' : ''}.
+            Create a reusable routine from this workout with {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''} and {totalSets} set{totalSets !== 1 ? 's' : ''}.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <label htmlFor="recipe-name" className="text-sm font-medium">Recipe Name</label>
+            <label htmlFor="routine-name" className="text-sm font-medium">Routine Name</label>
             <Input
-              id="recipe-name"
+              id="routine-name"
               value={recipeName}
               onChange={(e) => setRecipeName(e.target.value)}
-              placeholder="Enter recipe name"
+              placeholder="Enter routine name"
             />
           </div>
           <div className="bg-muted rounded-lg p-3">
@@ -185,7 +185,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!recipeName.trim() || isLoading} className="flex-1">
-            {isLoading ? 'Saving...' : 'Save Recipe'}
+            {isLoading ? 'Saving...' : 'Save Routine'}
           </Button>
         </div>
       </SheetContent>

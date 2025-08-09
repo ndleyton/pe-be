@@ -1,7 +1,9 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 
-// Recipe types to match backend schema
+// NOTE: Recipes are exposed to users as "Routines" in the API and UI
+// The backend models and types still use "Recipe" naming for consistency
+// Routine types to match backend schema
 export interface Recipe {
   id: number | string;
   name: string;
@@ -62,27 +64,27 @@ export interface UpdateRecipeData {
 
 // API functions
 export const getRecipes = async (): Promise<Recipe[]> => {
-  const response = await api.get(endpoints.recipes);
+  const response = await api.get(endpoints.routines);
   return response.data;
 };
 
 export const getRecipeById = async (recipeId: string | number): Promise<Recipe> => {
-  const response = await api.get(endpoints.recipeById(recipeId));
+  const response = await api.get(endpoints.routineById(recipeId));
   return response.data;
 };
 
 export const createRecipe = async (recipeData: CreateRecipeData): Promise<Recipe> => {
-  const response = await api.post(endpoints.recipes, recipeData);
+  const response = await api.post(endpoints.routines, recipeData);
   return response.data;
 };
 
 export const updateRecipe = async (recipeId: string | number, updateData: UpdateRecipeData): Promise<Recipe> => {
-  const response = await api.put(endpoints.recipeById(recipeId), updateData);
+  const response = await api.put(endpoints.routineById(recipeId), updateData);
   return response.data;
 };
 
 export const deleteRecipe = async (recipeId: string | number): Promise<void> => {
-  await api.delete(endpoints.recipeById(recipeId));
+  await api.delete(endpoints.routineById(recipeId));
 };
 
 // Types are already exported above via individual export statements
