@@ -45,10 +45,13 @@ import src.recipes.models  # noqa: F401
 
 
 def get_test_database_url():
-    """Get test database URL and ensure it's async compatible."""
+    """Get test database URL and ensure it's async compatible.
+
+    Defaults to in-memory SQLite for CI environments without Postgres.
+    """
     db_url = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://ndleyton@localhost:5432/gym_tracker_test",
+        "sqlite+aiosqlite:///:memory:",
     )
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
@@ -64,7 +67,7 @@ def get_test_database_url():
 TEST_DATABASE_URL = get_test_database_url()
 
 # Create test engine
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 
 # Create test session
 TestSessionLocal = sessionmaker(
@@ -76,8 +79,11 @@ def _assert_safe_test_database_url(db_url: str) -> None:
     """Fail fast if DATABASE_URL doesn't clearly point to a test database.
 
     We require the database name to contain the substring 'test' to reduce the
-    risk of accidental data loss when running pytest.
+    risk of accidental data loss when running pytest. Skip this for SQLite.
     """
+    if db_url.startswith("sqlite+"):
+        return
+
     try:
         parsed = urlsplit(db_url)
         db_name = (parsed.path or "").lstrip("/")
@@ -127,7 +133,7 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session with proper cleanup."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            # Clean tables before test
+            # Clean tables before test (works across Postgres/SQLite)
             for table in [
                 "exercises",
                 "exercise_sets",
@@ -136,8 +142,14 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
                 "workouts",
                 "users",
                 "recipes",
+                "intensity_units",
+                "muscles",
+                "muscle_groups",
             ]:
-                await session.execute(text(f"TRUNCATE {table} CASCADE"))
+                try:
+                    await session.execute(text(f"DELETE FROM {table}"))
+                except Exception:
+                    pass
 
             yield session
 

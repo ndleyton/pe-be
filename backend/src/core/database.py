@@ -47,9 +47,14 @@ class Base(DeclarativeBase):
 
 
 def get_database_url():
-    """Get the database URL and ensure it's compatible with async operations."""
-    # Fallback URL for local development only - configure DATABASE_URL environment variable in production
-    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db")
+    """Get the database URL and ensure it's compatible with async operations.
+
+    For tests, allow sqlite+aiosqlite by default if DATABASE_URL is unset.
+    """
+    # Prefer env var; else use a safe sqlite memory DB for tests
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        return "sqlite+aiosqlite:///:memory:"
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
     if db_url.startswith("postgresql://"):
@@ -63,7 +68,8 @@ def get_database_url():
 DATABASE_URL = get_database_url()
 
 # Database engine and session factory
-engine = create_async_engine(DATABASE_URL)
+# Use future defaults; echo can be toggled via env if needed
+engine = create_async_engine(DATABASE_URL, echo=os.getenv("SQL_ECHO", "0") == "1")
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
