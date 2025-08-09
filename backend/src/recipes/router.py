@@ -17,9 +17,11 @@ router = APIRouter(tags=["routines"])
 async def get_user_recipes(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
+    offset: int = 0,
+    limit: int = 100,
 ):
     """Get all routines for the authenticated user"""
-    return await recipe_service.get_user_recipes(session, user.id)
+    return await recipe_service.get_user_recipes(session, user.id, offset, limit)
 
 
 @router.get("/{recipe_id}", response_model=RecipeRead)

@@ -1,0 +1,147 @@
+import React, { useState, useMemo } from 'react';
+import { Search } from 'lucide-react';
+import { getRoutines, type Routine } from '@/features/routines/api';
+import { RoutineCard } from '@/features/routines/components';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/shared/components/ui/alert';
+import { useInfiniteScroll } from '@/shared/hooks';
+
+const RoutinesPage: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [orderBy, setOrderBy] = useState<'createdAt' | 'name'>('createdAt');
+
+  const {
+    data: routines,
+    isLoading,
+    isFetchingNextPage,
+    hasMore,
+    error,
+  } = useInfiniteScroll<Routine>({
+    queryKey: ['routines', orderBy],
+    queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
+    limit: 100,
+  });
+
+  const filteredRoutines = useMemo(() => {
+    if (!searchTerm) return routines;
+    
+    return routines.filter((routine) =>
+      routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (routine.description && routine.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [routines, searchTerm]);
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error loading routines. Please try again.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto p-8 text-center">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-4">Routines</h1>
+        
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <Input
+              type="text"
+              placeholder="Search routines..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10"
+            />
+          </div>
+          
+          <Select
+            value={orderBy}
+            onValueChange={(value) => setOrderBy(value as 'createdAt' | 'name')}
+          >
+            <SelectTrigger className="w-full sm:w-auto">
+              <SelectValue placeholder="Order By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt">Recent</SelectItem>
+              <SelectItem value="name">Alphabetical</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      )}
+
+      {/* Routines Grid */}
+      {!isLoading && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRoutines.map((routine) => (
+              <RoutineCard key={routine.id} routine={routine} />
+            ))}
+          </div>
+          
+          {/* Loading more indicator */}
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-8">
+              <span className="loading loading-spinner loading-lg"></span>
+            </div>
+          )}
+          
+          {/* End of results indicator */}
+          {!hasMore && filteredRoutines.length > 0 && (
+            <div className="text-center py-8">
+              <span className="text-muted-foreground text-sm">No more routines to load</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredRoutines.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            {searchTerm ? 'No routines found matching your search.' : 'No routines available.'}
+          </div>
+          {searchTerm && (
+            <Button
+              onClick={() => setSearchTerm('')}
+              variant="outline"
+              size="sm"
+            >
+              Clear Search
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RoutinesPage;
