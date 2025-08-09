@@ -59,3 +59,8 @@ export const updateRoutine = async (routineId: string | number, updateData: Upda
 export const deleteRoutine = async (routineId: string | number): Promise<void> => {
   await apiClient.delete(`/routines/${routineId}`);
 };
+
+export const startWorkoutFromRoutine = async (routineId: number | string): Promise<{ id: number }> => {
+  const response = await apiClient.post(`/routines/${routineId}/start`);
+  return response.data;
+};

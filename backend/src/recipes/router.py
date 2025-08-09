@@ -3,6 +3,7 @@ from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.recipes.schemas import RecipeRead, RecipeCreate, RecipeUpdate
+from src.workouts.schemas import WorkoutRead
 from src.recipes.service import recipe_service
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -59,6 +60,20 @@ async def update_recipe(
     if not recipe:
         raise HTTPException(status_code=404, detail="Routine not found")
     return recipe
+
+
+@router.post("/{recipe_id}/start", response_model=WorkoutRead, status_code=status.HTTP_201_CREATED)
+async def start_workout_from_recipe(
+    recipe_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Create a workout from a saved routine (recipe) and return it."""
+    try:
+        workout = await recipe_service.create_workout_from_recipe(session, user.id, recipe_id)
+        return workout
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Routine not found")
 
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
