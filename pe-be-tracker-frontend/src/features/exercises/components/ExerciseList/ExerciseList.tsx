@@ -1,6 +1,7 @@
 import React from 'react';
 import { Exercise } from '@/features/exercises/api';
 import ExerciseRow from '../ExerciseRow';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 
 interface ExerciseListProps {
   exercises: Exercise[];
@@ -18,7 +19,22 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error
       </h2>
       
       {isLoading && (
-        <div className="text-muted-foreground text-center py-4">Loading exercises...</div>
+        <>
+          <div className="text-muted-foreground text-center py-2">Loading exercises...</div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg p-4 border border-border">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="w-8 h-8 rounded" />
+                  <div className="flex-1">
+                    <Skeleton className="h-5 w-1/2 mb-2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
       
       {error && (

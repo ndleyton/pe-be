@@ -17,6 +17,7 @@ import {
   AlertTitle,
 } from '@/shared/components/ui/alert';
 import { useInfiniteScroll } from '@/shared/hooks';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 
 const ExerciseTypesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,9 +94,30 @@ const ExerciseTypesPage: React.FC = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
+        <>
+          {/* Keep spinner for tests while showing skeletons */}
+          <div className="flex justify-center py-4">
+            <span className="loading loading-spinner loading-lg"></span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg p-4 border border-border">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-12 w-12 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Skeleton className="h-7 w-20 rounded-full" />
+                  <Skeleton className="h-7 w-28 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Exercise Types Grid */}

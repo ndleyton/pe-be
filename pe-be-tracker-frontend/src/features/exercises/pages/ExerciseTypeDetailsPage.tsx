@@ -26,6 +26,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/shared/components/ui/carousel';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -90,8 +91,37 @@ const ExerciseTypeDetailsPage: React.FC = () => {
   if (isLoadingExerciseType) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-center py-8">
+        {/* Keep spinner for tests while showing skeletons */}
+        <div className="flex justify-center py-4">
           <span className="loading loading-spinner loading-lg"></span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2">
+          <div className="space-y-6">
+            <div className="bg-card rounded-lg p-6 border border-border">
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </div>
+            <div className="bg-card rounded-lg p-6 border border-border">
+              <Skeleton className="h-6 w-40 mb-4" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <div className="bg-card rounded-lg p-6 border border-border">
+              <Skeleton className="h-6 w-48 mb-4" />
+              <div className="flex gap-2 flex-wrap">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-6 w-24 rounded-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg p-6 border border-border">
+                <Skeleton className="h-6 w-56 mb-4" />
+                <Skeleton className="h-40 w-full" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -240,9 +270,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {isLoadingStats ? (
-                <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-md"></span>
-                </div>
+                <>
+                  <div className="flex justify-center py-4">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                  <Skeleton className="h-48 w-full" />
+                </>
               ) : stats?.progressiveOverload && stats.progressiveOverload.length > 0 ? (
                 <ProgressiveOverloadChart data={stats.progressiveOverload} />
               ) : (
@@ -259,9 +292,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {isLoadingStats ? (
-                <div className="flex justify-center py-4">
-                  <span className="loading loading-spinner loading-sm"></span>
-                </div>
+                <>
+                  <div className="flex justify-center py-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                  </div>
+                  <Skeleton className="h-24 w-full" />
+                </>
               ) : stats?.lastWorkout ? (
                 <LastWorkoutInfo 
                   lastWorkout={stats.lastWorkout}
@@ -278,9 +314,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {isLoadingStats ? (
-                <div className="flex justify-center py-4">
-                  <span className="loading loading-spinner loading-sm"></span>
-                </div>
+                <>
+                  <div className="flex justify-center py-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                  </div>
+                  <Skeleton className="h-20 w-full" />
+                </>
               ) : stats?.personalBest ? (
                 <PersonalBestInfo 
                   personalBest={stats.personalBest}
