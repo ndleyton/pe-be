@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { getRoutines } from '@/features/routines/api';
+import { getRoutines, startWorkoutFromRoutine } from '@/features/routines/api';
 import type { Routine } from '@/features/routines/types';
 import { RoutineQuickStartCard } from '@/features/routines/components';
-import type { GuestRecipe } from '@/stores';
+import { useAuthStore, useGuestStore, type GuestRecipe } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {
@@ -19,9 +19,15 @@ import {
   AlertTitle,
 } from '@/shared/components/ui/alert';
 import { useInfiniteScroll } from '@/shared/hooks';
+import { useNavigate } from 'react-router-dom';
+import api from '@/shared/api/client';
 
 const RoutinesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestData = useGuestStore();
+  const guestActions = useGuestStore();
   const [orderBy, setOrderBy] = useState<'createdAt' | 'name'>('createdAt');
 
   const {
@@ -44,6 +50,29 @@ const RoutinesPage: React.FC = () => {
       (routine.description && routine.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [routines, searchTerm]);
+
+  const handleStartWorkout = async (recipe: GuestRecipe) => {
+    try {
+      if (isAuthenticated) {
+        const newWorkout = await startWorkoutFromRoutine(Number(recipe.id));
+        navigate(`/workouts/${newWorkout.id}`);
+      } else {
+        const defaultWorkoutType = guestData.workoutTypes.find(wt => wt.id === '8') || guestData.workoutTypes[0];
+        const newWorkoutId = guestActions.addWorkout({
+          name: `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          notes: null,
+          start_time: new Date().toISOString(),
+          end_time: null,
+          workout_type_id: defaultWorkoutType.id,
+          workout_type: defaultWorkoutType,
+          exercises: [],
+        });
+        navigate(`/workouts/${newWorkoutId}`, { state: { recipe } });
+      }
+    } catch (error) {
+      console.error('Failed to start workout from routine:', error);
+    }
+  };
 
   const convertToGuestRecipe = (routine: Routine): GuestRecipe => ({
     id: String(routine.id),
@@ -143,7 +172,7 @@ const RoutinesPage: React.FC = () => {
               <RoutineQuickStartCard
                 key={routine.id}
                 routine={convertToGuestRecipe(routine)}
-                onStartWorkout={() => {}}
+                onStartWorkout={handleStartWorkout}
               />
             ))}
           </div>

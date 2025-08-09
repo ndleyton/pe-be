@@ -1,8 +1,16 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
 
 from src.recipes import crud
 from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate
+from src.workouts.schemas import WorkoutCreate
+from src.workouts.models import Workout
+from src.workouts.crud import create_workout, get_workout_by_id
+from src.exercises.schemas import ExerciseCreate
+from src.exercise_sets.schemas import ExerciseSetCreate
+from src.exercises.crud import create_exercise
+from src.exercise_sets.crud import create_exercise_set
 
 
 class RecipeService:
@@ -49,6 +57,61 @@ class RecipeService:
     ) -> bool:
         """Delete a recipe"""
         return await crud.delete_recipe(session, recipe_id, user_id)
+
+    async def create_workout_from_recipe(
+        self, session: AsyncSession, user_id: int, recipe_id: int
+    ) -> Workout:
+        """Instantiate a Workout (with exercises and sets) from a saved recipe.
+
+        - Creates a new workout using the recipe's name and workout_type_id
+        - For each exercise template:
+          - Creates the exercise attached to the workout
+          - Creates its sets with reps/intensity/unit from the template, marked as not done
+        """
+        # Load recipe with relationships and ensure ownership
+        recipe = await crud.get_recipe_by_id(session, recipe_id, user_id)
+        if recipe is None:
+            raise ValueError("Recipe not found or not accessible")
+
+        # 1) Create the workout
+        workout = await create_workout(
+            session,
+            WorkoutCreate(
+                name=recipe.name,
+                notes=None,
+                start_time=datetime.now(timezone.utc),
+                workout_type_id=recipe.workout_type_id,
+            ),
+            user_id,
+        )
+
+        # 2) Create exercises and sets from templates
+        for exercise_template in recipe.exercise_templates:
+            exercise = await create_exercise(
+                session,
+                ExerciseCreate(
+                    timestamp=datetime.now(timezone.utc),
+                    notes=None,
+                    exercise_type_id=exercise_template.exercise_type_id,
+                    workout_id=workout.id,
+                ),
+            )
+
+            for set_template in exercise_template.set_templates:
+                await create_exercise_set(
+                    session,
+                    ExerciseSetCreate(
+                        reps=set_template.reps,
+                        intensity=set_template.intensity,
+                        intensity_unit_id=set_template.intensity_unit_id,
+                        rest_time_seconds=None,
+                        exercise_id=exercise.id,
+                        done=False,
+                    ),
+                )
+
+        # Return the workout with relationships loaded
+        return await get_workout_by_id(session, workout.id, user_id)
 
 
 # Create a singleton instance
