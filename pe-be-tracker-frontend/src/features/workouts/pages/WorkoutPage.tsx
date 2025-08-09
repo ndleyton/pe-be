@@ -175,8 +175,8 @@ const WorkoutPage: React.FC = () => {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
       } else {
-        // For guest users, create exercises from the recipe
-        guestActions.createExercisesFromRecipe(recipe, workoutId);
+        // For guest users, create exercises from the routine
+        guestActions.createExercisesFromRoutine(recipe, workoutId);
       }
     }
   }, [recipe, workoutId, exercises?.length, isAuthenticated, guestActions]);
