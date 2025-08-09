@@ -150,7 +150,7 @@ const MyWorkoutsPage = () => {
           <div className="mb-6">
             <h1 className="text-2xl font-bold">Workouts</h1>
           </div>
-          <WeekTracking workouts={workouts} className="mb-6" />
+          <WeekTracking workouts={workouts} loading={isAuthenticated && isLoading} className="mb-6" />
           
           <RecipesSection onStartWorkout={handleStartWorkoutFromRecipe} />
           
