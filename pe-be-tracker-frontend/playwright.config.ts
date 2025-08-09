@@ -17,14 +17,19 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // Only run additional browsers locally to reduce CI flakiness and deps
+    ...(!process.env.CI
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+        ]
+      : []),
   ],
   
+  webServer: {
+    command: 'npm run dev:test',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+    timeout: 60_000,
+  },
 });

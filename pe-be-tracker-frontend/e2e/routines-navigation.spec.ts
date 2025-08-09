@@ -58,7 +58,7 @@ test.describe('Routines quick-start navigation', () => {
     await page.goto('/workouts');
 
     // Wait for the section title to appear
-    const heading = page.getByRole('heading', { name: 'Quick Start Routines' });
+    const heading = page.getByRole('heading', { name: 'Quick Start Routines', level: 3 });
     await expect(heading).toBeVisible({ timeout: 15000 });
 
     // Open the accordion to reveal the More link
@@ -73,8 +73,8 @@ test.describe('Routines quick-start navigation', () => {
     // Verify navigation to /routines
     await expect(page).toHaveURL(/\/routines$/);
 
-    // Optional: basic assertion that routines list page rendered
-    await expect(page.getByRole('heading', { name: 'Routines' })).toBeVisible();
+    // Assert the Routines page heading is visible
+    await expect(page.getByRole('heading', { name: 'Routines', level: 1 })).toBeVisible();
   });
 });
 
