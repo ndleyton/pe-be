@@ -144,7 +144,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
   });
 
@@ -266,7 +266,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
     // FAB should be visible initially
@@ -297,7 +297,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
     // Mock backend start endpoint response
@@ -360,7 +360,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
     // Show form
