@@ -15,7 +15,7 @@ interface WeekTrackingProps {
   loading?: boolean;
 }
 
-const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '', loading = false }) => {
+const WeekTracking: React.FC<WeekTrackingProps> = React.memo(({ workouts, className = '', loading = false }) => {
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
   
   const getLast7Days = () => {
@@ -32,7 +32,8 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '', l
   };
 
   const hasWorkoutOnDate = (date: Date) => {
-    if (loading) return false;
+    // If loading or no workouts data, return false (show neutral state)
+    if (loading || safeWorkouts.length === 0) return false;
     const dateString = date.toDateString();
     return safeWorkouts.some(workout => {
       const workoutDate = new Date(workout.start_time);
@@ -88,6 +89,8 @@ const WeekTracking: React.FC<WeekTrackingProps> = ({ workouts, className = '', l
       </div>
     </div>
   );
-};
+});
+
+WeekTracking.displayName = 'WeekTracking';
 
 export default WeekTracking;
