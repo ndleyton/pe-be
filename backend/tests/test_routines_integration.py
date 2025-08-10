@@ -12,7 +12,9 @@ from src.workouts.models import WorkoutType
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_routine_endpoint_success(async_client: AsyncClient, db_session: AsyncSession):
+async def test_create_routine_endpoint_success(
+    async_client: AsyncClient, db_session: AsyncSession
+):
     """End-to-end test for POST /api/v1/routines/ creating a routine with nested templates.
 
     Seeds minimal reference data (user, intensity unit, exercise type, workout type),
@@ -105,5 +107,3 @@ async def test_create_routine_endpoint_success(async_client: AsyncClient, db_ses
     finally:
         # Clean up dependency override
         app.dependency_overrides.pop(current_active_user, None)
-
-
