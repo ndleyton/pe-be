@@ -1,20 +1,42 @@
 import React from 'react';
 import { useAuthStore, useGuestStore } from '@/stores';
 
-const GuestModeBanner: React.FC = () => {
+interface GuestModeBannerProps {
+  onBannerVisible?: (visible: boolean) => void;
+}
+
+const GuestModeBanner: React.FC<GuestModeBannerProps> = ({ onBannerVisible }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const authLoading = useAuthStore(state => state.loading);
   const workouts = useGuestStore(state => state.workouts);
   
   // Ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
-  // Don't show banner if user is authenticated
-  if (isAuthenticated) {
+  // Delay showing banner to avoid layout shift
+  const [showBanner, setShowBanner] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      // Show banner after a short delay for smoother transition
+      const timer = setTimeout(() => {
+        setShowBanner(true);
+        onBannerVisible?.(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setShowBanner(false);
+      onBannerVisible?.(false);
+    }
+  }, [authLoading, isAuthenticated, onBannerVisible]);
+
+  // Don't show banner if user is authenticated or still loading auth
+  if (isAuthenticated || authLoading || !showBanner) {
     return null;
   }
 
   return (
-    <div className="bg-accent border-l-4 border-primary p-4 min-h-16">
+    <div className="bg-accent border-l-4 border-primary p-4 min-h-16 animate-in fade-in duration-500">
       <div className="flex">
         <div className="flex-shrink-0">
           <svg 

@@ -6,6 +6,11 @@ import { useAuthStore } from '@/stores';
 
 const AppLayout: React.FC = () => {
   const authLoading = useAuthStore(state => state.loading);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const [guestBannerVisible, setGuestBannerVisible] = React.useState(false);
+
+  // Keep placeholder height during auth loading OR for guests before banner appears
+  const shouldShowPlaceholder = authLoading || (!isAuthenticated && !guestBannerVisible);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -25,9 +30,9 @@ const AppLayout: React.FC = () => {
           {/* Top App Bar */}
           <AppBar />
           
-          {/* Guest Mode Banner with placeholder height during auth loading to prevent CLS */}
-          <div className={authLoading ? 'min-h-16' : ''}>
-            <GuestModeBanner />
+          {/* Guest Mode Banner with placeholder height to prevent CLS */}
+          <div className={shouldShowPlaceholder ? 'min-h-16' : ''}>
+            <GuestModeBanner onBannerVisible={setGuestBannerVisible} />
           </div>
           
           {/* Side Drawer (mobile/tablet) */}
