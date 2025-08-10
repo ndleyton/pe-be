@@ -30,7 +30,7 @@ describe('WorkoutPage', () => {
   it('renders workout page with correct heading', () => {
     render(<WorkoutPage />);
 
-    expect(screen.getByRole('heading', { name: /workout: #123/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /workout: #123/i, level: 2 })).toBeInTheDocument();
   });
 
   it('shows floating action button', () => {

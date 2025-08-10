@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '@/test/utils';
+import api from '@/shared/api/client';
 import MyWorkoutsPage from './MyWorkoutsPage';
 import { getMyWorkouts } from '@/features/workouts';
 import type { Workout } from '@/features/workouts';
@@ -12,6 +13,16 @@ vi.mock('@/features/workouts/components', () => ({
 
 vi.mock('@/features/workouts', () => ({
   getMyWorkouts: vi.fn(),
+}));
+
+// Mock API client
+vi.mock('@/shared/api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
 }));
 
 vi.mock('axios', async () => {
@@ -78,11 +89,11 @@ vi.mock('@/shared/components/WeekTracking', () => ({
   ),
 }));
 
-vi.mock('@/features/recipes/components/RecipesSection/RecipesSection', () => ({
-  RecipesSection: ({ onStartWorkout }: any) => (
+vi.mock('@/features/routines/components/RoutinesSection/RoutinesSection', () => ({
+  RoutinesSection: ({ onStartWorkout }: any) => (
     <div data-testid="recipes-section">
-      <button onClick={() => onStartWorkout({ id: 'test-recipe' })}>
-        Start from recipe
+      <button onClick={() => onStartWorkout({ id: '123', name: 'Routine A' })}>
+        Start from routine
       </button>
     </div>
   ),
@@ -133,7 +144,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
   });
 
@@ -255,7 +266,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
     // FAB should be visible initially
@@ -286,15 +297,21 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
-    const startFromRecipeButton = screen.getByText('Start from recipe');
-    await userEvent.click(startFromRecipeButton);
+    // Mock backend start endpoint response
+    (api.post as unknown as jest.Mock).mockResolvedValueOnce({ data: { id: 42 } });
+
+    const startFromRoutineButton = screen.getByText('Start from routine');
+    await userEvent.click(startFromRoutineButton);
 
     await waitFor(() => {
-      expect(screen.getByTestId('workout-form')).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledWith('/routines/123/start');
     });
+
+    // Should not open the workout form anymore
+    expect(screen.queryByTestId('workout-form')).not.toBeInTheDocument();
   });
 
   it('handles API errors gracefully', async () => {
@@ -343,7 +360,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     // Wait for component to load first
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /workouts/i, level: 1 })).toBeInTheDocument();
     });
 
     // Show form

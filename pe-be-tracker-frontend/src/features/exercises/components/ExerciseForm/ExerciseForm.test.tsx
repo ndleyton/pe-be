@@ -40,7 +40,7 @@ describe('ExerciseForm', () => {
   it('renders the form with all fields', () => {
     render(<ExerciseForm {...defaultProps} />);
 
-    expect(screen.getByRole('heading', { name: /add exercise/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /add exercise/i, level: 2 })).toBeInTheDocument();
     expect(screen.getByText(/select exercise/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add exercise/i })).toBeInTheDocument();

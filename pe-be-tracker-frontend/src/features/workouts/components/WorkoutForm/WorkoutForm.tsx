@@ -123,9 +123,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
         exercises: [],
       });
 
-      // If there's a recipe, create exercises from it
+      // If there's a routine, create exercises from it
       if (recipe) {
-        guestActions.createExercisesFromRecipe(recipe, newWorkoutId);
+        guestActions.createExercisesFromRoutine(recipe, newWorkoutId);
       }
 
       resetForm();

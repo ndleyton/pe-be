@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGuestStore, useAuthStore, GuestExercise } from '@/stores';
 import { Exercise, updateExerciseSet } from '@/features/exercises/api';
-import { createRecipe, CreateRecipeData } from '@/features/recipes/api';
+import { createRoutine, type CreateRoutineData } from '@/features/routines/api';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {
@@ -13,7 +13,7 @@ import {
   SheetDescription,
 } from '@/shared/components/ui/sheet';
 
-interface SaveRecipeModalProps {
+interface SaveRoutineModalProps {
   isOpen: boolean;
   onClose: () => void;
   workoutName: string;
@@ -21,7 +21,6 @@ interface SaveRecipeModalProps {
   workoutId?: string;
 }
 
-// Helper function to convert Exercise[] to GuestExercise[] format
 const convertToGuestExercises = (exercises: Exercise[]): GuestExercise[] => {
   return exercises.map((exercise): GuestExercise => ({
     id: exercise.id as string,
@@ -52,91 +51,60 @@ const convertToGuestExercises = (exercises: Exercise[]): GuestExercise[] => {
   }));
 };
 
-export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
+export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   isOpen,
   onClose,
   workoutName,
   exercises,
   workoutId,
 }) => {
-  // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestActions = useGuestStore();
   const queryClient = useQueryClient();
-  const [recipeName, setRecipeName] = useState(workoutName || 'My Routine');
+  const [routineName, setRoutineName] = useState(workoutName || 'My Routine');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Helper function to update exercise sets done status
   const updateExerciseSetsDoneStatus = async () => {
-    if (!isAuthenticated) return; // Only for authenticated users
-    
-    // Get all exercise sets that need to be updated
+    if (!isAuthenticated) return;
     const setsToUpdate = exercises.flatMap(exercise => 
-      exercise.exercise_sets.map(set => ({
-        id: set.id,
-        done: set.done
-      }))
+      exercise.exercise_sets.map(set => ({ id: set.id, done: set.done }))
     );
-    
-    // Update all sets in parallel
     await Promise.all(
-      setsToUpdate.map(set => 
-        updateExerciseSet(set.id, { done: set.done })
-      )
+      setsToUpdate.map(set => updateExerciseSet(set.id, { done: set.done }))
     );
   };
 
   const handleSave = async () => {
-    if (!recipeName.trim()) return;
-    
+    if (!routineName.trim()) return;
     setIsLoading(true);
     try {
       if (isAuthenticated) {
-        // First, update the exercise sets' done status
         await updateExerciseSetsDoneStatus();
-        
-        // Then create the recipe
-        const recipeData: CreateRecipeData = {
-          name: recipeName,
-          workout_type_id: 1, // Default workout type - could be made configurable
-          exercise_templates: exercises.map(exercise => {
-            // Removed debug log: Processing exercise details
-            // Removed debug log: Exercise sets
-            
-            return {
-              exercise_type_id: exercise.exercise_type_id as number,
-              set_templates: exercise.exercise_sets.map(set => {
-                const setTemplate = {
-                  reps: set.reps || 0,
-                  intensity: set.intensity || 0,
-                  intensity_unit_id: set.intensity_unit_id,
-                };
-                return setTemplate;
-              }),
-            };
-          }),
+        const routineData: CreateRoutineData = {
+          name: routineName,
+          workout_type_id: 1,
+          exercise_templates: exercises.map(exercise => ({
+            exercise_type_id: exercise.exercise_type_id as number,
+            set_templates: exercise.exercise_sets.map(set => ({
+              reps: set.reps || 0,
+              intensity: set.intensity || 0,
+              intensity_unit_id: set.intensity_unit_id,
+            })),
+          })),
         };
-        
-        
-        const createdRecipe = await createRecipe(recipeData);
-        
-        // Invalidate routines query to refresh the list
+        await createRoutine(routineData);
         queryClient.invalidateQueries({ queryKey: ['routines'] });
-        // Invalidate exercises query to refresh the workout exercises
         if (workoutId) {
           queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
         }
       } else {
-        // For guest users, use the existing local storage approach
         const guestExercises = convertToGuestExercises(exercises);
-        guestActions.createRecipeFromWorkout(recipeName, guestExercises);
+        guestActions.createRoutineFromWorkout(routineName, guestExercises);
       }
-      
       onClose();
-      setRecipeName('');
+      setRoutineName('');
     } catch (error) {
-      console.error('Error saving recipe:', error);
-      // Could add toast notification here
+      console.error('Error saving routine:', error);
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +112,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
 
   const handleCancel = () => {
     onClose();
-    setRecipeName(workoutName || 'My Routine');
+    setRoutineName(workoutName || 'My Routine');
   };
 
   const exerciseCount = exercises.length;
@@ -164,8 +132,8 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
             <label htmlFor="routine-name" className="text-sm font-medium">Routine Name</label>
             <Input
               id="routine-name"
-              value={recipeName}
-              onChange={(e) => setRecipeName(e.target.value)}
+              value={routineName}
+              onChange={(e) => setRoutineName(e.target.value)}
               placeholder="Enter routine name"
             />
           </div>
@@ -184,7 +152,7 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
           <Button variant="outline" onClick={handleCancel} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!recipeName.trim() || isLoading} className="flex-1">
+          <Button onClick={handleSave} disabled={!routineName.trim() || isLoading} className="flex-1">
             {isLoading ? 'Saving...' : 'Save Routine'}
           </Button>
         </div>
@@ -192,3 +160,5 @@ export const SaveRecipeModal: React.FC<SaveRecipeModalProps> = ({
     </Sheet>
   );
 };
+
+
