@@ -195,10 +195,10 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
         {onSaveRecipe && exercises.length > 0 && (
           <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-lg">
             <div className="flex items-center space-x-2 mb-2">
-              <span className="text-sm font-medium">📋 Save as Recipe</span>
+              <span className="text-sm font-medium">📋 Save as Routine</span>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              Save this workout as a reusable recipe for quick starts in the future.
+              Save this workout as a reusable routine for quick starts in the future.
             </p>
             <Button
               onClick={onSaveRecipe}
@@ -206,7 +206,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
               size="sm"
               className="w-full"
             >
-              Save Recipe
+              Save Routine
             </Button>
           </div>
         )}

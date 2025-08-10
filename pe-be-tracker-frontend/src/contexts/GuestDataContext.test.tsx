@@ -176,9 +176,11 @@ describe('GuestDataContext', () => {
       </AuthProvider>
     );
 
-    // Wait for the API call to complete
+    // Wait for the API call to complete and the UI to reflect authentication
     await screen.findByTestId('is-authenticated');
-    expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
+    });
   });
 
   it('handles corrupted localStorage data gracefully', () => {

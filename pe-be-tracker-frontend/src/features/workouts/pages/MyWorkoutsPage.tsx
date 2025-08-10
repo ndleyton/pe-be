@@ -1,12 +1,13 @@
 import React from 'react';
 import axios from 'axios';
+import { startWorkoutFromRoutine } from '@/features/routines/api';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { WeekTracking } from '@/shared/components/WeekTracking';
-import { RecipesSection } from '@/features/recipes/components/RecipesSection/RecipesSection';
+import { RoutinesSection } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
@@ -73,9 +74,29 @@ const MyWorkoutsPage = () => {
 
   const [selectedRecipe, setSelectedRecipe] = React.useState<GuestRecipe | null>(null);
 
-  const handleStartWorkoutFromRecipe = (recipe: GuestRecipe) => {
-    setSelectedRecipe(recipe);
-    setShowWorkoutForm(true);
+  const handleStartWorkoutFromRecipe = async (recipe: GuestRecipe) => {
+    try {
+      if (isAuthenticated) {
+        // Create full workout from routine on the server
+        const newWorkout = await startWorkoutFromRoutine(Number(recipe.id));
+        navigate(`/workouts/${newWorkout.id}`);
+      } else {
+        // Create guest workout with default values
+        const defaultWorkoutType = guestData.workoutTypes.find(wt => wt.id === '8') || guestData.workoutTypes[0];
+        const newWorkoutId = useGuestStore.getState().addWorkout({
+          name: `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          notes: null,
+          start_time: new Date().toISOString(),
+          end_time: null,
+          workout_type_id: defaultWorkoutType.id,
+          workout_type: defaultWorkoutType,
+          exercises: [],
+        });
+        navigate(`/workouts/${newWorkoutId}`, { state: { recipe } });
+      }
+    } catch (error) {
+      console.error('Failed to start workout from routine:', error);
+    }
   };
 
   // Track if we've detected an auth error to keep showing the message
@@ -153,7 +174,7 @@ const MyWorkoutsPage = () => {
           </div>
           <WeekTracking workouts={workouts} loading={isAuthenticated && isLoading} className="mb-6" />
           
-          <RecipesSection onStartWorkout={handleStartWorkoutFromRecipe} />
+          <RoutinesSection onStartWorkout={handleStartWorkoutFromRecipe} />
           
           {showWorkoutForm && (
             <div className="mb-6">

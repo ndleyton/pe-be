@@ -27,8 +27,10 @@ async def get_recipe_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_user_recipes(session: AsyncSession, user_id: int) -> List[Recipe]:
-    """Get all recipes for a specific user"""
+async def get_user_recipes(
+    session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+) -> List[Recipe]:
+    """Get all recipes for a specific user with pagination"""
     result = await session.execute(
         select(Recipe)
         .options(
@@ -42,6 +44,8 @@ async def get_user_recipes(session: AsyncSession, user_id: int) -> List[Recipe]:
         )
         .where(Recipe.creator_id == user_id)
         .order_by(Recipe.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     return result.scalars().all()
 

@@ -127,10 +127,11 @@ interface GuestActions {
   addWorkoutType: (workoutType: Omit<GuestWorkoutType, 'id'>) => string;
   updateWorkoutType: (id: string, updates: Partial<GuestWorkoutType>) => void;
   
-  addRecipe: (recipe: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
-  deleteRecipe: (id: string) => void;
-  createRecipeFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
-  createExercisesFromRecipe: (recipe: GuestRecipe, workoutId: string) => string[];
+  // Routine-named actions
+  addRoutine: (routine: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
+  deleteRoutine: (id: string) => void;
+  createRoutineFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
+  createExercisesFromRoutine: (routine: GuestRecipe, workoutId: string) => string[];
   
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
@@ -486,11 +487,12 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       });
     },
 
-    addRecipe: (recipe) => {
+    // Routine-named implementation
+    addRoutine: (routine) => {
       const id = generateRandomId();
       const now = getCurrentUTCTimestamp();
       const newRecipe: GuestRecipe = {
-        ...recipe,
+        ...routine,
         id,
         created_at: now,
         updated_at: now,
@@ -507,8 +509,8 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       
       return id;
     },
-
-    deleteRecipe: (id) => {
+    // Routine-named implementation
+    deleteRoutine: (id) => {
       set((state) => {
         const newState = {
           ...state,
@@ -518,8 +520,8 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         return newState;
       });
     },
-
-    createRecipeFromWorkout: (workoutName, exercises) => {
+    // Routine-named implementation
+    createRoutineFromWorkout: (workoutName, exercises) => {
       const id = generateRandomId();
       const now = getCurrentUTCTimestamp();
       
@@ -539,7 +541,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
 
       const newRecipe: GuestRecipe = {
         id,
-        name: workoutName || 'My Recipe',
+        name: workoutName || 'My Routine',
         exercises: recipeExercises,
         created_at: now,
         updated_at: now,
@@ -556,8 +558,8 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       
       return id;
     },
-
-    createExercisesFromRecipe: (recipe, workoutId) => {
+    // Routine-named implementation
+    createExercisesFromRoutine: (recipe, workoutId) => {
       const exerciseIds: string[] = [];
       const { addExercise, addExerciseSet } = get();
       
