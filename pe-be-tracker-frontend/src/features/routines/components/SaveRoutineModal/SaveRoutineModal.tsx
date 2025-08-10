@@ -66,12 +66,26 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
 
   const updateExerciseSetsDoneStatus = async () => {
     if (!isAuthenticated) return;
-    const setsToUpdate = exercises.flatMap(exercise => 
-      exercise.exercise_sets.map(set => ({ id: set.id, done: set.done }))
+    const setsToUpdate = exercises.flatMap(exercise =>
+      exercise.exercise_sets
+        .filter(set => Boolean(set.id))
+        .map(set => ({ id: set.id, done: set.done }))
     );
-    await Promise.all(
+
+    const results = await Promise.allSettled(
       setsToUpdate.map(set => updateExerciseSet(set.id, { done: set.done }))
     );
+
+    // Best-effort update: log failures but do not block routine creation
+    results.forEach((res, idx) => {
+      if (res.status === 'rejected') {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to update exercise set done status', {
+          setId: setsToUpdate[idx]?.id,
+          error: res.reason,
+        });
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -84,11 +98,11 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
           name: routineName,
           workout_type_id: 1,
           exercise_templates: exercises.map(exercise => ({
-            exercise_type_id: exercise.exercise_type_id as number,
+            exercise_type_id: Number(exercise.exercise_type_id),
             set_templates: exercise.exercise_sets.map(set => ({
               reps: set.reps || 0,
               intensity: set.intensity || 0,
-              intensity_unit_id: set.intensity_unit_id,
+              intensity_unit_id: Number(set.intensity_unit_id),
             })),
           })),
         };
