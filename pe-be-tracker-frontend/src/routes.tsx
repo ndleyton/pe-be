@@ -7,8 +7,10 @@ import { PageErrorBoundary } from '@/shared/components/error';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
-// Lazy load components with error boundaries
-const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
+// Import MyWorkoutsPage directly (no lazy loading for core page)
+import { MyWorkoutsPage } from './features/workouts/pages';
+
+// Lazy load other components with error boundaries
 const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
 const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
 const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
@@ -75,11 +77,7 @@ const routes: RouteObject[] = [
     children: [
       {
         path: 'workouts',
-        element: (
-          <PageWrapper>
-            <MyWorkoutsPage />
-          </PageWrapper>
-        ),
+        element: <MyWorkoutsPage />,
       },
       {
         path: 'workouts/:workoutId',
