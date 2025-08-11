@@ -29,6 +29,11 @@ async def test_create_routine_endpoint_success():
 
     # Safety: ensure we are running against a test database to avoid destructive ops
     db_url = settings.DATABASE_URL
+    # Ensure async driver for SQLAlchemy asyncio
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
     db_name = urlsplit(db_url).path.lstrip("/")
     if not db_name or "test" not in db_name.lower():
         pytest.skip("Integration test requires a dedicated test database")
