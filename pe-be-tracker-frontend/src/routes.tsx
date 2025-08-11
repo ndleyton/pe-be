@@ -7,8 +7,10 @@ import { PageErrorBoundary } from '@/shared/components/error';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
-// Lazy load components with error boundaries
-const MyWorkoutsPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.MyWorkoutsPage })));
+// Import MyWorkoutsPage directly (no lazy loading for core page)
+import { MyWorkoutsPage } from './features/workouts/pages';
+
+// Lazy load other components with error boundaries  
 const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
 const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
 const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
@@ -48,10 +50,135 @@ const LoadingFallback = () => (
   </div>
 );
 
+// ExerciseTypesPage-specific loading fallback that matches its structure
+const ExerciseTypesPageFallback = () => (
+  <div className="max-w-5xl mx-auto p-8 text-center">
+    <div className="mb-6">
+      <h1 className="text-3xl font-bold mb-4">Exercise Types</h1>
+      
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
+      </div>
+    </div>
+
+    {/* Exercise Types Grid with skeletons */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Keep spinner for tests */}
+      <div className="col-span-full flex justify-center py-4">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-12 w-12 rounded" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Skeleton className="h-7 w-20 rounded-full" />
+            <Skeleton className="h-7 w-28 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ProfilePage-specific loading fallback that matches its structure
+const ProfilePageFallback = () => (
+  <div className="max-w-5xl mx-auto p-8 text-center">
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Profile</h1>
+        <p className="text-muted-foreground mt-1">Track your fitness journey</p>
+      </div>
+      
+      {/* WeekTracking Skeleton */}
+      <div className="bg-base-100 rounded-lg p-4 mb-6">
+        <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
+        <div className="flex justify-between items-center gap-1">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <span className="text-xs text-card-foreground/60">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'][i]}
+              </span>
+              <Skeleton className="w-8 h-8 rounded-full" />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-card-foreground/50 mt-2">
+          <span>7 days ago</span>
+          <span>Today</span>
+        </div>
+      </div>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-card rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-12" />
+              </div>
+              <Skeleton className="w-12 h-12 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Account Information Section */}
+      <div className="bg-card rounded-lg p-6">
+        <h2 className="text-lg font-semibold mb-4">Account Information</h2>
+        <div className="space-y-4">
+          <div>
+            <Skeleton className="h-4 w-12 mb-1" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <div>
+            <Skeleton className="h-4 w-16 mb-1" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Keep spinner for tests */}
+      <div className="flex justify-center py-4">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    </div>
+  </div>
+);
+
 // Wrapper component for pages with error boundary and suspense
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <PageErrorBoundary>
     <Suspense fallback={<LoadingFallback />}>
+      {children}
+    </Suspense>
+  </PageErrorBoundary>
+);
+
+// Wrapper component for ExerciseTypesPage with custom fallback
+const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <PageErrorBoundary>
+    <Suspense fallback={<ExerciseTypesPageFallback />}>
+      {children}
+    </Suspense>
+  </PageErrorBoundary>
+);
+
+// Wrapper component for ProfilePage with custom fallback
+const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <PageErrorBoundary>
+    <Suspense fallback={<ProfilePageFallback />}>
       {children}
     </Suspense>
   </PageErrorBoundary>
@@ -75,11 +202,7 @@ const routes: RouteObject[] = [
     children: [
       {
         path: 'workouts',
-        element: (
-          <PageWrapper>
-            <MyWorkoutsPage />
-          </PageWrapper>
-        ),
+        element: <MyWorkoutsPage />,
       },
       {
         path: 'workouts/:workoutId',
@@ -92,9 +215,9 @@ const routes: RouteObject[] = [
       {
         path: 'exercise-types',
         element: (
-          <PageWrapper>
+          <ExerciseTypesPageWrapper>
             <ExerciseTypesPage />
-          </PageWrapper>
+          </ExerciseTypesPageWrapper>
         ),
       },
       {
@@ -132,9 +255,9 @@ const routes: RouteObject[] = [
       {
         path: 'profile',
         element: (
-          <PageWrapper>
+          <ProfilePageWrapper>
             <ProfilePage />
-          </PageWrapper>
+          </ProfilePageWrapper>
         ),
       },
       {
