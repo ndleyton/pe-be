@@ -81,7 +81,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
       if (res.status === 'rejected') {
         // eslint-disable-next-line no-console
         console.warn('Failed to update exercise set done status', {
-          setId: setsToUpdate[idx]?.id,
+          setId: setsToUpdate[idx].id,
           error: res.reason,
         });
       }
