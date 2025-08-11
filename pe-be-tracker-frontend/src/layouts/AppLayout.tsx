@@ -2,10 +2,9 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppBar, SideDrawer, DesktopSidebar, BottomNav } from '../shared/components/layout';
 import { GuestModeBanner } from '../shared/components/feedback';
-import { useAuthStore } from '@/stores';
 
 const AppLayout: React.FC = () => {
-  const authLoading = useAuthStore(state => state.loading);
+  // Guest banner is rendered as an overlay so it won't affect layout
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -21,14 +20,12 @@ const AppLayout: React.FC = () => {
         <DesktopSidebar />
         
         {/* Main Content Area */}
-        <div className="flex flex-col flex-1 lg:ml-64">
+        <div className="relative flex flex-col flex-1 lg:ml-64">
           {/* Top App Bar */}
           <AppBar />
           
-          {/* Guest Mode Banner with placeholder height during auth loading to prevent CLS */}
-          <div className={authLoading ? 'min-h-16' : ''}>
-            <GuestModeBanner />
-          </div>
+          {/* Guest Mode Banner overlay (positioned relative to this container) */}
+          <GuestModeBanner />
           
           {/* Side Drawer (mobile/tablet) */}
           <SideDrawer />

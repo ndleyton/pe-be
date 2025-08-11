@@ -47,7 +47,8 @@ export const getRoutine = async (id: number): Promise<Routine> => {
 };
 
 export const createRoutine = async (routineData: CreateRoutineData): Promise<Routine> => {
-  const response = await api.post('/routines', routineData);
+  // Backend is mounted at /api/v1/routines/ and prefers trailing slash for POST
+  const response = await api.post('/routines/', routineData);
   return response.data;
 };
 

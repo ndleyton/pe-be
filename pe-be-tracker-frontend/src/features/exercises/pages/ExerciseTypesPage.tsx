@@ -92,14 +92,14 @@ const ExerciseTypesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <>
-          {/* Keep spinner for tests while showing skeletons */}
-          <div className="flex justify-center py-4">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
+      {/* Exercise Types Grid - Always show structure */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <>
+            {/* Keep spinner for tests while showing skeletons */}
+            <div className="col-span-full flex justify-center py-4">
+              <span className="loading loading-spinner loading-lg"></span>
+            </div>
             {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-4 border border-border">
                 <div className="flex items-start gap-4">
@@ -116,33 +116,26 @@ const ExerciseTypesPage: React.FC = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </>
+          </>
+        ) : (
+          filteredExerciseTypes.map((exerciseType) => (
+            <ExerciseTypeCard key={exerciseType.id} exerciseType={exerciseType} />
+          ))
+        )}
+      </div>
+      
+      {/* Loading more indicator */}
+      {!isLoading && isFetchingNextPage && (
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
       )}
-
-      {/* Exercise Types Grid */}
-      {!isLoading && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredExerciseTypes.map((exerciseType) => (
-              <ExerciseTypeCard key={exerciseType.id} exerciseType={exerciseType} />
-            ))}
-          </div>
-          
-          {/* Loading more indicator */}
-          {isFetchingNextPage && (
-            <div className="flex justify-center py-8">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
-          )}
-          
-          {/* End of results indicator */}
-          {!hasMore && filteredExerciseTypes.length > 0 && (
-            <div className="text-center py-8">
-              <span className="text-muted-foreground text-sm">No more exercise types to load</span>
-            </div>
-          )}
-        </>
+      
+      {/* End of results indicator */}
+      {!isLoading && !hasMore && filteredExerciseTypes.length > 0 && (
+        <div className="text-center py-8">
+          <span className="text-muted-foreground text-sm">No more exercise types to load</span>
+        </div>
       )}
 
       {/* Empty State */}

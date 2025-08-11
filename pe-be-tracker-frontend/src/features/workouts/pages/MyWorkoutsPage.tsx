@@ -57,6 +57,12 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
+  // Memoize loading state to prevent unnecessary rerenders
+  const weekTrackingLoading = React.useMemo(() => 
+    isAuthenticated && isLoading, 
+    [isAuthenticated, isLoading]
+  );
+
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -114,33 +120,6 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, error, setUser]);
 
-  if (isAuthenticated && isLoading) {
-    return (
-      <div className="max-w-5xl mx-auto p-8 text-center">
-        <div className="max-w-4xl mx-auto">
-          {/* Keep text for tests while adding skeletons */}
-          <p className="text-muted-foreground mb-4">Loading workouts...</p>
-          <div className="space-y-3">
-            {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-              <div key={i} className="bg-card rounded-lg p-4 border border-border">
-                <div className="flex items-center space-x-4">
-                  <Skeleton className="w-10 h-10 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-2/5 mb-2" />
-                    <div className="flex items-center gap-4">
-                      <Skeleton className="h-5 w-24" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  </div>
-                  <Skeleton className="w-5 h-5 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (sessionExpired) {
     const errorMessage = getErrorMessage(error);
@@ -172,7 +151,11 @@ const MyWorkoutsPage = () => {
           <div className="mb-6">
             <h1 className="text-2xl font-bold">Workouts</h1>
           </div>
-          <WeekTracking workouts={workouts} loading={isAuthenticated && isLoading} className="mb-6" />
+          <WeekTracking 
+            workouts={workouts} 
+            loading={weekTrackingLoading} 
+            className="mb-6" 
+          />
           
           <RoutinesSection onStartWorkout={handleStartWorkoutFromRecipe} />
           
@@ -205,7 +188,26 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {validWorkouts.length === 0 ? (
+          {isAuthenticated && isLoading ? (
+            <div className="space-y-3">
+              <p className="text-muted-foreground mb-4">Loading workouts...</p>
+              {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
+                <div key={i} className="bg-card rounded-lg p-4 border border-border">
+                  <div className="flex items-center space-x-4">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <div className="flex-1">
+                      <Skeleton className="h-5 w-2/5 mb-2" />
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                    <Skeleton className="w-5 h-5 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : validWorkouts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>

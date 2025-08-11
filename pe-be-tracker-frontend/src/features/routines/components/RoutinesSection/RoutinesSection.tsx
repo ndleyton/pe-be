@@ -67,7 +67,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
     return (
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-md font-semibold text-muted-foreground">Quick Start Routines</h3>
+          <h3 className="text-lg font-semibold text-muted-foreground">Quick Start Routines</h3>
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
       </div>
