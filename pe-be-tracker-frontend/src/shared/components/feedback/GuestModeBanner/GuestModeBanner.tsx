@@ -1,6 +1,9 @@
 import React from 'react';
 import { useAuthStore, useGuestStore } from '@/stores';
 
+// Delay in milliseconds before showing the banner to avoid layout shift
+const BANNER_DISPLAY_DELAY_MS = 800;
+
 const GuestModeBanner: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const authLoading = useAuthStore(state => state.loading);
@@ -17,7 +20,7 @@ const GuestModeBanner: React.FC = () => {
       // Show banner after a short delay for smoother transition
       const timer = setTimeout(() => {
         setShowBanner(true);
-      }, 800);
+      }, BANNER_DISPLAY_DELAY_MS);
       return () => clearTimeout(timer);
     } else {
       setShowBanner(false);
