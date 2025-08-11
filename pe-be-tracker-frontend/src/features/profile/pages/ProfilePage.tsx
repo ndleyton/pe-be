@@ -71,19 +71,6 @@ const ProfilePage: React.FC = () => {
       }, 0) / completedWorkouts.length / (1000 * 60) // Convert to minutes
     : 0;
 
-  if (isAuthenticated && isLoading) {
-    return (
-      <div className="p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse">
-                      <div className="h-8 bg-muted rounded w-48 mb-6"></div>
-          <div className="h-32 bg-muted rounded mb-6"></div>
-          <div className="h-48 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (isAuthenticated && error) {
     return (
