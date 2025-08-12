@@ -14,13 +14,10 @@ interface ExerciseListProps {
 const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId, onExerciseUpdate }) => {
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-semibold text-foreground mb-4">
-        Exercises: {exercises.length}
-      </h2>
+      <div className="h-px w-full bg-primary mb-4" role="separator" />
       
       {isLoading && (
         <>
-          <div className="text-muted-foreground text-center py-2">Loading exercises...</div>
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-4 border border-border">

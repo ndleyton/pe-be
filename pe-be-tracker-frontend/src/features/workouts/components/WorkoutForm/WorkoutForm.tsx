@@ -147,7 +147,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-6 rounded-lg bg-card text-card-foreground shadow-lg w-full max-w-md mx-auto">
+    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 sm:p-6 rounded-lg bg-card text-card-foreground shadow-lg w-full max-w-md mx-auto">
       {recipe && (
         <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
           <div className="flex items-center space-x-2 mb-2">
@@ -165,7 +165,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
               type="text"
               {...register('name')}
               data-testid="workout-name-input"
-              className="flex-1 bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
               autoFocus
             />
             <Button
@@ -199,7 +199,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
             type="text"
             {...register('notes')}
             data-testid="workout-notes-input"
-            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
           />
         </label>
       </div>
@@ -208,7 +208,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
           <input
             type="datetime-local"
             {...register('start_time', { required: 'Start time is required' })}
-            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
           />
         </label>
         {formState.errors.start_time && <div className="text-destructive text-sm">{formState.errors.start_time.message}</div>}
