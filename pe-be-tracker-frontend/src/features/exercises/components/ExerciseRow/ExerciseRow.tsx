@@ -485,7 +485,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
 
       <CardContent className="p-4 pt-0">
         {/* Sets Table Header */}
-        <div className="grid gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "40px 80px 1fr 40px 32px" }}>
+        <div className="grid gap-2 sm:gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}>
           <div>SET</div>
           <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
           <div>REPS</div>
@@ -498,10 +498,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
           {exerciseSets.map((set, index) => (
             <div
               key={set.id}
-              className={`grid gap-4 items-center p-2 rounded ${
+              className={`grid gap-2 sm:gap-4 items-center p-2 rounded ${
                 set.done ? "bg-done" : "bg-secondary"
               }`}
-              style={{ gridTemplateColumns: "40px 80px 1fr 40px 32px" }}
+              style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}
             >
               <div className="font-medium text-muted-foreground">
                 <span>{index + 1}</span>
@@ -511,11 +511,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.intensity || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center input min-w-[6ch] max-w-[10ch]"
+                  className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
                   disabled={set.done}
                 />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -529,7 +529,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   type="number"
                   value={set.reps || ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center input min-w-[8ch] max-w-[10ch]"
+                  className="h-8 text-center input min-w-[4ch] sm:min-w-[8ch] max-w-[10ch]"
                   disabled={set.done}
                 />
                 <Button
