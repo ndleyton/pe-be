@@ -110,13 +110,13 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
   if (isEditing) {
     return (
-      <div className="bg-card border border-border rounded-lg p-3 flex items-center space-x-2">
+      <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
         <Input
           type="number"
           placeholder="Reps"
           value={editData.reps || ''}
           onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
+          className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
           type="number"
@@ -124,36 +124,39 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Weight"
           value={editData.intensity || ''}
           onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
+          className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
           type="number"
           placeholder="Rest (s)"
           value={editData.rest_time_seconds || ''}
           onChange={(e) => setEditData({ ...editData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="w-20"
+          className="w-20 sm:w-20 flex-shrink-0"
         />
-        <label className="flex items-center space-x-2 text-foreground text-sm">
+        <label className="flex items-center space-x-2 text-foreground text-sm flex-shrink-0">
           <input
             type="checkbox"
             checked={editData.done}
             onChange={(e) => setEditData({ ...editData, done: e.target.checked })}
             className="text-primary"
           />
-          <span>Done</span>
+          <span className="hidden sm:inline">Done</span>
+          <span className="sm:hidden">✓</span>
         </label>
-        <button
-          onClick={handleSave}
-          className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
-        >
-          Save
-        </button>
-        <button
-          onClick={() => setIsEditing(false)}
-          className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-accent"
-        >
-          Cancel
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto justify-end">
+          <button
+            onClick={handleSave}
+            className="px-3 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 flex-1 sm:flex-initial"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => setIsEditing(false)}
+            className="px-3 py-2 bg-muted text-muted-foreground rounded text-sm hover:bg-accent flex-1 sm:flex-initial"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     );
   }
