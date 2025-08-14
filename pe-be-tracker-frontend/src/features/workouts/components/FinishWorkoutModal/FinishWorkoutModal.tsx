@@ -132,8 +132,17 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
     }
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-card text-card-foreground p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" data-testid="finish-workout-modal">
         <h2 className="text-xl font-bold mb-4">Finish Workout?</h2>
         <p className="mb-4 text-muted-foreground">

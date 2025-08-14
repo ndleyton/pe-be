@@ -277,8 +277,8 @@ const WorkoutPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto p-2 sm:p-4 md:p-6 lg:p-8 text-center">
-      <div className="max-w-2xl mx-auto p-3 sm:p-4 md:p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-2 sm:mt-4 md:mt-8">
+    <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center">
+      <div className="max-w-2xl mx-auto p-2 md:p-4 lg:p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-2 md:mt-4 lg:mt-8">
         <div className="flex items-center gap-4 mb-3 sm:mb-4 md:mb-6 text-left">
           <Button variant="ghost" size="icon" asChild aria-label="Go back" className="lg:hidden">
             <Link to="/workouts">
