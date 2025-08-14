@@ -63,6 +63,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   const queryClient = useQueryClient();
   const [routineName, setRoutineName] = useState(workoutName || 'My Routine');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const updateExerciseSetsDoneStatus = async () => {
     if (!isAuthenticated) return;
@@ -115,8 +116,16 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
         const guestExercises = convertToGuestExercises(exercises);
         guestActions.createRoutineFromWorkout(routineName, guestExercises);
       }
-      onClose();
-      setRoutineName('');
+      
+      // Show success message
+      setShowSuccess(true);
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        onClose();
+        setShowSuccess(false);
+        setRoutineName('');
+      }, 2000);
     } catch (error) {
       console.error('Error saving routine:', error);
     } finally {
@@ -127,6 +136,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   const handleCancel = () => {
     onClose();
     setRoutineName(workoutName || 'My Routine');
+    setShowSuccess(false);
   };
 
   const exerciseCount = exercises.length;
@@ -136,40 +146,59 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
     <Sheet open={isOpen} onOpenChange={handleCancel}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Save as Routine</SheetTitle>
+          <SheetTitle>{showSuccess ? 'Routine Saved!' : 'Save as Routine'}</SheetTitle>
           <SheetDescription>
-            Create a reusable routine from this workout with {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''} and {totalSets} set{totalSets !== 1 ? 's' : ''}.
+            {showSuccess 
+              ? `"${routineName}" has been saved successfully and is ready to use for quick starts.`
+              : `Create a reusable routine from this workout with ${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''} and ${totalSets} set${totalSets !== 1 ? 's' : ''}.`
+            }
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label htmlFor="routine-name" className="text-sm font-medium">Routine Name</label>
-            <Input
-              id="routine-name"
-              value={routineName}
-              onChange={(e) => setRoutineName(e.target.value)}
-              placeholder="Enter routine name"
-            />
-          </div>
-          <div className="bg-muted rounded-lg p-3">
-            <h4 className="font-medium text-sm mb-2">Exercises to include:</h4>
-            <div className="space-y-1">
-              {exercises.map((exercise) => (
-                <div key={exercise.id} className="text-sm text-muted-foreground">
-                  {exercise.exercise_type.name} • {exercise.exercise_sets.length} set{exercise.exercise_sets.length !== 1 ? 's' : ''}
-                </div>
-              ))}
+        
+        {showSuccess ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-16 h-16 bg-done/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-done" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
+            <p className="text-center text-muted-foreground">
+              You can now find this routine in your Quick Start section.
+            </p>
           </div>
-        </div>
-        <div className="flex gap-2 mt-4">
-          <Button variant="outline" onClick={handleCancel} className="flex-1">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!routineName.trim() || isLoading} className="flex-1">
-            {isLoading ? 'Saving...' : 'Save Routine'}
-          </Button>
-        </div>
+        ) : (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="routine-name" className="text-sm font-medium">Routine Name</label>
+                <Input
+                  id="routine-name"
+                  value={routineName}
+                  onChange={(e) => setRoutineName(e.target.value)}
+                  placeholder="Enter routine name"
+                />
+              </div>
+              <div className="bg-muted rounded-lg p-3">
+                <h4 className="font-medium text-sm mb-2">Exercises to include:</h4>
+                <div className="space-y-1">
+                  {exercises.map((exercise) => (
+                    <div key={exercise.id} className="text-sm text-muted-foreground">
+                      {exercise.exercise_type.name} • {exercise.exercise_sets.length} set{exercise.exercise_sets.length !== 1 ? 's' : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" onClick={handleCancel} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={!routineName.trim() || isLoading} className="flex-1">
+                {isLoading ? 'Saving...' : 'Save Routine'}
+              </Button>
+            </div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );

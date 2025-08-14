@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore } from '@/stores';
+import { Input } from '@/shared/components/ui/input';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
@@ -110,27 +111,27 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
   if (isEditing) {
     return (
       <div className="bg-card border border-border rounded-lg p-3 flex items-center space-x-2">
-        <input
+        <Input
           type="number"
           placeholder="Reps"
           value={editData.reps || ''}
           onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="p-2 bg-background border border-border rounded text-foreground text-sm text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
+          className="text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
         />
-        <input
+        <Input
           type="number"
           step="0.1"
           placeholder="Weight"
           value={editData.intensity || ''}
           onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="p-2 bg-background border border-border rounded text-foreground text-sm text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
+          className="text-center w-[5ch] min-w-[3ch] max-w-[5ch]"
         />
-        <input
+        <Input
           type="number"
           placeholder="Rest (s)"
           value={editData.rest_time_seconds || ''}
           onChange={(e) => setEditData({ ...editData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
-          className="w-20 p-2 bg-background border border-border rounded text-foreground text-sm"
+          className="w-20"
         />
         <label className="flex items-center space-x-2 text-foreground text-sm">
           <input

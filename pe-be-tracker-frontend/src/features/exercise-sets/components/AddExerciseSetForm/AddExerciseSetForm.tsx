@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createExerciseSet, CreateExerciseSetData, ExerciseSet, getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
 import { IntensityUnitModal } from '@/features/exercises/components';
 import { useGuestStore, useAuthStore, GuestExerciseSet } from '@/stores';
+import { Input } from '@/shared/components/ui/input';
 
 interface AddExerciseSetFormProps {
   exerciseId: number | string; // Can be number (server) or string (guest)
@@ -115,27 +116,26 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
         <div className="flex space-x-3">
           <div className="flex-1">
             <label htmlFor="reps" className="block text-muted-foreground text-sm mb-1">Reps</label>
-            <input
+            <Input
               type="number"
               min="0"
               id="reps"
               value={formData.reps || ''}
               onChange={(e) => setFormData({ ...formData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
-              className="w-full p-2 bg-background border border-border rounded text-foreground"
               placeholder="e.g., 10"
             />
           </div>
           <div className="flex-1 relative">
             <label htmlFor="intensity" className="block text-muted-foreground text-sm mb-1">Weight</label>
             <div className="flex">
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 min="0"
                 id="intensity"
                 value={formData.intensity || ''}
                 onChange={(e) => setFormData({ ...formData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="flex-1 p-2 bg-background border border-border rounded-l text-foreground"
+                className="rounded-r-none border-r-0"
                 placeholder="e.g., 50.5"
               />
               <button
@@ -151,13 +151,12 @@ const AddExerciseSetForm: React.FC<AddExerciseSetFormProps> = ({ exerciseId, onS
           </div>
           <div className="flex-1">
             <label htmlFor="rest-time" className="block text-muted-foreground text-sm mb-1">Rest (seconds)</label>
-            <input
+            <Input
               type="number"
               min="0"
               id="rest-time"
               value={formData.rest_time_seconds || ''}
               onChange={(e) => setFormData({ ...formData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
-              className="w-full p-2 bg-background border border-border rounded text-foreground"
               placeholder="e.g., 60"
             />
           </div>
