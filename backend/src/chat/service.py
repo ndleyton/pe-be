@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 from langfuse import Langfuse
@@ -15,10 +16,9 @@ from src.chat.crud import (
     get_user_conversations,
 )
 from src.chat.schemas import ConversationMessageCreate, CreateRoutineSchema
-from src.exercises.crud import get_exercise_types, get_exercise_type_stats
+from src.exercises.crud import get_exercise_types, get_exercise_type_stats, get_exercises_for_workout
 from src.workouts.service import WorkoutParsingService
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date, get_workout_types
-from src.exercises.crud import get_exercises_for_workout, get_exercise_types
 from src.recipes.service import recipe_service
 from src.recipes.schemas import RecipeCreate, ExerciseTemplateCreate, SetTemplateCreate
 
@@ -65,28 +65,28 @@ class ChatService:
         Returns:
             A string summarizing the last workout, or a message indicating no data found.
         """
-        print(f"DEBUG: _get_last_workout_summary called for user {self.user_id}")
+        self.logger.debug(f"_get_last_workout_summary called for user {self.user_id}")
 
         if not self.session:
-            print("DEBUG: No database session available")
+            self.logger.debug("No database session available")
             return "Database session not available."
 
         try:
             workout = await get_latest_workout_for_user(self.session, self.user_id)
-            print(f"DEBUG: Found workout: {workout}")
+            self.logger.debug(f"Found workout: {workout}")
         except Exception as e:
-            print(f"DEBUG: Error getting latest workout: {e}")
+            self.logger.exception("Error getting latest workout")
             return f"Error retrieving workout: {str(e)}"
 
         if not workout:
-            print("DEBUG: No workout found")
+            self.logger.debug("No workout found")
             return "No workout history found."
 
         try:
             exercises = await get_exercises_for_workout(self.session, workout.id)
-            print(f"DEBUG: Found {len(exercises) if exercises else 0} exercises")
+            self.logger.debug(f"Found {len(exercises) if exercises else 0} exercises")
         except Exception as e:
-            print(f"DEBUG: Error getting exercises: {e}")
+            self.logger.exception("Error getting exercises")
             return f"Error retrieving exercises: {str(e)}"
 
         if not exercises:
@@ -115,10 +115,10 @@ class ChatService:
                         f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
                     )
 
-            print(f"DEBUG: Generated summary: {summary}")
+            self.logger.debug("Successfully generated workout summary")
             return summary
         except Exception as e:
-            print(f"DEBUG: Error generating summary: {e}")
+            self.logger.exception("Error generating summary")
             return f"Error generating summary: {str(e)}"
 
     async def _get_workout_summary_by_date(self, workout_date: str) -> str:
@@ -261,10 +261,7 @@ class ChatService:
             return response
 
         except Exception as e:
-            print(f"Error creating routine: {e}")
-            import traceback
-
-            traceback.print_exc()
+            self.logger.exception("Error creating routine")
             return (
                 "I encountered an issue while creating the routine. Please try again."
             )
@@ -307,6 +304,7 @@ class ChatService:
     def __init__(self, user_id: int, session: Optional[AsyncSession] = None):
         self.user_id = user_id
         self.session = session
+        self.logger = logging.getLogger(__name__)
         self.langfuse = self._get_langfuse_client()
         self.rate_limiter = InMemoryRateLimiter(
             requests_per_second=3,
@@ -367,7 +365,7 @@ class ChatService:
                 # Fallback: best-effort string conversion
                 return str(raw_prompt)
             except Exception as e:
-                print(f"Warning: Could not fetch prompt from Langfuse: {e}")
+                self.logger.warning(f"Could not fetch prompt from Langfuse: {e}")
 
         return """You are a friendly and encouraging fitness coach and personal trainer.
 
@@ -485,9 +483,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
                 if response.tool_calls:
                     # If the LLM wants to call a tool, execute it
-                    print(
-                        f"DEBUG: Tool calls detected: {response.tool_calls}"
-                    )  # Debug logging
+                    self.logger.debug(f"Tool calls detected: {response.tool_calls}")
                     tool_outputs = []
                     for tool_call in response.tool_calls:
                         # Handle both object and dictionary formats
@@ -502,9 +498,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                             tool_args = tool_call.get("args", {})
                             tool_call_id = tool_call.get("id")
 
-                        print(
-                            f"DEBUG: Calling tool {tool_name} with args: {tool_args}"
-                        )  # Debug logging
+                        self.logger.debug(f"Calling tool {tool_name} with args: {tool_args}")
 
                         # Find the tool function by name
                         tool_func = next(
@@ -556,9 +550,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
                                     output = await tool_func(**kwargs)
 
-                                print(f"DEBUG: Tool {tool_name} output: {output}")
+                                self.logger.debug(f"Tool {tool_name} output: {output}")
                             except Exception as e:
-                                print(f"DEBUG: Exception in tool {tool_name}: {str(e)}")
+                                self.logger.exception(f"Exception in tool {tool_name}")
                                 output = f"Error executing tool {tool_name}: {str(e)}"
 
                             tool_outputs.append(
