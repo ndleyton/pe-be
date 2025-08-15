@@ -17,8 +17,10 @@ from src.chat.crud import (
 from src.chat.schemas import ConversationMessageCreate
 from src.exercises.crud import get_exercise_types, get_exercise_type_stats
 from src.workouts.service import WorkoutParsingService
-from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
-from src.exercises.crud import get_exercises_for_workout
+from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date, get_workout_types
+from src.exercises.crud import get_exercises_for_workout, get_exercise_types
+from src.recipes.service import recipe_service
+from src.recipes.schemas import RecipeCreate, ExerciseTemplateCreate, SetTemplateCreate
 
 
 class ChatService:
@@ -176,6 +178,197 @@ class ChatService:
 
         return parsed_workout.model_dump_json()
 
+    async def _create_routine(self, routine_description: str) -> str:
+        """
+        Creates a workout routine/template based on a text description.
+        
+        Args:
+            routine_description: Text description of the routine to create including exercises, sets, reps, and weights.
+            
+        Returns:
+            A string describing the created routine, or an error message if creation failed.
+        """
+        if not self.session:
+            return "Database session not available."
+            
+        try:
+            import json
+            import re
+            
+            # Parse the routine description to extract structure
+            # This is a simplified parser - in production you might want more sophisticated NLP
+            description_lower = routine_description.lower()
+            
+            # Determine workout type (default to strength training)
+            workout_types = await get_workout_types(self.session)
+            workout_type_id = 1  # Default fallback
+            
+            if workout_types:
+                # Look for workout type keywords
+                if any(word in description_lower for word in ['cardio', 'running', 'cycling', 'endurance']):
+                    cardio_type = next((wt for wt in workout_types if 'cardio' in wt.name.lower()), None)
+                    if cardio_type:
+                        workout_type_id = cardio_type.id
+                else:
+                    # Default to first available workout type or look for strength
+                    strength_type = next((wt for wt in workout_types if 'strength' in wt.name.lower()), None)
+                    if strength_type:
+                        workout_type_id = strength_type.id
+                    else:
+                        workout_type_id = workout_types[0].id
+            
+            # Extract routine name from description
+            routine_name = "Custom Routine"
+            name_patterns = [
+                r"routine\s+called\s+['\"]([^'\"]+)['\"]",
+                r"name\s+['\"]([^'\"]+)['\"]",
+                r"call\s+it\s+['\"]([^'\"]+)['\"]"
+            ]
+            
+            for pattern in name_patterns:
+                match = re.search(pattern, description_lower)
+                if match:
+                    routine_name = match.group(1).title()
+                    break
+            
+            # Look for exercises in the description
+            exercise_templates = []
+            
+            # Get available exercise types
+            exercise_types_result = await get_exercise_types(self.session, limit=1000)
+            exercise_types = exercise_types_result.data if exercise_types_result else []
+            
+            # Common exercise name mappings
+            exercise_mappings = {
+                'bench press': ['bench press', 'bench'],
+                'squat': ['squat', 'squats'],
+                'deadlift': ['deadlift', 'deadlifts'],
+                'pull up': ['pull up', 'pullup', 'pull-up', 'pullups'],
+                'push up': ['push up', 'pushup', 'push-up', 'pushups'],
+                'overhead press': ['overhead press', 'shoulder press', 'military press'],
+                'row': ['row', 'rows', 'barbell row', 'dumbbell row'],
+                'curl': ['curl', 'curls', 'bicep curl', 'biceps curl']
+            }
+            
+            # Find exercise matches
+            found_exercises = []
+            for exercise_type in exercise_types:
+                exercise_name_lower = exercise_type.name.lower()
+                
+                # Direct name match
+                if exercise_name_lower in description_lower:
+                    found_exercises.append(exercise_type)
+                    continue
+                    
+                # Check mappings
+                for canonical_name, variations in exercise_mappings.items():
+                    if exercise_name_lower in variations:
+                        for variation in variations:
+                            if variation in description_lower:
+                                found_exercises.append(exercise_type)
+                                break
+                        break
+            
+            # If no specific exercises found, create a basic template
+            if not found_exercises:
+                # Try to find at least one common exercise
+                common_exercises = ['bench press', 'squat', 'deadlift']
+                for common_ex in common_exercises:
+                    matching_ex = next((et for et in exercise_types if common_ex in et.name.lower()), None)
+                    if matching_ex:
+                        found_exercises.append(matching_ex)
+                        break
+            
+            # Create exercise templates
+            for exercise_type in found_exercises[:6]:  # Limit to 6 exercises max
+                # Parse sets, reps, and weight from description
+                sets = 3  # Default
+                reps = 10  # Default
+                weight = 50.0  # Default weight
+                
+                # Look for patterns like "3 sets of 10" or "4x8" 
+                sets_patterns = [
+                    rf"{exercise_type.name.lower()}.*?(\d+)\s*sets?\s*of\s*(\d+)",
+                    rf"{exercise_type.name.lower()}.*?(\d+)x(\d+)",
+                    r"(\d+)\s*sets?\s*of\s*(\d+)",
+                    r"(\d+)x(\d+)"
+                ]
+                
+                for pattern in sets_patterns:
+                    match = re.search(pattern, description_lower)
+                    if match:
+                        sets = int(match.group(1))
+                        reps = int(match.group(2))
+                        break
+                
+                # Look for weight patterns
+                weight_patterns = [
+                    rf"{exercise_type.name.lower()}.*?(\d+(?:\.\d+)?)\s*(?:lb|lbs|pounds?)",
+                    rf"{exercise_type.name.lower()}.*?(\d+(?:\.\d+)?)\s*(?:kg|kilos?)",
+                    r"(\d+(?:\.\d+)?)\s*(?:lb|lbs|pounds?)",
+                    r"(\d+(?:\.\d+)?)\s*(?:kg|kilos?)"
+                ]
+                
+                for pattern in weight_patterns:
+                    match = re.search(pattern, description_lower)
+                    if match:
+                        weight = float(match.group(1))
+                        break
+                
+                # Get default intensity unit for this exercise type
+                intensity_unit_id = exercise_type.default_intensity_unit
+                
+                # Create set templates
+                set_templates = []
+                for i in range(min(sets, 5)):  # Max 5 sets per exercise
+                    set_templates.append(SetTemplateCreate(
+                        reps=reps,
+                        intensity=weight,
+                        intensity_unit_id=intensity_unit_id
+                    ))
+                
+                exercise_templates.append(ExerciseTemplateCreate(
+                    exercise_type_id=exercise_type.id,
+                    set_templates=set_templates
+                ))
+            
+            # If no exercises were found, return helpful message
+            if not exercise_templates:
+                return f"I couldn't identify specific exercises in your description. Please be more specific about which exercises you want in your routine, such as 'bench press', 'squat', 'deadlift', etc."
+            
+            # Create the routine
+            routine_data = RecipeCreate(
+                name=routine_name,
+                description=f"Created from: {routine_description[:200]}{'...' if len(routine_description) > 200 else ''}",
+                workout_type_id=workout_type_id,
+                exercise_templates=exercise_templates
+            )
+            
+            created_routine = await recipe_service.create_recipe(
+                self.session, routine_data, self.user_id
+            )
+            
+            # Format response
+            response = f"✅ Created routine '{created_routine.name}' with {len(created_routine.exercise_templates)} exercises:\n\n"
+            
+            for i, template in enumerate(created_routine.exercise_templates, 1):
+                exercise_name = template.exercise_type.name if template.exercise_type else "Unknown Exercise"
+                response += f"{i}. {exercise_name}\n"
+                
+                for j, set_template in enumerate(template.set_templates, 1):
+                    intensity_unit = ""
+                    if set_template.intensity_unit:
+                        intensity_unit = f" {set_template.intensity_unit.abbreviation}"
+                    
+                    response += f"   Set {j}: {set_template.reps} reps @ {set_template.intensity}{intensity_unit}\n"
+                response += "\n"
+            
+            response += f"Your routine has been saved and you can start it anytime from the routines page!"
+            return response
+            
+        except Exception as e:
+            return f"Error creating routine: {str(e)}"
+
     def _get_tools(self) -> List[Tool]:
         """
         Returns a list of LangChain tools available to the LLM.
@@ -200,6 +393,11 @@ class ChatService:
                 name="get_workout_summary_by_date",
                 func=self._get_workout_summary_by_date,
                 description="Useful for when you need to find out what the user did in their workout on a specific date. Input should be the date in YYYY-MM-DD format.",
+            ),
+            Tool(
+                name="create_routine",
+                func=self._create_routine,
+                description="Use this tool when the user wants to create a new workout routine or template. Input should be a detailed description of the routine including exercises, sets, reps, and weights. For example: 'Create a routine called Push Day with bench press 3 sets of 8 at 185 lbs, overhead press 3 sets of 10 at 95 lbs, and push ups 3 sets of 15'.",
             ),
         ]
 
