@@ -191,46 +191,6 @@ class ChatService:
             return "Database session not available."
 
         try:
-            import json
-            import re
-            
-            # Parse the routine description to extract structure
-            # This is a simplified parser - in production you might want more sophisticated NLP
-            description_lower = routine_description.lower()
-            
-            # Determine workout type (default to strength training)
-            workout_types = await get_workout_types(self.session)
-            workout_type_id = 1  # Default fallback
-            
-            if workout_types:
-                # Look for workout type keywords
-                if any(word in description_lower for word in ['cardio', 'running', 'cycling', 'endurance']):
-                    cardio_type = next((wt for wt in workout_types if 'cardio' in wt.name.lower()), None)
-                    if cardio_type:
-                        workout_type_id = cardio_type.id
-                else:
-                    # Default to first available workout type or look for strength
-                    strength_type = next((wt for wt in workout_types if 'strength' in wt.name.lower()), None)
-                    if strength_type:
-                        workout_type_id = strength_type.id
-                    else:
-                        workout_type_id = workout_types[0].id
-            
-            # Extract routine name from description
-            routine_name = "Custom Routine"
-            name_patterns = [
-                r"routine\s+called\s+['\"]([^'\"]+)['\"]",
-                r"name\s+['\"]([^'\"]+)['\"]",
-                r"call\s+it\s+['\"]([^'\"]+)['\"]"
-            ]
-            
-            for pattern in name_patterns:
-                match = re.search(pattern, description_lower)
-                if match:
-                    routine_name = match.group(1).title()
-                    break
-            
-            # Look for exercises in the description
             exercise_templates = []
             for ex_data in exercises:
                 exercise_name = ex_data.get("exercise_name")
