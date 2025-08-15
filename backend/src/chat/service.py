@@ -14,7 +14,7 @@ from src.chat.crud import (
     get_conversation_by_id,
     get_user_conversations,
 )
-from src.chat.schemas import ConversationMessageCreate
+from src.chat.schemas import ConversationMessageCreate, CreateRoutineSchema
 from src.exercises.crud import get_exercise_types, get_exercise_type_stats
 from src.workouts.service import WorkoutParsingService
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date, get_workout_types

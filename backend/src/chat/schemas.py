@@ -1,5 +1,5 @@
-from pydantic import ConfigDict, BaseModel
-from typing import List, Optional
+from pydantic import ConfigDict, BaseModel, Field
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -56,3 +56,31 @@ class ConversationListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# Tool schemas for function calling
+class ExerciseInput(BaseModel):
+    """Schema for exercise input in routine creation"""
+
+    exercise_name: str = Field(..., description="The name of the exercise")
+    sets: Optional[int] = Field(3, description="Number of sets", ge=1, le=10)
+    reps: Optional[int] = Field(
+        10, description="Number of repetitions per set", ge=1, le=100
+    )
+    weight: Optional[float] = Field(
+        50.0, description="Weight/intensity for the exercise", ge=0
+    )
+
+
+class CreateRoutineSchema(BaseModel):
+    """Schema for creating workout routines via tool calling"""
+
+    name: str = Field(
+        ..., description="The name of the workout routine", min_length=1, max_length=255
+    )
+    exercises: List[ExerciseInput] = Field(
+        ..., description="List of exercises in the routine", min_items=1
+    )
+    description: Optional[str] = Field(
+        None, description="Optional description of the routine"
+    )
