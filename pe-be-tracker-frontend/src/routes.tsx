@@ -18,7 +18,7 @@ const RoutinesPage = React.lazy(() => import('./features/routines/pages/Routines
 const RoutineDetailsPage = React.lazy(() => import('./features/routines/pages/RoutineDetailsPage'));
 const ChatPage = React.lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
 const ProfilePage = React.lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
-const SettingsPage = React.lazy(() => import('./features/settings/pages').then(module => ({ default: module.SettingsPage })));
+const AboutPage = React.lazy(() => import('./features/about/pages').then(module => ({ default: module.AboutPage })));
 const OAuthCallbackPage = React.lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
 
 // Enhanced loading component with reduced CLS and accessibility
@@ -261,10 +261,10 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'settings',
+        path: 'about',
         element: (
           <PageWrapper>
-            <SettingsPage />
+            <AboutPage />
           </PageWrapper>
         ),
       }
