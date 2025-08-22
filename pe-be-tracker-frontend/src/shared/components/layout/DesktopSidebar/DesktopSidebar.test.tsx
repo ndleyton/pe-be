@@ -149,11 +149,11 @@ describe('DesktopSidebar', () => {
       );
 
       expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /about/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
     });
 
-    it('should show settings and sign out buttons when authenticated', () => {
+    it('should show about and sign out buttons when authenticated', () => {
       mockIsAuthenticated.mockReturnValue(true);
       
       render(
@@ -162,7 +162,7 @@ describe('DesktopSidebar', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+              expect(screen.getByRole('button', { name: /about/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /sign in with google/i })).not.toBeInTheDocument();
     });
