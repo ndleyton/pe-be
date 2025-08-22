@@ -57,7 +57,7 @@ const SideDrawer: React.FC = () => {
           <div className="space-y-2">
             {isAuthenticated ? (
               <>
-                <NavLink to="about" className="w-full">
+                <NavLink to="/about" className="w-full">
                   <Button variant="ghost" className="w-full justify-start" onClick={closeDrawer}>
                     About
                   </Button>

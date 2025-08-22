@@ -1,103 +1,102 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
-import { Mail, Github, Linkedin } from 'lucide-react';
+import { Mail, Github, Linkedin, ExternalLink } from 'lucide-react';
 
 const AboutPage: React.FC = () => {
   return (
-    <div className="max-w-5xl mx-auto p-8 text-center">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">About</h1>
-          <p className="text-muted-foreground mt-1">Get to know the developer</p>
+    <div className="max-w-3xl mx-auto p-6 sm:p-8 space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            About Me
+          </h1>
+          <p className="text-muted-foreground">Full-stack developer passionate about creating meaningful digital experiences</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Developer Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Developer</CardTitle>
-              <CardDescription>
-                About the creator of this fitness tracking application
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-left">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Nicolás Leyton</h3>
-                  <p className="text-muted-foreground">
-                    Full-stack developer eager to help out clients with their journey via technology.
+        <Card className="overflow-hidden border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Nicolás Leyton</CardTitle>
+            <CardDescription className="text-base">
+              Full-stack developer eager to help clients achieve their goals through technology.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent my-4" />
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              I build responsive, accessible, and performant web applications with modern technologies.
+              When I'm not coding, you can find me exploring new technologies or contributing to open source.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl">Get In Touch</CardTitle>
+            <CardDescription>Feel free to reach out for collaboration or just to say hi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <a 
+                href="mailto:ndleyton@uc.cl" 
+                className="group flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="font-medium">Email</h3>
+                  <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    ndleyton@uc.cl
                   </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
 
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>
-                Get in touch for questions, feedback, or collaboration
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <h3 className="font-medium">Email</h3>
-                      <p className="text-sm text-muted-foreground">ndleyton@uc.cl</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="mailto:ndleyton@uc.cl">Send Email</a>
-                  </Button>
+              <a 
+                href="https://github.com/ndleyton" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-foreground">
+                  <Github className="w-5 h-5" />
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Github className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <h3 className="font-medium">GitHub</h3>
-                      <p className="text-sm text-muted-foreground">@ndleyton</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="https://github.com/ndleyton" target="_blank" rel="noopener noreferrer">
-                      View Profile
-                    </a>
-                  </Button>
+                <div className="flex-1 text-left">
+                  <h3 className="font-medium">GitHub</h3>
+                  <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    @ndleyton
+                  </p>
                 </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Linkedin className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <h3 className="font-medium">LinkedIn</h3>
-                      <p className="text-sm text-muted-foreground">Nicolás Leyton</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer">
-                      Connect
-                    </a>
-                  </Button>
+              <a 
+                href="https://www.linkedin.com/in/nicolas-d-leyton/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-[#0A66C2]">
+                  <Linkedin className="w-5 h-5" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex-1 text-left">
+                  <h3 className="font-medium">LinkedIn</h3>
+                  <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    Nicolás Leyton
+                  </p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Project Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>About This App</CardTitle>
-              <CardDescription>
-                Personal Exercise Tracker - Built with modern web technologies
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-left">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl">About This App</CardTitle>
+            <CardDescription>Personal Exercise Tracker - Built with modern web technologies</CardDescription>
+          </CardHeader>
+          <CardContent className="text-left">
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
               <div className="space-y-3">
                 <p className="text-muted-foreground">
                   This fitness tracking application is designed to help users monitor their exercise routines, 
@@ -105,10 +104,9 @@ const AboutPage: React.FC = () => {
                   and modern web technologies for a smooth user experience.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+          </CardContent>
+        </Card>
     </div>
   );
 };
