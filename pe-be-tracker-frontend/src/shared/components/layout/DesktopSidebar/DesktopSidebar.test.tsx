@@ -201,10 +201,10 @@ describe('DesktopSidebar', () => {
       expect(screen.getByRole('link', { name: /exercises/i })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();
+      expect(screen.getByRole('link', { name: /chat/i })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByRole('link', { name: /chat/i })).toHaveFocus();
+      expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();
     });
 
     it('should have proper semantic structure', () => {
