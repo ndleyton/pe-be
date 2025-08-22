@@ -47,7 +47,7 @@ const DesktopSidebar: React.FC = () => {
         <div className="p-4 border-t">
           {isAuthenticated ? (
             <div className="space-y-2">
-              <NavLink to="about" className="w-full">
+              <NavLink to="/about" className="w-full">
                 <Button variant="ghost" className="w-full justify-start">
                   About
                 </Button>

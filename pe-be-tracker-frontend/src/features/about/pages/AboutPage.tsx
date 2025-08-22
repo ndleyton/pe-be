@@ -80,7 +80,7 @@ const AboutPage: React.FC = () => {
                     </div>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <a href="https://linkedin.com/in/Nicolásleyton" target="_blank" rel="noopener noreferrer">
+                    <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer">
                       Connect
                     </a>
                   </Button>
