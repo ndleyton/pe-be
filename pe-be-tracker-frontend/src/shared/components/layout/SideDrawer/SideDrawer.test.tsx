@@ -270,10 +270,10 @@ describe('SideDrawer', () => {
       });
       
       expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /about/i })).not.toBeInTheDocument();
     });
 
-    it('should show Settings and Sign Out buttons when authenticated', async () => {
+    it('should show About and Sign Out buttons when authenticated', async () => {
       // Set authenticated state
       mockIsAuthenticated.mockReturnValue(true);
       
@@ -289,7 +289,7 @@ describe('SideDrawer', () => {
       );
       
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /about/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
       });
       
