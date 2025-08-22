@@ -9,21 +9,20 @@ const AboutPage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             About Me
           </h1>
-          <p className="text-muted-foreground">Full-stack developer passionate about creating meaningful digital experiences</p>
+          <p className="text-muted-foreground">Full-Stack Software Engineer</p>
         </div>
 
         <Card className="overflow-hidden border-border/50 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl">Nicolás Leyton</CardTitle>
             <CardDescription className="text-base">
-              Full-stack developer eager to help clients achieve their goals through technology.
+              Full-Stack Software Engineer eager to help clients achieve their goals through technology.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent my-4" />
             <p className="text-muted-foreground text-sm leading-relaxed">
-              I build responsive, accessible, and performant web applications with modern technologies.
-              When I'm not coding, you can find me exploring new technologies or contributing to open source.
+              When I'm not coding, you can find me working out, bouldering or taking pictures (never at the same time).
             </p>
           </CardContent>
         </Card>
@@ -100,8 +99,7 @@ const AboutPage: React.FC = () => {
               <div className="space-y-3">
                 <p className="text-muted-foreground">
                   This fitness tracking application is designed to help users monitor their exercise routines, 
-                  track progress, and seamlessly consult with the latest AI models to help them achieve their goals. Built with React, TypeScript, 
-                  and modern web technologies for a smooth user experience.
+                  track progress, and seamlessly consult with the latest AI models to help them achieve their goals. You can reach out for implementation questions.
                 </p>
               </div>
             </div>
