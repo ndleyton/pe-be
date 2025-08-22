@@ -25,6 +25,7 @@ const MyWorkoutsPage = () => {
   const guestData = useGuestStore();
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
   
   const {
     data: serverWorkouts,
@@ -120,6 +121,10 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, error, setUser]);
 
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
 
   if (sessionExpired) {
     const errorMessage = getErrorMessage(error);
@@ -188,9 +193,8 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {isAuthenticated && isLoading ? (
+          {(isLoading || !isMounted) ? (
             <div className="space-y-3">
-              <p className="text-muted-foreground mb-4">Loading workouts...</p>
               {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
                 <div key={i} className="bg-card rounded-lg p-4 border border-border">
                   <div className="flex items-center space-x-4">
