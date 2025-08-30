@@ -1,15 +1,34 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleSignInButton } from "./features/auth/components";
 import { HomeLogo } from "./shared/components/layout";
 import { NAV_PATHS } from "./shared/navigation/constants";
+import { useAuthStore } from "./stores/useAuthStore";
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loading, initialized } = useAuthStore();
 
   const handleTryAsGuest = () => {
     navigate(NAV_PATHS.WORKOUTS);
   };
+
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      navigate(NAV_PATHS.WORKOUTS, { replace: true });
+    }
+  }, [initialized, isAuthenticated, navigate]);
+
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="loading loading-spinner loading-lg" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
