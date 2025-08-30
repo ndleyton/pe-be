@@ -23,11 +23,41 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
     rest_time_seconds: exerciseSet.rest_time_seconds || undefined,
     done: exerciseSet.done,
   });
+  
+  // Local string states for inputs to allow intermediate values (e.g., "1.")
+  const [repsInput, setRepsInput] = useState<string>('');
+  const [intensityInput, setIntensityInput] = useState<string>('');
+  const [restInput, setRestInput] = useState<string>('');
 
   const handleSave = async () => {
     try {
+      // Parse string inputs into numbers or undefined
+      const parseOptionalInt = (s: string): number | undefined => {
+        const t = s.trim();
+        if (t === '') return undefined;
+        const n = parseInt(t, 10);
+        return Number.isNaN(n) ? undefined : n;
+      };
+      const parseOptionalFloat = (s: string): number | undefined => {
+        const t = s.trim();
+        if (t === '' || t === '.' || t === '-' || t === '-.') return undefined;
+        const n = parseFloat(t);
+        return Number.isNaN(n) ? undefined : n;
+      };
+
+      const reps = parseOptionalInt(repsInput);
+      const intensity = parseOptionalFloat(intensityInput);
+      const rest_time_seconds = parseOptionalInt(restInput);
+
+      const updateData: UpdateExerciseSetData = {
+        reps,
+        intensity,
+        rest_time_seconds,
+        done: editData.done ?? false,
+      };
+
       if (isAuthenticated) {
-        const updatedSet = await updateExerciseSet(exerciseSet.id, editData);
+        const updatedSet = await updateExerciseSet(exerciseSet.id, updateData);
         onUpdate(updatedSet);
         
         // Invalidate the exercises query to refresh the cache
@@ -37,19 +67,19 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       } else {
         // Handle guest mode update
         guestActions.updateExerciseSet(exerciseSet.id as string, {
-          reps: editData.reps ?? null,
-          intensity: editData.intensity ?? null,
-          rest_time_seconds: editData.rest_time_seconds ?? null,
-          done: editData.done ?? false,
+          reps: reps ?? null,
+          intensity: intensity ?? null,
+          rest_time_seconds: rest_time_seconds ?? null,
+          done: updateData.done ?? false,
         });
         
         // Create updated set for callback
         const updatedSet: ExerciseSet = {
           ...exerciseSet,
-          reps: editData.reps ?? null,
-          intensity: editData.intensity ?? null,
-          rest_time_seconds: editData.rest_time_seconds ?? null,
-          done: editData.done ?? false,
+          reps: reps ?? null,
+          intensity: intensity ?? null,
+          rest_time_seconds: rest_time_seconds ?? null,
+          done: updateData.done ?? false,
           updated_at: new Date().toISOString(),
         };
         onUpdate(updatedSet);
@@ -107,30 +137,47 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       console.error('Error toggling done status:', error);
     }
   };
+  
+  // Initialize input strings and enter edit mode
+  const openEdit = () => {
+    setRepsInput(
+      exerciseSet.reps !== null && exerciseSet.reps !== undefined ? String(exerciseSet.reps) : ''
+    );
+    setIntensityInput(
+      exerciseSet.intensity !== null && exerciseSet.intensity !== undefined ? String(exerciseSet.intensity) : ''
+    );
+    setRestInput(
+      exerciseSet.rest_time_seconds !== null && exerciseSet.rest_time_seconds !== undefined ? String(exerciseSet.rest_time_seconds) : ''
+    );
+    setEditData((prev) => ({ ...prev, done: exerciseSet.done }));
+    setIsEditing(true);
+  };
 
   if (isEditing) {
     return (
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
         <Input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Reps"
-          value={editData.reps || ''}
-          onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
+          value={repsInput}
+          onChange={(e) => setRepsInput(e.target.value)}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
-          type="number"
-          step="0.1"
+          type="text"
+          inputMode="decimal"
           placeholder="Weight"
-          value={editData.intensity || ''}
-          onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
+          value={intensityInput}
+          onChange={(e) => setIntensityInput(e.target.value)}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Rest (s)"
-          value={editData.rest_time_seconds || ''}
-          onChange={(e) => setEditData({ ...editData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
+          value={restInput}
+          onChange={(e) => setRestInput(e.target.value)}
           className="w-20 sm:w-20 flex-shrink-0"
         />
         <label className="flex items-center space-x-2 text-foreground text-sm flex-shrink-0">
@@ -193,7 +240,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       </div>
       <div className="flex items-center space-x-2">
         <button
-          onClick={() => setIsEditing(true)}
+          onClick={openEdit}
           className="text-primary hover:text-primary/80 text-sm"
         >
           Edit

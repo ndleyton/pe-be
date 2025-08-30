@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     Column,
     Integer,
-    Float,
     Boolean,
     ForeignKey,
     Text,
     String,
     DateTime,
+    Numeric,
 )
 from sqlalchemy.orm import relationship, Mapped
 
@@ -25,7 +25,7 @@ class ExerciseSet(Base):
     __tablename__ = "exercise_sets"
 
     reps = Column(Integer)
-    intensity = Column(Float)
+    intensity = Column(Numeric(precision=7, scale=3))
     intensity_unit_id = Column(
         Integer, ForeignKey("intensity_units.id"), nullable=False
     )

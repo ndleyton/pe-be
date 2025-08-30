@@ -55,6 +55,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>({});
   
   // Default intensity unit based on exercise type or fallback
   const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>(() => {
@@ -508,9 +509,52 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               </div>
               <div>
                 <Input
-                  type="number"
-                  value={set.intensity || ""}
-                  onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
+                  type="text"
+                  inputMode="decimal"
+                  value={
+                    intensityInputs[String(set.id)] ??
+                    (set.intensity ?? "")
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setIntensityInputs((prev) => ({ ...prev, [String(set.id)]: v }));
+                  }}
+                  onBlur={(e) => {
+                    const t = e.target.value.trim();
+                    const key = String(set.id);
+                    if (t === "" || t === "." || t === "-" || t === "-.") {
+                      // Revert to persisted value
+                      setIntensityInputs((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
+                      return;
+                    }
+                    const n = Number.parseFloat(t);
+                    if (!Number.isNaN(n)) {
+                      updateSet(exercise.id, set.id, "weight", n);
+                    }
+                    setIntensityInputs((prev) => {
+                      const next = { ...prev };
+                      delete next[key];
+                      return next;
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                    if (e.key === "Escape") {
+                      const key = String(set.id);
+                      setIntensityInputs((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
                   disabled={set.done}
                 />
@@ -527,7 +571,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 </Button>
                 <Input
                   type="number"
-                  value={set.reps || ""}
+                  value={set.reps ?? ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[8ch] max-w-[10ch]"
                   disabled={set.done}

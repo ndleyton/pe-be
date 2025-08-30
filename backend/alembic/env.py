@@ -19,12 +19,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.core.database import Base
 
 # Import all models to ensure they're registered with SQLAlchemy
-from src.users.models import User, OAuthAccount
-from src.workouts.models import Workout, WorkoutType
-from src.exercises.models import Exercise, ExerciseType, ExerciseMuscle, IntensityUnit, MuscleGroup, Muscle
-from src.exercise_sets.models import ExerciseSet
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
-from src.chat.models import Conversation, ConversationMessage
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv
