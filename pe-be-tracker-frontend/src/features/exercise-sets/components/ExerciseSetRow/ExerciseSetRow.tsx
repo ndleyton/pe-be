@@ -158,8 +158,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           value={repsInput}
           onChange={(e) => setRepsInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') setIsEditing(false);
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
           }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
@@ -170,8 +169,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           value={intensityInput}
           onChange={(e) => setIntensityInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') setIsEditing(false);
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
           }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
@@ -182,8 +180,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           value={restInput}
           onChange={(e) => setRestInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') setIsEditing(false);
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
           }}
           className="w-20 sm:w-20 flex-shrink-0"
         />
