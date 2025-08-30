@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 from pydantic import ConfigDict, BaseModel
 
 
@@ -7,7 +8,7 @@ class ExerciseSetBase(BaseModel):
     """Base schema for exercise set data"""
 
     reps: Optional[int] = None
-    intensity: Optional[float] = None
+    intensity: Optional[Decimal] = None
     intensity_unit_id: int
     exercise_id: int
     rest_time_seconds: Optional[int] = None
@@ -26,7 +27,7 @@ class ExerciseSetUpdate(BaseModel):
     """Schema for updating exercise sets"""
 
     reps: Optional[int] = None
-    intensity: Optional[float] = None
+    intensity: Optional[Decimal] = None
     intensity_unit_id: Optional[int] = None
     rest_time_seconds: Optional[int] = None
     done: Optional[bool] = None

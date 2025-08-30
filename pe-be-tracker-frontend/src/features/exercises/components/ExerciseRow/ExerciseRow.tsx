@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { useAuthStore } from '@/stores';
-import { AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
-import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
-import { MoreVertical, Timer, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
-import { formatDisplayDate } from '@/utils/date';
-import { truncateWords } from '@/utils/text';
+import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
+import { MoreVertical, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks';
+import { formatDecimal, parseDecimalInput } from '@/utils/format';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -41,7 +38,6 @@ interface MoreMenuModalState {
 }
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
-  const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
@@ -56,14 +52,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
-  // Default intensity unit based on exercise type or fallback
-  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>(() => {
-    // Try to get from exercise type default, otherwise fallback to kg
-    return {
-      id: 2,
-      name: 'Kilograms',
-      abbreviation: 'kg'
-    };
+  // Default intensity unit
+  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>({
+    id: 1,
+    name: 'Kilograms',
+    abbreviation: 'kg'
   });
   
 
@@ -319,8 +312,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     const tempId = `temp-${Date.now()}`;
     const newExerciseSet: ExerciseSet = {
       id: tempId,
-      reps: lastSet?.reps || 0,
-      intensity: lastSet?.intensity || 0,
+      reps: lastSet?.reps,
+      intensity: lastSet?.intensity,
       intensity_unit_id: currentIntensityUnit.id,
       exercise_id: exerciseId,
       rest_time_seconds: null,
@@ -508,9 +501,24 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               </div>
               <div>
                 <Input
-                  type="number"
-                  value={set.intensity || ""}
-                  onChange={(e) => updateSet(exercise.id, set.id, "weight", Number.parseInt(e.target.value) || 0)}
+                  key={`intensity-${String(set.id)}-${set.intensity ?? ''}`}
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={formatDecimal(set.intensity)}
+                  onBlur={(e) => {
+                    const parsed = parseDecimalInput(e.currentTarget.value);
+                    if (parsed !== null) {
+                      updateSet(exercise.id, set.id, "weight", parsed);
+                      e.currentTarget.value = formatDecimal(parsed);
+                    } else {
+                      e.currentTarget.value = formatDecimal(set.intensity);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Escape") {
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
                   disabled={set.done}
                 />
@@ -527,7 +535,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                 </Button>
                 <Input
                   type="number"
-                  value={set.reps || ""}
+                  value={set.reps ?? ""}
                   onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[8ch] max-w-[10ch]"
                   disabled={set.done}
