@@ -27,11 +27,11 @@ const ExerciseTypeMore: React.FC<ExerciseTypeMoreProps> = ({
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
-  // For guest mode, use hardcoded intensity units
+  // For guest mode, use hardcoded intensity units (match backend)
   const guestIntensityUnits: GuestIntensityUnit[] = [
-    { id: 1, name: 'Bodyweight', abbreviation: 'bw' },
-    { id: 2, name: 'Kilograms', abbreviation: 'kg' },
-    { id: 3, name: 'Pounds', abbreviation: 'lbs' },
+    { id: 1, name: 'Kilograms', abbreviation: 'kg' },
+    { id: 2, name: 'Pounds', abbreviation: 'lbs' },
+    { id: 5, name: 'Bodyweight', abbreviation: 'BW' },
   ];
 
   const intensityUnits = isAuthenticated ? serverIntensityUnits : guestIntensityUnits;
