@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore } from '@/stores';
 import { Input } from '@/shared/components/ui/input';
+import { formatDecimal, parseDecimalInput } from '@/utils/format';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
@@ -38,15 +39,9 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
         const n = parseInt(t, 10);
         return Number.isNaN(n) ? undefined : n;
       };
-      const parseOptionalFloat = (s: string): number | undefined => {
-        const t = s.trim();
-        if (t === '' || t === '.' || t === '-' || t === '-.') return undefined;
-        const n = parseFloat(t.replace(/,/g, '.'));
-        return Number.isNaN(n) ? undefined : n;
-      };
 
       const reps = parseOptionalInt(repsInput);
-      const intensity = parseOptionalFloat(intensityInput);
+      const intensity = parseDecimalInput(intensityInput);
       const rest_time_seconds = parseOptionalInt(restInput);
 
       const updateData: UpdateExerciseSetData = {
@@ -241,7 +236,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
             <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps ?? '-'}
           </div>
           <div className="text-foreground">
-            <span className="text-muted-foreground">Weight:</span> {exerciseSet.intensity ?? '-'}
+            <span className="text-muted-foreground">Weight:</span> {formatDecimal(exerciseSet.intensity)}
           </div>
           {exerciseSet.rest_time_seconds != null && (
             <div className="text-foreground">
