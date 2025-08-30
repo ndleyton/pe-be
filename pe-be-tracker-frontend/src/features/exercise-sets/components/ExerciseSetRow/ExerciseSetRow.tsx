@@ -41,7 +41,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       const parseOptionalFloat = (s: string): number | undefined => {
         const t = s.trim();
         if (t === '' || t === '.' || t === '-' || t === '-.') return undefined;
-        const n = parseFloat(t);
+        const n = parseFloat(t.replace(/,/g, '.'));
         return Number.isNaN(n) ? undefined : n;
       };
 
@@ -162,6 +162,10 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Reps"
           value={repsInput}
           onChange={(e) => setRepsInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+            if (e.key === 'Escape') setIsEditing(false);
+          }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
@@ -170,6 +174,10 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Weight"
           value={intensityInput}
           onChange={(e) => setIntensityInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+            if (e.key === 'Escape') setIsEditing(false);
+          }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
@@ -178,6 +186,10 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
           placeholder="Rest (s)"
           value={restInput}
           onChange={(e) => setRestInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+            if (e.key === 'Escape') setIsEditing(false);
+          }}
           className="w-20 sm:w-20 flex-shrink-0"
         />
         <label className="flex items-center space-x-2 text-foreground text-sm flex-shrink-0">
@@ -226,12 +238,12 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
         </button>
         <div className="flex space-x-6 text-sm">
           <div className="text-foreground">
-            <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps || '-'}
+            <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps ?? '-'}
           </div>
           <div className="text-foreground">
-            <span className="text-muted-foreground">Weight:</span> {exerciseSet.intensity || '-'}
+            <span className="text-muted-foreground">Weight:</span> {exerciseSet.intensity ?? '-'}
           </div>
-          {exerciseSet.rest_time_seconds && (
+          {exerciseSet.rest_time_seconds != null && (
             <div className="text-foreground">
               <span className="text-muted-foreground">Rest:</span> {exerciseSet.rest_time_seconds}s
             </div>
