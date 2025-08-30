@@ -187,19 +187,24 @@ describe('ExerciseRow', () => {
   });
 
   it('displays exercise sets in grid format', () => {
-    render(<ExerciseRow {...defaultProps} />);
+    const { container } = render(<ExerciseRow {...defaultProps} />);
 
     // Check for set numbers
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
 
-    // Check for set values
-    const intensityInputs = screen.getAllByRole('spinbutton');
-    const weightInputs = intensityInputs.filter(input => (input as HTMLInputElement).value === '50.5' || (input as HTMLInputElement).value === '55');
-    const repsInputs = intensityInputs.filter(input => (input as HTMLInputElement).value === '10' || (input as HTMLInputElement).value === '12');
-    
-    expect(weightInputs).toHaveLength(2);
-    expect(repsInputs).toHaveLength(2);
+    // Weight inputs are textboxes with inputMode="decimal"
+    const weightInputs = Array.from(
+      container.querySelectorAll('input[inputmode="decimal"]')
+    ) as HTMLInputElement[];
+    // Reps inputs are number inputs (spinbuttons)
+    const repsInputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
+
+    const weightValues = weightInputs.map(i => i.value);
+    const repsValues = repsInputs.map(i => i.value);
+
+    expect(weightValues).toEqual(expect.arrayContaining(['50.5', '55']));
+    expect(repsValues).toEqual(expect.arrayContaining(['10', '12']));
   });
 
   it('shows Add Set button', () => {
@@ -269,25 +274,75 @@ describe('ExerciseRow', () => {
 
   it('can update weight/intensity directly in input', async () => {
     const user = userEvent.setup();
-    render(<ExerciseRow {...defaultProps} />);
+    const { container } = render(<ExerciseRow {...defaultProps} />);
 
-    const intensityInputs = screen.getAllByRole('spinbutton');
-    const weightInput = intensityInputs.find(input => (input as HTMLInputElement).value === '50.5');
-    
-    if (weightInput) {
-      await user.clear(weightInput);
-      await user.type(weightInput, '60');
+    const weightInputs = Array.from(
+      container.querySelectorAll('input[inputmode="decimal"]')
+    ) as HTMLInputElement[];
+    const weightInput = weightInputs[0];
 
-      await waitFor(() => {
-        expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
-          ...mockExercise,
-          exercise_sets: [
-            { ...mockExerciseSet1, intensity: 60 },
-            mockExerciseSet2,
-          ],
-        });
+    await user.clear(weightInput);
+    await user.type(weightInput, '60');
+    // Commit via Enter which triggers blur in component
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
+        ...mockExercise,
+        exercise_sets: [
+          { ...mockExerciseSet1, intensity: 60 },
+          mockExerciseSet2,
+        ],
       });
-    }
+    });
+  });
+
+  it('commits decimal comma on Enter for weight input', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ExerciseRow {...defaultProps} />);
+
+    const weightInputs = Array.from(
+      container.querySelectorAll('input[inputmode="decimal"]')
+    ) as HTMLInputElement[];
+    const weightInput = weightInputs[0];
+
+    await user.clear(weightInput);
+    await user.type(weightInput, '60,75');
+    // Press Enter to commit
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      // API called with normalized decimal
+      expect(updateExerciseSet).toHaveBeenCalledWith(1, { intensity: 60.75 });
+      // Parent callback receives updated value
+      expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
+        ...mockExercise,
+        exercise_sets: [
+          { ...mockExerciseSet1, intensity: 60.75 },
+          mockExerciseSet2,
+        ],
+      });
+    });
+  });
+
+  it('reverts weight input on Escape without committing', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ExerciseRow {...defaultProps} />);
+
+    const weightInputs = Array.from(
+      container.querySelectorAll('input[inputmode="decimal"]')
+    ) as HTMLInputElement[];
+    const weightInput = weightInputs[0];
+
+    // Change but cancel with Escape
+    await user.clear(weightInput);
+    await user.type(weightInput, '99,9');
+    await user.keyboard('{Escape}');
+
+    // Value should be reverted to original persisted value
+    expect(weightInput.value).toBe('50.5');
+    // No API call should have been made
+    expect(updateExerciseSet).not.toHaveBeenCalledWith(1, expect.objectContaining({ intensity: 99.9 }));
   });
 
   it('can toggle set completion', async () => {

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ExerciseSet, updateExerciseSet, deleteExerciseSet, UpdateExerciseSetData } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore } from '@/stores';
 import { Input } from '@/shared/components/ui/input';
+import { formatDecimal, parseDecimalInput } from '@/utils/format';
 
 interface ExerciseSetRowProps {
   exerciseSet: ExerciseSet;
@@ -23,11 +24,35 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
     rest_time_seconds: exerciseSet.rest_time_seconds || undefined,
     done: exerciseSet.done,
   });
+  
+  // Local string states for inputs to allow intermediate values (e.g., "1.")
+  const [repsInput, setRepsInput] = useState<string>('');
+  const [intensityInput, setIntensityInput] = useState<string>('');
+  const [restInput, setRestInput] = useState<string>('');
 
   const handleSave = async () => {
     try {
+      // Parse string inputs into numbers or undefined
+      const parseOptionalInt = (s: string): number | undefined => {
+        const t = s.trim();
+        if (t === '') return undefined;
+        const n = parseInt(t, 10);
+        return Number.isNaN(n) ? undefined : n;
+      };
+
+      const reps = parseOptionalInt(repsInput);
+      const intensity = parseDecimalInput(intensityInput);
+      const rest_time_seconds = parseOptionalInt(restInput);
+
+      const updateData: UpdateExerciseSetData = {
+        reps,
+        intensity,
+        rest_time_seconds,
+        done: editData.done ?? false,
+      };
+
       if (isAuthenticated) {
-        const updatedSet = await updateExerciseSet(exerciseSet.id, editData);
+        const updatedSet = await updateExerciseSet(exerciseSet.id, updateData);
         onUpdate(updatedSet);
         
         // Invalidate the exercises query to refresh the cache
@@ -37,19 +62,19 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       } else {
         // Handle guest mode update
         guestActions.updateExerciseSet(exerciseSet.id as string, {
-          reps: editData.reps ?? null,
-          intensity: editData.intensity ?? null,
-          rest_time_seconds: editData.rest_time_seconds ?? null,
-          done: editData.done ?? false,
+          reps: reps ?? null,
+          intensity: intensity ?? null,
+          rest_time_seconds: rest_time_seconds ?? null,
+          done: updateData.done ?? false,
         });
         
         // Create updated set for callback
         const updatedSet: ExerciseSet = {
           ...exerciseSet,
-          reps: editData.reps ?? null,
-          intensity: editData.intensity ?? null,
-          rest_time_seconds: editData.rest_time_seconds ?? null,
-          done: editData.done ?? false,
+          reps: reps ?? null,
+          intensity: intensity ?? null,
+          rest_time_seconds: rest_time_seconds ?? null,
+          done: updateData.done ?? false,
           updated_at: new Date().toISOString(),
         };
         onUpdate(updatedSet);
@@ -107,30 +132,56 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       console.error('Error toggling done status:', error);
     }
   };
+  
+  // Initialize input strings and enter edit mode
+  const openEdit = () => {
+    setRepsInput(
+      exerciseSet.reps !== null && exerciseSet.reps !== undefined ? String(exerciseSet.reps) : ''
+    );
+    setIntensityInput(
+      exerciseSet.intensity !== null && exerciseSet.intensity !== undefined ? String(exerciseSet.intensity) : ''
+    );
+    setRestInput(
+      exerciseSet.rest_time_seconds !== null && exerciseSet.rest_time_seconds !== undefined ? String(exerciseSet.rest_time_seconds) : ''
+    );
+    setEditData((prev) => ({ ...prev, done: exerciseSet.done }));
+    setIsEditing(true);
+  };
 
   if (isEditing) {
     return (
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
         <Input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Reps"
-          value={editData.reps || ''}
-          onChange={(e) => setEditData({ ...editData, reps: e.target.value ? parseInt(e.target.value) : undefined })}
+          value={repsInput}
+          onChange={(e) => setRepsInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
+          }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
-          type="number"
-          step="0.1"
+          type="text"
+          inputMode="decimal"
           placeholder="Weight"
-          value={editData.intensity || ''}
-          onChange={(e) => setEditData({ ...editData, intensity: e.target.value ? parseFloat(e.target.value) : undefined })}
+          value={intensityInput}
+          onChange={(e) => setIntensityInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
+          }}
           className="text-center w-16 sm:w-[5ch] flex-shrink-0"
         />
         <Input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Rest (s)"
-          value={editData.rest_time_seconds || ''}
-          onChange={(e) => setEditData({ ...editData, rest_time_seconds: e.target.value ? parseInt(e.target.value) : undefined })}
+          value={restInput}
+          onChange={(e) => setRestInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') handleSave();
+          }}
           className="w-20 sm:w-20 flex-shrink-0"
         />
         <label className="flex items-center space-x-2 text-foreground text-sm flex-shrink-0">
@@ -179,12 +230,12 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
         </button>
         <div className="flex space-x-6 text-sm">
           <div className="text-foreground">
-            <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps || '-'}
+            <span className="text-muted-foreground">Reps:</span> {exerciseSet.reps ?? '-'}
           </div>
           <div className="text-foreground">
-            <span className="text-muted-foreground">Weight:</span> {exerciseSet.intensity || '-'}
+            <span className="text-muted-foreground">Weight:</span> {formatDecimal(exerciseSet.intensity)}
           </div>
-          {exerciseSet.rest_time_seconds && (
+          {exerciseSet.rest_time_seconds != null && (
             <div className="text-foreground">
               <span className="text-muted-foreground">Rest:</span> {exerciseSet.rest_time_seconds}s
             </div>
@@ -193,7 +244,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
       </div>
       <div className="flex items-center space-x-2">
         <button
-          onClick={() => setIsEditing(true)}
+          onClick={openEdit}
           className="text-primary hover:text-primary/80 text-sm"
         >
           Edit
