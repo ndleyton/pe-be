@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { useAuthStore } from '@/stores';
-import { AddExerciseSetForm } from '@/features/exercise-sets/components';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
-import { Card, CardHeader, CardContent, Button, Input, Badge, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
-import { MoreVertical, Timer, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
-import { formatDisplayDate } from '@/utils/date';
-import { truncateWords } from '@/utils/text';
+import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
+import { MoreVertical, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks';
 
 // Guest intensity unit type (simplified)
@@ -41,7 +37,6 @@ interface MoreMenuModalState {
 }
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
-  const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
@@ -55,7 +50,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
   const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
-  const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>({});
   
   // Default intensity unit based on exercise type or fallback
   const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>(() => {
@@ -509,50 +503,37 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               </div>
               <div>
                 <Input
+                  key={`intensity-${String(set.id)}-${set.intensity ?? ''}`}
                   type="text"
                   inputMode="decimal"
-                  value={
-                    intensityInputs[String(set.id)] ??
-                    (set.intensity ?? "")
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setIntensityInputs((prev) => ({ ...prev, [String(set.id)]: v }));
-                  }}
+                  defaultValue={set.intensity ?? ""}
                   onBlur={(e) => {
-                    const t = e.target.value.trim();
-                    const key = String(set.id);
-                    if (t === "" || t === "." || t === "-" || t === "-.") {
-                      // Revert to persisted value
-                      setIntensityInputs((prev) => {
-                        const next = { ...prev };
-                        delete next[key];
-                        return next;
-                      });
+                    const input = e.currentTarget;
+                    if (input.dataset.revert === "1") {
+                      delete input.dataset.revert;
                       return;
                     }
-                    const n = Number.parseFloat(t);
+                    const t = input.value.trim();
+                    if (t === "" || t === "." || t === "-" || t === "-.") {
+                      input.value = String(set.intensity ?? "");
+                      return;
+                    }
+                    const n = Number.parseFloat(t.replace(/,/g, "."));
                     if (!Number.isNaN(n)) {
                       updateSet(exercise.id, set.id, "weight", n);
+                    } else {
+                      input.value = String(set.intensity ?? "");
                     }
-                    setIntensityInputs((prev) => {
-                      const next = { ...prev };
-                      delete next[key];
-                      return next;
-                    });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      (e.target as HTMLInputElement).blur();
+                      (e.currentTarget as HTMLInputElement).blur();
                     }
                     if (e.key === "Escape") {
-                      const key = String(set.id);
-                      setIntensityInputs((prev) => {
-                        const next = { ...prev };
-                        delete next[key];
-                        return next;
-                      });
-                      (e.target as HTMLInputElement).blur();
+                      const input = e.currentTarget as HTMLInputElement;
+                      input.dataset.revert = "1";
+                      input.value = String(set.intensity ?? "");
+                      input.blur();
                     }
                   }}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
