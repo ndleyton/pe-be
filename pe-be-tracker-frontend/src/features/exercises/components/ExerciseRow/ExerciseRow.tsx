@@ -59,9 +59,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     abbreviation: 'kg'
   });
   
-  // Debug: Log current intensity unit
-  console.log('Current intensity unit:', currentIntensityUnit);
-  
 
   // Helper function to update exercise notes
   const updateExerciseNotes = (notes: string) => {
@@ -509,28 +506,17 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
                   inputMode="decimal"
                   defaultValue={formatDecimal(set.intensity)}
                   onBlur={(e) => {
-                    const input = e.currentTarget;
-                    if (input.dataset.revert === "1") {
-                      delete input.dataset.revert;
-                      return;
-                    }
-                    const parsed = parseDecimalInput(input.value);
+                    const parsed = parseDecimalInput(e.currentTarget.value);
                     if (parsed !== null) {
                       updateSet(exercise.id, set.id, "weight", parsed);
-                      input.value = formatDecimal(parsed);
+                      e.currentTarget.value = formatDecimal(parsed);
                     } else {
-                      input.value = formatDecimal(set.intensity);
+                      e.currentTarget.value = formatDecimal(set.intensity);
                     }
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" || e.key === "Escape") {
                       (e.currentTarget as HTMLInputElement).blur();
-                    }
-                    if (e.key === "Escape") {
-                      const input = e.currentTarget as HTMLInputElement;
-                      input.dataset.revert = "1";
-                      input.value = formatDecimal(set.intensity);
-                      input.blur();
                     }
                   }}
                   className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
