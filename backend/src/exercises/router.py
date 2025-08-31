@@ -34,6 +34,20 @@ async def create_exercise(
     return await ExerciseService.create_new_exercise(session, exercise_in)
 
 
+@router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exercise(
+    exercise_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Soft delete an exercise (sets deleted_at timestamp)"""
+    success = await ExerciseService.remove_exercise(
+        session, exercise_id, user.id
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
 

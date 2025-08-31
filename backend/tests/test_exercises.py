@@ -113,6 +113,11 @@ class TestExercisesAPI:
         response = client.post(f"{settings.API_PREFIX}/exercises/", json=exercise_data)
         assert response.status_code == 401
 
+    def test_delete_exercise_unauthorized(self, client: TestClient):
+        """Test deleting exercise without authentication."""
+        response = client.delete(f"{settings.API_PREFIX}/exercises/1")
+        assert response.status_code == 401
+
 
 class TestExerciseTypesUsage:
     """Test exercise types usage tracking functionality."""

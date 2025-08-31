@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
@@ -46,7 +47,7 @@ async def get_exercise_by_id(
 async def get_exercises_for_workout(
     session: AsyncSession, workout_id: int
 ) -> List[Exercise]:
-    """Get all exercises for a specific workout"""
+    """Get all exercises for a specific workout (excluding soft-deleted)"""
     result = await session.execute(
         select(Exercise)
         .options(
@@ -58,7 +59,7 @@ async def get_exercises_for_workout(
                 ExerciseSet.intensity_unit
             ),
         )
-        .where(Exercise.workout_id == workout_id)
+        .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
     )
     return result.scalars().all()
@@ -421,3 +422,36 @@ async def get_exercise_type_stats(
         if intensity_unit
         else None,
     }
+
+
+async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
+    """Soft delete an exercise by setting deleted_at timestamp"""
+    exercise = await get_exercise_by_id(session, exercise_id)
+    if not exercise:
+        return False
+    
+    exercise.deleted_at = datetime.now(timezone.utc)
+    await session.commit()
+    return True
+
+
+async def delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
+    """Soft delete an exercise (for consistency with exercise_sets)"""
+    return await soft_delete_exercise(session, exercise_id)
+
+
+async def verify_exercise_ownership(
+    session: AsyncSession, exercise_id: int, user_id: int
+) -> Optional[Exercise]:
+    """Verify that an exercise belongs to the specified user"""
+    result = await session.execute(
+        select(Exercise)
+        .options(selectinload(Exercise.workout))
+        .where(Exercise.id == exercise_id)
+    )
+    exercise = result.scalar_one_or_none()
+    
+    if not exercise or exercise.workout.owner_id != user_id:
+        return None
+    
+    return exercise

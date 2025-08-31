@@ -52,6 +52,7 @@ class Exercise(Base):
     notes = Column(Text)
     exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     exercise_type: Mapped["ExerciseType"] = relationship(
