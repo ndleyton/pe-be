@@ -56,9 +56,7 @@ class ExerciseService:
         # Verify ownership first
         exercise = await verify_exercise_ownership(session, exercise_id, user_id)
         if not exercise:
-            raise HTTPException(
-                status_code=404, detail="Exercise not found"
-            )
+            return False
             
         return await soft_delete_exercise(session, exercise_id)
 
