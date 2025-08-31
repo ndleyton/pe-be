@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, deleteExercise, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
 import { GuestExerciseSet } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
@@ -18,6 +18,7 @@ interface GuestIntensityUnit {
 interface ExerciseRowProps {
   exercise: Exercise;
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  onExerciseDelete?: (exerciseId: number | string) => void;
   workoutId?: string;
 }
 
@@ -37,7 +38,7 @@ interface MoreMenuModalState {
   setId: string | number;
 }
 
-const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, onExerciseDelete, workoutId }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
@@ -385,6 +386,26 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
     setShowExerciseModal(false);
   };
 
+  const handleExerciseDelete = async () => {
+    try {
+      if (isAuthenticated) {
+        await deleteExercise(exercise.id);
+      } else {
+        // Handle guest mode - this could remove from guest store
+        // For now, just notify parent component
+      }
+      
+      if (onExerciseDelete) {
+        onExerciseDelete(exercise.id);
+      }
+      
+      setShowExerciseModal(false);
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      // TODO: Show error toast when available
+    }
+  };
+
   return (
     <Card key={exercise.id} className="border-input">
       <CardHeader className="pb-2">
@@ -461,6 +482,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               <ExerciseTypeMore
                 currentIntensityUnit={currentIntensityUnit}
                 onIntensityUnitChange={handleIntensityUnitChange}
+                onExerciseDelete={handleExerciseDelete}
+                onClose={() => setShowExerciseModal(false)}
               />
             </DialogContent>
           </Dialog>

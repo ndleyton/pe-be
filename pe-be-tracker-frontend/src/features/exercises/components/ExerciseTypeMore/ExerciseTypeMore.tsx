@@ -2,6 +2,8 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore } from '@/stores';
+import { Button } from '@/shared/components/ui';
+import { Trash2 } from 'lucide-react';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -13,11 +15,15 @@ interface GuestIntensityUnit {
 interface ExerciseTypeMoreProps {
   currentIntensityUnit?: IntensityUnit | GuestIntensityUnit;
   onIntensityUnitChange: (unit: IntensityUnit | GuestIntensityUnit) => void;
+  onExerciseDelete: () => void;
+  onClose?: () => void;
 }
 
 const ExerciseTypeMore: React.FC<ExerciseTypeMoreProps> = ({ 
   currentIntensityUnit, 
-  onIntensityUnitChange 
+  onIntensityUnitChange,
+  onExerciseDelete,
+  onClose
 }) => {
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated); 
@@ -78,6 +84,31 @@ const ExerciseTypeMore: React.FC<ExerciseTypeMoreProps> = ({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Delete Exercise Section */}
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to delete this exercise? This will also delete all associated sets.')) {
+                onExerciseDelete();
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Exercise
+          </Button>
+          {onClose && (
+            <Button
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
