@@ -28,11 +28,7 @@ vi.mock('../ExerciseTypeMore', () => ({
         Change to lbs
       </button>
       <button 
-        onClick={() => {
-          if (window.confirm('Are you sure you want to delete this exercise? This will also delete all associated sets.')) {
-            onExerciseDelete();
-          }
-        }} 
+        onClick={onExerciseDelete}
         data-testid="delete-exercise-button"
         className="text-red-600 dark:text-red-400"
       >
@@ -501,9 +497,6 @@ describe('ExerciseRow', () => {
     const user = userEvent.setup();
     const mockOnExerciseDelete = vi.fn();
     
-    // Mock window.confirm to return true
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    
     render(
       <ExerciseRow 
         {...defaultProps}
@@ -517,7 +510,7 @@ describe('ExerciseRow', () => {
     if (exerciseSettingsButton) {
       await user.click(exerciseSettingsButton);
       
-      // Click delete button in ExerciseTypeMore
+      // Click delete button in ExerciseTypeMore (now directly calls onExerciseDelete)
       const deleteButton = screen.getByTestId('delete-exercise-button');
       await user.click(deleteButton);
 
@@ -526,42 +519,5 @@ describe('ExerciseRow', () => {
         expect(mockOnExerciseDelete).toHaveBeenCalledWith(123);
       });
     }
-    
-    confirmSpy.mockRestore();
-  });
-
-  it('does not delete exercise if confirmation is cancelled', async () => {
-    const user = userEvent.setup();
-    const mockOnExerciseDelete = vi.fn();
-    
-    // Mock window.confirm to return false
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    
-    render(
-      <ExerciseRow 
-        {...defaultProps}
-        onExerciseDelete={mockOnExerciseDelete}
-      />
-    );
-
-    // Open settings modal
-    const moreButtons = screen.getAllByTestId('more-vertical-icon');
-    const exerciseSettingsButton = moreButtons[0].closest('button');
-    if (exerciseSettingsButton) {
-      await user.click(exerciseSettingsButton);
-      
-      // Click delete button in ExerciseTypeMore (should show confirm, but user cancels)
-      const deleteButton = screen.getByTestId('delete-exercise-button');
-      await user.click(deleteButton);
-
-      // Confirm was called
-      expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to delete this exercise? This will also delete all associated sets.');
-      
-      // Should not call delete functions since user cancelled
-      expect(deleteExercise).not.toHaveBeenCalled();
-      expect(mockOnExerciseDelete).not.toHaveBeenCalled();
-    }
-    
-    confirmSpy.mockRestore();
   });
 });
