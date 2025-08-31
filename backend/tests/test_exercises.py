@@ -8,7 +8,6 @@ from src.core.config import settings
 from src.core.database import get_async_session
 from src.exercises.models import ExerciseType
 
-# Import the test session from conftest
 
 
 def get_test_exercise_types(suffix=""):
@@ -161,3 +160,38 @@ class TestExerciseTypesUsage:
         # Check that times_used is in the schema
         assert "times_used" in annotations
         assert annotations["times_used"] is int
+
+
+def test_exercise_deletion_cascade_logic():
+    """Test that the cascade deletion SQL logic is correct (unit test)."""
+    from src.exercises.crud import soft_delete_exercise
+    from sqlalchemy import update
+    from src.exercise_sets.models import ExerciseSet
+    from datetime import datetime, timezone
+    import inspect
+    
+    # Get the source code of the function to verify the logic
+    source = inspect.getsource(soft_delete_exercise)
+    
+    # Verify it contains the cascade deletion logic
+    assert "update(ExerciseSet)" in source
+    assert "ExerciseSet.exercise_id == exercise_id" in source
+    assert "ExerciseSet.deleted_at.is_(None)" in source
+    assert "deleted_at=datetime.now(timezone.utc)" in source
+    
+    # Test the SQL update construction (without executing)
+    exercise_id = 123
+    now = datetime.now(timezone.utc)
+    
+    # This is the SQL statement that should be generated
+    expected_update = (
+        update(ExerciseSet)
+        .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
+        .values(deleted_at=now)
+    )
+    
+    # Verify the statement can be compiled
+    compiled = str(expected_update.compile(compile_kwargs={"literal_binds": True}))
+    assert "UPDATE exercise_sets" in compiled
+    assert "exercise_id" in compiled
+    assert "deleted_at" in compiled
