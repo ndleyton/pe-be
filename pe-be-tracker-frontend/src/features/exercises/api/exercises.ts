@@ -127,6 +127,11 @@ export const deleteExerciseSet = async (exerciseSetId: number | string): Promise
   await api.delete(`/exercise-sets/${exerciseSetId}`);
 };
 
+// Delete an exercise
+export const deleteExercise = async (exerciseId: number | string): Promise<void> => {
+  await api.delete(`/exercises/${exerciseId}`);
+};
+
 // Exercise Type API functions
 
 export interface CreateExerciseTypeData {
