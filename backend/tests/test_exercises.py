@@ -177,7 +177,7 @@ def test_exercise_deletion_cascade_logic():
     assert "update(ExerciseSet)" in source
     assert "ExerciseSet.exercise_id == exercise_id" in source
     assert "ExerciseSet.deleted_at.is_(None)" in source
-    assert "deleted_at=datetime.now(timezone.utc)" in source
+    assert "deleted_at=now" in source
     
     # Test the SQL update construction (without executing)
     exercise_id = 123

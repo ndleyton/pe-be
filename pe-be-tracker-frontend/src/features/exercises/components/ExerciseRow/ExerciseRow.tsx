@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, deleteExercise, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
-import { GuestExerciseSet } from '@/stores';
+import { GuestExerciseSet, useGuestStore } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
@@ -40,6 +40,7 @@ interface MoreMenuModalState {
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, onExerciseDelete, workoutId }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestDeleteExercise = useGuestStore(state => state.deleteExercise);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -375,7 +376,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
         // TODO: Add toast notification when available
       }
     }
@@ -391,8 +391,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       if (isAuthenticated) {
         await deleteExercise(exercise.id);
       } else {
-        // Handle guest mode - this could remove from guest store
-        // For now, just notify parent component
+        guestDeleteExercise(exercise.id.toString());
       }
       
       if (onExerciseDelete) {
