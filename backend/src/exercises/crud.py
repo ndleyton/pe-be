@@ -449,8 +449,6 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
         raise
 
 
-
-
 async def verify_exercise_ownership(
     session: AsyncSession, exercise_id: int, user_id: int
 ) -> Optional[Exercise]:
