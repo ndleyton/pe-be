@@ -56,9 +56,10 @@ vi.mock('../../../exercise-sets/components/AddExerciseSetForm', () => ({
   ),
 }));
 
-// Mock the auth store
+// Mock the auth store and guest store
 vi.mock('@/stores', () => ({
   useAuthStore: vi.fn(() => ({ isAuthenticated: true })),
+  useGuestStore: vi.fn(() => ({ deleteExercise: vi.fn() })),
   GuestExerciseSet: {},
 }));
 
