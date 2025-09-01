@@ -429,21 +429,24 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
     exercise = await get_exercise_by_id(session, exercise_id)
     if not exercise:
         return False
-    
+
     try:
         async with session.begin():
             now = datetime.now(timezone.utc)
-            
+
             # Soft delete the exercise
             exercise.deleted_at = now
-            
+
             # Also soft delete all associated exercise sets that haven't been deleted yet
             await session.execute(
                 update(ExerciseSet)
-                .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
+                .where(
+                    ExerciseSet.exercise_id == exercise_id,
+                    ExerciseSet.deleted_at.is_(None),
+                )
                 .values(deleted_at=now)
             )
-            
+
         return True
     except Exception:
         raise
@@ -459,8 +462,8 @@ async def verify_exercise_ownership(
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
     exercise = result.scalar_one_or_none()
-    
+
     if not exercise or exercise.workout.owner_id != user_id:
         return None
-    
+
     return exercise
