@@ -426,29 +426,26 @@ async def get_exercise_type_stats(
 
 async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
     """Soft delete an exercise and all its exercise sets by setting deleted_at timestamp"""
+    exercise = await get_exercise_by_id(session, exercise_id)
+    if not exercise:
+        return False
+    
     try:
-        exercise = await get_exercise_by_id(session, exercise_id)
-        if not exercise:
-            return False
-        
-        # Check if already soft deleted (defensive check, get_exercise_by_id already filters these out)
-        if exercise.deleted_at is not None:
-            return False
-        
-        # Soft delete the exercise
-        exercise.deleted_at = datetime.now(timezone.utc)
-        
-        # Also soft delete all associated exercise sets that haven't been deleted yet
-        await session.execute(
-            update(ExerciseSet)
-            .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
-            .values(deleted_at=datetime.now(timezone.utc))
-        )
-        
-        await session.commit()
+        async with session.begin():
+            now = datetime.now(timezone.utc)
+            
+            # Soft delete the exercise
+            exercise.deleted_at = now
+            
+            # Also soft delete all associated exercise sets that haven't been deleted yet
+            await session.execute(
+                update(ExerciseSet)
+                .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
+                .values(deleted_at=now)
+            )
+            
         return True
     except Exception:
-        await session.rollback()
         raise
 
 
