@@ -57,7 +57,7 @@ class ExerciseService:
         exercise = await verify_exercise_ownership(session, exercise_id, user_id)
         if not exercise:
             return False
-            
+
         return await soft_delete_exercise(session, exercise_id)
 
 
