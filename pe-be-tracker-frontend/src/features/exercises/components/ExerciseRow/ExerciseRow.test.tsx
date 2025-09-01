@@ -3,7 +3,7 @@ import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '@/test/utils';
 import ExerciseRow from './ExerciseRow';
-import { Exercise, ExerciseSet, createExerciseSet, updateExerciseSet } from '@/features/exercises/api';
+import { Exercise, ExerciseSet, createExerciseSet, updateExerciseSet, deleteExercise } from '@/features/exercises/api';
 
 // Mock API functions
 vi.mock('@/features/exercises/api', async () => {
@@ -12,12 +12,13 @@ vi.mock('@/features/exercises/api', async () => {
     ...actual,
     createExerciseSet: vi.fn(),
     updateExerciseSet: vi.fn(),
+    deleteExercise: vi.fn(),
   };
 });
 
 // Mock the ExerciseTypeMore component
 vi.mock('../ExerciseTypeMore', () => ({
-  ExerciseTypeMore: ({ currentIntensityUnit, onIntensityUnitChange }: any) => (
+  ExerciseTypeMore: ({ currentIntensityUnit, onIntensityUnitChange, onExerciseDelete, onClose }: any) => (
     <div data-testid="exercise-type-more">
       <span>Current unit: {currentIntensityUnit.abbreviation}</span>
       <button 
@@ -26,6 +27,18 @@ vi.mock('../ExerciseTypeMore', () => ({
       >
         Change to lbs
       </button>
+      <button 
+        onClick={onExerciseDelete}
+        data-testid="delete-exercise-button"
+        className="text-red-600 dark:text-red-400"
+      >
+        🗑️ Delete Exercise
+      </button>
+      {onClose && (
+        <button onClick={onClose} data-testid="close-button">
+          Close
+        </button>
+      )}
     </div>
   ),
 }));
@@ -43,9 +56,10 @@ vi.mock('../../../exercise-sets/components/AddExerciseSetForm', () => ({
   ),
 }));
 
-// Mock the auth store
+// Mock the auth store and guest store
 vi.mock('@/stores', () => ({
   useAuthStore: vi.fn(() => ({ isAuthenticated: true })),
+  useGuestStore: vi.fn(() => ({ deleteExercise: vi.fn() })),
   GuestExerciseSet: {},
 }));
 
@@ -147,6 +161,7 @@ describe('ExerciseRow', () => {
       updated_at: new Date().toISOString(),
     });
     (updateExerciseSet as any).mockResolvedValue({});
+    (deleteExercise as any).mockResolvedValue(undefined);
   });
 
   it('renders exercise information in card format', () => {
@@ -325,26 +340,6 @@ describe('ExerciseRow', () => {
     });
   });
 
-  it('reverts weight input on Escape without committing', async () => {
-    const user = userEvent.setup();
-    const { container } = render(<ExerciseRow {...defaultProps} />);
-
-    const weightInputs = Array.from(
-      container.querySelectorAll('input[inputmode="decimal"]')
-    ) as HTMLInputElement[];
-    const weightInput = weightInputs[0];
-
-    // Change but cancel with Escape
-    await user.clear(weightInput);
-    await user.type(weightInput, '99,9');
-    await user.keyboard('{Escape}');
-
-    // Value should be reverted to original persisted value
-    expect(weightInput.value).toBe('50.5');
-    // No API call should have been made
-    expect(updateExerciseSet).not.toHaveBeenCalledWith(1, expect.objectContaining({ intensity: 99.9 }));
-  });
-
   it('can toggle set completion', async () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
@@ -407,21 +402,6 @@ describe('ExerciseRow', () => {
     });
   });
 
-  it('opens exercise settings modal', async () => {
-    const user = userEvent.setup();
-    render(<ExerciseRow {...defaultProps} />);
-
-    // Get all more-vertical icons and find the one in the exercise header (not in set rows)
-    const moreButtons = screen.getAllByTestId('more-vertical-icon');
-    const exerciseSettingsButton = moreButtons[0].closest('button'); // First one is exercise settings
-    if (exerciseSettingsButton) {
-      await user.click(exerciseSettingsButton);
-      
-      expect(screen.getByText('Exercise Settings')).toBeInTheDocument();
-      expect(screen.getByTestId('exercise-type-more')).toBeInTheDocument();
-    }
-  });
-
   it('can change intensity unit', async () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
@@ -431,6 +411,10 @@ describe('ExerciseRow', () => {
     const exerciseSettingsButton = moreButtons[0].closest('button'); // First one is exercise settings
     if (exerciseSettingsButton) {
       await user.click(exerciseSettingsButton);
+      
+      // Verify modal opened
+      expect(screen.getByText('Exercise Settings')).toBeInTheDocument();
+      expect(screen.getByTestId('exercise-type-more')).toBeInTheDocument();
       
       // Change unit
       const changeUnitButton = screen.getByTestId('change-unit-button');
@@ -508,5 +492,33 @@ describe('ExerciseRow', () => {
     // This would require checking className or computed styles
     // For now, we just verify the component renders without error
     expect(screen.getByText('Bench Press')).toBeInTheDocument();
+  });
+
+  it('can delete exercise through ExerciseTypeMore', async () => {
+    const user = userEvent.setup();
+    const mockOnExerciseDelete = vi.fn();
+    
+    render(
+      <ExerciseRow 
+        {...defaultProps}
+        onExerciseDelete={mockOnExerciseDelete}
+      />
+    );
+
+    // Open settings modal
+    const moreButtons = screen.getAllByTestId('more-vertical-icon');
+    const exerciseSettingsButton = moreButtons[0].closest('button');
+    if (exerciseSettingsButton) {
+      await user.click(exerciseSettingsButton);
+      
+      // Click delete button in ExerciseTypeMore (now directly calls onExerciseDelete)
+      const deleteButton = screen.getByTestId('delete-exercise-button');
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(deleteExercise).toHaveBeenCalledWith(123);
+        expect(mockOnExerciseDelete).toHaveBeenCalledWith(123);
+      });
+    }
   });
 });

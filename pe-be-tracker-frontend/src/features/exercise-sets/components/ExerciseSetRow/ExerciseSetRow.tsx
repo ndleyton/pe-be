@@ -46,7 +46,7 @@ const ExerciseSetRow: React.FC<ExerciseSetRowProps> = ({ exerciseSet, onUpdate, 
 
       const updateData: UpdateExerciseSetData = {
         reps,
-        intensity,
+        intensity: intensity ?? undefined,
         rest_time_seconds,
         done: editData.done ?? false,
       };

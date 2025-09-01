@@ -7,6 +7,8 @@ from src.exercises.crud import (
     get_exercise_by_id,
     get_exercises_for_workout,
     create_exercise,
+    soft_delete_exercise,
+    verify_exercise_ownership,
     get_exercise_types,
     get_exercise_type_by_id,
     create_exercise_type,
@@ -45,6 +47,18 @@ class ExerciseService:
         """Create a new exercise with business logic validation"""
         # Add any business logic here (e.g., validation, authorization)
         return await create_exercise(session, exercise_data)
+
+    @staticmethod
+    async def remove_exercise(
+        session: AsyncSession, exercise_id: int, user_id: int
+    ) -> bool:
+        """Soft delete an exercise with ownership verification"""
+        # Verify ownership first
+        exercise = await verify_exercise_ownership(session, exercise_id, user_id)
+        if not exercise:
+            return False
+
+        return await soft_delete_exercise(session, exercise_id)
 
 
 class ExerciseTypeService:

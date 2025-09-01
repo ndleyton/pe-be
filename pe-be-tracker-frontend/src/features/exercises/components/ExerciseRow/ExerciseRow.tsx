@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
-import { GuestExerciseSet } from '@/stores';
+import { Exercise, ExerciseSet, IntensityUnit, updateExerciseSet, createExerciseSet, deleteExerciseSet, deleteExercise, CreateExerciseSetData, UpdateExerciseSetData } from '@/features/exercises/api';
+import { GuestExerciseSet, useGuestStore } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
@@ -18,6 +18,7 @@ interface GuestIntensityUnit {
 interface ExerciseRowProps {
   exercise: Exercise;
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  onExerciseDelete?: (exerciseId: number | string) => void;
   workoutId?: string;
 }
 
@@ -37,8 +38,9 @@ interface MoreMenuModalState {
   setId: string | number;
 }
 
-const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, workoutId }) => {
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, onExerciseDelete, workoutId }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestDeleteExercise = useGuestStore(state => state.deleteExercise);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -374,7 +376,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
         // TODO: Add toast notification when available
       }
     }
@@ -383,6 +384,25 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
   const handleIntensityUnitChange = (unit: IntensityUnit | GuestIntensityUnit) => {
     setCurrentIntensityUnit(unit);
     setShowExerciseModal(false);
+  };
+
+  const handleExerciseDelete = async () => {
+    try {
+      if (isAuthenticated) {
+        await deleteExercise(exercise.id);
+      } else {
+        guestDeleteExercise(exercise.id.toString());
+      }
+      
+      if (onExerciseDelete) {
+        onExerciseDelete(exercise.id);
+      }
+      
+      setShowExerciseModal(false);
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      // TODO: Show error toast when available
+    }
   };
 
   return (
@@ -461,6 +481,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, w
               <ExerciseTypeMore
                 currentIntensityUnit={currentIntensityUnit}
                 onIntensityUnitChange={handleIntensityUnitChange}
+                onExerciseDelete={handleExerciseDelete}
+                onClose={() => setShowExerciseModal(false)}
               />
             </DialogContent>
           </Dialog>

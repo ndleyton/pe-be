@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
@@ -38,7 +39,7 @@ async def get_exercise_by_id(
             .selectinload(Muscle.muscle_group),
             selectinload(Exercise.exercise_sets),
         )
-        .where(Exercise.id == exercise_id)
+        .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
 
@@ -58,7 +59,7 @@ async def get_exercises_for_workout(
                 ExerciseSet.intensity_unit
             ),
         )
-        .where(Exercise.workout_id == workout_id)
+        .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
     )
     return result.scalars().all()
@@ -421,3 +422,48 @@ async def get_exercise_type_stats(
         if intensity_unit
         else None,
     }
+
+
+async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
+    """Soft delete an exercise and all its exercise sets by setting deleted_at timestamp"""
+    exercise = await get_exercise_by_id(session, exercise_id)
+    if not exercise:
+        return False
+
+    try:
+        async with session.begin():
+            now = datetime.now(timezone.utc)
+
+            # Soft delete the exercise
+            exercise.deleted_at = now
+
+            # Also soft delete all associated exercise sets that haven't been deleted yet
+            await session.execute(
+                update(ExerciseSet)
+                .where(
+                    ExerciseSet.exercise_id == exercise_id,
+                    ExerciseSet.deleted_at.is_(None),
+                )
+                .values(deleted_at=now)
+            )
+
+        return True
+    except Exception:
+        raise
+
+
+async def verify_exercise_ownership(
+    session: AsyncSession, exercise_id: int, user_id: int
+) -> Optional[Exercise]:
+    """Verify that an exercise belongs to the specified user (excluding soft-deleted)"""
+    result = await session.execute(
+        select(Exercise)
+        .options(selectinload(Exercise.workout))
+        .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
+    )
+    exercise = result.scalar_one_or_none()
+
+    if not exercise or exercise.workout.owner_id != user_id:
+        return None
+
+    return exercise
