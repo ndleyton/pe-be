@@ -449,9 +449,6 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
         raise
 
 
-async def remove_exercise(session: AsyncSession, exercise_id: int) -> bool:
-    """Soft delete an exercise (alias for consistency with exercise_sets)"""
-    return await soft_delete_exercise(session, exercise_id)
 
 
 async def verify_exercise_ownership(
