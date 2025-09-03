@@ -212,7 +212,7 @@ const migrateGuestData = (data: any): GuestData => {
 };
 
 
-export const useGuestStore = create<GuestStore>(
+export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
       workouts: [],
@@ -599,13 +599,13 @@ export const useGuestStore = create<GuestStore>(
         set({ hasAttemptedSync: false });
       }
     },
-  }),
-  {
-    name: 'pe-guest-data',
-    storage: createJSONStorage(() => createIndexedDBStorage()),
-    migrate: (persistedState: any, version: number) => {
-      return migrateGuestData(persistedState);
-    },
-  }
-)
+    }),
+    {
+      name: 'pe-guest-data',
+      storage: createJSONStorage(() => createIndexedDBStorage()),
+      migrate: (persistedState: any, version: number) => {
+        return migrateGuestData(persistedState);
+      },
+    }
+  )
 );

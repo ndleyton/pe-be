@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncGuestDataToServer } from './syncGuestData';
 import { endpoints } from '@/shared/api/endpoints';
-import type { GuestData } from '@/contexts/GuestDataContext';
+import type { GuestData } from '@/stores/useGuestStore';
 
 // Mock the API client
 vi.mock('@/shared/api/client', () => ({
