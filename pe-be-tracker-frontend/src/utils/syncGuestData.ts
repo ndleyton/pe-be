@@ -1,4 +1,4 @@
-import { GuestData, GuestDataActions } from '../contexts/GuestDataContext';
+import { GuestData } from '../stores/useGuestStore';
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { toUTCISOString } from './date';

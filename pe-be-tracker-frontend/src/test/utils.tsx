@@ -2,7 +2,6 @@ import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { GuestDataProvider } from '../contexts/GuestDataContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { WorkoutTimerProvider } from '../contexts/WorkoutTimerContext';
 import { vi } from 'vitest';
@@ -39,11 +38,9 @@ const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode;
     <QueryClientProvider client={queryClient}>
       <WorkoutTimerProvider>
         <AuthProvider>
-          <GuestDataProvider>
-            <MemoryRouter>
-              {children}
-            </MemoryRouter>
-          </GuestDataProvider>
+          <MemoryRouter>
+            {children}
+          </MemoryRouter>
         </AuthProvider>
       </WorkoutTimerProvider>
     </QueryClientProvider>

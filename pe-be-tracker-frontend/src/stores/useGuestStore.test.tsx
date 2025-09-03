@@ -1,0 +1,408 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useGuestStore } from './useGuestStore';
+import type { GuestWorkout, GuestExercise, GuestExerciseSet } from './useGuestStore';
+
+// Mock IndexedDB storage
+vi.mock('./indexedDBStorage', () => ({
+  createIndexedDBStorage: () => ({
+    getItem: vi.fn().mockResolvedValue(null),
+    setItem: vi.fn().mockResolvedValue(undefined),
+    removeItem: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+// Mock sync utilities
+vi.mock('@/utils/syncGuestData', () => ({
+  syncGuestDataToServer: vi.fn(),
+  showSyncSuccessToast: vi.fn(),
+  showSyncErrorToast: vi.fn(),
+}));
+
+// Mock auth store
+vi.mock('./useAuthStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      user: null,
+    }),
+  },
+}));
+
+describe('useGuestStore', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    // Reset store state between tests
+    if (useGuestStore.persist && useGuestStore.persist.clearStorage) {
+      await useGuestStore.persist.clearStorage();
+    }
+    // Also manually reset the store to initial state
+    useGuestStore.getState().clear();
+  });
+
+  it('initializes with default data', () => {
+    const { result } = renderHook(() => useGuestStore());
+    const state = result.current;
+
+    expect(state.workouts).toEqual([]);
+    expect(state.exerciseTypes).toHaveLength(4); // Default exercise types
+    expect(state.workoutTypes).toHaveLength(4); // Default workout types
+    expect(state.recipes).toEqual([]);
+    expect(state.hasAttemptedSync).toBe(false);
+  });
+
+  it('adds a workout', () => {
+    const { result } = renderHook(() => useGuestStore());
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      const workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: 'Test notes',
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      expect(workoutId).toBeDefined();
+      expect(typeof workoutId).toBe('string');
+    });
+
+    const state = result.current;
+    expect(state.workouts).toHaveLength(1);
+    expect(state.workouts[0].name).toBe('Test Workout');
+    expect(state.workouts[0].notes).toBe('Test notes');
+    expect(state.workouts[0].exercises).toEqual([]);
+  });
+
+  it('updates a workout', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Original Name',
+        notes: 'Original notes',
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+    });
+
+    act(() => {
+      result.current.updateWorkout(workoutId, {
+        name: 'Updated Name',
+        end_time: '2024-01-01T11:00:00Z',
+      });
+    });
+
+    const state = result.current;
+    const workout = state.workouts.find(w => w.id === workoutId);
+    expect(workout).toBeDefined();
+    expect(workout!.name).toBe('Updated Name');
+    expect(workout!.end_time).toBe('2024-01-01T11:00:00Z');
+    expect(workout!.notes).toBe('Original notes'); // Should remain unchanged
+  });
+
+  it('deletes a workout', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+    });
+
+    expect(result.current.workouts).toHaveLength(1);
+
+    act(() => {
+      result.current.deleteWorkout(workoutId);
+    });
+
+    expect(result.current.workouts).toHaveLength(0);
+  });
+
+  it('adds an exercise to a workout', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+    });
+
+    act(() => {
+      const exerciseType = result.current.exerciseTypes[0];
+      result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: 'Exercise notes',
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+    });
+
+    const state = result.current;
+    const workout = state.workouts.find(w => w.id === workoutId);
+    expect(workout).toBeDefined();
+    expect(workout!.exercises).toHaveLength(1);
+    expect(workout!.exercises[0].notes).toBe('Exercise notes');
+    expect(workout!.exercises[0].exercise_sets).toEqual([]);
+  });
+
+  it('adds exercise sets to an exercise', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+    let exerciseId: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      const exerciseType = result.current.exerciseTypes[0];
+      exerciseId = result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: null,
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+    });
+
+    act(() => {
+      result.current.addExerciseSet({
+        exercise_id: exerciseId,
+        reps: 10,
+        intensity: 50,
+        intensity_unit_id: 2,
+        rest_time_seconds: 60,
+        done: false,
+      });
+    });
+
+    const state = result.current;
+    const workout = state.workouts.find(w => w.id === workoutId);
+    const exercise = workout!.exercises.find(e => e.id === exerciseId);
+    expect(exercise!.exercise_sets).toHaveLength(1);
+    expect(exercise!.exercise_sets[0].reps).toBe(10);
+    expect(exercise!.exercise_sets[0].intensity).toBe(50);
+    expect(exercise!.exercise_sets[0].done).toBe(false);
+  });
+
+  it('creates and manages recipes', () => {
+    const { result } = renderHook(() => useGuestStore());
+
+    act(() => {
+      result.current.addRoutine({
+        name: 'Test Recipe',
+        description: 'A test recipe',
+        exercises: [],
+      });
+    });
+
+    const state = result.current;
+    expect(state.recipes).toHaveLength(1);
+    expect(state.recipes[0].name).toBe('Test Recipe');
+    expect(state.recipes[0].description).toBe('A test recipe');
+  });
+
+  it('creates recipe from workout', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+    let exerciseId: string;
+
+    // Create workout with exercise and sets
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      const exerciseType = result.current.exerciseTypes[0];
+      exerciseId = result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: 'Exercise notes',
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+
+      result.current.addExerciseSet({
+        exercise_id: exerciseId,
+        reps: 10,
+        intensity: 50,
+        intensity_unit_id: 2,
+        rest_time_seconds: 60,
+        done: false,
+      });
+    });
+
+    // Create recipe from workout
+    act(() => {
+      const workout = result.current.workouts.find(w => w.id === workoutId)!;
+      result.current.createRoutineFromWorkout('My Recipe', workout.exercises);
+    });
+
+    const state = result.current;
+    expect(state.recipes).toHaveLength(1);
+    expect(state.recipes[0].name).toBe('My Recipe');
+    expect(state.recipes[0].exercises).toHaveLength(1);
+    expect(state.recipes[0].exercises[0].sets).toHaveLength(1);
+    expect(state.recipes[0].exercises[0].sets[0].reps).toBe(10);
+  });
+
+  it('creates exercises from recipe', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+
+    // Create workout and recipe
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      result.current.addRoutine({
+        name: 'Test Recipe',
+        exercises: [
+          {
+            id: 'recipe-ex-1',
+            exercise_type_id: result.current.exerciseTypes[0].id,
+            exercise_type: result.current.exerciseTypes[0],
+            sets: [
+              {
+                id: 'recipe-set-1',
+                reps: 12,
+                intensity: 60,
+                intensity_unit_id: 2,
+                rest_time_seconds: 90,
+              },
+            ],
+            notes: 'From recipe',
+          },
+        ],
+      });
+    });
+
+    // Create exercises from recipe
+    act(() => {
+      const recipe = result.current.recipes[0];
+      result.current.createExercisesFromRoutine(recipe, workoutId);
+    });
+
+    const state = result.current;
+    const workout = state.workouts.find(w => w.id === workoutId)!;
+    expect(workout.exercises).toHaveLength(1);
+    expect(workout.exercises[0].notes).toBe('From recipe');
+    expect(workout.exercises[0].exercise_sets).toHaveLength(1);
+    expect(workout.exercises[0].exercise_sets[0].reps).toBe(12);
+    expect(workout.exercises[0].exercise_sets[0].done).toBe(false);
+  });
+
+  it('provides utility methods to find workouts and exercises', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId: string;
+    let exerciseId: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      const exerciseType = result.current.exerciseTypes[0];
+      exerciseId = result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: null,
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+    });
+
+    const workout = result.current.getWorkout(workoutId);
+    expect(workout).toBeDefined();
+    expect(workout!.name).toBe('Test Workout');
+
+    const exercise = result.current.getExercise(exerciseId);
+    expect(exercise).toBeDefined();
+    expect(exercise!.workout_id).toBe(workoutId);
+  });
+
+  it('clears all data', () => {
+    const { result } = renderHook(() => useGuestStore());
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+    });
+
+    expect(result.current.workouts).toHaveLength(1);
+
+    act(() => {
+      result.current.clear();
+    });
+
+    const state = result.current;
+    expect(state.workouts).toEqual([]);
+    expect(state.recipes).toEqual([]);
+    expect(state.hasAttemptedSync).toBe(false);
+    // Should still have default exercise types and workout types
+    expect(state.exerciseTypes.length).toBeGreaterThan(0);
+    expect(state.workoutTypes.length).toBeGreaterThan(0);
+  });
+});
