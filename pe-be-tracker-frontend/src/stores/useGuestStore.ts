@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
 import { generateRandomId, getCurrentUTCTimestamp } from '@/utils/date';
 import { useAuthStore } from './useAuthStore';
+import { createIndexedDBStorage } from './indexedDBStorage';
 
 export interface GuestExerciseType {
   id: string;
@@ -141,7 +143,6 @@ interface GuestActions {
 
 type GuestStore = GuestState & GuestActions;
 
-const GUEST_DATA_KEY = 'pe-guest-data';
 
 const getInitialGuestData = (): GuestData => ({
   workouts: [],
@@ -210,80 +211,100 @@ const migrateGuestData = (data: any): GuestData => {
   return migrated as GuestData;
 };
 
-const loadGuestData = (): GuestData => {
-  try {
-    const stored = localStorage.getItem(GUEST_DATA_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return migrateGuestData(parsed);
-    }
-    return getInitialGuestData();
-  } catch {
-    return getInitialGuestData();
-  }
-};
 
-const saveGuestData = (data: GuestData) => {
-  try {
-    localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(data));
-  } catch (error) {
-    console.warn('Failed to save guest data to localStorage:', error);
-  }
-};
+export const useGuestStore = create<GuestStore>(
+  persist(
+    (set, get) => ({
+      workouts: [],
+      exerciseTypes: [
+        {
+          id: generateRandomId(),
+          name: 'Push-ups',
+          description: 'Upper body bodyweight exercise',
+          default_intensity_unit: 1,
+          times_used: 0,
+        },
+        {
+          id: generateRandomId(),
+          name: 'Squats',
+          description: 'Lower body bodyweight exercise',
+          default_intensity_unit: 1,
+          times_used: 0,
+        },
+        {
+          id: generateRandomId(),
+          name: 'Bench Press',
+          description: 'Upper body strength exercise',
+          default_intensity_unit: 2,
+          times_used: 0,
+        },
+        {
+          id: generateRandomId(),
+          name: 'Deadlift',
+          description: 'Full body strength exercise',
+          default_intensity_unit: 2,
+          times_used: 0,
+        },
+      ],
+      workoutTypes: [
+        {
+          id: generateRandomId(),
+          name: 'Strength Training',
+          description: 'Traditional weightlifting session',
+        },
+        {
+          id: generateRandomId(),
+          name: 'Cardio',
+          description: 'Cardiovascular exercise session',
+        },
+        {
+          id: generateRandomId(),
+          name: 'Bodyweight',
+          description: 'Exercises using your own body weight',
+        },
+        {
+          id: '8',
+          name: 'Other',
+          description: 'General workout session',
+        },
+      ],
+      recipes: [],
+      hasAttemptedSync: false,
 
-export const useGuestStore = create<GuestStore>((set, get) => {
-  const initialData = loadGuestData();
-  
-  return {
-    ...initialData,
-    hasAttemptedSync: false,
-
-    addWorkout: (workout) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      const newWorkout: GuestWorkout = {
-        ...workout,
-        id,
-        created_at: now,
-        updated_at: now,
-      };
-      
-      set((state) => {
-        const newState = {
+      addWorkout: (workout) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
+        const newWorkout: GuestWorkout = {
+          ...workout,
+          id,
+          created_at: now,
+          updated_at: now,
+        };
+        
+        set((state) => ({
           ...state,
           workouts: [...state.workouts, newWorkout],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
-      
-      return id;
-    },
+        }));
+        
+        return id;
+      },
 
     updateWorkout: (id, updates) => {
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.map(workout =>
-            workout.id === id
-              ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
-              : workout
-          ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.map(workout =>
+          workout.id === id
+            ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
+            : workout
+        ),
+      }));
     },
 
     deleteWorkout: (id) => {
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.filter(workout => workout.id !== id),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.filter(workout => workout.id !== id),
+      }));
     },
 
     addExercise: (exercise) => {
@@ -297,30 +318,25 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.map(workout =>
-            workout.id === exercise.workout_id
-              ? {
-                  ...workout,
-                  exercises: [...workout.exercises, newExercise],
-                  updated_at: now,
-                }
-              : workout
-          ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.map(workout =>
+          workout.id === exercise.workout_id
+            ? {
+                ...workout,
+                exercises: [...workout.exercises, newExercise],
+                updated_at: now,
+              }
+            : workout
+        ),
+      }));
       
       return id;
     },
 
     updateExercise: (id, updates) => {
       const now = getCurrentUTCTimestamp();
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -330,24 +346,17 @@ export const useGuestStore = create<GuestStore>((set, get) => {
                 : exercise
             ),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     deleteExercise: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
             exercises: workout.exercises.filter(exercise => exercise.id !== id),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     addExerciseSet: (exerciseSet) => {
@@ -360,8 +369,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -375,18 +383,14 @@ export const useGuestStore = create<GuestStore>((set, get) => {
                 : exercise
             ),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateExerciseSet: (id, updates) => {
       const now = getCurrentUTCTimestamp();
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -399,15 +403,11 @@ export const useGuestStore = create<GuestStore>((set, get) => {
               ),
             })),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     deleteExerciseSet: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -416,10 +416,7 @@ export const useGuestStore = create<GuestStore>((set, get) => {
               exercise_sets: exercise.exercise_sets.filter(set => set.id !== id),
             })),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     addExerciseType: (exerciseType) => {
@@ -430,29 +427,21 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         times_used: 0,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           exerciseTypes: [...state.exerciseTypes, newExerciseType],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateExerciseType: (id, updates) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           exerciseTypes: state.exerciseTypes.map(type =>
             type.id === id ? { ...type, ...updates } : type
           ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     addWorkoutType: (workoutType) => {
@@ -462,29 +451,21 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         id,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workoutTypes: [...state.workoutTypes, newWorkoutType],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateWorkoutType: (id, updates) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workoutTypes: state.workoutTypes.map(type =>
             type.id === id ? { ...type, ...updates } : type
           ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     // Routine-named implementation
@@ -498,27 +479,19 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
     // Routine-named implementation
     deleteRoutine: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: (state.recipes || []).filter(recipe => recipe.id !== id),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
     // Routine-named implementation
     createRoutineFromWorkout: (workoutName, exercises) => {
@@ -547,14 +520,10 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
@@ -592,11 +561,6 @@ export const useGuestStore = create<GuestStore>((set, get) => {
     clear: () => {
       const initialData = getInitialGuestData();
       set({ ...initialData, hasAttemptedSync: false });
-      try {
-        localStorage.removeItem(GUEST_DATA_KEY);
-      } catch (error) {
-        console.warn('Failed to clear guest data from localStorage:', error);
-      }
     },
 
     getWorkout: (id) => {
@@ -635,5 +599,13 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         set({ hasAttemptedSync: false });
       }
     },
-  };
-});
+  }),
+  {
+    name: 'pe-guest-data',
+    storage: createJSONStorage(() => createIndexedDBStorage()),
+    migrate: (persistedState: any, version: number) => {
+      return migrateGuestData(persistedState);
+    },
+  }
+)
+);
