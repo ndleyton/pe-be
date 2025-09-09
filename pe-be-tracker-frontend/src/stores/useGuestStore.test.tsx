@@ -78,7 +78,7 @@ describe('useGuestStore', () => {
 
   it('updates a workout', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
+    let workoutId!: string;
 
     act(() => {
       const workoutType = result.current.workoutTypes[0];
@@ -110,7 +110,7 @@ describe('useGuestStore', () => {
 
   it('deletes a workout', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
+    let workoutId!: string;
 
     act(() => {
       const workoutType = result.current.workoutTypes[0];
@@ -136,7 +136,7 @@ describe('useGuestStore', () => {
 
   it('adds an exercise to a workout', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
+    let workoutId!: string;
 
     act(() => {
       const workoutType = result.current.workoutTypes[0];
@@ -172,8 +172,8 @@ describe('useGuestStore', () => {
 
   it('adds exercise sets to an exercise', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
-    let exerciseId: string;
+    let workoutId!: string;
+    let exerciseId!: string;
 
     act(() => {
       const workoutType = result.current.workoutTypes[0];
@@ -213,7 +213,7 @@ describe('useGuestStore', () => {
     const exercise = workout!.exercises.find(e => e.id === exerciseId);
     expect(exercise!.exercise_sets).toHaveLength(1);
     expect(exercise!.exercise_sets[0].reps).toBe(10);
-    expect(exercise!.exercise_sets[0].intensity).toBe(50);
+    expect(parseFloat(exercise!.exercise_sets[0].intensity!)).toBe(50);
     expect(exercise!.exercise_sets[0].done).toBe(false);
   });
 
@@ -236,8 +236,8 @@ describe('useGuestStore', () => {
 
   it('creates recipe from workout', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
-    let exerciseId: string;
+    let workoutId!: string;
+    let exerciseId!: string;
 
     // Create workout with exercise and sets
     act(() => {
@@ -287,7 +287,7 @@ describe('useGuestStore', () => {
 
   it('creates exercises from recipe', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
+    let workoutId!: string;
 
     // Create workout and recipe
     act(() => {
@@ -341,8 +341,8 @@ describe('useGuestStore', () => {
 
   it('provides utility methods to find workouts and exercises', () => {
     const { result } = renderHook(() => useGuestStore());
-    let workoutId: string;
-    let exerciseId: string;
+    let workoutId!: string;
+    let exerciseId!: string;
 
     act(() => {
       const workoutType = result.current.workoutTypes[0];
@@ -373,6 +373,187 @@ describe('useGuestStore', () => {
     const exercise = result.current.getExercise(exerciseId);
     expect(exercise).toBeDefined();
     expect(exercise!.workout_id).toBe(workoutId);
+  });
+
+  it('handles soft delete and restore for exercises', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId!: string;
+    let exerciseId!: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      const exerciseType = result.current.exerciseTypes[0];
+      exerciseId = result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: null,
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+    });
+
+    // Exercise should be active initially
+    expect(result.current.getActiveExercises(workoutId)).toHaveLength(1);
+
+    // Soft delete the exercise
+    act(() => {
+      result.current.softDeleteExercise(exerciseId);
+    });
+
+    // Exercise should be soft deleted (not in active list)
+    expect(result.current.getActiveExercises(workoutId)).toHaveLength(0);
+    
+    // But still exist in the workout
+    const workout = result.current.getWorkout(workoutId);
+    expect(workout!.exercises).toHaveLength(1);
+    expect(workout!.exercises[0].deleted_at).toBeTruthy();
+
+    // Restore the exercise
+    act(() => {
+      result.current.restoreExercise(exerciseId);
+    });
+
+    // Exercise should be active again
+    expect(result.current.getActiveExercises(workoutId)).toHaveLength(1);
+    const restoredWorkout = result.current.getWorkout(workoutId);
+    expect(restoredWorkout!.exercises[0].deleted_at).toBeNull();
+  });
+
+  it('handles soft delete and restore for exercise sets', () => {
+    const { result } = renderHook(() => useGuestStore());
+    let workoutId!: string;
+    let exerciseId!: string;
+    let setId!: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      workoutId = result.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      const exerciseType = result.current.exerciseTypes[0];
+      exerciseId = result.current.addExercise({
+        workout_id: workoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: null,
+        timestamp: '2024-01-01T10:00:00Z',
+      });
+
+      setId = result.current.addExerciseSet({
+        exercise_id: exerciseId,
+        reps: 10,
+        intensity: 50,
+        intensity_unit_id: 2,
+        rest_time_seconds: 60,
+        done: false,
+      });
+    });
+
+    // Set should be active initially
+    expect(result.current.getActiveSets(exerciseId)).toHaveLength(1);
+
+    // Soft delete the set
+    act(() => {
+      result.current.softDeleteExerciseSet(setId);
+    });
+
+    // Set should be soft deleted (not in active list)
+    expect(result.current.getActiveSets(exerciseId)).toHaveLength(0);
+    
+    // But still exist in the exercise
+    const exercise = result.current.getExercise(exerciseId);
+    expect(exercise!.exercise_sets).toHaveLength(1);
+    expect(exercise!.exercise_sets[0].deleted_at).toBeTruthy();
+
+    // Restore the set
+    act(() => {
+      result.current.restoreExerciseSet(setId);
+    });
+
+    // Set should be active again
+    expect(result.current.getActiveSets(exerciseId)).toHaveLength(1);
+    const restoredExercise = result.current.getExercise(exerciseId);
+    expect(restoredExercise!.exercise_sets[0].deleted_at).toBeNull();
+  });
+
+  it('ensures clear() produces identical state to fresh initialization', () => {
+    const { result: freshResult } = renderHook(() => useGuestStore());
+    const { result: clearResult } = renderHook(() => useGuestStore());
+
+    // Get fresh state
+    const freshState = {
+      workouts: freshResult.current.workouts,
+      exerciseTypes: freshResult.current.exerciseTypes,
+      workoutTypes: freshResult.current.workoutTypes,
+      recipes: freshResult.current.recipes,
+      hasAttemptedSync: freshResult.current.hasAttemptedSync,
+    };
+
+    // Add some data to the clear test store
+    act(() => {
+      const workoutType = clearResult.current.workoutTypes[0];
+      clearResult.current.addWorkout({
+        name: 'Test Workout',
+        notes: null,
+        start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+      clearResult.current.addRoutine({
+        name: 'Test Recipe',
+        exercises: [],
+      });
+    });
+
+    // Verify data was added
+    expect(clearResult.current.workouts).toHaveLength(1);
+    expect(clearResult.current.recipes).toHaveLength(1);
+
+    // Clear the store
+    act(() => {
+      clearResult.current.clear();
+    });
+
+    // Get cleared state
+    const clearedState = {
+      workouts: clearResult.current.workouts,
+      exerciseTypes: clearResult.current.exerciseTypes,
+      workoutTypes: clearResult.current.workoutTypes,
+      recipes: clearResult.current.recipes,
+      hasAttemptedSync: clearResult.current.hasAttemptedSync,
+    };
+
+    // Compare structures (excluding specific IDs since they're random)
+    expect(clearedState.workouts).toEqual(freshState.workouts);
+    expect(clearedState.recipes).toEqual(freshState.recipes);
+    expect(clearedState.hasAttemptedSync).toEqual(freshState.hasAttemptedSync);
+    
+    // Compare exercise types (same count and names)
+    expect(clearedState.exerciseTypes).toHaveLength(freshState.exerciseTypes.length);
+    expect(clearedState.exerciseTypes.map(e => e.name)).toEqual(freshState.exerciseTypes.map(e => e.name));
+    
+    // Compare workout types (same count and names)
+    expect(clearedState.workoutTypes).toHaveLength(freshState.workoutTypes.length);
+    expect(clearedState.workoutTypes.map(w => w.name)).toEqual(freshState.workoutTypes.map(w => w.name));
   });
 
   it('clears all data', () => {
