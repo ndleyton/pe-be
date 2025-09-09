@@ -266,60 +266,7 @@ const migrateGuestData = (data: any): GuestData => {
 export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
-      workouts: [],
-      exerciseTypes: [
-        {
-          id: generateRandomId(),
-          name: 'Push-ups',
-          description: 'Upper body bodyweight exercise',
-          default_intensity_unit: 1,
-          times_used: 0,
-        },
-        {
-          id: generateRandomId(),
-          name: 'Squats',
-          description: 'Lower body bodyweight exercise',
-          default_intensity_unit: 1,
-          times_used: 0,
-        },
-        {
-          id: generateRandomId(),
-          name: 'Bench Press',
-          description: 'Upper body strength exercise',
-          default_intensity_unit: 2,
-          times_used: 0,
-        },
-        {
-          id: generateRandomId(),
-          name: 'Deadlift',
-          description: 'Full body strength exercise',
-          default_intensity_unit: 2,
-          times_used: 0,
-        },
-      ],
-      workoutTypes: [
-        {
-          id: generateRandomId(),
-          name: 'Strength Training',
-          description: 'Traditional weightlifting session',
-        },
-        {
-          id: generateRandomId(),
-          name: 'Cardio',
-          description: 'Cardiovascular exercise session',
-        },
-        {
-          id: generateRandomId(),
-          name: 'Bodyweight',
-          description: 'Exercises using your own body weight',
-        },
-        {
-          id: '8',
-          name: 'Other',
-          description: 'General workout session',
-        },
-      ],
-      recipes: [],
+      ...getInitialGuestData(),
       hasAttemptedSync: false,
 
       addWorkout: (workout) => {
