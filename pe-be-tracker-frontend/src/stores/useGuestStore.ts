@@ -11,11 +11,14 @@ export interface GuestExerciseType {
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
+  external_id?: string | null;
+  images_url?: string | null;
   equipment?: string | null;
   instructions?: string | null;
   category?: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
   usage_count?: number;
   muscles?: Array<{ id: number; name: string }>;
   muscle_groups?: string[];
@@ -30,13 +33,14 @@ export interface GuestIntensityUnit {
 export interface GuestExerciseSet {
   id: string;
   reps: number | null;
-  intensity: number | null;
+  intensity: string | null;
   intensity_unit_id: number;
   exercise_id: string;
   rest_time_seconds: number | null;
   done: boolean;
   notes?: string | null;
   type?: string | null;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +51,7 @@ export interface GuestExercise {
   notes: string | null;
   exercise_type_id: string;
   workout_id: string;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
   exercise_type: GuestExerciseType;
@@ -75,7 +80,7 @@ export interface GuestWorkout {
 export interface GuestRecipeSet {
   id: string;
   reps: number | null;
-  intensity: number | null;
+  intensity: string | null;
   intensity_unit_id: number;
   rest_time_seconds: number | null;
   notes?: string | null;
@@ -118,10 +123,14 @@ interface GuestActions {
   addExercise: (exercise: Omit<GuestExercise, 'id' | 'created_at' | 'updated_at' | 'exercise_sets'>) => string;
   updateExercise: (id: string, updates: Partial<GuestExercise>) => void;
   deleteExercise: (id: string) => void;
+  softDeleteExercise: (id: string) => void;
+  restoreExercise: (id: string) => void;
   
   addExerciseSet: (exerciseSet: Omit<GuestExerciseSet, 'id' | 'created_at' | 'updated_at'>) => string;
   updateExerciseSet: (id: string, updates: Partial<GuestExerciseSet>) => void;
   deleteExerciseSet: (id: string) => void;
+  softDeleteExerciseSet: (id: string) => void;
+  restoreExerciseSet: (id: string) => void;
   
   addExerciseType: (exerciseType: Omit<GuestExerciseType, 'id' | 'times_used'>) => string;
   updateExerciseType: (id: string, updates: Partial<GuestExerciseType>) => void;
@@ -134,6 +143,10 @@ interface GuestActions {
   deleteRoutine: (id: string) => void;
   createRoutineFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
   createExercisesFromRoutine: (routine: GuestRecipe, workoutId: string) => string[];
+  
+  // Utility methods
+  getActiveExercises: (workoutId?: string) => GuestExercise[];
+  getActiveSets: (exerciseId?: string) => GuestExerciseSet[];
   
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
@@ -201,11 +214,49 @@ const getInitialGuestData = (): GuestData => ({
   recipes: [],
 });
 
+const formatIntensityValue = (value: number | string | null): string | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value;
+  return Number(value).toFixed(3);
+};
+
+const parseIntensityValue = (value: string | null): number | null => {
+  if (!value) return null;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? null : parsed;
+};
+
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
   
   if (!migrated.recipes) {
     migrated.recipes = [];
+  }
+  
+  // Migrate intensity from number to string format
+  if (migrated.workouts) {
+    migrated.workouts.forEach((workout: any) => {
+      workout.exercises?.forEach((exercise: any) => {
+        exercise.exercise_sets?.forEach((set: any) => {
+          if (typeof set.intensity === 'number') {
+            set.intensity = formatIntensityValue(set.intensity);
+          }
+        });
+      });
+    });
+  }
+  
+  // Migrate recipe sets intensity
+  if (migrated.recipes) {
+    migrated.recipes.forEach((recipe: any) => {
+      recipe.exercises?.forEach((exercise: any) => {
+        exercise.sets?.forEach((set: any) => {
+          if (typeof set.intensity === 'number') {
+            set.intensity = formatIntensityValue(set.intensity);
+          }
+        });
+      });
+    });
   }
   
   return migrated as GuestData;
@@ -359,12 +410,43 @@ export const useGuestStore = create<GuestStore>()(
       }));
     },
 
+    softDeleteExercise: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise =>
+              exercise.id === id
+                ? { ...exercise, deleted_at: now, updated_at: now }
+                : exercise
+            ),
+          })),
+      }));
+    },
+
+    restoreExercise: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise =>
+              exercise.id === id
+                ? { ...exercise, deleted_at: null, updated_at: now }
+                : exercise
+            ),
+          })),
+      }));
+    },
+
     addExerciseSet: (exerciseSet) => {
       const id = generateRandomId();
       const now = getCurrentUTCTimestamp();
       const newExerciseSet: GuestExerciseSet = {
         ...exerciseSet,
         id,
+        intensity: formatIntensityValue(exerciseSet.intensity),
         created_at: now,
         updated_at: now,
       };
@@ -414,6 +496,42 @@ export const useGuestStore = create<GuestStore>()(
             exercises: workout.exercises.map(exercise => ({
               ...exercise,
               exercise_sets: exercise.exercise_sets.filter(set => set.id !== id),
+            })),
+          })),
+      }));
+    },
+
+    softDeleteExerciseSet: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise => ({
+              ...exercise,
+              exercise_sets: exercise.exercise_sets.map(set =>
+                set.id === id
+                  ? { ...set, deleted_at: now, updated_at: now }
+                  : set
+              ),
+            })),
+          })),
+      }));
+    },
+
+    restoreExerciseSet: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise => ({
+              ...exercise,
+              exercise_sets: exercise.exercise_sets.map(set =>
+                set.id === id
+                  ? { ...set, deleted_at: null, updated_at: now }
+                  : set
+              ),
             })),
           })),
       }));
@@ -574,6 +692,31 @@ export const useGuestStore = create<GuestStore>()(
         if (exercise) return exercise;
       }
       return undefined;
+    },
+
+    getActiveExercises: (workoutId?: string) => {
+      const { workouts } = get();
+      if (workoutId) {
+        const workout = workouts.find(w => w.id === workoutId);
+        return workout ? workout.exercises.filter(ex => !ex.deleted_at) : [];
+      }
+      return workouts.flatMap(w => w.exercises.filter(ex => !ex.deleted_at));
+    },
+
+    getActiveSets: (exerciseId?: string) => {
+      const { workouts } = get();
+      if (exerciseId) {
+        for (const workout of workouts) {
+          const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+          if (exercise) {
+            return exercise.exercise_sets.filter(set => !set.deleted_at);
+          }
+        }
+        return [];
+      }
+      return workouts.flatMap(w => 
+        w.exercises.flatMap(ex => ex.exercise_sets.filter(set => !set.deleted_at))
+      );
     },
 
     syncWithServer: async () => {
