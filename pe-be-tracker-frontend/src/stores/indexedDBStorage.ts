@@ -132,59 +132,104 @@ export function createIndexedDBStorage(): StateStorage {
   // Test IndexedDB availability on first use
   let hasTestedIDB = false;
   let useIndexedDB = false;
+  let readinessPromise: Promise<boolean> | null = null;
+
+  const ensureIDBReady = async (): Promise<boolean> => {
+    if (hasTestedIDB) {
+      return useIndexedDB;
+    }
+
+    if (!readinessPromise) {
+      readinessPromise = (async () => {
+        try {
+          await idbStorage.setItem('__idb_test__', 'probe');
+          await idbStorage.removeItem('__idb_test__');
+          useIndexedDB = true;
+        } catch (error) {
+          useIndexedDB = false;
+          console.info('IndexedDB unavailable, using localStorage fallback', error);
+        } finally {
+          hasTestedIDB = true;
+        }
+
+        return useIndexedDB;
+      })().finally(() => {
+        readinessPromise = null;
+      });
+    }
+
+    return readinessPromise;
+  };
+
+  const localStorageSafeGet = (name: string): string | null => {
+    try {
+      return localStorage.getItem(name);
+    } catch (error) {
+      console.warn('Failed to read from localStorage fallback:', error);
+      return null;
+    }
+  };
+
+  const localStorageSafeSet = (name: string, value: string): void => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (error) {
+      console.error('Failed to persist to localStorage fallback:', error);
+      throw error;
+    }
+  };
+
+  const localStorageSafeRemove = (name: string): void => {
+    try {
+      localStorage.removeItem(name);
+    } catch (error) {
+      console.warn('Failed to remove from localStorage fallback:', error);
+    }
+  };
+
+  const withIndexedDBFallback = async <T>(
+    operation: () => Promise<T>,
+    fallback: () => T | Promise<T>
+  ): Promise<T> => {
+    if (await ensureIDBReady()) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.warn('IndexedDB operation failed, falling back to localStorage:', error);
+        hasTestedIDB = false;
+        useIndexedDB = false;
+      }
+    }
+
+    return fallback();
+  };
 
   return {
     async getItem(name: string): Promise<string | null> {
-      // Test IndexedDB on first access
-      if (!hasTestedIDB) {
-        try {
-          await idbStorage.setItem('__test__', 'test');
-          await idbStorage.removeItem('__test__');
-          useIndexedDB = true;
-        } catch {
-          useIndexedDB = false;
-          console.info('IndexedDB unavailable, using localStorage fallback');
-        }
-        hasTestedIDB = true;
-      }
-
-      if (useIndexedDB) {
-        return idbStorage.getItem(name);
-      } else {
-        // Fallback to localStorage
-        try {
-          return localStorage.getItem(name);
-        } catch {
-          return null;
-        }
-      }
+      return withIndexedDBFallback(
+        () => idbStorage.getItem(name),
+        () => localStorageSafeGet(name)
+      );
     },
 
     async setItem(name: string, value: string): Promise<void> {
-      if (useIndexedDB) {
-        return idbStorage.setItem(name, value);
-      } else {
-        // Fallback to localStorage
-        try {
-          localStorage.setItem(name, value);
-        } catch (error) {
-          console.error('Failed to save to localStorage:', error);
-          throw error;
+      await withIndexedDBFallback(
+        () => idbStorage.setItem(name, value),
+        () => {
+          localStorageSafeSet(name, value);
+          return Promise.resolve();
         }
-      }
+      );
     },
 
     async removeItem(name: string): Promise<void> {
-      if (useIndexedDB) {
-        return idbStorage.removeItem(name);
-      } else {
-        // Fallback to localStorage
-        try {
-          localStorage.removeItem(name);
-        } catch {
-          // Ignore localStorage remove failures
+      await withIndexedDBFallback(
+        () => idbStorage.removeItem(name),
+        () => {
+          localStorageSafeRemove(name);
+          return Promise.resolve();
         }
-      }
+      );
     },
   };
 }
