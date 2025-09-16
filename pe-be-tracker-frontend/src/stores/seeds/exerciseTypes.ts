@@ -15,7 +15,7 @@ export const buildExerciseTypes = (
     {
       id: ids.squats,
       name: 'Squats',
-      description: 'Lower body bodyweight exercise',
+      description: 'Lower body exercise',
       default_intensity_unit: 1,
       times_used: 0,
     },
