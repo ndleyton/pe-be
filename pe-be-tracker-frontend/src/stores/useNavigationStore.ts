@@ -24,12 +24,15 @@ export const useNavigationStore = create<NavigationStore>()(
       },
 
       setLastVisitedPath: (navKey: NavKey, path: string) => {
-        set(state => ({
-          lastVisitedPaths: {
-            ...state.lastVisitedPaths,
-            [navKey]: path
-          }
-        }));
+        const { lastVisitedPaths } = get();
+        if (lastVisitedPaths[navKey] !== path) {
+          set(state => ({
+            lastVisitedPaths: {
+              ...state.lastVisitedPaths,
+              [navKey]: path
+            }
+          }));
+        }
       },
 
       getLastVisitedPath: (navKey: NavKey, defaultPath: string) => {
