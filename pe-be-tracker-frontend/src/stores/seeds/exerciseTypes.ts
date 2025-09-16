@@ -1,0 +1,163 @@
+import type { GuestExerciseType } from '../useGuestStore';
+import type { ExerciseTypeIds } from './types';
+
+export const buildExerciseTypes = (
+  ids: ExerciseTypeIds
+): GuestExerciseType[] => (
+  [
+    {
+      id: ids.pushUps,
+      name: 'Push-ups',
+      description: 'Upper body bodyweight exercise',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    {
+      id: ids.squats,
+      name: 'Squats',
+      description: 'Lower body bodyweight exercise',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    {
+      id: ids.benchPress,
+      name: 'Bench Press',
+      description: 'Upper body strength exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.deadlift,
+      name: 'Deadlift',
+      description: 'Full body strength exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.pullUps,
+      name: 'Pull-ups',
+      description: 'Upper body bodyweight pulling exercise',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    {
+      id: ids.barbellRows,
+      name: 'Barbell Rows',
+      description: 'Back strength exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.latPulldowns,
+      name: 'Lat Pulldowns',
+      description: 'Upper back and lat exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.facePulls,
+      name: 'Face Pulls',
+      description: 'Rear deltoid and upper back exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.bicepCurls,
+      name: 'Bicep Curls',
+      description: 'Bicep isolation exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.hammerCurls,
+      name: 'Hammer Curls',
+      description: 'Bicep and forearm exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.overheadPress,
+      name: 'Overhead Press',
+      description: 'Shoulder and tricep exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.dips,
+      name: 'Dips',
+      description: 'Tricep and chest bodyweight exercise',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    {
+      id: ids.inclineBenchPress,
+      name: 'Incline Bench Press',
+      description: 'Upper chest strength exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.tricepExtensions,
+      name: 'Tricep Extensions',
+      description: 'Tricep isolation exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.lateralRaises,
+      name: 'Lateral Raises',
+      description: 'Side deltoid exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.bulgarianSplitSquats,
+      name: 'Bulgarian Split Squats',
+      description: 'Single leg quad and glute exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.romanianDeadlifts,
+      name: 'Romanian Deadlifts',
+      description: 'Hamstring and glute exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.walkingLunges,
+      name: 'Walking Lunges',
+      description: 'Dynamic leg and glute exercise',
+      default_intensity_unit: 1,
+      times_used: 0,
+    },
+    {
+      id: ids.legPress,
+      name: 'Leg Press',
+      description: 'Quad and glute machine exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.calfRaises,
+      name: 'Calf Raises',
+      description: 'Calf muscle exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.legCurls,
+      name: 'Leg Curls',
+      description: 'Hamstring isolation exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+    {
+      id: ids.legExtensions,
+      name: 'Leg Extensions',
+      description: 'Quadricep isolation exercise',
+      default_intensity_unit: 2,
+      times_used: 0,
+    },
+  ] satisfies GuestExerciseType[]
+);
