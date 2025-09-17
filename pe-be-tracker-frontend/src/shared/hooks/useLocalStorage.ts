@@ -45,9 +45,9 @@ export function useLocalStorage<T>(
         const valueToStore = value instanceof Function ? value(prev) : value;
 
         if (storage) {
-          storage
+          (storage as any)
             .setItem(key, JSON.stringify(valueToStore))
-            .catch(error => {
+            .catch((error: any) => {
               console.error(`Error setting persistent key "${key}":`, error);
             });
         }

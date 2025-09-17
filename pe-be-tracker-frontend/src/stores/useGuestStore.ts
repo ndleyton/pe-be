@@ -33,7 +33,7 @@ export interface GuestIntensityUnit {
 export interface GuestExerciseSet {
   id: string;
   reps: number | null;
-  intensity: string | null;
+  intensity: number | null;
   intensity_unit_id: number;
   exercise_id: string;
   rest_time_seconds: number | null;
@@ -80,7 +80,7 @@ export interface GuestWorkout {
 export interface GuestRecipeSet {
   id: string;
   reps: number | null;
-  intensity: string | null;
+  intensity: number | null;
   intensity_unit_id: number;
   rest_time_seconds: number | null;
   notes?: string | null;
@@ -214,11 +214,6 @@ const getInitialGuestData = (): GuestData => ({
   recipes: [],
 });
 
-const formatIntensityValue = (value: number | string | null): string | null => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return value;
-  return Number(value).toFixed(3);
-};
 
 const parseIntensityValue = (value: string | null): number | null => {
   if (!value) return null;
@@ -233,27 +228,23 @@ const migrateGuestData = (data: any): GuestData => {
     migrated.recipes = [];
   }
   
-  // Migrate intensity from number to string format
+  // Migration placeholder for exercise sets
   if (migrated.workouts) {
     migrated.workouts.forEach((workout: any) => {
       workout.exercises?.forEach((exercise: any) => {
         exercise.exercise_sets?.forEach((set: any) => {
-          if (typeof set.intensity === 'number') {
-            set.intensity = formatIntensityValue(set.intensity);
-          }
+          // Keep intensity as number | null
         });
       });
     });
   }
   
-  // Migrate recipe sets intensity
+  // Migration placeholder for recipe sets
   if (migrated.recipes) {
     migrated.recipes.forEach((recipe: any) => {
       recipe.exercises?.forEach((exercise: any) => {
         exercise.sets?.forEach((set: any) => {
-          if (typeof set.intensity === 'number') {
-            set.intensity = formatIntensityValue(set.intensity);
-          }
+          // Keep intensity as number | null
         });
       });
     });
@@ -393,7 +384,7 @@ export const useGuestStore = create<GuestStore>()(
       const newExerciseSet: GuestExerciseSet = {
         ...exerciseSet,
         id,
-        intensity: formatIntensityValue(exerciseSet.intensity),
+        intensity: exerciseSet.intensity,
         created_at: now,
         updated_at: now,
       };

@@ -213,7 +213,7 @@ describe('useGuestStore', () => {
     const exercise = workout!.exercises.find(e => e.id === exerciseId);
     expect(exercise!.exercise_sets).toHaveLength(1);
     expect(exercise!.exercise_sets[0].reps).toBe(10);
-    expect(parseFloat(exercise!.exercise_sets[0].intensity!)).toBe(50);
+    expect(exercise!.exercise_sets[0].intensity).toBe(50);
     expect(exercise!.exercise_sets[0].done).toBe(false);
   });
 
