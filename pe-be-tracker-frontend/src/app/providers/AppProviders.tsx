@@ -51,7 +51,7 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
       onReset={() => {
         // Reset any global state that might be causing issues
         queryClient.clear();
-        // Could also clear localStorage or other persistent state if needed
+        // Could also clear IndexedDB/localStorage fallback or other persistent state if needed
       }}
     >
       <QueryClientProvider client={queryClient}>

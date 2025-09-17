@@ -1,38 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createIndexedDBStorage } from '@/stores/indexedDBStorage';
+
+const storage = typeof window !== 'undefined' ? createIndexedDBStorage() : null;
 
 export function useLocalStorage<T>(
   key: string,
   initialValue: T
 ): [T, (value: T | ((val: T) => T)) => void] {
-  // State to store our value
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      // Get from local storage by key
-      const item = window.localStorage.getItem(key);
-      // Parse stored json or if none return initialValue
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      // If error also return initialValue
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  });
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
 
-  // Return a wrapped version of useState's setter function that ...
-  // ... persists the new value to localStorage.
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      // Allow value to be a function so we have the same API as useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      // Save state
-      setStoredValue(valueToStore);
-      // Save to local storage
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
-    } catch (error) {
-      // A more advanced implementation would handle the error case
-      console.error(`Error setting localStorage key "${key}":`, error);
-    }
-  };
+  useEffect(() => {
+    if (!storage) return;
+
+    let isActive = true;
+
+    const hydrate = async () => {
+      try {
+        const item = await storage.getItem(key);
+        if (!isActive) return;
+
+        if (item !== null) {
+          setStoredValue(JSON.parse(item));
+        } else {
+          setStoredValue(initialValue);
+        }
+      } catch (error) {
+        console.error(`Error reading persistent key "${key}":`, error);
+        if (isActive) {
+          setStoredValue(initialValue);
+        }
+      }
+    };
+
+    hydrate();
+
+    return () => {
+      isActive = false;
+    };
+  }, [key, initialValue]);
+
+  const setValue = useCallback(
+    (value: T | ((val: T) => T)) => {
+      setStoredValue(prev => {
+        const valueToStore = value instanceof Function ? value(prev) : value;
+
+        if (storage) {
+          storage
+            .setItem(key, JSON.stringify(valueToStore))
+            .catch(error => {
+              console.error(`Error setting persistent key "${key}":`, error);
+            });
+        }
+
+        return valueToStore;
+      });
+    },
+    [key]
+  );
 
   return [storedValue, setValue];
 }
