@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clearGuestData } from './utils/storage';
 
 // Helper function to dismiss common overlays that might interfere with clicks
 async function dismissOverlays(page: any) {
@@ -99,9 +100,6 @@ test.describe('Guest Mode Workout Creation', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    // Clean up guest data stored in localStorage so subsequent tests start fresh
-    await page.evaluate(() => {
-      localStorage.removeItem('pe-guest-data');
-    });
+    await clearGuestData(page);
   });
 });
