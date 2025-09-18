@@ -3,12 +3,10 @@ import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/shared/api/client';
-import { toUTCISOString } from '@/utils/date';
+import { toUTCISOString, toLocalDateTimeInputValue, getCurrentUTCTimestamp } from '@/utils/date';
 import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
 import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
-
-const DEFAULT_WORKOUT_TYPE_ID = '8';
 
 interface WorkoutFormData {
   name?: string;
@@ -25,13 +23,16 @@ interface WorkoutFormProps {
 
 
 const createWorkout = async (data: WorkoutFormData) => {
+  const startTimeISO = data.start_time ? toUTCISOString(data.start_time) : null;
+  const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
+
   const response = await api.post(
     '/workouts/',
     {
       name: data.name || null,
       notes: data.notes || null,
-      start_time: data.start_time ? toUTCISOString(data.start_time) : null,
-      end_time: data.end_time ? toUTCISOString(data.end_time) : null,
+      start_time: startTimeISO || null,
+      end_time: endTimeISO || null,
       workout_type_id: data.workout_type_id,
     },
   );
@@ -58,7 +59,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
   } = useForm<WorkoutFormData>({
     defaultValues: {
       name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      start_time: new Date().toISOString().slice(0, 16),
+      start_time: toLocalDateTimeInputValue(),
       workout_type_id: !isAuthenticated ? '' : undefined, // Initialize for guest users
     },
   });
@@ -89,7 +90,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     if (recipe) {
       reset({
         name: `${recipe.name} - ${datePrefix}`,
-        start_time: new Date().toISOString().slice(0, 16),
+        start_time: toLocalDateTimeInputValue(),
       });
     }
   }, [recipe, datePrefix, reset]);
@@ -123,11 +124,14 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
         setValue('workout_type_id', workoutType.id);
       }
 
+      const startTimeISO = toUTCISOString(data.start_time) || getCurrentUTCTimestamp();
+      const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
+
       const newWorkoutId = guestActions.addWorkout({
         name: data.name || null,
         notes: data.notes || null,
-        start_time: data.start_time || new Date().toISOString(),
-        end_time: data.end_time || null,
+        start_time: startTimeISO,
+        end_time: endTimeISO,
         workout_type_id: data.workout_type_id as string,
         workout_type: workoutType,
         exercises: [],
@@ -154,7 +158,8 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     reset();
     setSelectedWorkoutType(null);
     setIsEditingName(false);
-    
+    setValue('start_time', toLocalDateTimeInputValue());
+
     // For guest users, immediately set a default workout type after reset
     if (!isAuthenticated && guestData.workoutTypes.length > 0) {
       setTimeout(() => {

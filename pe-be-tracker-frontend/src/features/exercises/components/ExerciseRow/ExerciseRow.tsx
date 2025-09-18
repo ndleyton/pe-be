@@ -38,11 +38,26 @@ interface MoreMenuModalState {
   setId: string | number;
 }
 
+const formatIntensityInputValue = (value: ExerciseSet['intensity']): string => {
+  const formatted = formatDecimal(value);
+  return formatted === '-' ? '' : formatted;
+};
+
+const buildIntensityInputs = (sets: ExerciseSet[]): Record<string, string> => {
+  return sets.reduce<Record<string, string>>((acc, set) => {
+    acc[String(set.id)] = formatIntensityInputValue(set.intensity);
+    return acc;
+  }, {});
+};
+
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, onExerciseDelete, workoutId }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestDeleteExercise = useGuestStore(state => state.deleteExercise);
   
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
+  const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>(() =>
+    buildIntensityInputs(exercise.exercise_sets || [])
+  );
   const [showAddForm, setShowAddForm] = useState(false);
   const [exerciseNotesModal, setExerciseNotesModal] = useState(false);
   const [exerciseNotesValue, setExerciseNotesValue] = useState<string>('');
@@ -83,6 +98,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     }
   }, [debouncedSetNotesValue, notesModal, exerciseSets, initialSetNotesValue]);
 
+  useEffect(() => {
+    setIntensityInputs(buildIntensityInputs(exerciseSets));
+  }, [exerciseSets]);
+
+  // Refresh intensity string map whenever exerciseSets change (e.g., after saves)
+
   // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
   const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
     return sets.map(set => ({
@@ -91,6 +112,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       exercise_id: String(set.exercise_id)
     }));
   };
+
+  // Intensity input is now uncontrolled; commit on blur or Enter and revert on Escape/invalid
 
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
@@ -510,41 +533,64 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
 
         {/* Sets */}
         <div className="space-y-2">
-          {exerciseSets.map((set, index) => (
-            <div
-              key={set.id}
-              className={`grid gap-2 sm:gap-4 items-center p-2 rounded ${
-                set.done ? "bg-done" : "bg-secondary"
-              }`}
-              style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}
-            >
-              <div className="font-medium text-muted-foreground">
-                <span>{index + 1}</span>
-              </div>
-              <div>
-                <Input
-                  key={`intensity-${String(set.id)}-${set.intensity ?? ''}`}
-                  type="text"
-                  inputMode="decimal"
-                  defaultValue={formatDecimal(set.intensity)}
-                  onBlur={(e) => {
-                    const parsed = parseDecimalInput(e.currentTarget.value);
-                    if (parsed !== null) {
-                      updateSet(exercise.id, set.id, "weight", parsed);
-                      e.currentTarget.value = formatDecimal(parsed);
-                    } else {
-                      e.currentTarget.value = formatDecimal(set.intensity);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === "Escape") {
-                      (e.currentTarget as HTMLInputElement).blur();
-                    }
-                  }}
-                  className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
-                  disabled={set.done}
-                />
-              </div>
+          {exerciseSets.map((set, index) => {
+            const savedIntensityValue = formatDecimal(set.intensity);
+            const setKey = String(set.id);
+            const intensityValue = intensityInputs[setKey] ?? (savedIntensityValue === '-' ? '' : savedIntensityValue);
+
+            return (
+              <div
+                key={set.id}
+                className={`grid gap-2 sm:gap-4 items-center p-2 rounded ${
+                  set.done ? "bg-done" : "bg-secondary"
+                }`}
+                style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}
+              >
+                <div className="font-medium text-muted-foreground">
+                  <span>{index + 1}</span>
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={intensityValue}
+                    data-testid="intensity-input"
+                    onChange={(e) => {
+                      const { value } = e.target;
+                      setIntensityInputs(prev => ({ ...prev, [setKey]: value }));
+                    }}
+                    onBlur={(e) => {
+                      const parsedValue = parseDecimalInput(e.currentTarget.value);
+                      if (parsedValue === null) {
+                        const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
+                        setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
+                        return;
+                      }
+                      if (parsedValue === set.intensity) {
+                        const formattedValue = formatIntensityInputValue(parsedValue);
+                        setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
+                        return;
+                      }
+                      const formattedValue = formatIntensityInputValue(parsedValue);
+                      setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
+                      void updateSet(exercise.id, set.id, 'weight', parsedValue);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLInputElement).blur();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
+                        setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
+                        (e.currentTarget as HTMLInputElement).blur();
+                      }
+                    }}
+                    className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
+                    disabled={set.done}
+                  />
+                </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
                 <Button
                   variant="outline"
@@ -647,12 +693,18 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                   </DialogContent>
                 </Dialog>
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* Add Set Button */}
-        <Button variant="outline" className="w-full mt-4 bg-transparent border-input" onClick={() => addSet(exercise.id)}>
+        <Button
+          variant="outline"
+          className="w-full mt-4 bg-transparent border-input"
+          data-testid="add-set-button"
+          onClick={() => addSet(exercise.id)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Set
         </Button>
