@@ -1,11 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { seedGuestData } from './utils/storage';
 
 test.describe('Routines quick-start navigation', () => {
   test('clicking More in RoutinesSection navigates to /routines', async ({ page }) => {
-    // Seed guest data so Quick Start Routines is visible (store reads from localStorage)
-    await page.addInitScript((data) => {
-      localStorage.setItem('pe-guest-data', JSON.stringify(data));
-    }, {
+    await seedGuestData(page, {
       workouts: [],
       exerciseTypes: [
         { id: '1', name: 'Push-ups', description: null, default_intensity_unit: 1, times_used: 0 }
@@ -77,5 +75,4 @@ test.describe('Routines quick-start navigation', () => {
     await expect(page.getByRole('heading', { name: 'Routines', level: 1 })).toBeVisible();
   });
 });
-
 

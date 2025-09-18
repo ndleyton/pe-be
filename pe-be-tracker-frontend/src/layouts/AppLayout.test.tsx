@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { GuestDataProvider } from '@/contexts/GuestDataContext';
 import { WorkoutTimerProvider } from '@/contexts/WorkoutTimerContext';
 
 const MockComponent = () => <div>Mock Content</div>;
@@ -14,9 +13,7 @@ const renderWithProviders = (ui: React.ReactElement) => {
     <MemoryRouter>
       <WorkoutTimerProvider>
         <AuthProvider>
-          <GuestDataProvider>
-            {ui}
-          </GuestDataProvider>
+          {ui}
         </AuthProvider>
       </WorkoutTimerProvider>
     </MemoryRouter>

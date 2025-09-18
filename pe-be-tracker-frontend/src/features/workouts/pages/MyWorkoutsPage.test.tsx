@@ -34,23 +34,6 @@ vi.mock('axios', async () => {
   };
 });
 
-vi.mock('@/contexts/GuestDataContext', async () => {
-  const actual = await vi.importActual('@/contexts/GuestDataContext');
-  return {
-    ...actual,
-    useGuestData: () => ({ 
-      isAuthenticated: () => true, 
-      guestData: { 
-        workouts: [], 
-        recipes: [], 
-        exerciseTypes: [], 
-        workoutTypes: [], 
-        intensityUnits: [], 
-        muscles: [] 
-      },
-    }),
-  };
-});
 
 vi.mock('@/stores', () => ({
   useAuthStore: vi.fn((selector) => {
@@ -68,8 +51,28 @@ vi.mock('@/stores', () => ({
       recipes: [],
       exerciseTypes: [],
       workoutTypes: [],
-      intensityUnits: [],
-      muscles: [],
+      hasAttemptedSync: false,
+      addWorkout: vi.fn(),
+      updateWorkout: vi.fn(),
+      deleteWorkout: vi.fn(),
+      addExercise: vi.fn(),
+      updateExercise: vi.fn(),
+      deleteExercise: vi.fn(),
+      addExerciseSet: vi.fn(),
+      updateExerciseSet: vi.fn(),
+      deleteExerciseSet: vi.fn(),
+      addExerciseType: vi.fn(),
+      updateExerciseType: vi.fn(),
+      addWorkoutType: vi.fn(),
+      updateWorkoutType: vi.fn(),
+      addRoutine: vi.fn(),
+      deleteRoutine: vi.fn(),
+      createRoutineFromWorkout: vi.fn(),
+      createExercisesFromRoutine: vi.fn(),
+      clear: vi.fn(),
+      getWorkout: vi.fn(),
+      getExercise: vi.fn(),
+      syncWithServer: vi.fn(),
     };
     return selector ? selector(mockState) : mockState;
   }),

@@ -9,7 +9,7 @@ A React + TypeScript fitness tracking application with local-first guest mode an
 - **Workout Tracking**: Create workouts, add exercises, and track sets with detailed metrics
 - **Exercise Type Management**: Built-in exercise library with the ability to create custom exercises
 - **Responsive Design**: Works on desktop and mobile devices
-- **Data Persistence**: localStorage for guest mode, secure cloud storage for authenticated users
+- **Data Persistence**: IndexedDB (with localStorage fallback) for guest mode, secure cloud storage for authenticated users
 
 ## 🏃‍♂️ Getting Started
 
@@ -34,7 +34,7 @@ The app includes a local-first guest mode that allows users to start tracking wo
 ### How It Works
 
 - **No Authentication Required**: Click "Try as Guest" on the welcome page
-- **Local Storage**: All workout data is stored in your browser's localStorage
+- **Local Storage**: All workout data is stored in your browser's IndexedDB (with an automatic localStorage fallback when necessary)
 - **Survives Browser Restarts**: Data persists across browser sessions
 - **Automatic Sync**: When you sign in, all local data is automatically uploaded to your account
 - **Clean Transition**: After sync, only authenticated data is shown
@@ -49,7 +49,7 @@ The app includes a local-first guest mode that allows users to start tracking wo
 ### Data Sync Process
 
 1. User creates workouts/exercises while unauthenticated
-2. Data is stored in localStorage under the key `pe-guest-data`
+2. Data is stored in IndexedDB (object store `keyval`, key `pe-guest-data`)
 3. User signs in with Google OAuth
 4. App automatically uploads all local data via REST APIs
 5. Local cache is cleared after successful sync
@@ -80,7 +80,7 @@ npm test
 
 ### Test Coverage
 The app includes comprehensive tests for:
-- Guest data context and localStorage persistence
+- Guest data context and IndexedDB persistence
 - Data sync functionality with mocked API calls
 - Component rendering with guest/authenticated states
 - Form submissions in both modes
@@ -98,13 +98,13 @@ The app includes comprehensive tests for:
 
 ```
 Guest Mode:
-User Input → Forms → GuestDataContext → localStorage
+User Input → Forms → GuestDataContext → IndexedDB
 
 Authenticated Mode:
 User Input → Forms → API Client → Server Database
 
 Sync Process:
-localStorage → syncGuestDataToServer() → API Client → Server Database
+IndexedDB → syncGuestDataToServer() → API Client → Server Database
 ```
 
 ## 🔗 API Endpoints
