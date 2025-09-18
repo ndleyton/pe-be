@@ -5,7 +5,8 @@ import {
   formatRelativeTime,
   getCurrentUTCTimestamp,
   generateRandomId,
-  parseWorkoutDuration
+  parseWorkoutDuration,
+  toLocalDateTimeInputValue
 } from './date';
 
 describe('Date Utilities', () => {
@@ -29,12 +30,12 @@ describe('Date Utilities', () => {
 
     it('handles HTML datetime-local format without seconds', () => {
       const datetimeLocal = '2024-01-01T12:00';
-      expect(toUTCISOString(datetimeLocal)).toBe('2024-01-01T12:00:00.000Z');
+      expect(toUTCISOString(datetimeLocal)).toBe(new Date(datetimeLocal).toISOString());
     });
 
     it('handles HTML datetime-local format with seconds', () => {
       const datetimeLocal = '2024-01-01T12:00:30';
-      expect(toUTCISOString(datetimeLocal)).toBe('2024-01-01T12:00:30.000Z');
+      expect(toUTCISOString(datetimeLocal)).toBe(new Date(datetimeLocal).toISOString());
     });
 
     it('handles other date formats by parsing as-is', () => {
@@ -131,6 +132,21 @@ describe('Date Utilities', () => {
       
       expect(newYear).toMatch(/Jan 1/);
       expect(newYearEve).toMatch(/Dec 31/);
+    });
+  });
+
+  describe('toLocalDateTimeInputValue', () => {
+    it('returns an ISO-like string without timezone suitable for datetime-local inputs', () => {
+      const date = new Date('2024-01-01T12:34:56Z');
+      const value = toLocalDateTimeInputValue(date);
+
+      expect(value).toHaveLength(16);
+      expect(value).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+
+      const parsed = new Date(value);
+      const expected = new Date(date);
+      expected.setSeconds(0, 0);
+      expect(parsed.toISOString()).toBe(expected.toISOString());
     });
   });
 
