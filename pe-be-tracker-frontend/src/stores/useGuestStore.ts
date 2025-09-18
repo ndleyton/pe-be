@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
-import { generateRandomId, getCurrentUTCTimestamp } from '@/utils/date';
+import { generateRandomId, getCurrentUTCTimestamp, toUTCISOString } from '@/utils/date';
 import { useAuthStore } from './useAuthStore';
 import { createIndexedDBStorage } from './indexedDBStorage';
 
@@ -221,6 +221,20 @@ const parseIntensityValue = (value: string | null): number | null => {
   return isNaN(parsed) ? null : parsed;
 };
 
+const normalizeTimestamp = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return value == null ? null : String(value);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = toUTCISOString(trimmed);
+  return normalized || trimmed;
+};
+
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
   
@@ -230,24 +244,40 @@ const migrateGuestData = (data: any): GuestData => {
   
   // Migration placeholder for exercise sets
   if (migrated.workouts) {
-    migrated.workouts.forEach((workout: any) => {
-      workout.exercises?.forEach((exercise: any) => {
-        exercise.exercise_sets?.forEach((set: any) => {
-          // Keep intensity as number | null
-        });
-      });
-    });
+    migrated.workouts = migrated.workouts.map((workout: any) => ({
+      ...workout,
+      start_time: normalizeTimestamp(workout.start_time),
+      end_time: normalizeTimestamp(workout.end_time),
+      created_at: normalizeTimestamp(workout.created_at),
+      updated_at: normalizeTimestamp(workout.updated_at),
+      exercises: workout.exercises?.map((exercise: any) => ({
+        ...exercise,
+        timestamp: normalizeTimestamp(exercise.timestamp),
+        created_at: normalizeTimestamp(exercise.created_at),
+        updated_at: normalizeTimestamp(exercise.updated_at),
+        exercise_sets: exercise.exercise_sets?.map((set: any) => ({
+          ...set,
+          created_at: normalizeTimestamp(set.created_at),
+          updated_at: normalizeTimestamp(set.updated_at),
+        })) ?? [],
+      })) ?? [],
+    }));
   }
   
   // Migration placeholder for recipe sets
   if (migrated.recipes) {
-    migrated.recipes.forEach((recipe: any) => {
-      recipe.exercises?.forEach((exercise: any) => {
-        exercise.sets?.forEach((set: any) => {
-          // Keep intensity as number | null
-        });
-      });
-    });
+    migrated.recipes = migrated.recipes.map((recipe: any) => ({
+      ...recipe,
+      created_at: normalizeTimestamp(recipe.created_at),
+      updated_at: normalizeTimestamp(recipe.updated_at),
+      exercises: recipe.exercises?.map((exercise: any) => ({
+        ...exercise,
+        notes: exercise.notes ?? null,
+        sets: exercise.sets?.map((set: any) => ({
+          ...set,
+        })) ?? [],
+      })) ?? [],
+    }));
   }
   
   return migrated as GuestData;
