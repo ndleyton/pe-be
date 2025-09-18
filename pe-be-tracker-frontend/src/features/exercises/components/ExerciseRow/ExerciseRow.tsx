@@ -66,7 +66,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
   const [initialSetNotesValue, setInitialSetNotesValue] = useState<string>('');
   const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
-  const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
+  // const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
   // Default intensity unit
@@ -76,8 +76,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     abbreviation: 'kg'
   });
   
-
-  // Helper function to update exercise notes
   const updateExerciseNotes = (notes: string) => {
     if (onExerciseUpdate) {
       onExerciseUpdate({
@@ -87,7 +85,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     }
   };
 
-  // Effect to update set notes when debounced value changes
   useEffect(() => {
     if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
@@ -102,9 +99,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     setIntensityInputs(buildIntensityInputs(exerciseSets));
   }, [exerciseSets]);
 
-  // Refresh intensity string map whenever exerciseSets change (e.g., after saves)
-
-  // Helper function to convert ExerciseSet to GuestExerciseSet for guest mode
   const convertToGuestExerciseSets = (sets: ExerciseSet[]): GuestExerciseSet[] => {
     return sets.map(set => ({
       ...set,
@@ -113,14 +107,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     }));
   };
 
-  // Intensity input is controlled (using value and onChange); changes are committed on blur or Enter, and reverted on Escape/invalid
-
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
     setExerciseSets(updatedSets);
     setShowAddForm(false);
-    
-    // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
@@ -130,7 +120,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   };
 
   const updateSet = async (exerciseId: string | number, setId: string | number, field: 'weight' | 'reps', value: number) => {
-    // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
       if (String(set.id) === String(setId)) {
         return {
@@ -141,8 +130,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       return set;
     });
     setExerciseSets(updatedSets);
-    
-    // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
@@ -273,13 +260,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         };
         
         await updateExerciseSet(setId, updateData);
-        
-        // Optionally invalidate queries to ensure consistency (but UI already updated)
-        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
       } catch (error) {
         console.error('Failed to update exercise set notes:', error);
-        
-        // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
           onExerciseUpdate({
@@ -287,18 +269,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
-        // TODO: Add toast notification when available
       }
     }
   };
 
   const deleteSet = async (exerciseId: string | number, setId: string | number) => {
-    // Optimistic update: Remove set from local state immediately
     const updatedSets = exerciseSets.filter(set => String(set.id) !== String(setId));
     setExerciseSets(updatedSets);
-    
-    // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
         ...exercise,
@@ -308,11 +285,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
 
     if (isAuthenticated) {
       try {
-        // Call API to delete the exercise set
         await deleteExerciseSet(setId);
-        
-        // Optionally invalidate queries to ensure consistency (but UI already updated)
-        // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
       } catch (error) {
         console.error('Failed to delete exercise set:', error);
         
