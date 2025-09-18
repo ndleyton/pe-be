@@ -113,7 +113,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     }));
   };
 
-  // Intensity input is now uncontrolled; commit on blur or Enter and revert on Escape/invalid
+  // Intensity input is controlled (using value and onChange); changes are committed on blur or Enter, and reverted on Escape/invalid
 
   const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
     const updatedSets = [...exerciseSets, newSet];
