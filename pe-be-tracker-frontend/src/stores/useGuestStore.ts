@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
-import { generateRandomId, getCurrentUTCTimestamp } from '@/utils/date';
+import { generateRandomId, getCurrentUTCTimestamp, toUTCISOString } from '@/utils/date';
 import { useAuthStore } from './useAuthStore';
+import { createIndexedDBStorage } from './indexedDBStorage';
 
 export interface GuestExerciseType {
   id: string;
@@ -9,11 +11,14 @@ export interface GuestExerciseType {
   description: string | null;
   default_intensity_unit: number;
   times_used: number;
+  external_id?: string | null;
+  images_url?: string | null;
   equipment?: string | null;
   instructions?: string | null;
   category?: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
   usage_count?: number;
   muscles?: Array<{ id: number; name: string }>;
   muscle_groups?: string[];
@@ -35,6 +40,7 @@ export interface GuestExerciseSet {
   done: boolean;
   notes?: string | null;
   type?: string | null;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +51,7 @@ export interface GuestExercise {
   notes: string | null;
   exercise_type_id: string;
   workout_id: string;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
   exercise_type: GuestExerciseType;
@@ -116,10 +123,14 @@ interface GuestActions {
   addExercise: (exercise: Omit<GuestExercise, 'id' | 'created_at' | 'updated_at' | 'exercise_sets'>) => string;
   updateExercise: (id: string, updates: Partial<GuestExercise>) => void;
   deleteExercise: (id: string) => void;
+  softDeleteExercise: (id: string) => void;
+  restoreExercise: (id: string) => void;
   
   addExerciseSet: (exerciseSet: Omit<GuestExerciseSet, 'id' | 'created_at' | 'updated_at'>) => string;
   updateExerciseSet: (id: string, updates: Partial<GuestExerciseSet>) => void;
   deleteExerciseSet: (id: string) => void;
+  softDeleteExerciseSet: (id: string) => void;
+  restoreExerciseSet: (id: string) => void;
   
   addExerciseType: (exerciseType: Omit<GuestExerciseType, 'id' | 'times_used'>) => string;
   updateExerciseType: (id: string, updates: Partial<GuestExerciseType>) => void;
@@ -133,6 +144,10 @@ interface GuestActions {
   createRoutineFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
   createExercisesFromRoutine: (routine: GuestRecipe, workoutId: string) => string[];
   
+  // Utility methods
+  getActiveExercises: (workoutId?: string) => GuestExercise[];
+  getActiveSets: (exerciseId?: string) => GuestExerciseSet[];
+  
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
@@ -141,7 +156,6 @@ interface GuestActions {
 
 type GuestStore = GuestState & GuestActions;
 
-const GUEST_DATA_KEY = 'pe-guest-data';
 
 const getInitialGuestData = (): GuestData => ({
   workouts: [],
@@ -200,6 +214,27 @@ const getInitialGuestData = (): GuestData => ({
   recipes: [],
 });
 
+
+const parseIntensityValue = (value: string | null): number | null => {
+  if (!value) return null;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? null : parsed;
+};
+
+const normalizeTimestamp = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return value == null ? null : String(value);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = toUTCISOString(trimmed);
+  return normalized || trimmed;
+};
+
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
   
@@ -207,83 +242,88 @@ const migrateGuestData = (data: any): GuestData => {
     migrated.recipes = [];
   }
   
+  // Migration placeholder for exercise sets
+  if (migrated.workouts) {
+    migrated.workouts = migrated.workouts.map((workout: any) => ({
+      ...workout,
+      start_time: normalizeTimestamp(workout.start_time),
+      end_time: normalizeTimestamp(workout.end_time),
+      created_at: normalizeTimestamp(workout.created_at),
+      updated_at: normalizeTimestamp(workout.updated_at),
+      exercises: workout.exercises?.map((exercise: any) => ({
+        ...exercise,
+        timestamp: normalizeTimestamp(exercise.timestamp),
+        created_at: normalizeTimestamp(exercise.created_at),
+        updated_at: normalizeTimestamp(exercise.updated_at),
+        exercise_sets: exercise.exercise_sets?.map((set: any) => ({
+          ...set,
+          created_at: normalizeTimestamp(set.created_at),
+          updated_at: normalizeTimestamp(set.updated_at),
+        })) ?? [],
+      })) ?? [],
+    }));
+  }
+  
+  // Migration placeholder for recipe sets
+  if (migrated.recipes) {
+    migrated.recipes = migrated.recipes.map((recipe: any) => ({
+      ...recipe,
+      created_at: normalizeTimestamp(recipe.created_at),
+      updated_at: normalizeTimestamp(recipe.updated_at),
+      exercises: recipe.exercises?.map((exercise: any) => ({
+        ...exercise,
+        notes: exercise.notes ?? null,
+        sets: exercise.sets?.map((set: any) => ({
+          ...set,
+        })) ?? [],
+      })) ?? [],
+    }));
+  }
+  
   return migrated as GuestData;
 };
 
-const loadGuestData = (): GuestData => {
-  try {
-    const stored = localStorage.getItem(GUEST_DATA_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return migrateGuestData(parsed);
-    }
-    return getInitialGuestData();
-  } catch {
-    return getInitialGuestData();
-  }
-};
 
-const saveGuestData = (data: GuestData) => {
-  try {
-    localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(data));
-  } catch (error) {
-    console.warn('Failed to save guest data to localStorage:', error);
-  }
-};
+export const useGuestStore = create<GuestStore>()(
+  persist(
+    (set, get) => ({
+      ...getInitialGuestData(),
+      hasAttemptedSync: false,
 
-export const useGuestStore = create<GuestStore>((set, get) => {
-  const initialData = loadGuestData();
-  
-  return {
-    ...initialData,
-    hasAttemptedSync: false,
-
-    addWorkout: (workout) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      const newWorkout: GuestWorkout = {
-        ...workout,
-        id,
-        created_at: now,
-        updated_at: now,
-      };
-      
-      set((state) => {
-        const newState = {
+      addWorkout: (workout) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
+        const newWorkout: GuestWorkout = {
+          ...workout,
+          id,
+          created_at: now,
+          updated_at: now,
+        };
+        
+        set((state) => ({
           ...state,
           workouts: [...state.workouts, newWorkout],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
-      
-      return id;
-    },
+        }));
+        
+        return id;
+      },
 
     updateWorkout: (id, updates) => {
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.map(workout =>
-            workout.id === id
-              ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
-              : workout
-          ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.map(workout =>
+          workout.id === id
+            ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
+            : workout
+        ),
+      }));
     },
 
     deleteWorkout: (id) => {
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.filter(workout => workout.id !== id),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.filter(workout => workout.id !== id),
+      }));
     },
 
     addExercise: (exercise) => {
@@ -297,30 +337,25 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
-          ...state,
-          workouts: state.workouts.map(workout =>
-            workout.id === exercise.workout_id
-              ? {
-                  ...workout,
-                  exercises: [...workout.exercises, newExercise],
-                  updated_at: now,
-                }
-              : workout
-          ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      set((state) => ({
+        ...state,
+        workouts: state.workouts.map(workout =>
+          workout.id === exercise.workout_id
+            ? {
+                ...workout,
+                exercises: [...workout.exercises, newExercise],
+                updated_at: now,
+              }
+            : workout
+        ),
+      }));
       
       return id;
     },
 
     updateExercise: (id, updates) => {
       const now = getCurrentUTCTimestamp();
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -330,24 +365,47 @@ export const useGuestStore = create<GuestStore>((set, get) => {
                 : exercise
             ),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     deleteExercise: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
             exercises: workout.exercises.filter(exercise => exercise.id !== id),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
+    },
+
+    softDeleteExercise: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise =>
+              exercise.id === id
+                ? { ...exercise, deleted_at: now, updated_at: now }
+                : exercise
+            ),
+          })),
+      }));
+    },
+
+    restoreExercise: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise =>
+              exercise.id === id
+                ? { ...exercise, deleted_at: null, updated_at: now }
+                : exercise
+            ),
+          })),
+      }));
     },
 
     addExerciseSet: (exerciseSet) => {
@@ -356,12 +414,12 @@ export const useGuestStore = create<GuestStore>((set, get) => {
       const newExerciseSet: GuestExerciseSet = {
         ...exerciseSet,
         id,
+        intensity: exerciseSet.intensity,
         created_at: now,
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -375,18 +433,14 @@ export const useGuestStore = create<GuestStore>((set, get) => {
                 : exercise
             ),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateExerciseSet: (id, updates) => {
       const now = getCurrentUTCTimestamp();
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -399,15 +453,11 @@ export const useGuestStore = create<GuestStore>((set, get) => {
               ),
             })),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     deleteExerciseSet: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workouts: state.workouts.map(workout => ({
             ...workout,
@@ -416,10 +466,43 @@ export const useGuestStore = create<GuestStore>((set, get) => {
               exercise_sets: exercise.exercise_sets.filter(set => set.id !== id),
             })),
           })),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
+    },
+
+    softDeleteExerciseSet: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise => ({
+              ...exercise,
+              exercise_sets: exercise.exercise_sets.map(set =>
+                set.id === id
+                  ? { ...set, deleted_at: now, updated_at: now }
+                  : set
+              ),
+            })),
+          })),
+      }));
+    },
+
+    restoreExerciseSet: (id) => {
+      const now = getCurrentUTCTimestamp();
+      set((state) => ({
+          ...state,
+          workouts: state.workouts.map(workout => ({
+            ...workout,
+            exercises: workout.exercises.map(exercise => ({
+              ...exercise,
+              exercise_sets: exercise.exercise_sets.map(set =>
+                set.id === id
+                  ? { ...set, deleted_at: null, updated_at: now }
+                  : set
+              ),
+            })),
+          })),
+      }));
     },
 
     addExerciseType: (exerciseType) => {
@@ -430,29 +513,21 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         times_used: 0,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           exerciseTypes: [...state.exerciseTypes, newExerciseType],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateExerciseType: (id, updates) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           exerciseTypes: state.exerciseTypes.map(type =>
             type.id === id ? { ...type, ...updates } : type
           ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     addWorkoutType: (workoutType) => {
@@ -462,29 +537,21 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         id,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workoutTypes: [...state.workoutTypes, newWorkoutType],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
 
     updateWorkoutType: (id, updates) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           workoutTypes: state.workoutTypes.map(type =>
             type.id === id ? { ...type, ...updates } : type
           ),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
 
     // Routine-named implementation
@@ -498,27 +565,19 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
       
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
     // Routine-named implementation
     deleteRoutine: (id) => {
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: (state.recipes || []).filter(recipe => recipe.id !== id),
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
     },
     // Routine-named implementation
     createRoutineFromWorkout: (workoutName, exercises) => {
@@ -547,14 +606,10 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         updated_at: now,
       };
 
-      set((state) => {
-        const newState = {
+      set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-        };
-        saveGuestData(newState);
-        return newState;
-      });
+      }));
       
       return id;
     },
@@ -592,11 +647,6 @@ export const useGuestStore = create<GuestStore>((set, get) => {
     clear: () => {
       const initialData = getInitialGuestData();
       set({ ...initialData, hasAttemptedSync: false });
-      try {
-        localStorage.removeItem(GUEST_DATA_KEY);
-      } catch (error) {
-        console.warn('Failed to clear guest data from localStorage:', error);
-      }
     },
 
     getWorkout: (id) => {
@@ -610,6 +660,31 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         if (exercise) return exercise;
       }
       return undefined;
+    },
+
+    getActiveExercises: (workoutId?: string) => {
+      const { workouts } = get();
+      if (workoutId) {
+        const workout = workouts.find(w => w.id === workoutId);
+        return workout ? workout.exercises.filter(ex => !ex.deleted_at) : [];
+      }
+      return workouts.flatMap(w => w.exercises.filter(ex => !ex.deleted_at));
+    },
+
+    getActiveSets: (exerciseId?: string) => {
+      const { workouts } = get();
+      if (exerciseId) {
+        for (const workout of workouts) {
+          const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+          if (exercise) {
+            return exercise.exercise_sets.filter(set => !set.deleted_at);
+          }
+        }
+        return [];
+      }
+      return workouts.flatMap(w => 
+        w.exercises.flatMap(ex => ex.exercise_sets.filter(set => !set.deleted_at))
+      );
     },
 
     syncWithServer: async () => {
@@ -635,5 +710,13 @@ export const useGuestStore = create<GuestStore>((set, get) => {
         set({ hasAttemptedSync: false });
       }
     },
-  };
-});
+    }),
+    {
+      name: 'pe-guest-data',
+      storage: createJSONStorage(() => createIndexedDBStorage()),
+      migrate: (persistedState: any, version: number) => {
+        return migrateGuestData(persistedState);
+      },
+    }
+  )
+);

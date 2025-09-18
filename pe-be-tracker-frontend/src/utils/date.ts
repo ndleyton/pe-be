@@ -27,9 +27,9 @@ export const toUTCISOString = (local: string | null | undefined): string => {
   // Handle HTML datetime-local format (YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss)
   const datetimeLocalRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
   if (datetimeLocalRegex.test(local)) {
-    const normalized = local.length === 16 ? `${local}:00Z` : `${local}Z`;
     try {
-      return new Date(normalized).toISOString();
+      const date = new Date(local);
+      return isNaN(date.getTime()) ? '' : date.toISOString();
     } catch {
       return '';
     }
@@ -117,6 +117,12 @@ export const formatRelativeTime = (timestamp: string | null | undefined): string
 
 export const getCurrentUTCTimestamp = (): string => {
   return new Date().toISOString();
+};
+
+export const toLocalDateTimeInputValue = (date: Date = new Date()): string => {
+  const tzOffset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - tzOffset * 60_000);
+  return localDate.toISOString().slice(0, 16);
 };
 
 export const generateRandomId = (): string => {
