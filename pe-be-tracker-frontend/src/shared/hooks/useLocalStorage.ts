@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { StateStorage } from 'zustand/middleware';
 import { createIndexedDBStorage } from '@/stores/indexedDBStorage';
 
-const storage = typeof window !== 'undefined' ? createIndexedDBStorage() : null;
+const storage: StateStorage | null = typeof window !== 'undefined' ? createIndexedDBStorage() : null;
 
 export function useLocalStorage<T>(
   key: string,
@@ -45,11 +46,9 @@ export function useLocalStorage<T>(
         const valueToStore = value instanceof Function ? value(prev) : value;
 
         if (storage) {
-          (storage as any)
-            .setItem(key, JSON.stringify(valueToStore))
-            .catch((error: any) => {
-              console.error(`Error setting persistent key "${key}":`, error);
-            });
+          Promise.resolve(storage.setItem(key, JSON.stringify(valueToStore))).catch((error) => {
+            console.error(`Error setting persistent key "${key}":`, error);
+          });
         }
 
         return valueToStore;
