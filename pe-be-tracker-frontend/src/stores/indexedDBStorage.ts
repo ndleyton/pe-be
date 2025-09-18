@@ -4,7 +4,7 @@ const DB_NAME = 'pe-guest-tracker';
 const DB_VERSION = 1;
 const STORE_NAME = 'keyval';
 
-class IndexedDBStorage implements StateStorage {
+export class IndexedDBStorage implements StateStorage {
   private dbPromise: Promise<IDBDatabase> | null = null;
 
   /**
