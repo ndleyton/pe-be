@@ -200,12 +200,12 @@ const normalizeTimestamp = (value: unknown): string | null => {
 
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
-  
+
   if (!migrated.recipes) {
     migrated.recipes = [];
   }
-  
-  // Migration placeholder for exercise sets
+
+  // Normalize timestamps and ensure arrays exist
   if (migrated.workouts) {
     migrated.workouts = migrated.workouts.map((workout: any) => ({
       ...workout,
@@ -226,8 +226,7 @@ const migrateGuestData = (data: any): GuestData => {
       })) ?? [],
     }));
   }
-  
-  // Migration placeholder for recipe sets
+
   if (migrated.recipes) {
     migrated.recipes = migrated.recipes.map((recipe: any) => ({
       ...recipe,
@@ -242,7 +241,7 @@ const migrateGuestData = (data: any): GuestData => {
       })) ?? [],
     }));
   }
-  
+
   return migrated as GuestData;
 };
 

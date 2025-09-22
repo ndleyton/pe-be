@@ -18,7 +18,7 @@ export const buildRecipes = (
             id: ids.pullUps,
             name: 'Pull-ups',
             description: 'Upper body bodyweight pulling exercise',
-            default_intensity_unit: 1,
+            default_intensity_unit: 5,
             times_used: 0,
           },
           sets: [
@@ -33,9 +33,9 @@ export const buildRecipes = (
           exercise_type_id: ids.barbellRows,
           exercise_type: {
             id: ids.barbellRows,
-            name: 'Barbell Rows',
+            name: 'Barbell Row',
             description: 'Back strength exercise',
-            default_intensity_unit: 2,
+            default_intensity_unit: 1,
             times_used: 0,
           },
           sets: [
@@ -128,7 +128,7 @@ export const buildRecipes = (
             id: ids.benchPress,
             name: 'Bench Press',
             description: 'Upper body strength exercise',
-            default_intensity_unit: 2,
+            default_intensity_unit: 1,
             times_used: 0,
           },
           sets: [
@@ -162,7 +162,7 @@ export const buildRecipes = (
             id: ids.overheadPress,
             name: 'Overhead Press',
             description: 'Shoulder and tricep exercise',
-            default_intensity_unit: 2,
+            default_intensity_unit: 1,
             times_used: 0,
           },
           sets: [
@@ -179,7 +179,7 @@ export const buildRecipes = (
             id: ids.dips,
             name: 'Dips',
             description: 'Tricep and chest bodyweight exercise',
-            default_intensity_unit: 1,
+            default_intensity_unit: 5,
             times_used: 0,
           },
           sets: [
@@ -237,9 +237,9 @@ export const buildRecipes = (
           exercise_type_id: ids.squats,
           exercise_type: {
             id: ids.squats,
-            name: 'Squats',
+            name: 'Squat',
             description: 'Lower body bodyweight exercise',
-            default_intensity_unit: 2,
+            default_intensity_unit: 1,
             times_used: 0,
           },
           sets: [
