@@ -44,7 +44,7 @@ export const buildExerciseTypes = (
       id: ids.barbellRows,
       name: 'Barbell Row',
       description: 'Back strength exercise',
-      default_intensity_unit: 2,
+      default_intensity_unit: 1,
       times_used: 0,
     },
     {
