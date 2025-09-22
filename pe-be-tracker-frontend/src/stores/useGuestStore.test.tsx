@@ -549,7 +549,9 @@ describe('useGuestStore', () => {
 
     // Compare structures (excluding specific IDs since they're random)
     expect(clearedState.workouts).toEqual(freshState.workouts);
-    expect(clearedState.recipes).toEqual(freshState.recipes);
+    // Recipes are seeded with random IDs; compare stable fields
+    expect(clearedState.recipes.length).toBe(freshState.recipes.length);
+    expect(clearedState.recipes.map(r => r.name)).toEqual(freshState.recipes.map(r => r.name));
     expect(clearedState.hasAttemptedSync).toEqual(freshState.hasAttemptedSync);
     
     // Compare exercise types (same count and names)
