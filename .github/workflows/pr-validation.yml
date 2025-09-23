@@ -119,17 +119,27 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+    
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v4
         
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         
+    - name: Cache uv and venv (backend)
+      uses: actions/cache@v4
+      with:
+        path: |
+          backend/.venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py311-${{ hashFiles('backend/uv.lock') }}
+
     - name: Install backend dependencies
       working-directory: ./backend
       run: |
-        pip install poetry
-        poetry install --no-interaction
+        uv sync
         
     - name: Install frontend dependencies
       working-directory: ./pe-be-tracker-frontend
@@ -142,8 +152,8 @@ jobs:
         SECRET_KEY: test-secret-key-for-integration
         ENVIRONMENT: test
       run: |
-        poetry run alembic upgrade head
-        poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+        uv run alembic upgrade head
+        uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
         echo "Waiting for backend to be ready..."
         timeout=60
         elapsed=0
