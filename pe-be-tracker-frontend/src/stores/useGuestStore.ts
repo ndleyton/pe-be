@@ -676,8 +676,19 @@ export const useGuestStore = create<GuestStore>()(
     {
       name: 'pe-guest-data',
       storage: createJSONStorage(() => createIndexedDBStorage()),
-      migrate: (persistedState: any, version: number) => {
-        return migrateGuestData(persistedState);
+      version: 1,
+      migrate: (persistedState: any, persistedVersion?: number) => {
+        // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
+        if (persistedVersion == null || persistedVersion < 1) {
+          const guest = migrateGuestData(persistedState);
+          return {
+            ...getInitialGuestData(),
+            ...guest,
+            hasAttemptedSync: Boolean((persistedState as any)?.hasAttemptedSync),
+          } as GuestState;
+        }
+        // Already at current version — return as-is
+        return persistedState as GuestState;
       },
     }
   )

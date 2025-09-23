@@ -113,5 +113,3 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({ onStartWorkout
     </div>
   );
 };
-
-
