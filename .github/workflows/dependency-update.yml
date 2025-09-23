@@ -59,27 +59,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-
-      - name: Update Poetry dependencies
+      - name: Update backend dependencies (uv)
         working-directory: ./backend
         run: |
-          poetry update
+          uv lock --upgrade
 
       - name: Create Pull Request for Backend
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore(backend): update poetry dependencies'
-          title: 'chore(backend): update poetry dependencies'
+          commit-message: 'chore(backend): update uv dependencies'
+          title: 'chore(backend): update uv dependencies'
           body: |
             ## 🔄 Automated dependency update
 
-            This PR updates Poetry dependencies in the backend.
+            This PR updates Python dependencies (uv) in the backend.
 
             ### Changes
             - Updated Python packages to latest compatible versions

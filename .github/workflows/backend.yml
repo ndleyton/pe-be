@@ -48,36 +48,26 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-        
-    - name: Load cached venv
-      id: cached-poetry-dependencies
+    
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v4
+    
+    - name: Cache uv and venv (backend)
       uses: actions/cache@v4
       with:
-        path: ./backend/.venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        path: |
+          backend/.venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py311-${{ hashFiles('backend/uv.lock') }}
         
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-      
-    - name: Install project
-      run: poetry install --no-interaction
-      
-    - name: Install coverage dependencies
-      run: poetry add --group dev pytest-cov
+      run: uv sync
       
     - name: Run ruff linting
-      run: poetry run ruff check src/ tests/
+      run: uv run ruff check src/ tests/
       
     - name: Run ruff formatting check
-      run: poetry run ruff format --check src/ tests/
+      run: uv run ruff format --check src/ tests/
       
     - name: Create test database
       run: |
@@ -92,7 +82,7 @@ jobs:
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
       run: |
-        poetry run alembic upgrade head
+        uv run alembic upgrade head
         
     - name: Run tests
       env:
@@ -102,7 +92,7 @@ jobs:
         GOOGLE_CLIENT_ID: test-google-client-id-ci
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
-      run: poetry run pytest -v --cov=app --cov-report=xml
+      run: uv run pytest -v --cov=app --cov-report=xml
       
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
@@ -124,20 +114,25 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v4
+
+    - name: Cache uv and venv (backend)
+      uses: actions/cache@v4
       with:
-        version: latest
-        
+        path: |
+          backend/.venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py311-${{ hashFiles('backend/uv.lock') }}
+
     - name: Install dependencies
       working-directory: ./backend
-      run: poetry install --no-interaction
+      run: uv sync
       
     - name: Run security scan with bandit
       working-directory: ./backend
       run: |
-        poetry add bandit[toml] --group dev
-        poetry run bandit -r app/ -f json -o bandit-report.json || true
+        uvx bandit -r app/ -f json -o bandit-report.json || true
         
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
@@ -158,17 +153,21 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v4
+    
+    - name: Cache uv and venv (backend)
+      uses: actions/cache@v4
       with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+        path: |
+          backend/.venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py311-${{ hashFiles('backend/uv.lock') }}
         
     - name: Install dependencies
       working-directory: ./backend
-      run: poetry install --no-interaction
+      run: uv sync --frozen
         
     - name: Validate application
       working-directory: ./backend
@@ -181,10 +180,7 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
       run: |
         # Validate that the application can start
-        poetry run python -c "from src.main import app; print('✅ App imports successfully')"
-        
-        # Validate that all dependencies are satisfied
-        poetry check
+        uv run python -c "from src.main import app; print('✅ App imports successfully')"
         
     - name: Build Docker image
       working-directory: ./backend
