@@ -1,31 +1,28 @@
 FROM python:3.11-slim
 
-# Set environment variables
+# Environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VENV_IN_PROJECT=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+    UV_LINK_MODE=copy \
+    PATH=/root/.local/bin:$PATH
 
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry
+# Install uv (fast Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Set work directory
+# Workdir
 WORKDIR /app
 
-# Copy Poetry files
-COPY pyproject.toml poetry.lock ./
+# Copy project metadata and lock file first (better caching)
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN poetry config virtualenvs.create false && \
-    poetry install --only=main && \
-    rm -rf $POETRY_CACHE_DIR
+# Install dependencies (no dev) into project venv (.venv)
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY src ./src
@@ -33,7 +30,7 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 COPY main.py ./
 
-# Create non-root user
+# Create non-root user and fix permissions
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
 USER appuser
@@ -45,7 +42,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
+# Entrypoint script
 COPY --chmod=0755 run.sh /app/run.sh
 
 # Command to run the application
