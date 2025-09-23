@@ -39,7 +39,10 @@ export async function seedGuestData(page: Page, data: unknown): Promise<void> {
           const db = request.result;
           const tx = db.transaction(storeName, 'readwrite');
           const store = tx.objectStore(storeName);
-          store.put(JSON.stringify(payload), key);
+          // Persist in Zustand's JSON storage shape: { state }
+          // Version is optional; the app's migrate() handles missing/legacy versions.
+          const wrapped = { state: payload } as const;
+          store.put(JSON.stringify(wrapped), key);
 
           tx.oncomplete = () => {
             db.close();
