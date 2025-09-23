@@ -43,7 +43,7 @@ const TrackedErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
         path: typeof window !== 'undefined' ? window.location.pathname : undefined,
         isAuthenticated,
         env: config.environment,
-        appVersion: (import.meta as any)?.env?.VITE_APP_VERSION || 'unknown',
+        appVersion: import.meta.env.VITE_APP_VERSION || 'unknown',
       },
     });
   };
