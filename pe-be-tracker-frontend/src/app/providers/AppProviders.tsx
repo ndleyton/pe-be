@@ -25,12 +25,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Global error handler for the entire app when PostHog isn't configured
-const handleGlobalError = (error: Error, errorInfo: ErrorInfo) => {
-  console.error('Global Error Boundary caught an error:', error);
-  console.error('Component Stack:', errorInfo.componentStack);
-};
-
 // Error boundary that forwards exceptions to PostHog via the React hook
 const TrackedErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const posthog = usePostHog();
@@ -83,17 +77,11 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
           </TrackedErrorBoundary>
         </PostHogProvider>
       ) : (
-        <ErrorBoundary
-          FallbackComponent={ErrorFallback}
-          onError={handleGlobalError}
-          onReset={() => {
-            queryClient.clear();
-          }}
-        >
+        <TrackedErrorBoundary>
           <StoreInitializer>
             {children}
           </StoreInitializer>
-        </ErrorBoundary>
+        </TrackedErrorBoundary>
       )}
       {config.isDevelopment && !config.isTest && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
