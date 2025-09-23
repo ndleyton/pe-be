@@ -44,9 +44,9 @@ describe('useGuestStore', () => {
     const state = result.current;
 
     expect(state.workouts).toEqual([]);
-    expect(state.exerciseTypes).toHaveLength(4); // Default exercise types
+    expect(state.exerciseTypes).toHaveLength(22); // Updated default exercise types
     expect(state.workoutTypes).toHaveLength(4); // Default workout types
-    expect(state.recipes).toEqual([]);
+    expect(state.recipes.length).toBeGreaterThan(0); // Seeded routines available in guest mode
     expect(state.hasAttemptedSync).toBe(false);
   });
 
@@ -220,8 +220,10 @@ describe('useGuestStore', () => {
   it('creates and manages recipes', () => {
     const { result } = renderHook(() => useGuestStore());
 
+    const initialLen = result.current.recipes.length;
+    let routineId = '';
     act(() => {
-      result.current.addRoutine({
+      routineId = result.current.addRoutine({
         name: 'Test Recipe',
         description: 'A test recipe',
         exercises: [],
@@ -229,9 +231,10 @@ describe('useGuestStore', () => {
     });
 
     const state = result.current;
-    expect(state.recipes).toHaveLength(1);
-    expect(state.recipes[0].name).toBe('Test Recipe');
-    expect(state.recipes[0].description).toBe('A test recipe');
+    expect(state.recipes.length).toBe(initialLen + 1);
+    const created = state.recipes.find(r => r.id === routineId)!;
+    expect(created.name).toBe('Test Recipe');
+    expect(created.description).toBe('A test recipe');
   });
 
   it('creates recipe from workout', () => {
@@ -272,17 +275,18 @@ describe('useGuestStore', () => {
     });
 
     // Create recipe from workout
+    let routineId = '';
     act(() => {
       const workout = result.current.workouts.find(w => w.id === workoutId)!;
-      result.current.createRoutineFromWorkout('My Recipe', workout.exercises);
+      routineId = result.current.createRoutineFromWorkout('My Recipe', workout.exercises);
     });
 
     const state = result.current;
-    expect(state.recipes).toHaveLength(1);
-    expect(state.recipes[0].name).toBe('My Recipe');
-    expect(state.recipes[0].exercises).toHaveLength(1);
-    expect(state.recipes[0].exercises[0].sets).toHaveLength(1);
-    expect(state.recipes[0].exercises[0].sets[0].reps).toBe(10);
+    const recipe = state.recipes.find(r => r.id === routineId)!;
+    expect(recipe.name).toBe('My Recipe');
+    expect(recipe.exercises).toHaveLength(1);
+    expect(recipe.exercises[0].sets).toHaveLength(1);
+    expect(recipe.exercises[0].sets[0].reps).toBe(10);
   });
 
   it('creates exercises from recipe', () => {
@@ -324,9 +328,9 @@ describe('useGuestStore', () => {
       });
     });
 
-    // Create exercises from recipe
+    // Create exercises from the newly added recipe (last item)
     act(() => {
-      const recipe = result.current.recipes[0];
+      const recipe = result.current.recipes[result.current.recipes.length - 1];
       result.current.createExercisesFromRoutine(recipe, workoutId);
     });
 
@@ -507,6 +511,7 @@ describe('useGuestStore', () => {
     };
 
     // Add some data to the clear test store
+    const initialClearRecipesLen = clearResult.current.recipes.length;
     act(() => {
       const workoutType = clearResult.current.workoutTypes[0];
       clearResult.current.addWorkout({
@@ -526,7 +531,7 @@ describe('useGuestStore', () => {
 
     // Verify data was added
     expect(clearResult.current.workouts).toHaveLength(1);
-    expect(clearResult.current.recipes).toHaveLength(1);
+    expect(clearResult.current.recipes.length).toBe(initialClearRecipesLen + 1);
 
     // Clear the store
     act(() => {
@@ -544,7 +549,9 @@ describe('useGuestStore', () => {
 
     // Compare structures (excluding specific IDs since they're random)
     expect(clearedState.workouts).toEqual(freshState.workouts);
-    expect(clearedState.recipes).toEqual(freshState.recipes);
+    // Recipes are seeded with random IDs; compare stable fields
+    expect(clearedState.recipes.length).toBe(freshState.recipes.length);
+    expect(clearedState.recipes.map(r => r.name)).toEqual(freshState.recipes.map(r => r.name));
     expect(clearedState.hasAttemptedSync).toEqual(freshState.hasAttemptedSync);
     
     // Compare exercise types (same count and names)
@@ -574,13 +581,13 @@ describe('useGuestStore', () => {
 
     expect(result.current.workouts).toHaveLength(1);
 
-    act(() => {
+  act(() => {
       result.current.clear();
     });
 
     const state = result.current;
     expect(state.workouts).toEqual([]);
-    expect(state.recipes).toEqual([]);
+    expect(state.recipes.length).toBeGreaterThan(0);
     expect(state.hasAttemptedSync).toBe(false);
     // Should still have default exercise types and workout types
     expect(state.exerciseTypes.length).toBeGreaterThan(0);

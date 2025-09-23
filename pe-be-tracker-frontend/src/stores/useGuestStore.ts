@@ -4,6 +4,10 @@ import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from 
 import { generateRandomId, getCurrentUTCTimestamp, toUTCISOString } from '@/utils/date';
 import { useAuthStore } from './useAuthStore';
 import { createIndexedDBStorage } from './indexedDBStorage';
+import { buildExerciseTypes } from './seeds/exerciseTypes';
+import { buildWorkoutTypes } from './seeds/workoutTypes';
+import { buildRecipes } from './seeds/recipes';
+import { generateExerciseTypeIds } from './seeds/types';
 
 export interface GuestExerciseType {
   id: string;
@@ -157,62 +161,21 @@ interface GuestActions {
 type GuestStore = GuestState & GuestActions;
 
 
-const getInitialGuestData = (): GuestData => ({
-  workouts: [],
-  exerciseTypes: [
-    {
-      id: generateRandomId(),
-      name: 'Push-ups',
-      description: 'Upper body bodyweight exercise',
-      default_intensity_unit: 1,
-      times_used: 0,
-    },
-    {
-      id: generateRandomId(),
-      name: 'Squats',
-      description: 'Lower body bodyweight exercise',
-      default_intensity_unit: 1,
-      times_used: 0,
-    },
-    {
-      id: generateRandomId(),
-      name: 'Bench Press',
-      description: 'Upper body strength exercise',
-      default_intensity_unit: 2,
-      times_used: 0,
-    },
-    {
-      id: generateRandomId(),
-      name: 'Deadlift',
-      description: 'Full body strength exercise',
-      default_intensity_unit: 2,
-      times_used: 0,
-    },
-  ],
-  workoutTypes: [
-    {
-      id: generateRandomId(),
-      name: 'Strength Training',
-      description: 'Traditional weightlifting session',
-    },
-    {
-      id: generateRandomId(),
-      name: 'Cardio',
-      description: 'Cardiovascular exercise session',
-    },
-    {
-      id: generateRandomId(),
-      name: 'Bodyweight',
-      description: 'Exercises using your own body weight',
-    },
-    {
-      id: '8',
-      name: 'Other',
-      description: 'General workout session',
-    },
-  ],
-  recipes: [],
-});
+const getInitialGuestData = (): GuestData => {
+  // Create consistent IDs for exercises
+  const exerciseTypeIds = generateExerciseTypeIds(generateRandomId);
+
+  const exerciseTypes = buildExerciseTypes(exerciseTypeIds);
+
+  const initialData = {
+    workouts: [],
+    exerciseTypes,
+  workoutTypes: buildWorkoutTypes(generateRandomId),
+  recipes: buildRecipes(exerciseTypeIds, generateRandomId),
+  } satisfies GuestData;
+
+  return initialData;
+};
 
 
 const parseIntensityValue = (value: string | null): number | null => {
@@ -237,12 +200,12 @@ const normalizeTimestamp = (value: unknown): string | null => {
 
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
-  
+
   if (!migrated.recipes) {
     migrated.recipes = [];
   }
-  
-  // Migration placeholder for exercise sets
+
+  // Normalize timestamps and ensure arrays exist
   if (migrated.workouts) {
     migrated.workouts = migrated.workouts.map((workout: any) => ({
       ...workout,
@@ -263,8 +226,7 @@ const migrateGuestData = (data: any): GuestData => {
       })) ?? [],
     }));
   }
-  
-  // Migration placeholder for recipe sets
+
   if (migrated.recipes) {
     migrated.recipes = migrated.recipes.map((recipe: any) => ({
       ...recipe,
@@ -279,7 +241,7 @@ const migrateGuestData = (data: any): GuestData => {
       })) ?? [],
     }));
   }
-  
+
   return migrated as GuestData;
 };
 
