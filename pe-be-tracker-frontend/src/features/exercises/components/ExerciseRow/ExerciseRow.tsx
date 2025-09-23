@@ -28,11 +28,6 @@ interface RestTimer {
   seconds: number;
 }
 
-interface NotesModalState {
-  exerciseId: string | number;
-  setId: string | number;
-}
-
 interface MoreMenuModalState {
   exerciseId: string | number;
   setId: string | number;
@@ -61,11 +56,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const [showAddForm, setShowAddForm] = useState(false);
   const [exerciseNotesModal, setExerciseNotesModal] = useState(false);
   const [exerciseNotesValue, setExerciseNotesValue] = useState<string>('');
-  const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
   const [setNotesValue, setSetNotesValue] = useState<string>('');
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
   const [initialSetNotesValue, setInitialSetNotesValue] = useState<string>('');
-  const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
+  const [notesMoreModal, setNotesMoreModal] = useState<MoreMenuModalState | null>(null);
   // const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -86,14 +80,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   };
 
   useEffect(() => {
-    if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
+    if (notesMoreModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
-      const currentSet = exerciseSets.find(set => String(set.id) === String(notesModal.setId));
+      const currentSet = exerciseSets.find(s => String(s.id) === String(notesMoreModal.setId));
       if (currentSet && debouncedSetNotesValue !== (currentSet.notes || '')) {
-        updateSetNotes(notesModal.exerciseId, notesModal.setId, debouncedSetNotesValue);
+        updateSetNotes(notesMoreModal.exerciseId, notesMoreModal.setId, debouncedSetNotesValue);
       }
     }
-  }, [debouncedSetNotesValue, notesModal, exerciseSets, initialSetNotesValue]);
+  }, [debouncedSetNotesValue, notesMoreModal, exerciseSets, initialSetNotesValue]);
 
   useEffect(() => {
     setIntensityInputs(buildIntensityInputs(exerciseSets));
@@ -602,9 +596,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                 </Button>
               </div>
               <div className="flex justify-end">
-                <Dialog open={moreMenuModal?.setId === set.id} onOpenChange={(open) => {
+                <Dialog open={notesMoreModal?.setId === set.id} onOpenChange={(open) => {
                   if (!open) {
-                    setMoreMenuModal(null);
+                    const currentSet = exerciseSets.find(s => String(s.id) === String(set.id));
+                    const currentNotes = currentSet?.notes || '';
+                    if (setNotesValue !== currentNotes) {
+                      void updateSetNotes(exercise.id, set.id, setNotesValue);
+                    }
+                    setNotesMoreModal(null);
                     setSetNotesValue('');
                     setInitialSetNotesValue('');
                   }
@@ -616,7 +615,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                       className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
                       onClick={() => {
                         const initialNotes = set.notes || '';
-                        setMoreMenuModal({ exerciseId: exercise.id, setId: set.id });
+                        setNotesMoreModal({ exerciseId: exercise.id, setId: set.id });
                         setSetNotesValue(initialNotes);
                         setInitialSetNotesValue(initialNotes);
                       }}
@@ -639,6 +638,13 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                           onChange={(e) => {
                             setSetNotesValue(e.target.value);
                           }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            const currentSet = exerciseSets.find(s => String(s.id) === String(set.id));
+                            if ((currentSet?.notes || '') !== value) {
+                              void updateSetNotes(exercise.id, set.id, value);
+                            }
+                          }}
                           className="min-h-[100px]"
                         />
                       </div>
@@ -648,7 +654,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                           className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                           onClick={() => {
                             deleteSet(exercise.id, set.id);
-                            setMoreMenuModal(null);
+                            setNotesMoreModal(null);
                           }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -656,7 +662,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                         </Button>
                         <Button
                           onClick={() => {
-                            setMoreMenuModal(null);
+                            const currentSet = exerciseSets.find(s => String(s.id) === String(set.id));
+                            const currentNotes = currentSet?.notes || '';
+                            if (setNotesValue !== currentNotes) {
+                              void updateSetNotes(exercise.id, set.id, setNotesValue);
+                            }
+                            setNotesMoreModal(null);
                           }}
                         >
                           Close
