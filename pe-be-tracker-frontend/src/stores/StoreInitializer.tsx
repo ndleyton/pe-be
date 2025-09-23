@@ -42,7 +42,7 @@ export const StoreInitializer: React.FC<StoreInitializerProps> = ({ children }) 
         // Register super properties for consistent context on all events
         posthog.register({
           env: config.environment,
-          app_version: (import.meta as any)?.env?.VITE_APP_VERSION || 'unknown',
+          app_version: import.meta.env.VITE_APP_VERSION || 'unknown',
           guest: !user,
           is_authenticated: !!user,
         });
