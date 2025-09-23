@@ -36,7 +36,7 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 
 **Jobs:**
 - **Frontend Updates**: Auto-update npm dependencies
-- **Backend Updates**: Auto-update Poetry dependencies
+- **Backend Updates**: Auto-update uv dependencies
 - Creates PRs for review
 
 ### 5. Release (`release.yml`)
