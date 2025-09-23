@@ -17,11 +17,11 @@
    ```
 4. Run the server (dev):
    ```bash
-   uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   Or using the entry script:
-   ```bash
    uv run python main.py
+   ```
+   For auto-reload during development:
+   ```bash
+   uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 ## Environment Variables

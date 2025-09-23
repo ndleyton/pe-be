@@ -9,7 +9,7 @@ PersonalBestie is a full-stack application designed to help users track their wo
 -   **Framework:** FastAPI
 -   **Database:** PostgreSQL (managed via Docker)
 -   **ORM/Migrations:** SQLAlchemy with Alembic
--   **Dependency Management:** Poetry
+-   **Dependency Management:** uv
 -   **Containerization:** Docker
 
 ### Frontend
