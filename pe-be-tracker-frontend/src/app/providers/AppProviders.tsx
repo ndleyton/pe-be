@@ -6,6 +6,7 @@ import { PostHogProvider, usePostHog } from 'posthog-js/react';
 import { config } from '@/app/config/env';
 import { ErrorFallback } from '@/shared/components/error';
 import { StoreInitializer } from '@/stores';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ const queryClient = new QueryClient({
 // Error boundary that forwards exceptions to PostHog via the React hook
 const TrackedErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const posthog = usePostHog();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const onError = (error: Error, errorInfo: ErrorInfo) => {
     console.error('Global Error Boundary caught an error:', error);
@@ -37,6 +39,11 @@ const TrackedErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
       properties: {
         boundary: 'global',
         componentStack: errorInfo.componentStack,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        isAuthenticated,
+        env: config.environment,
+        appVersion: (import.meta as any)?.env?.VITE_APP_VERSION || 'unknown',
       },
     });
   };
