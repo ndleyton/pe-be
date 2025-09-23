@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { usePostHog } from 'posthog-js/react';
+import { config } from '@/app/config/env';
 import { initializeAuth, useAuthStore } from './useAuthStore';
 import { useGuestStore } from './useGuestStore';
 
@@ -37,6 +38,13 @@ export const StoreInitializer: React.FC<StoreInitializerProps> = ({ children }) 
         posthog.identify(distinctId, {
           email: user.email,
           name: user.name ?? undefined,
+        });
+        // Register super properties for consistent context on all events
+        posthog.register({
+          env: config.environment,
+          app_version: (import.meta as any)?.env?.VITE_APP_VERSION || 'unknown',
+          guest: !user,
+          is_authenticated: !!user,
         });
         lastIdentifiedIdRef.current = distinctId;
       }
