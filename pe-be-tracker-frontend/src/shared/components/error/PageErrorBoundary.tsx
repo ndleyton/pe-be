@@ -3,6 +3,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert';
 import { Button } from '@/shared/components/ui/button';
 import { ErrorInfo } from 'react';
+import { usePostHog } from 'posthog-js/react';
 
 interface PageErrorFallbackProps {
   error: Error;
@@ -61,18 +62,19 @@ export const PageErrorBoundary: React.FC<PageErrorBoundaryProps> = ({
   children, 
   fallback: Fallback = PageErrorFallback 
 }) => {
+  const posthog = usePostHog();
+
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
     console.error('Page Error:', error);
     console.error('Component Stack:', errorInfo.componentStack);
-    
-    // In production, you might want to send this to an error tracking service
-    if (process.env.NODE_ENV === 'production') {
-      // Example: Send to error tracking service
-      // errorTrackingService.captureException(error, {
-      //   tags: { boundary: 'page' },
-      //   extra: errorInfo
-      // });
-    }
+
+    // Forward to PostHog Error Tracking when available
+    posthog?.captureException?.(error, {
+      properties: {
+        boundary: 'page',
+        componentStack: errorInfo.componentStack,
+      },
+    });
   };
 
   return (
