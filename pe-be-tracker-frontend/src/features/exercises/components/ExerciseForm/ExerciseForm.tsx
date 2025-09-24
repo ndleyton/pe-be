@@ -77,6 +77,11 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     setValue('exercise_type_id', exerciseType.id, { shouldValidate: true });
     clearErrors('exercise_type_id');
     setShowModal(false);
+
+    // Scroll to bottom after selection
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
   };
 
   return (
