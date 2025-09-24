@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import ExerciseTypeModal from '../ExerciseTypeModal';
@@ -24,6 +24,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   
   const {
     register,
@@ -78,14 +79,17 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     clearErrors('exercise_type_id');
     setShowModal(false);
 
-    // Scroll to bottom after selection
-    setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    }, 100);
+    // Scroll form into view after modal closes
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end'
+      });
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 rounded-lg bg-card text-card-foreground shadow w-full max-w-lg mx-auto">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 rounded-lg bg-card text-card-foreground shadow w-full max-w-lg mx-auto">
       <h2 className="text-lg font-semibold mb-4">Add Exercise</h2>
       <div className="mb-4">
         {selectedExerciseType ? (
