@@ -92,7 +92,7 @@ jobs:
         GOOGLE_CLIENT_ID: test-google-client-id-ci
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
-      run: uv run pytest -v --cov=app --cov-report=xml
+      run: uv run pytest -v --cov=src --cov-report=xml
       
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
@@ -133,7 +133,7 @@ jobs:
     - name: Run security scan with bandit
       working-directory: ./backend
       run: |
-        uvx bandit -r app/ -f json -o bandit-report.json || true
+        uvx bandit -r src/ -f json -o bandit-report.json || true
         
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
