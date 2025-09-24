@@ -55,10 +55,6 @@ const ExerciseTypeMore: React.FC<ExerciseTypeMoreProps> = ({
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Exercise Settings</h3>
-      </div>
 
       {/* Intensity Unit Selection */}
       <div>
