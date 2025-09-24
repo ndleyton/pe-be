@@ -4,6 +4,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/aler
 import { Button } from '@/shared/components/ui/button';
 import { ErrorInfo } from 'react';
 import { usePostHog } from 'posthog-js/react';
+import { useLocation } from 'react-router-dom';
+import { config } from '@/app/config/env';
 
 interface PageErrorFallbackProps {
   error: Error;
@@ -63,6 +65,7 @@ export const PageErrorBoundary: React.FC<PageErrorBoundaryProps> = ({
   fallback: Fallback = PageErrorFallback 
 }) => {
   const posthog = usePostHog();
+  const location = useLocation();
 
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
     console.error('Page Error:', error);
@@ -73,6 +76,9 @@ export const PageErrorBoundary: React.FC<PageErrorBoundaryProps> = ({
       properties: {
         boundary: 'page',
         componentStack: errorInfo.componentStack,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        path: location?.pathname,
+        env: config.environment,
       },
     });
   };
