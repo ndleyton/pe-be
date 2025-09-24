@@ -137,6 +137,10 @@ jobs:
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
 
+    - name: Verify lockfile is up-to-date
+      working-directory: ./backend
+      run: uv lock --check
+
     - name: Install backend dependencies
       working-directory: ./backend
       run: |
