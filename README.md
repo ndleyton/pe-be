@@ -23,6 +23,12 @@ PersonalBestie is a full-stack application designed to help users track their wo
 ### Overall
 -   **Orchestration:** Docker Compose
 
+## CI Caching
+
+- GitHub Actions cache the backend virtualenv (`backend/.venv`) and uv download cache (`~/.cache/uv`).
+- Cache key includes OS, Python version, and `backend/uv.lock`, so cache refreshes on lockfile updates or Python version changes.
+- Installs use `uv sync` (build jobs use `--frozen`) to stay consistent with the committed lockfile.
+
 ## How to Run
 
 To get the PersonalBestie application up and running on your local machine, follow these steps:
