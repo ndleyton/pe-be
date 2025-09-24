@@ -289,7 +289,6 @@ const WorkoutPage: React.FC = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
         <ExerciseList 
           exercises={exercises} 
           isLoading={isAuthenticated && exercisesLoading} 
@@ -297,6 +296,8 @@ const WorkoutPage: React.FC = () => {
           workoutId={workoutId}
           onExerciseUpdate={handleExerciseUpdate}
         />
+        <div className="h-px w-full bg-primary mb-4 mt-4" role="separator" />
+         <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
       </div>
       
       <FloatingActionButton

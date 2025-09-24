@@ -125,7 +125,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({ isOpen, onClose, on
       className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-background rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+      <div className="bg-background rounded-lg p-6 max-w-2xl w-full max-h-[36rem] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-foreground">Select Workout Type</h3>
           <button

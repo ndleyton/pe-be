@@ -14,8 +14,6 @@ interface ExerciseListProps {
 const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId, onExerciseUpdate }) => {
   return (
     <div className="mt-8">
-      <div className="h-px w-full bg-primary mb-4" role="separator" />
-      
       {isLoading && (
         <>
           <div className="space-y-4">
@@ -42,7 +40,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error
       
       {!isLoading && !error && exercises.length === 0 && (
         <div className="text-muted-foreground text-center py-8 border border-border rounded-lg bg-card">
-          No exercises added yet. Use the form above to add your first exercise.
+          No exercises added yet. Click below to add your first exercise.
         </div>
       )}
       

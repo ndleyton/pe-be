@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import api from '@/shared/api/client';
-import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
-import { ExerciseType } from '@/features/exercises/api';
+import { ExerciseType, createExercise } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 
@@ -19,19 +17,6 @@ interface ExerciseFormProps {
   onExerciseCreated: () => void;
 }
 
-const createExercise = async (data: ExerciseFormData & { workout_id: number }) => {
-  const response = await api.post(
-    '/exercises/',
-    {
-      exercise_type_id: data.exercise_type_id,
-      workout_id: data.workout_id,
-      timestamp: data.timestamp ? toUTCISOString(data.timestamp) : null,
-      notes: data.notes || null,
-    },
-  );
-  return response.data;
-};
-
 const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
@@ -39,6 +24,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   
   const {
     register,
@@ -92,10 +78,16 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     setValue('exercise_type_id', exerciseType.id, { shouldValidate: true });
     clearErrors('exercise_type_id');
     setShowModal(false);
+
+    // Scroll form into view after modal closes
+    formRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end'
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 rounded-lg bg-card text-card-foreground shadow w-full max-w-lg mx-auto">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 rounded-lg bg-card text-card-foreground shadow w-full max-w-lg mx-auto">
       <h2 className="text-lg font-semibold mb-4">Add Exercise</h2>
       <div className="mb-4">
         {selectedExerciseType ? (

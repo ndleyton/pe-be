@@ -32,6 +32,8 @@ import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
+  const [containerRatio, setContainerRatio] = useState<string>('16 / 9');
+  const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -75,6 +77,29 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       );
     }
   });
+
+  // Compute valid images each render; safe even when loading
+  const validImages = exerciseType?.images?.filter((img) => !failedImages.has(img)) || [];
+  const firstImageUrl = validImages[0];
+
+  // Preload the first valid image to set a single container aspect-ratio.
+  React.useEffect(() => {
+    setFirstImageLoaded(false);
+    if (!firstImageUrl) return;
+    const url = firstImageUrl;
+    const img = new window.Image();
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setContainerRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+      }
+      setFirstImageLoaded(true);
+    };
+    img.onerror = () => {
+      // Mark this image as failed so we can try the next one
+      setFailedImages((prev) => new Set(prev).add(url));
+    };
+    img.src = url;
+  }, [firstImageUrl]);
 
   if (exerciseTypeError) {
     return (
@@ -141,6 +166,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     );
   }
 
+
   return (
     <div className="max-w-5xl mx-auto p-8 text-center">
       {/* Header */}
@@ -184,12 +210,20 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           {/* Exercise Images */}
           <Card className="shadow-md">
             <CardContent className="pt-6">
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+              <div
+                className="bg-muted rounded-lg flex items-center justify-center overflow-hidden"
+                style={{ aspectRatio: containerRatio }}
+                data-testid="exercise-carousel-container"
+              >
                 {(() => {
-                  // Filter out failed images
-                  const validImages = exerciseType.images?.filter(img => !failedImages.has(img)) || [];
-                  
                   if (validImages.length > 0) {
+                    if (!firstImageLoaded) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="loading loading-spinner loading-md"></span>
+                        </div>
+                      );
+                    }
                     return (
                       <Carousel 
                         className="w-full h-full" 
@@ -206,7 +240,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                               <img 
                                 src={imageUrl} 
                                 alt={`${exerciseType.name} - Image ${index + 1}`}
-                                className="w-full h-full object-cover rounded-lg"
+                                className="w-full h-full object-contain"
                                 onError={() => {
                                   setFailedImages(prev => new Set(prev).add(imageUrl));
                                 }}

@@ -1,5 +1,6 @@
 import api from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import { toUTCISOString } from '@/utils/date';
 import type { MuscleGroup, Muscle } from '@/shared/types';
 import { type ExerciseType } from '@/features/exercises/types';
 
@@ -79,6 +80,27 @@ export const getExercisesInWorkout = async (workoutId: string): Promise<Exercise
   );
 
   return exercisesWithFullType;
+};
+
+// Exercise API functions
+
+export interface CreateExerciseData {
+  exercise_type_id: number | string;
+  workout_id: number;
+  timestamp?: string | null;
+  notes?: string | null;
+}
+
+// Create a new exercise
+export const createExercise = async (data: CreateExerciseData): Promise<Exercise> => {
+  const payload = {
+    exercise_type_id: data.exercise_type_id,
+    workout_id: data.workout_id,
+    timestamp: data.timestamp ? toUTCISOString(data.timestamp) : null,
+    notes: data.notes ?? null,
+  };
+  const response = await api.post(endpoints.exercises, payload);
+  return response.data;
 };
 
 // Exercise Set API functions
