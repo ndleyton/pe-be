@@ -2,21 +2,26 @@
 
 ## Setup
 
-1. Install Poetry if you don't have it:
+1. Install uv (fast Python package manager):
    ```bash
-   pip install poetry
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   # restart your shell so `uv` is on PATH, or symlink ~/.local/bin/uv
    ```
 2. Install dependencies:
    ```bash
-   poetry install
+   uv sync
    ```
 3. Copy `.env.example` to `.env` and fill in your secrets:
    ```bash
    cp .env.example .env
    ```
-4. Run the server:
+4. Run the server (dev):
    ```bash
-   poetry run python main.py
+   uv run python main.py
+   ```
+   For auto-reload during development:
+   ```bash
+   uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 ## Environment Variables
