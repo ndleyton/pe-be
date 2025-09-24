@@ -212,6 +212,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               <div
                 className="bg-muted rounded-lg flex items-center justify-center overflow-hidden"
                 style={{ aspectRatio: containerRatio }}
+                data-testid="exercise-carousel-container"
               >
                 {(() => {
                   if (validImages.length > 0) {
