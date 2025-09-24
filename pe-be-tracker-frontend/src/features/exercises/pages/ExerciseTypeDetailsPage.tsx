@@ -80,12 +80,13 @@ const ExerciseTypeDetailsPage: React.FC = () => {
 
   // Compute valid images each render; safe even when loading
   const validImages = exerciseType?.images?.filter((img) => !failedImages.has(img)) || [];
+  const firstImageUrl = validImages[0];
 
   // Preload the first valid image to set a single container aspect-ratio.
   React.useEffect(() => {
     setFirstImageLoaded(false);
-    if (!validImages.length) return;
-    const url = validImages[0];
+    if (!firstImageUrl) return;
+    const url = firstImageUrl;
     const img = new window.Image();
     img.onload = () => {
       if (img.naturalWidth && img.naturalHeight) {
@@ -98,7 +99,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       setFailedImages((prev) => new Set(prev).add(url));
     };
     img.src = url;
-  }, [validImages.map((u) => u).join('|')]);
+  }, [firstImageUrl]);
 
   if (exerciseTypeError) {
     return (
