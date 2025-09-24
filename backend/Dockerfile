@@ -3,8 +3,7 @@ FROM python:3.11-slim
 # Environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy \
-    PATH=/root/.local/bin:$PATH
+    UV_LINK_MODE=copy
 
 # System dependencies
 RUN apt-get update && apt-get install -y \
@@ -25,6 +24,10 @@ COPY pyproject.toml uv.lock ./
 
 # Install dependencies (no dev) into project venv (.venv)
 RUN uv sync --frozen --no-dev
+
+# Ensure the project venv is used at runtime
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Copy application code
 COPY src ./src
