@@ -60,6 +60,9 @@ jobs:
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
         
+    - name: Verify lockfile is up-to-date
+      run: uv lock --check
+
     - name: Install dependencies
       run: uv sync
       
@@ -126,6 +129,10 @@ jobs:
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
 
+    - name: Verify lockfile is up-to-date
+      working-directory: ./backend
+      run: uv lock --check
+
     - name: Install dependencies
       working-directory: ./backend
       run: uv sync
@@ -167,6 +174,10 @@ jobs:
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
         
+    - name: Verify lockfile is up-to-date
+      working-directory: ./backend
+      run: uv lock --check
+
     - name: Install dependencies
       working-directory: ./backend
       run: uv sync --frozen
