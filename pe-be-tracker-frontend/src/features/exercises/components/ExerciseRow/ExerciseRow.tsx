@@ -4,9 +4,10 @@ import { GuestExerciseSet, useGuestStore } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
-import { MoreVertical, StickyNote, Plus, Minus, Check, Trash2 } from 'lucide-react';
+import { MoreVertical, StickyNote, Plus, Minus, Check, Trash2, ExternalLink } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks';
 import { formatDecimal, parseDecimalInput } from '@/utils/format';
+import { Link } from 'react-router-dom';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -462,6 +463,20 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
                 </div>
               </DialogContent>
               </Dialog>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
+                asChild
+              >
+                <Link
+                  to={`/exercise-types/${exercise.exercise_type.id}`}
+                  aria-label={`View details for ${exercise.exercise_type.name}`}
+                  title="View exercise details"
+                >
+                  <ExternalLink className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                </Link>
+              </Button>
             </div>
           </div>
           <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
