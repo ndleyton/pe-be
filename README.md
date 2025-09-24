@@ -9,7 +9,7 @@ PersonalBestie is a full-stack application designed to help users track their wo
 -   **Framework:** FastAPI
 -   **Database:** PostgreSQL (managed via Docker)
 -   **ORM/Migrations:** SQLAlchemy with Alembic
--   **Dependency Management:** Poetry
+-   **Dependency Management:** uv
 -   **Containerization:** Docker
 
 ### Frontend
@@ -22,6 +22,12 @@ PersonalBestie is a full-stack application designed to help users track their wo
 
 ### Overall
 -   **Orchestration:** Docker Compose
+
+## CI Caching
+
+- GitHub Actions cache the backend virtualenv (`backend/.venv`) and uv download cache (`~/.cache/uv`).
+- Cache key includes OS, Python version, and `backend/uv.lock`, so cache refreshes on lockfile updates or Python version changes.
+- Installs use `uv sync` (build jobs use `--frozen`) to stay consistent with the committed lockfile.
 
 ## How to Run
 
