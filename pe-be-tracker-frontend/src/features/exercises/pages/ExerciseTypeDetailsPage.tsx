@@ -25,7 +25,6 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-  type CarouselApi,
 } from '@/shared/components/ui/carousel';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
@@ -33,9 +32,8 @@ import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 const ExerciseTypeDetailsPage: React.FC = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
-  const [imageRatios, setImageRatios] = useState<Record<string, string>>({});
-  const [activeRatio, setActiveRatio] = useState<string>('16 / 9');
+  const [containerRatio, setContainerRatio] = useState<string>('16 / 9');
+  const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -79,6 +77,28 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       );
     }
   });
+
+  // Compute valid images each render; safe even when loading
+  const validImages = exerciseType?.images?.filter((img) => !failedImages.has(img)) || [];
+
+  // Preload the first valid image to set a single container aspect-ratio.
+  React.useEffect(() => {
+    setFirstImageLoaded(false);
+    if (!validImages.length) return;
+    const url = validImages[0];
+    const img = new window.Image();
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setContainerRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+      }
+      setFirstImageLoaded(true);
+    };
+    img.onerror = () => {
+      // Mark this image as failed so we can try the next one
+      setFailedImages((prev) => new Set(prev).add(url));
+    };
+    img.src = url;
+  }, [validImages.map((u) => u).join('|')]);
 
   if (exerciseTypeError) {
     return (
@@ -145,27 +165,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
     );
   }
 
-  // Compute valid images once per render so we can use in effects
-  const validImages = exerciseType.images?.filter((img) => !failedImages.has(img)) || [];
-
-  // Update container aspect ratio when slide changes (if we know it)
-  React.useEffect(() => {
-    if (!carouselApi) return;
-    const onSelect = () => {
-      const index = carouselApi.selectedScrollSnap();
-      const url = validImages[index];
-      if (url && imageRatios[url]) {
-        setActiveRatio(imageRatios[url]);
-      }
-    };
-    carouselApi.on('select', onSelect);
-    carouselApi.on('reInit', onSelect);
-    // Initial sync
-    onSelect();
-    return () => {
-      carouselApi.off('select', onSelect);
-    };
-  }, [carouselApi, validImages, imageRatios]);
 
   return (
     <div className="max-w-5xl mx-auto p-8 text-center">
@@ -212,10 +211,17 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div
                 className="bg-muted rounded-lg flex items-center justify-center overflow-hidden"
-                style={{ aspectRatio: activeRatio }}
+                style={{ aspectRatio: containerRatio }}
               >
                 {(() => {
                   if (validImages.length > 0) {
+                    if (!firstImageLoaded) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="loading loading-spinner loading-md"></span>
+                        </div>
+                      );
+                    }
                     return (
                       <Carousel 
                         className="w-full h-full" 
@@ -224,7 +230,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                           align: 'center',
                           containScroll: false
                         }}
-                        setApi={setCarouselApi}
                         plugins={[Fade()]}
                       >
                         <CarouselContent>
@@ -236,23 +241,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                                 className="w-full h-full object-contain"
                                 onError={() => {
                                   setFailedImages(prev => new Set(prev).add(imageUrl));
-                                }}
-                                onLoad={(e) => {
-                                  const img = e.currentTarget;
-                                  if (img.naturalWidth && img.naturalHeight) {
-                                    const ratio = `${img.naturalWidth} / ${img.naturalHeight}`;
-                                    setImageRatios((prev) =>
-                                      prev[imageUrl] === ratio ? prev : { ...prev, [imageUrl]: ratio }
-                                    );
-                                    // If this is the first slide or currently active, sync container
-                                    if (
-                                      (carouselApi &&
-                                        validImages[carouselApi.selectedScrollSnap()] === imageUrl) ||
-                                      (!carouselApi && index === 0)
-                                    ) {
-                                      setActiveRatio(ratio);
-                                    }
-                                  }
                                 }}
                               />
                             </CarouselItem>
