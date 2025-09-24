@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import api from '@/shared/api/client';
-import { toUTCISOString } from '@/utils/date';
 import ExerciseTypeModal from '../ExerciseTypeModal';
-import { ExerciseType } from '@/features/exercises/api';
+import { ExerciseType, createExercise } from '@/features/exercises/api';
 import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
 import { Button } from '@/shared/components/ui/button';
 
@@ -18,19 +16,6 @@ interface ExerciseFormProps {
   workoutId: string;
   onExerciseCreated: () => void;
 }
-
-const createExercise = async (data: ExerciseFormData & { workout_id: number }) => {
-  const response = await api.post(
-    '/exercises/',
-    {
-      exercise_type_id: data.exercise_type_id,
-      workout_id: data.workout_id,
-      timestamp: data.timestamp ? toUTCISOString(data.timestamp) : null,
-      notes: data.notes || null,
-    },
-  );
-  return response.data;
-};
 
 const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
   // Get state from stores
