@@ -80,11 +80,9 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     setShowModal(false);
 
     // Scroll form into view after modal closes
-    requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'end'
-      });
+    formRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end'
     });
   };
 
