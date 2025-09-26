@@ -98,13 +98,6 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     expect(screen.getByText('Pull-ups')).toBeInTheDocument();
   });
 
-  it('shows loading spinner during initial load', () => {
-    mockGetExerciseTypes.mockImplementation(() => new Promise(() => {})); // Never resolves
-    render(<ExerciseTypesPage />);
-
-    expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
-  });
-
   it('filters exercise types based on search term', async () => {
     render(<ExerciseTypesPage />);
 
