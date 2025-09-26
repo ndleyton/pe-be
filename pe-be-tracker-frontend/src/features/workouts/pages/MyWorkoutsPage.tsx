@@ -81,6 +81,18 @@ const MyWorkoutsPage = () => {
 
   const [selectedRecipe, setSelectedRecipe] = React.useState<GuestRecipe | null>(null);
 
+  // preloading of the WorkoutPage lazy chunk to speed up navigation
+  const preloadedRef = React.useRef(false);
+  const preloadWorkoutPage = React.useCallback(() => {
+    if (preloadedRef.current) return;
+    preloadedRef.current = true;
+    void import('@/features/workouts/pages').catch(() => {
+      // If preloading fails, allow future attempts
+      preloadedRef.current = false;
+    });
+  }, []);
+
+
   const handleStartWorkoutFromRecipe = async (recipe: GuestRecipe) => {
     try {
       if (isAuthenticated) {
@@ -151,10 +163,10 @@ const MyWorkoutsPage = () => {
 
   return (
     <>
-      <div className="max-w-5xl mx-auto p-0 md:p-4 lg:p-8 text-center">
+      <div className="max-w-5xl mx-auto p-8 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold">Workouts</h1>
+            <h1 className="text-2xl font-semibold">Workouts</h1>
           </div>
           <WeekTracking 
             workouts={workouts} 
@@ -222,6 +234,8 @@ const MyWorkoutsPage = () => {
                   <div
                     key={workout.id}
                     onClick={() => handleWorkoutClick(workout.id)}
+                    onMouseEnter={preloadWorkoutPage}
+                    onTouchStart={preloadWorkoutPage}
                     className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
                   >
                     <div className="flex items-center space-x-4">
