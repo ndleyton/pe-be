@@ -10,7 +10,7 @@ import App from './App';
 import AppLayout from './layouts/AppLayout';
 import NotFoundPage from './pages/NotFoundPage';
 
-// These pages bear no lazy loading as they are core pages
+// These pages are not lazy loaded as they are core pages
 import { MyWorkoutsPage } from './features/workouts/pages';
 import { ChatPage } from './features/chat/pages';
 
