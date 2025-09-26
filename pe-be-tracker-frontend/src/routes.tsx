@@ -1,25 +1,40 @@
 import React, { Suspense } from 'react';
 import { type RouteObject } from 'react-router-dom';
-import App from './App';
-import AppLayout from './layouts/AppLayout';
-import NotFoundPage from './pages/NotFoundPage';
+
 import { PageErrorBoundary } from '@/shared/components/error';
+import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
-// Import MyWorkoutsPage directly (no lazy loading for core page)
-import { MyWorkoutsPage } from './features/workouts/pages';
+import App from './App';
+import AppLayout from './layouts/AppLayout';
+import NotFoundPage from './pages/NotFoundPage';
 
-// Lazy load other components with error boundaries  
-const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
-const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
-const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
+// These pages bear no lazy loading as they are core pages
+import { MyWorkoutsPage } from './features/workouts/pages';
+import { ChatPage } from './features/chat/pages';
+
+// Lazy load other components with error boundaries
+const WorkoutPage = React.lazy(() =>
+  import('./features/workouts/pages').then((m) => ({ default: m.WorkoutPage })),
+);
+const ExerciseTypesPage = React.lazy(() =>
+  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypesPage })),
+);
+const ExerciseTypeDetailsPage = React.lazy(() =>
+  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypeDetailsPage })),
+);
 const RoutinesPage = React.lazy(() => import('./features/routines/pages/RoutinesPage'));
 const RoutineDetailsPage = React.lazy(() => import('./features/routines/pages/RoutineDetailsPage'));
-const ChatPage = React.lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
-const ProfilePage = React.lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
-const AboutPage = React.lazy(() => import('./features/about/pages').then(module => ({ default: module.AboutPage })));
-const OAuthCallbackPage = React.lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
+const ProfilePage = React.lazy(() =>
+  import('./features/profile/pages').then((m) => ({ default: m.ProfilePage })),
+);
+const AboutPage = React.lazy(() =>
+  import('./features/about/pages').then((m) => ({ default: m.AboutPage })),
+);
+const OAuthCallbackPage = React.lazy(() =>
+  import('./features/auth/pages').then((m) => ({ default: m.OAuthCallbackPage })),
+);
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
@@ -207,9 +222,9 @@ const routes: RouteObject[] = [
       {
         path: 'workouts/:workoutId',
         element: (
-          <PageWrapper>
+          <SimplePageWrapper>
             <WorkoutPage />
-          </PageWrapper>
+          </SimplePageWrapper>
         ),
       },
       {
@@ -247,9 +262,9 @@ const routes: RouteObject[] = [
       {
         path: 'chat',
         element: (
-          <PageWrapper>
+          <SimplePageWrapper>
             <ChatPage />
-          </PageWrapper>
+          </SimplePageWrapper>
         ),
       },
       {

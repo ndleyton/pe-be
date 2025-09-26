@@ -81,6 +81,31 @@ const MyWorkoutsPage = () => {
 
   const [selectedRecipe, setSelectedRecipe] = React.useState<GuestRecipe | null>(null);
 
+  // preloading of the WorkoutPage lazy chunk to speed up navigation
+  const preloadedRef = React.useRef(false);
+  const preloadWorkoutPage = React.useCallback(() => {
+    if (preloadedRef.current) return;
+    preloadedRef.current = true;
+    void import('@/features/workouts/pages')
+      .then(() => {})
+      .catch(() => {
+        // If preloading fails, allow future attempts
+        preloadedRef.current = false;
+      });
+  }, []);
+
+  // Idle-time prefetch when the workouts list is visible
+  React.useEffect(() => {
+    if (!Array.isArray(workouts) || workouts.length === 0) return;
+    const ric = (cb: () => void) => ((window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb) : setTimeout(cb, 150));
+    const cancelRic = (id: number) => {
+      if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
+    const id = ric(() => preloadWorkoutPage());
+    return () => cancelRic(id as unknown as number);
+  }, [workouts, preloadWorkoutPage]);
+
   const handleStartWorkoutFromRecipe = async (recipe: GuestRecipe) => {
     try {
       if (isAuthenticated) {
@@ -222,6 +247,8 @@ const MyWorkoutsPage = () => {
                   <div
                     key={workout.id}
                     onClick={() => handleWorkoutClick(workout.id)}
+                    onMouseEnter={preloadWorkoutPage}
+                    onTouchStart={preloadWorkoutPage}
                     className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
                   >
                     <div className="flex items-center space-x-4">
