@@ -67,13 +67,16 @@ const LoadingFallback = () => (
 
 // ExerciseTypesPage-specific loading fallback that matches its structure
 const ExerciseTypesPageFallback = () => (
-  <div className="max-w-5xl mx-auto p-8 text-center">
+  <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center" aria-busy="true" aria-live="polite">
     <div className="mb-6">
       <h1 className="text-3xl font-bold mb-4">Exercise Types</h1>
-      
+
       {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="h-5 w-5 bg-muted rounded" />
+          </div>
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
         <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
@@ -83,8 +86,8 @@ const ExerciseTypesPageFallback = () => (
     {/* Exercise Types Grid with skeletons */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {/* Keep spinner for tests */}
-      <div className="col-span-full flex justify-center py-4">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div className="col-span-full flex justify-center py-4" role="status">
+        <span className="loading loading-spinner loading-lg" aria-label="Loading"></span>
       </div>
       {Array.from({ length: 9 }).map((_, i) => (
         <div key={i} className="bg-card rounded-lg p-4 border border-border">
