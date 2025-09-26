@@ -71,8 +71,8 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
   it('renders the page title and search controls', async () => {
     render(<ExerciseTypesPage />);
 
-  expect(screen.getByRole('heading', { name: /exercise types/i, level: 1 })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/search exercise types/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /exercises/i, level: 1 })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search exercises.../i)).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
 
@@ -98,13 +98,6 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
     expect(screen.getByText('Pull-ups')).toBeInTheDocument();
   });
 
-  it('shows loading spinner during initial load', () => {
-    mockGetExerciseTypes.mockImplementation(() => new Promise(() => {})); // Never resolves
-    render(<ExerciseTypesPage />);
-
-    expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
-  });
-
   it('filters exercise types based on search term', async () => {
     render(<ExerciseTypesPage />);
 
@@ -112,7 +105,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'push');
 
     // Should only show Push-ups
@@ -128,7 +121,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'bodyweight');
 
     // Should only show Push-ups (has "bodyweight" in description)
@@ -144,7 +137,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'nonexistent');
 
     expect(screen.getByText(/no exercise types found matching your search/i)).toBeInTheDocument();
@@ -158,7 +151,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'nonexistent');
 
     expect(screen.getByText(/no exercise types found matching your search/i)).toBeInTheDocument();
@@ -266,7 +259,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'PUSH');
 
     // Should still find Push-ups despite case difference
@@ -298,7 +291,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
       expect(screen.getByTestId('exercise-type-1')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
     await userEvent.type(searchInput, 'Push');
 
     // Should show only Push exercises (filtered client-side)

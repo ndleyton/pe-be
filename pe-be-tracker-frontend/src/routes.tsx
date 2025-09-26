@@ -1,25 +1,40 @@
 import React, { Suspense } from 'react';
 import { type RouteObject } from 'react-router-dom';
-import App from './App';
-import AppLayout from './layouts/AppLayout';
-import NotFoundPage from './pages/NotFoundPage';
+
 import { PageErrorBoundary } from '@/shared/components/error';
+import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 
-// Import MyWorkoutsPage directly (no lazy loading for core page)
-import { MyWorkoutsPage } from './features/workouts/pages';
+import App from './App';
+import AppLayout from './layouts/AppLayout';
+import NotFoundPage from './pages/NotFoundPage';
 
-// Lazy load other components with error boundaries  
-const WorkoutPage = React.lazy(() => import('./features/workouts/pages').then(module => ({ default: module.WorkoutPage })));
-const ExerciseTypesPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypesPage })));
-const ExerciseTypeDetailsPage = React.lazy(() => import('./features/exercises/pages').then(module => ({ default: module.ExerciseTypeDetailsPage })));
+// These pages are not lazy loaded as they are core pages
+import { MyWorkoutsPage } from './features/workouts/pages';
+import { ChatPage } from './features/chat/pages';
+
+// Lazy load other components with error boundaries
+const WorkoutPage = React.lazy(() =>
+  import('./features/workouts/pages').then((m) => ({ default: m.WorkoutPage })),
+);
+const ExerciseTypesPage = React.lazy(() =>
+  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypesPage })),
+);
+const ExerciseTypeDetailsPage = React.lazy(() =>
+  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypeDetailsPage })),
+);
 const RoutinesPage = React.lazy(() => import('./features/routines/pages/RoutinesPage'));
 const RoutineDetailsPage = React.lazy(() => import('./features/routines/pages/RoutineDetailsPage'));
-const ChatPage = React.lazy(() => import('./features/chat/pages').then(module => ({ default: module.ChatPage })));
-const ProfilePage = React.lazy(() => import('./features/profile/pages').then(module => ({ default: module.ProfilePage })));
-const AboutPage = React.lazy(() => import('./features/about/pages').then(module => ({ default: module.AboutPage })));
-const OAuthCallbackPage = React.lazy(() => import('./features/auth/pages').then(module => ({ default: module.OAuthCallbackPage })));
+const ProfilePage = React.lazy(() =>
+  import('./features/profile/pages').then((m) => ({ default: m.ProfilePage })),
+);
+const AboutPage = React.lazy(() =>
+  import('./features/about/pages').then((m) => ({ default: m.AboutPage })),
+);
+const OAuthCallbackPage = React.lazy(() =>
+  import('./features/auth/pages').then((m) => ({ default: m.OAuthCallbackPage })),
+);
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
@@ -50,48 +65,49 @@ const LoadingFallback = () => (
   </div>
 );
 
-// ExerciseTypesPage-specific loading fallback that matches its structure
 const ExerciseTypesPageFallback = () => (
-  <div className="max-w-5xl mx-auto p-8 text-center">
-    <div className="mb-6">
-      <h1 className="text-3xl font-bold mb-4">Exercise Types</h1>
-      
+  <div className="max-w-5xl mx-auto p-8 text-center" aria-busy="true" aria-live="polite">
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">Exercises</h1>
+      </div>
+
       {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="h-5 w-5 bg-muted rounded" />
+          </div>
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
-        <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
+        <div className="w-full sm:w-auto">
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
       </div>
-    </div>
 
-    {/* Exercise Types Grid with skeletons */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* Keep spinner for tests */}
-      <div className="col-span-full flex justify-center py-4">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-start gap-4">
-            <Skeleton className="h-12 w-12 rounded" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
+      {/* Exercise Types Grid - Always show structure */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="bg-card rounded-lg p-4 border border-border">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-12 w-12 rounded" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Skeleton className="h-7 w-20 rounded-full" />
+              <Skeleton className="h-7 w-28 rounded-full" />
             </div>
           </div>
-          <div className="mt-4 flex gap-2">
-            <Skeleton className="h-7 w-20 rounded-full" />
-            <Skeleton className="h-7 w-28 rounded-full" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   </div>
 );
 
-// ProfilePage-specific loading fallback that matches its structure
 const ProfilePageFallback = () => (
   <div className="max-w-5xl mx-auto p-8 text-center">
     <div className="max-w-4xl mx-auto">
@@ -100,7 +116,6 @@ const ProfilePageFallback = () => (
         <p className="text-muted-foreground mt-1">Track your fitness journey</p>
       </div>
       
-      {/* WeekTracking Skeleton */}
       <div className="bg-base-100 rounded-lg p-4 mb-6">
         <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
         <div className="flex justify-between items-center gap-1">
@@ -119,7 +134,6 @@ const ProfilePageFallback = () => (
         </div>
       </div>
       
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-card rounded-lg p-4">
@@ -134,7 +148,6 @@ const ProfilePageFallback = () => (
         ))}
       </div>
       
-      {/* Account Information Section */}
       <div className="bg-card rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Account Information</h2>
         <div className="space-y-4">
@@ -207,9 +220,9 @@ const routes: RouteObject[] = [
       {
         path: 'workouts/:workoutId',
         element: (
-          <PageWrapper>
+          <SimplePageWrapper>
             <WorkoutPage />
-          </PageWrapper>
+          </SimplePageWrapper>
         ),
       },
       {
@@ -247,9 +260,9 @@ const routes: RouteObject[] = [
       {
         path: 'chat',
         element: (
-          <PageWrapper>
+          <SimplePageWrapper>
             <ChatPage />
-          </PageWrapper>
+          </SimplePageWrapper>
         ),
       },
       {
