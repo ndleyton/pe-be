@@ -94,17 +94,6 @@ const MyWorkoutsPage = () => {
       });
   }, []);
 
-  // Idle-time prefetch when the workouts list is visible
-  React.useEffect(() => {
-    if (!Array.isArray(workouts) || workouts.length === 0) return;
-    const ric = (cb: () => void) => ((window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb) : setTimeout(cb, 150));
-    const cancelRic = (id: number) => {
-      if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
-      else clearTimeout(id);
-    };
-    const id = ric(() => preloadWorkoutPage());
-    return () => cancelRic(id as unknown as number);
-  }, [workouts, preloadWorkoutPage]);
 
   const handleStartWorkoutFromRecipe = async (recipe: GuestRecipe) => {
     try {
