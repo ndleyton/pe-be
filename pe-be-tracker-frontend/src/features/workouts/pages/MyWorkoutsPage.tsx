@@ -86,12 +86,10 @@ const MyWorkoutsPage = () => {
   const preloadWorkoutPage = React.useCallback(() => {
     if (preloadedRef.current) return;
     preloadedRef.current = true;
-    void import('@/features/workouts/pages')
-      .then(() => {})
-      .catch(() => {
-        // If preloading fails, allow future attempts
-        preloadedRef.current = false;
-      });
+    void import('@/features/workouts/pages').catch(() => {
+      // If preloading fails, allow future attempts
+      preloadedRef.current = false;
+    });
   }, []);
 
 
