@@ -58,9 +58,11 @@ const ExerciseTypesPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-4">Exercise Types</h1>
+    <div className="max-w-5xl mx-auto p-8 text-center">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold">Exercises</h1>
+        </div>
         
         {/* Search and Filter Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -70,7 +72,7 @@ const ExerciseTypesPage: React.FC = () => {
             </div>
             <Input
               type="text"
-              placeholder="Search exercise types..."
+              placeholder="Search exercises..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10"
@@ -90,10 +92,9 @@ const ExerciseTypesPage: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Exercise Types Grid - Always show structure */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Exercise Types Grid - Always show structure */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           <>
             {/* Keep spinner for tests while showing skeletons */}
@@ -155,6 +156,7 @@ const ExerciseTypesPage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
