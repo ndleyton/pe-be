@@ -97,10 +97,6 @@ const ExerciseTypesPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           <>
-            {/* Keep spinner for tests while showing skeletons */}
-            <div className="col-span-full flex justify-center py-4">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
             {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-4 border border-border">
                 <div className="flex items-start gap-4">
