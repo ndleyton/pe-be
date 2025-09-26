@@ -65,13 +65,11 @@ const LoadingFallback = () => (
   </div>
 );
 
-// ExerciseTypesPage-specific loading fallback that matches its structure
 const ExerciseTypesPageFallback = () => (
   <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center" aria-busy="true" aria-live="polite">
     <div className="mb-6">
-      <h1 className="text-3xl font-bold mb-4">Exercise Types</h1>
+      <h1 className="text-2xl font-semibold mb-4">Exercises</h1>
 
-      {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -83,9 +81,7 @@ const ExerciseTypesPageFallback = () => (
       </div>
     </div>
 
-    {/* Exercise Types Grid with skeletons */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* Keep spinner for tests */}
       <div className="col-span-full flex justify-center py-4" role="status">
         <span className="loading loading-spinner loading-lg" aria-label="Loading"></span>
       </div>
@@ -109,7 +105,6 @@ const ExerciseTypesPageFallback = () => (
   </div>
 );
 
-// ProfilePage-specific loading fallback that matches its structure
 const ProfilePageFallback = () => (
   <div className="max-w-5xl mx-auto p-8 text-center">
     <div className="max-w-4xl mx-auto">
@@ -118,7 +113,6 @@ const ProfilePageFallback = () => (
         <p className="text-muted-foreground mt-1">Track your fitness journey</p>
       </div>
       
-      {/* WeekTracking Skeleton */}
       <div className="bg-base-100 rounded-lg p-4 mb-6">
         <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
         <div className="flex justify-between items-center gap-1">
@@ -137,7 +131,6 @@ const ProfilePageFallback = () => (
         </div>
       </div>
       
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-card rounded-lg p-4">
@@ -152,7 +145,6 @@ const ProfilePageFallback = () => (
         ))}
       </div>
       
-      {/* Account Information Section */}
       <div className="bg-card rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Account Information</h2>
         <div className="space-y-4">

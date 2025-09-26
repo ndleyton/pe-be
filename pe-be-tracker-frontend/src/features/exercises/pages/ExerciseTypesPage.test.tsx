@@ -71,7 +71,7 @@ describe('ExerciseTypesPage - Infinite Scroll', () => {
   it('renders the page title and search controls', async () => {
     render(<ExerciseTypesPage />);
 
-  expect(screen.getByRole('heading', { name: /exercise types/i, level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /exercises/i, level: 1 })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Search exercises.../i)).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });

@@ -46,7 +46,7 @@ describe('ExerciseTypeModal', () => {
       />
     );
 
-    expect(screen.getByPlaceholderText(/search exercise types/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search exercise types.../i)).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', async () => {
