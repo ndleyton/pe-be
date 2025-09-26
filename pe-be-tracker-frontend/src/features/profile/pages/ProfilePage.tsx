@@ -91,7 +91,7 @@ const ProfilePage: React.FC = () => {
     <div className="max-w-5xl mx-auto p-8 text-center">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Profile</h1>
+          <h1 className="text-2xl font-semibold">Profile</h1>
           <p className="text-muted-foreground mt-1">Track your fitness journey</p>
         </div>
         
