@@ -33,6 +33,8 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
     );
   }
 
+  const [activeMetric, setActiveMetric] = React.useState<'maxWeight' | 'totalVolume'>('maxWeight');
+
   // Transform data for the chart
   const chartData = data.map((point) => ({
     date: new Date(point.date).toLocaleDateString('en-US', { 
@@ -51,8 +53,45 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
     ? Math.abs(((latestWeight - previousWeight) / previousWeight) * 100).toFixed(1)
     : '0';
 
+  const latestVolume = data[data.length - 1]?.totalVolume || 0;
+  const previousVolume = data[data.length - 2]?.totalVolume || latestVolume;
+  const volumeTrend = latestVolume > previousVolume;
+  const volumeChange = latestVolume > 0 && previousVolume > 0
+    ? Math.abs(((latestVolume - previousVolume) / previousVolume) * 100).toFixed(1)
+    : '0';
+
   return (
     <div className="space-y-4">
+      {/* Tabs / Segmented control */}
+      <div className="flex w-full items-center justify-center">
+        <div className="inline-flex items-center gap-1 rounded-lg border bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => setActiveMetric('maxWeight')}
+            aria-pressed={activeMetric === 'maxWeight'}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              activeMetric === 'maxWeight'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Max Weight
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMetric('totalVolume')}
+            aria-pressed={activeMetric === 'totalVolume'}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              activeMetric === 'totalVolume'
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Total Volume
+          </button>
+        </div>
+      </div>
+
       <ChartContainer config={chartConfig}>
         <AreaChart
           accessibilityLayer
@@ -76,20 +115,23 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
             tickCount={3}
           />
           <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-          <Area
-            dataKey="totalVolume"
-            type="natural"
-            fill="var(--color-totalVolume)"
-            fillOpacity={0.4}
-            stroke="var(--color-totalVolume)"
-          />
-          <Area
-            dataKey="maxWeight"
-            type="natural"
-            fill="var(--color-maxWeight)"
-            fillOpacity={0.4}
-            stroke="var(--color-maxWeight)"
-          />
+          {activeMetric === 'maxWeight' ? (
+            <Area
+              dataKey="maxWeight"
+              type="natural"
+              fill="var(--color-maxWeight)"
+              fillOpacity={0.4}
+              stroke="var(--color-maxWeight)"
+            />
+          ) : (
+            <Area
+              dataKey="totalVolume"
+              type="natural"
+              fill="var(--color-totalVolume)"
+              fillOpacity={0.4}
+              stroke="var(--color-totalVolume)"
+            />
+          )}
         </AreaChart>
       </ChartContainer>
 
@@ -97,11 +139,16 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
       <div className="flex w-full items-start gap-2 text-sm">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 leading-none font-medium">
-            {weightTrend ? 'Trending up' : 'Steady progress'} by {weightChange}% this session{' '}
+            {activeMetric === 'maxWeight'
+              ? (weightTrend ? 'Trending up' : 'Steady progress')
+              : (volumeTrend ? 'Trending up' : 'Steady progress')}{' '}
+            by {activeMetric === 'maxWeight' ? weightChange : volumeChange}% this session{' '}
             <TrendingUp className="h-4 w-4" />
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
-            Latest: {latestWeight}kg max weight • {data[data.length - 1]?.totalVolume || 0}kg volume
+            {activeMetric === 'maxWeight'
+              ? <>Latest: {latestWeight}kg max weight</>
+              : <>Latest: {latestVolume}kg total volume</>}
           </div>
         </div>
       </div>
