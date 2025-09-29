@@ -4,10 +4,19 @@ import { GuestExerciseSet, useGuestStore } from '@/stores';
 import { useAuthStore } from '@/stores';
 import { ExerciseTypeMore } from '@/features/exercises/components/ExerciseTypeMore';
 import { Card, CardHeader, CardContent, Button, Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Textarea } from '@/shared/components/ui';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/components/ui/accordion';
 import { MoreVertical, StickyNote, Plus, Minus, Check, Trash2, ExternalLink } from 'lucide-react';
+import Fade from 'embla-carousel-fade';
 import { useDebounce } from '@/shared/hooks';
 import { formatDecimal, parseDecimalInput } from '@/utils/format';
 import { Link } from 'react-router-dom';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/shared/components/ui/carousel';
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -69,6 +78,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
   // const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
+  // Carousel state (mirrors ExerciseTypeDetailsPage)
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [containerRatio, setContainerRatio] = useState<string>('16 / 9');
+  const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
   
   // Default intensity unit
   const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>({
@@ -85,6 +98,27 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       });
     }
   };
+
+  // Prepare exercise type images for carousel
+  const validImages = (exercise.exercise_type.images || []).filter((img) => !failedImages.has(img));
+  const firstImageUrl = validImages[0];
+
+  useEffect(() => {
+    setFirstImageLoaded(false);
+    if (!firstImageUrl) return;
+    const url = firstImageUrl;
+    const img = new window.Image();
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setContainerRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+      }
+      setFirstImageLoaded(true);
+    };
+    img.onerror = () => {
+      setFailedImages((prev) => new Set(prev).add(url));
+    };
+    img.src = url;
+  }, [firstImageUrl]);
 
   useEffect(() => {
     if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
@@ -404,299 +438,350 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
 
   return (
     <Card key={exercise.id} className="border-input">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                {exercise.exercise_type.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">
-                {exercise.exercise_type.name} 
-              </h3>
-              <Dialog open={exerciseNotesModal} onOpenChange={(open) => {
-                setExerciseNotesModal(open);
-                if (!open) {
-                  setExerciseNotesValue('');
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
-                    onClick={() => {
-                      setExerciseNotesValue(exercise.notes || '');
-                      setExerciseNotesModal(true);
-                    }}
-                  >
-                    <StickyNote className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </Button>
-                </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Exercise Notes</DialogTitle>
-                </DialogHeader>
-                <Textarea
-                  placeholder="Add notes for this exercise..."
-                  value={exerciseNotesValue}
-                  onChange={(e) => setExerciseNotesValue(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setExerciseNotesModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      updateExerciseNotes(exerciseNotesValue);
-                      setExerciseNotesModal(false);
-                    }}
-                  >
-                    Save
-                  </Button>
+      <Accordion type="single" collapsible defaultValue={`exercise-${exercise.id}`}>
+        <AccordionItem value={`exercise-${exercise.id}`} className="border-b-0">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <AccordionTrigger className="py-0 justify-start gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-sm">
+                      {exercise.exercise_type.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-foreground">
+                    {exercise.exercise_type.name}
+                  </h3>
                 </div>
-              </DialogContent>
-              </Dialog>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
-                asChild
-              >
-                <Link
-                  to={`/exercise-types/${exercise.exercise_type.id}`}
-                  aria-label={`View details for ${exercise.exercise_type.name}`}
-                  title="View exercise details"
-                >
-                  <ExternalLink className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-          <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Exercise Settings</DialogTitle>
-              </DialogHeader>
-              <ExerciseTypeMore
-                currentIntensityUnit={currentIntensityUnit}
-                onIntensityUnitChange={handleIntensityUnitChange}
-                onExerciseDelete={handleExerciseDelete}
-                onClose={() => setShowExerciseModal(false)}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-
-
-        {/* Rest Timer   // TODO: Add rest timer with functionality with zustand */}
-        {/* <div className="flex items-center gap-2 mt-2">
-          <Timer className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-          <span className="text-sm text-blue-500 dark:text-blue-400">
-            Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
-          </span>
-        </div> */}
-      </CardHeader>
-
-      <CardContent className="p-4 pt-0">
-        {/* Sets Table Header */}
-        <div className="grid gap-2 sm:gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}>
-          <div>SET</div>
-          <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
-          <div>REPS</div>
-          <div className="text-right">DONE</div>
-          <div></div>
-        </div>
-
-        {/* Sets */}
-        <div className="space-y-2">
-          {exerciseSets.map((set, index) => {
-            const savedIntensityValue = formatDecimal(set.intensity);
-            const setKey = String(set.id);
-            const intensityValue = intensityInputs[setKey] ?? (savedIntensityValue === '-' ? '' : savedIntensityValue);
-
-            return (
-              <div
-                key={set.id}
-                className={`grid gap-2 sm:gap-4 items-center p-2 rounded ${
-                  set.done ? "bg-done" : "bg-secondary"
-                }`}
-                style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}
-              >
-                <div className="font-medium text-muted-foreground">
-                  <span>{index + 1}</span>
-                </div>
-                <div>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={intensityValue}
-                    data-testid="intensity-input"
-                    onChange={(e) => {
-                      const { value } = e.target;
-                      setIntensityInputs(prev => ({ ...prev, [setKey]: value }));
-                    }}
-                    onBlur={(e) => {
-                      const parsedValue = parseDecimalInput(e.currentTarget.value);
-                      if (parsedValue === null) {
-                        const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
-                        setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
-                        return;
-                      }
-                      if (parsedValue === set.intensity) {
-                        const formattedValue = formatIntensityInputValue(parsedValue);
-                        setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
-                        return;
-                      }
-                      const formattedValue = formatIntensityInputValue(parsedValue);
-                      setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
-                      void updateSet(exercise.id, set.id, 'weight', parsedValue);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.currentTarget as HTMLInputElement).blur();
-                      }
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
-                        setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
-                        (e.currentTarget as HTMLInputElement).blur();
-                      }
-                    }}
-                    className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
-                    disabled={set.done}
-                  />
-                </div>
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 w-6 p-0 bg-transparent border border-input"
-                  onClick={() => decrementReps(exercise.id, set.id)}
-                  disabled={set.done}
-                >
-                  <Minus className="w-3 h-3" />
-                </Button>
-                <Input
-                  type="number"
-                  value={set.reps ?? ""}
-                  onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
-                  className="h-8 text-center input min-w-[4ch] sm:min-w-[8ch] max-w-[10ch]"
-                  disabled={set.done}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 w-6 p-0 bg-transparent border border-input"
-                  onClick={() => incrementReps(exercise.id, set.id)}
-                  disabled={set.done}
-                >
-                  <Plus className="w-3 h-3" />
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  variant={set.done ? "default" : "outline"}
-                  size="sm"
-                  className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800" : "border border-input dark:border-gray-600"}`}
-                  onClick={() => toggleSetCompletion(exercise.id, set.id)}
-                >
-                  <Check className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Dialog open={moreMenuModal?.setId === set.id} onOpenChange={(open) => {
+              </AccordionTrigger>
+              <div className="flex items-center gap-2">
+                <Dialog open={exerciseNotesModal} onOpenChange={(open) => {
+                  setExerciseNotesModal(open);
                   if (!open) {
-                    setMoreMenuModal(null);
-                    setSetNotesValue('');
-                    setInitialSetNotesValue('');
+                    setExerciseNotesValue('');
                   }
                 }}>
                   <DialogTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
+                      className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
                       onClick={() => {
-                        const initialNotes = set.notes || '';
-                        setMoreMenuModal({ exerciseId: exercise.id, setId: set.id });
-                        setSetNotesValue(initialNotes);
-                        setInitialSetNotesValue(initialNotes);
+                        setExerciseNotesValue(exercise.notes || '');
+                        setExerciseNotesModal(true);
                       }}
                     >
+                      <StickyNote className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Exercise Notes</DialogTitle>
+                    </DialogHeader>
+                    <Textarea
+                      placeholder="Add notes for this exercise..."
+                      value={exerciseNotesValue}
+                      onChange={(e) => setExerciseNotesValue(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setExerciseNotesModal(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          updateExerciseNotes(exerciseNotesValue);
+                          setExerciseNotesModal(false);
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-6 h-6 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
+                  asChild
+                >
+                  <Link
+                    to={`/exercise-types/${exercise.exercise_type.id}`}
+                    aria-label={`View details for ${exercise.exercise_type.name}`}
+                    title="View exercise details"
+                  >
+                    <ExternalLink className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </Link>
+                </Button>
+                <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Set Notes & Options</DialogTitle>
+                      <DialogTitle>Exercise Settings</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                          Notes for Set {exerciseSets.findIndex(s => String(s.id) === String(set.id)) + 1}
-                        </label>
-                        <Textarea
-                          placeholder="Add notes for this set..."
-                          value={setNotesValue}
-                          onChange={(e) => {
-                            setSetNotesValue(e.target.value);
-                          }}
-                          className="min-h-[100px]"
-                        />
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t">
-                        <Button
-                          variant="outline"
-                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          onClick={() => {
-                            deleteSet(exercise.id, set.id);
-                            setMoreMenuModal(null);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Set
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setMoreMenuModal(null);
-                          }}
-                        >
-                          Close
-                        </Button>
-                      </div>
-                    </div>
+                    <ExerciseTypeMore
+                      currentIntensityUnit={currentIntensityUnit}
+                      onIntensityUnitChange={handleIntensityUnitChange}
+                      onExerciseDelete={handleExerciseDelete}
+                      onClose={() => setShowExerciseModal(false)}
+                    />
                   </DialogContent>
                 </Dialog>
               </div>
-              </div>
-            );
-          })}
-        </div>
+            </div>
 
-        {/* Add Set Button */}
-        <Button
-          variant="outline"
-          className="w-full mt-4 bg-transparent border-input"
-          data-testid="add-set-button"
-          onClick={() => addSet(exercise.id)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Set
-        </Button>
-      </CardContent>
+            {/* Rest Timer   // TODO: Add rest timer with functionality with zustand */}
+            {/* <div className="flex items-center gap-2 mt-2">
+              <Timer className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+              <span className="text-sm text-blue-500 dark:text-blue-400">
+                Rest Timer: {restTimer.minutes}min {restTimer.seconds}s
+              </span>
+            </div> */}
+          </CardHeader>
+
+          <AccordionContent>
+            <CardContent className="p-4 pt-0">
+              {/* Exercise Images Carousel (if available) */}
+              {validImages.length > 0 && (
+                <div className="mb-4">
+                  <div
+                    className="bg-muted rounded-lg flex items-center justify-center overflow-hidden"
+                    style={{ aspectRatio: containerRatio }}
+                    data-testid="exercise-carousel-container"
+                  >
+                    {!firstImageLoaded ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="loading loading-spinner loading-md"></span>
+                      </div>
+                    ) : (
+                      <Carousel
+                        className="w-full h-full"
+                        opts={{ loop: true, align: 'center', containScroll: false }}
+                        plugins={[Fade()]}
+                      >
+                        <CarouselContent>
+                          {validImages.map((imageUrl, index) => (
+                            <CarouselItem key={imageUrl}>
+                              <img
+                                src={imageUrl}
+                                alt={`${exercise.exercise_type.name} - Image ${index + 1}`}
+                                className="w-full h-full object-contain"
+                                onError={() => {
+                                  setFailedImages((prev) => new Set(prev).add(imageUrl));
+                                }}
+                              />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        {validImages.length > 1 && (
+                          <>
+                            <CarouselPrevious className="left-2" />
+                            <CarouselNext className="right-2" />
+                          </>
+                        )}
+                      </Carousel>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Sets Table Header */}
+              <div className="grid gap-2 sm:gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}>
+                <div>SET</div>
+                <div>{currentIntensityUnit.abbreviation.toUpperCase()}</div>
+                <div>REPS</div>
+                <div className="text-right">DONE</div>
+                <div></div>
+              </div>
+
+              {/* Sets */}
+              <div className="space-y-2">
+                {exerciseSets.map((set, index) => {
+                  const savedIntensityValue = formatDecimal(set.intensity);
+                  const setKey = String(set.id);
+                  const intensityValue = intensityInputs[setKey] ?? (savedIntensityValue === '-' ? '' : savedIntensityValue);
+
+                  return (
+                    <div
+                      key={set.id}
+                      className={`grid gap-2 sm:gap-4 items-center p-2 rounded ${
+                        set.done ? "bg-done" : "bg-secondary"
+                      }`}
+                      style={{ gridTemplateColumns: "30px 60px 1fr 40px 32px" }}
+                    >
+                      <div className="font-medium text-muted-foreground">
+                        <span>{index + 1}</span>
+                      </div>
+                      <div>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={intensityValue}
+                          data-testid="intensity-input"
+                          onChange={(e) => {
+                            const { value } = e.target;
+                            setIntensityInputs(prev => ({ ...prev, [setKey]: value }));
+                          }}
+                          onBlur={(e) => {
+                            const parsedValue = parseDecimalInput(e.currentTarget.value);
+                            if (parsedValue === null) {
+                              const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
+                              setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
+                              return;
+                            }
+                            if (parsedValue === set.intensity) {
+                              const formattedValue = formatIntensityInputValue(parsedValue);
+                              setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
+                              return;
+                            }
+                            const formattedValue = formatIntensityInputValue(parsedValue);
+                            setIntensityInputs(prev => ({ ...prev, [setKey]: formattedValue }));
+                            void updateSet(exercise.id, set.id, 'weight', parsedValue);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (e.currentTarget as HTMLInputElement).blur();
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              const revertValue = savedIntensityValue === '-' ? '' : savedIntensityValue;
+                              setIntensityInputs(prev => ({ ...prev, [setKey]: revertValue }));
+                              (e.currentTarget as HTMLInputElement).blur();
+                            }
+                          }}
+                          className="h-8 text-center input min-w-[4ch] sm:min-w-[6ch] max-w-[10ch]"
+                          disabled={set.done}
+                        />
+                      </div>
+                      <div className="flex items-center gap-0.5 sm:gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0 bg-transparent border border-input"
+                          onClick={() => decrementReps(exercise.id, set.id)}
+                          disabled={set.done}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={set.reps ?? ""}
+                          onChange={(e) => updateSet(exercise.id, set.id, "reps", Number.parseInt(e.target.value) || 0)}
+                          className="h-8 text-center input min-w-[4ch] sm:min-w-[8ch] max-w-[10ch]"
+                          disabled={set.done}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0 bg-transparent border border-input"
+                          onClick={() => incrementReps(exercise.id, set.id)}
+                          disabled={set.done}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant={set.done ? "default" : "outline"}
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800" : "border border-input dark:border-gray-600"}`}
+                          onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-end">
+                        <Dialog open={moreMenuModal?.setId === set.id} onOpenChange={(open) => {
+                          if (!open) {
+                            setMoreMenuModal(null);
+                            setSetNotesValue('');
+                            setInitialSetNotesValue('');
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-700"
+                              onClick={() => {
+                                const initialNotes = set.notes || '';
+                                setMoreMenuModal({ exerciseId: exercise.id, setId: set.id });
+                                setSetNotesValue(initialNotes);
+                                setInitialSetNotesValue(initialNotes);
+                              }}
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Set Notes & Options</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                                  Notes for Set {exerciseSets.findIndex(s => String(s.id) === String(set.id)) + 1}
+                                </label>
+                                <Textarea
+                                  placeholder="Add notes for this set..."
+                                  value={setNotesValue}
+                                  onChange={(e) => {
+                                    setSetNotesValue(e.target.value);
+                                  }}
+                                  className="min-h-[100px]"
+                                />
+                              </div>
+                              <div className="flex justify-between items-center pt-2 border-t">
+                                <Button
+                                  variant="outline"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  onClick={() => {
+                                    deleteSet(exercise.id, set.id);
+                                    setMoreMenuModal(null);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Set
+                                </Button>
+                                <Button
+                                  onClick={() => {
+                                    setMoreMenuModal(null);
+                                  }}
+                                >
+                                  Close
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add Set Button */}
+              <Button
+                variant="outline"
+                className="w-full mt-4 bg-transparent border-input"
+                data-testid="add-set-button"
+                onClick={() => addSet(exercise.id)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Set
+              </Button>
+            </CardContent>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   );
 };
