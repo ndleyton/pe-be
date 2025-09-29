@@ -75,7 +75,7 @@ const ExerciseTypesPage: React.FC = () => {
               placeholder="Search exercises..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 sm:pl-10"
+              className="w-full pl-10"
             />
           </div>
           
