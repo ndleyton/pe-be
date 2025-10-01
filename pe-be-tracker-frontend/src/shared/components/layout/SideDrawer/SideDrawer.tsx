@@ -16,7 +16,7 @@ const SideDrawer: React.FC = () => {
   const isOpen = useUIStore(state => state.isDrawerOpen);
   const closeDrawer = useUIStore(state => state.closeDrawer);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const initialized = useAuthStore(state => (state as any).initialized ?? true);
+  const initialized = useAuthStore(state => state.initialized);
   const signOut = useAuthStore(state => state.signOut);
   const googleSignIn = useGoogleSignIn();
 

@@ -13,6 +13,7 @@ vi.mock('@/stores', () => ({
       isAuthenticated: mockIsAuthenticated(),
       signOut: mockSignOut,
       user: null,
+      initialized: true,
     };
     return selector ? selector(state) : state;
   }),

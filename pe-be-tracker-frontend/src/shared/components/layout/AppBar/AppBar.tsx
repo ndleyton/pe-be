@@ -11,7 +11,7 @@ const AppBar: React.FC = () => {
   const navigate = useNavigate();
   const toggleDrawer = useUIStore(state => state.toggleDrawer);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const initialized = useAuthStore(state => (state as any).initialized ?? true);
+  const initialized = useAuthStore(state => state.initialized);
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated) {
