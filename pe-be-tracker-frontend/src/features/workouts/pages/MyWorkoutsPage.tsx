@@ -4,7 +4,8 @@ import { startWorkoutFromRoutine } from '@/features/routines/api';
 import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
-import { WorkoutForm, WorkoutCard } from '@/features/workouts/components';
+import { WorkoutForm } from '@/features/workouts/components';
+import WorkoutCard from '@/features/workouts/components/WorkoutCard';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { WeekTracking } from '@/shared/components/WeekTracking';
 import { RoutinesSection } from '@/features/routines/components';
@@ -119,18 +120,30 @@ const MyWorkoutsPage = () => {
   const [sessionExpired, setSessionExpired] = React.useState(false);
 
   React.useEffect(() => {
-    const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
-    if (isAuthenticated && isAuthError) {
-      // Mark user as signed out so header logo routes to login
+    const authErr = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
+    if (isAuthenticated && authErr) {
       if (typeof setUser === 'function') {
         setUser(null);
       }
-      // Preserve session expired UI state on this page
       setSessionExpired(true);
     }
   }, [isAuthenticated, error, setUser]);
 
-  if (sessionExpired) {
+  const isAuthError = axios.isAxiosError(error) && (error?.response?.status === 401 || error?.response?.status === 403);
+
+  const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
+  // Decide if empty-state should be shown in a readable way
+  const showEmpty = React.useMemo(() => {
+    // Only after list has finished initial loading
+    if (listStatus !== 'success') return false;
+    // Only if there are truly no workouts to render
+    if (validWorkouts.length > 0) return false;
+    // Authenticated users are ready; guests must wait for guest store hydration
+    return isAuthenticated || guestHydrated;
+  }, [listStatus, validWorkouts.length, isAuthenticated, guestHydrated]);
+
+  // Early return for auth errors (after all hooks are called)
+  if (isAuthenticated && (sessionExpired || isAuthError)) {
     const errorMessage = getErrorMessage(error);
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -146,13 +159,11 @@ const MyWorkoutsPage = () => {
     );
   }
 
+  // Early return for other errors (after all hooks are called)
   if (isAuthenticated && error) {
     const errorMessage = getErrorMessage(error);
     return <p className="text-destructive">{errorMessage}</p>;
   }
-
-  const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
-  const showEmpty = listStatus === 'success' && validWorkouts.length === 0 && (isAuthenticated || guestHydrated);
 
   return (
     <>

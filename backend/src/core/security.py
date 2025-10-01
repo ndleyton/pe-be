@@ -84,9 +84,9 @@ def get_jwt_strategy() -> JWTStrategy:
 auth_backend = AuthenticationBackend(
     name="jwt",
     transport=CookieTransportWithRedirect(
-        cookie_name="fitnessapp",
-        cookie_max_age=3600 * 24 * 7,  # 7 days
-        cookie_secure=settings.COOKIE_SECURE,  # Configurable via COOKIE_SECURE environment variable
+        cookie_name="personalbestie_session",
+        cookie_max_age=3600 * 24 * 7,
+        cookie_secure=settings.COOKIE_SECURE,
         cookie_samesite=settings.COOKIE_SAMESITE,
         cookie_domain=settings.COOKIE_DOMAIN,
     ),
