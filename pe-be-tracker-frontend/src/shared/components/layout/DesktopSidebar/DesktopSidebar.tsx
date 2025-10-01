@@ -30,7 +30,7 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
 
 const DesktopSidebar: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const initialized = useAuthStore(state => (state as any).initialized ?? true);
+  const initialized = useAuthStore(state => state.initialized);
   const signOut = useAuthStore(state => state.signOut);
   const googleSignIn = useGoogleSignIn();
 
