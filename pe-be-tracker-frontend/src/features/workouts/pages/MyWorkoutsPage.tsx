@@ -58,14 +58,13 @@ const MyWorkoutsPage = () => {
   }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
   // Memoize loading state to prevent unnecessary rerenders
-  // Treat guest-store hydration as loading to avoid empty-state flash
-  const guestHydrated = useGuestStore(state => state.hydrated);
-  const guestHydrating = !isAuthenticated && !guestHydrated;
-
-  const weekTrackingLoading = React.useMemo(() => 
-    authLoading || guestHydrating || (isAuthenticated && isLoading), 
-    [authLoading, guestHydrating, isAuthenticated, isLoading]
+  // For guests, skip loading skeletons; for authed users (or while auth initializing), show loading
+  const weekTrackingLoading = React.useMemo(() =>
+    (isAuthenticated && (authLoading || isLoading)),
+    [authLoading, isAuthenticated, isLoading]
   );
+  // For guests, avoid initial mount skeleton; only show loading while authenticated flows fetch
+  const listPending = isAuthenticated && (authLoading || isLoading || !isMounted);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -208,7 +207,7 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {(authLoading || guestHydrating || isLoading || !isMounted) ? (
+          {listPending ? (
             <WorkoutListSkeleton />
           ) : validWorkouts.length === 0 ? (
             <div className="text-center py-12">

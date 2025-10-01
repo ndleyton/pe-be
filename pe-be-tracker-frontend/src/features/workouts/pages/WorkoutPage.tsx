@@ -277,13 +277,12 @@ const WorkoutPage: React.FC = () => {
     };
   }, []);
 
-  // Determine list status to control skeleton/empty/error states
-  const guestHydrated = useGuestStore(state => state.hydrated);
-  const guestHydrating = !isAuthenticated && !guestHydrated;
-  const listStatus: 'pending' | 'success' | 'error' =
-    (authLoading || guestHydrating || (isAuthenticated && exercisesLoading))
-      ? 'pending'
-      : (isAuthenticated && exercisesError ? 'error' : 'success');
+  // Streamlined status computation
+  // For guests, avoid showing the skeleton; only show when authenticated
+  const listPending = isAuthenticated && (authLoading || exercisesLoading);
+  const listStatus: 'pending' | 'success' | 'error' = listPending
+    ? 'pending'
+    : (isAuthenticated && exercisesError ? 'error' : 'success');
 
   return (
     <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center">
