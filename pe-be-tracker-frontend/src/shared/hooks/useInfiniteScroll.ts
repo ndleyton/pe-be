@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 // Generic shape for cursor-based paginated responses
@@ -26,7 +26,6 @@ export const useInfiniteScroll = <T>({
   threshold = 300,
   enabled = true,
 }: UseInfiniteScrollOptions<T>) => {
-  const [allData, setAllData] = useState<T[]>([]);
   const loadingRef = useRef(false);
 
   const {
@@ -34,7 +33,8 @@ export const useInfiniteScroll = <T>({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
+    isFetched,
     error,
     refetch,
   } = useInfiniteQuery({
@@ -54,19 +54,13 @@ export const useInfiniteScroll = <T>({
     enabled,
   });
 
-  // Flatten all pages into a single array
-  useEffect(() => {
-    if (data?.pages) {
-      const flatData = data.pages.flatMap((page) => {
-        if (!page || !page.data) return [];
-        // Defensive check to ensure page.data is actually an array
-        return Array.isArray(page.data) ? page.data : [];
-      });
-      setAllData(flatData);
-    } else {
-      // Ensure we always have an array
-      setAllData([]);
-    }
+  // Flatten all pages into a single array synchronously to avoid flicker
+  const flatData = useMemo<T[]>(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => {
+      if (!page || !page.data) return [];
+      return Array.isArray(page.data) ? page.data : [];
+    });
   }, [data]);
 
   // Scroll event handler
@@ -100,14 +94,15 @@ export const useInfiniteScroll = <T>({
   }, [handleScroll, enabled]);
 
   const reset = useCallback(() => {
-    setAllData([]);
     loadingRef.current = false;
     refetch();
   }, [refetch]);
 
   return {
-    data: allData,
-    isLoading,
+    data: flatData,
+    // v5 naming: expose both for compatibility
+    isPending,
+    isFetched,
     isFetchingNextPage,
     hasMore: hasNextPage,
     error,
