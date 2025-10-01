@@ -152,6 +152,7 @@ const MyWorkoutsPage = () => {
   }
 
   const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
+  const showEmpty = listStatus === 'success' && validWorkouts.length === 0 && (isAuthenticated || guestHydrated);
 
   return (
     <>
@@ -199,12 +200,7 @@ const MyWorkoutsPage = () => {
           
           {listStatus === 'pending' ? (
             <WorkoutListSkeleton />
-          ) : (
-            (
-              (isAuthenticated && !authLoading && !isPending && validWorkouts.length === 0) ||
-              (!isAuthenticated && guestHydrated && validWorkouts.length === 0)
-            )
-          ) ? (
+          ) : showEmpty ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
