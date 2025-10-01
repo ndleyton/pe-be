@@ -11,6 +11,7 @@ const AppBar: React.FC = () => {
   const navigate = useNavigate();
   const toggleDrawer = useUIStore(state => state.toggleDrawer);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const initialized = useAuthStore(state => (state as any).initialized ?? true);
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated) {
@@ -76,7 +77,7 @@ const AppBar: React.FC = () => {
             )}
           </button>
         )}
-        {!isAuthenticated && (
+        {initialized && !isAuthenticated && (
           <Button onClick={googleSignIn} size="sm">
             Sign In
           </Button>
