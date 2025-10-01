@@ -24,11 +24,10 @@ const MyWorkoutsPage = () => {
   const guestData = useGuestStore();
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
   
   const {
     data: serverWorkouts,
-    isLoading,
+    isPending,
     isFetchingNextPage,
     error,
     refetch,
@@ -57,17 +56,10 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
-  // Memoize loading state to prevent unnecessary rerenders
-  // For guests, skip loading skeletons; for authed users (or while auth initializing), show loading
-  const weekTrackingLoading = React.useMemo(() =>
-    (isAuthenticated && (authLoading || isLoading)),
-    [authLoading, isAuthenticated, isLoading]
-  );
-  // For guests, avoid initial mount skeleton; only show loading while authenticated flows fetch
-  const listPending = isAuthenticated && (authLoading || isLoading || !isMounted);
-  // Only show the empty-state when we're confident about data readiness
+  const listPending = isAuthenticated && (authLoading || isPending);
+  const listStatus: 'pending' | 'success' = listPending ? 'pending' : 'success';
+  // Gate empty-state for guests until guest store hydration completes
   const guestHydrated = useGuestStore(state => state.hydrated);
-  const canShowEmpty = (!isAuthenticated && guestHydrated) || (isAuthenticated && !authLoading && !isLoading);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -138,11 +130,6 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, error, setUser]);
 
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-
   if (sessionExpired) {
     const errorMessage = getErrorMessage(error);
     return (
@@ -175,7 +162,7 @@ const MyWorkoutsPage = () => {
           </div>
           <WeekTracking 
             workouts={workouts} 
-            loading={weekTrackingLoading} 
+            loading={listStatus === 'pending'} 
             className="mb-6" 
           />
           
@@ -210,9 +197,14 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {listPending ? (
+          {listStatus === 'pending' ? (
             <WorkoutListSkeleton />
-          ) : (canShowEmpty && validWorkouts.length === 0) ? (
+          ) : (
+            (
+              (isAuthenticated && !authLoading && !isPending && validWorkouts.length === 0) ||
+              (!isAuthenticated && guestHydrated && validWorkouts.length === 0)
+            )
+          ) ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>

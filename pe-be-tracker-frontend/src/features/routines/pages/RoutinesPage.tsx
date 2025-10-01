@@ -32,7 +32,7 @@ const RoutinesPage: React.FC = () => {
 
   const {
     data: routines,
-    isLoading,
+    isPending,
     isFetchingNextPage,
     hasMore,
     error,
@@ -164,14 +164,14 @@ const RoutinesPage: React.FC = () => {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
+      {isPending && (
         <div className="flex justify-center py-8">
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       )}
 
       {/* Routines Grid */}
-      {!isLoading && (
+      {!isPending && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRoutines.map((routine) => (
@@ -200,7 +200,7 @@ const RoutinesPage: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredRoutines.length === 0 && (
+      {!isPending && filteredRoutines.length === 0 && (
         <div className="text-center py-12">
           <div className="text-muted-foreground mb-4">
             {searchTerm ? 'No routines found matching your search.' : 'No routines available.'}
