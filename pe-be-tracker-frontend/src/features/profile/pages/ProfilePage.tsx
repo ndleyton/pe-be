@@ -95,7 +95,7 @@ const ProfilePage: React.FC = () => {
           <p className="text-muted-foreground mt-1">Track your fitness journey</p>
         </div>
         
-        <WeekTracking workouts={workouts} className="mb-6" />
+        <WeekTracking workouts={workouts} loading={loading || isLoading} className="mb-6" />
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

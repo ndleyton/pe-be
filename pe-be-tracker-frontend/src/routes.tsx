@@ -5,6 +5,7 @@ import { PageErrorBoundary } from '@/shared/components/error';
 import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
+import { WeekTrackingSkeleton } from '@/shared/components/skeletons/WeekTrackingSkeleton';
 
 import App from './App';
 import AppLayout from './layouts/AppLayout';
@@ -116,23 +117,7 @@ const ProfilePageFallback = () => (
         <p className="text-muted-foreground mt-1">Track your fitness journey</p>
       </div>
       
-      <div className="bg-base-100 rounded-lg p-4 mb-6">
-        <h3 className="text-sm font-medium text-base-content/70 mb-3">Week Activity</h3>
-        <div className="flex justify-between items-center gap-1">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <span className="text-xs text-card-foreground/60">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'][i]}
-              </span>
-              <Skeleton className="w-8 h-8 rounded-full" />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between text-xs text-card-foreground/50 mt-2">
-          <span>7 days ago</span>
-          <span>Today</span>
-        </div>
-      </div>
+      <WeekTrackingSkeleton className="mb-6" />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {Array.from({ length: 3 }).map((_, i) => (
@@ -148,9 +133,9 @@ const ProfilePageFallback = () => (
         ))}
       </div>
       
-      <div className="bg-card rounded-lg p-6">
+      <div className="bg-card rounded-lg p-6 text-center">
         <h2 className="text-lg font-semibold mb-4">Account Information</h2>
-        <div className="space-y-4">
+        <div className="space-y-4 flex flex-col items-center">
           <div>
             <Skeleton className="h-4 w-12 mb-1" />
             <Skeleton className="h-5 w-20" />

@@ -12,8 +12,7 @@ import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
 import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
 import { Dumbbell } from 'lucide-react';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
+import { WorkoutListSkeleton } from '@/shared/components/skeletons/WorkoutListSkeleton';
 
 
 const MyWorkoutsPage = () => {
@@ -21,6 +20,7 @@ const MyWorkoutsPage = () => {
   
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const authLoading = useAuthStore(state => state.loading);
   const setUser = useAuthStore(state => state.setUser);
   const guestData = useGuestStore();
   
@@ -59,9 +59,13 @@ const MyWorkoutsPage = () => {
   }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
   // Memoize loading state to prevent unnecessary rerenders
+  // Treat guest-store hydration as loading to avoid empty-state flash
+  const guestHydrated = (useGuestStore as any)?.persist?.hasHydrated?.() ?? true;
+  const guestHydrating = !isAuthenticated && !guestHydrated;
+
   const weekTrackingLoading = React.useMemo(() => 
-    isAuthenticated && isLoading, 
-    [isAuthenticated, isLoading]
+    authLoading || guestHydrating || (isAuthenticated && isLoading), 
+    [authLoading, guestHydrating, isAuthenticated, isLoading]
   );
 
   const getErrorMessage = (error: unknown) => {
@@ -205,24 +209,8 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {(isLoading || !isMounted) ? (
-            <div className="space-y-3">
-              {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-                <div key={i} className="bg-card rounded-lg p-4 border border-border">
-                  <div className="flex items-center space-x-4">
-                    <Skeleton className="w-10 h-10 rounded-lg" />
-                    <div className="flex-1">
-                      <Skeleton className="h-5 w-2/5 mb-2" />
-                      <div className="flex items-center gap-4">
-                        <Skeleton className="h-5 w-24" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    </div>
-                    <Skeleton className="w-5 h-5 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
+          {(authLoading || guestHydrating || isLoading || !isMounted) ? (
+            <WorkoutListSkeleton />
           ) : validWorkouts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
