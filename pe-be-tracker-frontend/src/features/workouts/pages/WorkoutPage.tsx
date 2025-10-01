@@ -278,7 +278,7 @@ const WorkoutPage: React.FC = () => {
   }, []);
 
   // Determine list status to control skeleton/empty/error states
-  const guestHydrated = (useGuestStore as any)?.persist?.hasHydrated?.() ?? true;
+  const guestHydrated = useGuestStore(state => state.hydrated);
   const guestHydrating = !isAuthenticated && !guestHydrated;
   const listStatus: 'pending' | 'success' | 'error' =
     (authLoading || guestHydrating || (isAuthenticated && exercisesLoading))
