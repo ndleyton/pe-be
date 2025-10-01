@@ -65,6 +65,9 @@ const MyWorkoutsPage = () => {
   );
   // For guests, avoid initial mount skeleton; only show loading while authenticated flows fetch
   const listPending = isAuthenticated && (authLoading || isLoading || !isMounted);
+  // Only show the empty-state when we're confident about data readiness
+  const guestHydrated = useGuestStore(state => state.hydrated);
+  const canShowEmpty = (!isAuthenticated && guestHydrated) || (isAuthenticated && !authLoading && !isLoading);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -209,7 +212,7 @@ const MyWorkoutsPage = () => {
           
           {listPending ? (
             <WorkoutListSkeleton />
-          ) : validWorkouts.length === 0 ? (
+          ) : (canShowEmpty && validWorkouts.length === 0) ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
