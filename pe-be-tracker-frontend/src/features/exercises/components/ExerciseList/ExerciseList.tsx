@@ -39,7 +39,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error
       )}
       
       {!isLoading && !error && exercises.length === 0 && (
-        <div className="text-muted-foreground text-center py-8 border border-border rounded-lg bg-card">
+        <div className="text-muted-foreground text-center p-4 border border-border rounded-lg bg-card">
           No exercises added yet. Click below to add your first exercise.
         </div>
       )}
