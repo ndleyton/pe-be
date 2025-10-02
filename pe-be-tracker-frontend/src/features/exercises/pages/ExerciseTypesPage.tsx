@@ -25,7 +25,7 @@ const ExerciseTypesPage: React.FC = () => {
 
   const {
     data: exerciseTypes,
-    isLoading,
+    isPending,
     isFetchingNextPage,
     hasMore,
     error,
@@ -95,7 +95,7 @@ const ExerciseTypesPage: React.FC = () => {
 
         {/* Exercise Types Grid - Always show structure */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
+        {isPending ? (
           <>
             {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg p-4 border border-border">
@@ -122,21 +122,21 @@ const ExerciseTypesPage: React.FC = () => {
       </div>
       
       {/* Loading more indicator */}
-      {!isLoading && isFetchingNextPage && (
+      {!isPending && isFetchingNextPage && (
         <div className="flex justify-center py-8">
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       )}
       
       {/* End of results indicator */}
-      {!isLoading && !hasMore && filteredExerciseTypes.length > 0 && (
+      {!isPending && !hasMore && filteredExerciseTypes.length > 0 && (
         <div className="text-center py-8">
           <span className="text-muted-foreground text-sm">No more exercise types to load</span>
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredExerciseTypes.length === 0 && (
+      {!isPending && filteredExerciseTypes.length === 0 && (
         <div className="text-center py-12">
           <div className="text-muted-foreground mb-4">
             {searchTerm ? 'No exercise types found matching your search.' : 'No exercise types available.'}

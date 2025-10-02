@@ -61,7 +61,7 @@ describe('useInfiniteScroll', () => {
     window.removeEventListener('scroll', expect.any(Function));
   });
 
-  it('should initialize with empty data and loading state', () => {
+  it('should initialize with empty data and pending state', () => {
     mockQueryFn.mockResolvedValue(wrap([]));
 
     const { result } = renderHook(
@@ -75,7 +75,7 @@ describe('useInfiniteScroll', () => {
     );
 
     expect(result.current.data).toEqual([]);
-    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isPending).toBe(true);
     expect(result.current.hasMore).toBe(false); // Initially false until we have data
     expect(result.current.isFetchingNextPage).toBe(false);
   });

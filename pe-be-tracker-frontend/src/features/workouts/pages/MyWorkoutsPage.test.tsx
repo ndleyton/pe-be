@@ -47,6 +47,7 @@ vi.mock('@/stores', () => ({
   }),
   useGuestStore: vi.fn((selector) => {
     const mockState = {
+      hydrated: true,
       workouts: [],
       recipes: [],
       exerciseTypes: [],
@@ -322,9 +323,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     render(<MyWorkoutsPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('API Error')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('API Error')).toBeInTheDocument();
   });
 
   it('handles 401 unauthorized errors with special message', async () => {
@@ -337,10 +336,8 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     render(<MyWorkoutsPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/session expired/i)).toBeInTheDocument();
-      expect(screen.getByText(/please log in to view your workouts/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/session expired/i)).toBeInTheDocument();
+    expect(await screen.findByText(/please log in to view your workouts/i)).toBeInTheDocument();
   });
 
   it('handles 403 forbidden errors with special message', async () => {
@@ -353,9 +350,7 @@ describe('MyWorkoutsPage - Infinite Scroll', () => {
 
     render(<MyWorkoutsPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/session expired/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/session expired/i)).toBeInTheDocument();
   });
 
   it('refetches data when workout is created', async () => {

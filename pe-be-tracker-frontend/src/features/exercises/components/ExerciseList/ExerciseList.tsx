@@ -1,45 +1,28 @@
 import React from 'react';
 import { Exercise } from '@/features/exercises/api';
 import ExerciseRow from '../ExerciseRow';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { ExerciseListSkeleton } from '@/shared/components/skeletons/ExerciseListSkeleton';
 
 interface ExerciseListProps {
   exercises: Exercise[];
-  isLoading: boolean;
-  error: any;
+  status: 'idle' | 'pending' | 'success' | 'error';
   workoutId?: string;
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
 }
 
-const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, isLoading, error, workoutId, onExerciseUpdate }) => {
+const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, status, workoutId, onExerciseUpdate }) => {
   return (
     <div className="mt-8">
-      {isLoading && (
-        <>
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-card rounded-lg p-4 border border-border">
-                <div className="flex items-center space-x-4">
-                  <Skeleton className="w-8 h-8 rounded" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-1/2 mb-2" />
-                    <Skeleton className="h-4 w-1/3" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {status === 'pending' && <ExerciseListSkeleton />}
       
-      {error && (
+      {status === 'error' && (
         <div className="text-destructive text-center py-4">
           Failed to load exercises
         </div>
       )}
       
-      {!isLoading && !error && exercises.length === 0 && (
-        <div className="text-muted-foreground text-center py-8 border border-border rounded-lg bg-card">
+      {status === 'success' && exercises.length === 0 && (
+        <div className="text-muted-foreground text-center p-4 border border-border rounded-lg bg-card">
           No exercises added yet. Click below to add your first exercise.
         </div>
       )}

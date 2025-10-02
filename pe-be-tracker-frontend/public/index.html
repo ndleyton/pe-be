@@ -16,6 +16,12 @@
     <meta name="theme-color" content="#000000">
     <title>PersonalBestie - AI Fitness Companion</title>
     <meta name="description" content="Reach your personal best with an AI-powered fitness companion. Track workouts, get personalized insights, and chat with your fitness AI.">
+    <script>
+        const hasAuthCookie = document.cookie.split('; ').some(row => row.startsWith('personalbestie_session='));
+        if (hasAuthCookie) {
+            window.location.href = 'https://app.personalbestie.com';
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,7 +102,6 @@
             </div>
         </main>
 
-        <!-- Footer -->
         <footer class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-12">
             <div class="text-center" style="color: rgb(161, 147, 147);">
                 <p>&copy; 2025 PersonalBestie. All rights reserved.</p>

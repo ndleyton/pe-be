@@ -5,15 +5,14 @@ import { useGuestStore, useAuthStore, GuestRecipe } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 import { getMyWorkouts, type Workout } from '@/features/workouts';
 import { WorkoutForm } from '@/features/workouts/components';
+import WorkoutCard from '@/features/workouts/components/WorkoutCard';
 import FloatingActionButton from '@/shared/components/FloatingActionButton';
 import { WeekTracking } from '@/shared/components/WeekTracking';
 import { RoutinesSection } from '@/features/routines/components';
 import { Button } from '@/shared/components/ui/button';
 import { useInfiniteScroll } from '@/shared/hooks';
-import { getCurrentUTCTimestamp, parseWorkoutDuration, formatDisplayDate } from '@/utils/date';
-import { Dumbbell } from 'lucide-react';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
+import { getCurrentUTCTimestamp } from '@/utils/date';
+import { WorkoutListSkeleton } from '@/shared/components/skeletons/WorkoutListSkeleton';
 
 
 const MyWorkoutsPage = () => {
@@ -21,15 +20,15 @@ const MyWorkoutsPage = () => {
   
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const authLoading = useAuthStore(state => state.loading);
   const setUser = useAuthStore(state => state.setUser);
   const guestData = useGuestStore();
   
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
   
   const {
     data: serverWorkouts,
-    isLoading,
+    isPending,
     isFetchingNextPage,
     error,
     refetch,
@@ -58,11 +57,10 @@ const MyWorkoutsPage = () => {
     }
   }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
 
-  // Memoize loading state to prevent unnecessary rerenders
-  const weekTrackingLoading = React.useMemo(() => 
-    isAuthenticated && isLoading, 
-    [isAuthenticated, isLoading]
-  );
+  const listPending = isAuthenticated && (authLoading || isPending);
+  const listStatus: 'pending' | 'success' = listPending ? 'pending' : 'success';
+  // Gate empty-state for guests until guest store hydration completes
+  const guestHydrated = useGuestStore(state => state.hydrated);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -122,23 +120,30 @@ const MyWorkoutsPage = () => {
   const [sessionExpired, setSessionExpired] = React.useState(false);
 
   React.useEffect(() => {
-    const isAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
-    if (isAuthenticated && isAuthError) {
-      // Mark user as signed out so header logo routes to login
+    const authErr = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
+    if (isAuthenticated && authErr) {
       if (typeof setUser === 'function') {
         setUser(null);
       }
-      // Preserve session expired UI state on this page
       setSessionExpired(true);
     }
   }, [isAuthenticated, error, setUser]);
 
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isAuthError = axios.isAxiosError(error) && (error?.response?.status === 401 || error?.response?.status === 403);
 
+  const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
+  // Decide if empty-state should be shown in a readable way
+  const showEmpty = React.useMemo(() => {
+    // Only after list has finished initial loading
+    if (listStatus !== 'success') return false;
+    // Only if there are truly no workouts to render
+    if (validWorkouts.length > 0) return false;
+    // Authenticated users are ready; guests must wait for guest store hydration
+    return isAuthenticated || guestHydrated;
+  }, [listStatus, validWorkouts.length, isAuthenticated, guestHydrated]);
 
-  if (sessionExpired) {
+  // Early return for auth errors (after all hooks are called)
+  if (isAuthenticated && (sessionExpired || isAuthError)) {
     const errorMessage = getErrorMessage(error);
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -154,12 +159,11 @@ const MyWorkoutsPage = () => {
     );
   }
 
+  // Early return for other errors (after all hooks are called)
   if (isAuthenticated && error) {
     const errorMessage = getErrorMessage(error);
     return <p className="text-destructive">{errorMessage}</p>;
   }
-
-  const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
 
   return (
     <>
@@ -170,7 +174,7 @@ const MyWorkoutsPage = () => {
           </div>
           <WeekTracking 
             workouts={workouts} 
-            loading={weekTrackingLoading} 
+            loading={listStatus === 'pending'} 
             className="mb-6" 
           />
           
@@ -205,25 +209,9 @@ const MyWorkoutsPage = () => {
             </div>
           )}
           
-          {(isLoading || !isMounted) ? (
-            <div className="space-y-3">
-              {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-                <div key={i} className="bg-card rounded-lg p-4 border border-border">
-                  <div className="flex items-center space-x-4">
-                    <Skeleton className="w-10 h-10 rounded-lg" />
-                    <div className="flex-1">
-                      <Skeleton className="h-5 w-2/5 mb-2" />
-                      <div className="flex items-center gap-4">
-                        <Skeleton className="h-5 w-24" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    </div>
-                    <Skeleton className="w-5 h-5 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : validWorkouts.length === 0 ? (
+          {listStatus === 'pending' ? (
+            <WorkoutListSkeleton />
+          ) : showEmpty ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">You haven't logged any workouts yet.</p>
             </div>
@@ -231,37 +219,13 @@ const MyWorkoutsPage = () => {
             <>
               <div className="space-y-3">
                 {validWorkouts.map(workout => (
-                  <div
+                  <WorkoutCard
                     key={workout.id}
-                    onClick={() => handleWorkoutClick(workout.id)}
+                    workout={workout}
+                    onClick={handleWorkoutClick}
                     onMouseEnter={preloadWorkoutPage}
                     onTouchStart={preloadWorkoutPage}
-                    className="bg-card rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                        <Dumbbell className="w-5 h-5 text-primary-foreground" />
-                      </div>
-                      <div>
-                        <h3 className="text-foreground font-medium">
-                          {workout.name || 'Traditional Strength Training'}
-                        </h3>
-                        <div className="flex items-center space-x-4 mt-1">
-                          <span className="text-primary font-mono text-lg">
-                            {parseWorkoutDuration(workout.start_time, workout.end_time).durationText}
-                          </span>
-                          <span className="text-muted-foreground text-sm">
-                            {formatDisplayDate(workout.start_time, { includeTime: false, includeTimezone: false })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-muted-foreground">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
               
