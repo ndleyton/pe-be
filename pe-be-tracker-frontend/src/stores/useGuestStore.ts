@@ -117,6 +117,8 @@ export interface GuestData {
 
 interface GuestState extends GuestData {
   hasAttemptedSync: boolean;
+  // Ephemeral flag set true after persisted state finishes rehydrating on client
+  hydrated: boolean;
 }
 
 interface GuestActions {
@@ -156,6 +158,7 @@ interface GuestActions {
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
   syncWithServer: () => Promise<void>;
+  setHydrated: (hydrated: boolean) => void;
 }
 
 type GuestStore = GuestState & GuestActions;
@@ -251,6 +254,7 @@ export const useGuestStore = create<GuestStore>()(
     (set, get) => ({
       ...getInitialGuestData(),
       hasAttemptedSync: false,
+      hydrated: false,
 
       addWorkout: (workout) => {
         const id = generateRandomId();
@@ -672,11 +676,20 @@ export const useGuestStore = create<GuestStore>()(
         set({ hasAttemptedSync: false });
       }
     },
+    setHydrated: (hydrated) => set({ hydrated }),
     }),
     {
       name: 'pe-guest-data',
       storage: createJSONStorage(() => createIndexedDBStorage()),
       version: 1,
+      // Persist only data fields; exclude ephemeral flags/actions
+      partialize: (state) => ({
+        workouts: state.workouts,
+        exerciseTypes: state.exerciseTypes,
+        workoutTypes: state.workoutTypes,
+        recipes: state.recipes,
+        hasAttemptedSync: state.hasAttemptedSync,
+      }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
         if (persistedVersion == null || persistedVersion < 1) {
@@ -689,6 +702,10 @@ export const useGuestStore = create<GuestStore>()(
         }
         // Already at current version — return as-is
         return persistedState as GuestState;
+      },
+      onRehydrateStorage: () => (state, error) => {
+        // Mark hydrated regardless of storage success or failure
+        state?.setHydrated(true);
       },
     }
   )

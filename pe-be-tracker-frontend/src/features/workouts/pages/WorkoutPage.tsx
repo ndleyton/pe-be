@@ -36,6 +36,7 @@ const WorkoutPage: React.FC = () => {
   
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const authLoading = useAuthStore(state => state.loading);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   
@@ -276,6 +277,13 @@ const WorkoutPage: React.FC = () => {
     };
   }, []);
 
+  // Streamlined status computation
+  // For guests, avoid showing the skeleton; only show when authenticated
+  const listPending = isAuthenticated && (authLoading || exercisesLoading);
+  const listStatus: 'pending' | 'success' | 'error' = listPending
+    ? 'pending'
+    : (isAuthenticated && exercisesError ? 'error' : 'success');
+
   return (
     <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center">
       <div className="max-w-2xl mx-auto p-2 md:p-4 lg:p-6 bg-card text-card-foreground rounded-lg shadow-lg mt-2 md:mt-4 lg:mt-8">
@@ -290,9 +298,8 @@ const WorkoutPage: React.FC = () => {
           </h2>
         </div>
         <ExerciseList 
-          exercises={exercises} 
-          isLoading={isAuthenticated && exercisesLoading} 
-          error={isAuthenticated ? exercisesError : null} 
+          exercises={exercises}
+          status={listStatus}
           workoutId={workoutId}
           onExerciseUpdate={handleExerciseUpdate}
         />

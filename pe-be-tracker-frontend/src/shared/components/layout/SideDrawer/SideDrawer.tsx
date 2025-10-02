@@ -16,6 +16,7 @@ const SideDrawer: React.FC = () => {
   const isOpen = useUIStore(state => state.isDrawerOpen);
   const closeDrawer = useUIStore(state => state.closeDrawer);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const initialized = useAuthStore(state => state.initialized);
   const signOut = useAuthStore(state => state.signOut);
   const googleSignIn = useGoogleSignIn();
 
@@ -73,11 +74,11 @@ const SideDrawer: React.FC = () => {
                   Sign Out
                 </Button>
               </>
-            ) : (
+            ) : initialized ? (
               <Button onClick={googleSignIn} className="w-full">
                 Sign In with Google
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </SheetContent>
