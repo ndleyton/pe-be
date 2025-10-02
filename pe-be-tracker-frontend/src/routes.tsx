@@ -5,7 +5,9 @@ import { PageErrorBoundary } from '@/shared/components/error';
 import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
-import { WeekTrackingSkeleton } from '@/shared/components/skeletons/WeekTrackingSkeleton';
+import ExerciseTypesPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton';
+import ExerciseTypeDetailsPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton';
+import ProfilePageSkeleton from '@/features/profile/components/skeletons/ProfilePageSkeleton';
 
 import App from './App';
 import AppLayout from './layouts/AppLayout';
@@ -66,94 +68,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-const ExerciseTypesPageFallback = () => (
-  <div className="max-w-5xl mx-auto p-8 text-center" aria-busy="true" aria-live="polite">
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Exercises</h1>
-      </div>
-
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <div className="h-5 w-5 bg-muted rounded" />
-          </div>
-          <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-        <div className="w-full sm:w-auto">
-          <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-      </div>
-
-      {/* Exercise Types Grid - Always show structure */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-lg p-4 border border-border">
-            <div className="flex items-start gap-4">
-              <Skeleton className="h-12 w-12 rounded" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Skeleton className="h-7 w-20 rounded-full" />
-              <Skeleton className="h-7 w-28 rounded-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const ProfilePageFallback = () => (
-  <div className="max-w-5xl mx-auto p-8 text-center">
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="text-muted-foreground mt-1">Track your fitness journey</p>
-      </div>
-      
-      <WeekTrackingSkeleton className="mb-6" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-8 w-12" />
-              </div>
-              <Skeleton className="w-12 h-12 rounded-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="bg-card rounded-lg p-6 text-center">
-        <h2 className="text-lg font-semibold mb-4">Account Information</h2>
-        <div className="space-y-4 flex flex-col items-center">
-          <div>
-            <Skeleton className="h-4 w-12 mb-1" />
-            <Skeleton className="h-5 w-20" />
-          </div>
-          <div>
-            <Skeleton className="h-4 w-16 mb-1" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-        </div>
-      </div>
-      
-      {/* Keep spinner for tests */}
-      <div className="flex justify-center py-4">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    </div>
-  </div>
-);
 
 // Wrapper component for pages with error boundary and suspense
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -167,7 +81,16 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 // Wrapper component for ExerciseTypesPage with custom fallback
 const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <PageErrorBoundary>
-    <Suspense fallback={<ExerciseTypesPageFallback />}>
+    <Suspense fallback={<ExerciseTypesPageSkeleton />}>
+      {children}
+    </Suspense>
+  </PageErrorBoundary>
+);
+
+// Wrapper component for ExerciseTypeDetailsPage with custom fallback
+const ExerciseTypeDetailsPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <PageErrorBoundary>
+    <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>
       {children}
     </Suspense>
   </PageErrorBoundary>
@@ -176,7 +99,7 @@ const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({ chi
 // Wrapper component for ProfilePage with custom fallback
 const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <PageErrorBoundary>
-    <Suspense fallback={<ProfilePageFallback />}>
+    <Suspense fallback={<ProfilePageSkeleton />}>
       {children}
     </Suspense>
   </PageErrorBoundary>
@@ -221,9 +144,9 @@ const routes: RouteObject[] = [
       {
         path: 'exercise-types/:exerciseTypeId',
         element: (
-          <PageWrapper>
+          <ExerciseTypeDetailsPageWrapper>
             <ExerciseTypeDetailsPage />
-          </PageWrapper>
+          </ExerciseTypeDetailsPageWrapper>
         ),
       },
       {
