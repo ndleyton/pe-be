@@ -116,12 +116,24 @@ const ExerciseTypeDetailsPage: React.FC = () => {
 
   if (isLoadingExerciseType) {
     return (
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto p-8 text-center" aria-busy="true" aria-live="polite">
+        {/* Header skeleton matching details layout */}
+        <div className="flex items-center gap-4 mb-6">
+          <Skeleton className="h-10 w-10 rounded" />
+          <div className="flex-1 min-w-0">
+            <Skeleton className="h-8 w-full max-w-[16rem]" />
+          </div>
+          <div className="ml-auto">
+            <Skeleton className="h-9 w-28 sm:w-36 md:w-48 rounded" />
+          </div>
+        </div>
+
         {/* Keep spinner for tests while showing skeletons */}
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-4" role="status">
           <span className="loading loading-spinner loading-lg"></span>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2">
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2 text-left">
           <div className="space-y-6">
             <div className="bg-card rounded-lg p-6 border border-border">
               <Skeleton className="h-64 w-full rounded-lg" />
