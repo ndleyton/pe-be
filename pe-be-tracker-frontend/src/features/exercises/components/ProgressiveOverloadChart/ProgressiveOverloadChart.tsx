@@ -92,11 +92,13 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
         </div>
       </div>
 
-      <ChartContainer config={chartConfig}>
+      <div className="mt-4">
+        <ChartContainer config={chartConfig}>
         <AreaChart
           accessibilityLayer
           data={chartData}
           margin={{
+            top: 10,
             left: -20,
             right: 12,
           }}
@@ -133,7 +135,8 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
             />
           )}
         </AreaChart>
-      </ChartContainer>
+        </ChartContainer>
+      </div>
 
       {/* Summary Stats */}
       <div className="flex w-full items-start gap-2 text-sm">
