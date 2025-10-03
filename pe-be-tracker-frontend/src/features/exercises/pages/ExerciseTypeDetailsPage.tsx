@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Image } from 'lucide-react';
+import { ArrowLeft, Image, Plus } from 'lucide-react';
 import Fade from 'embla-carousel-fade';
 import { getExerciseTypeById, getExerciseTypeStats } from '@/features/exercises/api';
 import { ProgressiveOverloadChart } from '@/features/exercises/components';
@@ -116,15 +116,22 @@ const ExerciseTypeDetailsPage: React.FC = () => {
 
   if (isLoadingExerciseType) {
     return (
-      <div className="max-w-5xl mx-auto p-8 text-center" aria-busy="true" aria-live="polite">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 text-center" aria-busy="true" aria-live="polite">
         {/* Header skeleton matching details layout */}
-        <div className="flex items-center gap-4 mb-6">
-          <Skeleton className="h-10 w-10 rounded" />
-          <div className="flex-1 min-w-0">
-            <Skeleton className="h-8 w-full max-w-[16rem]" />
+        <div className="mb-6">
+          {/* Title Row */}
+          <div className="flex items-center gap-3 sm:gap-4 mb-4">
+            <Skeleton className="h-10 w-10 rounded shrink-0" />
+            <Skeleton className="h-8 flex-1 min-w-0" />
           </div>
-          <div className="ml-auto">
-            <Skeleton className="h-9 w-28 sm:w-36 md:w-48 rounded" />
+          {/* Muscles and Button Row */}
+          <div className="flex items-center gap-3 justify-between">
+            <div className="flex flex-wrap gap-2 flex-1 min-w-0">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-9 w-28 rounded shrink-0" />
           </div>
         </div>
 
@@ -182,23 +189,44 @@ const ExerciseTypeDetailsPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 text-center">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+      <div className="mb-6">
+        {/* Title Row */}
+        <div className="flex items-center gap-3 sm:gap-4 mb-4">
+          <Button variant="ghost" size="icon" asChild className="shrink-0">
             <Link to="/exercise-types">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold">{exerciseType.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold break-words min-w-0">{exerciseType.name}</h1>
         </div>
-        <Button
-          size="sm"
-          className="sm:ml-auto w-full sm:w-auto"
-          onClick={() => addMutation.mutate()}
-          disabled={addMutation.isPending}
-        >
-          {addMutation.isPending ? 'Adding...' : 'Add to Workout'}
-        </Button>
+
+        {/* Muscles and Button Row */}
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex flex-wrap gap-2 flex-1 min-w-0">
+            {exerciseType.muscles && exerciseType.muscles.length > 0 ? (
+              exerciseType.muscles.map((muscle) => (
+                <span key={muscle.id} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                  {muscle.name}
+                </span>
+              ))
+            ) : null}
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => addMutation.mutate()}
+            disabled={addMutation.isPending}
+          >
+            {addMutation.isPending ? (
+              'Adding...'
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-1" />
+                Add to Workout
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {statsError && (
@@ -239,9 +267,9 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                       );
                     }
                     return (
-                      <Carousel 
-                        className="w-full h-full" 
-                        opts={{ 
+                      <Carousel
+                        className="w-full h-full"
+                        opts={{
                           loop: true,
                           align: 'center',
                           containScroll: false
@@ -251,8 +279,8 @@ const ExerciseTypeDetailsPage: React.FC = () => {
                         <CarouselContent>
                           {validImages.map((imageUrl, index) => (
                             <CarouselItem key={imageUrl}>
-                              <img 
-                                src={imageUrl} 
+                              <img
+                                src={imageUrl}
                                 alt={`${exerciseType.name} - Image ${index + 1}`}
                                 className="w-full h-full object-contain"
                                 onError={() => {
@@ -293,23 +321,6 @@ const ExerciseTypeDetailsPage: React.FC = () => {
               </p>
             </CardContent>
           </Card>
-
-          {exerciseType.muscles && exerciseType.muscles.length > 0 && (
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle>Target Muscles</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {exerciseType.muscles.map((muscle) => (
-                    <span key={muscle.id} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80">
-                      {muscle.name}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="space-y-6">
