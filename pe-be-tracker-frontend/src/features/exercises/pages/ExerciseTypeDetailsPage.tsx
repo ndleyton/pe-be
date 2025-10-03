@@ -396,12 +396,12 @@ const ExerciseTypeDetailsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg">
+                <div className="p-4 bg-muted/50 rounded-lg">
                   <div className="text-sm font-medium text-muted-foreground">Times Used</div>
                   <div className="text-2xl font-bold text-primary">{exerciseType.times_used}</div>
                 </div>
                 {stats?.totalSets && (
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <div className="text-sm font-medium text-muted-foreground">Total Sets</div>
                     <div className="text-2xl font-bold text-secondary">{stats.totalSets}</div>
                   </div>
