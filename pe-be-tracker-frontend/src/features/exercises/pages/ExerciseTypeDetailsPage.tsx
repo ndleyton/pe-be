@@ -140,28 +140,18 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <span className="loading loading-spinner loading-lg"></span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2 text-left">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 text-left">
           <div className="space-y-6">
-            <div className="bg-card rounded-lg p-6 border border-border">
-              <Skeleton className="h-64 w-full rounded-lg" />
-            </div>
-            <div className="bg-card rounded-lg p-6 border border-border">
-              <Skeleton className="h-6 w-40 mb-4" />
+            <div className="bg-muted/50 rounded-2xl shadow-md border border-border/20 h-64"></div>
+            <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
               <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-5/6" />
-            </div>
-            <div className="bg-card rounded-lg p-6 border border-border">
-              <Skeleton className="h-6 w-48 mb-4" />
-              <div className="flex gap-2 flex-wrap">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-24 rounded-full" />
-                ))}
-              </div>
+              <Skeleton className="h-4 w-5/6 mb-2" />
+              <Skeleton className="h-4 w-4/5" />
             </div>
           </div>
           <div className="space-y-6">
             {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-              <div key={i} className="bg-card rounded-lg p-6 border border-border">
+              <div key={i} className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
                 <Skeleton className="h-6 w-56 mb-4" />
                 <Skeleton className="h-40 w-full" />
               </div>
@@ -191,17 +181,17 @@ const ExerciseTypeDetailsPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         {/* Title Row */}
-        <div className="flex items-center gap-3 sm:gap-4 mb-4">
-          <Button variant="ghost" size="icon" asChild className="shrink-0">
+        <div className="flex items-start gap-3 sm:gap-4 mb-4">
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-1">
             <Link to="/exercise-types">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold break-words min-w-0">{exerciseType.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold break-words min-w-0 leading-tight">{exerciseType.name}</h1>
         </div>
 
         {/* Muscles and Button Row */}
-        <div className="flex items-center gap-3 justify-between">
+        <div className="flex items-start gap-3 justify-between">
           <div className="flex flex-wrap gap-2 flex-1 min-w-0">
             {exerciseType.muscles && exerciseType.muscles.length > 0 ? (
               exerciseType.muscles.map((muscle) => (
@@ -247,168 +237,148 @@ const ExerciseTypeDetailsPage: React.FC = () => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 text-left">
         <div className="space-y-6">
           {/* Exercise Images */}
-          <Card className="shadow-md">
-            <CardContent className="pt-6">
-              <div
-                className="bg-muted rounded-lg flex items-center justify-center overflow-hidden"
-                style={{ aspectRatio: containerRatio }}
-                data-testid="exercise-carousel-container"
-              >
-                {(() => {
-                  if (validImages.length > 0) {
-                    if (!firstImageLoaded) {
-                      return (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="loading loading-spinner loading-md"></span>
-                        </div>
-                      );
-                    }
+          <div className="overflow-hidden">
+            <div
+              className="bg-muted/50 rounded-2xl flex items-center justify-center overflow-hidden shadow-md border border-border/20"
+              style={{ aspectRatio: containerRatio }}
+              data-testid="exercise-carousel-container"
+            >
+              {(() => {
+                if (validImages.length > 0) {
+                  if (!firstImageLoaded) {
                     return (
-                      <Carousel
-                        className="w-full h-full"
-                        opts={{
-                          loop: true,
-                          align: 'center',
-                          containScroll: false
-                        }}
-                        plugins={[Fade()]}
-                      >
-                        <CarouselContent>
-                          {validImages.map((imageUrl, index) => (
-                            <CarouselItem key={imageUrl}>
-                              <img
-                                src={imageUrl}
-                                alt={`${exerciseType.name} - Image ${index + 1}`}
-                                className="w-full h-full object-contain"
-                                onError={() => {
-                                  setFailedImages(prev => new Set(prev).add(imageUrl));
-                                }}
-                              />
-                            </CarouselItem>
-                          ))}
-                        </CarouselContent>
-                        {validImages.length > 1 && (
-                          <>
-                            <CarouselPrevious className="left-2" />
-                            <CarouselNext className="right-2" />
-                          </>
-                        )}
-                      </Carousel>
-                    );
-                  } else {
-                    return (
-                      <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
-                        <Image className="h-16 w-16 mx-auto mb-2" />
-                        <p>Exercise image coming soon</p>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="loading loading-spinner loading-md"></span>
                       </div>
                     );
                   }
-                })()}
-              </div>
-            </CardContent>
-          </Card>
+                  return (
+                    <Carousel
+                      className="w-full h-full"
+                      opts={{
+                        loop: true,
+                        align: 'center',
+                        containScroll: false
+                      }}
+                      plugins={[Fade()]}
+                    >
+                      <CarouselContent>
+                        {validImages.map((imageUrl, index) => (
+                          <CarouselItem key={imageUrl}>
+                            <img
+                              src={imageUrl}
+                              alt={`${exerciseType.name} - Image ${index + 1}`}
+                              className="w-full h-full object-contain"
+                              onError={() => {
+                                setFailedImages(prev => new Set(prev).add(imageUrl));
+                              }}
+                            />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      {validImages.length > 1 && (
+                        <>
+                          <CarouselPrevious className="left-2" />
+                          <CarouselNext className="right-2" />
+                        </>
+                      )}
+                    </Carousel>
+                  );
+                } else {
+                  return (
+                    <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
+                      <Image className="h-16 w-16 mx-auto mb-2" />
+                      <p>Exercise image coming soon</p>
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
 
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                {exerciseType.description || 'No description available for this exercise type.'}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+              {exerciseType.description || 'No description available for this exercise type.'}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-6">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Progressive Overload</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingStats ? (
-                <>
-                  <div className="flex justify-center py-4">
-                    <span className="loading loading-spinner loading-md"></span>
-                  </div>
-                  <Skeleton className="h-48 w-full" />
-                </>
-              ) : stats?.progressiveOverload && stats.progressiveOverload.length > 0 ? (
-                <ProgressiveOverloadChart data={stats.progressiveOverload} />
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No workout data available yet.</p>
-                  <p className="text-sm">Start tracking workouts to see your progress!</p>
+          <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
+            <h2 className="text-lg font-semibold mb-4">Progressive Overload</h2>
+            {isLoadingStats ? (
+              <>
+                <div className="flex justify-center py-4">
+                  <span className="loading loading-spinner loading-md"></span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Last Workout</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingStats ? (
-                <>
-                  <div className="flex justify-center py-2">
-                    <span className="loading loading-spinner loading-sm"></span>
-                  </div>
-                  <Skeleton className="h-24 w-full" />
-                </>
-              ) : stats?.lastWorkout ? (
-                <LastWorkoutInfo 
-                  lastWorkout={stats.lastWorkout}
-                  intensityUnit={stats.intensityUnit}
-                />
-              ) : (
-                <p className="text-muted-foreground">You haven't done this exercise yet.</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Personal Best</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingStats ? (
-                <>
-                  <div className="flex justify-center py-2">
-                    <span className="loading loading-spinner loading-sm"></span>
-                  </div>
-                  <Skeleton className="h-20 w-full" />
-                </>
-              ) : stats?.personalBest ? (
-                <PersonalBestInfo 
-                  personalBest={stats.personalBest}
-                  intensityUnit={stats.intensityUnit}
-                />
-              ) : (
-                <p className="text-muted-foreground">No personal best recorded yet.</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Usage Statistics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm font-medium text-muted-foreground">Times Used</div>
-                  <div className="text-2xl font-bold text-primary">{exerciseType.times_used}</div>
-                </div>
-                {stats?.totalSets && (
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="text-sm font-medium text-muted-foreground">Total Sets</div>
-                    <div className="text-2xl font-bold text-secondary">{stats.totalSets}</div>
-                  </div>
-                )}
+                <Skeleton className="h-48 w-full" />
+              </>
+            ) : stats?.progressiveOverload && stats.progressiveOverload.length > 0 ? (
+              <ProgressiveOverloadChart data={stats.progressiveOverload} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No workout data available yet.</p>
+                <p className="text-sm">Start tracking workouts to see your progress!</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+
+          <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
+            <h2 className="text-lg font-semibold mb-4">Last Workout</h2>
+            {isLoadingStats ? (
+              <>
+                <div className="flex justify-center py-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                </div>
+                <Skeleton className="h-24 w-full" />
+              </>
+            ) : stats?.lastWorkout ? (
+              <LastWorkoutInfo
+                lastWorkout={stats.lastWorkout}
+                intensityUnit={stats.intensityUnit}
+              />
+            ) : (
+              <p className="text-muted-foreground">You haven't done this exercise yet.</p>
+            )}
+          </div>
+
+          <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
+            <h2 className="text-lg font-semibold mb-4">Personal Best</h2>
+            {isLoadingStats ? (
+              <>
+                <div className="flex justify-center py-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                </div>
+                <Skeleton className="h-20 w-full" />
+              </>
+            ) : stats?.personalBest ? (
+              <PersonalBestInfo
+                personalBest={stats.personalBest}
+                intensityUnit={stats.intensityUnit}
+              />
+            ) : (
+              <p className="text-muted-foreground">No personal best recorded yet.</p>
+            )}
+          </div>
+
+          <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
+            <h2 className="text-lg font-semibold mb-4">Usage Statistics</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="p-5 bg-muted/50 rounded-xl">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Times Used</div>
+                <div className="text-2xl font-bold">{exerciseType.times_used}</div>
+              </div>
+              {stats?.totalSets && (
+                <div className="p-5 bg-muted/50 rounded-xl">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Total Sets</div>
+                  <div className="text-2xl font-bold">{stats.totalSets}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

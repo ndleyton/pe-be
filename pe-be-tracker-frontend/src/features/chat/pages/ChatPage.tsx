@@ -401,206 +401,205 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background to-secondary/20">
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-2 sm:p-4 min-h-0">
-        <div className="flex-1 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
-          {/* Header - Fixed */}
-          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Dumbbell className="h-6 w-6" />
-              <h1 className="text-xl font-semibold">Fitness Coach AI</h1>
-            </div>
-            <p className="text-primary-foreground/80 text-sm">
-              Log your workouts or get personalized fitness advice
-            </p>
-          </div>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header - Fixed */}
+      <div className="bg-card border-b border-border/20 px-4 py-3 flex items-center gap-3 shrink-0 shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <Dumbbell className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-semibold leading-tight">AI Personal Trainer</h1>
+          <p className="text-xs text-muted-foreground">Always here to help</p>
+        </div>
+      </div>
 
-          {/* Messages - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-background min-h-0">
-            {messages.length === 0 && (
-              <div className="text-center py-8">
-                <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Welcome to your Fitness Coach!
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  I can help you log workouts and provide personalized fitness advice.
-                </p>
-                <div className="grid gap-2 max-w-2xl mx-auto">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Try these examples:</p>
-                  {examplePrompts.map((prompt, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleExamplePrompt(prompt)}
-                      className="text-left p-3 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors text-secondary-foreground"
-                    >
-                      "{prompt}"
-                    </button>
-                  ))}
-                </div>
-                {!isAuthenticated && (
-                  <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-destructive text-sm">
-                      ⚠️ You need to be signed in to parse and save workouts
-                    </p>
-                  </div>
-                )}
+      {/* Messages - Scrollable */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 min-h-0">
+        <div className="max-w-4xl mx-auto">
+          {messages.length === 0 && (
+            <div className="text-center py-8 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <Bot className="h-8 w-8 text-primary" />
               </div>
-            )}
+              <h3 className="text-lg font-semibold mb-2">
+                Welcome to your AI Personal Trainer!
+              </h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                I can help you log workouts and provide personalized fitness advice.
+              </p>
+              <div className="space-y-2 max-w-md mx-auto">
+                <p className="text-xs font-medium text-muted-foreground mb-3">Try these examples:</p>
+                {examplePrompts.map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleExamplePrompt(prompt)}
+                    className="w-full text-left px-4 py-3 bg-muted/50 hover:bg-muted rounded-2xl text-sm transition-colors"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+              {!isAuthenticated && (
+                <div className="mt-6 mx-auto max-w-md px-4 py-3 bg-destructive/10 rounded-2xl">
+                  <p className="text-destructive text-sm">
+                    ⚠️ Sign in to parse and save workouts
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 mb-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`flex gap-3 max-w-[85%] sm:max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-                >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex mb-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div className={`flex gap-2 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar - only show for assistant/system */}
+                {message.role !== "user" && (
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : message.role === "system"
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground"
+                      message.role === "system"
+                        ? "bg-accent/20"
+                        : "bg-muted"
                     }`}
                   >
-                    {message.role === "user" ? (
-                      <User className="h-4 w-4" />
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                <div
+                  className={`px-4 py-2.5 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
+                      : message.role === "system"
+                      ? "bg-accent/50 text-accent-foreground rounded-2xl shadow-sm"
+                      : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
+                  }`}
+                >
+                  <div className="text-sm">
+                    {message.role === 'assistant' ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ children, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props}>{children}</p>,
+                          ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
+                          ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
+                          li: ({ children, ...props }) => <li className="mb-0.5" {...props}>{children}</li>,
+                          strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
+                          em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
+                          code: ({ children, ...props }) => {
+                            const isInline = !props.className?.includes('language-');
+                            return isInline ? (
+                              <code className="px-1.5 py-0.5 rounded-md bg-background/50 text-xs font-mono" {...props}>
+                                {children}
+                              </code>
+                            ) : (
+                              <code {...props}>{children}</code>
+                            );
+                          },
+                          pre: ({ children, ...props }) => (
+                            <pre className="bg-background/50 p-2 rounded-lg overflow-x-auto mb-2 text-xs" {...props}>
+                              {children}
+                            </pre>
+                          ),
+                          h1: ({ children, ...props }) => <h1 className="text-base font-bold mb-2" {...props}>{children}</h1>,
+                          h2: ({ children, ...props }) => <h2 className="text-sm font-bold mb-1.5" {...props}>{children}</h2>,
+                          h3: ({ children, ...props }) => <h3 className="text-sm font-semibold mb-1" {...props}>{children}</h3>,
+                          blockquote: ({ children, ...props }) => (
+                            <blockquote className="border-l-2 border-border pl-3 italic my-2" {...props}>
+                              {children}
+                            </blockquote>
+                          ),
+                        }}
+                      >
+                        {message.content || ''}
+                      </ReactMarkdown>
                     ) : (
-                      <Bot className="h-4 w-4" />
+                      <p className="leading-relaxed">{message.content}</p>
                     )}
                   </div>
-                  <div
-                    className={`p-3 rounded-lg ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : message.role === "system"
-                        ? "bg-accent/50 text-accent-foreground border border-accent"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap">
-                      {message.role === 'assistant' ? (
-                        <div className="space-y-2">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              p: ({ children, ...props }) => <p className="mb-2 last:mb-0" {...props}>{children}</p>,
-                              ul: ({ children, ...props }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props}>{children}</ul>,
-                              ol: ({ children, ...props }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>{children}</ol>,
-                              li: ({ children, ...props }) => <li className="mb-1" {...props}>{children}</li>,
-                              strong: ({ children, ...props }) => <strong className="font-semibold" {...props}>{children}</strong>,
-                              em: ({ children, ...props }) => <em className="italic" {...props}>{children}</em>,
-                              code: ({ children, ...props }) => {
-                                // Check if this is inline code by looking at the props
-                                const isInline = !props.className?.includes('language-');
-                                return isInline ? (
-                                  <code className="px-1 py-0.5 rounded bg-muted/50 text-sm font-mono" {...props}>
-                                    {children}
-                                  </code>
-                                ) : (
-                                  <code {...props}>{children}</code>
-                                );
-                              },
-                              pre: ({ children, ...props }) => (
-                                <pre className="bg-muted/50 p-2 rounded overflow-x-auto mb-2 text-sm" {...props}>
-                                  {children}
-                                </pre>
-                              ),
-                              h1: ({ children, ...props }) => <h1 className="text-lg font-bold mb-2" {...props}>{children}</h1>,
-                              h2: ({ children, ...props }) => <h2 className="text-base font-bold mb-2" {...props}>{children}</h2>,
-                              h3: ({ children, ...props }) => <h3 className="text-sm font-bold mb-1" {...props}>{children}</h3>,
-                              blockquote: ({ children, ...props }) => (
-                                <blockquote className="border-l-4 border-muted pl-4 italic mb-2" {...props}>
-                                  {children}
-                                </blockquote>
-                              ),
-                            }}
-                          >
-                            {message.content || ''}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        message.content
-                      )}
+                  {message.showSaveButton && message.workoutData && (
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs rounded-xl"
+                        onClick={() => handleSaveWorkout(message.workoutData!)}
+                        disabled={saveWorkoutMutation.isPending}
+                      >
+                        {saveWorkoutMutation.isPending ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                            Saving...
+                          </div>
+                        ) : (
+                          '💾 Save Workout'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs rounded-xl"
+                        onClick={() => {
+                          setMessages(prev => prev.map(msg =>
+                            msg.id === message.id
+                              ? { ...msg, showSaveButton: false }
+                              : msg
+                          ));
+                        }}
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                    {message.showSaveButton && message.workoutData && (
-                      <div className="mt-3 flex gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-accent hover:bg-accent/80 text-accent-foreground"
-                          onClick={() => handleSaveWorkout(message.workoutData!)}
-                          disabled={saveWorkoutMutation.isPending}
-                        >
-                          {saveWorkoutMutation.isPending ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                              Saving...
-                            </div>
-                          ) : (
-                            '💾 Save Workout'
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setMessages(prev => prev.map(msg => 
-                              msg.id === message.id 
-                                ? { ...msg, showSaveButton: false }
-                                : msg
-                            ));
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
 
-            {isLoading && (
-              <div className="flex gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                    <div
-                      className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                      style={{ animationDelay: "0.1s" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    ></div>
-                  </div>
+          {isLoading && (
+            <div className="flex gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Bot className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="bg-muted/80 px-4 py-3 rounded-2xl rounded-tl-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div ref={messagesEndRef} />
-          </div>
-          
-          {/* Input - Fixed at bottom */}
-          <div className="border-t border-border p-2 sm:p-4 bg-background flex-shrink-0">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Describe your workout or ask for fitness advice..."
-                className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
-                disabled={isLoading}
-              />
-              <Button type="submit" disabled={isLoading || !inputValue.trim()}>
-                <MessageCircle className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input - Fixed at bottom */}
+      <div className="border-t border-border/20 bg-card p-3 shrink-0 shadow-sm">
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Message..."
+              className="flex-1 h-11 rounded-xl border-border/30 bg-muted/30 focus:bg-background transition-colors"
+              disabled={isLoading}
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || !inputValue.trim()}
+              className="h-11 w-11 p-0 rounded-xl shrink-0"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+          </form>
         </div>
       </div>
     </div>
