@@ -107,9 +107,9 @@ describe('SideDrawer', () => {
           <SideDrawer />
         </TestWrapper>
       );
-      
+
       // Drawer content should always be in DOM
-      expect(screen.getByText('Navigation')).toBeInTheDocument();
+      expect(screen.getByText('Menu')).toBeInTheDocument();
       expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
@@ -241,16 +241,16 @@ describe('SideDrawer', () => {
 
     it('should not close drawer when clicking on drawer content', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <TestWrapper>
           <SideDrawer />
         </TestWrapper>
       );
-      
-      const drawerContent = screen.getByText('Navigation');
+
+      const drawerContent = screen.getByText('Menu');
       await user.click(drawerContent);
-      
+
       expect(mockCloseDrawer).not.toHaveBeenCalled();
     });
   });
