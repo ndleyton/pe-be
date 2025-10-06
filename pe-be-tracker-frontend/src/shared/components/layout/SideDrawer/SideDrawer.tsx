@@ -24,9 +24,9 @@ const SideDrawer: React.FC = () => {
     <Sheet open={isOpen} onOpenChange={closeDrawer}>
       <SheetContent side="left" className="w-64 bg-background p-4 flex flex-col">
         <SheetHeader>
-          <SheetTitle className="text-lg font-semibold">Navigation</SheetTitle>
-          <SheetDescription>
-            Navigate between different sections of the application
+          <SheetTitle className="text-lg font-semibold">Menu</SheetTitle>
+          <SheetDescription className="sr-only">
+            Navigation menu
           </SheetDescription>
         </SheetHeader>
         <nav className="flex-1 overflow-y-auto mt-6" aria-label="Secondary navigation">
