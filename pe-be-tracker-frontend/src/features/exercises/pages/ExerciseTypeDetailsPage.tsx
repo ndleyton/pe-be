@@ -140,15 +140,13 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           <span className="loading loading-spinner loading-lg"></span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2 text-left">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 text-left">
           <div className="space-y-6">
-            <div className="overflow-hidden">
-              <Skeleton className="h-64 w-full rounded-2xl" />
-            </div>
-            <div>
-              <Skeleton className="h-6 w-40 mb-3" />
+            <div className="bg-muted/50 rounded-2xl shadow-md border border-border/20 h-64"></div>
+            <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
               <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-5/6 mb-2" />
+              <Skeleton className="h-4 w-4/5" />
             </div>
           </div>
           <div className="space-y-6">
@@ -193,7 +191,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
         </div>
 
         {/* Muscles and Button Row */}
-        <div className="flex items-center gap-3 justify-between">
+        <div className="flex items-start gap-3 justify-between">
           <div className="flex flex-wrap gap-2 flex-1 min-w-0">
             {exerciseType.muscles && exerciseType.muscles.length > 0 ? (
               exerciseType.muscles.map((muscle) => (
