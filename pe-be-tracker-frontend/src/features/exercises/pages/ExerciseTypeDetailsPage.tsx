@@ -302,8 +302,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
           </div>
 
           <div className="bg-card rounded-2xl p-6 shadow-md border border-border/20">
-            <h2 className="text-lg font-semibold mb-3">Description</h2>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
               {exerciseType.description || 'No description available for this exercise type.'}
             </p>
           </div>
