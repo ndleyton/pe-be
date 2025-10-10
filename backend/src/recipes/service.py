@@ -1,11 +1,13 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete
 from datetime import datetime, timezone
 
 from src.recipes import crud
 from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate
 from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
+from src.recipes.models import Recipe
 from src.workouts.crud import create_workout, get_workout_by_id
 from src.exercises.schemas import ExerciseCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
@@ -55,8 +57,20 @@ class RecipeService:
     async def delete_recipe(
         self, session: AsyncSession, recipe_id: int, user_id: int
     ) -> bool:
-        """Delete a recipe"""
-        return await crud.delete_recipe(session, recipe_id, user_id)
+        """Delete a recipe idempotently (no ownership info leak).
+
+        Uses a conditional DELETE filtered by `creator_id` to ensure
+        repeated calls are no-ops and to avoid extra SELECTs.
+        """
+        await session.execute(
+            delete(Recipe).where(Recipe.id == recipe_id, Recipe.creator_id == user_id)
+        )
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        return True
 
     async def create_workout_from_recipe(
         self, session: AsyncSession, user_id: int, recipe_id: int

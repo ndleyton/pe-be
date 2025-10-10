@@ -143,7 +143,7 @@ async def update_conversation_endpoint(
         raise HTTPException(status_code=500, detail="Failed to update conversation")
 
 
-@router.delete("/conversations/{conversation_id}")
+@router.delete("/conversations/{conversation_id}", status_code=204)
 async def delete_conversation_endpoint(
     conversation_id: int,
     user: User = Depends(current_active_user),
@@ -151,12 +151,8 @@ async def delete_conversation_endpoint(
 ):
     """Delete (deactivate) a conversation."""
     try:
-        success = await delete_conversation(session, conversation_id, user.id)
-
-        if not success:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        return {"message": "Conversation deleted successfully"}
+        # Idempotent delete: 204 for missing or already inactive
+        await delete_conversation(session, conversation_id, user.id)
 
     except HTTPException:
         raise
