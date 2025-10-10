@@ -386,15 +386,18 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const handleExerciseDelete = async () => {
     try {
       if (isAuthenticated) {
-        await deleteExercise(exercise.id);
+        // Delegate to parent mutation for optimistic update/rollback/invalidation
+        if (onExerciseDelete) {
+          onExerciseDelete(exercise.id);
+        } else {
+          // Fallback: direct API call if no parent handler provided
+          await deleteExercise(exercise.id);
+        }
       } else {
+        // Guest mode uses local store
         guestDeleteExercise(exercise.id.toString());
       }
-      
-      if (onExerciseDelete) {
-        onExerciseDelete(exercise.id);
-      }
-      
+
       setShowExerciseModal(false);
     } catch (error) {
       console.error('Error deleting exercise:', error);

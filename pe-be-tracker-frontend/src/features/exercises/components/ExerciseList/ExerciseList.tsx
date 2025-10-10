@@ -8,9 +8,10 @@ interface ExerciseListProps {
   status: 'idle' | 'pending' | 'success' | 'error';
   workoutId?: string;
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  onExerciseDelete?: (exerciseId: number | string) => void;
 }
 
-const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, status, workoutId, onExerciseUpdate }) => {
+const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, status, workoutId, onExerciseUpdate, onExerciseDelete }) => {
   return (
     <div className="mt-8">
       {status === 'pending' && <ExerciseListSkeleton />}
@@ -30,7 +31,13 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, status, workoutI
       {exercises.length > 0 && (
         <div className="space-y-4">
           {exercises.map((exercise) => (
-            <ExerciseRow key={exercise.id} exercise={exercise} workoutId={workoutId} onExerciseUpdate={onExerciseUpdate} />
+            <ExerciseRow
+              key={exercise.id}
+              exercise={exercise}
+              workoutId={workoutId}
+              onExerciseUpdate={onExerciseUpdate}
+              onExerciseDelete={onExerciseDelete}
+            />
           ))}
         </div>
       )}

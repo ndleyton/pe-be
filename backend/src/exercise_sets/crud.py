@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from src.exercise_sets.models import ExerciseSet
 from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetUpdate
 from src.exercises.models import Exercise
+from src.workouts.models import Workout
 
 
 async def get_exercise_set_by_id(
@@ -19,6 +20,27 @@ async def get_exercise_set_by_id(
         .where(ExerciseSet.id == exercise_set_id, ExerciseSet.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
+
+
+async def get_exercise_set_owner_and_deleted(
+    session: AsyncSession, exercise_set_id: int
+) -> Optional[tuple[int, Optional[datetime]]]:
+    """Return (owner_id, deleted_at) for an exercise set via lightweight joins.
+
+    This avoids eager-loading full ORM graphs when only ownership and deletion
+    state are needed.
+    """
+    result = await session.execute(
+        select(Workout.owner_id, ExerciseSet.deleted_at)
+        .select_from(ExerciseSet)
+        .join(Exercise, Exercise.id == ExerciseSet.exercise_id)
+        .join(Workout, Workout.id == Exercise.workout_id)
+        .where(ExerciseSet.id == exercise_set_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        return None
+    return (row.owner_id, row.deleted_at)
 
 
 async def get_exercise_sets_for_exercise(
@@ -63,11 +85,27 @@ async def update_exercise_set(
 
 async def soft_delete_exercise_set(session: AsyncSession, exercise_set_id: int) -> bool:
     """Soft delete an exercise set by setting deleted_at timestamp"""
-    exercise_set = await get_exercise_set_by_id(session, exercise_set_id)
-    if not exercise_set:
+    now = datetime.now(timezone.utc)
+    result = await session.execute(
+        select(ExerciseSet.id, ExerciseSet.deleted_at).where(
+            ExerciseSet.id == exercise_set_id
+        )
+    )
+    row = result.one_or_none()
+    if not row:
         return False
 
-    exercise_set.deleted_at = datetime.now(timezone.utc)
+    if row.deleted_at is not None:
+        return True
+
+    await session.execute(
+        # Conditional, idempotent soft-delete
+        (
+            ExerciseSet.__table__.update()
+            .where(ExerciseSet.id == exercise_set_id, ExerciseSet.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+    )
     await session.commit()
     return True
 

@@ -1,6 +1,7 @@
 from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from datetime import datetime, timezone, date
@@ -85,9 +86,21 @@ class WorkoutService:
     async def remove_workout(
         session: AsyncSession, workout_id: int, user_id: int
     ) -> bool:
-        """Remove a workout with business logic validation"""
-        # Add any business logic here (e.g., cascade deletion, authorization)
-        return await delete_workout(session, workout_id, user_id)
+        """Remove a workout idempotently (204 semantics at router).
+
+        Performs a conditional DELETE filtered by owner to avoid leaking
+        existence and to make retries safe. Returns True regardless of
+        prior state.
+        """
+        await session.execute(
+            delete(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
+        )
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        return True
 
     @staticmethod
     async def add_exercise_to_current_workout(
