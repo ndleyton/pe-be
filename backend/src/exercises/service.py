@@ -1,21 +1,23 @@
 from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import update
 from fastapi import HTTPException, status
 
 from src.exercises.crud import (
     get_exercise_by_id,
     get_exercises_for_workout,
     create_exercise,
-    soft_delete_exercise,
-    verify_exercise_ownership,
     get_exercise_types,
     get_exercise_type_by_id,
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
+    get_exercise_owner_id,
 )
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
+from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
@@ -52,13 +54,51 @@ class ExerciseService:
     async def remove_exercise(
         session: AsyncSession, exercise_id: int, user_id: int
     ) -> bool:
-        """Soft delete an exercise with ownership verification"""
-        # Verify ownership first
-        exercise = await verify_exercise_ownership(session, exercise_id, user_id)
-        if not exercise:
-            return False
+        """Soft delete an exercise with ownership verification.
 
-        return await soft_delete_exercise(session, exercise_id)
+        Idempotent behavior:
+        - If the exercise doesn't exist or is already soft-deleted, return True (no-op).
+        - If the exercise exists but isn't owned by the user, raise 403.
+        - Otherwise, perform soft delete and return True.
+        """
+        # Ownership lookup without loading full entity
+        owner_id = await get_exercise_owner_id(session, exercise_id)
+
+        # Not found => idempotent success (no-op)
+        if owner_id is None:
+            return True
+
+        # Exists but not owned => forbidden
+        if owner_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not allowed to delete this exercise",
+            )
+
+        # Idempotent soft delete via guarded bulk updates
+        now = datetime.now(timezone.utc)
+
+        await session.execute(
+            update(Exercise)
+            .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+
+        await session.execute(
+            update(ExerciseSet)
+            .where(
+                ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None)
+            )
+            .values(deleted_at=now)
+        )
+
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+        return True
 
 
 class ExerciseTypeService:
