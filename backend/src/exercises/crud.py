@@ -14,6 +14,7 @@ from src.exercises.models import (
     ExerciseMuscle,
 )
 from src.exercise_sets.models import ExerciseSet
+from src.workouts.models import Workout
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
@@ -452,6 +453,22 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
         raise
 
     return True
+
+
+async def get_exercise_owner_id(
+    session: AsyncSession, exercise_id: int
+) -> Optional[int]:
+    """Return the owner_id for the exercise's workout, or None if not found.
+
+    This performs a lightweight join without loading full ORM graphs.
+    """
+    result = await session.execute(
+        select(Workout.owner_id)
+        .select_from(Exercise)
+        .join(Workout, Exercise.workout_id == Workout.id)
+        .where(Exercise.id == exercise_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def verify_exercise_ownership(
