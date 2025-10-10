@@ -430,26 +430,28 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
     if not exercise:
         return False
 
+    now = datetime.now(timezone.utc)
+
+    # Soft delete the exercise
+    exercise.deleted_at = now
+
+    # Also soft delete all associated exercise sets that haven't been deleted yet
+    await session.execute(
+        update(ExerciseSet)
+        .where(
+            ExerciseSet.exercise_id == exercise_id,
+            ExerciseSet.deleted_at.is_(None),
+        )
+        .values(deleted_at=now)
+    )
+
     try:
-        async with session.begin():
-            now = datetime.now(timezone.utc)
-
-            # Soft delete the exercise
-            exercise.deleted_at = now
-
-            # Also soft delete all associated exercise sets that haven't been deleted yet
-            await session.execute(
-                update(ExerciseSet)
-                .where(
-                    ExerciseSet.exercise_id == exercise_id,
-                    ExerciseSet.deleted_at.is_(None),
-                )
-                .values(deleted_at=now)
-            )
-
-        return True
+        await session.commit()
     except Exception:
+        await session.rollback()
         raise
+
+    return True
 
 
 async def verify_exercise_ownership(
