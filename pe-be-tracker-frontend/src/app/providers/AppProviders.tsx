@@ -35,17 +35,28 @@ const TrackedErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
     console.error('Global Error Boundary caught an error:', error);
     console.error('Component Stack:', errorInfo.componentStack);
 
-    posthog?.captureException?.(error, {
-      properties: {
-        boundary: 'global',
-        componentStack: errorInfo.componentStack,
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
-        path: typeof window !== 'undefined' ? window.location.pathname : undefined,
-        isAuthenticated,
-        env: config.environment,
-        appVersion: import.meta.env.VITE_APP_VERSION || 'unknown',
-      },
-    });
+    const props = {
+      boundary: 'global',
+      componentStack: errorInfo.componentStack,
+      url: typeof window !== 'undefined' ? window.location.href : undefined,
+      path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      isAuthenticated,
+      env: config.environment,
+      appVersion: import.meta.env.VITE_APP_VERSION || 'unknown',
+    } as const;
+
+    if (posthog && typeof (posthog as any).captureException === 'function') {
+      // Preferred API when available
+      (posthog as any).captureException(error, props);
+    } else {
+      // Fallback for older posthog-js versions
+      posthog?.capture?.('$exception', {
+        message: error?.message,
+        name: (error as any)?.name,
+        stack: (error as any)?.stack,
+        ...props,
+      });
+    }
   };
 
   return (

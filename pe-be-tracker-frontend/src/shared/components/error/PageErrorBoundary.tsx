@@ -72,15 +72,24 @@ export const PageErrorBoundary: React.FC<PageErrorBoundaryProps> = ({
     console.error('Component Stack:', errorInfo.componentStack);
 
     // Forward to PostHog Error Tracking when available
-    posthog?.captureException?.(error, {
-      properties: {
-        boundary: 'page',
-        componentStack: errorInfo.componentStack,
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
-        path: location?.pathname,
-        env: config.environment,
-      },
-    });
+    const props = {
+      boundary: 'page',
+      componentStack: errorInfo.componentStack,
+      url: typeof window !== 'undefined' ? window.location.href : undefined,
+      path: location?.pathname,
+      env: config.environment,
+    } as const;
+
+    if (posthog && typeof (posthog as any).captureException === 'function') {
+      (posthog as any).captureException(error, props);
+    } else {
+      posthog?.capture?.('$exception', {
+        message: error?.message,
+        name: (error as any)?.name,
+        stack: (error as any)?.stack,
+        ...props,
+      });
+    }
   };
 
   return (
