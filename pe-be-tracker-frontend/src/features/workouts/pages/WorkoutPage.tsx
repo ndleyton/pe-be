@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/shared/api/client';
-import { getExercisesInWorkout, Exercise, deleteExercise } from '@/features/exercises/api';
+import { getExercisesInWorkout, Exercise } from '@/features/exercises/api';
 import { ExerciseForm, ExerciseList } from '@/features/exercises/components';
 import { FinishWorkoutModal } from '@/features/workouts/components';
 import { Button } from '@/shared/components/ui/button';
@@ -33,21 +33,21 @@ const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  
+
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const authLoading = useAuthStore(state => state.loading);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
-  
+
   // Get workout timer state and actions from UI store
   const startTime = useUIStore(state => state.workoutTimer.startTime);
   const startWorkoutTimer = useUIStore(state => state.startWorkoutTimer);
   const stopWorkoutTimer = useUIStore(state => state.stopWorkoutTimer);
-  
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
-  
+
   const recipe = location.state?.recipe as GuestRecipe | undefined;
 
   // Fetch workout details (only when authenticated)
@@ -57,9 +57,12 @@ const WorkoutPage: React.FC = () => {
     enabled: !!workoutId && isAuthenticated,
   });
 
-  // Delete exercise mutation with optimistic update
   const deleteExerciseMutation = useMutation({
-    mutationFn: (exerciseId: number | string) => deleteExercise(exerciseId),
+    // Network call is executed by ExerciseRow. This mutation
+    // only updates cache optimistically and handles invalidation.
+    mutationFn: async (_exerciseId: number | string) => {
+      return;
+    },
     onMutate: async (exerciseId) => {
       await queryClient.cancelQueries({ queryKey: ['exercises', workoutId] });
       const prev = queryClient.getQueryData<Exercise[]>(['exercises', workoutId]);
@@ -236,7 +239,7 @@ const WorkoutPage: React.FC = () => {
       // For optimistic updates (like notes), just update the query data directly
       queryClient.setQueryData(['exercises', workoutId], (oldData: Exercise[] | undefined) => {
         if (!oldData) return oldData;
-        return oldData.map(exercise => 
+        return oldData.map(exercise =>
           exercise.id === updatedExercise.id ? updatedExercise : exercise
         );
       });
@@ -248,7 +251,7 @@ const WorkoutPage: React.FC = () => {
         id: String(set.id),
         exercise_id: String(set.exercise_id)
       }));
-      
+
       guestActions.updateExercise(String(updatedExercise.id), {
         exercise_sets: guestExerciseSets
       });
@@ -332,7 +335,7 @@ const WorkoutPage: React.FC = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <ExerciseList 
+        <ExerciseList
           exercises={exercises}
           status={listStatus}
           workoutId={workoutId}
@@ -342,14 +345,14 @@ const WorkoutPage: React.FC = () => {
         <div className="h-px w-full bg-primary mb-4 mt-4" role="separator" />
          <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
       </div>
-      
+
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
         disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>
-      
+
       <FinishWorkoutModal
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
@@ -359,7 +362,7 @@ const WorkoutPage: React.FC = () => {
         onSaveRecipe={handleSaveRecipe}
         workoutName={workoutName || undefined}
       />
-      
+
       <SaveRoutineModal
         isOpen={showSaveRecipeModal}
         onClose={() => setShowSaveRecipeModal(false)}
