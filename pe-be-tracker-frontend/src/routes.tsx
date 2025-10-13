@@ -1,13 +1,12 @@
 import React, { Suspense } from 'react';
 import { type RouteObject } from 'react-router-dom';
 
-import { PageErrorBoundary } from '@/shared/components/error';
-import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
 import ExerciseTypesPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton';
 import ExerciseTypeDetailsPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton';
 import ProfilePageSkeleton from '@/features/profile/components/skeletons/ProfilePageSkeleton';
+import { config } from '@/app/config/env';
 
 import App from './App';
 import AppLayout from './layouts/AppLayout';
@@ -38,6 +37,7 @@ const AboutPage = React.lazy(() =>
 const OAuthCallbackPage = React.lazy(() =>
   import('./features/auth/pages').then((m) => ({ default: m.OAuthCallbackPage })),
 );
+const DebugCrashPage = React.lazy(() => import('./features/debug/pages/CrashPage'));
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
@@ -68,41 +68,32 @@ const LoadingFallback = () => (
   </div>
 );
 
-
-// Wrapper component for pages with error boundary and suspense
+// Wrapper component for pages with suspense
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<LoadingFallback />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+  <Suspense fallback={<LoadingFallback />}>
+    {children}
+  </Suspense>
 );
 
 // Wrapper component for ExerciseTypesPage with custom fallback
 const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ExerciseTypesPageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+  <Suspense fallback={<ExerciseTypesPageSkeleton />}>
+    {children}
+  </Suspense>
 );
 
 // Wrapper component for ExerciseTypeDetailsPage with custom fallback
 const ExerciseTypeDetailsPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+  <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>
+    {children}
+  </Suspense>
 );
 
 // Wrapper component for ProfilePage with custom fallback
 const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ProfilePageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+  <Suspense fallback={<ProfilePageSkeleton />}>
+    {children}
+  </Suspense>
 );
 
 const routes: RouteObject[] = [
@@ -127,11 +118,7 @@ const routes: RouteObject[] = [
       },
       {
         path: 'workouts/:workoutId',
-        element: (
-          <SimplePageWrapper>
-            <WorkoutPage />
-          </SimplePageWrapper>
-        ),
+        element: <WorkoutPage />,
       },
       {
         path: 'exercise-types',
@@ -167,11 +154,7 @@ const routes: RouteObject[] = [
       },
       {
         path: 'chat',
-        element: (
-          <SimplePageWrapper>
-            <ChatPage />
-          </SimplePageWrapper>
-        ),
+        element: <ChatPage />,
       },
       {
         path: 'profile',
@@ -191,14 +174,28 @@ const routes: RouteObject[] = [
       }
     ]
   },
-  {
-    path: '*',
+];
+
+// Development-only debug routes
+if (config.isDevelopment) {
+  routes.push({
+    path: '/debug/crash',
     element: (
       <PageWrapper>
-        <NotFoundPage />
+        <DebugCrashPage />
       </PageWrapper>
     ),
-  }
-];
+  });
+}
+
+// catch-all route
+routes.push({
+  path: '*',
+  element: (
+    <PageWrapper>
+      <NotFoundPage />
+    </PageWrapper>
+  ),
+});
 
 export default routes;
