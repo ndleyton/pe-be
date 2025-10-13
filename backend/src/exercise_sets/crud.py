@@ -99,7 +99,6 @@ async def soft_delete_exercise_set(session: AsyncSession, exercise_set_id: int) 
         return True
 
     await session.execute(
-        # Conditional, idempotent soft-delete
         (
             ExerciseSet.__table__.update()
             .where(ExerciseSet.id == exercise_set_id, ExerciseSet.deleted_at.is_(None))
