@@ -11,7 +11,6 @@ from src.workouts.crud import (
     get_workout_by_id,
     create_workout,
     update_workout,
-    delete_workout,
     get_workout_types,
     create_workout_type,
     get_user_workouts,
@@ -540,7 +539,7 @@ Given a workout description, extract:
 1. A suitable workout name (if not provided, generate one based on the exercises)
 2. Workout type: must be one of these IDs:
    - 1: Low Intensity Cardio
-   - 2: HIIT  
+   - 2: HIIT
    - 3: Sports
    - 4: Strength Training
    - 5: Mobility
@@ -561,7 +560,7 @@ Return ONLY valid JSON in this exact format:
   "exercises": [
     {
       "exercise_type_name": "string",
-      "notes": "string or null", 
+      "notes": "string or null",
       "sets": [
         {
           "reps": number or null,
