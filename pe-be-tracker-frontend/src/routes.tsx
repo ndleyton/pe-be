@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { type RouteObject } from "react-router-dom";
+import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
@@ -7,7 +7,6 @@ import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 
-import App from "./App";
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -107,10 +106,6 @@ const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({
 
 const routes: RouteObject[] = [
   {
-    path: "/",
-    element: <App />,
-  },
-  {
     path: "/oauth/callback",
     element: (
       <PageWrapper>
@@ -121,6 +116,10 @@ const routes: RouteObject[] = [
   {
     element: <AppLayout />,
     children: [
+      {
+        index: true,
+        element: <Navigate to="workouts" replace />,
+      },
       {
         path: "workouts",
         element: <MyWorkoutsPage />,
@@ -183,16 +182,15 @@ const routes: RouteObject[] = [
       },
     ],
   },
+  // catch-all route
+  {
+    path: "*",
+    element: (
+      <PageWrapper>
+        <NotFoundPage />
+      </PageWrapper>
+    ),
+  },
 ];
-
-// catch-all route
-routes.push({
-  path: "*",
-  element: (
-    <PageWrapper>
-      <NotFoundPage />
-    </PageWrapper>
-  ),
-});
 
 export default routes;
