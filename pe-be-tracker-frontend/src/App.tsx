@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { GoogleSignInButton } from "./features/auth/components";
 import { HomeLogo } from "./shared/components/layout";
 import { NAV_PATHS } from "./shared/navigation/constants";
 import { useAuthStore } from "./stores/useAuthStore";
 
-const App: React.FC = () => {
+const App = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading, initialized } = useAuthStore();
 
@@ -21,7 +21,7 @@ const App: React.FC = () => {
 
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="loading loading-spinner loading-lg" />
           <p className="text-muted-foreground">Loading...</p>
@@ -31,35 +31,37 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="bg-background flex min-h-screen flex-col">
       <div className="p-4">
         <HomeLogo />
       </div>
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-full max-w-xs p-8 bg-card rounded-xl shadow-lg flex flex-col items-center gap-6">
-          <h1 className="text-2xl font-bold text-center mb-4 text-card-foreground">Welcome to PersonalBestie</h1>
-          
+      <div className="flex flex-1 items-center justify-center">
+        <div className="bg-card flex w-full max-w-xs flex-col items-center gap-6 rounded-xl p-8 shadow-lg">
+          <h1 className="text-card-foreground mb-4 text-center text-2xl font-bold">
+            Welcome to PersonalBestie
+          </h1>
+
           <div className="w-full space-y-4">
             <GoogleSignInButton />
-            
+
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
+                <div className="border-border w-full border-t"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground"></span>
+                <span className="bg-card text-muted-foreground px-2"></span>
               </div>
             </div>
-            
+
             <button
               onClick={handleTryAsGuest}
-              className="w-full py-2 px-4 border border-border rounded-md shadow-sm bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors"
+              className="border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-ring w-full rounded-md border px-4 py-2 shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
             >
               Try as Guest
             </button>
           </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
+
+          <p className="text-muted-foreground text-center text-xs">
             Guest mode stores data locally. Sign in to sync across devices.
           </p>
         </div>

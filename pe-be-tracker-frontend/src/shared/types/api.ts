@@ -24,16 +24,16 @@ export interface RequestConfig {
   timeout?: number;
 }
 
-export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 // Generic CRUD operations
 export interface CreateData<T> {
-  data: Omit<T, 'id' | 'created_at' | 'updated_at'>;
+  data: Omit<T, "id" | "created_at" | "updated_at">;
 }
 
 export interface UpdateData<T> {
   id: string | number;
-  data: Partial<Omit<T, 'id' | 'created_at' | 'updated_at'>>;
+  data: Partial<Omit<T, "id" | "created_at" | "updated_at">>;
 }
 
 export interface DeleteData {

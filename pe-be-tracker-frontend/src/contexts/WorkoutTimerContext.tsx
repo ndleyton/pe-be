@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 interface WorkoutTimerContextValue {
   /** The time the workout started (null if no workout is active) */
@@ -21,9 +21,11 @@ interface WorkoutTimerContextValue {
   start: (at?: Date) => void;
 }
 
-const WorkoutTimerContext = createContext<WorkoutTimerContextValue | undefined>(undefined);
+const WorkoutTimerContext = createContext<WorkoutTimerContextValue | undefined>(
+  undefined,
+);
 
-export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
@@ -46,9 +48,11 @@ export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const start = (at?: Date) => {
     const startAt = at ?? new Date();
     setStartTime(startAt);
-    
+
     // Calculate elapsed seconds, ensuring it's never negative
-    const calculatedElapsed = Math.floor((Date.now() - startAt.getTime()) / 1000);
+    const calculatedElapsed = Math.floor(
+      (Date.now() - startAt.getTime()) / 1000,
+    );
     setElapsedSeconds(Math.max(0, calculatedElapsed));
 
     clear();
@@ -99,14 +103,18 @@ export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   return (
-    <WorkoutTimerContext.Provider value={value}>{children}</WorkoutTimerContext.Provider>
+    <WorkoutTimerContext.Provider value={value}>
+      {children}
+    </WorkoutTimerContext.Provider>
   );
 };
 
 export const useWorkoutTimer = (): WorkoutTimerContextValue => {
   const ctx = useContext(WorkoutTimerContext);
   if (!ctx) {
-    throw new Error('useWorkoutTimer must be used within a WorkoutTimerProvider');
+    throw new Error(
+      "useWorkoutTimer must be used within a WorkoutTimerProvider",
+    );
   }
   return ctx;
 };
@@ -115,6 +123,6 @@ function formatSeconds(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, '0');
+  const pad = (n: number) => n.toString().padStart(2, "0");
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-} 
+}

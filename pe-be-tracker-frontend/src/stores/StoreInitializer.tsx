@@ -1,17 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import { usePostHog } from 'posthog-js/react';
-import { config } from '@/app/config/env';
-import { initializeAuth, useAuthStore } from './useAuthStore';
-import { useGuestStore } from './useGuestStore';
+import { useEffect, useRef, type ReactNode } from "react";
+import { usePostHog } from "posthog-js/react";
+import { config } from "@/app/config/env";
+import { initializeAuth, useAuthStore } from "./useAuthStore";
+import { useGuestStore } from "./useGuestStore";
 
 interface StoreInitializerProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const StoreInitializer: React.FC<StoreInitializerProps> = ({ children }) => {
+export const StoreInitializer = ({ children }: StoreInitializerProps) => {
   const initialized = useRef(false);
-  const user = useAuthStore(state => state.user);
-  const syncWithServer = useGuestStore(state => state.syncWithServer);
+  const user = useAuthStore((state) => state.user);
+  const syncWithServer = useGuestStore((state) => state.syncWithServer);
   const posthog = usePostHog();
   const lastIdentifiedIdRef = useRef<string | null>(null);
 
@@ -42,7 +42,7 @@ export const StoreInitializer: React.FC<StoreInitializerProps> = ({ children }) 
         // Register super properties for consistent context on all events
         posthog.register({
           env: config.environment,
-          app_version: import.meta.env.VITE_APP_VERSION || 'unknown',
+          app_version: import.meta.env.VITE_APP_VERSION || "unknown",
           guest: !user,
           is_authenticated: !!user,
         });

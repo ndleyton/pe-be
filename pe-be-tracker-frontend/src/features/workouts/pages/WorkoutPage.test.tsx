@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
-import { render } from '@/test/utils';
-import WorkoutPage from './WorkoutPage';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { screen } from "@testing-library/react";
+import { render } from "@/test/utils";
+import WorkoutPage from "./WorkoutPage";
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
-const mockWorkoutId = '123';
+const mockWorkoutId = "123";
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useParams: () => ({ workoutId: mockWorkoutId }),
@@ -17,25 +17,29 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock the ExerciseForm component
-vi.mock('@/features/exercises/components', () => ({
+vi.mock("@/features/exercises/components", () => ({
   ExerciseForm: () => <div data-testid="exercise-form">Mock Exercise Form</div>,
   ExerciseList: () => <div data-testid="exercise-list">Mock Exercise List</div>,
 }));
 
-describe('WorkoutPage', () => {
+describe("WorkoutPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders workout page with correct heading', () => {
+  it("renders workout page with correct heading", () => {
     render(<WorkoutPage />);
 
-  expect(screen.getByRole('heading', { name: /workout: #123/i, level: 2 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /workout: #123/i, level: 2 }),
+    ).toBeInTheDocument();
   });
 
-  it('shows floating action button', () => {
+  it("shows floating action button", () => {
     render(<WorkoutPage />);
 
-    expect(screen.getByLabelText(/floating action button/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/floating action button/i),
+    ).toBeInTheDocument();
   });
 });

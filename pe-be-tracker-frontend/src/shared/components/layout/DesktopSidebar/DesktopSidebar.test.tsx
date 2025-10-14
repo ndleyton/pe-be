@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import DesktopSidebar from './DesktopSidebar';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import DesktopSidebar from "./DesktopSidebar";
 
 // Mock Zustand stores
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
-vi.mock('@/stores', () => ({
+vi.mock("@/stores", () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {
       isAuthenticated: mockIsAuthenticated(),
@@ -34,253 +34,290 @@ vi.mock('@/stores', () => ({
       resumeWorkoutTimer: vi.fn(),
       toggleWorkoutTimer: vi.fn(),
       stopWorkoutTimer: vi.fn(),
-      getFormattedWorkoutTime: vi.fn(() => '0:00'),
+      getFormattedWorkoutTime: vi.fn(() => "0:00"),
     };
     return selector ? selector(state) : state;
   }),
 }));
 
 // Mock API client
-vi.mock('@/shared/api/client', () => ({
+vi.mock("@/shared/api/client", () => ({
   default: {
     get: vi.fn(),
   },
 }));
 
-const TestWrapper: React.FC<{ children: React.ReactNode; initialEntries?: string[] }> = ({ 
-  children, 
-  initialEntries = ['/'] 
-}) => (
-  <MemoryRouter initialEntries={initialEntries}>
-    {children}
-  </MemoryRouter>
+const TestWrapper: React.FC<{
+  children: React.ReactNode;
+  initialEntries?: string[];
+}> = ({ children, initialEntries = ["/"] }) => (
+  <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
 );
 
-describe('DesktopSidebar', () => {
+describe("DesktopSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsAuthenticated.mockReturnValue(false);
   });
 
-  describe('Rendering and Structure', () => {
-    it('should render the desktop sidebar with proper structure', () => {
+  describe("Rendering and Structure", () => {
+    it("should render the desktop sidebar with proper structure", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const sidebar = screen.getByRole('complementary');
+      const sidebar = screen.getByRole("complementary");
       expect(sidebar).toBeInTheDocument();
-      expect(sidebar).toHaveClass('hidden', 'lg:flex', 'lg:flex-col', 'lg:w-64', 'lg:fixed');
+      expect(sidebar).toHaveClass(
+        "hidden",
+        "lg:flex",
+        "lg:flex-col",
+        "lg:w-64",
+        "lg:fixed",
+      );
     });
 
-    it('should render the brand logo and title', () => {
+    it("should render the brand logo and title", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      expect(screen.getByTestId('home-logo')).toBeInTheDocument();
+      expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });
 
-    it('should render all navigation items', () => {
+    it("should render all navigation items", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      expect(screen.getByRole('link', { name: /workouts/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /exercises/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /workouts/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /exercises/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /profile/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /chat/i })).toBeInTheDocument();
     });
 
-    it('should have correct href attributes for navigation links', () => {
+    it("should have correct href attributes for navigation links", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      expect(screen.getByRole('link', { name: /workouts/i })).toHaveAttribute('href', '/workouts');
-      expect(screen.getByRole('link', { name: /exercises/i })).toHaveAttribute('href', '/exercise-types');
-      expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
-      expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat');
+      expect(screen.getByRole("link", { name: /workouts/i })).toHaveAttribute(
+        "href",
+        "/workouts",
+      );
+      expect(screen.getByRole("link", { name: /exercises/i })).toHaveAttribute(
+        "href",
+        "/exercise-types",
+      );
+      expect(screen.getByRole("link", { name: /profile/i })).toHaveAttribute(
+        "href",
+        "/profile",
+      );
+      expect(screen.getByRole("link", { name: /chat/i })).toHaveAttribute(
+        "href",
+        "/chat",
+      );
     });
   });
 
-  describe('Navigation States', () => {
-    it('should highlight the active navigation item', () => {
+  describe("Navigation States", () => {
+    it("should highlight the active navigation item", () => {
       render(
-        <TestWrapper initialEntries={['/workouts']}>
+        <TestWrapper initialEntries={["/workouts"]}>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const workoutsLink = screen.getByRole('link', { name: /workouts/i });
-      expect(workoutsLink).toHaveClass('bg-primary', 'text-primary-foreground');
+      const workoutsLink = screen.getByRole("link", { name: /workouts/i });
+      expect(workoutsLink).toHaveClass("bg-primary", "text-primary-foreground");
     });
 
-    it('should not highlight inactive navigation items', () => {
+    it("should not highlight inactive navigation items", () => {
       render(
-        <TestWrapper initialEntries={['/workouts']}>
+        <TestWrapper initialEntries={["/workouts"]}>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const exercisesLink = screen.getByRole('link', { name: /exercises/i });
-      const profileLink = screen.getByRole('link', { name: /profile/i });
-      
-      expect(exercisesLink).not.toHaveClass('bg-primary', 'text-primary-content');
-      expect(profileLink).not.toHaveClass('bg-primary', 'text-primary-content');
+      const exercisesLink = screen.getByRole("link", { name: /exercises/i });
+      const profileLink = screen.getByRole("link", { name: /profile/i });
+
+      expect(exercisesLink).not.toHaveClass(
+        "bg-primary",
+        "text-primary-content",
+      );
+      expect(profileLink).not.toHaveClass("bg-primary", "text-primary-content");
     });
   });
 
-  describe('Authentication States', () => {
-    it('should show sign in button when not authenticated', () => {
+  describe("Authentication States", () => {
+    it("should show sign in button when not authenticated", () => {
       mockIsAuthenticated.mockReturnValue(false);
-      
+
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /about/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /sign in with google/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /about/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /sign out/i }),
+      ).not.toBeInTheDocument();
     });
 
-    it('should show about and sign out buttons when authenticated', () => {
+    it("should show about and sign out buttons when authenticated", () => {
       mockIsAuthenticated.mockReturnValue(true);
-      
+
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-              expect(screen.getByRole('button', { name: /about/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /sign in with google/i })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /about/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /sign out/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /sign in with google/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
-  describe('Accessibility', () => {
-    it('should have proper ARIA labels and roles', () => {
+  describe("Accessibility", () => {
+    it("should have proper ARIA labels and roles", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const sidebar = screen.getByRole('complementary');
+      const sidebar = screen.getByRole("complementary");
       expect(sidebar).toBeInTheDocument();
 
-      const nav = screen.getByRole('navigation');
+      const nav = screen.getByRole("navigation");
       expect(nav).toBeInTheDocument();
-      expect(nav).toHaveAttribute('aria-label', 'Sidebar navigation');
+      expect(nav).toHaveAttribute("aria-label", "Sidebar navigation");
     });
 
-    it('should be keyboard navigable', async () => {
+    it("should be keyboard navigable", async () => {
       const user = userEvent.setup();
-      
+
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       // Tab through navigation items
       await user.tab();
-      expect(screen.getByRole('link', { name: /workouts/i })).toHaveFocus();
+      expect(screen.getByRole("link", { name: /workouts/i })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByRole('link', { name: /exercises/i })).toHaveFocus();
+      expect(screen.getByRole("link", { name: /exercises/i })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByRole('link', { name: /chat/i })).toHaveFocus();
+      expect(screen.getByRole("link", { name: /chat/i })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();
+      expect(screen.getByRole("link", { name: /profile/i })).toHaveFocus();
     });
 
-    it('should have proper semantic structure', () => {
+    it("should have proper semantic structure", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       // Should have semantic aside element
-      const sidebar = screen.getByRole('complementary');
-      expect(sidebar.tagName).toBe('ASIDE');
+      const sidebar = screen.getByRole("complementary");
+      expect(sidebar.tagName).toBe("ASIDE");
 
       // Should have semantic nav element
-      const nav = screen.getByRole('navigation');
-      expect(nav.tagName).toBe('NAV');
+      const nav = screen.getByRole("navigation");
+      expect(nav.tagName).toBe("NAV");
     });
   });
 
-  describe('Visual Design', () => {
-    it('should have consistent styling classes', () => {
+  describe("Visual Design", () => {
+    it("should have consistent styling classes", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const sidebar = screen.getByRole('complementary');
+      const sidebar = screen.getByRole("complementary");
       expect(sidebar).toHaveClass(
-        'hidden',
-        'lg:flex',
-        'lg:flex-col',
-        'lg:w-64',
-        'lg:fixed',
-        'lg:inset-y-0',
-        'lg:left-0',
-        'lg:bg-background',
-        'lg:border-r'
+        "hidden",
+        "lg:flex",
+        "lg:flex-col",
+        "lg:w-64",
+        "lg:fixed",
+        "lg:inset-y-0",
+        "lg:left-0",
+        "lg:bg-background",
+        "lg:border-r",
       );
     });
 
-    it('should have proper spacing and layout classes', () => {
+    it("should have proper spacing and layout classes", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const nav = screen.getByRole('navigation');
-      expect(nav).toHaveClass('flex-1', 'px-4', 'py-6', 'space-y-2');
+      const nav = screen.getByRole("navigation");
+      expect(nav).toHaveClass("flex-1", "px-4", "py-6", "space-y-2");
     });
   });
 
-  describe('Responsive Design', () => {
-    it('should be hidden on smaller screens and visible on desktop', () => {
+  describe("Responsive Design", () => {
+    it("should be hidden on smaller screens and visible on desktop", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      const sidebar = screen.getByRole('complementary');
-      expect(sidebar).toHaveClass('hidden', 'lg:flex');
+      const sidebar = screen.getByRole("complementary");
+      expect(sidebar).toHaveClass("hidden", "lg:flex");
     });
   });
 
-  describe('Brand Display', () => {
-    it('should display the brand correctly', () => {
+  describe("Brand Display", () => {
+    it("should display the brand correctly", () => {
       render(
         <TestWrapper>
           <DesktopSidebar />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
-      expect(screen.getByTestId('home-logo')).toBeInTheDocument();
+      expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });
   });
-}); 
+});

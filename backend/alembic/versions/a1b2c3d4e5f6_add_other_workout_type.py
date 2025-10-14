@@ -19,9 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Add 'Other' workout type."""
     import datetime
-    
+
     now = datetime.datetime.now(datetime.timezone.utc)
-    
+
     # Use raw SQL with ON CONFLICT to handle existing records
     op.execute(f"""
         INSERT INTO workout_types (id, name, description, created_at, updated_at)

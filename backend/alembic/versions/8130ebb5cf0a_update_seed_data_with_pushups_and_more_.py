@@ -83,7 +83,7 @@ def upgrade() -> None:
         column('exercise_type_id', sa.Integer),
         column('muscle_id', sa.Integer),
     )
-    
+
     # Add updated relationships for existing exercises
     op.bulk_insert(
         exercise_types_muscles_table,
@@ -97,7 +97,7 @@ def upgrade() -> None:
             {'exercise_type_id': 3, 'muscle_id': 10}, # Glutes
         ]
     )
-    
+
     # Add relationships for new exercises
     op.bulk_insert(
         exercise_types_muscles_table,

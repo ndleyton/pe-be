@@ -1,1 +1,1 @@
-export { default } from './IntensityUnitModal';
+export { default } from "./IntensityUnitModal";

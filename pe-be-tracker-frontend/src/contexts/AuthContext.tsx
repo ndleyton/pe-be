@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import api from '@/shared/api/client';
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import api from "@/shared/api/client";
 
 interface User {
   id: number;
@@ -20,13 +20,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchCurrentUser = async () => {
     try {
-      const { data } = await api.get<User>('/users/me');
+      const { data } = await api.get<User>("/users/me");
       setUser(data);
     } catch {
       setUser(null);
@@ -47,20 +47,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       // FastAPI-Users exposes this route on the auth router
-      await api.post('/auth/jwt/logout');
+      await api.post("/auth/jwt/logout");
     } catch {
       /* ignore */
     } finally {
       setUser(null);
       // Redirect to landing page
-      window.location.href = '/';
+      window.location.href = "/";
     }
   };
 
   const isAuthenticated = () => !!user;
 
   return (
-    <AuthContext.Provider value={{ user, loading, refresh, signOut, isAuthenticated }}>
+    <AuthContext.Provider
+      value={{ user, loading, refresh, signOut, isAuthenticated }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -69,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (ctx === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return ctx;
-}; 
+};

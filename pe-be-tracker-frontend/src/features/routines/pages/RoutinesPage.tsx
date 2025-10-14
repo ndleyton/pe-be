@@ -1,34 +1,33 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ArrowLeft } from 'lucide-react';
-import { getRoutines, startWorkoutFromRoutine } from '@/features/routines/api';
-import type { Routine } from '@/features/routines/types';
-import { RoutineQuickStartCard } from '@/features/routines/components';
-import { useAuthStore, useGuestStore, type GuestRecipe } from '@/stores';
-import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
+import { useMemo, useState } from "react";
+import { Search, ArrowLeft } from "lucide-react";
+import { getRoutines, startWorkoutFromRoutine } from "@/features/routines/api";
+import type { Routine } from "@/features/routines/types";
+import { RoutineQuickStartCard } from "@/features/routines/components";
+import { useAuthStore, useGuestStore, type GuestRecipe } from "@/stores";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/shared/components/ui/select';
+} from "@/shared/components/ui/select";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '@/shared/components/ui/alert';
-import { useInfiniteScroll } from '@/shared/hooks';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '@/shared/api/client';
+} from "@/shared/components/ui/alert";
+import { useInfiniteScroll } from "@/shared/hooks";
+import { useNavigate, Link } from "react-router-dom";
 
-const RoutinesPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+const RoutinesPage = () => {
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
-  const [orderBy, setOrderBy] = useState<'createdAt' | 'name'>('createdAt');
+  const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
 
   const {
     data: routines,
@@ -37,17 +36,19 @@ const RoutinesPage: React.FC = () => {
     hasMore,
     error,
   } = useInfiniteScroll<Routine>({
-    queryKey: ['routines', orderBy],
+    queryKey: ["routines", orderBy],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
   });
 
   const filteredRoutines = useMemo(() => {
     if (!searchTerm) return routines;
-    
-    return routines.filter((routine) =>
-      routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (routine.description && routine.description.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    return routines.filter(
+      (routine) =>
+        routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (routine.description &&
+          routine.description.toLowerCase().includes(searchTerm.toLowerCase())),
     );
   }, [routines, searchTerm]);
 
@@ -57,9 +58,11 @@ const RoutinesPage: React.FC = () => {
         const newWorkout = await startWorkoutFromRoutine(Number(recipe.id));
         navigate(`/workouts/${newWorkout.id}`);
       } else {
-        const defaultWorkoutType = guestData.workoutTypes.find(wt => wt.id === '8') || guestData.workoutTypes[0];
+        const defaultWorkoutType =
+          guestData.workoutTypes.find((wt) => wt.id === "8") ||
+          guestData.workoutTypes[0];
         const newWorkoutId = guestActions.addWorkout({
-          name: `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          name: `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
           notes: null,
           start_time: new Date().toISOString(),
           end_time: null,
@@ -70,7 +73,7 @@ const RoutinesPage: React.FC = () => {
         navigate(`/workouts/${newWorkoutId}`, { state: { recipe } });
       }
     } catch (error) {
-      console.error('Failed to start workout from routine:', error);
+      console.error("Failed to start workout from routine:", error);
     }
   };
 
@@ -85,14 +88,14 @@ const RoutinesPage: React.FC = () => {
         ? {
             id: String(t.exercise_type.id),
             name: t.exercise_type.name,
-            description: t.exercise_type.description || '',
+            description: t.exercise_type.description || "",
             default_intensity_unit: t.exercise_type.default_intensity_unit,
             times_used: t.exercise_type.times_used,
           }
         : {
             id: String(t.exercise_type_id),
-            name: 'Unknown Exercise',
-            description: '',
+            name: "Unknown Exercise",
+            description: "",
             default_intensity_unit: 1,
             times_used: 0,
           },
@@ -123,10 +126,16 @@ const RoutinesPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-2 md:p-4 lg:p-8 text-center">
+    <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4 text-left">
-          <Button variant="ghost" size="icon" asChild aria-label="Go back" className="lg:hidden">
+        <div className="mb-4 flex items-center gap-4 text-left">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            aria-label="Go back"
+            className="lg:hidden"
+          >
             <Link to="/workouts">
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -134,10 +143,10 @@ const RoutinesPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Routines</h1>
         </div>
         {/* Search and Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-muted-foreground" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <Search className="text-muted-foreground h-5 w-5" />
             </div>
             <Input
               type="text"
@@ -147,10 +156,10 @@ const RoutinesPage: React.FC = () => {
               className="w-full pl-10"
             />
           </div>
-          
+
           <Select
             value={orderBy}
-            onValueChange={(value) => setOrderBy(value as 'createdAt' | 'name')}
+            onValueChange={(value) => setOrderBy(value as "createdAt" | "name")}
           >
             <SelectTrigger className="w-full sm:w-auto">
               <SelectValue placeholder="Order By" />
@@ -173,7 +182,7 @@ const RoutinesPage: React.FC = () => {
       {/* Routines Grid */}
       {!isPending && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredRoutines.map((routine) => (
               <RoutineQuickStartCard
                 key={routine.id}
@@ -182,18 +191,20 @@ const RoutinesPage: React.FC = () => {
               />
             ))}
           </div>
-          
+
           {/* Loading more indicator */}
           {isFetchingNextPage && (
             <div className="flex justify-center py-8">
               <span className="loading loading-spinner loading-lg"></span>
             </div>
           )}
-          
+
           {/* End of results indicator */}
           {!hasMore && filteredRoutines.length > 0 && (
-            <div className="text-center py-8">
-              <span className="text-muted-foreground text-sm">No more routines to load</span>
+            <div className="py-8 text-center">
+              <span className="text-muted-foreground text-sm">
+                No more routines to load
+              </span>
             </div>
           )}
         </>
@@ -201,13 +212,15 @@ const RoutinesPage: React.FC = () => {
 
       {/* Empty State */}
       {!isPending && filteredRoutines.length === 0 && (
-        <div className="text-center py-12">
+        <div className="py-12 text-center">
           <div className="text-muted-foreground mb-4">
-            {searchTerm ? 'No routines found matching your search.' : 'No routines available.'}
+            {searchTerm
+              ? "No routines found matching your search."
+              : "No routines available."}
           </div>
           {searchTerm && (
             <Button
-              onClick={() => setSearchTerm('')}
+              onClick={() => setSearchTerm("")}
               variant="outline"
               size="sm"
             >

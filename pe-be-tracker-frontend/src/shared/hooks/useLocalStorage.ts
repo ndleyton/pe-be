@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { StateStorage } from 'zustand/middleware';
-import { createIndexedDBStorage } from '@/stores/indexedDBStorage';
+import { useState, useEffect, useCallback } from "react";
+import type { StateStorage } from "zustand/middleware";
+import { createIndexedDBStorage } from "@/stores/indexedDBStorage";
 
-const storage: StateStorage | null = typeof window !== 'undefined' ? createIndexedDBStorage() : null;
+const storage: StateStorage | null =
+  typeof window !== "undefined" ? createIndexedDBStorage() : null;
 
 export function useLocalStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
 ): [T, (value: T | ((val: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
 
@@ -42,11 +43,13 @@ export function useLocalStorage<T>(
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
-      setStoredValue(prev => {
+      setStoredValue((prev) => {
         const valueToStore = value instanceof Function ? value(prev) : value;
 
         if (storage) {
-          Promise.resolve(storage.setItem(key, JSON.stringify(valueToStore))).catch((error) => {
+          Promise.resolve(
+            storage.setItem(key, JSON.stringify(valueToStore)),
+          ).catch((error) => {
             console.error(`Error setting persistent key "${key}":`, error);
           });
         }
@@ -54,7 +57,7 @@ export function useLocalStorage<T>(
         return valueToStore;
       });
     },
-    [key]
+    [key],
   );
 
   return [storedValue, setValue];

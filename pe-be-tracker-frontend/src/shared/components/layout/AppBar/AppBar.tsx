@@ -1,36 +1,40 @@
-import React, { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Menu, Pause, Play } from 'lucide-react';
-import { useUIStore, useAuthStore } from '@/stores';
-import HomeLogo from '../HomeLogo';
-import { useGoogleSignIn } from '@/features/auth/hooks';
-import { Button } from '@/shared/components/ui/button';
-import { NAV_PATHS } from '@/shared/navigation/constants';
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Menu, Pause, Play } from "lucide-react";
+import { useUIStore, useAuthStore } from "@/stores";
+import HomeLogo from "../HomeLogo";
+import { useGoogleSignIn } from "@/features/auth/hooks";
+import { Button } from "@/shared/components/ui/button";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const AppBar: React.FC = () => {
+const AppBar = () => {
   const navigate = useNavigate();
-  const toggleDrawer = useUIStore(state => state.toggleDrawer);
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const initialized = useAuthStore(state => state.initialized);
+  const toggleDrawer = useUIStore((state) => state.toggleDrawer);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const initialized = useAuthStore((state) => state.initialized);
 
   const handleLogoClick = useCallback(() => {
     if (isAuthenticated) {
       navigate(NAV_PATHS.WORKOUTS);
     } else {
-      navigate('/');
+      navigate("/");
     }
   }, [navigate, isAuthenticated]);
 
   const googleSignIn = useGoogleSignIn();
-  
+
   // Get workout timer state from UI store
-  const startTime = useUIStore(state => state.workoutTimer.startTime);
-  const formatted = useUIStore(state => state.getFormattedWorkoutTime());
-  const paused = useUIStore(state => state.workoutTimer.paused);
-  const togglePause = useUIStore(state => state.toggleWorkoutTimer);
+  const startTime = useUIStore((state) => state.workoutTimer.startTime);
+  const formatted = useUIStore((state) => state.getFormattedWorkoutTime());
+  const paused = useUIStore((state) => state.workoutTimer.paused);
+  const togglePause = useUIStore((state) => state.toggleWorkoutTimer);
 
   return (
-    <header className="relative flex h-16 items-center justify-center border-b bg-background px-4" role="banner" aria-label="Primary navigation">
+    <header
+      className="bg-background relative flex h-16 items-center justify-center border-b px-4"
+      role="banner"
+      aria-label="Primary navigation"
+    >
       {/* Left section for hamburger menu */}
       <div className="absolute left-4 flex items-center">
         <Button
@@ -62,8 +66,8 @@ const AppBar: React.FC = () => {
           <button
             type="button"
             onClick={togglePause}
-            aria-label={paused ? 'Resume timer' : 'Pause timer'}
-            className="flex items-center space-x-1 px-2 py-1 rounded-md hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={paused ? "Resume timer" : "Pause timer"}
+            className="hover:bg-muted/50 focus-visible:ring-ring flex items-center space-x-1 rounded-md px-2 py-1 focus:outline-none focus-visible:ring-2"
           >
             {/* Timer text always visible */}
             <span className="font-mono text-sm" aria-label="Workout timer">

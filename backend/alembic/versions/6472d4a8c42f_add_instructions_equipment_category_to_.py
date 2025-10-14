@@ -24,13 +24,13 @@ def upgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
     columns = [col['name'] for col in inspector.get_columns('exercise_types')]
-    
+
     if 'instructions' not in columns:
         op.add_column('exercise_types', sa.Column('instructions', sa.Text(), nullable=True))
-    
+
     if 'equipment' not in columns:
         op.add_column('exercise_types', sa.Column('equipment', sa.String(), nullable=True))
-    
+
     if 'category' not in columns:
         op.add_column('exercise_types', sa.Column('category', sa.String(), nullable=True))
 
@@ -41,12 +41,12 @@ def downgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
     columns = [col['name'] for col in inspector.get_columns('exercise_types')]
-    
+
     if 'category' in columns:
         op.drop_column('exercise_types', 'category')
-    
+
     if 'equipment' in columns:
         op.drop_column('exercise_types', 'equipment')
-    
+
     if 'instructions' in columns:
         op.drop_column('exercise_types', 'instructions')

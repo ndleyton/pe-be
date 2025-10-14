@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
-import ExerciseTypeModal from '../ExerciseTypeModal';
-import { ExerciseType, createExercise } from '@/features/exercises/api';
-import { useGuestStore, useAuthStore, GuestExerciseType } from '@/stores';
-import { Button } from '@/shared/components/ui/button';
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import ExerciseTypeModal from "../ExerciseTypeModal";
+import { ExerciseType, createExercise } from "@/features/exercises/api";
+import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
+import { Button } from "@/shared/components/ui/button";
 
 interface ExerciseFormData {
   exercise_type_id: number | string; // Can be number (server) or string (guest)
@@ -17,15 +17,20 @@ interface ExerciseFormProps {
   onExerciseCreated: () => void;
 }
 
-const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreated }) => {
+const ExerciseForm: React.FC<ExerciseFormProps> = ({
+  workoutId,
+  onExerciseCreated,
+}) => {
   // Get state from stores
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
-  const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | GuestExerciseType | null>(null);
+  const [selectedExerciseType, setSelectedExerciseType] = useState<
+    ExerciseType | GuestExerciseType | null
+  >(null);
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   const {
     register,
     handleSubmit,
@@ -36,7 +41,8 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
   } = useForm<ExerciseFormData>();
 
   const mutation = useMutation({
-    mutationFn: (data: ExerciseFormData) => createExercise({ ...data, workout_id: Number(workoutId) }),
+    mutationFn: (data: ExerciseFormData) =>
+      createExercise({ ...data, workout_id: Number(workoutId) }),
     onSuccess: () => {
       reset();
       setSelectedExerciseType(null);
@@ -53,9 +59,11 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
       });
     } else {
       // Use guest context for unauthenticated users
-      const exerciseType = guestData.exerciseTypes.find(et => et.id === data.exercise_type_id);
+      const exerciseType = guestData.exerciseTypes.find(
+        (et) => et.id === data.exercise_type_id,
+      );
       if (!exerciseType) {
-        console.error('Exercise type not found:', data.exercise_type_id);
+        console.error("Exercise type not found:", data.exercise_type_id);
         return;
       }
 
@@ -73,41 +81,61 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
     }
   };
 
-  const handleExerciseTypeSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
+  const handleExerciseTypeSelect = (
+    exerciseType: ExerciseType | GuestExerciseType,
+  ) => {
     setSelectedExerciseType(exerciseType);
-    setValue('exercise_type_id', exerciseType.id, { shouldValidate: true });
-    clearErrors('exercise_type_id');
+    setValue("exercise_type_id", exerciseType.id, { shouldValidate: true });
+    clearErrors("exercise_type_id");
     setShowModal(false);
 
     // Scroll form into view after modal closes
     formRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end'
+      behavior: "smooth",
+      block: "end",
     });
   };
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 rounded-lg bg-card text-card-foreground shadow w-full max-w-lg mx-auto">
-      <h2 className="text-lg font-semibold mb-4">Add Exercise</h2>
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit(onSubmit)}
+      className="border-border bg-card text-card-foreground mx-auto mb-6 w-full max-w-lg rounded-lg border p-4 shadow"
+    >
+      <h2 className="mb-4 text-lg font-semibold">Add Exercise</h2>
       <div className="mb-4">
         {selectedExerciseType ? (
           <div
             onClick={() => setShowModal(true)}
-            className="bg-background rounded-lg p-4 border border-border cursor-pointer hover:bg-accent transition-colors"
+            className="bg-background border-border hover:bg-accent cursor-pointer rounded-lg border p-4 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
                 <span className="text-primary-foreground font-bold">
                   {selectedExerciseType.name.charAt(0)}
                 </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-foreground font-medium">{selectedExerciseType.name}</h4>
-                <p className="text-muted-foreground text-sm mt-1">{selectedExerciseType.description}</p>
+                <h4 className="text-foreground font-medium">
+                  {selectedExerciseType.name}
+                </h4>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {selectedExerciseType.description}
+                </p>
               </div>
               <div className="text-muted-foreground">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
                 </svg>
               </div>
             </div>
@@ -117,37 +145,44 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ workoutId, onExerciseCreate
             type="button"
             onClick={() => setShowModal(true)}
             variant="outline"
-            className="w-full bg-background text-foreground border-border hover:bg-accent justify-start"
+            className="bg-background text-foreground border-border hover:bg-accent w-full justify-start"
           >
             Select Exercise
           </Button>
         )}
         <input
           type="hidden"
-          {...register('exercise_type_id', {
-            required: 'Exercise is required',
+          {...register("exercise_type_id", {
+            required: "Exercise is required",
             valueAsNumber: isAuthenticated, // Only convert to number if authenticated
           })}
         />
-        {errors.exercise_type_id && <div className="text-destructive text-sm mt-2">{errors.exercise_type_id.message}</div>}
+        {errors.exercise_type_id && (
+          <div className="text-destructive mt-2 text-sm">
+            {errors.exercise_type_id.message}
+          </div>
+        )}
       </div>
       <div className="mb-4">
-        <label className="block mb-1 text-foreground font-medium">Notes:
+        <label className="text-foreground mb-1 block font-medium">
+          Notes:
           <input
             type="text"
-            {...register('notes')}
-            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+            {...register("notes")}
+            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-3 py-2 focus:ring-2 focus:outline-none"
           />
         </label>
       </div>
       <Button
         type="submit"
         disabled={isAuthenticated && mutation.isPending}
-        className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
+        className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
       >
-        {(isAuthenticated && mutation.isPending) ? 'Adding...' : 'Add Exercise'}
+        {isAuthenticated && mutation.isPending ? "Adding..." : "Add Exercise"}
       </Button>
-      {isAuthenticated && mutation.error && <div className="text-destructive mt-3">Failed to create exercise.</div>}
+      {isAuthenticated && mutation.error && (
+        <div className="text-destructive mt-3">Failed to create exercise.</div>
+      )}
 
       <ExerciseTypeModal
         isOpen={showModal}

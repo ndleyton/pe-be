@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -15,32 +15,32 @@ import { MyWorkoutsPage } from "./features/workouts/pages";
 import { ChatPage } from "./features/chat/pages";
 
 // Lazy load other components with error boundaries
-const WorkoutPage = React.lazy(() =>
+const WorkoutPage = lazy(() =>
   import("./features/workouts/pages").then((m) => ({ default: m.WorkoutPage })),
 );
-const ExerciseTypesPage = React.lazy(() =>
+const ExerciseTypesPage = lazy(() =>
   import("./features/exercises/pages").then((m) => ({
     default: m.ExerciseTypesPage,
   })),
 );
-const ExerciseTypeDetailsPage = React.lazy(() =>
+const ExerciseTypeDetailsPage = lazy(() =>
   import("./features/exercises/pages").then((m) => ({
     default: m.ExerciseTypeDetailsPage,
   })),
 );
-const RoutinesPage = React.lazy(
+const RoutinesPage = lazy(
   () => import("./features/routines/pages/RoutinesPage"),
 );
-const RoutineDetailsPage = React.lazy(
+const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
 );
-const ProfilePage = React.lazy(() =>
+const ProfilePage = lazy(() =>
   import("./features/profile/pages").then((m) => ({ default: m.ProfilePage })),
 );
-const AboutPage = React.lazy(() =>
+const AboutPage = lazy(() =>
   import("./features/about/pages").then((m) => ({ default: m.AboutPage })),
 );
-const OAuthCallbackPage = React.lazy(() =>
+const OAuthCallbackPage = lazy(() =>
   import("./features/auth/pages").then((m) => ({
     default: m.OAuthCallbackPage,
   })),
@@ -83,26 +83,24 @@ const LoadingFallback = () => (
 );
 
 // Wrapper component for pages with suspense
-const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const PageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
 );
 
 // Wrapper component for ExerciseTypesPage with custom fallback
-const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <Suspense fallback={<ExerciseTypesPageSkeleton />}>{children}</Suspense>;
+const ExerciseTypesPageWrapper = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<ExerciseTypesPageSkeleton />}>{children}</Suspense>
+);
 
 // Wrapper component for ExerciseTypeDetailsPage with custom fallback
-const ExerciseTypeDetailsPageWrapper: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => (
+const ExerciseTypeDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>{children}</Suspense>
 );
 
 // Wrapper component for ProfilePage with custom fallback
-const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <Suspense fallback={<ProfilePageSkeleton />}>{children}</Suspense>;
+const ProfilePageWrapper = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<ProfilePageSkeleton />}>{children}</Suspense>
+);
 
 const routes: RouteObject[] = [
   {

@@ -1,1 +1,1 @@
-declare module 'react-svg-pan-zoom'; 
+declare module "react-svg-pan-zoom";

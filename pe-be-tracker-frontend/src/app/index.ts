@@ -1,3 +1,3 @@
-export * from './config';
-export * from './providers';
-export * from './router';
+export * from "./config";
+export * from "./providers";
+export * from "./router";

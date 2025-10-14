@@ -1,16 +1,15 @@
-import { useAuthStore } from '@/stores';
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, ArrowLeft, AlertTriangle } from 'lucide-react';
-import { NAV_PATHS } from '@/shared/navigation/constants';
+import { useAuthStore } from "@/stores";
+import { useNavigate } from "react-router-dom";
+import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const NotFoundPage: React.FC = () => {
+const NotFoundPage = () => {
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const handleGoHome = () => {
     // Navigate to workouts if authenticated, otherwise to landing page
-    navigate(isAuthenticated ? NAV_PATHS.WORKOUTS : '/');
+    navigate(isAuthenticated ? NAV_PATHS.WORKOUTS : "/");
   };
 
   const handleGoBack = () => {
@@ -19,41 +18,41 @@ const NotFoundPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8 text-center min-h-screen bg-background flex items-center justify-center">
-      <div className="max-w-md w-full">
+    <div className="bg-background mx-auto flex min-h-screen max-w-5xl items-center justify-center p-8 text-center">
+      <div className="w-full max-w-md">
         {/* Error Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="rounded-full bg-destructive/10 p-6">
-            <AlertTriangle className="h-16 w-16 text-destructive" />
+        <div className="mb-6 flex justify-center">
+          <div className="bg-destructive/10 rounded-full p-6">
+            <AlertTriangle className="text-destructive h-16 w-16" />
           </div>
         </div>
 
         {/* Error Code */}
-        <h1 className="text-8xl font-bold text-primary mb-2">404</h1>
-        
+        <h1 className="text-primary mb-2 text-8xl font-bold">404</h1>
+
         {/* Error Message */}
-        <h2 className="text-2xl font-semibold text-foreground mb-4">
+        <h2 className="text-foreground mb-4 text-2xl font-semibold">
           Page Not Found
         </h2>
-        
+
         <p className="text-muted-foreground mb-8 leading-relaxed">
-          Oops! The page you're looking for doesn't exist. It might have been moved, 
-          deleted, or you entered the wrong URL.
+          Oops! The page you're looking for doesn't exist. It might have been
+          moved, deleted, or you entered the wrong URL.
         </p>
 
         {/* Action Buttons */}
         <div className="space-y-4">
           <button
             onClick={handleGoHome}
-            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors duration-200"
           >
             <Home className="h-5 w-5" />
-            {isAuthenticated ? 'Go to Workouts' : 'Go to Home'}
+            {isAuthenticated ? "Go to Workouts" : "Go to Home"}
           </button>
-          
+
           <button
             onClick={handleGoBack}
-            className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-accent text-muted-foreground font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+            className="bg-muted hover:bg-accent text-muted-foreground flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors duration-200"
           >
             <ArrowLeft className="h-5 w-5" />
             Go Back
@@ -61,8 +60,10 @@ const NotFoundPage: React.FC = () => {
         </div>
 
         {/* Helpful Links */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-muted-foreground mb-4">Need help? Try these:</p>
+        <div className="border-border mt-12 border-t pt-8">
+          <p className="text-muted-foreground mb-4 text-sm">
+            Need help? Try these:
+          </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <button
               onClick={() => navigate(NAV_PATHS.WORKOUTS)}

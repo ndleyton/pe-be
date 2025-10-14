@@ -1,15 +1,15 @@
-import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../contexts/AuthContext';
-import { WorkoutTimerProvider } from '../contexts/WorkoutTimerContext';
-import { vi } from 'vitest';
+import React, { ReactElement } from "react";
+import { render, RenderOptions } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "../contexts/AuthContext";
+import { WorkoutTimerProvider } from "../contexts/WorkoutTimerContext";
+import { vi } from "vitest";
 
 // Mock API client for all tests
-vi.mock('@/shared/api/client', () => ({
+vi.mock("@/shared/api/client", () => ({
   default: {
-    get: vi.fn().mockRejectedValue(new Error('Unauthorized')),
+    get: vi.fn().mockRejectedValue(new Error("Unauthorized")),
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
@@ -29,18 +29,22 @@ const createTestQueryClient = () =>
     },
   });
 
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
 }
 
-const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) => {
+const AllTheProviders = ({
+  children,
+  queryClient,
+}: {
+  children: React.ReactNode;
+  queryClient: QueryClient;
+}) => {
   return (
     <QueryClientProvider client={queryClient}>
       <WorkoutTimerProvider>
         <AuthProvider>
-          <MemoryRouter>
-            {children}
-          </MemoryRouter>
+          <MemoryRouter>{children}</MemoryRouter>
         </AuthProvider>
       </WorkoutTimerProvider>
     </QueryClientProvider>
@@ -49,13 +53,18 @@ const AllTheProviders = ({ children, queryClient }: { children: React.ReactNode;
 
 const customRender = (
   ui: ReactElement,
-  { queryClient = createTestQueryClient(), ...options }: CustomRenderOptions = {}
+  {
+    queryClient = createTestQueryClient(),
+    ...options
+  }: CustomRenderOptions = {},
 ) => {
   return render(ui, {
-    wrapper: ({ children }) => <AllTheProviders queryClient={queryClient}>{children}</AllTheProviders>,
+    wrapper: ({ children }) => (
+      <AllTheProviders queryClient={queryClient}>{children}</AllTheProviders>
+    ),
     ...options,
   });
 };
 
-export * from '@testing-library/react';
+export * from "@testing-library/react";
 export { customRender as render };

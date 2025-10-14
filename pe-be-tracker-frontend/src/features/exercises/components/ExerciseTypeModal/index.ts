@@ -1,1 +1,1 @@
-export { default } from './ExerciseTypeModal';
+export { default } from "./ExerciseTypeModal";
