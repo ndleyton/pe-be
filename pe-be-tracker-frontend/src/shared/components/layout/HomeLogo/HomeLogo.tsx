@@ -1,12 +1,12 @@
-import React from "react";
+import type { KeyboardEvent } from "react";
 
 interface HomeLogoProps {
   onClick?: () => void;
   className?: string;
 }
 
-const HomeLogo: React.FC<HomeLogoProps> = ({ onClick, className = "" }) => {
-  const handleKeyDown = (event: React.KeyboardEvent) => {
+const HomeLogo = ({ onClick, className = "" }: HomeLogoProps) => {
+  const handleKeyDown = (event: KeyboardEvent) => {
     if (onClick && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
       onClick();

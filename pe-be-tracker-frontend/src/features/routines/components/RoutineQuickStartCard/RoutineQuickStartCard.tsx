@@ -1,4 +1,4 @@
-import React from "react";
+
 import { GuestRecipe } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -14,10 +14,10 @@ interface RoutineQuickStartCardProps {
   onStartWorkout: (routine: GuestRecipe) => void;
 }
 
-export const RoutineQuickStartCard: React.FC<RoutineQuickStartCardProps> = ({
+export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
-}) => {
+}: RoutineQuickStartCardProps) => {
   const exerciseCount = routine.exercises.length;
   const totalSets = routine.exercises.reduce(
     (total, exercise) => total + exercise.sets.length,

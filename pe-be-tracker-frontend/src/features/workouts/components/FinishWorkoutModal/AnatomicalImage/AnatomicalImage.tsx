@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MuscleGroupSummary } from "@/utils/muscleGroups";
 import {
   MUSCLE_GROUP_MAPPING,
@@ -10,9 +10,7 @@ interface AnatomicalImageProps {
   muscleGroupSummary: MuscleGroupSummary[];
 }
 
-const AnatomicalImage: React.FC<AnatomicalImageProps> = ({
-  muscleGroupSummary,
-}) => {
+const AnatomicalImage = ({ muscleGroupSummary }: AnatomicalImageProps) => {
   const [rawSvgContent, setRawSvgContent] = useState<string | null>(null);
 
   // Fetch the raw SVG content once on mount

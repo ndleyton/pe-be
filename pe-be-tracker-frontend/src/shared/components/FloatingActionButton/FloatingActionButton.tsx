@@ -1,22 +1,22 @@
-import React from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/shared/components/ui/button";
 
 interface FloatingActionButtonProps {
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   disabled?: boolean;
   /** Optional test id for E2E selectors */
   dataTestId?: string;
 }
 
-const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
+const FloatingActionButton = ({
   onClick,
   children,
   className = "",
   disabled = false,
   dataTestId,
-}) => {
+}: FloatingActionButtonProps) => {
   return (
     <Button
       onClick={onClick}

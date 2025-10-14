@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   calculateMuscleGroupSummary,
-  MuscleGroupSummary,
   ExerciseTypeWithMuscles,
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
@@ -35,7 +34,7 @@ interface FinishWorkoutModalProps {
   workoutName?: string;
 }
 
-const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
+const FinishWorkoutModal = ({
   isOpen,
   onConfirm,
   onCancel,
@@ -43,8 +42,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
   exercises = [],
   onSaveRecipe,
   workoutName,
-}) => {
-  const shareContentRef = useRef<HTMLDivElement>(null);
+}: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const formattedDuration = useUIStore((state) =>
     state.getFormattedWorkoutTime(),
@@ -158,7 +156,7 @@ const FinishWorkoutModal: React.FC<FinishWorkoutModalProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       onCancel();
     }

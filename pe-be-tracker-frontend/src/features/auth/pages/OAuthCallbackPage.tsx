@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HomeLogo } from "@/shared/components/layout";
 import { useGuestStore } from "@/stores";
@@ -11,7 +11,7 @@ import {
 import api from "@/shared/api/client";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const OAuthCallbackPage: React.FC = () => {
+const OAuthCallbackPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { workouts: rawWorkouts, clear } = useGuestStore(
@@ -46,7 +46,7 @@ const OAuthCallbackPage: React.FC = () => {
         }
 
         // Exchange code for token
-        const { data: tokenData } = await api.post("/auth/google/callback", {
+        await api.post("/auth/google/callback", {
           code: code,
         });
 

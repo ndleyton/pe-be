@@ -1,9 +1,9 @@
-import React from "react";
+
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const RoutineDetailsPage: React.FC = () => {
+const RoutineDetailsPage = () => {
   return (
     <div className="mx-auto max-w-5xl p-8">
       <div className="mb-6 flex items-center gap-4 text-left">

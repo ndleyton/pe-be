@@ -1,15 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import api from "@/shared/api/client";
 import { Button } from "@/shared/components/ui/button";
-
-interface GoogleSignInButtonProps {}
 
 interface GoogleSignInButtonState {
   loading: boolean;
   error: string | null;
 }
 
-export default function GoogleSignInButton(props: GoogleSignInButtonProps) {
+export default function GoogleSignInButton() {
   const [loading, setLoading] =
     useState<GoogleSignInButtonState["loading"]>(false);
   const [error, setError] = useState<GoogleSignInButtonState["error"]>(null);

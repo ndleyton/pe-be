@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { ProgressiveOverloadDataPoint } from "@/features/exercises/api";
@@ -24,9 +24,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export const ProgressiveOverloadChart: React.FC<
-  ProgressiveOverloadChartProps
-> = ({ data }) => {
+export const ProgressiveOverloadChart = ({ data }: ProgressiveOverloadChartProps) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
@@ -35,7 +33,7 @@ export const ProgressiveOverloadChart: React.FC<
     );
   }
 
-  const [activeMetric, setActiveMetric] = React.useState<
+  const [activeMetric, setActiveMetric] = useState<
     "maxWeight" | "totalVolume"
   >("maxWeight");
 

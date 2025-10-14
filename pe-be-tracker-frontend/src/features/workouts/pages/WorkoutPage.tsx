@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -31,7 +31,7 @@ const fetchWorkout = async (workoutId: string) => {
   return response.data as { id: string | number; name: string | null };
 };
 
-const WorkoutPage: React.FC = () => {
+const WorkoutPage = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,7 +121,7 @@ const WorkoutPage: React.FC = () => {
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const exercises: Exercise[] = React.useMemo(() => {
+  const exercises: Exercise[] = useMemo(() => {
     if (isAuthenticated) {
       return Array.isArray(serverExercises) ? serverExercises : [];
     } else {

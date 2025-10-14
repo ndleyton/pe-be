@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { getExerciseTypes, type ExerciseType } from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
@@ -19,7 +19,7 @@ import {
 import { useInfiniteScroll } from "@/shared/hooks";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
-const ExerciseTypesPage: React.FC = () => {
+const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
 

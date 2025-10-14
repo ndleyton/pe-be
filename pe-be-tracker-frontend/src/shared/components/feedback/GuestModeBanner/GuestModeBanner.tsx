@@ -1,10 +1,10 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 // Delay in milliseconds before showing the banner to avoid layout shift
 const BANNER_DISPLAY_DELAY_MS = 800;
 
-const GuestModeBanner: React.FC = () => {
+const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authLoading = useAuthStore((state) => state.loading);
   const workouts = useGuestStore((state) => state.workouts);
@@ -13,9 +13,9 @@ const GuestModeBanner: React.FC = () => {
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
   // Delay showing banner to avoid layout shift
-  const [showBanner, setShowBanner] = React.useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       // Show banner after a short delay for smoother transition
       const timer = setTimeout(() => {

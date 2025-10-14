@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Trophy } from "lucide-react";
 import type {
   PersonalBestData as PersonalBestInfoType,
@@ -10,10 +10,10 @@ interface PersonalBestInfoProps {
   intensityUnit: IntensityUnit;
 }
 
-export const PersonalBestInfo: React.FC<PersonalBestInfoProps> = ({
+export const PersonalBestInfo = ({
   personalBest,
   intensityUnit,
-}) => {
+}: PersonalBestInfoProps) => {
   const prDate = new Date(personalBest.date).toLocaleDateString();
 
   return (

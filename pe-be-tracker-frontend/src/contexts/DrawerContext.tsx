@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface DrawerContextType {
   isOpen: boolean;
@@ -21,7 +21,7 @@ interface DrawerProviderProps {
   children: ReactNode;
 }
 
-export const DrawerProvider: React.FC<DrawerProviderProps> = ({ children }) => {
+export const DrawerProvider = ({ children }: DrawerProviderProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const openDrawer = () => setIsOpen(true);

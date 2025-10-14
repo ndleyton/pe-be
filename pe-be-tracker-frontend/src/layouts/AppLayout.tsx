@@ -1,4 +1,3 @@
-import React from "react";
 import { Outlet } from "react-router-dom";
 import {
   AppBar,
@@ -8,7 +7,7 @@ import {
 } from "../shared/components/layout";
 import { GuestModeBanner } from "../shared/components/feedback";
 
-const AppLayout: React.FC = () => {
+const AppLayout = () => {
   // Guest banner is rendered as an overlay so it won't affect layout
 
   return (

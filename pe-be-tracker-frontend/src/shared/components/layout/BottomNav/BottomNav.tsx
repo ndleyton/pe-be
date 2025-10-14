@@ -1,9 +1,9 @@
-import React from "react";
+
 import { NavLink } from "react-router-dom";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { useNavigation } from "@/shared/hooks/useNavigation";
 
-const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
+const NavItemLink = ({ item }: { item: NavItem }) => {
   const lastVisited = useNavigation(item.key, item.to);
   const IconComponent = item.icon;
 
@@ -23,7 +23,7 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
   );
 };
 
-const BottomNav: React.FC = () => (
+const BottomNav = () => (
   <nav
     className="bg-background fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t md:hidden"
     style={{ bottom: "env(safe-area-inset-bottom)" }}

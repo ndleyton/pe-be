@@ -1,16 +1,14 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
 import { initializeAuth, useAuthStore } from "./useAuthStore";
 import { useGuestStore } from "./useGuestStore";
 
 interface StoreInitializerProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const StoreInitializer: React.FC<StoreInitializerProps> = ({
-  children,
-}) => {
+export const StoreInitializer = ({ children }: StoreInitializerProps) => {
   const initialized = useRef(false);
   const user = useAuthStore((state) => state.user);
   const syncWithServer = useGuestStore((state) => state.syncWithServer);

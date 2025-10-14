@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Search, ArrowLeft } from "lucide-react";
 import { getRoutines, startWorkoutFromRoutine } from "@/features/routines/api";
 import type { Routine } from "@/features/routines/types";
@@ -20,9 +20,8 @@ import {
 } from "@/shared/components/ui/alert";
 import { useInfiniteScroll } from "@/shared/hooks";
 import { useNavigate, Link } from "react-router-dom";
-import api from "@/shared/api/client";
 
-const RoutinesPage: React.FC = () => {
+const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

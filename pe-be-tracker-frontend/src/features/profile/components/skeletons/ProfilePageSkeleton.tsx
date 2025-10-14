@@ -1,8 +1,8 @@
-import React from "react";
+
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { WeekTrackingSkeleton } from "@/shared/components/skeletons/WeekTrackingSkeleton";
 
-const ProfilePageSkeleton: React.FC = () => (
+const ProfilePageSkeleton = () => (
   <div className="mx-auto max-w-5xl p-8 text-center">
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">

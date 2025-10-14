@@ -1,4 +1,4 @@
-import React from "react";
+
 import { NavLink } from "react-router-dom";
 import { useAuthStore } from "@/stores";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
@@ -7,7 +7,7 @@ import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { useNavigation } from "@/shared/hooks/useNavigation";
 
-const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
+const NavItemLink = ({ item }: { item: NavItem }) => {
   const lastVisited = useNavigation(item.key, item.to);
   const IconComponent = item.icon;
 
@@ -28,7 +28,7 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
   );
 };
 
-const DesktopSidebar: React.FC = () => {
+const DesktopSidebar = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialized = useAuthStore((state) => state.initialized);
   const signOut = useAuthStore((state) => state.signOut);

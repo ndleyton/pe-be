@@ -1,4 +1,4 @@
-import React from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";

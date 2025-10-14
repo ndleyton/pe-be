@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/shared/components/ui/button";
 
 interface DownloadImageButtonProps {
@@ -6,10 +5,7 @@ interface DownloadImageButtonProps {
   disabled?: boolean;
 }
 
-const DownloadImageButton: React.FC<DownloadImageButtonProps> = ({
-  onDownload,
-  disabled = false,
-}) => {
+const DownloadImageButton = ({ onDownload, disabled = false }: DownloadImageButtonProps) => {
   const handleClick = async () => {
     try {
       await onDownload();

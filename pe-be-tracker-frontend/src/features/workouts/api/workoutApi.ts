@@ -1,10 +1,5 @@
 import api from "@/shared/api/client";
-import {
-  Workout,
-  CreateWorkoutData,
-  UpdateWorkoutData,
-  PaginatedWorkouts,
-} from "../types";
+import { Workout, CreateWorkoutData, UpdateWorkoutData } from "../types";
 
 /**
  * Fetch the current user's workouts using cursor-based pagination.

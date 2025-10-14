@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 interface WorkoutTimerContextValue {
   /** The time the workout started (null if no workout is active) */
@@ -31,9 +25,7 @@ const WorkoutTimerContext = createContext<WorkoutTimerContextValue | undefined>(
   undefined,
 );
 
-export const WorkoutTimerProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
