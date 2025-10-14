@@ -52,19 +52,15 @@ test.describe('Guest Mode Workout Creation', () => {
         jsErrors.push(`REQUEST FAILED: ${request.url()} - ${failure.errorText}`);
       }
     });
-    
-    await page.goto('/');
+    // Go directly to workouts; '/' redirects there now
+    await page.goto('/workouts');
 
     // Wait for the page to be fully loaded
     await page.waitForLoadState('networkidle');
-    
-    // Wait for React app to load - look for "Try as Guest" button
-    await page.waitForSelector('text=Try as Guest', { timeout: 15000 });
-    console.log('React app loaded - found Try as Guest button');
 
-    // 1. Click the "Try as Guest" button to enter the app
-    await page.click('text=Try as Guest');
-    await expect(page).toHaveURL('/workouts');
+    // Verify we are on workouts page
+    await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Workouts' })).toBeVisible();
 
     // Dismiss any overlays that might interfere with the FAB
     await dismissOverlays(page);
@@ -72,10 +68,10 @@ test.describe('Guest Mode Workout Creation', () => {
     // 2. Click the floating action button to show the workout form
     const fab = page.locator('[data-testid="fab-add-workout"]');
     await fab.waitFor({ state: 'visible', timeout: 10000 });
-    
+
     // Click FAB to show workout form
     await fab.click();
-    
+
     // Wait for the workout form to appear
     await page.locator('[data-testid="workout-name-heading"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('[data-testid="workout-name-heading"]').click();
