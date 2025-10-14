@@ -1,10 +1,9 @@
 import { useAuthStore } from "@/stores";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const NotFoundPage: React.FC = () => {
+const NotFoundPage = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 

@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
-import { useGuestStore, useAuthStore } from "@/stores";
+import { useAuthStore } from "@/stores";
 import {
   Button,
   AlertDialog,
@@ -30,12 +30,12 @@ interface ExerciseTypeMoreProps {
   onClose?: () => void;
 }
 
-const ExerciseTypeMore: React.FC<ExerciseTypeMoreProps> = ({
+const ExerciseTypeMore = ({
   currentIntensityUnit,
   onIntensityUnitChange,
   onExerciseDelete,
   onClose,
-}) => {
+}: ExerciseTypeMoreProps) => {
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const {

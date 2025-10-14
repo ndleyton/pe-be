@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Pause, Play } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
@@ -7,7 +7,7 @@ import { useGoogleSignIn } from "@/features/auth/hooks";
 import { Button } from "@/shared/components/ui/button";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const AppBar: React.FC = () => {
+const AppBar = () => {
   const navigate = useNavigate();
   const toggleDrawer = useUIStore((state) => state.toggleDrawer);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

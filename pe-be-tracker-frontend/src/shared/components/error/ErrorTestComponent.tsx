@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -12,9 +12,7 @@ interface ErrorTestComponentProps {
   className?: string;
 }
 
-export const ErrorTestComponent: React.FC<ErrorTestComponentProps> = ({
-  className,
-}) => {
+export const ErrorTestComponent = ({ className }: ErrorTestComponentProps) => {
   const [shouldThrow, setShouldThrow] = useState(false);
 
   // This will trigger an error in the render method

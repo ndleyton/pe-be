@@ -1,7 +1,8 @@
-import React from "react";
+
+import type { MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
-import { useGuestStore, useAuthStore } from "@/stores";
+import { useAuthStore } from "@/stores";
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -16,11 +17,11 @@ interface IntensityUnitModalProps {
   onSelect: (unit: IntensityUnit | GuestIntensityUnit) => void;
 }
 
-const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({
+const IntensityUnitModal = ({
   isOpen,
   onClose,
   onSelect,
-}) => {
+}: IntensityUnitModalProps) => {
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const {
@@ -44,7 +45,7 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({
     ? serverIntensityUnits
     : guestIntensityUnits;
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }

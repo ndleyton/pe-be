@@ -1,4 +1,4 @@
-import React from "react";
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "react-error-boundary";
@@ -38,9 +38,7 @@ const SimpleErrorFallback = () => (
 );
 
 // Error boundary that sends errors to PostHog
-const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const PostHogErrorBoundary = ({ children }: { children: ReactNode }) => {
   const posthog = usePostHog();
 
   const handleError = (error: Error) => {
@@ -61,9 +59,7 @@ const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const AppProviders: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AppProviders = ({ children }: { children: ReactNode }) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
   const isPostHogConfigured =
     !config.isTest && config.posthogApiKey && config.posthogHost;

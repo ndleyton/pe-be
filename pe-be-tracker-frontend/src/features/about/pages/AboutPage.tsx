@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   Card,
   CardContent,
@@ -8,7 +8,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Mail, Github, Linkedin, ExternalLink } from "lucide-react";
 
-const AboutPage: React.FC = () => {
+const AboutPage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6 sm:p-8">
       <div className="space-y-2 text-center">

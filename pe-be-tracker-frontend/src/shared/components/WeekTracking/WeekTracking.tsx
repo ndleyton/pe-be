@@ -1,4 +1,4 @@
-import React from "react";
+import { memo } from "react";
 import { Flame } from "lucide-react";
 
 interface Workout {
@@ -15,8 +15,8 @@ interface WeekTrackingProps {
   loading?: boolean;
 }
 
-const WeekTracking: React.FC<WeekTrackingProps> = React.memo(
-  ({ workouts, className = "", loading = false }) => {
+const WeekTracking = memo(
+  ({ workouts, className = "", loading = false }: WeekTrackingProps) => {
     const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
     const getLast7Days = () => {

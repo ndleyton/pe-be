@@ -1,11 +1,11 @@
 import { Home, User, MessageCircle, Search } from "lucide-react";
-import React from "react";
+import type { ComponentType } from "react";
 import { NAV_KEYS, NAV_PATHS, type NavKey } from "./constants";
 
 export interface NavItem {
   to: string;
   key: NavKey;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   label: string;
 }
 

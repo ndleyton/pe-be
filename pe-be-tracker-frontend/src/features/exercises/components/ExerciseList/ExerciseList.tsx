@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Exercise } from "@/features/exercises/api";
 import ExerciseRow from "../ExerciseRow";
 import { ExerciseListSkeleton } from "@/shared/components/skeletons/ExerciseListSkeleton";

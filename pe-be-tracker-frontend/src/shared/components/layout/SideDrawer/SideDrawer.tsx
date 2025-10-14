@@ -1,4 +1,4 @@
-import React from "react";
+
 import { NavLink } from "react-router-dom";
 import { useUIStore, useAuthStore } from "@/stores";
 import { navItems } from "@/shared/navigation/navItems";
@@ -12,7 +12,7 @@ import {
 } from "@/shared/components/ui/sheet";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 
-const SideDrawer: React.FC = () => {
+const SideDrawer = () => {
   const isOpen = useUIStore((state) => state.isDrawerOpen);
   const closeDrawer = useUIStore((state) => state.closeDrawer);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

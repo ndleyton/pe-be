@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Image, Plus } from "lucide-react";
@@ -15,12 +15,6 @@ import {
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import { Button } from "@/shared/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import {
   Alert,
   AlertDescription,
   AlertTitle,
@@ -35,7 +29,7 @@ import {
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 
-const ExerciseTypeDetailsPage: React.FC = () => {
+const ExerciseTypeDetailsPage = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const [containerRatio, setContainerRatio] = useState<string>("16 / 9");
@@ -100,7 +94,7 @@ const ExerciseTypeDetailsPage: React.FC = () => {
   const firstImageUrl = validImages[0];
 
   // Preload the first valid image to set a single container aspect-ratio.
-  React.useEffect(() => {
+  useEffect(() => {
     setFirstImageLoaded(false);
     if (!firstImageUrl) return;
     const url = firstImageUrl;

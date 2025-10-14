@@ -1,11 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getExerciseTypes,
-  createExerciseType,
-  type ExerciseType,
-  type CreateExerciseTypeData,
-} from "@/features/exercises/api";
+import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { truncateWords } from "@/utils/text";
@@ -26,11 +21,11 @@ const hasMusclesProperty = (
   return "muscles" in exerciseType && Array.isArray(exerciseType.muscles);
 };
 
-const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({
+const ExerciseTypeModal = ({
   isOpen,
   onClose,
   onSelect,
-}) => {
+}: ExerciseTypeModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
   // Get state from stores
@@ -97,7 +92,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
 
-  const createInFlight = React.useRef(false);
+  const createInFlight = useRef(false);
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
@@ -192,7 +187,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({
     }
   };
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+  const handleSearchKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && filteredExerciseTypes.length > 0) {
       handleSelect(filteredExerciseTypes[0]);
     } else if (e.key === "Escape") {
@@ -200,7 +195,7 @@ const ExerciseTypeModal: React.FC<ExerciseTypeModalProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }

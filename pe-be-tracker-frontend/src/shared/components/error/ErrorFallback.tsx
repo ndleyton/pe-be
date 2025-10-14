@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect } from "react";
 import { FallbackProps } from "react-error-boundary";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -12,11 +12,11 @@ interface CustomFallbackProps extends FallbackProps {
   message?: string;
 }
 
-export const ErrorFallback: React.FC<CustomFallbackProps> = ({
+export const ErrorFallback = ({
   error,
   resetErrorBoundary,
   message,
-}) => {
+}: CustomFallbackProps) => {
   const errorMessage =
     message || error?.message || "An unexpected error occurred";
   const isNetworkError =
@@ -40,7 +40,7 @@ export const ErrorFallback: React.FC<CustomFallbackProps> = ({
   };
 
   // Log error for debugging (in development) and monitoring (in production)
-  React.useEffect(() => {
+  useEffect(() => {
     console.error("Error caught by ErrorBoundary:", error);
 
     // In production, you might want to send this to an error tracking service

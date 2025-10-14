@@ -1,7 +1,7 @@
 // Muscle group mapping utility
 // Uses real muscle group data from the backend API
 
-import type { MuscleGroup, Muscle } from "@/shared/types";
+import type { Muscle } from "@/shared/types";
 
 export interface MuscleGroupSummary {
   name: string;

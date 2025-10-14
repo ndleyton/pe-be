@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Dumbbell } from "lucide-react";
 import { parseWorkoutDuration, formatDisplayDate } from "@/utils/date";
 import type { Workout } from "@/features/workouts";
@@ -10,12 +10,12 @@ interface WorkoutCardProps {
   onTouchStart?: () => void;
 }
 
-const WorkoutCard: React.FC<WorkoutCardProps> = ({
+const WorkoutCard = ({
   workout,
   onClick,
   onMouseEnter,
   onTouchStart,
-}) => {
+}: WorkoutCardProps) => {
   return (
     <div
       onClick={() => onClick(workout.id)}

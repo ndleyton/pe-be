@@ -1,4 +1,4 @@
-import React from "react";
+ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
@@ -17,7 +17,7 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
   return data;
 };
 
-const ProfilePage: React.FC = () => {
+const ProfilePage = () => {
   // Use new store structure
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const loading = useAuthStore((state) => state.loading);
@@ -43,7 +43,7 @@ const ProfilePage: React.FC = () => {
     },
   });
 
-  const workouts: Workout[] = React.useMemo(() => {
+  const workouts: Workout[] = useMemo(() => {
     // Don't compute workouts until auth loading is complete
     if (loading) return [];
 

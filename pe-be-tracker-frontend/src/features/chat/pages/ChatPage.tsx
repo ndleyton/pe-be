@@ -1,19 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, MessageCircle, User, Bot } from "lucide-react";
+import { Dumbbell, MessageCircle, Bot } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import api from "@/shared/api/client";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import { ScrollArea } from "@/shared/components/ui/scroll-area";
 
 interface ChatMessage {
   id: string;
@@ -60,44 +53,6 @@ interface IntensityUnit {
   abbreviation: string;
 }
 
-interface WorkoutType {
-  id: number;
-  name: string;
-}
-
-// Format workout data for display
-const formatWorkoutDisplay = (
-  workoutData: ParsedWorkout,
-  workoutTypes: WorkoutType[],
-): string => {
-  const workoutTypeName =
-    workoutTypes.find((wt) => wt.id === workoutData.workout_type_id)?.name ||
-    "Unknown Type";
-
-  const exercisesText = workoutData.exercises
-    .map((ex) => {
-      const setsText = ex.sets
-        .map((set, idx) => {
-          const repsText = set.reps || "?";
-          const intensityText = set.intensity
-            ? ` @ ${set.intensity}${set.intensity_unit}`
-            : "";
-          const restText = set.rest_time_seconds
-            ? ` (${set.rest_time_seconds}s rest)`
-            : "";
-          return `  ${idx + 1}. ${repsText} reps${intensityText}${restText}`;
-        })
-        .join("\n");
-
-      const exerciseNotes = ex.notes ? ` - ${ex.notes}` : "";
-      return `\n• **${ex.exercise_type_name}**${exerciseNotes}:\n${setsText}`;
-    })
-    .join("\n");
-
-  const notesText = workoutData.notes ? `\n_${workoutData.notes}_\n` : "";
-
-  return `I've parsed your workout! Here's what I found:\n\n**${workoutData.name}** (${workoutTypeName})${notesText}${exercisesText}\n\nWould you like me to save this workout to your account?`;
-};
 
 // Send chat message to general chat endpoint
 const sendChatMessage = async (
@@ -111,11 +66,7 @@ const sendChatMessage = async (
   return response.data;
 };
 
-// Get workout types
-const fetchWorkoutTypes = async () => {
-  const response = await api.get("/workouts/workout-types");
-  return response.data;
-};
+// (workout types fetch removed; not used in current UI)
 
 // Get exercise types
 const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
@@ -176,7 +127,7 @@ const createExerciseSet = async (setData: {
   return response.data;
 };
 
-const ChatPage: React.FC = () => {
+const ChatPage = () => {
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -196,11 +147,7 @@ const ChatPage: React.FC = () => {
   ];
 
   // Fetch reference data
-  const { data: workoutTypes = [] } = useQuery<WorkoutType[]>({
-    queryKey: ["workout-types"],
-    queryFn: fetchWorkoutTypes,
-    enabled: isAuthenticated,
-  });
+  // Fetching workout types is currently unused; enable if needed in the future
 
   const { data: exerciseTypes = [] } = useQuery({
     queryKey: ["exercise-types"],

@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Link } from "react-router-dom";
 import { Eye, Flame } from "lucide-react";
 import type { ExerciseType } from "@/features/exercises/api";
@@ -8,9 +8,7 @@ interface ExerciseTypeCardProps {
   exerciseType: ExerciseType;
 }
 
-export const ExerciseTypeCard: React.FC<ExerciseTypeCardProps> = ({
-  exerciseType,
-}) => {
+export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
   const { id, name, description, times_used, muscles } = exerciseType;
 
   return (
