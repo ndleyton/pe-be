@@ -289,6 +289,7 @@ export const showSyncSuccessToast = (result: SyncResult) => {
   const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? "s" : ""}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? "s" : ""}, and ${result.syncedSets} set${result.syncedSets !== 1 ? "s" : ""} to your account!`;
 
   // TODO: Replace with proper toast notification system
+  console.info(message);
 };
 
 export const showSyncErrorToast = (error: string) => {

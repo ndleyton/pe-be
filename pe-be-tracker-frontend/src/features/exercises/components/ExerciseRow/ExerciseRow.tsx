@@ -53,16 +53,6 @@ interface ExerciseRowProps {
   workoutId?: string;
 }
 
-interface RestTimer {
-  minutes: number;
-  seconds: number;
-}
-
-interface NotesModalState {
-  exerciseId: string | number;
-  setId: string | number;
-}
-
 interface MoreMenuModalState {
   exerciseId: string | number;
   setId: string | number;
@@ -84,7 +74,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   exercise,
   onExerciseUpdate,
   onExerciseDelete,
-  workoutId,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
@@ -95,10 +84,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   const [intensityInputs, setIntensityInputs] = useState<
     Record<string, string>
   >(() => buildIntensityInputs(exercise.exercise_sets || []));
-  const [showAddForm, setShowAddForm] = useState(false);
   const [exerciseNotesModal, setExerciseNotesModal] = useState(false);
   const [exerciseNotesValue, setExerciseNotesValue] = useState<string>("");
-  const [notesModal, setNotesModal] = useState<NotesModalState | null>(null);
+  // Notes are edited via moreMenuModal
   const [setNotesValue, setSetNotesValue] = useState<string>("");
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000); // 1 second delay for set notes
   const [initialSetNotesValue, setInitialSetNotesValue] = useState<string>("");
@@ -127,20 +115,21 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   };
 
   useEffect(() => {
-    if (notesModal && debouncedSetNotesValue !== initialSetNotesValue) {
+    if (moreMenuModal && debouncedSetNotesValue !== initialSetNotesValue) {
       // Find the current set to check if notes actually changed
       const currentSet = exerciseSets.find(
-        (set) => String(set.id) === String(notesModal.setId),
+        (set) => String(set.id) === String(moreMenuModal.setId),
       );
       if (currentSet && debouncedSetNotesValue !== (currentSet.notes || "")) {
-        updateSetNotes(
-          notesModal.exerciseId,
-          notesModal.setId,
-          debouncedSetNotesValue,
-        );
+        updateSetNotes(moreMenuModal.setId, debouncedSetNotesValue);
       }
     }
-  }, [debouncedSetNotesValue, notesModal, exerciseSets, initialSetNotesValue]);
+  }, [
+    debouncedSetNotesValue,
+    moreMenuModal,
+    exerciseSets,
+    initialSetNotesValue,
+  ]);
 
   useEffect(() => {
     setIntensityInputs(buildIntensityInputs(exerciseSets));
@@ -156,22 +145,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
     }));
   };
 
-  const handleSetAdded = (newSet: ExerciseSet | GuestExerciseSet) => {
-    const updatedSets = [...exerciseSets, newSet];
-    setExerciseSets(updatedSets);
-    setShowAddForm(false);
-    if (onExerciseUpdate) {
-      onExerciseUpdate({
-        ...exercise,
-        exercise_sets: isAuthenticated
-          ? updatedSets
-          : convertToGuestExerciseSets(updatedSets),
-      });
-    }
-  };
-
   const updateSet = async (
-    exerciseId: string | number,
     setId: string | number,
     field: "weight" | "reps",
     value: number,
@@ -228,28 +202,19 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
     }
   };
 
-  const incrementReps = (
-    exerciseId: string | number,
-    setId: string | number,
-  ) => {
+  const incrementReps = (setId: string | number) => {
     const currentSet = exerciseSets.find((s) => String(s.id) === String(setId));
     const newReps = (currentSet?.reps || 0) + 1;
-    updateSet(exerciseId, setId, "reps", newReps);
+    updateSet(setId, "reps", newReps);
   };
 
-  const decrementReps = (
-    exerciseId: string | number,
-    setId: string | number,
-  ) => {
+  const decrementReps = (setId: string | number) => {
     const currentSet = exerciseSets.find((s) => String(s.id) === String(setId));
     const newReps = Math.max((currentSet?.reps || 0) - 1, 0);
-    updateSet(exerciseId, setId, "reps", newReps);
+    updateSet(setId, "reps", newReps);
   };
 
-  const toggleSetCompletion = async (
-    exerciseId: string | number,
-    setId: string | number,
-  ) => {
+  const toggleSetCompletion = async (setId: string | number) => {
     // Find the current set to get its completion status
     const currentSet = exerciseSets.find(
       (set) => String(set.id) === String(setId),
@@ -307,11 +272,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
     }
   };
 
-  const updateSetNotes = async (
-    exerciseId: string | number,
-    setId: string | number,
-    notes: string,
-  ) => {
+  const updateSetNotes = async (setId: string | number, notes: string) => {
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map((set) => {
       if (String(set.id) === String(setId)) {
@@ -356,10 +317,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
     }
   };
 
-  const deleteSet = async (
-    exerciseId: string | number,
-    setId: string | number,
-  ) => {
+  const deleteSet = async (setId: string | number) => {
     const updatedSets = exerciseSets.filter(
       (set) => String(set.id) !== String(setId),
     );
@@ -689,12 +647,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                         ...prev,
                         [setKey]: formattedValue,
                       }));
-                      void updateSet(
-                        exercise.id,
-                        set.id,
-                        "weight",
-                        parsedValue,
-                      );
+                      void updateSet(set.id, "weight", parsedValue);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -723,7 +676,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                     variant="outline"
                     size="sm"
                     className="border-input h-6 w-6 border bg-transparent p-0"
-                    onClick={() => decrementReps(exercise.id, set.id)}
+                    onClick={() => decrementReps(set.id)}
                     disabled={set.done}
                   >
                     <Minus className="h-3 w-3" />
@@ -733,7 +686,6 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                     value={set.reps ?? ""}
                     onChange={(e) =>
                       updateSet(
-                        exercise.id,
                         set.id,
                         "reps",
                         Number.parseInt(e.target.value) || 0,
@@ -746,7 +698,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                     variant="outline"
                     size="sm"
                     className="border-input h-6 w-6 border bg-transparent p-0"
-                    onClick={() => incrementReps(exercise.id, set.id)}
+                    onClick={() => incrementReps(set.id)}
                     disabled={set.done}
                   >
                     <Plus className="h-3 w-3" />
@@ -757,7 +709,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                     variant={set.done ? "default" : "outline"}
                     size="sm"
                     className={`h-8 w-8 p-0 ${set.done ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800" : "border-input border dark:border-gray-600"}`}
-                    onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                    onClick={() => toggleSetCompletion(set.id)}
                   >
                     <Check className="h-4 w-4" />
                   </Button>
@@ -817,7 +769,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                             variant="outline"
                             className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
                             onClick={() => {
-                              deleteSet(exercise.id, set.id);
+                              deleteSet(set.id);
                               setMoreMenuModal(null);
                             }}
                           >
