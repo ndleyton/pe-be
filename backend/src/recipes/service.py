@@ -23,7 +23,7 @@ class RecipeService:
     ) -> List[RecipeRead]:
         """Get all recipes for a user with pagination"""
         recipes = await crud.get_user_recipes(session, user_id, offset, limit)
-        return [RecipeRead.from_orm(recipe) for recipe in recipes]
+        return [RecipeRead.model_validate(recipe) for recipe in recipes]
 
     async def get_recipe(
         self, session: AsyncSession, recipe_id: int, user_id: int
@@ -31,7 +31,7 @@ class RecipeService:
         """Get a specific recipe by ID"""
         recipe = await crud.get_recipe_by_id_for_user(session, recipe_id, user_id)
         if recipe:
-            return RecipeRead.from_orm(recipe)
+            return RecipeRead.model_validate(recipe)
         return None
 
     async def create_recipe(
@@ -39,7 +39,7 @@ class RecipeService:
     ) -> RecipeRead:
         """Create a new recipe"""
         recipe = await crud.create_recipe(session, recipe_data, user_id)
-        return RecipeRead.from_orm(recipe)
+        return RecipeRead.model_validate(recipe)
 
     async def update_recipe(
         self,
@@ -51,7 +51,7 @@ class RecipeService:
         """Update an existing recipe"""
         recipe = await crud.update_recipe(session, recipe_id, recipe_data, user_id)
         if recipe:
-            return RecipeRead.from_orm(recipe)
+            return RecipeRead.model_validate(recipe)
         return None
 
     async def delete_recipe(
