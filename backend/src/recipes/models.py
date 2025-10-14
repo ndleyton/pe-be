@@ -22,6 +22,7 @@ class Recipe(Base):
     description = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
     # Visibility as an enum (private, public, link_only)
     class RecipeVisibility(str, Enum):
         PRIVATE = "private"

@@ -101,7 +101,9 @@ async def test_visibility_filtering_lists_mine_and_public():
 
     try:
         async with AsyncClient(app=app, base_url="http://test") as client:
-            resp = await client.get(f"{settings.API_PREFIX}/routines/?offset=0&limit=50")
+            resp = await client.get(
+                f"{settings.API_PREFIX}/routines/?offset=0&limit=50"
+            )
         assert resp.status_code == 200, resp.text
         items = resp.json()
         names = {item["name"] for item in items}
@@ -197,7 +199,9 @@ async def test_visibility_get_by_id_allows_public_blocks_private():
             assert r1.json()["name"] == "Other Public 2"
 
             # Private not accessible
-            r2 = await client.get(f"{settings.API_PREFIX}/routines/{r_other_private.id}")
+            r2 = await client.get(
+                f"{settings.API_PREFIX}/routines/{r_other_private.id}"
+            )
             assert r2.status_code == 404
     finally:
         app.dependency_overrides.pop(current_active_user, None)
