@@ -206,11 +206,6 @@ const getInitialGuestData = (): GuestData => {
   return initialData;
 };
 
-const parseIntensityValue = (value: string | null): number | null => {
-  if (!value) return null;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? null : parsed;
-};
 
 const normalizeTimestamp = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -745,7 +740,7 @@ export const useGuestStore = create<GuestStore>()(
         // Already at current version — return as-is
         return persistedState as GuestState;
       },
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);
       },

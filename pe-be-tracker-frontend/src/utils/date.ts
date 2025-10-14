@@ -51,7 +51,6 @@ export const formatDisplayDate = (
   options: {
     includeTime?: boolean;
     includeTimezone?: boolean;
-    dateStyle?: "short" | "medium" | "long" | "full";
     timeStyle?: "short" | "medium" | "long" | "full";
   } = {},
 ): string => {
@@ -61,12 +60,7 @@ export const formatDisplayDate = (
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) return "";
 
-    const {
-      includeTime = true,
-      includeTimezone = false,
-      dateStyle = "medium",
-      timeStyle = "short",
-    } = options;
+    const { includeTime = true, includeTimezone = false, timeStyle = "short" } = options;
 
     const formatOptions: Intl.DateTimeFormatOptions = {};
 
