@@ -1,4 +1,4 @@
-import asyncio 
+import asyncio
 import os
 import sys
 from logging.config import fileConfig
@@ -95,7 +95,7 @@ def _log_and_validate_db_url(db_url: str) -> None:
 
     # Allow short hostnames in local/dev and typical docker-compose service names
     allowed_no_dot_hosts = {"localhost", "db"}
-    
+
     # Allow Render's internal database hostnames (format: dpg-xxxxx-a)
     is_render_host = host.startswith("dpg-") and host.count("-") >= 2
 
@@ -147,17 +147,17 @@ def run_migrations_online() -> None:
     """Run migrations in 'online' mode using a synchronous engine."""
     # Use the regular URL for sync operations
     db_url = get_url()
-    
+
     # If the URL is using the asyncpg driver, convert it to the synchronous
     # equivalent so that create_engine() receives a compatible dialect.
     if db_url.startswith("postgresql+asyncpg://"):
         db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     elif db_url.startswith("postgres+asyncpg://"):
         db_url = db_url.replace("postgres+asyncpg://", "postgres://", 1)
-    
+
     # Log and validate before connecting
     _log_and_validate_db_url(db_url)
-    
+
     connectable = create_engine(
         db_url,
         poolclass=pool.NullPool,
@@ -166,7 +166,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         do_run_migrations(connection)
-    
+
     connectable.dispose()
 
 async def run_migrations_online_async() -> None:
@@ -202,7 +202,7 @@ else:
     _db_url_raw = get_url()
     _async_driver = "+asyncpg" in _db_url_raw
     use_async = _async_env_flag or _async_driver
-    
+
     if use_async:
         print("Using async migrations...")
         asyncio.run(run_migrations_online_async())

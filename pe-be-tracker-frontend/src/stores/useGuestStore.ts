@@ -1,13 +1,21 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { syncGuestDataToServer, showSyncSuccessToast, showSyncErrorToast } from '@/utils/syncGuestData';
-import { generateRandomId, getCurrentUTCTimestamp, toUTCISOString } from '@/utils/date';
-import { useAuthStore } from './useAuthStore';
-import { createIndexedDBStorage } from './indexedDBStorage';
-import { buildExerciseTypes } from './seeds/exerciseTypes';
-import { buildWorkoutTypes } from './seeds/workoutTypes';
-import { buildRecipes } from './seeds/recipes';
-import { generateExerciseTypeIds } from './seeds/types';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  syncGuestDataToServer,
+  showSyncSuccessToast,
+  showSyncErrorToast,
+} from "@/utils/syncGuestData";
+import {
+  generateRandomId,
+  getCurrentUTCTimestamp,
+  toUTCISOString,
+} from "@/utils/date";
+import { useAuthStore } from "./useAuthStore";
+import { createIndexedDBStorage } from "./indexedDBStorage";
+import { buildExerciseTypes } from "./seeds/exerciseTypes";
+import { buildWorkoutTypes } from "./seeds/workoutTypes";
+import { buildRecipes } from "./seeds/recipes";
+import { generateExerciseTypeIds } from "./seeds/types";
 
 export interface GuestExerciseType {
   id: string;
@@ -122,38 +130,57 @@ interface GuestState extends GuestData {
 }
 
 interface GuestActions {
-  addWorkout: (workout: Omit<GuestWorkout, 'id' | 'created_at' | 'updated_at'>) => string;
+  addWorkout: (
+    workout: Omit<GuestWorkout, "id" | "created_at" | "updated_at">,
+  ) => string;
   updateWorkout: (id: string, updates: Partial<GuestWorkout>) => void;
   deleteWorkout: (id: string) => void;
-  
-  addExercise: (exercise: Omit<GuestExercise, 'id' | 'created_at' | 'updated_at' | 'exercise_sets'>) => string;
+
+  addExercise: (
+    exercise: Omit<
+      GuestExercise,
+      "id" | "created_at" | "updated_at" | "exercise_sets"
+    >,
+  ) => string;
   updateExercise: (id: string, updates: Partial<GuestExercise>) => void;
   deleteExercise: (id: string) => void;
   softDeleteExercise: (id: string) => void;
   restoreExercise: (id: string) => void;
-  
-  addExerciseSet: (exerciseSet: Omit<GuestExerciseSet, 'id' | 'created_at' | 'updated_at'>) => string;
+
+  addExerciseSet: (
+    exerciseSet: Omit<GuestExerciseSet, "id" | "created_at" | "updated_at">,
+  ) => string;
   updateExerciseSet: (id: string, updates: Partial<GuestExerciseSet>) => void;
   deleteExerciseSet: (id: string) => void;
   softDeleteExerciseSet: (id: string) => void;
   restoreExerciseSet: (id: string) => void;
-  
-  addExerciseType: (exerciseType: Omit<GuestExerciseType, 'id' | 'times_used'>) => string;
+
+  addExerciseType: (
+    exerciseType: Omit<GuestExerciseType, "id" | "times_used">,
+  ) => string;
   updateExerciseType: (id: string, updates: Partial<GuestExerciseType>) => void;
-  
-  addWorkoutType: (workoutType: Omit<GuestWorkoutType, 'id'>) => string;
+
+  addWorkoutType: (workoutType: Omit<GuestWorkoutType, "id">) => string;
   updateWorkoutType: (id: string, updates: Partial<GuestWorkoutType>) => void;
-  
+
   // Routine-named actions
-  addRoutine: (routine: Omit<GuestRecipe, 'id' | 'created_at' | 'updated_at'>) => string;
+  addRoutine: (
+    routine: Omit<GuestRecipe, "id" | "created_at" | "updated_at">,
+  ) => string;
   deleteRoutine: (id: string) => void;
-  createRoutineFromWorkout: (workoutName: string, exercises: GuestExercise[]) => string;
-  createExercisesFromRoutine: (routine: GuestRecipe, workoutId: string) => string[];
-  
+  createRoutineFromWorkout: (
+    workoutName: string,
+    exercises: GuestExercise[],
+  ) => string;
+  createExercisesFromRoutine: (
+    routine: GuestRecipe,
+    workoutId: string,
+  ) => string[];
+
   // Utility methods
   getActiveExercises: (workoutId?: string) => GuestExercise[];
   getActiveSets: (exerciseId?: string) => GuestExerciseSet[];
-  
+
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
@@ -162,7 +189,6 @@ interface GuestActions {
 }
 
 type GuestStore = GuestState & GuestActions;
-
 
 const getInitialGuestData = (): GuestData => {
   // Create consistent IDs for exercises
@@ -173,22 +199,16 @@ const getInitialGuestData = (): GuestData => {
   const initialData = {
     workouts: [],
     exerciseTypes,
-  workoutTypes: buildWorkoutTypes(generateRandomId),
-  recipes: buildRecipes(exerciseTypeIds, generateRandomId),
+    workoutTypes: buildWorkoutTypes(generateRandomId),
+    recipes: buildRecipes(exerciseTypeIds, generateRandomId),
   } satisfies GuestData;
 
   return initialData;
 };
 
 
-const parseIntensityValue = (value: string | null): number | null => {
-  if (!value) return null;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? null : parsed;
-};
-
 const normalizeTimestamp = (value: unknown): string | null => {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return value == null ? null : String(value);
   }
 
@@ -216,17 +236,19 @@ const migrateGuestData = (data: any): GuestData => {
       end_time: normalizeTimestamp(workout.end_time),
       created_at: normalizeTimestamp(workout.created_at),
       updated_at: normalizeTimestamp(workout.updated_at),
-      exercises: workout.exercises?.map((exercise: any) => ({
-        ...exercise,
-        timestamp: normalizeTimestamp(exercise.timestamp),
-        created_at: normalizeTimestamp(exercise.created_at),
-        updated_at: normalizeTimestamp(exercise.updated_at),
-        exercise_sets: exercise.exercise_sets?.map((set: any) => ({
-          ...set,
-          created_at: normalizeTimestamp(set.created_at),
-          updated_at: normalizeTimestamp(set.updated_at),
+      exercises:
+        workout.exercises?.map((exercise: any) => ({
+          ...exercise,
+          timestamp: normalizeTimestamp(exercise.timestamp),
+          created_at: normalizeTimestamp(exercise.created_at),
+          updated_at: normalizeTimestamp(exercise.updated_at),
+          exercise_sets:
+            exercise.exercise_sets?.map((set: any) => ({
+              ...set,
+              created_at: normalizeTimestamp(set.created_at),
+              updated_at: normalizeTimestamp(set.updated_at),
+            })) ?? [],
         })) ?? [],
-      })) ?? [],
     }));
   }
 
@@ -235,19 +257,20 @@ const migrateGuestData = (data: any): GuestData => {
       ...recipe,
       created_at: normalizeTimestamp(recipe.created_at),
       updated_at: normalizeTimestamp(recipe.updated_at),
-      exercises: recipe.exercises?.map((exercise: any) => ({
-        ...exercise,
-        notes: exercise.notes ?? null,
-        sets: exercise.sets?.map((set: any) => ({
-          ...set,
+      exercises:
+        recipe.exercises?.map((exercise: any) => ({
+          ...exercise,
+          notes: exercise.notes ?? null,
+          sets:
+            exercise.sets?.map((set: any) => ({
+              ...set,
+            })) ?? [],
         })) ?? [],
-      })) ?? [],
     }));
   }
 
   return migrated as GuestData;
 };
-
 
 export const useGuestStore = create<GuestStore>()(
   persist(
@@ -265,421 +288,433 @@ export const useGuestStore = create<GuestStore>()(
           created_at: now,
           updated_at: now,
         };
-        
+
         set((state) => ({
           ...state,
           workouts: [...state.workouts, newWorkout],
         }));
-        
+
         return id;
       },
 
-    updateWorkout: (id, updates) => {
-      set((state) => ({
-        ...state,
-        workouts: state.workouts.map(workout =>
-          workout.id === id
-            ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
-            : workout
-        ),
-      }));
-    },
-
-    deleteWorkout: (id) => {
-      set((state) => ({
-        ...state,
-        workouts: state.workouts.filter(workout => workout.id !== id),
-      }));
-    },
-
-    addExercise: (exercise) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      const newExercise: GuestExercise = {
-        ...exercise,
-        id,
-        exercise_sets: [],
-        created_at: now,
-        updated_at: now,
-      };
-
-      set((state) => ({
-        ...state,
-        workouts: state.workouts.map(workout =>
-          workout.id === exercise.workout_id
-            ? {
-                ...workout,
-                exercises: [...workout.exercises, newExercise],
-                updated_at: now,
-              }
-            : workout
-        ),
-      }));
-      
-      return id;
-    },
-
-    updateExercise: (id, updates) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+      updateWorkout: (id, updates) => {
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) =>
+            workout.id === id
+              ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
+              : workout,
+          ),
+        }));
+      },
+
+      deleteWorkout: (id) => {
+        set((state) => ({
+          ...state,
+          workouts: state.workouts.filter((workout) => workout.id !== id),
+        }));
+      },
+
+      addExercise: (exercise) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
+        const newExercise: GuestExercise = {
+          ...exercise,
+          id,
+          exercise_sets: [],
+          created_at: now,
+          updated_at: now,
+        };
+
+        set((state) => ({
+          ...state,
+          workouts: state.workouts.map((workout) =>
+            workout.id === exercise.workout_id
+              ? {
+                  ...workout,
+                  exercises: [...workout.exercises, newExercise],
+                  updated_at: now,
+                }
+              : workout,
+          ),
+        }));
+
+        return id;
+      },
+
+      updateExercise: (id, updates) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
+          ...state,
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise =>
+            exercises: workout.exercises.map((exercise) =>
               exercise.id === id
                 ? { ...exercise, ...updates, updated_at: now }
-                : exercise
+                : exercise,
             ),
           })),
-      }));
-    },
+        }));
+      },
 
-    deleteExercise: (id) => {
-      set((state) => ({
+      deleteExercise: (id) => {
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.filter(exercise => exercise.id !== id),
+            exercises: workout.exercises.filter(
+              (exercise) => exercise.id !== id,
+            ),
           })),
-      }));
-    },
+        }));
+      },
 
-    softDeleteExercise: (id) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+      softDeleteExercise: (id) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise =>
+            exercises: workout.exercises.map((exercise) =>
               exercise.id === id
                 ? { ...exercise, deleted_at: now, updated_at: now }
-                : exercise
+                : exercise,
             ),
           })),
-      }));
-    },
+        }));
+      },
 
-    restoreExercise: (id) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+      restoreExercise: (id) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise =>
+            exercises: workout.exercises.map((exercise) =>
               exercise.id === id
                 ? { ...exercise, deleted_at: null, updated_at: now }
-                : exercise
+                : exercise,
             ),
           })),
-      }));
-    },
+        }));
+      },
 
-    addExerciseSet: (exerciseSet) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      const newExerciseSet: GuestExerciseSet = {
-        ...exerciseSet,
-        id,
-        intensity: exerciseSet.intensity,
-        created_at: now,
-        updated_at: now,
-      };
+      addExerciseSet: (exerciseSet) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
+        const newExerciseSet: GuestExerciseSet = {
+          ...exerciseSet,
+          id,
+          intensity: exerciseSet.intensity,
+          created_at: now,
+          updated_at: now,
+        };
 
-      set((state) => ({
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise =>
+            exercises: workout.exercises.map((exercise) =>
               exercise.id === exerciseSet.exercise_id
                 ? {
                     ...exercise,
                     exercise_sets: [...exercise.exercise_sets, newExerciseSet],
                     updated_at: now,
                   }
-                : exercise
+                : exercise,
             ),
           })),
-      }));
-      
-      return id;
-    },
+        }));
 
-    updateExerciseSet: (id, updates) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+        return id;
+      },
+
+      updateExerciseSet: (id, updates) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise => ({
+            exercises: workout.exercises.map((exercise) => ({
               ...exercise,
-              exercise_sets: exercise.exercise_sets.map(set =>
-                set.id === id
-                  ? { ...set, ...updates, updated_at: now }
-                  : set
+              exercise_sets: exercise.exercise_sets.map((set) =>
+                set.id === id ? { ...set, ...updates, updated_at: now } : set,
               ),
             })),
           })),
-      }));
-    },
+        }));
+      },
 
-    deleteExerciseSet: (id) => {
-      set((state) => ({
+      deleteExerciseSet: (id) => {
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise => ({
+            exercises: workout.exercises.map((exercise) => ({
               ...exercise,
-              exercise_sets: exercise.exercise_sets.filter(set => set.id !== id),
+              exercise_sets: exercise.exercise_sets.filter(
+                (set) => set.id !== id,
+              ),
             })),
           })),
-      }));
-    },
+        }));
+      },
 
-    softDeleteExerciseSet: (id) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+      softDeleteExerciseSet: (id) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise => ({
+            exercises: workout.exercises.map((exercise) => ({
               ...exercise,
-              exercise_sets: exercise.exercise_sets.map(set =>
+              exercise_sets: exercise.exercise_sets.map((set) =>
                 set.id === id
                   ? { ...set, deleted_at: now, updated_at: now }
-                  : set
+                  : set,
               ),
             })),
           })),
-      }));
-    },
+        }));
+      },
 
-    restoreExerciseSet: (id) => {
-      const now = getCurrentUTCTimestamp();
-      set((state) => ({
+      restoreExerciseSet: (id) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
           ...state,
-          workouts: state.workouts.map(workout => ({
+          workouts: state.workouts.map((workout) => ({
             ...workout,
-            exercises: workout.exercises.map(exercise => ({
+            exercises: workout.exercises.map((exercise) => ({
               ...exercise,
-              exercise_sets: exercise.exercise_sets.map(set =>
+              exercise_sets: exercise.exercise_sets.map((set) =>
                 set.id === id
                   ? { ...set, deleted_at: null, updated_at: now }
-                  : set
+                  : set,
               ),
             })),
           })),
-      }));
-    },
+        }));
+      },
 
-    addExerciseType: (exerciseType) => {
-      const id = generateRandomId();
-      const newExerciseType: GuestExerciseType = {
-        ...exerciseType,
-        id,
-        times_used: 0,
-      };
-      
-      set((state) => ({
+      addExerciseType: (exerciseType) => {
+        const id = generateRandomId();
+        const newExerciseType: GuestExerciseType = {
+          ...exerciseType,
+          id,
+          times_used: 0,
+        };
+
+        set((state) => ({
           ...state,
           exerciseTypes: [...state.exerciseTypes, newExerciseType],
-      }));
-      
-      return id;
-    },
+        }));
 
-    updateExerciseType: (id, updates) => {
-      set((state) => ({
+        return id;
+      },
+
+      updateExerciseType: (id, updates) => {
+        set((state) => ({
           ...state,
-          exerciseTypes: state.exerciseTypes.map(type =>
-            type.id === id ? { ...type, ...updates } : type
+          exerciseTypes: state.exerciseTypes.map((type) =>
+            type.id === id ? { ...type, ...updates } : type,
           ),
-      }));
-    },
+        }));
+      },
 
-    addWorkoutType: (workoutType) => {
-      const id = generateRandomId();
-      const newWorkoutType: GuestWorkoutType = {
-        ...workoutType,
-        id,
-      };
-      
-      set((state) => ({
+      addWorkoutType: (workoutType) => {
+        const id = generateRandomId();
+        const newWorkoutType: GuestWorkoutType = {
+          ...workoutType,
+          id,
+        };
+
+        set((state) => ({
           ...state,
           workoutTypes: [...state.workoutTypes, newWorkoutType],
-      }));
-      
-      return id;
-    },
+        }));
 
-    updateWorkoutType: (id, updates) => {
-      set((state) => ({
+        return id;
+      },
+
+      updateWorkoutType: (id, updates) => {
+        set((state) => ({
           ...state,
-          workoutTypes: state.workoutTypes.map(type =>
-            type.id === id ? { ...type, ...updates } : type
+          workoutTypes: state.workoutTypes.map((type) =>
+            type.id === id ? { ...type, ...updates } : type,
           ),
-      }));
-    },
+        }));
+      },
 
-    // Routine-named implementation
-    addRoutine: (routine) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      const newRecipe: GuestRecipe = {
-        ...routine,
-        id,
-        created_at: now,
-        updated_at: now,
-      };
-      
-      set((state) => ({
+      // Routine-named implementation
+      addRoutine: (routine) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
+        const newRecipe: GuestRecipe = {
+          ...routine,
+          id,
+          created_at: now,
+          updated_at: now,
+        };
+
+        set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-      }));
-      
-      return id;
-    },
-    // Routine-named implementation
-    deleteRoutine: (id) => {
-      set((state) => ({
+        }));
+
+        return id;
+      },
+      // Routine-named implementation
+      deleteRoutine: (id) => {
+        set((state) => ({
           ...state,
-          recipes: (state.recipes || []).filter(recipe => recipe.id !== id),
-      }));
-    },
-    // Routine-named implementation
-    createRoutineFromWorkout: (workoutName, exercises) => {
-      const id = generateRandomId();
-      const now = getCurrentUTCTimestamp();
-      
-      const recipeExercises: GuestRecipeExercise[] = exercises.map(exercise => ({
-        id: generateRandomId(),
-        exercise_type_id: exercise.exercise_type_id,
-        exercise_type: exercise.exercise_type,
-        sets: exercise.exercise_sets.map(set => ({
-          id: generateRandomId(),
-          reps: set.reps,
-          intensity: set.intensity,
-          intensity_unit_id: set.intensity_unit_id,
-          rest_time_seconds: set.rest_time_seconds,
-        })),
-        notes: exercise.notes || null,
-      }));
+          recipes: (state.recipes || []).filter((recipe) => recipe.id !== id),
+        }));
+      },
+      // Routine-named implementation
+      createRoutineFromWorkout: (workoutName, exercises) => {
+        const id = generateRandomId();
+        const now = getCurrentUTCTimestamp();
 
-      const newRecipe: GuestRecipe = {
-        id,
-        name: workoutName || 'My Routine',
-        exercises: recipeExercises,
-        created_at: now,
-        updated_at: now,
-      };
+        const recipeExercises: GuestRecipeExercise[] = exercises.map(
+          (exercise) => ({
+            id: generateRandomId(),
+            exercise_type_id: exercise.exercise_type_id,
+            exercise_type: exercise.exercise_type,
+            sets: exercise.exercise_sets.map((set) => ({
+              id: generateRandomId(),
+              reps: set.reps,
+              intensity: set.intensity,
+              intensity_unit_id: set.intensity_unit_id,
+              rest_time_seconds: set.rest_time_seconds,
+            })),
+            notes: exercise.notes || null,
+          }),
+        );
 
-      set((state) => ({
+        const newRecipe: GuestRecipe = {
+          id,
+          name: workoutName || "My Routine",
+          exercises: recipeExercises,
+          created_at: now,
+          updated_at: now,
+        };
+
+        set((state) => ({
           ...state,
           recipes: [...(state.recipes || []), newRecipe],
-      }));
-      
-      return id;
-    },
-    // Routine-named implementation
-    createExercisesFromRoutine: (recipe, workoutId) => {
-      const exerciseIds: string[] = [];
-      const { addExercise, addExerciseSet } = get();
-      
-      recipe.exercises.forEach(recipeExercise => {
-        const exerciseId = addExercise({
-          workout_id: workoutId,
-          exercise_type_id: recipeExercise.exercise_type_id,
-          exercise_type: recipeExercise.exercise_type,
-          notes: recipeExercise.notes,
-          timestamp: getCurrentUTCTimestamp(),
-        });
-        
-        exerciseIds.push(exerciseId);
-        
-        recipeExercise.sets.forEach(recipeSet => {
-          addExerciseSet({
-            exercise_id: exerciseId,
-            reps: recipeSet.reps,
-            intensity: recipeSet.intensity,
-            intensity_unit_id: recipeSet.intensity_unit_id,
-            rest_time_seconds: recipeSet.rest_time_seconds,
-            done: false,
+        }));
+
+        return id;
+      },
+      // Routine-named implementation
+      createExercisesFromRoutine: (recipe, workoutId) => {
+        const exerciseIds: string[] = [];
+        const { addExercise, addExerciseSet } = get();
+
+        recipe.exercises.forEach((recipeExercise) => {
+          const exerciseId = addExercise({
+            workout_id: workoutId,
+            exercise_type_id: recipeExercise.exercise_type_id,
+            exercise_type: recipeExercise.exercise_type,
+            notes: recipeExercise.notes,
+            timestamp: getCurrentUTCTimestamp(),
+          });
+
+          exerciseIds.push(exerciseId);
+
+          recipeExercise.sets.forEach((recipeSet) => {
+            addExerciseSet({
+              exercise_id: exerciseId,
+              reps: recipeSet.reps,
+              intensity: recipeSet.intensity,
+              intensity_unit_id: recipeSet.intensity_unit_id,
+              rest_time_seconds: recipeSet.rest_time_seconds,
+              done: false,
+            });
           });
         });
-      });
-      
-      return exerciseIds;
-    },
 
-    clear: () => {
-      const initialData = getInitialGuestData();
-      set({ ...initialData, hasAttemptedSync: false });
-    },
+        return exerciseIds;
+      },
 
-    getWorkout: (id) => {
-      return get().workouts.find(workout => workout.id === id);
-    },
+      clear: () => {
+        const initialData = getInitialGuestData();
+        set({ ...initialData, hasAttemptedSync: false });
+      },
 
-    getExercise: (id) => {
-      const { workouts } = get();
-      for (const workout of workouts) {
-        const exercise = workout.exercises.find(ex => ex.id === id);
-        if (exercise) return exercise;
-      }
-      return undefined;
-    },
+      getWorkout: (id) => {
+        return get().workouts.find((workout) => workout.id === id);
+      },
 
-    getActiveExercises: (workoutId?: string) => {
-      const { workouts } = get();
-      if (workoutId) {
-        const workout = workouts.find(w => w.id === workoutId);
-        return workout ? workout.exercises.filter(ex => !ex.deleted_at) : [];
-      }
-      return workouts.flatMap(w => w.exercises.filter(ex => !ex.deleted_at));
-    },
-
-    getActiveSets: (exerciseId?: string) => {
-      const { workouts } = get();
-      if (exerciseId) {
+      getExercise: (id) => {
+        const { workouts } = get();
         for (const workout of workouts) {
-          const exercise = workout.exercises.find(ex => ex.id === exerciseId);
-          if (exercise) {
-            return exercise.exercise_sets.filter(set => !set.deleted_at);
-          }
+          const exercise = workout.exercises.find((ex) => ex.id === id);
+          if (exercise) return exercise;
         }
-        return [];
-      }
-      return workouts.flatMap(w => 
-        w.exercises.flatMap(ex => ex.exercise_sets.filter(set => !set.deleted_at))
-      );
-    },
+        return undefined;
+      },
 
-    syncWithServer: async () => {
-      const state = get();
-      const { user } = useAuthStore.getState();
-      
-      if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
-        return;
-      }
+      getActiveExercises: (workoutId?: string) => {
+        const { workouts } = get();
+        if (workoutId) {
+          const workout = workouts.find((w) => w.id === workoutId);
+          return workout
+            ? workout.exercises.filter((ex) => !ex.deleted_at)
+            : [];
+        }
+        return workouts.flatMap((w) =>
+          w.exercises.filter((ex) => !ex.deleted_at),
+        );
+      },
 
-      set({ hasAttemptedSync: true });
-      
-      try {
-        const result = await syncGuestDataToServer(state, get().clear);
-        if (result.success) {
-          showSyncSuccessToast(result);
-        } else {
-          showSyncErrorToast(result.error ?? 'Unknown error');
+      getActiveSets: (exerciseId?: string) => {
+        const { workouts } = get();
+        if (exerciseId) {
+          for (const workout of workouts) {
+            const exercise = workout.exercises.find(
+              (ex) => ex.id === exerciseId,
+            );
+            if (exercise) {
+              return exercise.exercise_sets.filter((set) => !set.deleted_at);
+            }
+          }
+          return [];
+        }
+        return workouts.flatMap((w) =>
+          w.exercises.flatMap((ex) =>
+            ex.exercise_sets.filter((set) => !set.deleted_at),
+          ),
+        );
+      },
+
+      syncWithServer: async () => {
+        const state = get();
+        const { user } = useAuthStore.getState();
+
+        if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
+          return;
+        }
+
+        set({ hasAttemptedSync: true });
+
+        try {
+          const result = await syncGuestDataToServer(state, get().clear);
+          if (result.success) {
+            showSyncSuccessToast(result);
+          } else {
+            showSyncErrorToast(result.error ?? "Unknown error");
+            set({ hasAttemptedSync: false });
+          }
+        } catch (error) {
+          console.error("Sync failed:", error);
           set({ hasAttemptedSync: false });
         }
-      } catch (error) {
-        console.error('Sync failed:', error);
-        set({ hasAttemptedSync: false });
-      }
-    },
-    setHydrated: (hydrated) => set({ hydrated }),
+      },
+      setHydrated: (hydrated) => set({ hydrated }),
     }),
     {
-      name: 'pe-guest-data',
+      name: "pe-guest-data",
       storage: createJSONStorage(() => createIndexedDBStorage()),
       version: 1,
       // Persist only data fields; exclude ephemeral flags/actions
@@ -697,16 +732,18 @@ export const useGuestStore = create<GuestStore>()(
           return {
             ...getInitialGuestData(),
             ...guest,
-            hasAttemptedSync: Boolean((persistedState as any)?.hasAttemptedSync),
+            hasAttemptedSync: Boolean(
+              (persistedState as any)?.hasAttemptedSync,
+            ),
           } as GuestState;
         }
         // Already at current version — return as-is
         return persistedState as GuestState;
       },
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);
       },
-    }
-  )
+    },
+  ),
 );

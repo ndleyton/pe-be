@@ -1,5 +1,5 @@
-import api from '@/shared/api/client';
-import { Routine } from '@/features/routines/types';
+import api from "@/shared/api/client";
+import { Routine } from "@/features/routines/types";
 
 // Create/Update payload types for routines
 export interface CreateRoutineData {
@@ -23,12 +23,12 @@ export interface UpdateRoutineData {
 }
 
 export const getRoutines = async (
-  orderBy: 'name' | 'createdAt' = 'createdAt',
+  orderBy: "name" | "createdAt" = "createdAt",
   cursor?: number | null,
-  limit: number = 100
+  limit: number = 100,
 ): Promise<{ data: Routine[]; next_cursor?: number | null }> => {
   const currentOffset = cursor ?? 0;
-  const response = await api.get('/routines/', {
+  const response = await api.get("/routines/", {
     params: {
       // Backend currently ignores order_by; safe to pass for future-proofing
       order_by: orderBy,
@@ -37,7 +37,8 @@ export const getRoutines = async (
     },
   });
   const items: Routine[] = Array.isArray(response.data) ? response.data : [];
-  const next_cursor = items.length < limit ? null : currentOffset + items.length;
+  const next_cursor =
+    items.length < limit ? null : currentOffset + items.length;
   return { data: items, next_cursor };
 };
 
@@ -46,22 +47,31 @@ export const getRoutine = async (id: number): Promise<Routine> => {
   return response.data;
 };
 
-export const createRoutine = async (routineData: CreateRoutineData): Promise<Routine> => {
+export const createRoutine = async (
+  routineData: CreateRoutineData,
+): Promise<Routine> => {
   // Backend is mounted at /api/v1/routines/ and prefers trailing slash for POST
-  const response = await api.post('/routines/', routineData);
+  const response = await api.post("/routines/", routineData);
   return response.data;
 };
 
-export const updateRoutine = async (routineId: string | number, updateData: UpdateRoutineData): Promise<Routine> => {
+export const updateRoutine = async (
+  routineId: string | number,
+  updateData: UpdateRoutineData,
+): Promise<Routine> => {
   const response = await api.put(`/routines/${routineId}`, updateData);
   return response.data;
 };
 
-export const deleteRoutine = async (routineId: string | number): Promise<void> => {
+export const deleteRoutine = async (
+  routineId: string | number,
+): Promise<void> => {
   await api.delete(`/routines/${routineId}`);
 };
 
-export const startWorkoutFromRoutine = async (routineId: number | string): Promise<{ id: number }> => {
+export const startWorkoutFromRoutine = async (
+  routineId: number | string,
+): Promise<{ id: number }> => {
   const response = await api.post(`/routines/${routineId}/start`);
   return response.data;
 };

@@ -158,10 +158,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # Remove seeded reference data in reverse dependency order using table constructs
-    
+
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    
+
     # Only attempt deletions if tables exist
     table_configs = [
         ('exercise_types_muscles', [1,2,3], [1,2,3,4,5,6,7,8]),  # (table, exercise_type_ids, muscle_ids)
@@ -171,7 +171,7 @@ def downgrade() -> None:
         ('intensity_units', [1,2,3,4,5], None),
         ('workout_types', [1,2,3,4,5], None),
     ]
-    
+
     for table_name, ids, muscle_ids in table_configs:
         if table_name in inspector.get_table_names():
             if table_name == 'exercise_types_muscles':

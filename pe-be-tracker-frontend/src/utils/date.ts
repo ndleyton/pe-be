@@ -2,7 +2,9 @@
 type FormatterKey = string;
 const formattersCache = new Map<FormatterKey, Intl.DateTimeFormat>();
 
-const getDateFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
+const getDateFormatter = (
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat => {
   const key = JSON.stringify(options);
   let formatter = formattersCache.get(key);
   if (!formatter) {
@@ -13,14 +15,14 @@ const getDateFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFor
 };
 
 export const toUTCISOString = (local: string | null | undefined): string => {
-  if (!local?.trim()) return '';
-  
+  if (!local?.trim()) return "";
+
   // If already has timezone info, parse and convert to UTC
   if (/Z$/i.test(local) || /[+-]\d{2}:?\d{2}$/.test(local)) {
     try {
       return new Date(local).toISOString();
     } catch {
-      return '';
+      return "";
     }
   }
 
@@ -29,74 +31,77 @@ export const toUTCISOString = (local: string | null | undefined): string => {
   if (datetimeLocalRegex.test(local)) {
     try {
       const date = new Date(local);
-      return isNaN(date.getTime()) ? '' : date.toISOString();
+      return isNaN(date.getTime()) ? "" : date.toISOString();
     } catch {
-      return '';
+      return "";
     }
   }
 
   // For other formats, try to parse as-is and convert to UTC
   try {
     const date = new Date(local);
-    return isNaN(date.getTime()) ? '' : date.toISOString();
+    return isNaN(date.getTime()) ? "" : date.toISOString();
   } catch {
-    return '';
+    return "";
   }
 };
 
-export const formatDisplayDate = (timestamp: string | null | undefined, options: {
-  includeTime?: boolean;
-  includeTimezone?: boolean;
-  dateStyle?: 'short' | 'medium' | 'long' | 'full';
-  timeStyle?: 'short' | 'medium' | 'long' | 'full';
-} = {}): string => {
-  if (!timestamp?.trim()) return '';
-  
+export const formatDisplayDate = (
+  timestamp: string | null | undefined,
+  options: {
+    includeTime?: boolean;
+    includeTimezone?: boolean;
+    timeStyle?: "short" | "medium" | "long" | "full";
+  } = {},
+): string => {
+  if (!timestamp?.trim()) return "";
+
   try {
     const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return '';
+    if (isNaN(date.getTime())) return "";
 
-    const {
-      includeTime = true,
-      includeTimezone = false,
-      dateStyle = 'medium',
-      timeStyle = 'short'
-    } = options;
+    const { includeTime = true, includeTimezone = false, timeStyle = "short" } = options;
 
     const formatOptions: Intl.DateTimeFormatOptions = {};
-    
+
     if (includeTime) {
       // When including time, use explicit format options (no year for cleaner UI)
-      formatOptions.month = 'short';
-      formatOptions.day = 'numeric';
-      formatOptions.hour = 'numeric';
-      formatOptions.minute = '2-digit';
-      if (timeStyle === 'medium' || timeStyle === 'long' || timeStyle === 'full') {
-        formatOptions.second = '2-digit';
+      formatOptions.month = "short";
+      formatOptions.day = "numeric";
+      formatOptions.hour = "numeric";
+      formatOptions.minute = "2-digit";
+      if (
+        timeStyle === "medium" ||
+        timeStyle === "long" ||
+        timeStyle === "full"
+      ) {
+        formatOptions.second = "2-digit";
       }
     } else {
       // When not including time, use explicit format options (no year for cleaner UI)
-      formatOptions.month = 'short';
-      formatOptions.day = 'numeric';
+      formatOptions.month = "short";
+      formatOptions.day = "numeric";
     }
 
     if (includeTimezone) {
-      formatOptions.timeZoneName = 'short';
+      formatOptions.timeZoneName = "short";
     }
 
     const formatter = getDateFormatter(formatOptions);
     return formatter.format(date);
   } catch {
-    return '';
+    return "";
   }
 };
 
-export const formatRelativeTime = (timestamp: string | null | undefined): string => {
-  if (!timestamp?.trim()) return '';
-  
+export const formatRelativeTime = (
+  timestamp: string | null | undefined,
+): string => {
+  if (!timestamp?.trim()) return "";
+
   try {
     const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return '';
+    if (isNaN(date.getTime())) return "";
 
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -104,14 +109,17 @@ export const formatRelativeTime = (timestamp: string | null | undefined): string
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 1) return "Just now";
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return formatDisplayDate(timestamp, { includeTime: false, includeTimezone: false });
+
+    return formatDisplayDate(timestamp, {
+      includeTime: false,
+      includeTimezone: false,
+    });
   } catch {
-    return '';
+    return "";
   }
 };
 
@@ -127,13 +135,13 @@ export const toLocalDateTimeInputValue = (date: Date = new Date()): string => {
 
 export const generateRandomId = (): string => {
   // Use crypto.randomUUID if available, fallback to secure random string
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  
+
   // Fallback: generate cryptographically secure random string
   const array = new Uint8Array(16);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     crypto.getRandomValues(array);
   } else {
     // Last resort fallback for environments without crypto
@@ -141,30 +149,35 @@ export const generateRandomId = (): string => {
       array[i] = Math.floor(Math.random() * 256);
     }
   }
-  
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 };
 
-export const parseWorkoutDuration = (startTime: string | null | undefined, endTime: string | null | undefined): {
+export const parseWorkoutDuration = (
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+): {
   durationMs: number;
   durationText: string;
 } => {
   if (!startTime?.trim() || !endTime?.trim()) {
-    return { durationMs: 0, durationText: 'In Progress' };
+    return { durationMs: 0, durationText: "In Progress" };
   }
 
   try {
     const start = new Date(startTime);
     const end = new Date(endTime);
-    
+
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return { durationMs: 0, durationText: 'Invalid duration' };
+      return { durationMs: 0, durationText: "Invalid duration" };
     }
 
     const durationMs = end.getTime() - start.getTime();
-    
+
     if (durationMs < 0) {
-      return { durationMs: 0, durationText: 'Invalid duration' };
+      return { durationMs: 0, durationText: "Invalid duration" };
     }
 
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
@@ -179,6 +192,6 @@ export const parseWorkoutDuration = (startTime: string | null | undefined, endTi
       return { durationMs, durationText: `${seconds}s` };
     }
   } catch {
-    return { durationMs: 0, durationText: 'Invalid duration' };
+    return { durationMs: 0, durationText: "Invalid duration" };
   }
-}; 
+};

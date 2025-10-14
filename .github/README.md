@@ -20,7 +20,7 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **Test**: Run pytest with PostgreSQL, generate coverage
 - **Security Scan**: Bandit security analysis
 - **Build**: Create wheel package and Docker image
-- **Deploy Staging**: Auto-deploy to staging on `develop` branch  
+- **Deploy Staging**: Auto-deploy to staging on `develop` branch
 - **Deploy Production**: Auto-deploy to production on `main` branch
 
 ### 3. PR Validation (`pr-validation.yml`)
@@ -160,7 +160,7 @@ Example deployment methods:
 - name: Deploy to S3
   run: aws s3 sync ./dist s3://your-bucket --delete
 
-# Docker Registry + ECS (Backend)  
+# Docker Registry + ECS (Backend)
 - name: Deploy to ECS
   run: |
     docker tag pe-be-backend:latest your-registry/pe-be-backend:latest

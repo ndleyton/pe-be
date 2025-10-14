@@ -26,7 +26,7 @@ export type ExerciseTypeIds = {
 };
 
 export const generateExerciseTypeIds = (
-  generateId: () => string
+  generateId: () => string,
 ): ExerciseTypeIds => ({
   pushUps: generateId(),
   squats: generateId(),

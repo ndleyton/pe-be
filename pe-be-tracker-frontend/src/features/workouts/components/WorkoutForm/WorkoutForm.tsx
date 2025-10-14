@@ -1,12 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import api from '@/shared/api/client';
-import { toUTCISOString, toLocalDateTimeInputValue, getCurrentUTCTimestamp } from '@/utils/date';
-import WorkoutTypeModal, { WorkoutType } from '../WorkoutTypeModal';
-import { useGuestStore, useAuthStore, GuestRecipe, GuestWorkoutType } from '@/stores';
-import { Button } from '@/shared/components/ui/button';
+import React, { useState, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import api from "@/shared/api/client";
+import {
+  toUTCISOString,
+  toLocalDateTimeInputValue,
+  getCurrentUTCTimestamp,
+} from "@/utils/date";
+import WorkoutTypeModal, { WorkoutType } from "../WorkoutTypeModal";
+import {
+  useGuestStore,
+  useAuthStore,
+  GuestRecipe,
+  GuestWorkoutType,
+} from "@/stores";
+import { Button } from "@/shared/components/ui/button";
 
 interface WorkoutFormData {
   name?: string;
@@ -21,70 +30,91 @@ interface WorkoutFormProps {
   recipe?: GuestRecipe | null;
 }
 
-
 const createWorkout = async (data: WorkoutFormData) => {
   const startTimeISO = data.start_time ? toUTCISOString(data.start_time) : null;
   const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
 
-  const response = await api.post(
-    '/workouts/',
-    {
-      name: data.name || null,
-      notes: data.notes || null,
-      start_time: startTimeISO || null,
-      end_time: endTimeISO || null,
-      workout_type_id: data.workout_type_id,
-    },
-  );
+  const response = await api.post("/workouts/", {
+    name: data.name || null,
+    notes: data.notes || null,
+    start_time: startTimeISO || null,
+    end_time: endTimeISO || null,
+    workout_type_id: data.workout_type_id,
+  });
   return response.data;
 };
 
-const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) => {
+const WorkoutForm: React.FC<WorkoutFormProps> = ({
+  onWorkoutCreated,
+  recipe,
+}) => {
   const navigate = useNavigate();
   // Get state from stores
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   const [showModal, setShowModal] = useState(false);
-  const [selectedWorkoutType, setSelectedWorkoutType] = useState<WorkoutType | GuestWorkoutType | null>(null);
+  const [selectedWorkoutType, setSelectedWorkoutType] = useState<
+    WorkoutType | GuestWorkoutType | null
+  >(null);
   const [isEditingName, setIsEditingName] = useState(false);
-  
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState,
-    setValue,
-    watch,
-  } = useForm<WorkoutFormData>({
-    defaultValues: {
-      name: recipe ? `${recipe.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      start_time: toLocalDateTimeInputValue(),
-      workout_type_id: !isAuthenticated ? '' : undefined, // Initialize for guest users
-    },
-  });
 
-  const nameField = watch('name');
-  const datePrefix = useMemo(() => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), []);
+  const { register, handleSubmit, reset, formState, setValue, watch } =
+    useForm<WorkoutFormData>({
+      defaultValues: {
+        name: recipe
+          ? `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+          : new Date().toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+        start_time: toLocalDateTimeInputValue(),
+        workout_type_id: !isAuthenticated ? "" : undefined, // Initialize for guest users
+      },
+    });
+
+  const nameField = watch("name");
+  const datePrefix = useMemo(
+    () =>
+      new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+    [],
+  );
 
   // Set initial workout type based on default form value
   useEffect(() => {
-    if (!selectedWorkoutType && !isAuthenticated && guestData.workoutTypes.length > 0) {
+    if (
+      !selectedWorkoutType &&
+      !isAuthenticated &&
+      guestData.workoutTypes.length > 0
+    ) {
       // For guest users, try to find "Other" type by name, or use the last one (which should be "Other")
-      const defaultWorkoutType = guestData.workoutTypes.find(wt => wt.name === 'Other') || 
-                                guestData.workoutTypes[guestData.workoutTypes.length - 1];
+      const defaultWorkoutType =
+        guestData.workoutTypes.find((wt) => wt.name === "Other") ||
+        guestData.workoutTypes[guestData.workoutTypes.length - 1];
       if (defaultWorkoutType) {
         setSelectedWorkoutType(defaultWorkoutType);
-        setValue('workout_type_id', defaultWorkoutType.id);
+        setValue("workout_type_id", defaultWorkoutType.id);
       }
     }
   }, [selectedWorkoutType, isAuthenticated, guestData.workoutTypes, setValue]);
 
   useEffect(() => {
-    if (selectedWorkoutType && (!formState.dirtyFields.name || nameField === datePrefix)) {
-      setValue('name', `${selectedWorkoutType.name} - ${datePrefix}`);
+    if (
+      selectedWorkoutType &&
+      (!formState.dirtyFields.name || nameField === datePrefix)
+    ) {
+      setValue("name", `${selectedWorkoutType.name} - ${datePrefix}`);
     }
-  }, [selectedWorkoutType, datePrefix, formState.dirtyFields.name, nameField, setValue]);
+  }, [
+    selectedWorkoutType,
+    datePrefix,
+    formState.dirtyFields.name,
+    nameField,
+    setValue,
+  ]);
 
   useEffect(() => {
     if (recipe) {
@@ -111,20 +141,24 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
       mutation.mutate(data);
     } else {
       // Use guest context for unauthenticated users
-      let workoutType = guestData.workoutTypes.find(wt => wt.id === data.workout_type_id);
+      let workoutType = guestData.workoutTypes.find(
+        (wt) => wt.id === data.workout_type_id,
+      );
       if (!workoutType) {
         // Fallback to default workout type if not found
-        workoutType = guestData.workoutTypes.find(wt => wt.name === 'Other') || 
-                     guestData.workoutTypes[guestData.workoutTypes.length - 1];
+        workoutType =
+          guestData.workoutTypes.find((wt) => wt.name === "Other") ||
+          guestData.workoutTypes[guestData.workoutTypes.length - 1];
         if (!workoutType) {
-          console.error('No workout types available');
+          console.error("No workout types available");
           return;
         }
         // Update the form with the fallback workout type
-        setValue('workout_type_id', workoutType.id);
+        setValue("workout_type_id", workoutType.id);
       }
 
-      const startTimeISO = toUTCISOString(data.start_time) || getCurrentUTCTimestamp();
+      const startTimeISO =
+        toUTCISOString(data.start_time) || getCurrentUTCTimestamp();
       const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
 
       const newWorkoutId = guestActions.addWorkout({
@@ -148,9 +182,11 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     }
   };
 
-  const handleWorkoutTypeSelect = (workoutType: WorkoutType | GuestWorkoutType) => {
+  const handleWorkoutTypeSelect = (
+    workoutType: WorkoutType | GuestWorkoutType,
+  ) => {
     setSelectedWorkoutType(workoutType);
-    setValue('workout_type_id', workoutType.id);
+    setValue("workout_type_id", workoutType.id);
     setShowModal(false);
   };
 
@@ -158,30 +194,45 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
     reset();
     setSelectedWorkoutType(null);
     setIsEditingName(false);
-    setValue('start_time', toLocalDateTimeInputValue());
+    setValue("start_time", toLocalDateTimeInputValue());
 
     // For guest users, immediately set a default workout type after reset
     if (!isAuthenticated && guestData.workoutTypes.length > 0) {
       setTimeout(() => {
-        const defaultWorkoutType = guestData.workoutTypes.find(wt => wt.name === 'Other') || 
-                                  guestData.workoutTypes[guestData.workoutTypes.length - 1];
+        const defaultWorkoutType =
+          guestData.workoutTypes.find((wt) => wt.name === "Other") ||
+          guestData.workoutTypes[guestData.workoutTypes.length - 1];
         if (defaultWorkoutType) {
           setSelectedWorkoutType(defaultWorkoutType);
-          setValue('workout_type_id', defaultWorkoutType.id);
+          setValue("workout_type_id", defaultWorkoutType.id);
         }
       }, 0);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-6 border border-border p-4 sm:p-6 rounded-lg bg-card text-card-foreground shadow-lg w-full max-w-md mx-auto">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="border-border bg-card text-card-foreground mx-auto mb-6 w-full max-w-md rounded-lg border p-4 shadow-lg sm:p-6"
+    >
       {recipe && (
-        <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="text-sm font-medium text-primary">📋 Starting from Recipe</span>
+        <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-3">
+          <div className="mb-2 flex items-center space-x-2">
+            <span className="text-primary text-sm font-medium">
+              📋 Starting from Recipe
+            </span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {recipe.exercises.length} exercise{recipe.exercises.length !== 1 ? 's' : ''} • {recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0)} set{recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0) !== 1 ? 's' : ''}
+          <div className="text-muted-foreground text-sm">
+            {recipe.exercises.length} exercise
+            {recipe.exercises.length !== 1 ? "s" : ""} •{" "}
+            {recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0)}{" "}
+            set
+            {recipe.exercises.reduce(
+              (total, ex) => total + ex.sets.length,
+              0,
+            ) !== 1
+              ? "s"
+              : ""}
           </div>
         </div>
       )}
@@ -190,9 +241,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
           <div className="flex items-center space-x-2">
             <input
               type="text"
-              {...register('name')}
+              {...register("name")}
               data-testid="workout-name-input"
-              className="flex-1 bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
+              className="bg-background text-foreground border-border focus:ring-ring flex-1 rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
               autoFocus
             />
             <Button
@@ -202,64 +253,109 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
               size="icon"
               className="bg-primary hover:bg-primary/90"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </Button>
           </div>
         ) : (
           <div
             onClick={() => setIsEditingName(true)}
-            className="flex items-center justify-between cursor-pointer group"
+            className="group flex cursor-pointer items-center justify-between"
           >
-            <h2 className="text-xl font-semibold text-foreground" data-testid="workout-name-heading">{nameField || 'Workout Name'}</h2>
-            <svg className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            <h2
+              className="text-foreground text-xl font-semibold"
+              data-testid="workout-name-heading"
+            >
+              {nameField || "Workout Name"}
+            </h2>
+            <svg
+              className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+              />
             </svg>
           </div>
         )}
       </div>
       <div className="mb-4">
-        <label className="block mb-1 text-foreground font-medium">Notes:
+        <label className="text-foreground mb-1 block font-medium">
+          Notes:
           <input
             placeholder="How am I feeling today?"
             type="text"
-            {...register('notes')}
+            {...register("notes")}
             data-testid="workout-notes-input"
-            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
           />
         </label>
       </div>
       <div className="mb-4">
-        <label className="block mb-1 text-foreground font-medium">Start Time:
+        <label className="text-foreground mb-1 block font-medium">
+          Start Time:
           <input
             type="datetime-local"
-            {...register('start_time', { required: 'Start time is required' })}
-            className="mt-1 mb-2 w-full bg-background text-foreground border border-border rounded px-2 py-1.5 sm:px-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-ring text-base sm:text-sm"
+            {...register("start_time", { required: "Start time is required" })}
+            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
           />
         </label>
-        {formState.errors.start_time && <div className="text-destructive text-sm">{formState.errors.start_time.message}</div>}
+        {formState.errors.start_time && (
+          <div className="text-destructive text-sm">
+            {formState.errors.start_time.message}
+          </div>
+        )}
       </div>
       <div className="mb-4">
         {selectedWorkoutType ? (
           <div
             onClick={() => setShowModal(true)}
-            className="bg-background rounded-lg p-4 border border-border cursor-pointer hover:bg-accent transition-colors"
+            className="bg-background border-border hover:bg-accent cursor-pointer rounded-lg border p-4 transition-colors"
             data-testid="open-workout-type-modal"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
                 <span className="text-primary-foreground font-bold">
                   {selectedWorkoutType.name.charAt(0)}
                 </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-foreground font-medium">{selectedWorkoutType.name}</h4>
-                <p className="text-muted-foreground text-sm mt-1">{selectedWorkoutType.description}</p>
+                <h4 className="text-foreground font-medium">
+                  {selectedWorkoutType.name}
+                </h4>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {selectedWorkoutType.description}
+                </p>
               </div>
               <div className="text-muted-foreground">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
                 </svg>
               </div>
             </div>
@@ -269,7 +365,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
             type="button"
             onClick={() => setShowModal(true)}
             variant="outline"
-            className="w-full bg-background text-foreground border-border hover:bg-accent justify-start"
+            className="bg-background text-foreground border-border hover:bg-accent w-full justify-start"
             data-testid="open-workout-type-modal"
           >
             Select Workout Type
@@ -277,22 +373,30 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onWorkoutCreated, recipe }) =
         )}
         <input
           type="hidden"
-          {...register('workout_type_id', {
-            required: 'Workout type is required',
+          {...register("workout_type_id", {
+            required: "Workout type is required",
             valueAsNumber: isAuthenticated, // Only convert to number if authenticated
           })}
         />
-        {formState.errors.workout_type_id && <div className="text-destructive text-sm mt-2">{formState.errors.workout_type_id.message}</div>}
+        {formState.errors.workout_type_id && (
+          <div className="text-destructive mt-2 text-sm">
+            {formState.errors.workout_type_id.message}
+          </div>
+        )}
       </div>
       <Button
         type="submit"
         disabled={isAuthenticated && mutation.isPending}
-        className="bg-primary hover:bg-primary/90 px-6 py-2 mt-2"
+        className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
         data-testid="start-workout-button"
       >
-        {(isAuthenticated && mutation.isPending) ? 'Creating...' : 'Start Workout'}
+        {isAuthenticated && mutation.isPending
+          ? "Creating..."
+          : "Start Workout"}
       </Button>
-      {isAuthenticated && mutation.error && <div className="text-destructive mt-3">Failed to create workout.</div>}
+      {isAuthenticated && mutation.error && (
+        <div className="text-destructive mt-3">Failed to create workout.</div>
+      )}
 
       <WorkoutTypeModal
         isOpen={showModal}

@@ -20,4 +20,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('exercise_muscles', 'is_primary') 
+    op.drop_column('exercise_muscles', 'is_primary')

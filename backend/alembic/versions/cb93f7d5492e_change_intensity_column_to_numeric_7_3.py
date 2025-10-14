@@ -25,7 +25,7 @@ def upgrade() -> None:
     inspector = sa.inspect(connection)
     columns = inspector.get_columns('exercise_sets')
     intensity_col = next((col for col in columns if col['name'] == 'intensity'), None)
-    
+
     if intensity_col:
         # Check if column is already NUMERIC(7,3)
         col_type = str(intensity_col['type']).upper()
@@ -43,7 +43,7 @@ def downgrade() -> None:
     inspector = sa.inspect(connection)
     columns = inspector.get_columns('exercise_sets')
     intensity_col = next((col for col in columns if col['name'] == 'intensity'), None)
-    
+
     if intensity_col:
         # Check if column is currently NUMERIC(7,3) and needs to be reverted
         col_type = str(intensity_col['type']).upper()

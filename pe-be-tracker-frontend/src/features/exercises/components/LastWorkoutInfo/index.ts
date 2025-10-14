@@ -1,1 +1,1 @@
-export { LastWorkoutInfo } from './LastWorkoutInfo';
+export { LastWorkoutInfo } from "./LastWorkoutInfo";

@@ -23,7 +23,7 @@ defaults:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:17
@@ -42,16 +42,16 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Python
       id: setup-python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
+
     - name: Setup uv
       uses: astral-sh/setup-uv@v4
-    
+
     - name: Cache uv and venv (backend)
       uses: actions/cache@v4
       with:
@@ -59,23 +59,23 @@ jobs:
           backend/.venv
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
-        
+
     - name: Verify lockfile is up-to-date
       run: uv lock --check
 
     - name: Install dependencies
       run: uv sync
-      
+
     - name: Run ruff linting
       run: uv run ruff check src/ tests/
-      
+
     - name: Run ruff formatting check
       run: uv run ruff format --check src/ tests/
-      
+
     - name: Create test database
       run: |
         PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gym_tracker_test;" || echo "Database might already exist"
-        
+
     - name: Run database migrations
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
@@ -86,7 +86,7 @@ jobs:
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
       run: |
         uv run alembic upgrade head
-        
+
     - name: Run tests
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gym_tracker_test
@@ -96,7 +96,7 @@ jobs:
         GOOGLE_CLIENT_SECRET: test-google-client-secret-ci
         GOOGLE_REDIRECT_URI: http://localhost:3000/auth/callback
       run: uv run pytest -v --cov=src --cov-report=xml
-      
+
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       with:
@@ -107,17 +107,17 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Python
       id: setup-python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
+
     - name: Setup uv
       uses: astral-sh/setup-uv@v4
 
@@ -136,12 +136,12 @@ jobs:
     - name: Install dependencies
       working-directory: ./backend
       run: uv sync
-      
+
     - name: Run security scan with bandit
       working-directory: ./backend
       run: |
         uvx "bandit[toml]" -r src/ -f json -o bandit-report.json || true
-        
+
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
       with:
@@ -152,11 +152,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Python
       id: setup-python
       uses: actions/setup-python@v5
@@ -165,7 +165,7 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v4
-    
+
     - name: Cache uv and venv (backend)
       uses: actions/cache@v4
       with:
@@ -173,7 +173,7 @@ jobs:
           backend/.venv
           ~/.cache/uv
         key: uv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/uv.lock') }}
-        
+
     - name: Verify lockfile is up-to-date
       working-directory: ./backend
       run: uv lock --check
@@ -181,7 +181,7 @@ jobs:
     - name: Install dependencies
       working-directory: ./backend
       run: uv sync --frozen
-        
+
     - name: Validate application
       working-directory: ./backend
       env:
@@ -194,17 +194,17 @@ jobs:
       run: |
         # Validate that the application can start
         uv run python -c "from src.main import app; print('✅ App imports successfully')"
-        
+
     - name: Build Docker image
       working-directory: ./backend
       run: |
         docker build -t pe-be-backend:latest .
-        
+
     - name: Save Docker image
       working-directory: ./backend
       run: |
         docker save pe-be-backend:latest | gzip > backend-image.tar.gz
-        
+
     #    - name: Upload Docker image
 #      uses: actions/upload-artifact@v4
 #      with:
@@ -220,7 +220,7 @@ jobs:
   #     - name: Deploy to staging
   #       run: |
   #         echo "🚀 Render will auto-deploy staging on push to develop branch"
-  #         
+  #
   # deploy-production:
   #   runs-on: ubuntu-latest
   #   needs: [test, build]

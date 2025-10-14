@@ -432,8 +432,8 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         for unit_name in data["intensity_units"]:
             await conn.execute(
                 """
-                INSERT INTO intensity_units (name, abbreviation, created_at, updated_at) 
-                VALUES ($1, $2, $3, $3) 
+                INSERT INTO intensity_units (name, abbreviation, created_at, updated_at)
+                VALUES ($1, $2, $3, $3)
                 ON CONFLICT (name) DO NOTHING
             """,
                 unit_name,
@@ -445,8 +445,8 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         for group_name in data["muscle_groups"]:
             await conn.execute(
                 """
-                INSERT INTO muscle_groups (name, created_at, updated_at) 
-                VALUES ($1, $2, $2) 
+                INSERT INTO muscle_groups (name, created_at, updated_at)
+                VALUES ($1, $2, $2)
                 ON CONFLICT (name) DO NOTHING
             """,
                 group_name,
@@ -474,8 +474,8 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             if group_id:
                 await conn.execute(
                     """
-                    INSERT INTO muscles (name, muscle_group_id, created_at, updated_at) 
-                    VALUES ($1, $2, $3, $3) 
+                    INSERT INTO muscles (name, muscle_group_id, created_at, updated_at)
+                    VALUES ($1, $2, $3, $3)
                     ON CONFLICT (name) DO NOTHING
                 """,
                     muscle_name,
@@ -510,8 +510,8 @@ async def import_exercises_to_database(data: Dict[str, Any]):
 
             await conn.execute(
                 """
-                INSERT INTO exercise_types 
-                (external_id, name, description, images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at) 
+                INSERT INTO exercise_types
+                (external_id, name, description, images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
                 ON CONFLICT (external_id) DO NOTHING
             """,

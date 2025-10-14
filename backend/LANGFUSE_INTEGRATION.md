@@ -35,7 +35,7 @@ Given a workout description, extract:
 1. A suitable workout name (if not provided, generate one based on the exercises)
 2. Workout type: must be one of these IDs:
    - 1: Low Intensity Cardio
-   - 2: HIIT  
+   - 2: HIIT
    - 3: Sports
    - 4: Strength Training
    - 5: Mobility
@@ -55,7 +55,7 @@ Return ONLY valid JSON in this exact format:
   "exercises": [
     {
       "exercise_type_name": "string",
-      "notes": "string or null", 
+      "notes": "string or null",
       "sets": [
         {
           "reps": number or null,
@@ -141,8 +141,8 @@ The existing `/api/v1/workouts/parse` endpoint automatically uses the new Langfu
 
 ```typescript
 // Frontend usage remains unchanged
-const response = await api.post('/workouts/parse', { 
-  workout_text: userInput 
+const response = await api.post('/workouts/parse', {
+  workout_text: userInput
 });
 ```
 
@@ -191,4 +191,4 @@ Set logging level to DEBUG to see detailed Langfuse interactions:
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
-``` 
+```

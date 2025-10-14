@@ -1,1 +1,1 @@
-export { ExerciseTypeCard } from './ExerciseTypeCard';
+export { ExerciseTypeCard } from "./ExerciseTypeCard";

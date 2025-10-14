@@ -1,17 +1,16 @@
-import React from 'react';
-import { Button } from '@/shared/components/ui/button';
+import { Button } from "@/shared/components/ui/button";
 
 interface DownloadImageButtonProps {
   onDownload: () => Promise<void>;
   disabled?: boolean;
 }
 
-const DownloadImageButton: React.FC<DownloadImageButtonProps> = ({ onDownload, disabled = false }) => {
+const DownloadImageButton = ({ onDownload, disabled = false }: DownloadImageButtonProps) => {
   const handleClick = async () => {
     try {
       await onDownload();
     } catch (error) {
-      console.error('Error downloading image:', error);
+      console.error("Error downloading image:", error);
     }
   };
 
@@ -22,4 +21,4 @@ const DownloadImageButton: React.FC<DownloadImageButtonProps> = ({ onDownload, d
   );
 };
 
-export default DownloadImageButton; 
+export default DownloadImageButton;

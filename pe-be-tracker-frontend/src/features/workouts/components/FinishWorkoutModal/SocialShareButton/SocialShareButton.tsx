@@ -1,20 +1,16 @@
-import React from 'react';
-import { Button } from '@/shared/components/ui/button';
+import { Button } from "@/shared/components/ui/button";
 
 interface SocialShareButtonProps {
   onShare: () => Promise<void>;
   disabled?: boolean;
 }
 
-const SocialShareButton: React.FC<SocialShareButtonProps> = ({
-  onShare,
-  disabled = false,
-}) => {
+const SocialShareButton = ({ onShare, disabled = false }: SocialShareButtonProps) => {
   const handleClick = async () => {
     try {
       await onShare();
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error("Error sharing:", error);
     }
   };
 

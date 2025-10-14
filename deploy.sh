@@ -55,27 +55,27 @@ sleep 10
 echo "🔍 Checking service health..."
 if docker-compose ps | grep -q "Up"; then
     echo "✅ Services are running"
-    
+
     # Show running services
     echo "📋 Running services:"
     docker-compose ps
-    
+
     # Show application URLs
     echo ""
     echo "🌐 Application URLs:"
     echo "   Frontend: http://localhost:3000"
     echo "   Backend API: http://localhost:8000"
     echo "   Database: postgresql://localhost:5432/pe_be"
-    
+
     # Run database migrations if in production
     if [ "$ENVIRONMENT" = "production" ]; then
         echo "🗄️  Running database migrations..."
         docker-compose exec backend alembic upgrade head
     fi
-    
+
     echo ""
     echo "🎉 Deployment to $ENVIRONMENT completed successfully!"
-    
+
 else
     echo "❌ Some services failed to start"
     docker-compose logs

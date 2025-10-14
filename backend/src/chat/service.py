@@ -274,7 +274,7 @@ class ChatService:
 
 Your expertise includes:
 - Exercise selection and programming
-- Form and technique guidance  
+- Form and technique guidance
 - Workout planning and periodization
 - Nutrition advice for fitness goals
 - Recovery and injury prevention
