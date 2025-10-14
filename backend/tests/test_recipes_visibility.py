@@ -1,5 +1,5 @@
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import urlsplit
@@ -100,7 +100,8 @@ async def test_visibility_filtering_lists_mine_and_public():
     app.dependency_overrides[get_async_session] = override_db
 
     try:
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
                 f"{settings.API_PREFIX}/routines/?offset=0&limit=50"
             )
@@ -192,7 +193,8 @@ async def test_visibility_get_by_id_allows_public_blocks_private():
     app.dependency_overrides[get_async_session] = override_db
 
     try:
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             # Public accessible
             r1 = await client.get(f"{settings.API_PREFIX}/routines/{r_other_public.id}")
             assert r1.status_code == 200, r1.text
