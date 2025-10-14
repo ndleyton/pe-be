@@ -1,10 +1,10 @@
-import React from 'react';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { WeekTrackingSkeleton } from '@/shared/components/skeletons/WeekTrackingSkeleton';
+import React from "react";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { WeekTrackingSkeleton } from "@/shared/components/skeletons/WeekTrackingSkeleton";
 
 const ProfilePageSkeleton: React.FC = () => (
-  <div className="max-w-5xl mx-auto p-8 text-center">
-    <div className="max-w-4xl mx-auto">
+  <div className="mx-auto max-w-5xl p-8 text-center">
+    <div className="mx-auto max-w-4xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Profile</h1>
         <p className="text-muted-foreground mt-1">Track your fitness journey</p>
@@ -12,29 +12,29 @@ const ProfilePageSkeleton: React.FC = () => (
 
       <WeekTrackingSkeleton className="mb-6" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="mb-2 h-4 w-24" />
                 <Skeleton className="h-8 w-12" />
               </div>
-              <Skeleton className="w-12 h-12 rounded-full" />
+              <Skeleton className="h-12 w-12 rounded-full" />
             </div>
           </div>
         ))}
       </div>
 
       <div className="bg-card rounded-lg p-6 text-center">
-        <h2 className="text-lg font-semibold mb-4">Account Information</h2>
-        <div className="space-y-4 flex flex-col items-center">
+        <h2 className="mb-4 text-lg font-semibold">Account Information</h2>
+        <div className="flex flex-col items-center space-y-4">
           <div>
-            <Skeleton className="h-4 w-12 mb-1" />
+            <Skeleton className="mb-1 h-4 w-12" />
             <Skeleton className="h-5 w-20" />
           </div>
           <div>
-            <Skeleton className="h-4 w-16 mb-1" />
+            <Skeleton className="mb-1 h-4 w-16" />
             <Skeleton className="h-10 w-32" />
           </div>
         </div>
@@ -48,4 +48,3 @@ const ProfilePageSkeleton: React.FC = () => (
 );
 
 export default ProfilePageSkeleton;
-

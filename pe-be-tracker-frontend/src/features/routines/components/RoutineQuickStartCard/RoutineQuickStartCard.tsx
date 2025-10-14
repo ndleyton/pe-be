@@ -1,31 +1,43 @@
-import React from 'react';
-import { GuestRecipe } from '@/stores';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import React from "react";
+import { GuestRecipe } from "@/stores";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 
 interface RoutineQuickStartCardProps {
   routine: GuestRecipe;
   onStartWorkout: (routine: GuestRecipe) => void;
 }
 
-export const RoutineQuickStartCard: React.FC<RoutineQuickStartCardProps> = ({ 
-  routine, 
-  onStartWorkout
+export const RoutineQuickStartCard: React.FC<RoutineQuickStartCardProps> = ({
+  routine,
+  onStartWorkout,
 }) => {
   const exerciseCount = routine.exercises.length;
-  const totalSets = routine.exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+  const totalSets = routine.exercises.reduce(
+    (total, exercise) => total + exercise.sets.length,
+    0,
+  );
 
   return (
-    <Card className="cursor-pointer transition-colors hover:bg-accent">
+    <Card className="hover:bg-accent cursor-pointer transition-colors">
       <CardHeader>
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">📋</span>
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
+            <span className="text-primary-foreground text-lg font-bold">
+              📋
+            </span>
           </div>
           <div>
             <CardTitle className="text-base">{routine.name}</CardTitle>
             <CardDescription>
-              {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''} • {totalSets} set{totalSets !== 1 ? 's' : ''}
+              {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} •{" "}
+              {totalSets} set{totalSets !== 1 ? "s" : ""}
             </CardDescription>
           </div>
         </div>
@@ -33,19 +45,21 @@ export const RoutineQuickStartCard: React.FC<RoutineQuickStartCardProps> = ({
       <CardContent className="pt-0">
         <div>
           {routine.exercises.slice(0, 3).map((exercise) => (
-            <div key={exercise.id} className="text-sm text-muted-foreground">
-              {exercise.exercise_type.name} • {exercise.sets.length} set{exercise.sets.length !== 1 ? 's' : ''}
+            <div key={exercise.id} className="text-muted-foreground text-sm">
+              {exercise.exercise_type.name} • {exercise.sets.length} set
+              {exercise.sets.length !== 1 ? "s" : ""}
             </div>
           ))}
           {routine.exercises.length > 3 && (
-            <div className="text-sm text-muted-foreground">
-              +{routine.exercises.length - 3} more exercise{routine.exercises.length - 3 !== 1 ? 's' : ''}
+            <div className="text-muted-foreground text-sm">
+              +{routine.exercises.length - 3} more exercise
+              {routine.exercises.length - 3 !== 1 ? "s" : ""}
             </div>
           )}
         </div>
-        <Button 
+        <Button
           onClick={() => onStartWorkout(routine)}
-          className="w-full mt-2"
+          className="mt-2 w-full"
           size="sm"
         >
           Start Workout
@@ -54,5 +68,3 @@ export const RoutineQuickStartCard: React.FC<RoutineQuickStartCardProps> = ({
     </Card>
   );
 };
-
-

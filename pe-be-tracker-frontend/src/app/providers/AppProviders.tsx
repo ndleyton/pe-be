@@ -1,10 +1,10 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { ErrorBoundary } from 'react-error-boundary';
-import { PostHogProvider, usePostHog } from 'posthog-js/react';
-import { config } from '@/app/config/env';
-import { StoreInitializer } from '@/stores';
+import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { ErrorBoundary } from "react-error-boundary";
+import { PostHogProvider, usePostHog } from "posthog-js/react";
+import { config } from "@/app/config/env";
+import { StoreInitializer } from "@/stores";
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -21,13 +21,15 @@ const queryClient = new QueryClient({
 });
 
 const SimpleErrorFallback = () => (
-  <div className="min-h-screen flex items-center justify-center p-4">
-    <div className="max-w-md w-full text-center">
-      <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-      <p className="text-muted-foreground mb-4">Please try refreshing the page</p>
+  <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="w-full max-w-md text-center">
+      <h2 className="mb-2 text-xl font-semibold">Something went wrong</h2>
+      <p className="text-muted-foreground mb-4">
+        Please try refreshing the page
+      </p>
       <button
         onClick={() => window.location.reload()}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2"
       >
         Reload Page
       </button>
@@ -36,13 +38,15 @@ const SimpleErrorFallback = () => (
 );
 
 // Error boundary that sends errors to PostHog
-const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const posthog = usePostHog();
 
   const handleError = (error: Error) => {
-    console.error('App Error:', error);
+    console.error("App Error:", error);
     posthog?.captureException(error, {
-      source: 'react-error-boundary',
+      source: "react-error-boundary",
       timestamp: new Date().toISOString(),
     });
   };
@@ -57,9 +61,12 @@ const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProviders: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
-  const isPostHogConfigured = !config.isTest && config.posthogApiKey && config.posthogHost;
+  const isPostHogConfigured =
+    !config.isTest && config.posthogApiKey && config.posthogHost;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -73,24 +80,22 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
           }}
         >
           <PostHogErrorBoundary>
-            <StoreInitializer>
-              {children}
-            </StoreInitializer>
+            <StoreInitializer>{children}</StoreInitializer>
           </PostHogErrorBoundary>
         </PostHogProvider>
       ) : (
         <ErrorBoundary
           FallbackComponent={SimpleErrorFallback}
           onError={(error) => {
-            console.error('App Error:', error);
+            console.error("App Error:", error);
           }}
         >
-          <StoreInitializer>
-            {children}
-          </StoreInitializer>
+          <StoreInitializer>{children}</StoreInitializer>
         </ErrorBoundary>
       )}
-      {config.isDevelopment && !config.isTest && <ReactQueryDevtools initialIsOpen={false} />}
+      {config.isDevelopment && !config.isTest && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
     </QueryClientProvider>
   );
 };

@@ -24,10 +24,10 @@ def upgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
     columns = [col['name'] for col in inspector.get_columns('exercises')]
-    
+
     if 'deleted_at' not in columns:
         op.add_column('exercises', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
-    
+
     # Add index on deleted_at column for better query performance
     op.execute("CREATE INDEX IF NOT EXISTS idx_exercises_deleted_at ON exercises (deleted_at)")
 
@@ -36,11 +36,11 @@ def downgrade() -> None:
     """Downgrade schema."""
     # Drop index first (idempotently)
     op.execute("DROP INDEX IF EXISTS idx_exercises_deleted_at")
-    
+
     # Drop deleted_at column idempotently
     connection = op.get_bind()
     inspector = sa.inspect(connection)
     columns = [col['name'] for col in inspector.get_columns('exercises')]
-    
+
     if 'deleted_at' in columns:
         op.drop_column('exercises', 'deleted_at')

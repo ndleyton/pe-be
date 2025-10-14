@@ -1,7 +1,7 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getIntensityUnits, IntensityUnit } from '@/features/exercises/api';
-import { useGuestStore, useAuthStore } from '@/stores';
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
+import { useGuestStore, useAuthStore } from "@/stores";
 
 // Guest intensity unit type (simplified)
 interface GuestIntensityUnit {
@@ -16,23 +16,33 @@ interface IntensityUnitModalProps {
   onSelect: (unit: IntensityUnit | GuestIntensityUnit) => void;
 }
 
-const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose, onSelect }) => {
+const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({
+  isOpen,
+  onClose,
+  onSelect,
+}) => {
   // Get state from stores
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated); 
-  const { data: serverIntensityUnits = [], isLoading, error } = useQuery({
-    queryKey: ['intensityUnits'],
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const {
+    data: serverIntensityUnits = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["intensityUnits"],
     queryFn: getIntensityUnits,
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
   // For guest mode, use hardcoded intensity units
   const guestIntensityUnits: GuestIntensityUnit[] = [
-    { id: 1, name: 'Bodyweight', abbreviation: 'bw' },
-    { id: 2, name: 'Kilograms', abbreviation: 'kg' },
-    { id: 3, name: 'Pounds', abbreviation: 'lbs' },
+    { id: 1, name: "Bodyweight", abbreviation: "bw" },
+    { id: 2, name: "Kilograms", abbreviation: "kg" },
+    { id: 3, name: "Pounds", abbreviation: "lbs" },
   ];
 
-  const intensityUnits = isAuthenticated ? serverIntensityUnits : guestIntensityUnits;
+  const intensityUnits = isAuthenticated
+    ? serverIntensityUnits
+    : guestIntensityUnits;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -44,14 +54,16 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={handleBackdropClick}
       data-testid="intensity-unit-modal"
     >
-      <div className="bg-background rounded-lg p-6 max-w-md w-full max-h-96 overflow-hidden flex flex-col">
+      <div className="bg-background flex max-h-96 w-full max-w-md flex-col overflow-hidden rounded-lg p-6">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Select Unit:</h3>
+          <h3 className="text-foreground text-lg font-semibold">
+            Select Unit:
+          </h3>
         </div>
 
         {/* Content */}
@@ -59,22 +71,27 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
           {isAuthenticated && isLoading && (
             <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="h-10 bg-muted rounded-lg animate-pulse" />
+                <div
+                  key={idx}
+                  className="bg-muted h-10 animate-pulse rounded-lg"
+                />
               ))}
             </div>
           )}
 
           {isAuthenticated && error && (
-            <p className="text-center text-destructive">Failed to load intensity units.</p>
+            <p className="text-destructive text-center">
+              Failed to load intensity units.
+            </p>
           )}
 
-          {((!isAuthenticated) || (!isLoading && !error)) && (
+          {(!isAuthenticated || (!isLoading && !error)) && (
             <div className="grid grid-cols-2 gap-2">
               {intensityUnits.map((unit) => (
                 <button
                   key={unit.id}
                   onClick={() => onSelect(unit)}
-                  className="w-full text-left px-4 py-2 rounded bg-muted hover:bg-accent text-muted-foreground"
+                  className="bg-muted hover:bg-accent text-muted-foreground w-full rounded px-4 py-2 text-left"
                   aria-label={`Select ${unit.name} (${unit.abbreviation})`}
                 >
                   {unit.abbreviation} - {unit.name}
@@ -88,4 +105,4 @@ const IntensityUnitModal: React.FC<IntensityUnitModalProps> = ({ isOpen, onClose
   );
 };
 
-export default IntensityUnitModal; 
+export default IntensityUnitModal;

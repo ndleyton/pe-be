@@ -1,18 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Exercise Type Carousel Aspect Ratio', () => {
-  test('uses first image intrinsic aspect ratio for container', async ({ page }) => {
+test.describe("Exercise Type Carousel Aspect Ratio", () => {
+  test("uses first image intrinsic aspect ratio for container", async ({
+    page,
+  }) => {
     // Use a deterministic exercise type id for routing
-    const id = '12345';
+    const id = "12345";
 
     // Stub exercise type details with a known non-square first image (300x200 => 3:2)
     await page.route(`**/exercises/exercise-types/${id}`, async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
           id,
-          name: 'E2E Aspect Exercise',
+          name: "E2E Aspect Exercise",
           description: null,
           muscle_groups: [],
           equipment: null,
@@ -23,29 +25,29 @@ test.describe('Exercise Type Carousel Aspect Ratio', () => {
           usage_count: 0,
           times_used: 0,
           default_intensity_unit: 1,
-          images: [
-            '/assets/test-300x200.svg',
-            '/assets/icon-192.png',
-          ],
+          images: ["/assets/test-300x200.svg", "/assets/icon-192.png"],
           muscles: [],
         }),
       });
     });
 
     // Stub stats endpoint
-    await page.route(`**/exercises/exercise-types/${id}/stats`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          progressiveOverload: [],
-          lastWorkout: null,
-          personalBest: null,
-          totalSets: 0,
-          intensityUnit: { id: 1, name: 'Kilograms', abbreviation: 'kg' },
-        }),
-      });
-    });
+    await page.route(
+      `**/exercises/exercise-types/${id}/stats`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            progressiveOverload: [],
+            lastWorkout: null,
+            personalBest: null,
+            totalSets: 0,
+            intensityUnit: { id: 1, name: "Kilograms", abbreviation: "kg" },
+          }),
+        });
+      },
+    );
 
     // Give a roomy viewport to avoid very small rounding errors
     await page.setViewportSize({ width: 1200, height: 900 });
@@ -53,13 +55,15 @@ test.describe('Exercise Type Carousel Aspect Ratio', () => {
     // Navigate directly to the details page
     await page.goto(`/exercise-types/${id}`);
 
-    const container = page.getByTestId('exercise-carousel-container');
+    const container = page.getByTestId("exercise-carousel-container");
     await expect(container).toBeVisible();
 
     // Wait until the first image has loaded and spinner is gone
-    await expect(container.locator('.loading')).toHaveCount(0, { timeout: 15000 });
+    await expect(container.locator(".loading")).toHaveCount(0, {
+      timeout: 15000,
+    });
     // The carousel renders multiple <img> nodes; assert the first is visible
-    await expect(container.locator('img').first()).toBeVisible();
+    await expect(container.locator("img").first()).toBeVisible();
 
     // Measure the rendered box and verify it approximates a 3:2 ratio
     const box = await container.boundingBox();

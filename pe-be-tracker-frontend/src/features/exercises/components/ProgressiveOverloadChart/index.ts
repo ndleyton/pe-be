@@ -1,1 +1,1 @@
-export { ProgressiveOverloadChart } from './ProgressiveOverloadChart';
+export { ProgressiveOverloadChart } from "./ProgressiveOverloadChart";

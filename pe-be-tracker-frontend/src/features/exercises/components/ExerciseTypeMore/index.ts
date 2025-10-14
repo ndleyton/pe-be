@@ -1,1 +1,1 @@
-export { default as ExerciseTypeMore } from './ExerciseTypeMore';
+export { default as ExerciseTypeMore } from "./ExerciseTypeMore";

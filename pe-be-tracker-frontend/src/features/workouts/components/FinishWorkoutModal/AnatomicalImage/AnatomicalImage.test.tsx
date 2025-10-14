@@ -1,21 +1,25 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import AnatomicalImage from './AnatomicalImage';
-import { vi } from 'vitest';
+import { render, screen, waitFor } from "@testing-library/react";
+import AnatomicalImage from "./AnatomicalImage";
+import { vi } from "vitest";
 
 // Mock the anatomical mapping utilities
-vi.mock('@/utils/anatomicalMapping', () => ({
+vi.mock("@/utils/anatomicalMapping", () => ({
   MUSCLE_GROUP_MAPPING: {
-    'Chest': ['anterior-left-pectoralis', 'anterior-right-pectoralis'],
-    'Shoulders': ['anterior-left-deltoid', 'anterior-right-deltoid'],
+    Chest: ["anterior-left-pectoralis", "anterior-right-pectoralis"],
+    Shoulders: ["anterior-left-deltoid", "anterior-right-deltoid"],
   },
-  getMuscleGroupColor: vi.fn((intensity: number) => `rgb(${Math.round(intensity * 255)}, 200, 100)`),
-  DEFAULT_MUSCLE_COLOR: '#f0f0f0',
+  getMuscleGroupColor: vi.fn(
+    (intensity: number) => `rgb(${Math.round(intensity * 255)}, 200, 100)`,
+  ),
+  DEFAULT_MUSCLE_COLOR: "#f0f0f0",
 }));
 
 // Mock the fetch API
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    text: () => Promise.resolve(`
+global.fetch = vi.fn(
+  () =>
+    Promise.resolve({
+      text: () =>
+        Promise.resolve(`
       <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
         <rect id="anterior-left-pectoralis" />
         <rect id="anterior-right-pectoralis" />
@@ -23,31 +27,29 @@ global.fetch = vi.fn(() =>
         <rect id="anterior-right-deltoid" />
       </svg>
     `),
-  }) as Promise<Response>
+    }) as Promise<Response>,
 );
 
-describe('AnatomicalImage', () => {
-  it('renders loading state initially', () => {
+describe("AnatomicalImage", () => {
+  it("renders loading state initially", () => {
     render(<AnatomicalImage muscleGroupSummary={[]} />);
-    expect(screen.getByText('Loading anatomical image...')).toBeInTheDocument();
+    expect(screen.getByText("Loading anatomical image...")).toBeInTheDocument();
   });
 
-  it('renders SVG content after fetching', async () => {
+  it("renders SVG content after fetching", async () => {
     render(<AnatomicalImage muscleGroupSummary={[]} />);
     await waitFor(() => {
-      const container = document.querySelector('.anatomical-image-container');
+      const container = document.querySelector(".anatomical-image-container");
       expect(container).toBeInTheDocument();
     });
   });
 
-  it('colors muscle groups based on summary', async () => {
-    const muscleGroupSummary = [
-      { name: 'Chest', setCount: 10 },
-    ];
+  it("colors muscle groups based on summary", async () => {
+    const muscleGroupSummary = [{ name: "Chest", setCount: 10 }];
     render(<AnatomicalImage muscleGroupSummary={muscleGroupSummary} />);
 
     await waitFor(() => {
-      const container = document.querySelector('.anatomical-image-container');
+      const container = document.querySelector(".anatomical-image-container");
       // Check that SVG container is rendered (the specific color testing is complex due to DOM parsing)
       expect(container).toBeInTheDocument();
     });

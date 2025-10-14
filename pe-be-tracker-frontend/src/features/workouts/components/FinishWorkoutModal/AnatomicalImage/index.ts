@@ -1,1 +1,1 @@
-export { default } from './AnatomicalImage';
+export { default } from "./AnatomicalImage";

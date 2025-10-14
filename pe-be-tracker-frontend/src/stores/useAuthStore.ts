@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import api from '@/shared/api/client';
+import { create } from "zustand";
+import api from "@/shared/api/client";
 
 interface User {
   id: number;
@@ -39,21 +39,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     refreshPromise = (async () => {
       const { setLoading } = get();
       setLoading(true);
-      
+
       try {
-        const { data } = await api.get<User>('/users/me');
-        set({ 
-          user: data, 
-          loading: false, 
+        const { data } = await api.get<User>("/users/me");
+        set({
+          user: data,
+          loading: false,
           isAuthenticated: true,
-          initialized: true 
+          initialized: true,
         });
       } catch {
-        set({ 
-          user: null, 
-          loading: false, 
+        set({
+          user: null,
+          loading: false,
           isAuthenticated: false,
-          initialized: true 
+          initialized: true,
         });
       } finally {
         refreshPromise = null;
@@ -65,24 +65,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   signOut: async () => {
     try {
-      await api.post('/auth/jwt/logout');
+      await api.post("/auth/jwt/logout");
     } catch {
       /* ignore */
     } finally {
-      set({ 
-        user: null, 
+      set({
+        user: null,
         isAuthenticated: false,
-        loading: false 
+        loading: false,
       });
-      window.location.href = '/';
+      window.location.href = "/";
     }
   },
 
   setUser: (user) => {
-    set({ 
-      user, 
+    set({
+      user,
       isAuthenticated: !!user,
-      initialized: true 
+      initialized: true,
     });
   },
 
@@ -99,7 +99,7 @@ export const initializeAuth = (): Promise<void> => {
   }
 
   const { initialized, refresh } = useAuthStore.getState();
-  
+
   if (initialized) {
     return Promise.resolve();
   }

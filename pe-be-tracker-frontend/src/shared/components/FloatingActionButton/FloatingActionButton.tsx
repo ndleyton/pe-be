@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from '@/shared/components/ui/button';
+import React from "react";
+import { Button } from "@/shared/components/ui/button";
 
 interface FloatingActionButtonProps {
   onClick: () => void;
@@ -13,21 +13,16 @@ interface FloatingActionButtonProps {
 const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   onClick,
   children,
-  className = '',
+  className = "",
   disabled = false,
-  dataTestId
+  dataTestId,
 }) => {
   return (
     <Button
       onClick={onClick}
       disabled={disabled}
       size="icon"
-      className={`
-        fixed bottom-20 md:bottom-6 right-6 z-50 h-12 w-12
-        shadow-lg hover:shadow-xl
-        transition-all duration-200
-        ${className}
-      `}
+      className={`fixed right-6 bottom-20 z-50 h-12 w-12 shadow-lg transition-all duration-200 hover:shadow-xl md:bottom-6 ${className} `}
       aria-label="Floating action button"
       data-testid={dataTestId}
     >

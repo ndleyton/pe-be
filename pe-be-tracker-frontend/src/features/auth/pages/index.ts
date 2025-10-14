@@ -1,1 +1,1 @@
-export { default as OAuthCallbackPage } from './OAuthCallbackPage';
+export { default as OAuthCallbackPage } from "./OAuthCallbackPage";

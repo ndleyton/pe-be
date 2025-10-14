@@ -27,6 +27,6 @@ except ImportError:
 if __name__ == "__main__":
     import asyncio
     from src.importers.exercise_importer import main
-    
+
     print("🚀 Starting exercise importer...")
     asyncio.run(main())

@@ -1,13 +1,13 @@
-import React from 'react';
+import React from "react";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import type { ProgressiveOverloadDataPoint } from '@/features/exercises/api';
+import type { ProgressiveOverloadDataPoint } from "@/features/exercises/api";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from '@/shared/components/ui/chart';
+} from "@/shared/components/ui/chart";
 
 interface ProgressiveOverloadChartProps {
   data: ProgressiveOverloadDataPoint[];
@@ -24,22 +24,26 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> = ({ data }) => {
+export const ProgressiveOverloadChart: React.FC<
+  ProgressiveOverloadChartProps
+> = ({ data }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-muted-foreground py-8 text-center">
         <p>No workout data available yet.</p>
       </div>
     );
   }
 
-  const [activeMetric, setActiveMetric] = React.useState<'maxWeight' | 'totalVolume'>('maxWeight');
+  const [activeMetric, setActiveMetric] = React.useState<
+    "maxWeight" | "totalVolume"
+  >("maxWeight");
 
   // Transform data for the chart
   const chartData = data.map((point) => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    date: new Date(point.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
     }),
     maxWeight: point.maxWeight,
     totalVolume: point.totalVolume,
@@ -49,42 +53,48 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
   const latestWeight = data[data.length - 1]?.maxWeight || 0;
   const previousWeight = data[data.length - 2]?.maxWeight || latestWeight;
   const weightTrend = latestWeight > previousWeight;
-  const weightChange = latestWeight > 0 && previousWeight > 0 
-    ? Math.abs(((latestWeight - previousWeight) / previousWeight) * 100).toFixed(1)
-    : '0';
+  const weightChange =
+    latestWeight > 0 && previousWeight > 0
+      ? Math.abs(
+          ((latestWeight - previousWeight) / previousWeight) * 100,
+        ).toFixed(1)
+      : "0";
 
   const latestVolume = data[data.length - 1]?.totalVolume || 0;
   const previousVolume = data[data.length - 2]?.totalVolume || latestVolume;
   const volumeTrend = latestVolume > previousVolume;
-  const volumeChange = latestVolume > 0 && previousVolume > 0
-    ? Math.abs(((latestVolume - previousVolume) / previousVolume) * 100).toFixed(1)
-    : '0';
+  const volumeChange =
+    latestVolume > 0 && previousVolume > 0
+      ? Math.abs(
+          ((latestVolume - previousVolume) / previousVolume) * 100,
+        ).toFixed(1)
+      : "0";
 
   return (
     <div className="space-y-4">
       {/* Tabs / Segmented control */}
       <div className="flex w-full items-center justify-center">
-        <div className="inline-flex items-center gap-1 rounded-lg border bg-muted p-1">
+        <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
           <button
             type="button"
-            onClick={() => setActiveMetric('maxWeight')}
-            aria-pressed={activeMetric === 'maxWeight'}
-            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              activeMetric === 'maxWeight'
-                ? 'bg-background text-foreground shadow'
-                : 'text-muted-foreground hover:text-foreground'
+            onClick={() => setActiveMetric("maxWeight")}
+            aria-pressed={activeMetric === "maxWeight"}
+            className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              activeMetric === "maxWeight"
+                ? "bg-background text-foreground shadow"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Max Weight
           </button>
           <button
             type="button"
-            onClick={() => setActiveMetric('totalVolume')}
-            aria-pressed={activeMetric === 'totalVolume'}
-            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              activeMetric === 'totalVolume'
-                ? 'bg-background text-foreground shadow'
-                : 'text-muted-foreground hover:text-foreground'
+            onClick={() => setActiveMetric("totalVolume")}
+            aria-pressed={activeMetric === "totalVolume"}
+            className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              activeMetric === "totalVolume"
+                ? "bg-background text-foreground shadow"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Total Volume
@@ -94,47 +104,47 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
 
       <div className="mt-4">
         <ChartContainer config={chartConfig}>
-        <AreaChart
-          accessibilityLayer
-          data={chartData}
-          margin={{
-            top: 10,
-            left: -20,
-            right: 12,
-          }}
-        >
-          <CartesianGrid vertical={false} />
-          <XAxis
-            dataKey="date"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            tickCount={3}
-          />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-          {activeMetric === 'maxWeight' ? (
-            <Area
-              dataKey="maxWeight"
-              type="natural"
-              fill="var(--color-maxWeight)"
-              fillOpacity={0.4}
-              stroke="var(--color-maxWeight)"
+          <AreaChart
+            accessibilityLayer
+            data={chartData}
+            margin={{
+              top: 10,
+              left: -20,
+              right: 12,
+            }}
+          >
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
             />
-          ) : (
-            <Area
-              dataKey="totalVolume"
-              type="natural"
-              fill="var(--color-totalVolume)"
-              fillOpacity={0.4}
-              stroke="var(--color-totalVolume)"
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickCount={3}
             />
-          )}
-        </AreaChart>
+            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            {activeMetric === "maxWeight" ? (
+              <Area
+                dataKey="maxWeight"
+                type="natural"
+                fill="var(--color-maxWeight)"
+                fillOpacity={0.4}
+                stroke="var(--color-maxWeight)"
+              />
+            ) : (
+              <Area
+                dataKey="totalVolume"
+                type="natural"
+                fill="var(--color-totalVolume)"
+                fillOpacity={0.4}
+                stroke="var(--color-totalVolume)"
+              />
+            )}
+          </AreaChart>
         </ChartContainer>
       </div>
 
@@ -142,16 +152,22 @@ export const ProgressiveOverloadChart: React.FC<ProgressiveOverloadChartProps> =
       <div className="flex w-full items-start gap-2 text-sm">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 leading-none font-medium">
-            {activeMetric === 'maxWeight'
-              ? (weightTrend ? 'Trending up' : 'Steady progress')
-              : (volumeTrend ? 'Trending up' : 'Steady progress')}{' '}
-            by {activeMetric === 'maxWeight' ? weightChange : volumeChange}% this session{' '}
-            <TrendingUp className="h-4 w-4" />
+            {activeMetric === "maxWeight"
+              ? weightTrend
+                ? "Trending up"
+                : "Steady progress"
+              : volumeTrend
+                ? "Trending up"
+                : "Steady progress"}{" "}
+            by {activeMetric === "maxWeight" ? weightChange : volumeChange}%
+            this session <TrendingUp className="h-4 w-4" />
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
-            {activeMetric === 'maxWeight'
-              ? <>Latest: {latestWeight}kg max weight</>
-              : <>Latest: {latestVolume}kg total volume</>}
+            {activeMetric === "maxWeight" ? (
+              <>Latest: {latestWeight}kg max weight</>
+            ) : (
+              <>Latest: {latestVolume}kg total volume</>
+            )}
           </div>
         </div>
       </div>

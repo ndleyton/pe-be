@@ -1,7 +1,11 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useNavigationStore } from '@/stores/useNavigationStore';
-import { NAV_KEYS, NAV_PATHS, type NavKey } from '@/shared/navigation/constants';
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useNavigationStore } from "@/stores/useNavigationStore";
+import {
+  NAV_KEYS,
+  NAV_PATHS,
+  type NavKey,
+} from "@/shared/navigation/constants";
 
 export const useNavigation = (navKey: NavKey, defaultPath: string) => {
   const location = useLocation();

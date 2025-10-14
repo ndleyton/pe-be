@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { config } from '@/app/config/env';
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import { config } from "@/app/config/env";
 
 // Centralized Axios configuration leveraging Vite environment variables.
 // NOTE: Only variables prefixed with `VITE_` are exposed to the browser bundle.
@@ -7,7 +7,7 @@ const apiConfig: AxiosRequestConfig = {
   baseURL: config.apiBaseUrl,
   timeout: config.apiTimeout,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   // Automatically send/receive cookies (needed for FastAPI session auth)
   withCredentials: true,
@@ -40,26 +40,26 @@ apiClient.interceptors.response.use(
   (error) => {
     // The browser will handle cookie expiration/invalidation.
     // Let components handle guest mode rather than forcing redirects.
-    
+
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
-      console.error('[API ERROR]', error);
-      
+      console.error("[API ERROR]", error);
+
       // Log detailed error information to help with debugging
       if (error.response) {
         // eslint-disable-next-line no-console
-        console.error('[API ERROR] Response data:', error.response.data);
+        console.error("[API ERROR] Response data:", error.response.data);
         // eslint-disable-next-line no-console
-        console.error('[API ERROR] Response status:', error.response.status);
+        console.error("[API ERROR] Response status:", error.response.status);
       } else if (error.request) {
         // eslint-disable-next-line no-console
-        console.error('[API ERROR] No response received:', error.request);
+        console.error("[API ERROR] No response received:", error.request);
       } else {
         // eslint-disable-next-line no-console
-        console.error('[API ERROR] Request setup error:', error.message);
+        console.error("[API ERROR] Request setup error:", error.message);
       }
     }
-    
+
     return Promise.reject(error);
   },
 );

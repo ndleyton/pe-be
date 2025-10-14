@@ -12,4 +12,4 @@ export interface Muscle {
   muscle_group: MuscleGroup;
   created_at: string;
   updated_at: string;
-} 
+}

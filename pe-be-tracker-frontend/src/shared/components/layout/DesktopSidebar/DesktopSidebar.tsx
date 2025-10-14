@@ -1,11 +1,11 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { useAuthStore } from '@/stores';
-import { navItems, NavItem } from '@/shared/navigation/navItems';
-import { Button } from '@/shared/components/ui/button';
-import HomeLogo from '../HomeLogo';
-import { useGoogleSignIn } from '@/features/auth/hooks';
-import { useNavigation } from '@/shared/hooks/useNavigation';
+import React from "react";
+import { NavLink } from "react-router-dom";
+import { useAuthStore } from "@/stores";
+import { navItems, NavItem } from "@/shared/navigation/navItems";
+import { Button } from "@/shared/components/ui/button";
+import HomeLogo from "../HomeLogo";
+import { useGoogleSignIn } from "@/features/auth/hooks";
+import { useNavigation } from "@/shared/hooks/useNavigation";
 
 const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
   const lastVisited = useNavigation(item.key, item.to);
@@ -15,37 +15,40 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
     <NavLink
       to={lastVisited}
       className={({ isActive }) =>
-        `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
+        `flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200 ${
           isActive
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         }`
       }
     >
-      <IconComponent className="w-5 h-5 mr-3" />
+      <IconComponent className="mr-3 h-5 w-5" />
       {item.label}
     </NavLink>
   );
 };
 
 const DesktopSidebar: React.FC = () => {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const initialized = useAuthStore(state => state.initialized);
-  const signOut = useAuthStore(state => state.signOut);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const initialized = useAuthStore((state) => state.initialized);
+  const signOut = useAuthStore((state) => state.signOut);
   const googleSignIn = useGoogleSignIn();
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 lg:bg-background lg:border-r">
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex items-center h-16 px-6 border-b">
+    <aside className="lg:bg-background hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:border-r">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-16 items-center border-b px-6">
           <HomeLogo />
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-2" aria-label="Sidebar navigation">
+        <nav
+          className="flex-1 space-y-2 px-4 py-6"
+          aria-label="Sidebar navigation"
+        >
           {navItems.map((item) => (
             <NavItemLink key={item.key} item={item} />
           ))}
         </nav>
-        <div className="p-4 border-t">
+        <div className="border-t p-4">
           {isAuthenticated ? (
             <div className="space-y-2">
               <NavLink to="/about" className="w-full">
@@ -72,4 +75,4 @@ const DesktopSidebar: React.FC = () => {
   );
 };
 
-export default DesktopSidebar; 
+export default DesktopSidebar;
