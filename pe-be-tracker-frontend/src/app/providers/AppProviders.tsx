@@ -1,9 +1,10 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { PostHogProvider } from 'posthog-js/react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { PostHogProvider, usePostHog } from 'posthog-js/react';
 import { config } from '@/app/config/env';
+import { StoreInitializer } from '@/stores';
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -34,6 +35,28 @@ const SimpleErrorFallback = () => (
   </div>
 );
 
+// Error boundary that sends errors to PostHog
+const PostHogErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const posthog = usePostHog();
+
+  const handleError = (error: Error) => {
+    console.error('App Error:', error);
+    posthog?.captureException(error, {
+      source: 'react-error-boundary',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  return (
+    <ErrorBoundary
+      FallbackComponent={SimpleErrorFallback}
+      onError={handleError}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+};
+
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
   const isPostHogConfigured = !config.isTest && config.posthogApiKey && config.posthogHost;
@@ -45,18 +68,15 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
           apiKey={config.posthogApiKey}
           options={{
             api_host: config.posthogHost,
-            capture_exceptions: true, // Enable automatic exception capture
+            capture_exceptions: true, // Enable automatic exception capture for unhandled errors
             debug: config.isDevelopment,
           }}
         >
-          <ErrorBoundary
-            FallbackComponent={SimpleErrorFallback}
-            onError={(error) => {
-              console.error('App Error:', error);
-            }}
-          >
-            {children}
-          </ErrorBoundary>
+          <PostHogErrorBoundary>
+            <StoreInitializer>
+              {children}
+            </StoreInitializer>
+          </PostHogErrorBoundary>
         </PostHogProvider>
       ) : (
         <ErrorBoundary
@@ -65,7 +85,9 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('App Error:', error);
           }}
         >
-          {children}
+          <StoreInitializer>
+            {children}
+          </StoreInitializer>
         </ErrorBoundary>
       )}
       {config.isDevelopment && !config.isTest && <ReactQueryDevtools initialIsOpen={false} />}
