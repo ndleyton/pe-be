@@ -111,3 +111,6 @@ temp/
 *.CLAUDE.md
 
 .gemini/
+
+# Pre-commit
+.pre-commit-config.yaml

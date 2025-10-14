@@ -14,6 +14,7 @@ from src.exercises.models import (
     ExerciseMuscle,
 )
 from src.exercise_sets.models import ExerciseSet
+from src.workouts.models import Workout
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
@@ -430,26 +431,44 @@ async def soft_delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
     if not exercise:
         return False
 
+    now = datetime.now(timezone.utc)
+
+    # Soft delete the exercise
+    exercise.deleted_at = now
+
+    # Also soft delete all associated exercise sets that haven't been deleted yet
+    await session.execute(
+        update(ExerciseSet)
+        .where(
+            ExerciseSet.exercise_id == exercise_id,
+            ExerciseSet.deleted_at.is_(None),
+        )
+        .values(deleted_at=now)
+    )
+
     try:
-        async with session.begin():
-            now = datetime.now(timezone.utc)
-
-            # Soft delete the exercise
-            exercise.deleted_at = now
-
-            # Also soft delete all associated exercise sets that haven't been deleted yet
-            await session.execute(
-                update(ExerciseSet)
-                .where(
-                    ExerciseSet.exercise_id == exercise_id,
-                    ExerciseSet.deleted_at.is_(None),
-                )
-                .values(deleted_at=now)
-            )
-
-        return True
+        await session.commit()
     except Exception:
+        await session.rollback()
         raise
+
+    return True
+
+
+async def get_exercise_owner_id(
+    session: AsyncSession, exercise_id: int
+) -> Optional[int]:
+    """Return the owner_id for the exercise's workout, or None if not found.
+
+    This performs a lightweight join without loading full ORM graphs.
+    """
+    result = await session.execute(
+        select(Workout.owner_id)
+        .select_from(Exercise)
+        .join(Workout, Exercise.workout_id == Workout.id)
+        .where(Exercise.id == exercise_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def verify_exercise_ownership(

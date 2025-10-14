@@ -11,10 +11,8 @@ test.describe('Intensity Input', () => {
   });
 
   test('allows entering decimal intensity values without losing formatting', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/workouts');
     await page.waitForLoadState('networkidle');
-
-    await page.getByRole('button', { name: 'Try as Guest' }).click();
     await expect(page).toHaveURL('/workouts');
 
     const createWorkoutFab = page.getByTestId('fab-add-workout');

@@ -1,6 +1,7 @@
 from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from datetime import datetime, timezone, date
@@ -10,7 +11,6 @@ from src.workouts.crud import (
     get_workout_by_id,
     create_workout,
     update_workout,
-    delete_workout,
     get_workout_types,
     create_workout_type,
     get_user_workouts,
@@ -85,9 +85,21 @@ class WorkoutService:
     async def remove_workout(
         session: AsyncSession, workout_id: int, user_id: int
     ) -> bool:
-        """Remove a workout with business logic validation"""
-        # Add any business logic here (e.g., cascade deletion, authorization)
-        return await delete_workout(session, workout_id, user_id)
+        """Remove a workout idempotently (204 semantics at router).
+
+        Performs a conditional DELETE filtered by owner to avoid leaking
+        existence and to make retries safe. Returns True regardless of
+        prior state.
+        """
+        await session.execute(
+            delete(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
+        )
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        return True
 
     @staticmethod
     async def add_exercise_to_current_workout(
@@ -527,7 +539,7 @@ Given a workout description, extract:
 1. A suitable workout name (if not provided, generate one based on the exercises)
 2. Workout type: must be one of these IDs:
    - 1: Low Intensity Cardio
-   - 2: HIIT  
+   - 2: HIIT
    - 3: Sports
    - 4: Strength Training
    - 5: Mobility
@@ -548,7 +560,7 @@ Return ONLY valid JSON in this exact format:
   "exercises": [
     {
       "exercise_type_name": "string",
-      "notes": "string or null", 
+      "notes": "string or null",
       "sets": [
         {
           "reps": number or null,

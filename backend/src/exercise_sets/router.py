@@ -62,8 +62,5 @@ async def delete_exercise_set(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Soft delete an exercise set (sets deleted_at timestamp)"""
-    success = await ExerciseSetService.remove_exercise_set(
-        session, exercise_set_id, user.id
-    )
-    if not success:
-        raise HTTPException(status_code=404, detail="Exercise set not found")
+    # Idempotent delete: 204 for missing or already-deleted; 403 for not-owned
+    await ExerciseSetService.remove_exercise_set(session, exercise_set_id, user.id)

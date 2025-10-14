@@ -89,6 +89,5 @@ async def delete_recipe(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Delete a routine"""
-    success = await recipe_service.delete_recipe(session, recipe_id, user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Routine not found")
+    # Idempotent delete: 204 whether missing or not owned
+    await recipe_service.delete_recipe(session, recipe_id, user.id)
