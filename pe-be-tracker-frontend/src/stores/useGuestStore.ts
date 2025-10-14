@@ -112,6 +112,8 @@ export interface GuestRecipe {
   name: string;
   description?: string;
   exercises: GuestRecipeExercise[];
+  visibility?: "private" | "public" | "link_only";
+  is_readonly?: boolean;
   created_at: string;
   updated_at: string;
 }

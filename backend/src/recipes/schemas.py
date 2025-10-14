@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import ConfigDict, BaseModel, Field
+from enum import Enum
 
 
 class ExerciseTypeRead(BaseModel):
@@ -89,6 +90,8 @@ class RecipeRead(RecipeBase):
 
     id: int
     creator_id: int
+    visibility: "RecipeVisibility"
+    is_readonly: bool
     created_at: datetime
     updated_at: datetime
     exercise_templates: List[ExerciseTemplateRead] = []
@@ -101,3 +104,9 @@ class RecipeUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     workout_type_id: Optional[int] = None
+
+
+class RecipeVisibility(str, Enum):
+    PRIVATE = "private"
+    PUBLIC = "public"
+    LINK_ONLY = "link_only"
