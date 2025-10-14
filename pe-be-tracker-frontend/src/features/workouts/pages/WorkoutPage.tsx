@@ -33,21 +33,21 @@ const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  
+
   // Get state from stores
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const authLoading = useAuthStore(state => state.loading);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
-  
+
   // Get workout timer state and actions from UI store
   const startTime = useUIStore(state => state.workoutTimer.startTime);
   const startWorkoutTimer = useUIStore(state => state.startWorkoutTimer);
   const stopWorkoutTimer = useUIStore(state => state.stopWorkoutTimer);
-  
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
-  
+
   const recipe = location.state?.recipe as GuestRecipe | undefined;
 
   // Fetch workout details (only when authenticated)
@@ -56,6 +56,44 @@ const WorkoutPage: React.FC = () => {
     queryFn: () => fetchWorkout(workoutId as string),
     enabled: !!workoutId && isAuthenticated,
   });
+
+  const deleteExerciseMutation = useMutation({
+    // Network call is executed by ExerciseRow. This mutation
+    // only updates cache optimistically and handles invalidation.
+    mutationFn: async (_exerciseId: number | string) => {
+      return;
+    },
+    onMutate: async (exerciseId) => {
+      await queryClient.cancelQueries({ queryKey: ['exercises', workoutId] });
+      const prev = queryClient.getQueryData<Exercise[]>(['exercises', workoutId]);
+      // Optimistically remove from list
+      queryClient.setQueryData(['exercises', workoutId], (old: Exercise[] | undefined) => {
+        if (!old) return old;
+        return old.filter((e) => String(e.id) !== String(exerciseId));
+      });
+      return { prev };
+    },
+    onError: (_err, _exerciseId, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(['exercises', workoutId], ctx.prev);
+      }
+    },
+    onSettled: (_data, _err, exerciseId) => {
+      queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
+      // Clean up potential detail caches (if any exist)
+      queryClient.removeQueries({ queryKey: ['exercise', exerciseId], exact: true });
+      queryClient.removeQueries({ queryKey: ['exerciseSets', 'byExercise', exerciseId] });
+    },
+  });
+
+  const handleExerciseDelete = (exerciseId: number | string) => {
+    if (isAuthenticated) {
+      deleteExerciseMutation.mutate(exerciseId);
+    } else {
+      // Guest deletion via store
+      guestActions.deleteExercise(String(exerciseId));
+    }
+  };
 
   // Fetch exercises for this workout (only when authenticated)
   const { data: serverExercises, isLoading: exercisesLoading, error: exercisesError } = useQuery({
@@ -201,7 +239,7 @@ const WorkoutPage: React.FC = () => {
       // For optimistic updates (like notes), just update the query data directly
       queryClient.setQueryData(['exercises', workoutId], (oldData: Exercise[] | undefined) => {
         if (!oldData) return oldData;
-        return oldData.map(exercise => 
+        return oldData.map(exercise =>
           exercise.id === updatedExercise.id ? updatedExercise : exercise
         );
       });
@@ -213,7 +251,7 @@ const WorkoutPage: React.FC = () => {
         id: String(set.id),
         exercise_id: String(set.exercise_id)
       }));
-      
+
       guestActions.updateExercise(String(updatedExercise.id), {
         exercise_sets: guestExerciseSets
       });
@@ -297,23 +335,24 @@ const WorkoutPage: React.FC = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <ExerciseList 
+        <ExerciseList
           exercises={exercises}
           status={listStatus}
           workoutId={workoutId}
           onExerciseUpdate={handleExerciseUpdate}
+          onExerciseDelete={handleExerciseDelete}
         />
         <div className="h-px w-full bg-primary mb-4 mt-4" role="separator" />
          <ExerciseForm workoutId={workoutId!} onExerciseCreated={handleExerciseCreated} />
       </div>
-      
+
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
         disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>
-      
+
       <FinishWorkoutModal
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
@@ -323,7 +362,7 @@ const WorkoutPage: React.FC = () => {
         onSaveRecipe={handleSaveRecipe}
         workoutName={workoutName || undefined}
       />
-      
+
       <SaveRoutineModal
         isOpen={showSaveRecipeModal}
         onClose={() => setShowSaveRecipeModal(false)}

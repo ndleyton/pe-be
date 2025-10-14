@@ -1,54 +1,65 @@
-import React, { Suspense } from 'react';
-import { type RouteObject } from 'react-router-dom';
+import React, { Suspense } from "react";
+import { type RouteObject, Navigate } from "react-router-dom";
 
-import { PageErrorBoundary } from '@/shared/components/error';
-import SimplePageWrapper from '@/shared/components/wrappers/SimplePageWrapper';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { DEFAULT_SKELETON_COUNT } from '@/shared/constants';
-import ExerciseTypesPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton';
-import ExerciseTypeDetailsPageSkeleton from '@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton';
-import ProfilePageSkeleton from '@/features/profile/components/skeletons/ProfilePageSkeleton';
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
+import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
+import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
+import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 
-import App from './App';
-import AppLayout from './layouts/AppLayout';
-import NotFoundPage from './pages/NotFoundPage';
+import AppLayout from "./layouts/AppLayout";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // These pages are not lazy loaded as they are core pages
-import { MyWorkoutsPage } from './features/workouts/pages';
-import { ChatPage } from './features/chat/pages';
+import { MyWorkoutsPage } from "./features/workouts/pages";
+import { ChatPage } from "./features/chat/pages";
 
 // Lazy load other components with error boundaries
 const WorkoutPage = React.lazy(() =>
-  import('./features/workouts/pages').then((m) => ({ default: m.WorkoutPage })),
+  import("./features/workouts/pages").then((m) => ({ default: m.WorkoutPage })),
 );
 const ExerciseTypesPage = React.lazy(() =>
-  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypesPage })),
+  import("./features/exercises/pages").then((m) => ({
+    default: m.ExerciseTypesPage,
+  })),
 );
 const ExerciseTypeDetailsPage = React.lazy(() =>
-  import('./features/exercises/pages').then((m) => ({ default: m.ExerciseTypeDetailsPage })),
+  import("./features/exercises/pages").then((m) => ({
+    default: m.ExerciseTypeDetailsPage,
+  })),
 );
-const RoutinesPage = React.lazy(() => import('./features/routines/pages/RoutinesPage'));
-const RoutineDetailsPage = React.lazy(() => import('./features/routines/pages/RoutineDetailsPage'));
+const RoutinesPage = React.lazy(
+  () => import("./features/routines/pages/RoutinesPage"),
+);
+const RoutineDetailsPage = React.lazy(
+  () => import("./features/routines/pages/RoutineDetailsPage"),
+);
 const ProfilePage = React.lazy(() =>
-  import('./features/profile/pages').then((m) => ({ default: m.ProfilePage })),
+  import("./features/profile/pages").then((m) => ({ default: m.ProfilePage })),
 );
 const AboutPage = React.lazy(() =>
-  import('./features/about/pages').then((m) => ({ default: m.AboutPage })),
+  import("./features/about/pages").then((m) => ({ default: m.AboutPage })),
 );
 const OAuthCallbackPage = React.lazy(() =>
-  import('./features/auth/pages').then((m) => ({ default: m.OAuthCallbackPage })),
+  import("./features/auth/pages").then((m) => ({
+    default: m.OAuthCallbackPage,
+  })),
 );
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[60vh]" aria-busy="true" aria-live="polite">
+  <div
+    className="flex min-h-[60vh] items-center justify-center"
+    aria-busy="true"
+    aria-live="polite"
+  >
     <div className="w-full max-w-4xl px-6">
       {/* Page title skeleton */}
-      <Skeleton className="h-8 w-48 mb-6 mx-auto" />
+      <Skeleton className="mx-auto mb-6 h-8 w-48" />
       {/* Content skeleton grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-          <div key={i} className="bg-card rounded-lg p-4 border border-border">
+          <div key={i} className="bg-card border-border rounded-lg border p-4">
             <div className="flex items-start gap-4">
               <Skeleton className="h-10 w-10 rounded" />
               <div className="flex-1 space-y-2">
@@ -62,56 +73,40 @@ const LoadingFallback = () => (
       </div>
       {/* Keep a spinner for SR and visual cue */}
       <div className="flex justify-center py-4" role="status">
-        <div className="loading loading-spinner loading-lg" aria-label="Loading"></div>
+        <div
+          className="loading loading-spinner loading-lg"
+          aria-label="Loading"
+        ></div>
       </div>
     </div>
   </div>
 );
 
-
-// Wrapper component for pages with error boundary and suspense
+// Wrapper component for pages with suspense
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<LoadingFallback />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+  <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
 );
 
 // Wrapper component for ExerciseTypesPage with custom fallback
-const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ExerciseTypesPageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
-);
+const ExerciseTypesPageWrapper: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => <Suspense fallback={<ExerciseTypesPageSkeleton />}>{children}</Suspense>;
 
 // Wrapper component for ExerciseTypeDetailsPage with custom fallback
-const ExerciseTypeDetailsPageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
+const ExerciseTypeDetailsPageWrapper: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => (
+  <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>{children}</Suspense>
 );
 
 // Wrapper component for ProfilePage with custom fallback
-const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PageErrorBoundary>
-    <Suspense fallback={<ProfilePageSkeleton />}>
-      {children}
-    </Suspense>
-  </PageErrorBoundary>
-);
+const ProfilePageWrapper: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => <Suspense fallback={<ProfilePageSkeleton />}>{children}</Suspense>;
 
 const routes: RouteObject[] = [
   {
-    path: '/',
-    element: <App />,
-  },
-  {
-    path: '/oauth/callback',
+    path: "/oauth/callback",
     element: (
       <PageWrapper>
         <OAuthCallbackPage />
@@ -122,19 +117,19 @@ const routes: RouteObject[] = [
     element: <AppLayout />,
     children: [
       {
-        path: 'workouts',
+        index: true,
+        element: <Navigate to="workouts" replace />,
+      },
+      {
+        path: "workouts",
         element: <MyWorkoutsPage />,
       },
       {
-        path: 'workouts/:workoutId',
-        element: (
-          <SimplePageWrapper>
-            <WorkoutPage />
-          </SimplePageWrapper>
-        ),
+        path: "workouts/:workoutId",
+        element: <WorkoutPage />,
       },
       {
-        path: 'exercise-types',
+        path: "exercise-types",
         element: (
           <ExerciseTypesPageWrapper>
             <ExerciseTypesPage />
@@ -142,7 +137,7 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'exercise-types/:exerciseTypeId',
+        path: "exercise-types/:exerciseTypeId",
         element: (
           <ExerciseTypeDetailsPageWrapper>
             <ExerciseTypeDetailsPage />
@@ -150,7 +145,7 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'routines',
+        path: "routines",
         element: (
           <PageWrapper>
             <RoutinesPage />
@@ -158,7 +153,7 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'routines/:routineId',
+        path: "routines/:routineId",
         element: (
           <PageWrapper>
             <RoutineDetailsPage />
@@ -166,15 +161,11 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'chat',
-        element: (
-          <SimplePageWrapper>
-            <ChatPage />
-          </SimplePageWrapper>
-        ),
+        path: "chat",
+        element: <ChatPage />,
       },
       {
-        path: 'profile',
+        path: "profile",
         element: (
           <ProfilePageWrapper>
             <ProfilePage />
@@ -182,23 +173,24 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'about',
+        path: "about",
         element: (
           <PageWrapper>
             <AboutPage />
           </PageWrapper>
         ),
-      }
-    ]
+      },
+    ],
   },
+  // catch-all route
   {
-    path: '*',
+    path: "*",
     element: (
       <PageWrapper>
         <NotFoundPage />
       </PageWrapper>
     ),
-  }
+  },
 ];
 
 export default routes;

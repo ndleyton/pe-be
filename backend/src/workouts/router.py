@@ -141,9 +141,8 @@ async def delete_workout(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Delete a workout"""
-    success = await WorkoutService.remove_workout(session, workout_id, user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Workout not found")
+    # Idempotent delete: 204 whether missing or already deleted for this user
+    await WorkoutService.remove_workout(session, workout_id, user.id)
 
 
 @router.get("/{workout_id}/exercises", response_model=List[ExerciseRead])

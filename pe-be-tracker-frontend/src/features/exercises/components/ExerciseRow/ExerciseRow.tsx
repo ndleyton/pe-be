@@ -54,7 +54,7 @@ const buildIntensityInputs = (sets: ExerciseSet[]): Record<string, string> => {
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, onExerciseDelete, workoutId }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const guestDeleteExercise = useGuestStore(state => state.deleteExercise);
-  
+
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(exercise.exercise_sets || []);
   const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>(() =>
     buildIntensityInputs(exercise.exercise_sets || [])
@@ -69,14 +69,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const [moreMenuModal, setMoreMenuModal] = useState<MoreMenuModalState | null>(null);
   // const [restTimer] = useState<RestTimer>({ minutes: 2, seconds: 30 });
   const [showExerciseModal, setShowExerciseModal] = useState(false);
-  
+
   // Default intensity unit
   const [currentIntensityUnit, setCurrentIntensityUnit] = useState<IntensityUnit | GuestIntensityUnit>({
     id: 1,
     name: 'Kilograms',
     abbreviation: 'kg'
   });
-  
+
   const updateExerciseNotes = (notes: string) => {
     if (onExerciseUpdate) {
       onExerciseUpdate({
@@ -147,14 +147,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         } else {
           updateData.reps = value;
         }
-        
+
         await updateExerciseSet(setId, updateData);
-        
+
         // Optionally invalidate queries to ensure consistency (but UI already updated)
         // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
       } catch (error) {
         console.error('Failed to update exercise set:', error);
-        
+
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
@@ -163,7 +163,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
+
         // TODO: Add toast notification when available
       }
     }
@@ -185,7 +185,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
     // Find the current set to get its completion status
     const currentSet = exerciseSets.find(set => String(set.id) === String(setId));
     if (!currentSet) return;
-    
+
     // Optimistic update: Update local state immediately
     const updatedSets = exerciseSets.map(set => {
       if (String(set.id) === String(setId)) {
@@ -197,7 +197,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       return set;
     });
     setExerciseSets(updatedSets);
-    
+
     // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
@@ -211,14 +211,14 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         const updateData: UpdateExerciseSetData = {
           done: !currentSet.done
         };
-        
+
         await updateExerciseSet(setId, updateData);
-        
+
         // Optionally invalidate queries to ensure consistency (but UI already updated)
         // queryClient.invalidateQueries({ queryKey: ['exercises', workoutId] });
       } catch (error) {
         console.error('Failed to toggle exercise set completion:', error);
-        
+
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
@@ -227,7 +227,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
+
         // TODO: Add toast notification when available
       }
     }
@@ -245,7 +245,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       return set;
     });
     setExerciseSets(updatedSets);
-    
+
     // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
@@ -259,7 +259,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         const updateData: UpdateExerciseSetData = {
           notes: notes
         };
-        
+
         await updateExerciseSet(setId, updateData);
       } catch (error) {
         console.error('Failed to update exercise set notes:', error);
@@ -289,7 +289,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         await deleteExerciseSet(setId);
       } catch (error) {
         console.error('Failed to delete exercise set:', error);
-        
+
         // Rollback: Revert to original state
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
@@ -298,7 +298,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             exercise_sets: isAuthenticated ? exercise.exercise_sets : convertToGuestExerciseSets(exercise.exercise_sets)
           });
         }
-        
+
         // TODO: Add toast notification when available
       }
     }
@@ -306,7 +306,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
 
   const addSet = async (exerciseId: string | number) => {
     const lastSet = exerciseSets[exerciseSets.length - 1];
-    
+
     // Create optimistic new set with temporary ID
     const tempId = `temp-${Date.now()}`;
     const newExerciseSet: ExerciseSet = {
@@ -322,11 +322,11 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     // Optimistic update: Add new set to local state immediately
     const updatedSets = [...exerciseSets, newExerciseSet];
     setExerciseSets(updatedSets);
-    
+
     // Update the parent with the updated exercise
     if (onExerciseUpdate) {
       onExerciseUpdate({
@@ -347,15 +347,15 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
           notes: undefined,
           type: exerciseSets.length === 0 ? 'warmup' : 'working'
         };
-        
+
         const createdSet = await createExerciseSet(newSetData);
-        
+
         // Replace the temporary set with the real one from the API
-        const finalUpdatedSets = updatedSets.map(set => 
+        const finalUpdatedSets = updatedSets.map(set =>
           String(set.id) === String(tempId) ? createdSet : set
         );
         setExerciseSets(finalUpdatedSets);
-        
+
         if (onExerciseUpdate) {
           onExerciseUpdate({
             ...exercise,
@@ -364,7 +364,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
         }
       } catch (error) {
         console.error('Failed to create exercise set:', error);
-        
+
         // Rollback: Remove the optimistic set
         setExerciseSets(exercise.exercise_sets || []);
         if (onExerciseUpdate) {
@@ -386,15 +386,20 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
   const handleExerciseDelete = async () => {
     try {
       if (isAuthenticated) {
+        // Always perform API deletion in authenticated mode
         await deleteExercise(exercise.id);
+        // Notify parent (e.g., to update state/invalidate queries)
+        if (onExerciseDelete) {
+          onExerciseDelete(exercise.id);
+        }
       } else {
+        // Guest mode uses local store
         guestDeleteExercise(exercise.id.toString());
+        if (onExerciseDelete) {
+          onExerciseDelete(exercise.id);
+        }
       }
-      
-      if (onExerciseDelete) {
-        onExerciseDelete(exercise.id);
-      }
-      
+
       setShowExerciseModal(false);
     } catch (error) {
       console.error('Error deleting exercise:', error);
@@ -414,7 +419,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, onExerciseUpdate, o
             </div>
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground">
-                {exercise.exercise_type.name} 
+                {exercise.exercise_type.name}
               </h3>
               <Dialog open={exerciseNotesModal} onOpenChange={(open) => {
                 setExerciseNotesModal(open);
