@@ -1,7 +1,7 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { navItems, NavItem } from '@/shared/navigation/navItems';
-import { useNavigation } from '@/shared/hooks/useNavigation';
+import React from "react";
+import { NavLink } from "react-router-dom";
+import { navItems, NavItem } from "@/shared/navigation/navItems";
+import { useNavigation } from "@/shared/hooks/useNavigation";
 
 const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
   const lastVisited = useNavigation(item.key, item.to);
@@ -12,12 +12,12 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
       to={lastVisited}
       aria-label={item.label}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center gap-0.5 w-full h-full py-2 ${
-          isActive ? 'text-primary' : 'text-muted-foreground'
+        `flex h-full w-full flex-col items-center justify-center gap-0.5 py-2 ${
+          isActive ? "text-primary" : "text-muted-foreground"
         }`
       }
     >
-      <IconComponent className="w-6 h-6" />
+      <IconComponent className="h-6 w-6" />
       <span className="text-xs">{item.label}</span>
     </NavLink>
   );
@@ -25,8 +25,8 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
 
 const BottomNav: React.FC = () => (
   <nav
-    className="fixed bottom-0 inset-x-0 z-50 flex justify-around items-center bg-background border-t md:hidden"
-    style={{ bottom: 'env(safe-area-inset-bottom)' }}
+    className="bg-background fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t md:hidden"
+    style={{ bottom: "env(safe-area-inset-bottom)" }}
     aria-label="Bottom navigation"
   >
     {navItems.map((item) => (

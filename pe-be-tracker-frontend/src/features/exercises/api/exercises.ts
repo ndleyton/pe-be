@@ -1,8 +1,8 @@
-import api from '@/shared/api/client';
-import { endpoints } from '@/shared/api/endpoints';
-import { toUTCISOString } from '@/utils/date';
-import type { MuscleGroup, Muscle } from '@/shared/types';
-import { type ExerciseType } from '@/features/exercises/types';
+import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
+import { toUTCISOString } from "@/utils/date";
+import type { MuscleGroup, Muscle } from "@/shared/types";
+import { type ExerciseType } from "@/features/exercises/types";
 
 export type { MuscleGroup, Muscle, ExerciseType };
 
@@ -67,16 +67,20 @@ export interface RecipeSet {
 }
 
 // Get exercises for a specific workout
-export const getExercisesInWorkout = async (workoutId: string): Promise<Exercise[]> => {
+export const getExercisesInWorkout = async (
+  workoutId: string,
+): Promise<Exercise[]> => {
   const response = await api.get(`/workouts/${workoutId}/exercises`);
   const exercises = response.data;
 
   // For each exercise, fetch the full exercise type data
   const exercisesWithFullType = await Promise.all(
     exercises.map(async (exercise: Exercise) => {
-      const exerciseType = await getExerciseTypeById(exercise.exercise_type_id.toString());
+      const exerciseType = await getExerciseTypeById(
+        exercise.exercise_type_id.toString(),
+      );
       return { ...exercise, exercise_type: exerciseType };
-    })
+    }),
   );
 
   return exercisesWithFullType;
@@ -92,7 +96,9 @@ export interface CreateExerciseData {
 }
 
 // Create a new exercise
-export const createExercise = async (data: CreateExerciseData): Promise<Exercise> => {
+export const createExercise = async (
+  data: CreateExerciseData,
+): Promise<Exercise> => {
   const payload = {
     exercise_type_id: data.exercise_type_id,
     workout_id: data.workout_id,
@@ -127,30 +133,41 @@ export interface UpdateExerciseSetData {
 }
 
 // Create a new exercise set
-export const createExerciseSet = async (exerciseSetData: CreateExerciseSetData): Promise<ExerciseSet> => {
-  const response = await api.post('/exercise-sets/', exerciseSetData);
+export const createExerciseSet = async (
+  exerciseSetData: CreateExerciseSetData,
+): Promise<ExerciseSet> => {
+  const response = await api.post("/exercise-sets/", exerciseSetData);
   return response.data;
 };
 
 // Get all exercise sets for an exercise
-export const getExerciseSets = async (exerciseId: number | string): Promise<ExerciseSet[]> => {
+export const getExerciseSets = async (
+  exerciseId: number | string,
+): Promise<ExerciseSet[]> => {
   const response = await api.get(`/exercise-sets/exercise/${exerciseId}`);
   return response.data;
 };
 
 // Update an exercise set
-export const updateExerciseSet = async (exerciseSetId: number | string, updateData: UpdateExerciseSetData): Promise<ExerciseSet> => {
+export const updateExerciseSet = async (
+  exerciseSetId: number | string,
+  updateData: UpdateExerciseSetData,
+): Promise<ExerciseSet> => {
   const response = await api.put(`/exercise-sets/${exerciseSetId}`, updateData);
   return response.data;
 };
 
 // Delete an exercise set
-export const deleteExerciseSet = async (exerciseSetId: number | string): Promise<void> => {
+export const deleteExerciseSet = async (
+  exerciseSetId: number | string,
+): Promise<void> => {
   await api.delete(`/exercise-sets/${exerciseSetId}`);
 };
 
 // Delete an exercise
-export const deleteExercise = async (exerciseId: number | string): Promise<void> => {
+export const deleteExercise = async (
+  exerciseId: number | string,
+): Promise<void> => {
   await api.delete(`/exercises/${exerciseId}`);
 };
 
@@ -164,19 +181,23 @@ export interface CreateExerciseTypeData {
 
 // Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
-  orderBy: 'usage' | 'name' = 'usage',
+  orderBy: "usage" | "name" = "usage",
   cursor?: number | null,
-  limit: number = 1000
+  limit: number = 1000,
 ): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
-  const response = await api.get(`${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`);
-  
+  const response = await api.get(
+    `${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`,
+  );
+
   // Server returns: { data: [...], next_cursor: ... }
   return response.data;
 };
 
 // Create a new exercise type
-export const createExerciseType = async (exerciseTypeData: CreateExerciseTypeData): Promise<ExerciseType> => {
+export const createExerciseType = async (
+  exerciseTypeData: CreateExerciseTypeData,
+): Promise<ExerciseType> => {
   const response = await api.post(endpoints.exerciseTypes, exerciseTypeData);
   return response.data;
 };
@@ -188,7 +209,9 @@ export const getIntensityUnits = async (): Promise<IntensityUnit[]> => {
 };
 
 // Get exercise type by ID
-export const getExerciseTypeById = async (exerciseTypeId: string): Promise<ExerciseType> => {
+export const getExerciseTypeById = async (
+  exerciseTypeId: string,
+): Promise<ExerciseType> => {
   const response = await api.get(endpoints.exerciseTypeById(exerciseTypeId));
   return response.data;
 };
@@ -225,7 +248,11 @@ export interface ExerciseTypeStats {
 }
 
 // Get exercise type statistics
-export const getExerciseTypeStats = async (exerciseTypeId: string): Promise<ExerciseTypeStats> => {
-  const response = await api.get(`${endpoints.exerciseTypeById(exerciseTypeId)}/stats`);
+export const getExerciseTypeStats = async (
+  exerciseTypeId: string,
+): Promise<ExerciseTypeStats> => {
+  const response = await api.get(
+    `${endpoints.exerciseTypeById(exerciseTypeId)}/stats`,
+  );
   return response.data;
 };

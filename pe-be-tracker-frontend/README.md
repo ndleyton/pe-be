@@ -14,6 +14,7 @@ A React + TypeScript fitness tracking application with local-first guest mode an
 ## 🏃‍♂️ Getting Started
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    ```
@@ -21,6 +22,7 @@ A React + TypeScript fitness tracking application with local-first guest mode an
 2. **Set up environment variables** (see section below)
 
 3. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -58,6 +60,7 @@ The app includes a local-first guest mode that allows users to start tracking wo
 ### Guest Mode Banner
 
 When using guest mode, a helpful banner appears at the top of the app:
+
 - Explains that data is stored locally
 - Shows count of saved workouts
 - Encourages signing in for cross-device sync
@@ -74,12 +77,15 @@ The app supports Google OAuth for secure authentication:
 ## 🧪 Testing
 
 ### Run Tests
+
 ```bash
 npm test
 ```
 
 ### Test Coverage
+
 The app includes comprehensive tests for:
+
 - Guest data context and IndexedDB persistence
 - Data sync functionality with mocked API calls
 - Component rendering with guest/authenticated states
@@ -116,7 +122,7 @@ The frontend uses **nested API endpoints** that follow logical groupings:
 /exercises/exercise-types/     # List and create exercise types
 /exercises/intensity-units/    # List and create intensity units
 
-# Workout-related endpoints  
+# Workout-related endpoints
 /workouts/workout-types/       # List and create workout types
 
 # Other core endpoints

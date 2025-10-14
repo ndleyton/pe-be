@@ -25,4 +25,4 @@ def downgrade():
     # Revert column to NOT NULL with default 1 (matches original state)
     op.alter_column('exercise_types', 'default_intensity_unit',
                     existing_type=sa.Integer(),
-                    nullable=False, server_default='1') 
+                    nullable=False, server_default='1')

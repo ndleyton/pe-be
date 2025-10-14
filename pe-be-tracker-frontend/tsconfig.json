@@ -27,9 +27,7 @@
       "@/lib/*": ["./lib/*"],
       "@/shared/components/ui/*": ["./shared/components/ui/*"]
     },
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "exclude": ["node_modules"]

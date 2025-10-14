@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useRef, useMemo } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useEffect, useCallback, useRef, useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 // Generic shape for cursor-based paginated responses
 interface CursorResponse<T> {
@@ -13,7 +13,10 @@ interface UseInfiniteScrollOptions<T> {
    * Fetch function that takes an optional cursor and limit, and returns
    * the API response with `data` array and optional `next_cursor`.
    */
-  queryFn: (cursor?: number | null, limit?: number) => Promise<CursorResponse<T>>;
+  queryFn: (
+    cursor?: number | null,
+    limit?: number,
+  ) => Promise<CursorResponse<T>>;
   limit?: number;
   threshold?: number;
   enabled?: boolean;
@@ -69,8 +72,10 @@ export const useInfiniteScroll = <T>({
       return;
     }
 
-    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+    const scrollTop =
+      document.documentElement.scrollTop || document.body.scrollTop;
+    const scrollHeight =
+      document.documentElement.scrollHeight || document.body.scrollHeight;
     const clientHeight = window.innerHeight;
 
     if (scrollTop + clientHeight >= scrollHeight - threshold) {
@@ -89,8 +94,8 @@ export const useInfiniteScroll = <T>({
       requestAnimationFrame(handleScroll);
     };
 
-    window.addEventListener('scroll', debouncedHandleScroll);
-    return () => window.removeEventListener('scroll', debouncedHandleScroll);
+    window.addEventListener("scroll", debouncedHandleScroll);
+    return () => window.removeEventListener("scroll", debouncedHandleScroll);
   }, [handleScroll, enabled]);
 
   const reset = useCallback(() => {

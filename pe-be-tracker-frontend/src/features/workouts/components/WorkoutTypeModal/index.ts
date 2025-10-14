@@ -1,2 +1,2 @@
-export { default } from './WorkoutTypeModal';
-export type { WorkoutType } from './WorkoutTypeModal';
+export { default } from "./WorkoutTypeModal";
+export type { WorkoutType } from "./WorkoutTypeModal";

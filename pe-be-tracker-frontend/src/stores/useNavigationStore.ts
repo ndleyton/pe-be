@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { type NavKey, NAV_PATHS } from '@/shared/navigation/constants';
-import { createIndexedDBStorage } from './indexedDBStorage';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { type NavKey, NAV_PATHS } from "@/shared/navigation/constants";
+import { createIndexedDBStorage } from "./indexedDBStorage";
 
 interface NavigationState {
   lastVisitedPaths: Partial<Record<NavKey, string>>;
@@ -30,7 +30,7 @@ export const useNavigationStore = create<NavigationStore>()(
           return;
         }
 
-        set(state => ({
+        set((state) => ({
           lastVisitedPaths: {
             ...state.lastVisitedPaths,
             [navKey]: path,
@@ -44,8 +44,8 @@ export const useNavigationStore = create<NavigationStore>()(
       },
     }),
     {
-      name: 'navigation-storage',
+      name: "navigation-storage",
       storage: createJSONStorage(() => createIndexedDBStorage()),
-    }
-  )
+    },
+  ),
 );

@@ -1,5 +1,10 @@
-import api from '@/shared/api/client';
-import { Workout, CreateWorkoutData, UpdateWorkoutData, PaginatedWorkouts } from '../types';
+import api from "@/shared/api/client";
+import {
+  Workout,
+  CreateWorkoutData,
+  UpdateWorkoutData,
+  PaginatedWorkouts,
+} from "../types";
 
 /**
  * Fetch the current user's workouts using cursor-based pagination.
@@ -9,33 +14,41 @@ import { Workout, CreateWorkoutData, UpdateWorkoutData, PaginatedWorkouts } from
  */
 export const getMyWorkouts = async (
   cursor?: number | null,
-  limit: number = 100
+  limit: number = 100,
 ): Promise<{ data: Workout[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
-  const response = await api.get(`/workouts/mine?offset=${offset}&limit=${limit}`);
-  
+  const response = await api.get(
+    `/workouts/mine?offset=${offset}&limit=${limit}`,
+  );
+
   // Server returns: { data: [...], next_cursor: ... }
   return response.data;
 };
 
-export const getWorkoutById = async (workoutId: string | number): Promise<Workout> => {
+export const getWorkoutById = async (
+  workoutId: string | number,
+): Promise<Workout> => {
   const response = await api.get(`/workouts/${workoutId}`);
   return response.data;
 };
 
-export const createWorkout = async (workoutData: CreateWorkoutData): Promise<Workout> => {
-  const response = await api.post('/workouts/', workoutData);
+export const createWorkout = async (
+  workoutData: CreateWorkoutData,
+): Promise<Workout> => {
+  const response = await api.post("/workouts/", workoutData);
   return response.data;
 };
 
 export const updateWorkout = async (
   workoutId: string | number,
-  updateData: UpdateWorkoutData
+  updateData: UpdateWorkoutData,
 ): Promise<Workout> => {
   const response = await api.patch(`/workouts/${workoutId}`, updateData);
   return response.data;
 };
 
-export const deleteWorkout = async (workoutId: string | number): Promise<void> => {
+export const deleteWorkout = async (
+  workoutId: string | number,
+): Promise<void> => {
   await api.delete(`/workouts/${workoutId}`);
 };

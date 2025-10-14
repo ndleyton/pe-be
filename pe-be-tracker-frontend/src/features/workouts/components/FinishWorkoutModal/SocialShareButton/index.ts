@@ -1,1 +1,1 @@
-export { default } from './SocialShareButton';
+export { default } from "./SocialShareButton";

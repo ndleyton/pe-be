@@ -21,7 +21,7 @@ def upgrade() -> None:
     """Upgrade schema."""
     # Add notes column (text type) to exercise_sets table
     op.add_column('exercise_sets', sa.Column('notes', sa.Text(), nullable=True))
-    
+
     # Add type column (varchar type) to exercise_sets table for enum values
     op.add_column('exercise_sets', sa.Column('type', sa.String(), nullable=True))
 

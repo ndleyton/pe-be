@@ -24,4 +24,4 @@ def downgrade():
     # Drop unique constraints
     op.drop_constraint('uq_muscles_name', 'muscles', type_='unique')
     op.drop_constraint('uq_muscle_groups_name', 'muscle_groups', type_='unique')
-    op.drop_constraint('uq_intensity_units_name', 'intensity_units', type_='unique') 
+    op.drop_constraint('uq_intensity_units_name', 'intensity_units', type_='unique')

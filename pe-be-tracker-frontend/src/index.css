@@ -72,11 +72,11 @@
     --chart-5: rgb(153, 31, 31);
     --warning: rgb(255, 165, 0);
     --warning-foreground: rgb(242, 242, 242);
-    --radius: 1.0rem;
+    --radius: 1rem;
     --done: #aafbdc;
     --done-foreground: rgb(25, 20, 5);
   }
-  
+
   .dark {
     --background: rgb(32, 29, 29);
     --card: rgb(32, 29, 29);
