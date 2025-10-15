@@ -3,9 +3,7 @@ import pytest
 import uuid
 from httpx import AsyncClient
 
-from src.main import app
 from src.core.config import settings
-from src.core.database import get_async_session
 from src.exercises.models import ExerciseType
 
 
