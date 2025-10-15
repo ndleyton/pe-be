@@ -1,44 +1,20 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from urllib.parse import urlsplit
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.main import app
-from src.core.config import settings
-from src.core.database import Base, get_async_session
 from src.users.models import User
-from src.users.router import current_active_user
 from src.workouts.models import WorkoutType
 from src.recipes.models import Recipe
+from src.recipes import crud
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_visibility_filtering_lists_mine_and_public():
-    """GET /routines returns user-owned and public, excludes others' private (and link_only)."""
-    db_url = settings.DATABASE_URL
-    if db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    db_name = urlsplit(db_url).path.lstrip("/")
-    if not db_name or "test" not in db_name.lower():
-        pytest.skip("Integration test requires a dedicated test database")
-
-    engine = create_async_engine(db_url, echo=False)
-    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
-    session: AsyncSession = SessionLocal()
-
+async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSession):
+    """CRUD: list returns user-owned and public, excludes others' private/link_only."""
     # Seed: one workout type (recipes require workout_type_id)
     wt = WorkoutType(name="Strength", description="Strength training")
-    session.add(wt)
-    await session.flush()
+    db_session.add(wt)
+    await db_session.flush()
 
     # Seed users
     me = User(
@@ -55,8 +31,8 @@ async def test_visibility_filtering_lists_mine_and_public():
         is_superuser=False,
         is_verified=True,
     )
-    session.add_all([me, other])
-    await session.flush()
+    db_session.add_all([me, other])
+    await db_session.flush()
 
     # Seed recipes: mine (private), other's private, other's public, other's link_only
     r_mine_private = Recipe(
@@ -87,67 +63,26 @@ async def test_visibility_filtering_lists_mine_and_public():
         visibility=Recipe.RecipeVisibility.LINK_ONLY,
         is_readonly=True,
     )
-    session.add_all([r_mine_private, r_other_private, r_other_public, r_other_link])
-    await session.commit()
+    db_session.add_all([r_mine_private, r_other_private, r_other_public, r_other_link])
+    await db_session.flush()
 
-    async def override_user():
-        return me
+    # Call CRUD directly
+    results = await crud.get_user_recipes(db_session, user_id=me.id, offset=0, limit=50)
+    names = {r.name for r in results}
 
-    async def override_db():
-        yield session
-
-    app.dependency_overrides[current_active_user] = override_user
-    app.dependency_overrides[get_async_session] = override_db
-
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get(
-                f"{settings.API_PREFIX}/routines/?offset=0&limit=50"
-            )
-        assert resp.status_code == 200, resp.text
-        items = resp.json()
-        names = {item["name"] for item in items}
-
-        # Should include my private and other's public
-        assert "Mine Private" in names
-        assert "Other Public" in names
-
-        # Should exclude other's private and link_only from listing
-        assert "Other Private" not in names
-        assert "Other Link Only" not in names
-    finally:
-        app.dependency_overrides.pop(current_active_user, None)
-        app.dependency_overrides.pop(get_async_session, None)
-        await session.close()
-        await engine.dispose()
+    assert "Mine Private" in names
+    assert "Other Public" in names
+    assert "Other Private" not in names
+    assert "Other Link Only" not in names
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_visibility_get_by_id_allows_public_blocks_private():
-    """GET /routines/{id}: accessible for public; 404 for others' private."""
-    db_url = settings.DATABASE_URL
-    if db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    db_name = urlsplit(db_url).path.lstrip("/")
-    if not db_name or "test" not in db_name.lower():
-        pytest.skip("Integration test requires a dedicated test database")
-
-    engine = create_async_engine(db_url, echo=False)
-    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
-    session: AsyncSession = SessionLocal()
-
+async def test_visibility_get_by_id_allows_public_blocks_private(db_session: AsyncSession):
+    """CRUD: get by id returns public to others; None for others' private."""
     wt = WorkoutType(name="Strength", description="Strength training")
-    session.add(wt)
-    await session.flush()
+    db_session.add(wt)
+    await db_session.flush()
 
     me = User(
         email="visibility-me2@example.com",
@@ -163,8 +98,8 @@ async def test_visibility_get_by_id_allows_public_blocks_private():
         is_superuser=False,
         is_verified=True,
     )
-    session.add_all([me, other])
-    await session.flush()
+    db_session.add_all([me, other])
+    await db_session.flush()
 
     r_other_private = Recipe(
         name="Other Private 2",
@@ -180,33 +115,14 @@ async def test_visibility_get_by_id_allows_public_blocks_private():
         visibility=Recipe.RecipeVisibility.PUBLIC,
         is_readonly=True,
     )
-    session.add_all([r_other_private, r_other_public])
-    await session.commit()
+    db_session.add_all([r_other_private, r_other_public])
+    await db_session.flush()
 
-    async def override_user():
-        return me
+    # Public accessible
+    got = await crud.get_recipe_by_id_for_user(db_session, r_other_public.id, me.id)
+    assert got is not None
+    assert got.name == "Other Public 2"
 
-    async def override_db():
-        yield session
-
-    app.dependency_overrides[current_active_user] = override_user
-    app.dependency_overrides[get_async_session] = override_db
-
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            # Public accessible
-            r1 = await client.get(f"{settings.API_PREFIX}/routines/{r_other_public.id}")
-            assert r1.status_code == 200, r1.text
-            assert r1.json()["name"] == "Other Public 2"
-
-            # Private not accessible
-            r2 = await client.get(
-                f"{settings.API_PREFIX}/routines/{r_other_private.id}"
-            )
-            assert r2.status_code == 404
-    finally:
-        app.dependency_overrides.pop(current_active_user, None)
-        app.dependency_overrides.pop(get_async_session, None)
-        await session.close()
-        await engine.dispose()
+    # Private not accessible
+    got2 = await crud.get_recipe_by_id_for_user(db_session, r_other_private.id, me.id)
+    assert got2 is None
