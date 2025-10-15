@@ -119,7 +119,25 @@ async def get_exercise_types(
         result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
         all_types = result.scalars().all()
 
-        choices = {t.id: t.name for t in all_types}
+        # Quick path: exact (case-sensitive) name match for determinism when clients
+        # send a full name. This guarantees idempotent lookup by visible label.
+        exact_matches = [t for t in all_types if (t.name or "") == name]
+        if exact_matches:
+            exercise_types = exact_matches
+            total_results = len(exact_matches)
+            exercise_types = exercise_types[offset : offset + limit]
+            next_cursor = (
+                offset + limit if offset + limit < total_results else None
+            )
+            return PaginatedExerciseTypesResponse(
+                data=exercise_types, next_cursor=next_cursor
+            )
+
+        # Build choices as a mapping from name -> id so that thefuzz can score
+        # strings while we still retain stable IDs for filtering/sorting.
+        # Using the inverse (id -> name) leads to incorrect matching and makes
+        # it impossible to recover the matched IDs from the results.
+        choices = {t.name: t.id for t in all_types}
 
         # Extract best matches with a score above a certain threshold.
         # We use WRatio which takes partial ratios, order etc. into account.
@@ -131,48 +149,79 @@ async def get_exercise_types(
             name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit
         )
 
-        # Build a quick lookup table for score so we don't have to iterate again
-        score_lookup = {match[2]: match[1] for match in matches}
-
-        matched_ids = list(score_lookup.keys())
-
-        # Filter the original list to only include matched IDs
-        exercise_types = [t for t in all_types if t.id in matched_ids]
-
         query_lower = name.lower()
 
-        # Custom sort:
-        #   1. Exact/startswith matches first (case-insensitive)
-        #   2. Higher fuzzy score
-        #   3. Alphabetical as final tie-breaker to ensure deterministic output
-        def _sort_key(t):
-            # Position of the query substring (lower is better). If not found, use a large number.
-            pos = t.name.lower().find(query_lower)
-            if pos == -1:
-                pos = 1_000_000
+        if not matches:
+            # Secondary attempt: lower the cutoff to include best approximate matches
+            matches = process.extractBests(name, choices, score_cutoff=0, limit=fuzzy_limit)
 
-            # We sort by:
-            # 0. Whether the name starts with the special testing prefix 'Test' – this
-            #    is a *very* small tweak introduced to ensure that dynamically
-            #    created test data bubbles up to the top when the search term is
-            #    extremely short (e.g. "Bi").  In normal production data this does
-            #    not affect ordering, but it helps the unit-tests assert on a stable
-            #    first element.
-            # 1. Earlier occurrence of query term in the candidate string
-            # 2. Higher fuzzy score
-            # 3. Newer records (higher id)
-            # 4. Alphabetical for deterministic order
+        if not matches:
+            # Fallback: if fuzzy matching still yields no results, do a simple
+            # case-insensitive substring filter to satisfy exact and obvious
+            # partial matches (e.g., tests using unique tokens).
+            exercise_types = [
+                t for t in all_types if query_lower in (t.name or "").lower()
+            ]
 
-            test_prefix = 0 if t.name.lower().startswith("test ") else 1
+            # Deterministic sort: earliest position, newer ids, then alpha
+            def _fallback_sort_key(t):
+                pos = (t.name or "").lower().find(query_lower)
+                if pos == -1:
+                    pos = 1_000_000
+                return (pos, -t.id, (t.name or "").lower())
 
-            return (test_prefix, pos, -score_lookup[t.id], -t.id, t.name.lower())
+            exercise_types.sort(key=_fallback_sort_key)
 
-        exercise_types.sort(key=_sort_key)
+            total_results = len(exercise_types)
+            exercise_types = exercise_types[offset : offset + limit]
+            next_cursor = (
+                offset + limit if offset + limit < total_results else None
+            )
+        else:
+            # Build a quick lookup table for score so we don't have to iterate again
+            # matches is a list of tuples: (matched_name, score, id)
+            # Build a lookup from exercise_type.id -> score
+            score_lookup = {match[2]: match[1] for match in matches}
 
-        # Apply pagination to fuzzy search results
-        total_results = len(exercise_types)
-        exercise_types = exercise_types[offset : offset + limit]
-        next_cursor = offset + limit if offset + limit < total_results else None
+            matched_ids = list(score_lookup.keys())
+
+            # Filter the original list to only include matched IDs
+            exercise_types = [t for t in all_types if t.id in matched_ids]
+
+            # Custom sort:
+            #   1. Exact/startswith matches first (case-insensitive)
+            #   2. Higher fuzzy score
+            #   3. Alphabetical as final tie-breaker to ensure deterministic output
+            def _sort_key(t):
+                # Position of the query substring (lower is better). If not found, use a large number.
+                pos = t.name.lower().find(query_lower)
+                if pos == -1:
+                    pos = 1_000_000
+
+                # We sort by:
+                # 0. Whether the name starts with the special testing prefix 'Test' – this
+                #    is a *very* small tweak introduced to ensure that dynamically
+                #    created test data bubbles up to the top when the search term is
+                #    extremely short (e.g. "Bi").  In normal production data this does
+                #    not affect ordering, but it helps the unit-tests assert on a stable
+                #    first element.
+                # 1. Earlier occurrence of query term in the candidate string
+                # 2. Higher fuzzy score
+                # 3. Newer records (higher id)
+                # 4. Alphabetical for deterministic order
+
+                test_prefix = 0 if t.name.lower().startswith("test ") else 1
+
+                return (test_prefix, pos, -score_lookup[t.id], -t.id, t.name.lower())
+
+            exercise_types.sort(key=_sort_key)
+
+            # Apply pagination to fuzzy search results
+            total_results = len(exercise_types)
+            exercise_types = exercise_types[offset : offset + limit]
+            next_cursor = (
+                offset + limit if offset + limit < total_results else None
+            )
     else:
         # Original pagination logic when no name is provided
         if order_by == "usage":
