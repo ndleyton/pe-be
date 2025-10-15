@@ -64,7 +64,9 @@ async def test_fuzzy_match_exercise_type_simple(db_session, async_client: AsyncC
 
     # Filter results to only our test exercise
     our_results = [
-        ex for ex in data["data"] if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+        ex
+        for ex in data["data"]
+        if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
     ]
     assert len(our_results) == 1
     assert our_results[0]["id"] == test_exercise_id

@@ -120,7 +120,9 @@ async def get_exercise_types(
         all_types = result.scalars().all()
 
         # Quick path: exact (case-insensitive) name match for determinism
-        exact_matches = [t for t in all_types if t.name and t.name.lower() == name.lower()]
+        exact_matches = [
+            t for t in all_types if t.name and t.name.lower() == name.lower()
+        ]
         if exact_matches:
             exercise_types = exact_matches
             total_results = len(exact_matches)
@@ -131,7 +133,9 @@ async def get_exercise_types(
             )
 
         # Filter out None/empty names to avoid TypeError from thefuzz
-        valid_types = [t for t in all_types if isinstance(t.name, str) and t.name.strip()]
+        valid_types = [
+            t for t in all_types if isinstance(t.name, str) and t.name.strip()
+        ]
 
         # Create a mapping of exercise types by ID for quick lookup
         types_by_id = {t.id: t for t in valid_types}
@@ -147,16 +151,22 @@ async def get_exercise_types(
             candidate_names,
             scorer=fuzz.WRatio,  # Using WRatio for better overall matching
             score_cutoff=FUZZY_SCORE_CUTOFF,
-            limit=min(limit * 3, 100),  # Get more candidates than needed, but cap at 100
+            limit=min(
+                limit * 3, 100
+            ),  # Get more candidates than needed, but cap at 100
         )
         print("FUZZY DEBUG", name, matches)
         if matches:
             # Create a score lookup by ID
-            score_lookup = {name_to_id[m[0]]: m[1] for m in matches if m and m[0] in name_to_id}
+            score_lookup = {
+                name_to_id[m[0]]: m[1] for m in matches if m and m[0] in name_to_id
+            }
             matched_ids = list(score_lookup.keys())
 
             # Get matched exercise types
-            exercise_types = [types_by_id[id] for id in matched_ids if id in types_by_id]
+            exercise_types = [
+                types_by_id[id] for id in matched_ids if id in types_by_id
+            ]
 
             # Simple sort key function that prioritizes:
             # 1. Starts with query (case-insensitive)
@@ -164,6 +174,7 @@ async def get_exercise_types(
             # 3. Higher fuzzy score
             # 4. Alphabetical for deterministic order
             query_lower = name.lower()
+
             def _sort_key(t):
                 name_lower = t.name.lower()
                 starts_with = 0 if name_lower.startswith(query_lower) else 1
@@ -187,7 +198,9 @@ async def get_exercise_types(
                     total_results = 1
                     # Apply pagination
                     exercise_types = exercise_types[offset : offset + limit]
-                    next_cursor = None if offset + limit >= total_results else offset + limit
+                    next_cursor = (
+                        None if offset + limit >= total_results else offset + limit
+                    )
                 else:
                     exercise_types = []
                     next_cursor = None

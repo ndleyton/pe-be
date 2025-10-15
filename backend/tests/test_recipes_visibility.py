@@ -78,7 +78,9 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_visibility_get_by_id_allows_public_blocks_private(db_session: AsyncSession):
+async def test_visibility_get_by_id_allows_public_blocks_private(
+    db_session: AsyncSession,
+):
     """CRUD: get by id returns public to others; None for others' private."""
     wt = WorkoutType(name="Strength", description="Strength training")
     db_session.add(wt)

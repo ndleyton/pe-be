@@ -11,7 +11,9 @@ from src.workouts.models import WorkoutType
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_routine_endpoint_success(db_session: AsyncSession, async_client: AsyncClient):
+async def test_create_routine_endpoint_success(
+    db_session: AsyncSession, async_client: AsyncClient
+):
     """End-to-end test for POST /api/v1/routines/ creating a routine with nested templates.
 
     Seeds minimal reference data (user, intensity unit, exercise type, workout type),
