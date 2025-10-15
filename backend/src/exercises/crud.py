@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
-from thefuzz import process
+from thefuzz import process, fuzz
 
 from src.exercises.models import (
     Exercise,
@@ -24,7 +24,7 @@ from src.exercises.schemas import (
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
 # search is without hunting through the implementation.
-FUZZY_SCORE_CUTOFF = 50  # was hard-coded before
+FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
 
 
 async def get_exercise_by_id(
@@ -119,109 +119,82 @@ async def get_exercise_types(
         result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
         all_types = result.scalars().all()
 
-        # Quick path: exact (case-sensitive) name match for determinism when clients
-        # send a full name. This guarantees idempotent lookup by visible label.
-        exact_matches = [t for t in all_types if (t.name or "") == name]
+        # Quick path: exact (case-insensitive) name match for determinism
+        exact_matches = [t for t in all_types if t.name and t.name.lower() == name.lower()]
         if exact_matches:
             exercise_types = exact_matches
             total_results = len(exact_matches)
             exercise_types = exercise_types[offset : offset + limit]
-            next_cursor = (
-                offset + limit if offset + limit < total_results else None
-            )
+            next_cursor = offset + limit if offset + limit < total_results else None
             return PaginatedExerciseTypesResponse(
                 data=exercise_types, next_cursor=next_cursor
             )
 
-        # Build choices as a mapping from name -> id so that thefuzz can score
-        # strings while we still retain stable IDs for filtering/sorting.
-        # Using the inverse (id -> name) leads to incorrect matching and makes
-        # it impossible to recover the matched IDs from the results.
-        choices = {t.name: t.id for t in all_types}
+        # Filter out None/empty names to avoid TypeError from thefuzz
+        valid_types = [t for t in all_types if isinstance(t.name, str) and t.name.strip()]
 
-        # Extract best matches with a score above a certain threshold.
-        # We use WRatio which takes partial ratios, order etc. into account.
-        # Limit fuzzy search results to prevent excessive processing
-        fuzzy_limit = min(
-            limit * 3, 100
-        )  # Get more candidates than needed, but cap at 100
+        # Create a mapping of exercise types by ID for quick lookup
+        types_by_id = {t.id: t for t in valid_types}
+
+        # Use name->id mapping and pass only names to thefuzz to avoid tuple-order
+        # differences across versions when passing a dict. Map back to ids afterward.
+        name_to_id = {str(t.name): t.id for t in valid_types}
+        candidate_names = list(name_to_id.keys())
+
+        # Perform fuzzy matching with a single call
         matches = process.extractBests(
-            name, choices, score_cutoff=FUZZY_SCORE_CUTOFF, limit=fuzzy_limit
+            name,
+            candidate_names,
+            scorer=fuzz.WRatio,  # Using WRatio for better overall matching
+            score_cutoff=FUZZY_SCORE_CUTOFF,
+            limit=min(limit * 3, 100),  # Get more candidates than needed, but cap at 100
         )
-
-        query_lower = name.lower()
-
-        if not matches:
-            # Secondary attempt: lower the cutoff to include best approximate matches
-            matches = process.extractBests(name, choices, score_cutoff=0, limit=fuzzy_limit)
-
-        if not matches:
-            # Fallback: if fuzzy matching still yields no results, do a simple
-            # case-insensitive substring filter to satisfy exact and obvious
-            # partial matches (e.g., tests using unique tokens).
-            exercise_types = [
-                t for t in all_types if query_lower in (t.name or "").lower()
-            ]
-
-            # Deterministic sort: earliest position, newer ids, then alpha
-            def _fallback_sort_key(t):
-                pos = (t.name or "").lower().find(query_lower)
-                if pos == -1:
-                    pos = 1_000_000
-                return (pos, -t.id, (t.name or "").lower())
-
-            exercise_types.sort(key=_fallback_sort_key)
-
-            total_results = len(exercise_types)
-            exercise_types = exercise_types[offset : offset + limit]
-            next_cursor = (
-                offset + limit if offset + limit < total_results else None
-            )
-        else:
-            # Build a quick lookup table for score so we don't have to iterate again
-            # matches is a list of tuples: (matched_name, score, id)
-            # Build a lookup from exercise_type.id -> score
-            score_lookup = {match[2]: match[1] for match in matches}
-
+        print("FUZZY DEBUG", name, matches)
+        if matches:
+            # Create a score lookup by ID
+            score_lookup = {name_to_id[m[0]]: m[1] for m in matches if m and m[0] in name_to_id}
             matched_ids = list(score_lookup.keys())
 
-            # Filter the original list to only include matched IDs
-            exercise_types = [t for t in all_types if t.id in matched_ids]
+            # Get matched exercise types
+            exercise_types = [types_by_id[id] for id in matched_ids if id in types_by_id]
 
-            # Custom sort:
-            #   1. Exact/startswith matches first (case-insensitive)
-            #   2. Higher fuzzy score
-            #   3. Alphabetical as final tie-breaker to ensure deterministic output
+            # Simple sort key function that prioritizes:
+            # 1. Starts with query (case-insensitive)
+            # 2. Contains query (case-insensitive)
+            # 3. Higher fuzzy score
+            # 4. Alphabetical for deterministic order
+            query_lower = name.lower()
             def _sort_key(t):
-                # Position of the query substring (lower is better). If not found, use a large number.
-                pos = t.name.lower().find(query_lower)
-                if pos == -1:
-                    pos = 1_000_000
-
-                # We sort by:
-                # 0. Whether the name starts with the special testing prefix 'Test' – this
-                #    is a *very* small tweak introduced to ensure that dynamically
-                #    created test data bubbles up to the top when the search term is
-                #    extremely short (e.g. "Bi").  In normal production data this does
-                #    not affect ordering, but it helps the unit-tests assert on a stable
-                #    first element.
-                # 1. Earlier occurrence of query term in the candidate string
-                # 2. Higher fuzzy score
-                # 3. Newer records (higher id)
-                # 4. Alphabetical for deterministic order
-
-                test_prefix = 0 if t.name.lower().startswith("test ") else 1
-
-                return (test_prefix, pos, -score_lookup[t.id], -t.id, t.name.lower())
+                name_lower = t.name.lower()
+                starts_with = 0 if name_lower.startswith(query_lower) else 1
+                contains = 0 if query_lower in name_lower else 1
+                return (starts_with, contains, -score_lookup[t.id], name_lower)
 
             exercise_types.sort(key=_sort_key)
 
-            # Apply pagination to fuzzy search results
+            # Apply pagination
             total_results = len(exercise_types)
             exercise_types = exercise_types[offset : offset + limit]
-            next_cursor = (
-                offset + limit if offset + limit < total_results else None
-            )
+            next_cursor = offset + limit if offset + limit < total_results else None
+        else:
+            # Last-resort: take the single best match with a minimum acceptance threshold
+            best = process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
+            if best and best[1] >= 60:
+                matched_name = best[0]
+                matched_id = name_to_id.get(matched_name)
+                if matched_id is not None and matched_id in types_by_id:
+                    exercise_types = [types_by_id[matched_id]]
+                    total_results = 1
+                    # Apply pagination
+                    exercise_types = exercise_types[offset : offset + limit]
+                    next_cursor = None if offset + limit >= total_results else offset + limit
+                else:
+                    exercise_types = []
+                    next_cursor = None
+            else:
+                # No acceptable matches
+                exercise_types = []
+                next_cursor = None
     else:
         # Original pagination logic when no name is provided
         if order_by == "usage":
