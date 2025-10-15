@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import ExerciseTypeModal from "../ExerciseTypeModal";
 import { ExerciseType, createExercise } from "@/features/exercises/api";
+import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 
@@ -30,6 +32,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     ExerciseType | GuestExerciseType | null
   >(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -50,11 +53,30 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     },
   });
 
+  const addToCurrentWorkoutMutation = useMutation({
+    mutationFn: (exercise_type_id: number) =>
+      addExerciseToCurrentWorkout({ exercise_type_id }),
+    onSuccess: (workout) => {
+      navigate(`/workouts/${workout.id}`);
+    },
+  });
+
   const onSubmit = (data: ExerciseFormData) => {
     if (isAuthenticated) {
-      // Use API for authenticated users
+      // Ensure numeric IDs for server payload
+      const numericExerciseTypeId = Number(data.exercise_type_id);
+      const numericWorkoutId = Number(workoutId);
+
+      if (!Number.isFinite(numericWorkoutId) || numericWorkoutId <= 0) {
+        // Fallback: if workoutId is not a valid server id (e.g., guest UUID),
+        // add to today's workout via server helper and navigate.
+        addToCurrentWorkoutMutation.mutate(numericExerciseTypeId);
+        return;
+      }
+
       mutation.mutate({
         ...data,
+        exercise_type_id: numericExerciseTypeId,
         timestamp: new Date().toISOString(),
       });
     } else {
@@ -175,10 +197,10 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
       </div>
       <Button
         type="submit"
-        disabled={isAuthenticated && mutation.isPending}
+        disabled={mutation.isPending}
         className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
       >
-        {isAuthenticated && mutation.isPending ? "Adding..." : "Add Exercise"}
+        {mutation.isPending ? "Adding..." : "Add Exercise"}
       </Button>
       {isAuthenticated && mutation.error && (
         <div className="text-destructive mt-3">Failed to create exercise.</div>
