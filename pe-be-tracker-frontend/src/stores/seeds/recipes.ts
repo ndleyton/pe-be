@@ -11,6 +11,8 @@ export const buildRecipes = (
       name: "Pull Routine",
       description:
         "Comprehensive back and bicep workout for muscle building and strength",
+      visibility: "public",
+      is_readonly: true,
       exercises: [
         {
           id: generateId(),
@@ -224,6 +226,8 @@ export const buildRecipes = (
       name: "Push Routine",
       description:
         "Complete chest, shoulders, and tricep workout for upper body power",
+      visibility: "public",
+      is_readonly: true,
       exercises: [
         {
           id: generateId(),
@@ -444,6 +448,8 @@ export const buildRecipes = (
       name: "Legs Routine",
       description:
         "Complete lower body workout targeting quads, hamstrings, glutes, and calves",
+      visibility: "public",
+      is_readonly: true,
       exercises: [
         {
           id: generateId(),

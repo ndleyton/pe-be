@@ -3,7 +3,7 @@ import pytest_asyncio
 import os
 from typing import AsyncGenerator
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
@@ -124,25 +124,37 @@ async def setup_database():
 
 @pytest_asyncio.fixture
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """Create a test database session with proper cleanup."""
+    """Provide a clean AsyncSession without wrapping it in an outer transaction.
+
+    Using an outer `session.begin()` causes conflicts when the application code
+    also manages transactions (commit/rollback) or when connection-inspecting
+    operations run under the same connection with asyncpg. We instead:
+      - TRUNCATE relevant tables up-front and COMMIT once to ensure a clean state
+      - Yield the raw session so app code can manage its own transactions
+      - Let the `setup_database` fixture drop the schema after each test for isolation
+    """
     async with TestSessionLocal() as session:
-        async with session.begin():
-            # Clean tables before test
-            for table in [
-                "exercises",
-                "exercise_sets",
-                "exercise_muscles",
-                "exercise_types",
-                "workouts",
-                "users",
-                "recipes",
-            ]:
-                await session.execute(text(f"TRUNCATE {table} CASCADE"))
+        # Clean tables before test (outside an explicit transaction)
+        for table in [
+            "exercises",
+            "exercise_sets",
+            "exercise_muscles",
+            "exercise_types",
+            "workouts",
+            "users",
+            "recipes",
+        ]:
+            await session.execute(text(f"TRUNCATE {table} CASCADE"))
+        await session.commit()
 
-            yield session
+        # Hand the session to tests and route handlers via dependency override
+        yield session
 
-            # Rollback will happen automatically when context exits
-            # This ensures ALL changes in this session are rolled back
+        # Best-effort cleanup of any uncommitted work
+        try:
+            await session.rollback()
+        except Exception:
+            pass
 
 
 @pytest_asyncio.fixture
@@ -154,7 +166,8 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
 
     app.dependency_overrides[get_async_session] = override_get_db
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
     app.dependency_overrides.clear()

@@ -1,16 +1,47 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 
 from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
 from src.recipes.schemas import RecipeCreate, RecipeUpdate
 
 
-async def get_recipe_by_id(
+async def get_recipe_by_id_for_user(
     session: AsyncSession, recipe_id: int, user_id: int
 ) -> Optional[Recipe]:
-    """Get a recipe by ID with relationships loaded (user-owned only)"""
+    """Get a recipe by ID with relationships loaded.
+
+    Accessible when owned by the user OR marked public.
+    """
+    result = await session.execute(
+        select(Recipe)
+        .options(
+            selectinload(Recipe.exercise_templates)
+            .selectinload(ExerciseTemplate.set_templates)
+            .selectinload(SetTemplate.intensity_unit),
+            selectinload(Recipe.exercise_templates).selectinload(
+                ExerciseTemplate.exercise_type
+            ),
+            selectinload(Recipe.workout_type),
+        )
+        .where(
+            and_(
+                Recipe.id == recipe_id,
+                or_(
+                    Recipe.creator_id == user_id,
+                    Recipe.visibility == Recipe.RecipeVisibility.PUBLIC,
+                ),
+            )
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_user_recipe_by_id(
+    session: AsyncSession, recipe_id: int, user_id: int
+) -> Optional[Recipe]:
+    """Get a recipe by ID with relationships loaded (user-owned only)."""
     result = await session.execute(
         select(Recipe)
         .options(
@@ -42,7 +73,12 @@ async def get_user_recipes(
             ),
             selectinload(Recipe.workout_type),
         )
-        .where(Recipe.creator_id == user_id)
+        .where(
+            or_(
+                Recipe.creator_id == user_id,
+                Recipe.visibility == Recipe.RecipeVisibility.PUBLIC,
+            )
+        )
         .order_by(Recipe.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -87,14 +123,14 @@ async def create_recipe(
     await session.refresh(recipe)
 
     # Return the recipe with all relationships loaded
-    return await get_recipe_by_id(session, recipe.id, user_id)
+    return await get_user_recipe_by_id(session, recipe.id, user_id)
 
 
 async def update_recipe(
     session: AsyncSession, recipe_id: int, recipe_data: RecipeUpdate, user_id: int
 ) -> Optional[Recipe]:
     """Update a recipe (user-owned only)"""
-    recipe = await get_recipe_by_id(session, recipe_id, user_id)
+    recipe = await get_user_recipe_by_id(session, recipe_id, user_id)
     if not recipe:
         return None
 
@@ -113,7 +149,7 @@ async def update_recipe(
 
 async def delete_recipe(session: AsyncSession, recipe_id: int, user_id: int) -> bool:
     """Delete a recipe (user-owned only)"""
-    recipe = await get_recipe_by_id(session, recipe_id, user_id)
+    recipe = await get_user_recipe_by_id(session, recipe_id, user_id)
     if not recipe:
         return False
 

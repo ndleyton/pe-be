@@ -5,7 +5,7 @@ These tests focus on the CRUD logic without requiring database setup.
 
 from src.recipes.crud import (
     create_recipe,
-    get_recipe_by_id,
+    get_recipe_by_id_for_user,
     get_user_recipes,
     update_recipe,
     delete_recipe,
@@ -25,7 +25,7 @@ class TestRecipeCRUDUnit:
     def test_recipe_crud_imports(self):
         """Test that all CRUD functions are properly importable."""
         assert callable(create_recipe)
-        assert callable(get_recipe_by_id)
+        assert callable(get_recipe_by_id_for_user)
         assert callable(get_user_recipes)
         assert callable(update_recipe)
         assert callable(delete_recipe)
@@ -161,8 +161,8 @@ class TestRecipeCRUDLogic:
 
         # In actual CRUD operations, these patterns would be used:
         # 1. create_recipe(session, recipe_data, user_id) -> recipe.creator_id = user_id
-        # 2. get_recipe_by_id(session, recipe_id, user_id) -> filters by creator_id
-        # 3. get_recipe_by_id(session, recipe_id, different_user_id) -> returns None (wrong user)
+        # 2. get_recipe_by_id_for_user(session, recipe_id, user_id) -> filters by creator_id or public
+        # 3. get_recipe_by_id_for_user(session, recipe_id, different_user_id) -> returns None when not public
 
         # This test validates the schema supports the ownership pattern
         assert recipe_data.name == "Ownership Test"
