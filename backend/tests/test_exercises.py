@@ -3,9 +3,7 @@ import pytest
 import uuid
 from httpx import AsyncClient
 
-from src.main import app
 from src.core.config import settings
-from src.core.database import get_async_session
 from src.exercises.models import ExerciseType
 
 
@@ -39,7 +37,7 @@ def get_test_exercise_types(suffix=""):
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_match_exercise_type_simple(db_session):
+async def test_fuzzy_match_exercise_type_simple(db_session, async_client: AsyncClient):
     """Test fuzzy matching for exercise types with better isolation."""
 
     # Create a unique exercise type with a very specific name
@@ -51,46 +49,40 @@ async def test_fuzzy_match_exercise_type_simple(db_session):
     )
     db_session.add(test_exercise)
     await db_session.flush()
+    # Ensure visibility across request boundary
+    await db_session.commit()
 
     # Store the ID for verification
     test_exercise_id = test_exercise.id
 
-    async def override_get_db():
-        yield db_session
+    # Test 1: Exact substring match
+    response = await async_client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
+    )
+    assert response.status_code == 200
+    data = response.json()
 
-    app.dependency_overrides[get_async_session] = override_get_db
+    # Filter results to only our test exercise
+    our_results = [
+        ex
+        for ex in data["data"]
+        if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
+    ]
+    assert len(our_results) == 1
+    assert our_results[0]["id"] == test_exercise_id
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        # Test 1: Exact substring match
-        response = await client.get(
-            f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
-        )
-        assert response.status_code == 200
-        data = response.json()
+    # Test 2: Fuzzy match with typo (missing 's')
+    response = await async_client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
+    )
+    assert response.status_code == 200
+    data = response.json()
 
-        # Filter results to only our test exercise
-        our_results = [
-            ex
-            for ex in data["data"]
-            if ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}"
-        ]
-        assert len(our_results) == 1
-        assert our_results[0]["id"] == test_exercise_id
-
-        # Test 2: Fuzzy match with typo (missing 's')
-        response = await client.get(
-            f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
-        )
-        assert response.status_code == 200
-        data = response.json()
-
-        # Check if our exercise is in the results (fuzzy match should find it)
-        found = any(
-            ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}" for ex in data["data"]
-        )
-        assert found is True
-
-    app.dependency_overrides.clear()
+    # Check if our exercise is in the results (fuzzy match should find it)
+    found = any(
+        ex["name"] == f"UniqueTestBicepsCurl_{unique_suffix}" for ex in data["data"]
+    )
+    assert found is True
 
 
 class TestExercisesAPI:

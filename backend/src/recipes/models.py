@@ -1,6 +1,8 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean
+from sqlalchemy import Enum as SAEnum
+from enum import Enum
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -20,6 +22,20 @@ class Recipe(Base):
     description = Column(Text)
     workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Visibility as an enum (private, public, link_only)
+    class RecipeVisibility(str, Enum):
+        PRIVATE = "private"
+        PUBLIC = "public"
+        LINK_ONLY = "link_only"
+
+    visibility = Column(
+        SAEnum(RecipeVisibility, name="recipe_visibility"),
+        nullable=False,
+        default=RecipeVisibility.PRIVATE,
+    )
+    # Mutability control for canonical content
+    is_readonly = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     creator: Mapped["User"] = relationship("User", back_populates="recipes")
