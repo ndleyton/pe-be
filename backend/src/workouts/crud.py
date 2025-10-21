@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, time, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -51,13 +51,22 @@ def _map_workout_integrity_error(
 async def get_workout_by_date(
     session: AsyncSession, user_id: int, workout_date: date
 ) -> Optional[Workout]:
-    """Get a workout by a specific date for a user."""
+    """Get a workout by a specific UTC date for a user.
+
+    We compute explicit UTC day boundaries to avoid database-dependent
+    timezone casts when comparing a timestamptz (`start_time`) with a `date`.
+    """
+    start_dt_utc = datetime.combine(workout_date, time.min).replace(
+        tzinfo=timezone.utc
+    )
+    end_dt_utc = start_dt_utc + timedelta(days=1)
+
     result = await session.execute(
         select(Workout)
         .where(
             Workout.owner_id == user_id,
-            Workout.start_time >= workout_date,
-            Workout.start_time < workout_date + timedelta(days=1),
+            Workout.start_time >= start_dt_utc,
+            Workout.start_time < end_dt_utc,
         )
         .order_by(Workout.start_time.desc())
         .limit(1)

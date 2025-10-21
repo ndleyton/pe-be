@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone
 from langfuse import Langfuse
 
 from src.workouts.crud import (
@@ -115,14 +115,14 @@ class WorkoutService:
         4. Optionally add initial set data.
         5. Return the workout with relationships loaded (reusing get_workout).
         """
-        # 1. Get today's workout if it exists
-        today = date.today()
-        workout = await get_workout_by_date(session, user_id, today)
+        # 1. Get today's workout if it exists (UTC-based day)
+        utc_today = datetime.now(timezone.utc).date()
+        workout = await get_workout_by_date(session, user_id, utc_today)
 
         if not workout:
-            # Need to create a new workout for today
+            # Need to create a new workout for today (UTC)
             workout_create = WorkoutCreate(
-                name=today.strftime("Workout %Y-%m-%d"),
+                name=utc_today.strftime("Workout %Y-%m-%d"),
                 start_time=datetime.now(timezone.utc),
                 workout_type_id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,  # Default Strength Training
             )
