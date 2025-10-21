@@ -77,8 +77,29 @@ class WorkoutService:
         workout_data: WorkoutUpdate,
         user_id: int,
     ) -> Optional[Workout]:
-        """Update workout data with business logic validation"""
-        # Add any business logic here (e.g., validation, authorization)
+        """Update workout data with business logic validation.
+
+        Validations:
+        - If both `start_time` and `end_time` are known (existing or provided),
+          ensure `end_time >= start_time`.
+        """
+        # Load current to validate against existing values
+        current = await get_workout_by_id(session, workout_id, user_id)
+        if not current:
+            return None
+
+        # Determine effective times after update
+        provided_fields = getattr(workout_data, "model_fields_set", set())
+        new_start = (
+            workout_data.start_time if "start_time" in provided_fields else current.start_time
+        )
+        new_end = (
+            workout_data.end_time if "end_time" in provided_fields else current.end_time
+        )
+
+        if new_start is not None and new_end is not None and new_end < new_start:
+            raise ValueError("end_time must be greater than or equal to start_time")
+
         return await update_workout(session, workout_id, workout_data, user_id)
 
     @staticmethod

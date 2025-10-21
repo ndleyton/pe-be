@@ -126,9 +126,12 @@ async def update_workout(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Update a workout"""
-    workout = await WorkoutService.update_workout_data(
-        session, workout_id, workout_update, user.id
-    )
+    try:
+        workout = await WorkoutService.update_workout_data(
+            session, workout_id, workout_update, user.id
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
     return workout
