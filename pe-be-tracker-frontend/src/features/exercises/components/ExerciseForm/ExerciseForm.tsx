@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { usePostHog } from "posthog-js/react";
 import { useMutation } from "@tanstack/react-query";
 import ExerciseTypeModal from "../ExerciseTypeModal";
 import { ExerciseType, createExercise } from "@/features/exercises/api";
@@ -30,6 +31,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     ExerciseType | GuestExerciseType | null
   >(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const posthog = usePostHog();
 
   const {
     register,
@@ -52,9 +54,31 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
 
   const onSubmit = (data: ExerciseFormData) => {
     if (isAuthenticated) {
-      // Use API for authenticated users
+      // Ensure numeric IDs for server payload
+      const numericExerciseTypeId = Number(data.exercise_type_id);
+      const numericWorkoutId = Number(workoutId);
+
+      if (!Number.isFinite(numericWorkoutId) || numericWorkoutId <= 0) {
+        const error = new Error(
+          `Invalid workout id for ExerciseForm: ${workoutId}`,
+        );
+        console.error(error);
+        // Feed handled error into PostHog error tracking with context
+        posthog?.captureException(error, {
+          source: "exercise-form",
+          reason: "invalid_workout_id",
+          workoutId,
+          exercise_type_id: numericExerciseTypeId,
+          isAuthenticated: true,
+          path: typeof window !== "undefined" ? window.location.pathname : "",
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
       mutation.mutate({
         ...data,
+        exercise_type_id: numericExerciseTypeId,
         timestamp: new Date().toISOString(),
       });
     } else {
@@ -175,10 +199,10 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
       </div>
       <Button
         type="submit"
-        disabled={isAuthenticated && mutation.isPending}
+        disabled={mutation.isPending}
         className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
       >
-        {isAuthenticated && mutation.isPending ? "Adding..." : "Add Exercise"}
+        {mutation.isPending ? "Adding..." : "Add Exercise"}
       </Button>
       {isAuthenticated && mutation.error && (
         <div className="text-destructive mt-3">Failed to create exercise.</div>
