@@ -1,10 +1,9 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
+import { usePostHog } from "posthog-js/react";
 import { useMutation } from "@tanstack/react-query";
 import ExerciseTypeModal from "../ExerciseTypeModal";
 import { ExerciseType, createExercise } from "@/features/exercises/api";
-import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 
@@ -32,7 +31,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     ExerciseType | GuestExerciseType | null
   >(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const navigate = useNavigate();
+  const posthog = usePostHog();
 
   const {
     register,
@@ -53,14 +52,6 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     },
   });
 
-  const addToCurrentWorkoutMutation = useMutation({
-    mutationFn: (exercise_type_id: number) =>
-      addExerciseToCurrentWorkout({ exercise_type_id }),
-    onSuccess: (workout) => {
-      navigate(`/workouts/${workout.id}`);
-    },
-  });
-
   const onSubmit = (data: ExerciseFormData) => {
     if (isAuthenticated) {
       // Ensure numeric IDs for server payload
@@ -68,9 +59,20 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
       const numericWorkoutId = Number(workoutId);
 
       if (!Number.isFinite(numericWorkoutId) || numericWorkoutId <= 0) {
-        // Fallback: if workoutId is not a valid server id (e.g., guest UUID),
-        // add to today's workout via server helper and navigate.
-        addToCurrentWorkoutMutation.mutate(numericExerciseTypeId);
+        const error = new Error(
+          `Invalid workout id for ExerciseForm: ${workoutId}`,
+        );
+        console.error(error);
+        // Feed handled error into PostHog error tracking with context
+        posthog?.captureException(error, {
+          source: "exercise-form",
+          reason: "invalid_workout_id",
+          workoutId,
+          exercise_type_id: numericExerciseTypeId,
+          isAuthenticated: true,
+          path: typeof window !== "undefined" ? window.location.pathname : "",
+          timestamp: new Date().toISOString(),
+        });
         return;
       }
 
