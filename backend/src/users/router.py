@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi_users import FastAPIUsers
 
 from src.users.models import User, OAuthAccount
@@ -59,3 +59,9 @@ router.include_router(
 
 # Export current user dependency
 current_active_user = fastapi_users.current_user(active=True)
+
+
+# Session probe endpoint: return current user if authenticated; 401 otherwise
+@router.get("/auth/session", response_model=UserRead, tags=["auth"])
+async def get_auth_session(user: User = Depends(current_active_user)):
+    return user
