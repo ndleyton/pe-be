@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import ConfigDict, BaseModel, Field
+from src.recipes.models import Recipe as RecipeModel
 
 
 class ExerciseTypeRead(BaseModel):
@@ -82,10 +83,6 @@ class RecipeCreate(RecipeBase):
     """Schema for creating recipes"""
 
     exercise_templates: List[ExerciseTemplateCreate] = []
-
-
-from src.recipes.models import Recipe as RecipeModel
-
 
 class RecipeRead(RecipeBase):
     """Schema for reading recipes"""
