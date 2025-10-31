@@ -2,8 +2,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
-import { getExercisesInWorkout, Exercise } from "@/features/exercises/api";
-import { ExerciseForm, ExerciseList } from "@/features/exercises/components";
+import {
+  getExercisesInWorkout,
+  Exercise,
+  type ExerciseType,
+  createExercise,
+  type CreateExerciseData,
+} from "@/features/exercises/api";
+import { ExerciseList, ExerciseTypeModal } from "@/features/exercises/components";
 import { FinishWorkoutModal } from "@/features/workouts/components";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -15,6 +21,7 @@ import {
   useUIStore,
   GuestExercise,
   GuestRecipe,
+  GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
@@ -50,6 +57,7 @@ const WorkoutPage = () => {
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
 
   const recipe = location.state?.recipe as GuestRecipe | undefined;
 
@@ -61,7 +69,7 @@ const WorkoutPage = () => {
   });
 
   const deleteExerciseMutation = useMutation({
-    // Network call is executed by ExerciseRow. This mutation
+    // request is done in ExerciseRow. This mutation
     // only updates cache optimistically and handles invalidation.
     mutationFn: async (_exerciseId: number | string) => {
       return;
@@ -273,12 +281,42 @@ const WorkoutPage = () => {
     }
   }, [recipe, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
-  // Invalidate exercises query when a new exercise is created (only for authenticated users)
-  const handleExerciseCreated = () => {
+  // Simple create; refetch on success
+  const addExerciseMutation = useMutation({
+    mutationFn: (data: CreateExerciseData) => createExercise(data),
+    onSuccess: () => {
+      if (workoutId) {
+        queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
+      }
+    },
+  });
+
+  const handleSelectExerciseType = (
+    exerciseType: ExerciseType | GuestExerciseType,
+  ) => {
+    setShowAddExerciseModal(false);
+    if (!workoutId) return;
+
+    const timestamp = new Date().toISOString();
+
     if (isAuthenticated) {
-      queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
+      addExerciseMutation.mutate({
+        exercise_type_id: Number(exerciseType.id),
+        workout_id: Number(workoutId),
+        timestamp,
+        notes: null,
+      });
+    } else {
+      // Guest mode: update local store directly (final update, not optimistic)
+      const guestType = exerciseType as GuestExerciseType; // modal returns guest type in guest mode
+      guestActions.addExercise({
+        exercise_type_id: String(guestType.id),
+        workout_id: String(workoutId),
+        timestamp,
+        notes: null,
+        exercise_type: guestType,
+      });
     }
-    // For guest mode, the data is already updated via the context
   };
 
   // Handle exercise updates (sets added/modified)
@@ -400,19 +438,29 @@ const WorkoutPage = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <ExerciseList
-          exercises={exercises}
-          status={listStatus}
-          workoutId={workoutId}
-          onExerciseUpdate={handleExerciseUpdate}
-          onExerciseDelete={handleExerciseDelete}
-        />
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          <ExerciseList
+            exercises={exercises}
+            status={listStatus}
+            workoutId={workoutId}
+            onExerciseUpdate={handleExerciseUpdate}
+            onExerciseDelete={handleExerciseDelete}
+          />
+        </div>
         <div className="bg-primary mt-4 mb-4 h-px w-full" role="separator" />
-        <ExerciseForm
-          workoutId={workoutId!}
-          onExerciseCreated={handleExerciseCreated}
-        />
-      </div>
+        <div className="flex items-center justify-center">
+          <Button
+            type="button"
+            onClick={() => setShowAddExerciseModal(true)}
+            className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
+            disabled={isAuthenticated && addExerciseMutation.isPending}
+          >
+            {isAuthenticated && addExerciseMutation.isPending
+              ? "Adding..."
+              : "Add Exercise"}
+          </Button>
+        </div>
+     </div>
 
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
@@ -437,6 +485,12 @@ const WorkoutPage = () => {
         workoutName={workoutName || "My Recipe"}
         exercises={exercises}
         workoutId={workoutId}
+      />
+
+      <ExerciseTypeModal
+        isOpen={showAddExerciseModal}
+        onClose={() => setShowAddExerciseModal(false)}
+        onSelect={handleSelectExerciseType}
       />
     </div>
   );
