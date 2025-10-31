@@ -39,28 +39,28 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
         name="Mine Private",
         workout_type_id=wt.id,
         creator_id=me.id,
-        visibility=Recipe.RecipeVisibility.PRIVATE,
+        visibility=Recipe.RecipeVisibility.private,
         is_readonly=False,
     )
     r_other_private = Recipe(
         name="Other Private",
         workout_type_id=wt.id,
         creator_id=other.id,
-        visibility=Recipe.RecipeVisibility.PRIVATE,
+        visibility=Recipe.RecipeVisibility.private,
         is_readonly=False,
     )
     r_other_public = Recipe(
         name="Other Public",
         workout_type_id=wt.id,
         creator_id=other.id,
-        visibility=Recipe.RecipeVisibility.PUBLIC,
+        visibility=Recipe.RecipeVisibility.public,
         is_readonly=True,
     )
     r_other_link = Recipe(
         name="Other Link Only",
         workout_type_id=wt.id,
         creator_id=other.id,
-        visibility=Recipe.RecipeVisibility.LINK_ONLY,
+        visibility=Recipe.RecipeVisibility.link_only,
         is_readonly=True,
     )
     db_session.add_all([r_mine_private, r_other_private, r_other_public, r_other_link])
@@ -107,14 +107,14 @@ async def test_visibility_get_by_id_allows_public_blocks_private(
         name="Other Private 2",
         workout_type_id=wt.id,
         creator_id=other.id,
-        visibility=Recipe.RecipeVisibility.PRIVATE,
+        visibility=Recipe.RecipeVisibility.private,
         is_readonly=False,
     )
     r_other_public = Recipe(
         name="Other Public 2",
         workout_type_id=wt.id,
         creator_id=other.id,
-        visibility=Recipe.RecipeVisibility.PUBLIC,
+        visibility=Recipe.RecipeVisibility.public,
         is_readonly=True,
     )
     db_session.add_all([r_other_private, r_other_public])

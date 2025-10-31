@@ -30,7 +30,7 @@ async def get_recipe_by_id_for_user(
                 Recipe.id == recipe_id,
                 or_(
                     Recipe.creator_id == user_id,
-                    Recipe.visibility == Recipe.RecipeVisibility.PUBLIC,
+                    Recipe.visibility == Recipe.RecipeVisibility.public,
                 ),
             )
         )
@@ -76,7 +76,7 @@ async def get_user_recipes(
         .where(
             or_(
                 Recipe.creator_id == user_id,
-                Recipe.visibility == Recipe.RecipeVisibility.PUBLIC,
+                Recipe.visibility == Recipe.RecipeVisibility.public,
             )
         )
         .order_by(Recipe.created_at.desc())

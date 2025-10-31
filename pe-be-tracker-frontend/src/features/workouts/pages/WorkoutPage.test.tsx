@@ -16,10 +16,10 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// Mock the ExerciseForm component
+// Mock exercise-related components used by WorkoutPage
 vi.mock("@/features/exercises/components", () => ({
-  ExerciseForm: () => <div data-testid="exercise-form">Mock Exercise Form</div>,
   ExerciseList: () => <div data-testid="exercise-list">Mock Exercise List</div>,
+  ExerciseTypeModal: () => <div data-testid="exercise-type-modal" />,
 }));
 
 describe("WorkoutPage", () => {
@@ -41,5 +41,10 @@ describe("WorkoutPage", () => {
     expect(
       screen.getByLabelText(/floating action button/i),
     ).toBeInTheDocument();
+  });
+
+  it('shows "Add Exercise" button', () => {
+    render(<WorkoutPage />);
+    expect(screen.getByRole("button", { name: /add exercise/i })).toBeInTheDocument();
   });
 });
