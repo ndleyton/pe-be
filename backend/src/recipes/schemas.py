@@ -84,6 +84,7 @@ class RecipeCreate(RecipeBase):
 
     exercise_templates: List[ExerciseTemplateCreate] = []
 
+
 class RecipeRead(RecipeBase):
     """Schema for reading recipes"""
 

@@ -25,7 +25,9 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
     primary: List[str] = context.get("primary_muscles") or []
     secondary: List[str] = context.get("secondary_muscles") or []
 
-    muscles_line = "Primary: " + ", ".join(primary) if primary else "Primary: (unspecified)"
+    muscles_line = (
+        "Primary: " + ", ".join(primary) if primary else "Primary: (unspecified)"
+    )
     if secondary:
         muscles_line += "; Secondary: " + ", ".join(secondary)
 
@@ -37,9 +39,7 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
     )
 
     # Explicitly specify the requested phase to minimize ambiguity
-    phase_directive = (
-        f"Render the {name} at the {phase_label} position."
-    )
+    phase_directive = f"Render the {name} at the {phase_label} position."
 
     prompt = (
         f"Exercise: {name}.\n"
@@ -78,7 +78,9 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
     try:
         candidate = response.candidates[0]
         parts = candidate.content.parts
-        inline = next((p.inline_data for p in parts if getattr(p, "inline_data", None)), None)
+        inline = next(
+            (p.inline_data for p in parts if getattr(p, "inline_data", None)), None
+        )
     except Exception as e:  # pragma: no cover - defensive path
         raise ValueError(f"Unexpected response structure from model: {e}") from e
 
@@ -93,7 +95,9 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
     )
 
 
-async def generate_exercise_phase_image(context: Dict, phase_label: str) -> ExerciseImageResult:
+async def generate_exercise_phase_image(
+    context: Dict, phase_label: str
+) -> ExerciseImageResult:
     """
     Generate a single exercise image for the specified phase using Gemini.
 
