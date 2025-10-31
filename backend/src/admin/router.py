@@ -14,7 +14,6 @@ from src.users.models import User
 from src.exercises.service import ExerciseTypeService
 from src.genai.google_images import (
     generate_exercise_phase_image,
-    ExerciseImageResult,
 )
 
 logger = logging.getLogger(__name__)
