@@ -41,9 +41,13 @@ test.describe("Intensity Input", () => {
       page.getByRole("heading", { name: workoutName }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Select Exercise" }).click();
-    await page.getByText("Push-ups", { exact: true }).click();
+    // Open exercise modal and select exercise type
     await page.getByRole("button", { name: "Add Exercise" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Select Exercise Type" }),
+    ).toBeVisible();
+    await page.getByPlaceholder("Search exercise types...").fill("Push");
+    await page.getByText("Push-ups", { exact: true }).click();
 
     const exerciseHeading = page.getByRole("heading", { name: "Push-ups" });
     await exerciseHeading.waitFor({ state: "visible" });

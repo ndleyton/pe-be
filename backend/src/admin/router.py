@@ -14,7 +14,6 @@ from src.users.models import User
 from src.exercises.service import ExerciseTypeService
 from src.genai.google_images import (
     generate_exercise_phase_image,
-    ExerciseImageResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -120,7 +119,9 @@ async def generate_exercise_type_images(
         )
 
     # Load exercise type with muscles
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
@@ -146,8 +147,12 @@ async def generate_exercise_type_images(
         import asyncio
 
         eccentric, concentric = await asyncio.gather(
-            generate_exercise_phase_image(context=context, phase_label="start / eccentric"),
-            generate_exercise_phase_image(context=context, phase_label="end / concentric"),
+            generate_exercise_phase_image(
+                context=context, phase_label="start / eccentric"
+            ),
+            generate_exercise_phase_image(
+                context=context, phase_label="end / concentric"
+            ),
         )
     except Exception as e:
         logger.exception("Failed to generate images: %s", e)

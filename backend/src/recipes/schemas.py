@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import ConfigDict, BaseModel, Field
-from enum import Enum
+from src.recipes.models import Recipe as RecipeModel
 
 
 class ExerciseTypeRead(BaseModel):
@@ -90,7 +90,7 @@ class RecipeRead(RecipeBase):
 
     id: int
     creator_id: int
-    visibility: "RecipeVisibility"
+    visibility: RecipeModel.RecipeVisibility
     is_readonly: bool
     created_at: datetime
     updated_at: datetime
@@ -106,7 +106,5 @@ class RecipeUpdate(BaseModel):
     workout_type_id: Optional[int] = None
 
 
-class RecipeVisibility(str, Enum):
-    PRIVATE = "private"
-    PUBLIC = "public"
-    LINK_ONLY = "link_only"
+# Pydantic schema reuses model enum to avoid drift
+RecipeVisibility = RecipeModel.RecipeVisibility
