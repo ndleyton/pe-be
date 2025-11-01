@@ -24,15 +24,17 @@ class Recipe(Base):
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # Visibility as an enum (private, public, link_only)
+    # Use lowercase member names so SQLAlchemy binds names that match DB labels.
     class RecipeVisibility(str, Enum):
-        PRIVATE = "private"
-        PUBLIC = "public"
-        LINK_ONLY = "link_only"
+        private = "private"
+        public = "public"
+        link_only = "link_only"
 
+    # Native PostgreSQL enum uses the same lowercase labels, so no adapter needed.
     visibility = Column(
         SAEnum(RecipeVisibility, name="recipe_visibility"),
         nullable=False,
-        default=RecipeVisibility.PRIVATE,
+        default=RecipeVisibility.private,
     )
     # Mutability control for canonical content
     is_readonly = Column(Boolean, default=False, nullable=False)
