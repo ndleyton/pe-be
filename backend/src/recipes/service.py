@@ -4,7 +4,12 @@ from sqlalchemy import delete
 from datetime import datetime, timezone
 
 from src.recipes import crud
-from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate, AdminRecipeCreate
+from src.recipes.schemas import (
+    RecipeCreate,
+    RecipeRead,
+    RecipeUpdate,
+    AdminRecipeCreate,
+)
 from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
 from src.recipes.models import Recipe
