@@ -4,7 +4,7 @@ from sqlalchemy import delete
 from datetime import datetime, timezone
 
 from src.recipes import crud
-from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate
+from src.recipes.schemas import RecipeCreate, RecipeRead, RecipeUpdate, AdminRecipeCreate
 from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
 from src.recipes.models import Recipe
@@ -39,6 +39,13 @@ class RecipeService:
     ) -> RecipeRead:
         """Create a new recipe"""
         recipe = await crud.create_recipe(session, recipe_data, user_id)
+        return RecipeRead.model_validate(recipe)
+
+    async def create_recipe_admin(
+        self, session: AsyncSession, recipe_data: AdminRecipeCreate, user_id: int
+    ) -> RecipeRead:
+        """Create a new recipe with admin-only fields"""
+        recipe = await crud.create_recipe_admin(session, recipe_data, user_id)
         return RecipeRead.model_validate(recipe)
 
     async def update_recipe(
