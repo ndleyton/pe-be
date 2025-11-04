@@ -5,7 +5,8 @@
 
 export const endpoints = {
   // Exercise endpoints
-  exercises: "/exercises",
+  // Use trailing slash to match FastAPI collection route and avoid 307 redirects on POST
+  exercises: "/exercises/",
   exerciseById: (id: string | number) => `/exercises/${id}`,
   exercisesInWorkout: (workoutId: string | number) =>
     `/workouts/${workoutId}/exercises`,

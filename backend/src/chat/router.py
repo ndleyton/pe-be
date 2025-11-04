@@ -104,7 +104,7 @@ async def get_conversation(
         raise HTTPException(status_code=500, detail="Failed to retrieve conversation")
 
 
-@router.post("/conversations", response_model=ConversationResponse)
+@router.post("/conversations/", response_model=ConversationResponse)
 async def create_new_conversation(
     request: ConversationCreate,
     user: User = Depends(current_active_user),
@@ -115,6 +115,24 @@ async def create_new_conversation(
         conversation = await create_conversation(session, request, user.id)
         return ConversationResponse.model_validate(conversation)
 
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
+
+
+# Alias without trailing slash for compatibility; avoids 307 redirects
+@router.post(
+    "/conversations",
+    response_model=ConversationResponse,
+    include_in_schema=False,
+)
+async def create_new_conversation_no_trailing(
+    request: ConversationCreate,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        conversation = await create_conversation(session, request, user.id)
+        return ConversationResponse.model_validate(conversation)
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to create conversation")
 
