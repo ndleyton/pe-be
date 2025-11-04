@@ -52,7 +52,7 @@ async def delete_exercise(
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
 
 
-@exercise_types_router.get("", response_model=PaginatedExerciseTypesResponse)
+@exercise_types_router.get("/", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
     name: Optional[str] = Query(
         default=None,
@@ -111,7 +111,7 @@ async def get_exercise_type_stats(
 
 
 @exercise_types_router.post(
-    "", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED
+    "/", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED
 )
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,

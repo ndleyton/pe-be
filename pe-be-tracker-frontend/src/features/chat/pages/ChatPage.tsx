@@ -70,7 +70,7 @@ const sendChatMessage = async (
 
 // Get exercise types
 const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
-  const response = await api.get("/exercises/exercise-types");
+  const response = await api.get("/exercises/exercise-types/");
   return response.data;
 };
 
@@ -98,7 +98,7 @@ const createExerciseType = async (exerciseTypeData: {
   default_intensity_unit: number;
 }): Promise<ExerciseType> => {
   const response = await api.post(
-    "/exercises/exercise-types",
+    "/exercises/exercise-types/",
     exerciseTypeData,
   );
   return response.data;

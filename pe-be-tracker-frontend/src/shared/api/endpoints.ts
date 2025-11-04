@@ -12,7 +12,7 @@ export const endpoints = {
     `/workouts/${workoutId}/exercises`,
 
   // Exercise Types (nested under exercises)
-  exerciseTypes: "/exercises/exercise-types",
+  exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
 
   // Intensity Units (nested under exercises)
@@ -31,7 +31,7 @@ export const endpoints = {
   workoutById: (id: string | number) => `/workouts/${id}`,
 
   // Workout Types (nested under workouts)
-  workoutTypes: "/workouts/workout-types",
+  workoutTypes: "/workouts/workout-types/",
   workoutTypeById: (id: string | number) => `/workouts/workout-types/${id}`,
 
   // Auth endpoints
