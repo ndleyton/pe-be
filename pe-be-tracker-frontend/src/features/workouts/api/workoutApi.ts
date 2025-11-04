@@ -11,10 +11,15 @@ export const getMyWorkouts = async (
   cursor?: number | null,
   limit: number = 100,
 ): Promise<{ data: Workout[]; next_cursor?: number | null }> => {
-  const offset = cursor || 0;
-  const response = await api.get(
-    `/workouts/mine?offset=${offset}&limit=${limit}`,
-  );
+  const params = new URLSearchParams();
+  if (cursor !== undefined && cursor !== null) {
+    params.set("cursor", String(cursor));
+  }
+  params.set("limit", String(limit));
+
+  const query = params.toString();
+  const url = query ? `/workouts/mine?${query}` : "/workouts/mine";
+  const response = await api.get(url);
 
   // Server returns: { data: [...], next_cursor: ... }
   return response.data;
