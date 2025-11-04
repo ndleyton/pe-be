@@ -76,7 +76,7 @@ const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
 
 // Get intensity units
 const fetchIntensityUnits = async (): Promise<IntensityUnit[]> => {
-  const response = await api.get("/exercises/intensity-units");
+  const response = await api.get("/exercises/intensity-units/");
   return response.data;
 };
 
