@@ -21,13 +21,13 @@ export const endpoints = {
     `/exercises/intensity-units/${id}`,
 
   // Exercise Sets
-  exerciseSets: "/exercise-sets",
+  exerciseSets: "/exercise-sets/",
   exerciseSetById: (id: string | number) => `/exercise-sets/${id}`,
   exerciseSetsByExercise: (exerciseId: string | number) =>
     `/exercise-sets/exercise/${exerciseId}`,
 
   // Workout endpoints
-  workouts: "/workouts",
+  workouts: "/workouts/",
   workoutById: (id: string | number) => `/workouts/${id}`,
 
   // Workout Types (nested under workouts)
@@ -46,7 +46,7 @@ export const endpoints = {
   addExerciseToCurrentWorkout: "/workouts/add-exercise",
 
   // Routine endpoints (recipes in backend, routines for users)
-  routines: "/routines",
+  routines: "/routines/",
   routineById: (id: string | number) => `/routines/${id}`,
 } as const;
 
