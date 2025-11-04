@@ -49,6 +49,7 @@ const WorkoutPage = () => {
   const authLoading = useAuthStore((state) => state.loading);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
+  const guestHydrated = useGuestStore((state) => state.hydrated);
 
   // Get workout timer state and actions from UI store
   const startTime = useUIStore((state) => state.workoutTimer.startTime);
@@ -199,74 +200,59 @@ const WorkoutPage = () => {
     },
   });
 
-  // Start the workout timer on mount if not already started
+  // Start or align the workout timer to the canonical start time
   useEffect(() => {
-    if (!startTime) {
-      // Try to derive the start time from workout data if available
-      if (isAuthenticated) {
-        if (serverWorkout && (serverWorkout as any).start_time) {
-          const workoutStartTime = (serverWorkout as any).start_time;
-          try {
-            const startDate = new Date(workoutStartTime);
-            // Validate the date and ensure it's not in the future
-            if (
-              !isNaN(startDate.getTime()) &&
-              startDate.getTime() <= Date.now()
-            ) {
-              startWorkoutTimer(startDate);
-            } else {
-              console.warn(
-                "Invalid or future workout start time, using current time:",
-                workoutStartTime,
-              );
-              startWorkoutTimer();
-            }
-          } catch (error) {
-            console.warn(
-              "Failed to parse workout start time, using current time:",
-              workoutStartTime,
-              error,
-            );
-            startWorkoutTimer();
-          }
-        } else {
-          startWorkoutTimer();
-        }
-      } else {
-        const guestWorkout = guestData.workouts.find((w) => w.id === workoutId);
-        if (guestWorkout && (guestWorkout as any).start_time) {
-          const workoutStartTime = (guestWorkout as any).start_time;
-          try {
-            const startDate = new Date(workoutStartTime);
-            // Validate the date and ensure it's not in the future
-            if (
-              !isNaN(startDate.getTime()) &&
-              startDate.getTime() <= Date.now()
-            ) {
-              startWorkoutTimer(startDate);
-            } else {
-              console.warn(
-                "Invalid or future workout start time, using current time:",
-                workoutStartTime,
-              );
-              startWorkoutTimer();
-            }
-          } catch (error) {
-            console.warn(
-              "Failed to parse workout start time, using current time:",
-              workoutStartTime,
-              error,
-            );
-            startWorkoutTimer();
-          }
-        } else {
-          startWorkoutTimer();
+    // Determine canonical start time from server (auth) or persisted guest data
+    let derived: Date | undefined;
+    if (isAuthenticated) {
+      const ws = (serverWorkout as any)?.start_time as string | undefined;
+      if (ws) {
+        const d = new Date(ws);
+        if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
+          derived = d;
         }
       }
+    } else {
+      if (guestHydrated) {
+        const guestWorkout = guestData.workouts.find((w) => w.id === workoutId);
+        const ws = (guestWorkout as any)?.start_time as string | undefined;
+        if (ws) {
+          const d = new Date(ws);
+          if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
+            derived = d;
+          }
+        }
+      } else {
+        // Wait for hydration before attempting to start in guest mode
+        return;
+      }
     }
-    // We purposely ignore exhaustive-deps for startWorkoutTimer to avoid resetting interval unnecessarily
+
+    // If we have a derived start and it's different from current, (re)start aligned to it
+    if (derived) {
+      if (!startTime || startTime.getTime() !== derived.getTime()) {
+        startWorkoutTimer(derived);
+      }
+      return;
+    }
+
+    // Fallbacks
+    // - Authenticated: wait for server value to avoid incorrect resets
+    // - Guest: after hydration, if no stored start is found, start now
+    if (!isAuthenticated) {
+      if (!derived && !startTime && guestHydrated) {
+        startWorkoutTimer();
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverWorkout, workoutId]);
+  }, [
+    serverWorkout,
+    workoutId,
+    isAuthenticated,
+    guestData.workouts,
+    guestHydrated,
+    startTime,
+  ]);
 
   // Auto-create exercises from recipe when page loads
   useEffect(() => {

@@ -43,14 +43,15 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
 
   const startInterval = () => {
     intervalRef.current = window.setInterval(() => {
-      setElapsedSeconds((prev) => {
-        if (!startTime) return 0;
-        const totalPausedMs = totalPausedMsRef.current;
-        const elapsed = Math.floor(
-          (Date.now() - startTime.getTime() - totalPausedMs) / 1000,
-        );
-        return Math.max(0, elapsed);
-      });
+      if (!startTime) {
+        setElapsedSeconds(0);
+        return;
+      }
+      const totalPausedMs = totalPausedMsRef.current;
+      const elapsed = Math.floor(
+        (Date.now() - startTime.getTime() - totalPausedMs) / 1000,
+      );
+      setElapsedSeconds(Math.max(0, elapsed));
     }, 1000);
   };
 
