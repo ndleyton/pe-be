@@ -263,6 +263,50 @@ describe("MyWorkoutsPage - Infinite Scroll", () => {
     });
   });
 
+  it("requests next page using next_cursor", async () => {
+    const fullPage = Array.from({ length: 100 }, (_, i) => ({
+      id: i + 1,
+      name: `Workout ${i + 1}`,
+      notes: `Notes ${i + 1}`,
+      start_time: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
+      end_time: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
+      created_at: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
+      updated_at: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
+    }));
+
+    const nextCursor = 100;
+    mockGetMyWorkouts
+      .mockResolvedValueOnce({ data: fullPage, next_cursor: nextCursor } as any)
+      .mockResolvedValueOnce({ data: [], next_cursor: null } as any);
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Workout 1")).toBeInTheDocument();
+    });
+
+    // Simulate scroll near bottom to trigger fetching next page
+    Object.defineProperty(document.documentElement, "scrollTop", {
+      value: 900,
+      configurable: true,
+    });
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      value: 800,
+      configurable: true,
+    });
+
+    fireEvent.scroll(window);
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
+      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(2, nextCursor, 100);
+    });
+  });
+
   it("handles workout clicks and navigation", async () => {
     render(<MyWorkoutsPage />);
 
