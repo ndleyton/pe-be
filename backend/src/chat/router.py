@@ -119,8 +119,6 @@ async def create_new_conversation(
         raise HTTPException(status_code=500, detail="Failed to create conversation")
 
 
-
-
 @router.put("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def update_conversation_endpoint(
     conversation_id: int,
