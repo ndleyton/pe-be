@@ -34,9 +34,6 @@ async def create_exercise(
     return await ExerciseService.create_new_exercise(session, exercise_in)
 
 
-
-
-
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exercise(
     exercise_id: int,
