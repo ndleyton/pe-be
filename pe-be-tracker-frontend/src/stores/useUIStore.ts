@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { createIndexedDBStorage } from "./indexedDBStorage";
 
 interface WorkoutTimer {
   startTime: Date | null;
@@ -24,6 +26,8 @@ interface UIActions {
   toggleWorkoutTimer: () => void;
   stopWorkoutTimer: () => void;
   getFormattedWorkoutTime: () => string;
+  /** Parse persisted dates, fix elapsed, and start/stop interval appropriately */
+  rehydrateWorkoutTimer: () => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -39,7 +43,9 @@ const formatTime = (totalSeconds: number): string => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-export const useUIStore = create<UIStore>((set, get) => ({
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set, get) => ({
   isDrawerOpen: false,
   workoutTimer: {
     startTime: null,
@@ -183,4 +189,79 @@ export const useUIStore = create<UIStore>((set, get) => ({
     const { workoutTimer } = get();
     return formatTime(workoutTimer.elapsedSeconds);
   },
-}));
+  rehydrateWorkoutTimer: () => {
+    // Convert string dates to Date, recompute elapsed, and (re)start interval if needed
+    set((state) => {
+      const t = state.workoutTimer;
+      const startTime =
+        typeof (t.startTime as any) === "string"
+          ? new Date(t.startTime as any)
+          : (t.startTime as Date | null);
+      const pausedAt =
+        typeof (t.pausedAt as any) === "string"
+          ? new Date(t.pausedAt as any)
+          : (t.pausedAt as Date | null);
+
+      let elapsedSeconds = 0;
+      if (startTime instanceof Date && !isNaN(startTime.getTime())) {
+        if (t.paused) {
+          const endMs = pausedAt ? pausedAt.getTime() : Date.now();
+          elapsedSeconds = Math.max(
+            0,
+            Math.floor((endMs - startTime.getTime()) / 1000),
+          );
+        } else {
+          elapsedSeconds = Math.max(
+            0,
+            Math.floor((Date.now() - startTime.getTime()) / 1000),
+          );
+        }
+      }
+
+      const next: WorkoutTimer = {
+        ...t,
+        startTime,
+        pausedAt,
+        elapsedSeconds,
+      };
+
+      // If running and no interval, start ticking
+      if (!next.paused && next.startTime && !next.intervalId) {
+        const intervalId = window.setInterval(() => {
+          set((inner) => {
+            const wt = inner.workoutTimer;
+            if (!wt.paused && wt.startTime) {
+              const elapsed = Math.floor(
+                (Date.now() - wt.startTime.getTime()) / 1000,
+              );
+              return {
+                workoutTimer: {
+                  ...wt,
+                  elapsedSeconds: elapsed,
+                },
+              };
+            }
+            return inner;
+          });
+        }, 1000);
+        next.intervalId = intervalId;
+      }
+
+      return { workoutTimer: next };
+    });
+  },
+}),
+    {
+      name: "ui-store",
+      storage: createJSONStorage(() => createIndexedDBStorage()),
+      partialize: (state) => ({
+        isDrawerOpen: state.isDrawerOpen,
+        workoutTimer: state.workoutTimer,
+      }),
+      onRehydrateStorage: () => (state) => {
+        // After state is loaded, fix dates and start/stop interval
+        state?.rehydrateWorkoutTimer();
+      },
+    },
+  ),
+);
