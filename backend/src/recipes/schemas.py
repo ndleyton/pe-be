@@ -108,3 +108,14 @@ class RecipeUpdate(BaseModel):
 
 # Pydantic schema reuses model enum to avoid drift
 RecipeVisibility = RecipeModel.RecipeVisibility
+
+
+class AdminRecipeCreate(RecipeBase):
+    """Admin-only creation schema with additional controls.
+
+    Allows setting visibility and is_readonly at creation time.
+    """
+
+    exercise_templates: List[ExerciseTemplateCreate] = []
+    visibility: Optional[RecipeVisibility] = None
+    is_readonly: Optional[bool] = None
