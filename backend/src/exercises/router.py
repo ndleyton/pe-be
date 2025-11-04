@@ -125,7 +125,7 @@ async def create_exercise_type(
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
 
-@intensity_units_router.get("", response_model=List[IntensityUnitRead])
+@intensity_units_router.get("/", response_model=List[IntensityUnitRead])
 async def get_intensity_units(session: AsyncSession = Depends(get_async_session)):
     """Get all intensity units"""
     return await IntensityUnitService.get_all_intensity_units(session)
