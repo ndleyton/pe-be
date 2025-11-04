@@ -12,26 +12,26 @@ export const endpoints = {
     `/workouts/${workoutId}/exercises`,
 
   // Exercise Types (nested under exercises)
-  exerciseTypes: "/exercises/exercise-types",
+  exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
 
   // Intensity Units (nested under exercises)
-  intensityUnits: "/exercises/intensity-units",
+  intensityUnits: "/exercises/intensity-units/",
   intensityUnitById: (id: string | number) =>
     `/exercises/intensity-units/${id}`,
 
   // Exercise Sets
-  exerciseSets: "/exercise-sets",
+  exerciseSets: "/exercise-sets/",
   exerciseSetById: (id: string | number) => `/exercise-sets/${id}`,
   exerciseSetsByExercise: (exerciseId: string | number) =>
     `/exercise-sets/exercise/${exerciseId}`,
 
   // Workout endpoints
-  workouts: "/workouts",
+  workouts: "/workouts/",
   workoutById: (id: string | number) => `/workouts/${id}`,
 
   // Workout Types (nested under workouts)
-  workoutTypes: "/workouts/workout-types",
+  workoutTypes: "/workouts/workout-types/",
   workoutTypeById: (id: string | number) => `/workouts/workout-types/${id}`,
 
   // Auth endpoints
@@ -46,7 +46,7 @@ export const endpoints = {
   addExerciseToCurrentWorkout: "/workouts/add-exercise",
 
   // Routine endpoints (recipes in backend, routines for users)
-  routines: "/routines",
+  routines: "/routines/",
   routineById: (id: string | number) => `/routines/${id}`,
 } as const;
 

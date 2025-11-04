@@ -57,7 +57,7 @@ async def test_fuzzy_match_exercise_type_simple(db_session, async_client: AsyncC
 
     # Test 1: Exact substring match
     response = await async_client.get(
-        f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepsCurl_{unique_suffix}"
+        f"{settings.API_PREFIX}/exercises/exercise-types/?name=UniqueTestBicepsCurl_{unique_suffix}"
     )
     assert response.status_code == 200
     data = response.json()
@@ -73,7 +73,7 @@ async def test_fuzzy_match_exercise_type_simple(db_session, async_client: AsyncC
 
     # Test 2: Fuzzy match with typo (missing 's')
     response = await async_client.get(
-        f"{settings.API_PREFIX}/exercises/exercise-types?name=UniqueTestBicepCurl_{unique_suffix}"
+        f"{settings.API_PREFIX}/exercises/exercise-types/?name=UniqueTestBicepCurl_{unique_suffix}"
     )
     assert response.status_code == 200
     data = response.json()

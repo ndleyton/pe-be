@@ -34,9 +34,6 @@ async def create_exercise(
     return await ExerciseService.create_new_exercise(session, exercise_in)
 
 
-
-
-
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exercise(
     exercise_id: int,
@@ -52,7 +49,7 @@ async def delete_exercise(
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
 
 
-@exercise_types_router.get("", response_model=PaginatedExerciseTypesResponse)
+@exercise_types_router.get("/", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
     name: Optional[str] = Query(
         default=None,
@@ -111,7 +108,7 @@ async def get_exercise_type_stats(
 
 
 @exercise_types_router.post(
-    "", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED
+    "/", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED
 )
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,
@@ -125,7 +122,7 @@ async def create_exercise_type(
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
 
-@intensity_units_router.get("", response_model=List[IntensityUnitRead])
+@intensity_units_router.get("/", response_model=List[IntensityUnitRead])
 async def get_intensity_units(session: AsyncSession = Depends(get_async_session)):
     """Get all intensity units"""
     return await IntensityUnitService.get_all_intensity_units(session)
