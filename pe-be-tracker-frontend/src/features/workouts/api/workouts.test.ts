@@ -48,9 +48,7 @@ describe("workouts API - pagination", () => {
 
       const result = await getMyWorkouts();
 
-      expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=0&limit=100",
-      );
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=100");
       expect(result.data).toEqual(mockWorkouts);
     });
 
@@ -58,9 +56,8 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
 
       await getMyWorkouts(20, 50);
-
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=20&limit=50",
+        "/workouts/mine?cursor=20&limit=50",
       );
     });
 
@@ -68,9 +65,8 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
 
       await getMyWorkouts(0, 100);
-
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=0&limit=100",
+        "/workouts/mine?cursor=0&limit=100",
       );
     });
 
@@ -78,9 +74,8 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       await getMyWorkouts(1000, 100);
-
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=1000&limit=100",
+        "/workouts/mine?cursor=1000&limit=100",
       );
     });
 
@@ -88,10 +83,28 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts.slice(0, 1)) });
 
       await getMyWorkouts(0, 1);
-
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=0&limit=1",
+        "/workouts/mine?cursor=0&limit=1",
       );
+    });
+
+    it("should omit cursor param when null and include only limit", async () => {
+      mockApi.get.mockResolvedValue({ data: wrap([]) });
+
+      await getMyWorkouts(null, 25);
+
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=25");
+    });
+
+    it("should pass through next_cursor from server", async () => {
+      const next = 9999;
+      mockApi.get.mockResolvedValue({ data: { data: mockWorkouts, next_cursor: next } });
+
+      const result = await getMyWorkouts();
+
+      expect(result.data).toEqual(mockWorkouts);
+      expect(result.next_cursor).toBe(next);
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=100");
     });
 
     it("should handle API errors", async () => {
@@ -115,10 +128,9 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap([]) });
 
       const result = await getMyWorkouts(100, 100);
-
       expect(result.data).toEqual([]);
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=100&limit=100",
+        "/workouts/mine?cursor=100&limit=100",
       );
     });
 
@@ -136,10 +148,9 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap(fullPageData) });
 
       const result = await getMyWorkouts(0, 100);
-
       expect(result.data).toHaveLength(100);
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=0&limit=100",
+        "/workouts/mine?cursor=0&limit=100",
       );
     });
 
@@ -148,10 +159,9 @@ describe("workouts API - pagination", () => {
       mockApi.get.mockResolvedValue({ data: wrap(partialPageData) });
 
       const result = await getMyWorkouts(50, 100);
-
       expect(result.data).toHaveLength(1);
       expect(mockApi.get).toHaveBeenCalledWith(
-        "/workouts/mine?offset=50&limit=100",
+        "/workouts/mine?cursor=50&limit=100",
       );
     });
 
