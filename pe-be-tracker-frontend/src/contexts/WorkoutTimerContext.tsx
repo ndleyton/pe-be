@@ -30,6 +30,8 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
   const [paused, setPaused] = useState(false);
+  const pausedAtRef = useRef<Date | null>(null);
+  const totalPausedMsRef = useRef<number>(0);
 
   // Helper to clear any existing interval
   const clear = () => {
@@ -41,17 +43,27 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
 
   const startInterval = () => {
     intervalRef.current = window.setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
+      setElapsedSeconds((prev) => {
+        if (!startTime) return 0;
+        const totalPausedMs = totalPausedMsRef.current;
+        const elapsed = Math.floor(
+          (Date.now() - startTime.getTime() - totalPausedMs) / 1000,
+        );
+        return Math.max(0, elapsed);
+      });
     }, 1000);
   };
 
   const start = (at?: Date) => {
     const startAt = at ?? new Date();
     setStartTime(startAt);
+    // reset pause tracking
+    totalPausedMsRef.current = 0;
+    pausedAtRef.current = null;
 
-    // Calculate elapsed seconds, ensuring it's never negative
+    // Calculate elapsed seconds from absolute times (start - total paused)
     const calculatedElapsed = Math.floor(
-      (Date.now() - startAt.getTime()) / 1000,
+      (Date.now() - startAt.getTime() - totalPausedMsRef.current) / 1000,
     );
     setElapsedSeconds(Math.max(0, calculatedElapsed));
 
@@ -63,11 +75,17 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const pause = () => {
     if (paused) return;
     clear();
+    pausedAtRef.current = new Date();
     setPaused(true);
   };
 
   const resume = () => {
     if (!paused) return;
+    // accumulate paused duration
+    if (pausedAtRef.current) {
+      totalPausedMsRef.current += Date.now() - pausedAtRef.current.getTime();
+      pausedAtRef.current = null;
+    }
     setPaused(false);
     startInterval();
   };
@@ -81,6 +99,8 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
     setStartTime(null);
     setElapsedSeconds(0);
     setPaused(false);
+    pausedAtRef.current = null;
+    totalPausedMsRef.current = 0;
   };
 
   // Clean up when provider unmounts
