@@ -56,7 +56,8 @@ test.describe("Add Exercise (authenticated)", () => {
     });
 
     // Mock exercise types for the selection modal
-    await page.route("**/api/v1/exercises/exercise-types**", (route) => {
+    // Handle both with and without trailing slash just in case
+    const fulfillExerciseTypes = (route: any) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -85,6 +86,13 @@ test.describe("Add Exercise (authenticated)", () => {
           next_cursor: null,
         }),
       });
+    await page.route("**/api/v1/exercises/exercise-types/**", (route) => {
+      if (route.request().method() === "GET") return fulfillExerciseTypes(route);
+      return route.continue();
+    });
+    await page.route("**/api/v1/exercises/exercise-types?**", (route) => {
+      if (route.request().method() === "GET") return fulfillExerciseTypes(route);
+      return route.continue();
     });
 
     // Fail the no-trailing-slash POST if it ever occurs
@@ -146,6 +154,7 @@ test.describe("Add Exercise (authenticated)", () => {
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
     await page.getByPlaceholder("Search exercise types...").fill("Push");
+    await expect(page.getByText("Push-ups", { exact: true })).toBeVisible();
     await page.getByText("Push-ups", { exact: true }).click();
 
     // Wait for the POST to be made
