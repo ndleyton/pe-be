@@ -34,6 +34,17 @@ async def create_exercise(
     return await ExerciseService.create_new_exercise(session, exercise_in)
 
 
+# Alias without trailing slash to avoid 307 redirect issues on some clients/browsers
+@router.post("", response_model=ExerciseRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+async def create_exercise_no_trailing_slash(
+    exercise_in: ExerciseCreate,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Create a new exercise (no trailing slash alias)."""
+    return await ExerciseService.create_new_exercise(session, exercise_in)
+
+
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exercise(
     exercise_id: int,
