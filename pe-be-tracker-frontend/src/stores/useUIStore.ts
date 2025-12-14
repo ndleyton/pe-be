@@ -3,12 +3,13 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { createIndexedDBStorage } from "./indexedDBStorage";
 
 interface WorkoutTimer {
-  startTime: Date | null;
+  /** Start time as epoch milliseconds */
+  startTime: number | null;
   elapsedSeconds: number;
   paused: boolean;
   intervalId: number | null;
-  /** Timestamp when the timer was paused. Used to adjust startTime on resume */
-  pausedAt: Date | null;
+  /** When paused, the epoch milliseconds of pause start */
+  pausedAt: number | null;
 }
 
 interface UIState {
@@ -20,7 +21,11 @@ interface UIActions {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  startWorkoutTimer: (at?: Date) => void;
+  /**
+   * Start the workout timer at an optional absolute time (epoch ms).
+   * If omitted, starts at "now".
+   */
+  startWorkoutTimer: (atMs?: number) => void;
   pauseWorkoutTimer: () => void;
   resumeWorkoutTimer: () => void;
   toggleWorkoutTimer: () => void;
@@ -61,7 +66,7 @@ export const useUIStore = create<UIStore>()(
 
   toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
 
-  startWorkoutTimer: (at?: Date) => {
+  startWorkoutTimer: (atMs?: number) => {
     const { workoutTimer } = get();
 
     // Clear any existing interval to prevent memory leaks
@@ -69,15 +74,13 @@ export const useUIStore = create<UIStore>()(
       clearInterval(workoutTimer.intervalId);
     }
 
-    const startTime = at || new Date();
+    const startTimeMs = typeof atMs === "number" ? atMs : Date.now();
     const intervalId = window.setInterval(() => {
       // Use functional state update to avoid stale closure issues
       set((state) => {
         const { workoutTimer } = state;
         if (!workoutTimer.paused && workoutTimer.startTime) {
-          const elapsed = Math.floor(
-            (Date.now() - workoutTimer.startTime.getTime()) / 1000,
-          );
+          const elapsed = Math.floor((Date.now() - workoutTimer.startTime) / 1000);
           return {
             workoutTimer: {
               ...workoutTimer,
@@ -91,11 +94,8 @@ export const useUIStore = create<UIStore>()(
 
     set({
       workoutTimer: {
-        startTime,
-        elapsedSeconds: Math.max(
-          0,
-          Math.floor((Date.now() - startTime.getTime()) / 1000),
-        ),
+        startTime: startTimeMs,
+        elapsedSeconds: Math.max(0, Math.floor((Date.now() - startTimeMs) / 1000)),
         paused: false,
         intervalId,
         pausedAt: null,
@@ -108,7 +108,7 @@ export const useUIStore = create<UIStore>()(
       workoutTimer: {
         ...state.workoutTimer,
         paused: true,
-        pausedAt: new Date(),
+        pausedAt: Date.now(),
       },
     }));
   },
@@ -117,10 +117,8 @@ export const useUIStore = create<UIStore>()(
     set((state) => {
       const { workoutTimer } = state;
       if (workoutTimer.startTime && workoutTimer.pausedAt) {
-        const pauseDurationMs = Date.now() - workoutTimer.pausedAt.getTime();
-        const adjustedStartTime = new Date(
-          workoutTimer.startTime.getTime() + pauseDurationMs,
-        );
+        const pauseDurationMs = Date.now() - workoutTimer.pausedAt;
+        const adjustedStartTime = workoutTimer.startTime + pauseDurationMs;
         return {
           workoutTimer: {
             ...workoutTimer,
@@ -141,15 +139,13 @@ export const useUIStore = create<UIStore>()(
     if (!workoutTimer.paused) {
       // Going from running -> paused
       set({
-        workoutTimer: { ...workoutTimer, paused: true, pausedAt: new Date() },
+        workoutTimer: { ...workoutTimer, paused: true, pausedAt: Date.now() },
       });
     } else {
       // Going from paused -> running; adjust startTime so elapsed excludes paused duration
       if (workoutTimer.startTime && workoutTimer.pausedAt) {
-        const pauseDurationMs = Date.now() - workoutTimer.pausedAt.getTime();
-        const adjustedStartTime = new Date(
-          workoutTimer.startTime.getTime() + pauseDurationMs,
-        );
+        const pauseDurationMs = Date.now() - workoutTimer.pausedAt;
+        const adjustedStartTime = workoutTimer.startTime + pauseDurationMs;
         set({
           workoutTimer: {
             ...workoutTimer,
@@ -190,40 +186,48 @@ export const useUIStore = create<UIStore>()(
     return formatTime(workoutTimer.elapsedSeconds);
   },
   rehydrateWorkoutTimer: () => {
-    // Convert string dates to Date, recompute elapsed, and (re)start interval if needed
+    // Normalize persisted values to epoch ms, recompute elapsed, and (re)start interval if needed
     set((state) => {
       const t = state.workoutTimer;
-      const startTime =
-        typeof (t.startTime as any) === "string"
-          ? new Date(t.startTime as any)
-          : (t.startTime as Date | null);
-      const pausedAt =
-        typeof (t.pausedAt as any) === "string"
-          ? new Date(t.pausedAt as any)
-          : (t.pausedAt as Date | null);
+      const startTime: number | null = (() => {
+        const s: any = t.startTime as any;
+        if (typeof s === "number") return s;
+        if (typeof s === "string") {
+          const ms = new Date(s).getTime();
+          return isNaN(ms) ? null : ms;
+        }
+        if (s && typeof s === "object" && typeof s.getTime === "function") {
+          const ms = (s as Date).getTime();
+          return isNaN(ms) ? null : ms;
+        }
+        return null;
+      })();
+
+      const pausedAt: number | null = (() => {
+        const p: any = t.pausedAt as any;
+        if (typeof p === "number") return p;
+        if (typeof p === "string") {
+          const ms = new Date(p).getTime();
+          return isNaN(ms) ? null : ms;
+        }
+        if (p && typeof p === "object" && typeof p.getTime === "function") {
+          const ms = (p as Date).getTime();
+          return isNaN(ms) ? null : ms;
+        }
+        return null;
+      })();
 
       let elapsedSeconds = 0;
-      if (startTime instanceof Date && !isNaN(startTime.getTime())) {
+      if (typeof startTime === "number") {
         if (t.paused) {
-          const endMs = pausedAt ? pausedAt.getTime() : Date.now();
-          elapsedSeconds = Math.max(
-            0,
-            Math.floor((endMs - startTime.getTime()) / 1000),
-          );
+          const endMs = typeof pausedAt === "number" ? pausedAt : Date.now();
+          elapsedSeconds = Math.max(0, Math.floor((endMs - startTime) / 1000));
         } else {
-          elapsedSeconds = Math.max(
-            0,
-            Math.floor((Date.now() - startTime.getTime()) / 1000),
-          );
+          elapsedSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
         }
       }
 
-      const next: WorkoutTimer = {
-        ...t,
-        startTime,
-        pausedAt,
-        elapsedSeconds,
-      };
+      const next: WorkoutTimer = { ...t, startTime, pausedAt, elapsedSeconds } as WorkoutTimer;
 
       // If running and no interval, start ticking
       if (!next.paused && next.startTime && !next.intervalId) {
@@ -231,9 +235,7 @@ export const useUIStore = create<UIStore>()(
           set((inner) => {
             const wt = inner.workoutTimer;
             if (!wt.paused && wt.startTime) {
-              const elapsed = Math.floor(
-                (Date.now() - wt.startTime.getTime()) / 1000,
-              );
+              const elapsed = Math.floor((Date.now() - wt.startTime) / 1000);
               return {
                 workoutTimer: {
                   ...wt,
@@ -256,7 +258,11 @@ export const useUIStore = create<UIStore>()(
       storage: createJSONStorage(() => createIndexedDBStorage()),
       partialize: (state) => ({
         isDrawerOpen: state.isDrawerOpen,
-        workoutTimer: state.workoutTimer,
+        workoutTimer: {
+          ...state.workoutTimer,
+          // Do not persist interval id
+          intervalId: null,
+        },
       }),
       onRehydrateStorage: () => (state) => {
         // After state is loaded, fix dates and start/stop interval
