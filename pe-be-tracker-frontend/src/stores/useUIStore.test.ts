@@ -34,8 +34,15 @@ describe("useUIStore persistence and rehydration", () => {
 
     // Load store so it rehydrates from storage
     const { useUIStore: reloadedStore } = await import("./useUIStore");
-    // allow async rehydrate and onRehydrate callbacks to complete
-    await Promise.resolve();
+    // Wait for hydration to complete
+    if (!reloadedStore.persist.hasHydrated()) {
+      await new Promise<void>((resolve) => {
+        const unsub = reloadedStore.persist.onFinishHydration(() => {
+          unsub();
+          resolve();
+        });
+      });
+    }
 
     const state = reloadedStore.getState().workoutTimer;
     expect(typeof state.startTime).toBe("number");
@@ -65,7 +72,14 @@ describe("useUIStore persistence and rehydration", () => {
     localStorage.setItem("ui-store", JSON.stringify(persisted));
 
     const { useUIStore: reloadedStore } = await import("./useUIStore");
-    await Promise.resolve();
+    if (!reloadedStore.persist.hasHydrated()) {
+      await new Promise<void>((resolve) => {
+        const unsub = reloadedStore.persist.onFinishHydration(() => {
+          unsub();
+          resolve();
+        });
+      });
+    }
 
     const st = reloadedStore.getState().workoutTimer;
     expect(st.paused).toBe(true);
