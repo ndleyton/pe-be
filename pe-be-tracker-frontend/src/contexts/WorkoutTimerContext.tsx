@@ -27,6 +27,8 @@ const WorkoutTimerContext = createContext<WorkoutTimerContextValue | undefined>(
 
 export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const [startTime, setStartTime] = useState<Date | null>(null);
+  // Keep a ref in sync to avoid stale closures inside setInterval
+  const startTimeRef = useRef<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
   const [paused, setPaused] = useState(false);
@@ -43,13 +45,14 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
 
   const startInterval = () => {
     intervalRef.current = window.setInterval(() => {
-      if (!startTime) {
+      const currentStart = startTimeRef.current;
+      if (!currentStart) {
         setElapsedSeconds(0);
         return;
       }
       const totalPausedMs = totalPausedMsRef.current;
       const elapsed = Math.floor(
-        (Date.now() - startTime.getTime() - totalPausedMs) / 1000,
+        (Date.now() - currentStart.getTime() - totalPausedMs) / 1000,
       );
       setElapsedSeconds(Math.max(0, elapsed));
     }, 1000);
@@ -58,6 +61,7 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const start = (at?: Date) => {
     const startAt = at ?? new Date();
     setStartTime(startAt);
+    startTimeRef.current = startAt;
     // reset pause tracking
     totalPausedMsRef.current = 0;
     pausedAtRef.current = null;
@@ -98,6 +102,7 @@ export const WorkoutTimerProvider = ({ children }: { children: ReactNode }) => {
   const stop = () => {
     clear();
     setStartTime(null);
+    startTimeRef.current = null;
     setElapsedSeconds(0);
     setPaused(false);
     pausedAtRef.current = null;

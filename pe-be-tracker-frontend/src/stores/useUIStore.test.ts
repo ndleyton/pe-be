@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Helper to await microtasks
-const tick = () => new Promise((r) => setTimeout(r, 0));
-
 describe("useUIStore persistence and rehydration", () => {
   const baseNow = new Date("2024-01-01T00:00:00Z").getTime();
 
@@ -37,10 +34,11 @@ describe("useUIStore persistence and rehydration", () => {
 
     // Load store so it rehydrates from storage
     const { useUIStore: reloadedStore } = await import("./useUIStore");
-    await tick();
+    // allow async rehydrate and onRehydrate callbacks to complete
+    await Promise.resolve();
 
     const state = reloadedStore.getState().workoutTimer;
-    expect(state.startTime).toBeInstanceOf(Date);
+    expect(typeof state.startTime).toBe("number");
     expect(state.paused).toBe(false);
     expect(state.elapsedSeconds).toBe(90);
     expect(state.intervalId).not.toBeNull();
@@ -67,11 +65,11 @@ describe("useUIStore persistence and rehydration", () => {
     localStorage.setItem("ui-store", JSON.stringify(persisted));
 
     const { useUIStore: reloadedStore } = await import("./useUIStore");
-    await tick();
+    await Promise.resolve();
 
     const st = reloadedStore.getState().workoutTimer;
     expect(st.paused).toBe(true);
-    expect(st.pausedAt).toBeInstanceOf(Date);
+    expect(typeof st.pausedAt).toBe("number");
     expect(st.intervalId).toBeNull();
     expect(st.elapsedSeconds).toBe(120);
 

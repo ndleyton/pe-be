@@ -230,8 +230,10 @@ const WorkoutPage = () => {
 
     // If we have a derived start and it's different from current, (re)start aligned to it
     if (derived) {
-      if (!startTime || startTime.getTime() !== derived.getTime()) {
-        startWorkoutTimer(derived);
+      const currentStartMs = typeof startTime === "number" ? startTime : null;
+      const derivedMs = derived.getTime();
+      if (currentStartMs == null || currentStartMs !== derivedMs) {
+        startWorkoutTimer(derivedMs);
       }
       return;
     }
@@ -240,7 +242,8 @@ const WorkoutPage = () => {
     // - Authenticated: wait for server value to avoid incorrect resets
     // - Guest: after hydration, if no stored start is found, start now
     if (!isAuthenticated) {
-      if (!derived && !startTime && guestHydrated) {
+      // Only auto-start when there's truly no startTime yet (null)
+      if (!derived && startTime == null && guestHydrated) {
         startWorkoutTimer();
       }
     }
