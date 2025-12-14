@@ -3,7 +3,6 @@ import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../contexts/AuthContext";
-import { WorkoutTimerProvider } from "../contexts/WorkoutTimerContext";
 import { vi } from "vitest";
 
 // Mock API client for all tests
@@ -42,11 +41,9 @@ const AllTheProviders = ({
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <WorkoutTimerProvider>
-        <AuthProvider>
-          <MemoryRouter>{children}</MemoryRouter>
-        </AuthProvider>
-      </WorkoutTimerProvider>
+      <AuthProvider>
+        <MemoryRouter>{children}</MemoryRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };
