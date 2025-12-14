@@ -1,25 +1,17 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/utils";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import AppLayout from "./AppLayout";
-import { AuthProvider } from "@/contexts/AuthContext";
 
 const MockComponent = () => <div>Mock Content</div>;
 
-const renderWithProviders = (ui: React.ReactElement) => {
-  return render(
-    <MemoryRouter>
-      <AuthProvider>{ui}</AuthProvider>
-    </MemoryRouter>,
-  );
-};
+// Use shared test render that includes providers and API client mocks
 
 describe("AppLayout", () => {
   it("should have skip to content link as first focusable element", async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(
+    render(
       <>
         <AppLayout />
         <MockComponent />
@@ -37,7 +29,7 @@ describe("AppLayout", () => {
   it("should open and close drawer with keyboard", async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(
+    render(
       <>
         <AppLayout />
         <MockComponent />
@@ -63,7 +55,7 @@ describe("AppLayout", () => {
   });
 
   it("should have proper ARIA labels on navigation elements", () => {
-    renderWithProviders(
+    render(
       <>
         <AppLayout />
         <MockComponent />
