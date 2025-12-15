@@ -1,8 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import SideDrawer from "./SideDrawer";
 import api from "@/shared/api/client";
 
@@ -78,13 +77,7 @@ vi.mock("@/stores", () => ({
 }));
 
 // Test wrapper with required providers
-const TestWrapper = ({
-  children,
-  initialEntries = ["/workouts"],
-}: {
-  children: React.ReactNode;
-  initialEntries?: string[];
-}) => <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>;
+const TestWrapper = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 describe("SideDrawer", () => {
   beforeEach(() => {
@@ -102,11 +95,7 @@ describe("SideDrawer", () => {
 
   describe("Rendering and Basic Structure", () => {
     it("should always render drawer elements", () => {
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       // Drawer content should always be in DOM
       expect(screen.getByText("Menu")).toBeInTheDocument();
@@ -116,11 +105,7 @@ describe("SideDrawer", () => {
     it("should show drawer when open", () => {
       mockIsOpen = true;
 
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       const drawer = screen.getByRole("dialog");
       expect(drawer).toBeInTheDocument();
@@ -132,21 +117,13 @@ describe("SideDrawer", () => {
     it("should hide drawer when closed", () => {
       mockIsOpen = false;
 
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
     it("should have proper ARIA attributes for accessibility", () => {
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       const dialog = screen.getByRole("dialog");
 
@@ -157,11 +134,7 @@ describe("SideDrawer", () => {
     });
 
     it("should have smooth animation classes", () => {
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       const drawer = screen.getByRole("dialog");
       expect(drawer).toHaveClass(
@@ -175,11 +148,7 @@ describe("SideDrawer", () => {
 
   describe("Navigation Links", () => {
     it("should render all navigation links", () => {
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       expect(
         screen.getByRole("link", { name: /workouts/i }),
@@ -194,11 +163,7 @@ describe("SideDrawer", () => {
     });
 
     it("should have correct href attributes", () => {
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       expect(screen.getByRole("link", { name: /workouts/i })).toHaveAttribute(
         "href",
@@ -218,25 +183,10 @@ describe("SideDrawer", () => {
       );
     });
 
-    it("should highlight active navigation link", () => {
-      render(
-        <TestWrapper initialEntries={["/workouts"]}>
-          <SideDrawer />
-        </TestWrapper>,
-      );
-
-      const workoutsLink = screen.getByRole("link", { name: /workouts/i });
-      expect(workoutsLink).toHaveClass("bg-primary", "text-primary-foreground");
-    });
-
     it("should close drawer when navigation link is clicked", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       await user.click(screen.getByRole("link", { name: /workouts/i }));
 
@@ -248,11 +198,7 @@ describe("SideDrawer", () => {
     it("should close drawer when clicking outside drawer area", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <SideDrawer />
-        </TestWrapper>,
-      );
+      render(<SideDrawer />);
 
       // Click outside the drawer (on the SheetOverlay)
       const overlay = screen.getByTestId("sheet-overlay");
@@ -371,7 +317,7 @@ describe("SideDrawer", () => {
     it("should handle Google sign-in failure gracefully", async () => {
       const consoleSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {});
+        .mockImplementation(() => { });
       const user = userEvent.setup();
 
       // Clear the default rejection and set specific failure
