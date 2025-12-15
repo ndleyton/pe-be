@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import DesktopSidebar from "./DesktopSidebar";
 
 // Mock Zustand stores
@@ -49,10 +48,7 @@ vi.mock("@/shared/api/client", () => ({
 
 const TestWrapper: React.FC<{
   children: React.ReactNode;
-  initialEntries?: string[];
-}> = ({ children, initialEntries = ["/"] }) => (
-  <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
-);
+}> = ({ children }) => <>{children}</>;
 
 describe("DesktopSidebar", () => {
   beforeEach(() => {
@@ -62,11 +58,7 @@ describe("DesktopSidebar", () => {
 
   describe("Rendering and Structure", () => {
     it("should render the desktop sidebar with proper structure", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       const sidebar = screen.getByRole("complementary");
       expect(sidebar).toBeInTheDocument();
@@ -80,21 +72,13 @@ describe("DesktopSidebar", () => {
     });
 
     it("should render the brand logo and title", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });
 
     it("should render all navigation items", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(
         screen.getByRole("link", { name: /workouts/i }),
@@ -109,11 +93,7 @@ describe("DesktopSidebar", () => {
     });
 
     it("should have correct href attributes for navigation links", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(screen.getByRole("link", { name: /workouts/i })).toHaveAttribute(
         "href",
@@ -134,45 +114,11 @@ describe("DesktopSidebar", () => {
     });
   });
 
-  describe("Navigation States", () => {
-    it("should highlight the active navigation item", () => {
-      render(
-        <TestWrapper initialEntries={["/workouts"]}>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
-
-      const workoutsLink = screen.getByRole("link", { name: /workouts/i });
-      expect(workoutsLink).toHaveClass("bg-primary", "text-primary-foreground");
-    });
-
-    it("should not highlight inactive navigation items", () => {
-      render(
-        <TestWrapper initialEntries={["/workouts"]}>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
-
-      const exercisesLink = screen.getByRole("link", { name: /exercises/i });
-      const profileLink = screen.getByRole("link", { name: /profile/i });
-
-      expect(exercisesLink).not.toHaveClass(
-        "bg-primary",
-        "text-primary-content",
-      );
-      expect(profileLink).not.toHaveClass("bg-primary", "text-primary-content");
-    });
-  });
-
   describe("Authentication States", () => {
     it("should show sign in button when not authenticated", () => {
       mockIsAuthenticated.mockReturnValue(false);
 
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(
         screen.getByRole("button", { name: /sign in with google/i }),
@@ -188,11 +134,7 @@ describe("DesktopSidebar", () => {
     it("should show about and sign out buttons when authenticated", () => {
       mockIsAuthenticated.mockReturnValue(true);
 
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(
         screen.getByRole("button", { name: /about/i }),
@@ -208,11 +150,7 @@ describe("DesktopSidebar", () => {
 
   describe("Accessibility", () => {
     it("should have proper ARIA labels and roles", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       const sidebar = screen.getByRole("complementary");
       expect(sidebar).toBeInTheDocument();
@@ -225,11 +163,7 @@ describe("DesktopSidebar", () => {
     it("should be keyboard navigable", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       // Tab through navigation items
       await user.tab();

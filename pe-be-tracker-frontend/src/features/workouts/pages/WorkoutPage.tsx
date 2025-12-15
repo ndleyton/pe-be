@@ -11,6 +11,7 @@ import {
 } from "@/features/exercises/api";
 import { ExerciseList, ExerciseTypeModal } from "@/features/exercises/components";
 import { FinishWorkoutModal } from "@/features/workouts/components";
+import { type Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { SaveRoutineModal } from "@/features/routines/components/SaveRoutineModal/SaveRoutineModal";
@@ -33,9 +34,9 @@ const updateWorkoutEndTime = async (workoutId: string) => {
 };
 
 // Fetch a single workout by ID (for authenticated users)
-const fetchWorkout = async (workoutId: string) => {
+const fetchWorkout = async (workoutId: string): Promise<Workout> => {
   const response = await api.get(`/workouts/${workoutId}`);
-  return response.data as { id: string | number; name: string | null };
+  return response.data as Workout;
 };
 
 const WorkoutPage = () => {
@@ -138,52 +139,52 @@ const WorkoutPage = () => {
       const guestExercises = guestWorkout?.exercises || [];
       return Array.isArray(guestExercises)
         ? guestExercises.map(
-            (guestExercise: GuestExercise): Exercise => ({
-              id: guestExercise.id,
-              timestamp: guestExercise.timestamp,
-              notes: guestExercise.notes,
-              exercise_type_id: guestExercise.exercise_type_id,
-              workout_id: guestExercise.workout_id,
-              created_at: guestExercise.created_at,
-              updated_at: guestExercise.updated_at,
-              exercise_type: {
-                id: parseInt(guestExercise.exercise_type.id) || 0,
-                name: guestExercise.exercise_type.name,
-                description: guestExercise.exercise_type.description,
-                default_intensity_unit:
-                  guestExercise.exercise_type.default_intensity_unit,
-                times_used: guestExercise.exercise_type.times_used,
-                equipment: guestExercise.exercise_type.equipment || null,
-                instructions: guestExercise.exercise_type.instructions || null,
-                category: guestExercise.exercise_type.category || null,
-                created_at:
-                  guestExercise.exercise_type.created_at ||
-                  guestExercise.created_at,
-                updated_at:
-                  guestExercise.exercise_type.updated_at ||
-                  guestExercise.updated_at,
-                usage_count:
-                  guestExercise.exercise_type.usage_count ||
-                  guestExercise.exercise_type.times_used,
-                // Ensure muscles and muscle_groups are passed through
-                muscles: guestExercise.exercise_type.muscles || [],
-                muscle_groups: guestExercise.exercise_type.muscle_groups || [],
-              },
-              exercise_sets: Array.isArray(guestExercise.exercise_sets)
-                ? guestExercise.exercise_sets.map((guestSet) => ({
-                    id: guestSet.id,
-                    reps: guestSet.reps,
-                    intensity: guestSet.intensity,
-                    intensity_unit_id: guestSet.intensity_unit_id,
-                    exercise_id: guestSet.exercise_id,
-                    rest_time_seconds: guestSet.rest_time_seconds,
-                    done: guestSet.done,
-                    created_at: guestSet.created_at,
-                    updated_at: guestSet.updated_at,
-                  }))
-                : [],
-            }),
-          )
+          (guestExercise: GuestExercise): Exercise => ({
+            id: guestExercise.id,
+            timestamp: guestExercise.timestamp,
+            notes: guestExercise.notes,
+            exercise_type_id: guestExercise.exercise_type_id,
+            workout_id: guestExercise.workout_id,
+            created_at: guestExercise.created_at,
+            updated_at: guestExercise.updated_at,
+            exercise_type: {
+              id: parseInt(guestExercise.exercise_type.id) || 0,
+              name: guestExercise.exercise_type.name,
+              description: guestExercise.exercise_type.description,
+              default_intensity_unit:
+                guestExercise.exercise_type.default_intensity_unit,
+              times_used: guestExercise.exercise_type.times_used,
+              equipment: guestExercise.exercise_type.equipment || null,
+              instructions: guestExercise.exercise_type.instructions || null,
+              category: guestExercise.exercise_type.category || null,
+              created_at:
+                guestExercise.exercise_type.created_at ||
+                guestExercise.created_at,
+              updated_at:
+                guestExercise.exercise_type.updated_at ||
+                guestExercise.updated_at,
+              usage_count:
+                guestExercise.exercise_type.usage_count ||
+                guestExercise.exercise_type.times_used,
+              // Ensure muscles and muscle_groups are passed through
+              muscles: guestExercise.exercise_type.muscles || [],
+              muscle_groups: guestExercise.exercise_type.muscle_groups || [],
+            },
+            exercise_sets: Array.isArray(guestExercise.exercise_sets)
+              ? guestExercise.exercise_sets.map((guestSet) => ({
+                id: guestSet.id,
+                reps: guestSet.reps,
+                intensity: guestSet.intensity,
+                intensity_unit_id: guestSet.intensity_unit_id,
+                exercise_id: guestSet.exercise_id,
+                rest_time_seconds: guestSet.rest_time_seconds,
+                done: guestSet.done,
+                created_at: guestSet.created_at,
+                updated_at: guestSet.updated_at,
+              }))
+              : [],
+          }),
+        )
         : [];
     }
   }, [isAuthenticated, serverExercises, guestData.workouts, workoutId]);
@@ -205,7 +206,7 @@ const WorkoutPage = () => {
     // Determine canonical start time from server (auth) or persisted guest data
     let derived: Date | undefined;
     if (isAuthenticated) {
-      const ws = (serverWorkout as any)?.start_time as string | undefined;
+      const ws = serverWorkout?.start_time ?? undefined;
       if (ws) {
         const d = new Date(ws);
         if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
@@ -215,7 +216,7 @@ const WorkoutPage = () => {
     } else {
       if (guestHydrated) {
         const guestWorkout = guestData.workouts.find((w) => w.id === workoutId);
-        const ws = (guestWorkout as any)?.start_time as string | undefined;
+        const ws = guestWorkout?.start_time ?? undefined;
         if (ws) {
           const d = new Date(ws);
           if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
@@ -228,12 +229,13 @@ const WorkoutPage = () => {
       }
     }
 
-    // If we have a derived start and it's different from current, (re)start aligned to it
+    // If we have a derived start and timer hasn't started yet, start aligned to it.
+    // IMPORTANT: Only do this when startTime is null (timer not yet started).
+    // If startTime exists but differs from derivedMs, that's expected after pause/resume
+    // adjustments - we should NOT reset it back to the original time.
     if (derived) {
-      const currentStartMs = typeof startTime === "number" ? startTime : null;
-      const derivedMs = derived.getTime();
-      if (currentStartMs == null || currentStartMs !== derivedMs) {
-        startWorkoutTimer(derivedMs);
+      if (startTime == null) {
+        startWorkoutTimer(derived.getTime());
       }
       return;
     }
@@ -247,7 +249,6 @@ const WorkoutPage = () => {
         startWorkoutTimer();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     serverWorkout,
     workoutId,
@@ -255,6 +256,7 @@ const WorkoutPage = () => {
     guestData.workouts,
     guestHydrated,
     startTime,
+    startWorkoutTimer,
   ]);
 
   // Auto-create exercises from recipe when page loads
@@ -449,7 +451,7 @@ const WorkoutPage = () => {
               : "Add Exercise"}
           </Button>
         </div>
-     </div>
+      </div>
 
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}

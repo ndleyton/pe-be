@@ -50,10 +50,7 @@ const AllTheProviders = ({
 
 const customRender = (
   ui: ReactElement,
-  {
-    queryClient = createTestQueryClient(),
-    ...options
-  }: CustomRenderOptions = {},
+  { queryClient = createTestQueryClient(), ...options }: CustomRenderOptions = {},
 ) => {
   return render(ui, {
     wrapper: ({ children }) => (
