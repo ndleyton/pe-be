@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { render } from "@/test/utils";
+import { render } from "@/test/testUtils";
 import WorkoutForm from "./WorkoutForm";
 
 interface WorkoutType {

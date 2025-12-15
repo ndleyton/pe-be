@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import api from "@/shared/api/client";
 
@@ -44,7 +44,7 @@ const TestComponent = () => {
 };
 
 const renderWithAuth = (component: React.ReactNode) => {
-  return render(<AuthProvider>{component}</AuthProvider>);
+  return rtlRender(<AuthProvider>{component}</AuthProvider>);
 };
 
 describe("AuthContext", () => {
@@ -259,7 +259,7 @@ describe("AuthContext", () => {
       };
 
       expect(() => {
-        render(<TestComponentWithoutProvider />);
+        rtlRender(<TestComponentWithoutProvider />);
       }).toThrow("useAuth must be used within an AuthProvider");
     });
   });
