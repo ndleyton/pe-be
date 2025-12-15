@@ -46,10 +46,6 @@ vi.mock("@/shared/api/client", () => ({
   },
 }));
 
-const TestWrapper: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => <>{children}</>;
-
 describe("DesktopSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -180,11 +176,7 @@ describe("DesktopSidebar", () => {
     });
 
     it("should have proper semantic structure", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       // Should have semantic aside element
       const sidebar = screen.getByRole("complementary");
@@ -198,11 +190,7 @@ describe("DesktopSidebar", () => {
 
   describe("Visual Design", () => {
     it("should have consistent styling classes", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       const sidebar = screen.getByRole("complementary");
       expect(sidebar).toHaveClass(
@@ -219,11 +207,7 @@ describe("DesktopSidebar", () => {
     });
 
     it("should have proper spacing and layout classes", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       const nav = screen.getByRole("navigation");
       expect(nav).toHaveClass("flex-1", "px-4", "py-6", "space-y-2");
@@ -232,11 +216,7 @@ describe("DesktopSidebar", () => {
 
   describe("Responsive Design", () => {
     it("should be hidden on smaller screens and visible on desktop", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       const sidebar = screen.getByRole("complementary");
       expect(sidebar).toHaveClass("hidden", "lg:flex");
@@ -245,11 +225,7 @@ describe("DesktopSidebar", () => {
 
   describe("Brand Display", () => {
     it("should display the brand correctly", () => {
-      render(
-        <TestWrapper>
-          <DesktopSidebar />
-        </TestWrapper>,
-      );
+      render(<DesktopSidebar />);
 
       expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });

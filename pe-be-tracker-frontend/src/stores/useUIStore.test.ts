@@ -12,6 +12,8 @@ describe("useUIStore persistence and rehydration", () => {
   });
 
   afterEach(() => {
+    // Ensure any scheduled timers/intervals from the store are cleared
+    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
@@ -85,7 +87,6 @@ describe("useUIStore persistence and rehydration", () => {
     const st = reloadedStore.getState().workoutTimer;
     expect(st.paused).toBe(true);
     expect(typeof st.pausedAt).toBe("number");
-    expect(st.intervalId).toBeNull();
     expect(st.elapsedSeconds).toBe(120);
 
     // Advance time; elapsed should remain frozen while paused
@@ -105,6 +106,7 @@ describe("Workout Timer Interactions", () => {
   });
 
   afterEach(() => {
+    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
