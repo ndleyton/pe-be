@@ -65,9 +65,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
         name: recipe
           ? `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
           : new Date().toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            }),
+            month: "short",
+            day: "numeric",
+          }),
         start_time: toLocalDateTimeInputValue(),
         workout_type_id: !isAuthenticated ? "" : undefined, // Initialize for guest users
       },
@@ -157,8 +157,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
         setValue("workout_type_id", workoutType.id);
       }
 
-      const startTimeISO =
-        toUTCISOString(data.start_time) || getCurrentUTCTimestamp();
+      const startTimeISO = getCurrentUTCTimestamp();
       const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
 
       const newWorkoutId = guestActions.addWorkout({

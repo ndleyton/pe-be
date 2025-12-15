@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import AppBar from "./AppBar";
 
 // Mock react-router-dom navigate
@@ -68,11 +67,6 @@ vi.mock("./DesktopNav", () => ({
   default: () => <div data-testid="desktop-nav">Desktop Navigation</div>,
 }));
 
-// Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  return <MemoryRouter initialEntries={["/workouts"]}>{children}</MemoryRouter>;
-};
-
 describe("AppBar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,11 +78,7 @@ describe("AppBar", () => {
 
   describe("Rendering and Structure", () => {
     it("should render the app bar with proper banner role", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const navbar = screen.getByRole("banner");
       expect(navbar).toBeInTheDocument();
@@ -106,11 +96,7 @@ describe("AppBar", () => {
     });
 
     it("should render the home logo button", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       expect(logoButton).toBeInTheDocument();
@@ -119,11 +105,7 @@ describe("AppBar", () => {
     });
 
     it("should render the mobile menu button with proper accessibility", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const menuButton = screen.getByRole("button", {
         name: /open navigation menu/i,
@@ -138,11 +120,7 @@ describe("AppBar", () => {
     it("should navigate to home when logo is clicked", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       await user.click(logoButton);
@@ -153,11 +131,7 @@ describe("AppBar", () => {
     it("should toggle drawer when mobile menu button is clicked", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const menuButton = screen.getByRole("button", {
         name: /open navigation menu/i,
@@ -170,11 +144,7 @@ describe("AppBar", () => {
     it("should handle keyboard navigation for logo button", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       logoButton.focus();
@@ -186,11 +156,7 @@ describe("AppBar", () => {
     it("should handle keyboard navigation for menu button", async () => {
       const user = userEvent.setup();
 
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const menuButton = screen.getByRole("button", {
         name: /open navigation menu/i,
@@ -204,11 +170,7 @@ describe("AppBar", () => {
 
   describe("Responsive Design", () => {
     it("should have mobile-first responsive classes", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       // Mobile menu should be hidden on large desktop
       const menuButton = screen.getByRole("button", {
@@ -224,11 +186,7 @@ describe("AppBar", () => {
     });
 
     it("should have proper styling classes for layout", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const navbar = screen.getByRole("banner");
       expect(navbar).toHaveClass(
@@ -254,11 +212,7 @@ describe("AppBar", () => {
 
   describe("Component Integration", () => {
     it("should properly integrate with DrawerContext", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       // Component should render without errors, indicating proper context integration
       expect(screen.getByRole("banner")).toBeInTheDocument();
@@ -268,11 +222,7 @@ describe("AppBar", () => {
     });
 
     it("should properly integrate with React Router", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       // Component should render without errors, indicating proper router integration
       expect(screen.getByRole("banner")).toBeInTheDocument();
@@ -282,11 +232,7 @@ describe("AppBar", () => {
     });
 
     it("should render child components correctly", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       // Check that mocked child components are rendered
       expect(screen.getByTestId("home-logo")).toHaveTextContent("PE Logo");
@@ -295,11 +241,7 @@ describe("AppBar", () => {
 
   describe("Accessibility", () => {
     it("should have proper ARIA labels and roles", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const navbar = screen.getByRole("banner");
       expect(navbar).toHaveAttribute("aria-label", "Primary navigation");
@@ -314,11 +256,7 @@ describe("AppBar", () => {
     });
 
     it("should be keyboard accessible", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       const menuButton = screen.getByRole("button", {
@@ -331,11 +269,7 @@ describe("AppBar", () => {
     });
 
     it("should have semantic HTML structure", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const banner = screen.getByRole("banner");
       expect(banner).toBeInTheDocument();
@@ -357,11 +291,7 @@ describe("AppBar", () => {
 
   describe("Visual Design and Styling", () => {
     it("should have proper button styling classes", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       expect(logoButton).toHaveClass("text-xl");
@@ -373,11 +303,7 @@ describe("AppBar", () => {
     });
 
     it("should have consistent navbar theming", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const navbar = screen.getByRole("banner");
       expect(navbar).toHaveClass(
@@ -395,11 +321,7 @@ describe("AppBar", () => {
 
   describe("User Account Features", () => {
     it("should have navbar-end with user account features", () => {
-      render(
-        <TestWrapper>
-          <AppBar />
-        </TestWrapper>,
-      );
+      render(<AppBar />);
 
       const endSection = screen
         .getByRole("banner")

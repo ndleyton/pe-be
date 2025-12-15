@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@/test/testUtils";
 import { useGuestStore } from "./useGuestStore";
 import type {
   GuestWorkout,
