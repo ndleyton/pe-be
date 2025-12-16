@@ -38,7 +38,7 @@ async def get_exercise_by_id(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets),
+            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))),
         )
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
@@ -48,7 +48,7 @@ async def get_exercise_by_id(
 async def get_exercises_for_workout(
     session: AsyncSession, workout_id: int
 ) -> List[Exercise]:
-    """Get all exercises for a specific workout"""
+    """Get all exercises for a specific workout (excluding soft-deleted sets)"""
     result = await session.execute(
         select(Exercise)
         .options(
@@ -56,9 +56,8 @@ async def get_exercises_for_workout(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets).selectinload(
-                ExerciseSet.intensity_unit
-            ),
+            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
+            .selectinload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
@@ -91,7 +90,7 @@ async def create_exercise(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets),
+            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))),
         )
         .where(Exercise.id == exercise.id)
     )
@@ -349,7 +348,7 @@ async def get_exercise_type_stats(
     # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
         select(Exercise)
-        .options(selectinload(Exercise.exercise_sets))
+        .options(selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))))
         .where(Exercise.exercise_type_id == exercise_type_id)
         .order_by(Exercise.created_at.desc())
     )
