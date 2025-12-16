@@ -56,8 +56,9 @@ async def get_exercises_for_workout(
             .selectinload(ExerciseType.exercise_muscles)
             .selectinload(ExerciseMuscle.muscle)
             .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
-            .selectinload(ExerciseSet.intensity_unit),
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).selectinload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
@@ -348,7 +349,9 @@ async def get_exercise_type_stats(
     # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
         select(Exercise)
-        .options(selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))))
+        .options(
+            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
+        )
         .where(Exercise.exercise_type_id == exercise_type_id)
         .order_by(Exercise.created_at.desc())
     )
