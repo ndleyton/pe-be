@@ -67,7 +67,9 @@ const AppBar = () => {
             type="button"
             onClick={togglePause}
             aria-label={paused ? "Resume timer" : "Pause timer"}
-            className="hover:bg-muted/50 focus-visible:ring-ring flex items-center space-x-1 rounded-md px-2 py-1 focus:outline-none focus-visible:ring-2"
+            className={`hover:bg-muted/50 focus-visible:ring-ring items-center space-x-1 rounded-md px-2 py-1 focus:outline-none focus-visible:ring-2 ${
+              isAuthenticated ? "flex" : "hidden lg:flex"
+            }`}
           >
             {/* Timer text always visible */}
             <span className="font-mono text-sm" aria-label="Workout timer">

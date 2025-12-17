@@ -123,8 +123,8 @@ export interface CreateExerciseSetData {
 }
 
 export interface UpdateExerciseSetData {
-  reps?: number;
-  intensity?: number;
+  reps?: number | null;
+  intensity?: number | null;
   intensity_unit_id?: number;
   rest_time_seconds?: number;
   done?: boolean;
