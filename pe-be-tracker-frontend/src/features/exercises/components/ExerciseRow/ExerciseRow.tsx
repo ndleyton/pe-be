@@ -73,7 +73,7 @@ const buildIntensityInputs = (sets: ExerciseSet[]): Record<string, string> => {
 
 const buildRepsInputs = (sets: ExerciseSet[]): Record<string, string> => {
   return sets.reduce<Record<string, string>>((acc, set) => {
-    acc[String(set.id)] = String(set.reps || 0);
+    acc[String(set.id)] = set.reps === null || set.reps === undefined ? "" : String(set.reps);
     return acc;
   }, {});
 };
@@ -227,7 +227,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   const updateSet = (
     setId: string | number,
     field: "weight" | "reps",
-    value: number,
+    value: number | null,
   ) => {
     // 1. Optimistic Update (Local State)
     const updatedSets = exerciseSets.map((set) => {
@@ -603,7 +603,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
               intensityInputs[setKey] ??
               (savedIntensityValue === "-" ? "" : savedIntensityValue);
 
-            const savedRepsValue = String(set.reps || 0);
+            const savedRepsValue = set.reps === null ? "" : String(set.reps);
             const repsValue = repsInputs[setKey] ?? savedRepsValue;
 
             return (
@@ -707,8 +707,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                       }
                     }}
                     onBlur={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (!isNaN(val)) {
+                      const val = e.target.value === "" ? null : parseInt(e.target.value);
+                      if (val === null || !isNaN(val)) {
                         updateSet(set.id, "reps", val);
                       } else {
                         // Revert on invalid
@@ -716,6 +716,12 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                           ...prev,
                           [setKey]: savedRepsValue,
                         }));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLInputElement).blur();
                       }
                     }}
                     className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[8ch]"
