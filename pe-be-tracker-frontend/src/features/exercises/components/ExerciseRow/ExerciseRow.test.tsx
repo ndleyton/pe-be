@@ -231,8 +231,8 @@ describe("ExerciseRow", () => {
     const weightInputs = Array.from(
       container.querySelectorAll('input[inputmode="decimal"]'),
     ) as HTMLInputElement[];
-    // Reps inputs are number inputs (spinbuttons)
-    const repsInputs = screen.getAllByRole("spinbutton") as HTMLInputElement[];
+    // Reps inputs are text inputs with inputMode="numeric"
+    const repsInputs = Array.from(container.querySelectorAll('input[inputmode="numeric"]')) as HTMLInputElement[];
 
     const weightValues = weightInputs.map((i) => i.value);
     const repsValues = repsInputs.map((i) => i.value);
@@ -375,14 +375,18 @@ describe("ExerciseRow", () => {
   it("disables inputs when set is completed", () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    const allInputs = screen.getAllByRole("spinbutton");
-    const allButtons = screen.getAllByRole("button");
+    // Select all weight and reps inputs
+    const decimalInputs = Array.from(document.querySelectorAll('input[inputmode="decimal"]'));
+    const numericInputs = Array.from(document.querySelectorAll('input[inputmode="numeric"]'));
 
-    // Check that completed set (second set) has disabled inputs
-    const secondSetInputs = allInputs.slice(2, 4); // Assuming second set inputs
-    secondSetInputs.forEach((input) => {
-      expect(input).toBeDisabled();
-    });
+    // We expect 2 sets. Set 2 is done.
+    // Set 2 inputs should be disabled.
+    // Let's check specifically for the inputs corresponding to set 2.
+    // Assuming inputs are rendered in order (Set 1 Weight, Set 1 Reps, Set 2 Weight, Set 2 Reps)
+    // But since we queried separately, we need to check index 1 of each array (Set 2).
+
+    expect(decimalInputs[1]).toBeDisabled();
+    expect(numericInputs[1]).toBeDisabled();
 
     // Check that plus/minus buttons for completed set are disabled
     const plusButtons = screen.getAllByTestId("plus-icon");
@@ -547,5 +551,27 @@ describe("ExerciseRow", () => {
         expect(mockOnExerciseDelete).toHaveBeenCalledWith(123);
       });
     }
+  });
+
+  it("allows clearing reps input (setting to null)", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ExerciseRow {...defaultProps} />);
+
+    const repsInputs = Array.from(
+      container.querySelectorAll('input[inputmode="numeric"]'),
+    ) as HTMLInputElement[];
+    const repsInput = repsInputs[0];
+
+    await user.clear(repsInput);
+    // Commit via Enter which triggers blur in component
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(updateExerciseSet).toHaveBeenCalledWith(1, { reps: null });
+      expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
+        ...mockExercise,
+        exercise_sets: [{ ...mockExerciseSet1, reps: null }, mockExerciseSet2],
+      });
+    });
   });
 });
