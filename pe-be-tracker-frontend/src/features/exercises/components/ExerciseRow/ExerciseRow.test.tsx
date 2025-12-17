@@ -552,4 +552,26 @@ describe("ExerciseRow", () => {
       });
     }
   });
+
+  it("allows clearing reps input (setting to null)", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ExerciseRow {...defaultProps} />);
+
+    const repsInputs = Array.from(
+      container.querySelectorAll('input[inputmode="numeric"]'),
+    ) as HTMLInputElement[];
+    const repsInput = repsInputs[0];
+
+    await user.clear(repsInput);
+    // Commit via Enter which triggers blur in component
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(updateExerciseSet).toHaveBeenCalledWith(1, { reps: null });
+      expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
+        ...mockExercise,
+        exercise_sets: [{ ...mockExerciseSet1, reps: null }, mockExerciseSet2],
+      });
+    });
+  });
 });
