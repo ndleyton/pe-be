@@ -16,7 +16,6 @@ from src.chat.crud import (
 )
 from src.chat.schemas import ConversationMessageCreate
 from src.exercises.crud import get_exercise_types, get_exercise_type_stats
-from src.workouts.service import WorkoutParsingService
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
 from src.exercises.crud import get_exercises_for_workout
 
@@ -156,25 +155,43 @@ class ChatService:
 
         return summary
 
-    async def _parse_workout_and_return_json(self, workout_text: str) -> str:
-        parsed_workout = await WorkoutParsingService.parse_workout_text(workout_text)
+    async def _parse_workout_and_save(self, **kwargs) -> str:
+        """
+        Receives structured workout data from the LLM and saves it to the database.
+        The LLM may pass either:
+        - Direct keyword arguments matching WorkoutParseResponse
+        - A single '__arg1' or 'kwargs' key containing a JSON string
+        """
+        # Prevent duplicate saves in the same request
+        if self._workout_saved_this_request:
+            return "WORKOUT ALREADY SAVED. A workout has already been logged in this conversation turn. No action taken."
 
-        # If we have a DB session, persist the parsed workout for this user
+        import json
         try:
+            from src.workouts.schemas import WorkoutParseResponse
+
+            # Handle case where LLM passes JSON string as __arg1 or kwargs
+            for key in ('__arg1', 'kwargs'):
+                if key in kwargs and len(kwargs) == 1:
+                    json_str = kwargs[key]
+                    if isinstance(json_str, str):
+                        kwargs = json.loads(json_str)
+                        break
+
+            parsed_workout = WorkoutParseResponse(**kwargs)
+
+            # If we have a DB session, persist the parsed workout for this user
             if self.session:
                 from src.workouts.service import WorkoutService
-
                 await WorkoutService.create_workout_from_parsed(
                     self.session, self.user_id, parsed_workout
                 )
-        except Exception as e:
-            # Do not fail the tool on persistence issues; return parsed JSON and include a note
-            return (
-                parsed_workout.model_dump_json()
-                + f"\n\n(Note: Failed to save workout to database: {str(e)})"
-            )
 
-        return parsed_workout.model_dump_json()
+            self._workout_saved_this_request = True
+            exercise_count = len(parsed_workout.exercises)
+            return f"WORKOUT SAVED SUCCESSFULLY. Name: '{parsed_workout.name}', Exercises: {exercise_count}. Do not call this tool again for this workout."
+        except Exception as e:
+            return f"Failed to save workout: {str(e)}"
 
     def _get_tools(self) -> List[Tool]:
         """
@@ -188,8 +205,14 @@ class ChatService:
             ),
             Tool(
                 name="parse_workout",
-                func=self._parse_workout_and_return_json,
-                description="Use this tool only when the user provides a detailed text description of a workout they want to log or analyze. Do not use this for general questions about workout history. Input should be the full text description of the workout.",
+                func=self._parse_workout_and_save,
+                description="""Use this tool when the user provides a workout they want to log.
+The input should be the structured workout data including:
+- name: A name for the workout
+- workout_type_id: 1(Low Intensity), 2(HIIT), 3(Sports), 4(Strength), 5(Mobility), 6(Other)
+- notes: Optional workout notes
+- exercises: List of exercises, each with exercise_type_name, optional notes, and sets (reps, intensity, intensity_unit, rest_time_seconds)
+""",
             ),
             Tool(
                 name="get_last_workout_summary",
@@ -209,10 +232,12 @@ class ChatService:
         self.user_id = user_id
         self.session = session
         self.langfuse = self._get_langfuse_client()
+        self._workout_saved_this_request = False  # Prevent duplicate saves in one request
+        # Free tier: 10 RPM (Requests Per Minute) = 1 request per 6 seconds
         self.rate_limiter = InMemoryRateLimiter(
-            requests_per_second=3,
+            requests_per_second=0.1,
             check_every_n_seconds=0.1,
-            max_bucket_size=10,
+            max_bucket_size=1,
         )
 
     def _get_langfuse_client(self) -> Optional[Langfuse]:
@@ -342,11 +367,13 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
         try:
             # Initialize Gemini model
+            # max_retries=0 prevents LangChain from retrying on 429 quota errors
             llm = ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash",
+                model="gemini-2.5-flash-preview-09-2025",
                 google_api_key=settings.GOOGLE_AI_KEY,
                 temperature=0.7,
-                max_tokens=800,
+                max_tokens=2000,
+                max_retries=2,
                 rate_limiter=self.rate_limiter,
             )
 
@@ -512,7 +539,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         }
                         for msg in langchain_messages
                     ],
-                    model="gemini-2.0-flash-exp",
+                    model="gemini-2.5-flash-preview-09-2025",
                 )
                 if trace
                 else None
@@ -562,6 +589,11 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         except Exception as e:
             if trace:
                 trace.update(metadata={"status": "error", "error": str(e)})
+
+            error_msg = str(e)
+            if "429" in error_msg or "ResourceExhausted" in error_msg:
+                raise ValueError("The AI service is currently busy (quota exceeded). Please try again in a minute.")
+
             raise ValueError(f"Error generating response with Gemini: {e}")
 
     async def load_conversation_history(
