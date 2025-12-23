@@ -234,10 +234,11 @@ The input should be the structured workout data including:
         self.langfuse = self._get_langfuse_client()
         self._workout_saved_this_request = False  # Prevent duplicate saves in one request
         # Free tier: 10 RPM (Requests Per Minute) = 1 request per 6 seconds
+        # Optimized for better UX while respecting quota limits
         self.rate_limiter = InMemoryRateLimiter(
-            requests_per_second=0.1,
-            check_every_n_seconds=0.1,
-            max_bucket_size=1,
+            requests_per_second=0.5,  # 1 request every 2 seconds (5x faster than current)
+            check_every_n_seconds=0.5,  # More granular rate limiting
+            max_bucket_size=3,  # Allows occasional bursts for better UX
         )
 
     def _get_langfuse_client(self) -> Optional[Langfuse]:
