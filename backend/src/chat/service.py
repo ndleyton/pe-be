@@ -167,11 +167,12 @@ class ChatService:
             return "WORKOUT ALREADY SAVED. A workout has already been logged in this conversation turn. No action taken."
 
         import json
+
         try:
             from src.workouts.schemas import WorkoutParseResponse
 
             # Handle case where LLM passes JSON string as __arg1 or kwargs
-            for key in ('__arg1', 'kwargs'):
+            for key in ("__arg1", "kwargs"):
                 if key in kwargs and len(kwargs) == 1:
                     json_str = kwargs[key]
                     if isinstance(json_str, str):
@@ -183,6 +184,7 @@ class ChatService:
             # If we have a DB session, persist the parsed workout for this user
             if self.session:
                 from src.workouts.service import WorkoutService
+
                 await WorkoutService.create_workout_from_parsed(
                     self.session, self.user_id, parsed_workout
                 )
@@ -232,7 +234,9 @@ The input should be the structured workout data including:
         self.user_id = user_id
         self.session = session
         self.langfuse = self._get_langfuse_client()
-        self._workout_saved_this_request = False  # Prevent duplicate saves in one request
+        self._workout_saved_this_request = (
+            False  # Prevent duplicate saves in one request
+        )
         # Free tier: 10 RPM (Requests Per Minute) = 1 request per 6 seconds
         # Optimized for better UX while respecting quota limits
         self.rate_limiter = InMemoryRateLimiter(
@@ -593,7 +597,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
             error_msg = str(e)
             if "429" in error_msg or "ResourceExhausted" in error_msg:
-                raise ValueError("The AI service is currently busy (quota exceeded). Please try again in a minute.")
+                raise ValueError(
+                    "The AI service is currently busy (quota exceeded). Please try again in a minute."
+                )
 
             raise ValueError(f"Error generating response with Gemini: {e}")
 
