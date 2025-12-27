@@ -181,13 +181,14 @@ class ChatService:
 
             parsed_workout = WorkoutParseResponse(**kwargs)
 
-            # If we have a DB session, persist the parsed workout for this user
-            if self.session:
-                from src.workouts.service import WorkoutService
+            if not self.session:
+                return "Failed to save workout: no database session available."
 
-                await WorkoutService.create_workout_from_parsed(
-                    self.session, self.user_id, parsed_workout
-                )
+            from src.workouts.service import WorkoutService
+
+            await WorkoutService.create_workout_from_parsed(
+                self.session, self.user_id, parsed_workout
+            )
 
             self._workout_saved_this_request = True
             exercise_count = len(parsed_workout.exercises)
