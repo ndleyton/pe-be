@@ -74,7 +74,6 @@ const FinishWorkoutModal = ({
 
   if (!isOpen) return null;
 
-  // Calculate muscle group summary
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
   const totalSets = muscleGroupSummary.reduce(
     (sum, group) => sum + group.setCount,
@@ -113,7 +112,6 @@ const FinishWorkoutModal = ({
         ) {
           resolvedBackground = nodeBg;
         } else {
-          // Fallback to CSS variable on :root (respects light/dark theme)
           const rootStyles = window.getComputedStyle(document.documentElement);
           const varBg = rootStyles.getPropertyValue("--background").trim();
           if (varBg) {
@@ -136,7 +134,7 @@ const FinishWorkoutModal = ({
         ),
       });
 
-      // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
+      // Build filename: "Workout Summary {Mon DD}.png"
       const now = new Date();
       const label = new Intl.DateTimeFormat(
         DATE_LABEL_LOCALE,
@@ -164,100 +162,97 @@ const FinishWorkoutModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-card text-card-foreground mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg p-6"
+        className="text-card-foreground mx-4 flex max-h-[90vh] w-full max-w-md flex-col"
         data-testid="finish-workout-modal"
       >
-        <h2 className="mb-4 text-xl font-bold">Finish Workout?</h2>
-        <p className="text-muted-foreground mb-4">
-          Are you sure you want to finish this workout?
-        </p>
-
-        {muscleGroupSummary.length > 0 && (
-          <div
-            ref={downloadAreaRef}
-            className="bg-background mb-6 rounded-lg p-4"
-          >
-            {/* Header: Logo and Duration for shareable image */}
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <img
-                  src={logoDataUrl ?? "/assets/logo.svg"}
-                  alt="Personal Bestie Logo"
-                  className="h-8 w-8"
-                  crossOrigin="anonymous"
-                />
-                <div className="text-primary flex flex-col items-start text-left text-base leading-none font-bold">
-                  <span>Personal</span>
-                  <span>Bestie.com</span>
-                </div>
-              </div>
-              <div className="text-foreground text-sm font-semibold">
-                Workout Duration:{" "}
-                <span className="text-primary">{formattedDuration}</span>
-              </div>
-            </div>
-            <h3 className="text-primary mb-1 text-lg font-bold">
-              {workoutName ?? "Great Training Session!"}
-            </h3>
-            <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
-            <div className="space-y-2">
-              {muscleGroupSummary.map((group) => (
-                <div
-                  key={group.name}
-                  className="bg-muted flex items-center justify-between rounded px-3 py-2"
-                >
-                  <span className="font-medium">{group.name}</span>
-                  <span className="text-primary font-bold">
-                    {group.setCount} set{group.setCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="border-border mt-3 border-t pt-3">
-              <div className="flex items-center justify-between font-bold">
-                <span>Total Sets Completed:</span>
-                <span className="text-primary text-lg">{totalSets}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {muscleGroupSummary.length > 0 && (
-          <div className="mb-4">
-            <DownloadImageButton onDownload={handleDownload} />
-          </div>
-        )}
-
-        {onSaveRecipe && exercises.length > 0 && (
-          <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-3">
-            <div className="mb-2 flex items-center space-x-2">
-              <span className="text-sm font-medium">📋 Save as Routine</span>
-            </div>
-            <p className="text-muted-foreground mb-3 text-sm">
-              Save this workout as a reusable routine for quick starts in the
-              future.
-            </p>
-            <Button
-              onClick={onSaveRecipe}
-              variant="outline"
-              size="sm"
-              className="w-full"
+        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
+          {muscleGroupSummary.length > 0 && (
+            <div
+              ref={downloadAreaRef}
+              className="bg-background mb-6 rounded-lg p-4"
             >
-              Save Routine
-            </Button>
-          </div>
-        )}
+              {/* Header: Logo and Duration for shareable image */}
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <img
+                    src={logoDataUrl ?? "/assets/logo.svg"}
+                    alt="Personal Bestie Logo"
+                    className="h-8 w-8"
+                    crossOrigin="anonymous"
+                  />
+                  <div className="text-primary flex flex-col items-start text-left text-base leading-none font-bold">
+                    <span>Personal</span>
+                    <span>Bestie.com</span>
+                  </div>
+                </div>
+                <div className="text-foreground text-sm font-semibold">
+                  Workout Duration:{" "}
+                  <span className="text-primary">{formattedDuration}</span>
+                </div>
+              </div>
+              <h3 className="text-primary mb-1 text-lg font-bold">
+                {workoutName ?? "Great Training Session!"}
+              </h3>
+              <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
+              <div className="space-y-2">
+                {muscleGroupSummary.map((group) => (
+                  <div
+                    key={group.name}
+                    className="bg-muted flex items-center justify-between rounded px-3 py-2"
+                  >
+                    <span className="font-medium">{group.name}</span>
+                    <span className="text-primary font-bold">
+                      {group.setCount} set{group.setCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-border mt-3 border-t pt-3">
+                <div className="flex items-center justify-between font-bold">
+                  <span>Total Sets Completed:</span>
+                  <span className="text-primary text-lg">{totalSets}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div className="flex justify-end space-x-4">
+          {muscleGroupSummary.length > 0 && (
+            <div className="mb-4">
+              <DownloadImageButton onDownload={handleDownload} />
+            </div>
+          )}
+
+          {onSaveRecipe && exercises.length > 0 && (
+            <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-3">
+              <div className="mb-2 flex items-center space-x-2">
+                <span className="text-sm font-medium">📋 Save as Routine</span>
+              </div>
+              <p className="text-muted-foreground mb-3 text-sm">
+                Save this workout as a reusable routine for quick starts in the
+                future.
+              </p>
+              <Button
+                onClick={onSaveRecipe}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                Save Routine
+              </Button>
+            </div>
+          )}
+        </div>
+        {/* Footer */}
+        <div className="flex shrink-0 justify-end gap-4 px-6 py-4">
           <Button
             onClick={onCancel}
             disabled={isLoading}
             variant="outline"
-            className="bg-muted hover:bg-accent border-border"
+            className="bg-card/80 hover:bg-accent border-border backdrop-blur-sm"
           >
             Cancel
           </Button>
