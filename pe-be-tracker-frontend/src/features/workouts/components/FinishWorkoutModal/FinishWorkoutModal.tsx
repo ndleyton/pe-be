@@ -164,17 +164,15 @@ const FinishWorkoutModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
       <div
         className="bg-card text-card-foreground mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg p-6"
         data-testid="finish-workout-modal"
       >
-        <h2 className="mb-4 text-xl font-bold">Finish Workout?</h2>
-        <p className="text-muted-foreground mb-4">
-          Are you sure you want to finish this workout?
-        </p>
+
+
 
         {muscleGroupSummary.length > 0 && (
           <div
