@@ -224,7 +224,7 @@ describe("FinishWorkoutModal", () => {
 
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
       expect(cancelButton).toHaveClass(
-        "bg-muted",
+        "bg-card",
         "hover:bg-accent",
         "border-border",
       );
@@ -257,7 +257,16 @@ describe("FinishWorkoutModal", () => {
       const buttonContainer = screen.getByRole("button", {
         name: "Cancel",
       }).parentElement;
-      expect(buttonContainer).toHaveClass("flex", "justify-end", "space-x-4");
+      expect(buttonContainer).toHaveClass(
+        "bg-transparent",
+        "border-border",
+        "-mx-6",
+        "-mb-6",
+        "border-t",
+        "px-6",
+        "py-4",
+        "rounded-b-lg",
+      );
     });
   });
 
