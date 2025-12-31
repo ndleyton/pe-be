@@ -26,17 +26,15 @@ describe("FinishWorkoutModal", () => {
     it("should not render when isOpen is false", () => {
       render(<FinishWorkoutModal {...defaultProps} isOpen={false} />);
 
-      expect(screen.queryByText("Finish Workout?")).not.toBeInTheDocument();
+
       expect(screen.queryByText("Cancel")).not.toBeInTheDocument();
     });
 
     it("should render when isOpen is true", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      expect(screen.getByText("Finish Workout?")).toBeInTheDocument();
-      expect(
-        screen.getByText("Are you sure you want to finish this workout?"),
-      ).toBeInTheDocument();
+
+
       expect(
         screen.getByRole("button", { name: "Cancel" }),
       ).toBeInTheDocument();
@@ -59,44 +57,27 @@ describe("FinishWorkoutModal", () => {
         "flex",
         "items-center",
         "justify-center",
-        "z-50",
+        "z-[100]",
       );
 
       // Check for modal content
       const modalContent = screen.getByTestId("finish-workout-modal");
       expect(modalContent).toHaveClass(
-        "bg-card",
         "text-card-foreground",
-        "p-6",
-        "rounded-lg",
         "max-w-md",
         "w-full",
         "mx-4",
         "max-h-[90vh]",
-        "overflow-y-auto",
+        "flex",
+        "flex-col",
       );
     });
   });
 
   describe("Content and Messaging", () => {
-    it("should display the correct title", () => {
-      render(<FinishWorkoutModal {...defaultProps} />);
 
-      const title = screen.getByText("Finish Workout?");
-      expect(title).toBeInTheDocument();
-      expect(title.tagName).toBe("H2");
-      expect(title).toHaveClass("text-xl", "font-bold", "mb-4");
-    });
 
-    it("should display the correct confirmation message", () => {
-      render(<FinishWorkoutModal {...defaultProps} />);
 
-      const message = screen.getByText(
-        "Are you sure you want to finish this workout?",
-      );
-      expect(message).toBeInTheDocument();
-      expect(message).toHaveClass("mb-4", "text-muted-foreground");
-    });
 
     it("should display correct button labels in normal state", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
@@ -241,9 +222,10 @@ describe("FinishWorkoutModal", () => {
 
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
       expect(cancelButton).toHaveClass(
-        "bg-muted",
+        "bg-card/80",
         "hover:bg-accent",
         "border-border",
+        "backdrop-blur-sm",
       );
     });
 
@@ -274,7 +256,14 @@ describe("FinishWorkoutModal", () => {
       const buttonContainer = screen.getByRole("button", {
         name: "Cancel",
       }).parentElement;
-      expect(buttonContainer).toHaveClass("flex", "justify-end", "space-x-4");
+      expect(buttonContainer).toHaveClass(
+        "flex",
+        "shrink-0",
+        "justify-end",
+        "gap-4",
+        "px-6",
+        "py-4",
+      );
     });
   });
 
@@ -311,7 +300,7 @@ describe("FinishWorkoutModal", () => {
         />,
       );
 
-      expect(screen.getByText("Finish Workout?")).toBeInTheDocument();
+      // Modal renders with buttons (no title text)
       expect(
         screen.getByRole("button", { name: "Cancel" }),
       ).toBeInTheDocument();
@@ -325,14 +314,14 @@ describe("FinishWorkoutModal", () => {
     it("should have proper z-index for modal overlay", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      const overlay = screen.getByText("Finish Workout?").closest(".fixed");
-      expect(overlay).toHaveClass("z-50");
+      const overlay = screen.getByTestId("finish-workout-modal").closest(".fixed");
+      expect(overlay).toHaveClass("z-[100]");
     });
 
     it("should center modal content properly", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      const overlay = screen.getByText("Finish Workout?").closest(".fixed");
+      const overlay = screen.getByTestId("finish-workout-modal").closest(".fixed");
       expect(overlay).toHaveClass("flex", "items-center", "justify-center");
     });
 
@@ -364,15 +353,9 @@ describe("FinishWorkoutModal", () => {
     it("should have proper semantic structure", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      // Title should be h2
-      const title = screen.getByText("Finish Workout?");
-      expect(title.tagName).toBe("H2");
 
-      // Message should be paragraph
-      const message = screen.getByText(
-        /Are you sure you want to finish this workout/,
-      );
-      expect(message.tagName).toBe("P");
+
+
 
       // Action elements should be buttons
       const buttons = screen.getAllByRole("button");
