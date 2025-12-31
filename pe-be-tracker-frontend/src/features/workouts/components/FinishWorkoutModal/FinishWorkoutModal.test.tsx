@@ -63,15 +63,13 @@ describe("FinishWorkoutModal", () => {
       // Check for modal content
       const modalContent = screen.getByTestId("finish-workout-modal");
       expect(modalContent).toHaveClass(
-        "bg-card",
         "text-card-foreground",
-        "p-6",
-        "rounded-lg",
         "max-w-md",
         "w-full",
         "mx-4",
         "max-h-[90vh]",
-        "overflow-y-auto",
+        "flex",
+        "flex-col",
       );
     });
   });
@@ -224,9 +222,10 @@ describe("FinishWorkoutModal", () => {
 
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
       expect(cancelButton).toHaveClass(
-        "bg-card",
+        "bg-card/80",
         "hover:bg-accent",
         "border-border",
+        "backdrop-blur-sm",
       );
     });
 
@@ -258,14 +257,12 @@ describe("FinishWorkoutModal", () => {
         name: "Cancel",
       }).parentElement;
       expect(buttonContainer).toHaveClass(
-        "bg-transparent",
-        "border-border",
-        "-mx-6",
-        "-mb-6",
-        "border-t",
+        "flex",
+        "shrink-0",
+        "justify-end",
+        "gap-4",
         "px-6",
         "py-4",
-        "rounded-b-lg",
       );
     });
   });
@@ -303,7 +300,7 @@ describe("FinishWorkoutModal", () => {
         />,
       );
 
-      expect(screen.getByText("Finish Workout?")).toBeInTheDocument();
+      // Modal renders with buttons (no title text)
       expect(
         screen.getByRole("button", { name: "Cancel" }),
       ).toBeInTheDocument();
@@ -317,14 +314,14 @@ describe("FinishWorkoutModal", () => {
     it("should have proper z-index for modal overlay", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      const overlay = screen.getByText("Finish Workout?").closest(".fixed");
+      const overlay = screen.getByTestId("finish-workout-modal").closest(".fixed");
       expect(overlay).toHaveClass("z-[100]");
     });
 
     it("should center modal content properly", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
-      const overlay = screen.getByText("Finish Workout?").closest(".fixed");
+      const overlay = screen.getByTestId("finish-workout-modal").closest(".fixed");
       expect(overlay).toHaveClass("flex", "items-center", "justify-center");
     });
 
