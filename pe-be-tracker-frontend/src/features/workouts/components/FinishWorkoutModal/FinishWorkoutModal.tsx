@@ -74,7 +74,6 @@ const FinishWorkoutModal = ({
 
   if (!isOpen) return null;
 
-  // Calculate muscle group summary
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
   const totalSets = muscleGroupSummary.reduce(
     (sum, group) => sum + group.setCount,
@@ -113,7 +112,6 @@ const FinishWorkoutModal = ({
         ) {
           resolvedBackground = nodeBg;
         } else {
-          // Fallback to CSS variable on :root (respects light/dark theme)
           const rootStyles = window.getComputedStyle(document.documentElement);
           const varBg = rootStyles.getPropertyValue("--background").trim();
           if (varBg) {
@@ -136,7 +134,7 @@ const FinishWorkoutModal = ({
         ),
       });
 
-      // Build filename: "Workout Summary {Mon DD}.png" using Intl for clarity
+      // Build filename: "Workout Summary {Mon DD}.png"
       const now = new Date();
       const label = new Intl.DateTimeFormat(
         DATE_LABEL_LOCALE,
@@ -168,10 +166,10 @@ const FinishWorkoutModal = ({
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-card text-card-foreground mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-lg"
+        className="text-card-foreground mx-4 flex max-h-[90vh] w-full max-w-md flex-col"
         data-testid="finish-workout-modal"
       >
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
@@ -248,20 +246,20 @@ const FinishWorkoutModal = ({
             </div>
           )}
         </div>
-
-        <div className="border-border flex shrink-0 flex-col gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end sm:gap-4">
+        {/* Footer */}
+        <div className="flex shrink-0 justify-end gap-4 px-6 py-4">
           <Button
             onClick={onCancel}
             disabled={isLoading}
             variant="outline"
-            className="bg-card hover:bg-accent border-border w-full sm:w-auto"
+            className="bg-card/80 hover:bg-accent border-border backdrop-blur-sm"
           >
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+            className="bg-primary hover:bg-primary/90"
           >
             {isLoading ? "Finishing..." : "Finish Workout"}
           </Button>
