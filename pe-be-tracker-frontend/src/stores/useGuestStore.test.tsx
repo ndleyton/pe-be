@@ -289,7 +289,7 @@ describe("useGuestStore", () => {
     });
 
     const state = result.current;
-    const recipe = state.recipes.find((r) => r.id === routineId)!;
+    const recipe = state.routines.find((r) => r.id === routineId)!;
     expect(recipe.name).toBe("My Recipe");
     expect(recipe.exercises).toHaveLength(1);
     expect(recipe.exercises[0].sets).toHaveLength(1);
