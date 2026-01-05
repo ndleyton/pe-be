@@ -14,7 +14,7 @@ import { useAuthStore } from "./useAuthStore";
 import { createIndexedDBStorage } from "./indexedDBStorage";
 import { buildExerciseTypes } from "./seeds/exerciseTypes";
 import { buildWorkoutTypes } from "./seeds/workoutTypes";
-import { buildRecipes } from "./seeds/recipes";
+import { buildRoutines } from "./seeds/routines";
 import { generateExerciseTypeIds } from "./seeds/types";
 
 export interface GuestExerciseType {
@@ -89,7 +89,7 @@ export interface GuestWorkout {
   updated_at: string;
 }
 
-export interface GuestRecipeSet {
+export interface GuestRoutineSet {
   id: string;
   reps: number | null;
   intensity: number | null;
@@ -99,19 +99,19 @@ export interface GuestRecipeSet {
   type?: string | null;
 }
 
-export interface GuestRecipeExercise {
+export interface GuestRoutineExercise {
   id: string;
   exercise_type_id: string;
   exercise_type: GuestExerciseType;
-  sets: GuestRecipeSet[];
+  sets: GuestRoutineSet[];
   notes: string | null;
 }
 
-export interface GuestRecipe {
+export interface GuestRoutine {
   id: string;
   name: string;
   description?: string;
-  exercises: GuestRecipeExercise[];
+  exercises: GuestRoutineExercise[];
   visibility?: "private" | "public" | "link_only";
   is_readonly?: boolean;
   created_at: string;
@@ -122,7 +122,8 @@ export interface GuestData {
   workouts: GuestWorkout[];
   exerciseTypes: GuestExerciseType[];
   workoutTypes: GuestWorkoutType[];
-  recipes: GuestRecipe[];
+  recipes?: never; // Deprecated
+  routines: GuestRoutine[];
 }
 
 interface GuestState extends GuestData {
@@ -167,7 +168,7 @@ interface GuestActions {
 
   // Routine-named actions
   addRoutine: (
-    routine: Omit<GuestRecipe, "id" | "created_at" | "updated_at">,
+    routine: Omit<GuestRoutine, "id" | "created_at" | "updated_at">,
   ) => string;
   deleteRoutine: (id: string) => void;
   createRoutineFromWorkout: (
@@ -175,7 +176,7 @@ interface GuestActions {
     exercises: GuestExercise[],
   ) => string;
   createExercisesFromRoutine: (
-    routine: GuestRecipe,
+    routine: GuestRoutine,
     workoutId: string,
   ) => string[];
 
@@ -202,7 +203,7 @@ const getInitialGuestData = (): GuestData => {
     workouts: [],
     exerciseTypes,
     workoutTypes: buildWorkoutTypes(generateRandomId),
-    recipes: buildRecipes(exerciseTypeIds, generateRandomId),
+    routines: buildRoutines(exerciseTypeIds, generateRandomId),
   } satisfies GuestData;
 
   return initialData;
@@ -226,8 +227,13 @@ const normalizeTimestamp = (value: unknown): string | null => {
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
 
-  if (!migrated.recipes) {
-    migrated.recipes = [];
+  if (!migrated.routines) {
+    if (migrated.recipes) {
+      migrated.routines = migrated.recipes;
+      delete migrated.recipes;
+    } else {
+      migrated.routines = [];
+    }
   }
 
   // Normalize timestamps and ensure arrays exist
@@ -254,13 +260,13 @@ const migrateGuestData = (data: any): GuestData => {
     }));
   }
 
-  if (migrated.recipes) {
-    migrated.recipes = migrated.recipes.map((recipe: any) => ({
-      ...recipe,
-      created_at: normalizeTimestamp(recipe.created_at),
-      updated_at: normalizeTimestamp(recipe.updated_at),
+  if (migrated.routines) {
+    migrated.routines = migrated.routines.map((routine: any) => ({
+      ...routine,
+      created_at: normalizeTimestamp(routine.created_at),
+      updated_at: normalizeTimestamp(routine.updated_at),
       exercises:
-        recipe.exercises?.map((exercise: any) => ({
+        routine.exercises?.map((exercise: any) => ({
           ...exercise,
           notes: exercise.notes ?? null,
           sets:
@@ -333,10 +339,10 @@ export const useGuestStore = create<GuestStore>()(
           workouts: state.workouts.map((workout) =>
             workout.id === exercise.workout_id
               ? {
-                  ...workout,
-                  exercises: [...workout.exercises, newExercise],
-                  updated_at: now,
-                }
+                ...workout,
+                exercises: [...workout.exercises, newExercise],
+                updated_at: now,
+              }
               : workout,
           ),
         }));
@@ -419,10 +425,10 @@ export const useGuestStore = create<GuestStore>()(
             exercises: workout.exercises.map((exercise) =>
               exercise.id === exerciseSet.exercise_id
                 ? {
-                    ...exercise,
-                    exercise_sets: [...exercise.exercise_sets, newExerciseSet],
-                    updated_at: now,
-                  }
+                  ...exercise,
+                  exercise_sets: [...exercise.exercise_sets, newExerciseSet],
+                  updated_at: now,
+                }
                 : exercise,
             ),
           })),
@@ -551,7 +557,7 @@ export const useGuestStore = create<GuestStore>()(
       addRoutine: (routine) => {
         const id = generateRandomId();
         const now = getCurrentUTCTimestamp();
-        const newRecipe: GuestRecipe = {
+        const newRoutine: GuestRoutine = {
           ...routine,
           id,
           created_at: now,
@@ -560,7 +566,7 @@ export const useGuestStore = create<GuestStore>()(
 
         set((state) => ({
           ...state,
-          recipes: [...(state.recipes || []), newRecipe],
+          routines: [...(state.routines || []), newRoutine],
         }));
 
         return id;
@@ -569,7 +575,7 @@ export const useGuestStore = create<GuestStore>()(
       deleteRoutine: (id) => {
         set((state) => ({
           ...state,
-          recipes: (state.recipes || []).filter((recipe) => recipe.id !== id),
+          routines: (state.routines || []).filter((routine) => routine.id !== id),
         }));
       },
       // Routine-named implementation
@@ -577,7 +583,7 @@ export const useGuestStore = create<GuestStore>()(
         const id = generateRandomId();
         const now = getCurrentUTCTimestamp();
 
-        const recipeExercises: GuestRecipeExercise[] = exercises.map(
+        const routineExercises: GuestRoutineExercise[] = exercises.map(
           (exercise) => ({
             id: generateRandomId(),
             exercise_type_id: exercise.exercise_type_id,
@@ -593,44 +599,44 @@ export const useGuestStore = create<GuestStore>()(
           }),
         );
 
-        const newRecipe: GuestRecipe = {
+        const newRoutine: GuestRoutine = {
           id,
           name: workoutName || "My Routine",
-          exercises: recipeExercises,
+          exercises: routineExercises,
           created_at: now,
           updated_at: now,
         };
 
         set((state) => ({
           ...state,
-          recipes: [...(state.recipes || []), newRecipe],
+          routines: [...(state.routines || []), newRoutine],
         }));
 
         return id;
       },
       // Routine-named implementation
-      createExercisesFromRoutine: (recipe, workoutId) => {
+      createExercisesFromRoutine: (routine, workoutId) => {
         const exerciseIds: string[] = [];
         const { addExercise, addExerciseSet } = get();
 
-        recipe.exercises.forEach((recipeExercise) => {
+        routine.exercises.forEach((routineExercise) => {
           const exerciseId = addExercise({
             workout_id: workoutId,
-            exercise_type_id: recipeExercise.exercise_type_id,
-            exercise_type: recipeExercise.exercise_type,
-            notes: recipeExercise.notes,
+            exercise_type_id: routineExercise.exercise_type_id,
+            exercise_type: routineExercise.exercise_type,
+            notes: routineExercise.notes,
             timestamp: getCurrentUTCTimestamp(),
           });
 
           exerciseIds.push(exerciseId);
 
-          recipeExercise.sets.forEach((recipeSet) => {
+          routineExercise.sets.forEach((routineSet) => {
             addExerciseSet({
               exercise_id: exerciseId,
-              reps: recipeSet.reps,
-              intensity: recipeSet.intensity,
-              intensity_unit_id: recipeSet.intensity_unit_id,
-              rest_time_seconds: recipeSet.rest_time_seconds,
+              reps: routineSet.reps,
+              intensity: routineSet.intensity,
+              intensity_unit_id: routineSet.intensity_unit_id,
+              rest_time_seconds: routineSet.rest_time_seconds,
               done: false,
             });
           });
@@ -718,18 +724,18 @@ export const useGuestStore = create<GuestStore>()(
     {
       name: "pe-guest-data",
       storage: createJSONStorage(() => createIndexedDBStorage()),
-      version: 1,
+      version: 2,
       // Persist only data fields; exclude ephemeral flags/actions
       partialize: (state) => ({
         workouts: state.workouts,
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
-        recipes: state.recipes,
+        routines: state.routines,
         hasAttemptedSync: state.hasAttemptedSync,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
-        if (persistedVersion == null || persistedVersion < 1) {
+        if (persistedVersion == null || persistedVersion < 2) {
           const guest = migrateGuestData(persistedState);
           return {
             ...getInitialGuestData(),

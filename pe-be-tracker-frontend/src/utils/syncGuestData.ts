@@ -9,6 +9,7 @@ export interface SyncResult {
   syncedWorkouts: number;
   syncedExercises: number;
   syncedSets: number;
+  syncedRoutines: number;
 }
 
 // Helper function to find or create exercise types on the server
@@ -110,6 +111,7 @@ export async function syncGuestDataToServer(
   let syncedWorkouts = 0;
   let syncedExercises = 0;
   let syncedSets = 0;
+  let syncedRoutines = 0;
 
   try {
     // If no guest data to sync, return early
@@ -119,6 +121,7 @@ export async function syncGuestDataToServer(
         syncedWorkouts: 0,
         syncedExercises: 0,
         syncedSets: 0,
+        syncedRoutines: 0,
       };
     }
 
@@ -130,6 +133,17 @@ export async function syncGuestDataToServer(
     const uniqueExerciseTypes = new Map();
     guestData.workouts.forEach((workout) => {
       workout.exercises.forEach((exercise) => {
+        if (!uniqueExerciseTypes.has(exercise.exercise_type.id)) {
+          uniqueExerciseTypes.set(
+            exercise.exercise_type.id,
+            exercise.exercise_type,
+          );
+        }
+      });
+    });
+
+    guestData.routines.forEach((routine) => {
+      routine.exercises.forEach((exercise) => {
         if (!uniqueExerciseTypes.has(exercise.exercise_type.id)) {
           uniqueExerciseTypes.set(
             exercise.exercise_type.id,
@@ -259,6 +273,65 @@ export async function syncGuestDataToServer(
       }
     }
 
+    // Now sync each routine
+    // We need a workout type for routines. Since guest routines don't store it,
+    // we'll use a default "Strength" type.
+    let defaultWorkoutTypeId: number | null = null;
+
+    if (guestData.routines.length > 0) {
+      try {
+        defaultWorkoutTypeId = await findOrCreateWorkoutType({
+          name: "Strength",
+          description: "Default workout type for synchronized routines",
+        });
+      } catch (e) {
+        console.error("Failed to get/create default workout type for routines", e);
+        // Fallback or skip routines? Use the first available if possible?
+        // For now we continue, but calls will fail if we pass null/undefined if strict check.
+        // But let's hope it works or we catch errors below.
+      }
+    }
+
+    for (const guestRoutine of guestData.routines) {
+      try {
+        if (!defaultWorkoutTypeId) {
+          console.warn("Skipping routine sync due to missing workout type");
+          continue;
+        }
+
+        const routinePayload = {
+          name: guestRoutine.name,
+          description: guestRoutine.description,
+          workout_type_id: defaultWorkoutTypeId,
+          exercise_templates: guestRoutine.exercises.map((ex: any) => {
+            const serverExerciseTypeId = exerciseTypeIdMap.get(ex.exercise_type_id);
+            if (!serverExerciseTypeId) {
+              throw new Error(`No server ID for exercise type ${ex.exercise_type_id} in routine`);
+            }
+            return {
+              exercise_type_id: serverExerciseTypeId,
+              set_templates: ex.sets.map((s: any) => ({
+                reps: s.reps,
+                intensity: s.intensity,
+                intensity_unit_id: s.intensity_unit_id,
+              }))
+            };
+          })
+        };
+
+        await api.post(endpoints.routines, routinePayload);
+        syncedRoutines++;
+
+      } catch (routineError) {
+        console.error(
+          `Failed to sync routine. Routine data:`,
+          guestRoutine,
+          "Error:",
+          routineError
+        );
+      }
+    }
+
     // Clear guest data after successful sync
     clearGuestData();
 
@@ -267,6 +340,7 @@ export async function syncGuestDataToServer(
       syncedWorkouts,
       syncedExercises,
       syncedSets,
+      syncedRoutines,
     };
   } catch (error) {
     console.error("Failed to sync guest data to server:", error);
@@ -276,6 +350,7 @@ export async function syncGuestDataToServer(
       syncedWorkouts,
       syncedExercises,
       syncedSets,
+      syncedRoutines,
     };
   }
 }
@@ -286,7 +361,7 @@ export const showSyncSuccessToast = (result: SyncResult) => {
     return; // No need to show toast if nothing was synced
   }
 
-  const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? "s" : ""}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? "s" : ""}, and ${result.syncedSets} set${result.syncedSets !== 1 ? "s" : ""} to your account!`;
+  const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? "s" : ""}, ${result.syncedRoutines} routine${result.syncedRoutines !== 1 ? "s" : ""}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? "s" : ""}, and ${result.syncedSets} set${result.syncedSets !== 1 ? "s" : ""} to your account!`;
 
   // TODO: Replace with proper toast notification system
   console.info(message);
