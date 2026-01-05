@@ -162,7 +162,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
         </SheetHeader>
 
         {showSuccess ? (
-          <div className="flex flex-col items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center px-4 py-8">
             <div className="bg-done/20 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
               <svg
                 className="text-done h-8 w-8"
@@ -184,7 +184,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
           </div>
         ) : (
           <>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 px-4 py-4">
               <div className="grid gap-2">
                 <label htmlFor="routine-name" className="text-sm font-medium">
                   Routine Name
@@ -214,7 +214,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 px-4 pb-6">
               <Button
                 variant="outline"
                 onClick={handleCancel}
