@@ -12,7 +12,7 @@ import WorkoutTypeModal, { WorkoutType } from "../WorkoutTypeModal";
 import {
   useGuestStore,
   useAuthStore,
-  GuestRecipe,
+  GuestRoutine,
   GuestWorkoutType,
 } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
@@ -27,7 +27,7 @@ interface WorkoutFormData {
 
 interface WorkoutFormProps {
   onWorkoutCreated: (newWorkoutId: number | string) => void; // Can be number (server) or string (guest)
-  recipe?: GuestRecipe | null;
+  routine?: GuestRoutine | null;
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
@@ -46,7 +46,7 @@ const createWorkout = async (data: WorkoutFormData) => {
 
 const WorkoutForm: React.FC<WorkoutFormProps> = ({
   onWorkoutCreated,
-  recipe,
+  routine,
 }) => {
   const navigate = useNavigate();
   // Get state from stores
@@ -62,8 +62,8 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
   const { register, handleSubmit, reset, formState, setValue, watch } =
     useForm<WorkoutFormData>({
       defaultValues: {
-        name: recipe
-          ? `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        name: routine
+          ? `${routine.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
           : new Date().toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -117,13 +117,13 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
   ]);
 
   useEffect(() => {
-    if (recipe) {
+    if (routine) {
       reset({
-        name: `${recipe.name} - ${datePrefix}`,
+        name: `${routine.name} - ${datePrefix}`,
         start_time: toLocalDateTimeInputValue(),
       });
     }
-  }, [recipe, datePrefix, reset]);
+  }, [routine, datePrefix, reset]);
 
   const mutation = useMutation({
     mutationFn: createWorkout,
@@ -171,8 +171,8 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       });
 
       // If there's a routine, create exercises from it
-      if (recipe) {
-        guestActions.createExercisesFromRoutine(recipe, newWorkoutId);
+      if (routine) {
+        guestActions.createExercisesFromRoutine(routine, newWorkoutId);
       }
 
       resetForm();
@@ -214,19 +214,19 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       onSubmit={handleSubmit(onSubmit)}
       className="border-border bg-card text-card-foreground mx-auto mb-6 w-full max-w-md rounded-lg border p-4 shadow-lg sm:p-6"
     >
-      {recipe && (
+      {routine && (
         <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-3">
           <div className="mb-2 flex items-center space-x-2">
             <span className="text-primary text-sm font-medium">
-              📋 Starting from Recipe
+              📋 Starting from Routine
             </span>
           </div>
           <div className="text-muted-foreground text-sm">
-            {recipe.exercises.length} exercise
-            {recipe.exercises.length !== 1 ? "s" : ""} •{" "}
-            {recipe.exercises.reduce((total, ex) => total + ex.sets.length, 0)}{" "}
+            {routine.exercises.length} exercise
+            {routine.exercises.length !== 1 ? "s" : ""} •{" "}
+            {routine.exercises.reduce((total, ex) => total + ex.sets.length, 0)}{" "}
             set
-            {recipe.exercises.reduce(
+            {routine.exercises.reduce(
               (total, ex) => total + ex.sets.length,
               0,
             ) !== 1

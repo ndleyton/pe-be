@@ -1,5 +1,5 @@
 
-import { GuestRecipe } from "@/stores";
+import { GuestRoutine } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -10,8 +10,8 @@ import {
 } from "@/shared/components/ui/card";
 
 interface RoutineQuickStartCardProps {
-  routine: GuestRecipe;
-  onStartWorkout: (routine: GuestRecipe) => void;
+  routine: GuestRoutine;
+  onStartWorkout: (routine: GuestRoutine) => void;
 }
 
 export const RoutineQuickStartCard = ({
