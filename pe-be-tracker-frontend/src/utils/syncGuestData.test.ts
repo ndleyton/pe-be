@@ -43,7 +43,7 @@ describe("syncGuestDataToServer", () => {
       syncedWorkouts: 0,
       syncedExercises: 0,
       syncedSets: 0,
-      syncedRecipes: 0,
+      syncedRoutines: 0,
     });
     expect(mockClearGuestData).not.toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe("syncGuestDataToServer", () => {
       ],
       exerciseTypes: [],
       workoutTypes: [],
-      recipes: [],
+      routines: [],
     };
 
     // Mock API responses
@@ -173,7 +173,7 @@ describe("syncGuestDataToServer", () => {
       ],
       exerciseTypes: [],
       workoutTypes: [],
-      recipes: [],
+      routines: [],
     };
 
     // Mock API to throw an error
@@ -190,7 +190,7 @@ describe("syncGuestDataToServer", () => {
       syncedWorkouts: 0,
       syncedExercises: 0,
       syncedSets: 0,
-      syncedRecipes: 0,
+      syncedRoutines: 0,
     });
 
     expect(mockClearGuestData).not.toHaveBeenCalled();
@@ -280,7 +280,7 @@ describe("syncGuestDataToServer", () => {
     });
   });
 
-  it("syncs recipes successfully", async () => {
+  it("syncs routines successfully", async () => {
     const mockGuestData: GuestData = {
       workouts: [],
       exerciseTypes: [],

@@ -114,8 +114,10 @@ export async function syncGuestDataToServer(
   let syncedRoutines = 0;
 
   try {
+    const routines = guestData.routines ?? [];
+
     // If no guest data to sync, return early
-    if (guestData.workouts.length === 0) {
+    if (guestData.workouts.length === 0 && routines.length === 0) {
       return {
         success: true,
         syncedWorkouts: 0,
@@ -142,7 +144,7 @@ export async function syncGuestDataToServer(
       });
     });
 
-    guestData.routines.forEach((routine) => {
+    routines.forEach((routine) => {
       routine.exercises.forEach((exercise) => {
         if (!uniqueExerciseTypes.has(exercise.exercise_type.id)) {
           uniqueExerciseTypes.set(
@@ -278,7 +280,7 @@ export async function syncGuestDataToServer(
     // we'll use a default "Strength" type.
     let defaultWorkoutTypeId: number | null = null;
 
-    if (guestData.routines.length > 0) {
+    if (routines.length > 0) {
       try {
         defaultWorkoutTypeId = await findOrCreateWorkoutType({
           name: "Strength",
@@ -292,7 +294,7 @@ export async function syncGuestDataToServer(
       }
     }
 
-    for (const guestRoutine of guestData.routines) {
+    for (const guestRoutine of routines) {
       try {
         if (!defaultWorkoutTypeId) {
           console.warn("Skipping routine sync due to missing workout type");

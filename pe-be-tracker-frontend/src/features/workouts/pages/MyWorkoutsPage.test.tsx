@@ -48,7 +48,7 @@ vi.mock("@/stores", () => ({
     const mockState = {
       hydrated: true,
       workouts: [],
-      recipes: [],
+      routines: [],
       exerciseTypes: [],
       workoutTypes: [],
       hasAttemptedSync: false,
