@@ -149,7 +149,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={handleCancel}>
-      <SheetContent className="z-[120]" overlayClassName="z-[120]">
+      <SheetContent>
         <SheetHeader>
           <SheetTitle>
             {showSuccess ? "Routine Saved!" : "Save as Routine"}
