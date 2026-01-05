@@ -19,7 +19,7 @@ test.describe("Routines quick-start navigation", () => {
       workoutTypes: [
         { id: "8", name: "Other", description: "General workout session" },
       ],
-      recipes: [
+      routines: [
         {
           id: "routine-1",
           name: "Test Routine",

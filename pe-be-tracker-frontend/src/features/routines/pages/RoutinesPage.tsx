@@ -3,7 +3,7 @@ import { Search, ArrowLeft } from "lucide-react";
 import { getRoutines, startWorkoutFromRoutine } from "@/features/routines/api";
 import type { Routine } from "@/features/routines/types";
 import { RoutineQuickStartCard } from "@/features/routines/components";
-import { useAuthStore, useGuestStore, type GuestRecipe } from "@/stores";
+import { useAuthStore, useGuestStore, type GuestRoutine } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -52,17 +52,17 @@ const RoutinesPage = () => {
     );
   }, [routines, searchTerm]);
 
-  const handleStartWorkout = async (recipe: GuestRecipe) => {
+  const handleStartWorkout = async (routine: GuestRoutine) => {
     try {
       if (isAuthenticated) {
-        const newWorkout = await startWorkoutFromRoutine(Number(recipe.id));
+        const newWorkout = await startWorkoutFromRoutine(Number(routine.id));
         navigate(`/workouts/${newWorkout.id}`);
       } else {
         const defaultWorkoutType =
           guestData.workoutTypes.find((wt) => wt.id === "8") ||
           guestData.workoutTypes[0];
         const newWorkoutId = guestActions.addWorkout({
-          name: `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          name: `${routine.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
           notes: null,
           start_time: new Date().toISOString(),
           end_time: null,
@@ -70,14 +70,14 @@ const RoutinesPage = () => {
           workout_type: defaultWorkoutType,
           exercises: [],
         });
-        navigate(`/workouts/${newWorkoutId}`, { state: { recipe } });
+        navigate(`/workouts/${newWorkoutId}`, { state: { routine } });
       }
     } catch (error) {
       console.error("Failed to start workout from routine:", error);
     }
   };
 
-  const convertToGuestRecipe = (routine: Routine): GuestRecipe => ({
+  const convertToGuestRoutine = (routine: Routine): GuestRoutine => ({
     id: String(routine.id),
     name: routine.name,
     description: routine.description,
@@ -86,19 +86,19 @@ const RoutinesPage = () => {
       exercise_type_id: String(t.exercise_type_id),
       exercise_type: t.exercise_type
         ? {
-            id: String(t.exercise_type.id),
-            name: t.exercise_type.name,
-            description: t.exercise_type.description || "",
-            default_intensity_unit: t.exercise_type.default_intensity_unit,
-            times_used: t.exercise_type.times_used,
-          }
+          id: String(t.exercise_type.id),
+          name: t.exercise_type.name,
+          description: t.exercise_type.description || "",
+          default_intensity_unit: t.exercise_type.default_intensity_unit,
+          times_used: t.exercise_type.times_used,
+        }
         : {
-            id: String(t.exercise_type_id),
-            name: "Unknown Exercise",
-            description: "",
-            default_intensity_unit: 1,
-            times_used: 0,
-          },
+          id: String(t.exercise_type_id),
+          name: "Unknown Exercise",
+          description: "",
+          default_intensity_unit: 1,
+          times_used: 0,
+        },
       sets: (t.set_templates || []).map((s: any) => ({
         id: String(s.id),
         reps: s.reps ?? null,
@@ -186,7 +186,7 @@ const RoutinesPage = () => {
             {filteredRoutines.map((routine) => (
               <RoutineQuickStartCard
                 key={routine.id}
-                routine={convertToGuestRecipe(routine)}
+                routine={convertToGuestRoutine(routine)}
                 onStartWorkout={handleStartWorkout}
               />
             ))}

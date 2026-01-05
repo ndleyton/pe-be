@@ -61,7 +61,7 @@ const OAuthCallbackPage = () => {
               workouts,
               exerciseTypes: useGuestStore.getState().exerciseTypes,
               workoutTypes: useGuestStore.getState().workoutTypes,
-              recipes: useGuestStore.getState().recipes,
+              routines: useGuestStore.getState().routines,
             },
             clear,
           );
