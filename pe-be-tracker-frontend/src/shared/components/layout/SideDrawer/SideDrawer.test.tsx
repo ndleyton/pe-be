@@ -434,7 +434,7 @@ describe("SideDrawer", () => {
 
       const drawer = screen.getByRole("dialog");
 
-      expect(drawer).toHaveClass("z-50");
+      expect(drawer).toHaveClass("z-[120]");
     });
   });
 });
