@@ -21,7 +21,7 @@ import {
   useAuthStore,
   useUIStore,
   GuestExercise,
-  GuestRecipe,
+  GuestRoutine,
   GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
@@ -61,7 +61,7 @@ const WorkoutPage = () => {
   const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
 
-  const recipe = location.state?.recipe as GuestRecipe | undefined;
+  const recipe = location.state?.recipe as GuestRoutine | undefined;
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
