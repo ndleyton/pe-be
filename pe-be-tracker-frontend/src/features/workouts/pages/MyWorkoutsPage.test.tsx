@@ -98,7 +98,7 @@ vi.mock(
   "@/features/routines/components/RoutinesSection/RoutinesSection",
   () => ({
     RoutinesSection: ({ onStartWorkout }: any) => (
-      <div data-testid="recipes-section">
+      <div data-testid="routines-section">
         <button
           onClick={() => onStartWorkout({ id: "123", name: "Routine A" })}
         >
@@ -233,7 +233,7 @@ describe("MyWorkoutsPage - Infinite Scroll", () => {
 
     mockGetMyWorkouts
       .mockResolvedValueOnce({ data: fullPage, next_cursor: 100 } as any)
-      .mockImplementation(() => new Promise(() => {})); // Pending next page
+      .mockImplementation(() => new Promise(() => { })); // Pending next page
 
     render(<MyWorkoutsPage />);
 
@@ -356,7 +356,7 @@ describe("MyWorkoutsPage - Infinite Scroll", () => {
     });
   });
 
-  it("starts workout from recipe", async () => {
+  it("starts workout from routine", async () => {
     render(<MyWorkoutsPage />);
 
     // Wait for component to load first
