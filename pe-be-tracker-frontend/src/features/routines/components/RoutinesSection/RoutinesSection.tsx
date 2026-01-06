@@ -8,11 +8,10 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
+  AccordionTrigger,
 } from "@/shared/components/ui/accordion";
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Link } from "react-router-dom";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: GuestRoutine) => void;
@@ -81,9 +80,9 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
     return (
       <div className="mb-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-muted-foreground text-lg font-semibold">
+          <h3 className="text-muted-foreground text-lg font-semibold">
             Quick Start Routines
-          </h2>
+          </h3>
           <span className="text-muted-foreground text-sm">Loading...</span>
         </div>
       </div>
@@ -98,20 +97,11 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
     <div className="mb-6 w-full">
       <Accordion type="single" collapsible>
         <AccordionItem value="quick-start-routines">
-          <AccordionPrimitive.Header className="flex" asChild>
-            <h2 className="flex">
-              <AccordionPrimitive.Trigger
-                className={cn(
-                  "focus-visible:border-ring focus-visible:ring-ring/50 flex flex-1 items-center justify-start gap-2 rounded-md py-0 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
-                )}
-              >
-                <span className="text-muted-foreground text-lg font-semibold">
-                  Quick Start Routines
-                </span>
-                <ChevronDown className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
-              </AccordionPrimitive.Trigger>
-            </h2>
-          </AccordionPrimitive.Header>
+          <AccordionTrigger className="justify-start gap-2 py-0">
+            <h3 className="text-muted-foreground text-lg font-semibold">
+              Quick Start Routines
+            </h3>
+          </AccordionTrigger>
           <AccordionContent>
             <div className="w-full px-1 sm:px-3">
               <div className="flex w-full items-center gap-2">
