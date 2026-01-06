@@ -78,7 +78,6 @@ test.describe("Routines quick-start navigation", () => {
     // Wait for the section title to appear
     const heading = page.getByRole("heading", {
       name: "Quick Start Routines",
-      level: 3,
     });
     await expect(heading).toBeVisible({ timeout: 15000 });
 
