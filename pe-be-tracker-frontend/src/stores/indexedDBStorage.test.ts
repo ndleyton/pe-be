@@ -15,7 +15,7 @@ describe("createIndexedDBStorage", () => {
 
     const idbSetSpy = vi
       .spyOn(IndexedDBStorage.prototype, "setItem")
-      .mockImplementation(async (key, value) => {
+      .mockImplementation(async (key, _value) => {
         store.set(key, value);
       });
 
