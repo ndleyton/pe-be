@@ -15,8 +15,8 @@ describe("createIndexedDBStorage", () => {
 
     const idbSetSpy = vi
       .spyOn(IndexedDBStorage.prototype, "setItem")
-      .mockImplementation(async (key, _value) => {
-        store.set(key, value);
+      .mockImplementation(async (key, storedValue) => {
+        store.set(key, storedValue);
       });
 
     const idbGetSpy = vi
@@ -87,7 +87,7 @@ describe("createIndexedDBStorage", () => {
 
     const probeSuccess = vi
       .spyOn(IndexedDBStorage.prototype, "setItem")
-      .mockImplementation(async (key, value) => {
+      .mockImplementation(async (key, _value) => {
         if (key === "__idb_test__") {
           return;
         }
