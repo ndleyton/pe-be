@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import AppLayout from "./AppLayout";

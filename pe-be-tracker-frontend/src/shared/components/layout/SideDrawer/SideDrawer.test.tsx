@@ -125,8 +125,6 @@ describe("SideDrawer", () => {
     it("should have proper ARIA attributes for accessibility", () => {
       render(<SideDrawer />);
 
-      const dialog = screen.getByRole("dialog");
-
       expect(screen.getByRole("navigation")).toHaveAttribute(
         "aria-label",
         "Secondary navigation",

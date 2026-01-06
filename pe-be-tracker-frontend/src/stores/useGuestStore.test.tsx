@@ -1,11 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@/test/testUtils";
 import { useGuestStore } from "./useGuestStore";
-import type {
-  GuestWorkout,
-  GuestExercise,
-  GuestExerciseSet,
-} from "./useGuestStore";
 
 // Mock IndexedDB storage
 vi.mock("./indexedDBStorage", () => ({
