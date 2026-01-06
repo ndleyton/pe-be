@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -20,24 +24,40 @@
     "jsx": "react-jsx",
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"],
-      "@/shared/*": ["./shared/*"],
-      "@/features/*": ["./features/*"],
-      "@/app/*": ["./app/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/contexts/*": ["./contexts/*"],
-      "@/lib/*": ["./lib/*"],
-      "@/shared/components/ui/*": ["./shared/components/ui/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@/shared/*": [
+        "./shared/*"
+      ],
+      "@/features/*": [
+        "./features/*"
+      ],
+      "@/app/*": [
+        "./app/*"
+      ],
+      "@/utils/*": [
+        "./utils/*"
+      ],
+      "@/contexts/*": [
+        "./contexts/*"
+      ],
+      "@/lib/*": [
+        "./lib/*"
+      ],
+      "@/shared/components/ui/*": [
+        "./shared/components/ui/*"
+      ]
     },
-    "types": ["vite/client"]
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "exclude": [
     "node_modules",
-    "e2e",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx"
+    "e2e"
   ]
 }
