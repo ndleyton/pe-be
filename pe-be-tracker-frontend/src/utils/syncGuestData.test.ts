@@ -287,12 +287,12 @@ describe("syncGuestDataToServer", () => {
       workoutTypes: [],
       routines: [
         {
-          id: "guest-recipe-1",
+          id: "guest-routine-1",
           name: "My Routine",
           description: "A test routine",
           exercises: [
             {
-              id: "guest-recipe-ex-1",
+              id: "guest-routine-ex-1",
               exercise_type_id: "guest-et-1",
               exercise_type: {
                 id: "guest-et-1",

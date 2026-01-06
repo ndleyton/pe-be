@@ -278,22 +278,22 @@ describe("useGuestStore", () => {
       });
     });
 
-    // Create recipe from workout
+    // Create routine from workout
     let routineId = "";
     act(() => {
       const workout = result.current.workouts.find((w) => w.id === workoutId)!;
       routineId = result.current.createRoutineFromWorkout(
-        "My Recipe",
+        "My Routine",
         workout.exercises,
       );
     });
 
     const state = result.current;
-    const recipe = state.routines.find((r) => r.id === routineId)!;
-    expect(recipe.name).toBe("My Recipe");
-    expect(recipe.exercises).toHaveLength(1);
-    expect(recipe.exercises[0].sets).toHaveLength(1);
-    expect(recipe.exercises[0].sets[0].reps).toBe(10);
+    const routine = state.routines.find((r) => r.id === routineId)!;
+    expect(routine.name).toBe("My Routine");
+    expect(routine.exercises).toHaveLength(1);
+    expect(routine.exercises[0].sets).toHaveLength(1);
+    expect(routine.exercises[0].sets[0].reps).toBe(10);
   });
 
   it("creates routine from workout", () => {
