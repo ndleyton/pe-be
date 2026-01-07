@@ -5,6 +5,40 @@ test.describe("Routines quick-start navigation", () => {
   test("clicking More in RoutinesSection navigates to /routines", async ({
     page,
   }) => {
+    // Force guest mode so the routines section uses seeded guest data.
+    const guestAuthHandler = (route: any) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    };
+    await page.route("**/users/me", guestAuthHandler);
+    await page.route("**/api/v1/users/me", guestAuthHandler);
+
+    // Stub routines API to avoid network dependency when navigating to /routines
+    await page.route("**/routines*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: 1,
+            name: "Server Routine",
+            description: "Sample",
+            workout_type_id: 1,
+            creator_id: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            exercise_templates: [],
+          },
+        ]),
+      });
+    });
+
+    // Load the workouts page to establish origin, then seed guest data.
+    await page.goto("/workouts");
+    await page.waitForURL(/\/workouts$/);
+
     await seedGuestData(page, {
       workouts: [],
       exerciseTypes: [
@@ -52,28 +86,9 @@ test.describe("Routines quick-start navigation", () => {
       ],
     });
 
-    // Stub routines API to avoid network dependency when navigating to /routines
-    await page.route("**/routines*", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: 1,
-            name: "Server Routine",
-            description: "Sample",
-            workout_type_id: 1,
-            creator_id: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            exercise_templates: [],
-          },
-        ]),
-      });
-    });
-
-    // Load the workouts page where the RoutinesSection is rendered
-    await page.goto("/workouts");
+    await page.reload();
+    await page.waitForURL(/\/workouts$/);
+    await page.getByTestId("fab-add-workout").waitFor({ state: "visible" });
 
     // Open the accordion to reveal the More link
     const accordionTrigger = page.getByRole("button", {
