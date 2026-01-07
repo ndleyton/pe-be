@@ -16,7 +16,7 @@ test.describe("Routines quick-start navigation", () => {
     await page.route("**/api/v1/users/me", guestAuthHandler);
 
     // Stub routines API to avoid network dependency when navigating to /routines
-    await page.route("**/routines*", async (route) => {
+    await page.route("**/api/v1/routines**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
