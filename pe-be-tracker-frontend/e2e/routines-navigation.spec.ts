@@ -75,16 +75,11 @@ test.describe("Routines quick-start navigation", () => {
     // Load the workouts page where the RoutinesSection is rendered
     await page.goto("/workouts");
 
-    // Wait for the section title to appear
-    const heading = page.getByRole("heading", {
-      name: "Quick Start Routines",
-    });
-    await expect(heading).toBeVisible({ timeout: 15000 });
-
     // Open the accordion to reveal the More link
     const accordionTrigger = page.getByRole("button", {
       name: "Quick Start Routines",
     });
+    await expect(accordionTrigger).toBeVisible({ timeout: 15000 });
     await accordionTrigger.click();
 
     // Click the "More" link button (locate by href for robustness)
