@@ -21,7 +21,7 @@ import {
   useAuthStore,
   useUIStore,
   GuestExercise,
-  GuestRecipe,
+  GuestRoutine,
   GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
@@ -58,10 +58,10 @@ const WorkoutPage = () => {
   const stopWorkoutTimer = useUIStore((state) => state.stopWorkoutTimer);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
-  const [showSaveRecipeModal, setShowSaveRecipeModal] = useState(false);
+  const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
 
-  const recipe = location.state?.recipe as GuestRecipe | undefined;
+  const routine = location.state?.routine as GuestRoutine | undefined;
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -259,18 +259,18 @@ const WorkoutPage = () => {
     startWorkoutTimer,
   ]);
 
-  // Auto-create exercises from recipe when page loads
+  // Auto-create exercises from routine when page loads
   useEffect(() => {
-    if (recipe && workoutId && exercises?.length === 0) {
+    if (routine && workoutId && exercises?.length === 0) {
       if (isAuthenticated) {
         // For authenticated users, we'd need to make API calls
         // This is simplified - would need to implement full API integration
       } else {
         // For guest users, create exercises from the routine
-        guestActions.createExercisesFromRoutine(recipe, workoutId);
+        guestActions.createExercisesFromRoutine(routine, workoutId);
       }
     }
-  }, [recipe, workoutId, exercises?.length, isAuthenticated, guestActions]);
+  }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
   // Simple create; refetch on success
   const addExerciseMutation = useMutation({
@@ -372,8 +372,8 @@ const WorkoutPage = () => {
     window.history.pushState(null, "", window.location.pathname);
   };
 
-  const handleSaveRecipe = () => {
-    setShowSaveRecipeModal(true);
+  const handleSaveRoutine = () => {
+    setShowSaveRoutineModal(true);
   };
 
   // Determine workout name based on authentication state
@@ -466,14 +466,14 @@ const WorkoutPage = () => {
         onCancel={handleCancelFinish}
         isLoading={isAuthenticated && finishWorkoutMutation.isPending}
         exercises={exercises}
-        onSaveRecipe={handleSaveRecipe}
+        onSaveRoutine={handleSaveRoutine}
         workoutName={workoutName || undefined}
       />
 
       <SaveRoutineModal
-        isOpen={showSaveRecipeModal}
-        onClose={() => setShowSaveRecipeModal(false)}
-        workoutName={workoutName || "My Recipe"}
+        isOpen={showSaveRoutineModal}
+        onClose={() => setShowSaveRoutineModal(false)}
+        workoutName={workoutName || "My Routine"}
         exercises={exercises}
         workoutId={workoutId}
       />

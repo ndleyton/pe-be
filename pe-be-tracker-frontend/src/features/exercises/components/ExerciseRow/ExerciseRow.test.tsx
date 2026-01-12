@@ -389,9 +389,6 @@ describe("ExerciseRow", () => {
     expect(numericInputs[1]).toBeDisabled();
 
     // Check that plus/minus buttons for completed set are disabled
-    const plusButtons = screen.getAllByTestId("plus-icon");
-    const minusButtons = screen.getAllByTestId("minus-icon");
-
     // Note: We'd need to check the parent button's disabled state
     // This is a simplified check - in real tests you'd check the button element
   });

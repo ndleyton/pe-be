@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
