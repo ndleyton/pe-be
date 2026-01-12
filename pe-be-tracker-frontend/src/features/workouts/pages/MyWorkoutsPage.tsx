@@ -1,7 +1,7 @@
 import React from "react";
 import axios from "axios";
 import { startWorkoutFromRoutine } from "@/features/routines/api";
-import { useGuestStore, useAuthStore, GuestRecipe } from "@/stores";
+import { useGuestStore, useAuthStore, GuestRoutine } from "@/stores";
 import { useNavigate } from "react-router-dom";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WorkoutForm } from "@/features/workouts/components";
@@ -77,8 +77,8 @@ const MyWorkoutsPage = () => {
     navigate(`/workouts/${workoutId}`);
   };
 
-  const [selectedRecipe, setSelectedRecipe] =
-    React.useState<GuestRecipe | null>(null);
+  const [selectedRoutine, setSelectedRoutine] =
+    React.useState<GuestRoutine | null>(null);
 
   // preloading of the WorkoutPage lazy chunk to speed up navigation
   const preloadedRef = React.useRef(false);
@@ -91,11 +91,11 @@ const MyWorkoutsPage = () => {
     });
   }, []);
 
-  const handleStartWorkoutFromRecipe = async (recipe: GuestRecipe) => {
+  const handleStartWorkoutFromRoutine = async (routine: GuestRoutine) => {
     try {
       if (isAuthenticated) {
         // Create full workout from routine on the server
-        const newWorkout = await startWorkoutFromRoutine(Number(recipe.id));
+        const newWorkout = await startWorkoutFromRoutine(Number(routine.id));
         navigate(`/workouts/${newWorkout.id}`);
       } else {
         // Create guest workout with default values
@@ -103,7 +103,7 @@ const MyWorkoutsPage = () => {
           guestData.workoutTypes.find((wt) => wt.id === "8") ||
           guestData.workoutTypes[0];
         const newWorkoutId = useGuestStore.getState().addWorkout({
-          name: `${recipe.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          name: `${routine.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
           notes: null,
           start_time: new Date().toISOString(),
           end_time: null,
@@ -111,7 +111,7 @@ const MyWorkoutsPage = () => {
           workout_type: defaultWorkoutType,
           exercises: [],
         });
-        navigate(`/workouts/${newWorkoutId}`, { state: { recipe } });
+        navigate(`/workouts/${newWorkoutId}`, { state: { routine } });
       }
     } catch (error) {
       console.error("Failed to start workout from routine:", error);
@@ -186,21 +186,21 @@ const MyWorkoutsPage = () => {
             className="mb-6"
           />
 
-          <RoutinesSection onStartWorkout={handleStartWorkoutFromRecipe} />
+          <RoutinesSection onStartWorkout={handleStartWorkoutFromRoutine} />
 
           {showWorkoutForm && (
             <div className="mb-6">
               <WorkoutForm
-                recipe={selectedRecipe}
+                routine={selectedRoutine}
                 onWorkoutCreated={(workoutId) => {
                   if (isAuthenticated) {
                     refetch();
                   }
                   setShowWorkoutForm(false);
-                  setSelectedRecipe(null);
-                  if (selectedRecipe) {
+                  setSelectedRoutine(null);
+                  if (selectedRoutine) {
                     navigate(`/workouts/${workoutId}`, {
-                      state: { recipe: selectedRecipe },
+                      state: { routine: selectedRoutine },
                     });
                   }
                 }}
@@ -208,7 +208,7 @@ const MyWorkoutsPage = () => {
               <Button
                 onClick={() => {
                   setShowWorkoutForm(false);
-                  setSelectedRecipe(null);
+                  setSelectedRoutine(null);
                 }}
                 variant="ghost"
                 size="sm"

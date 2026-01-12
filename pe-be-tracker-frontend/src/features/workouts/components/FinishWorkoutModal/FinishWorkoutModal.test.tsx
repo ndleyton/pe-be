@@ -409,13 +409,6 @@ describe("FinishWorkoutModal", () => {
       },
     ];
 
-    const mockExercisesNoSets = [
-      {
-        exercise_type: { name: "Bench Press" },
-        exercise_sets: [],
-      },
-    ];
-
     it("should display muscle group summary when exercises with completed sets are provided", () => {
       render(
         <FinishWorkoutModal

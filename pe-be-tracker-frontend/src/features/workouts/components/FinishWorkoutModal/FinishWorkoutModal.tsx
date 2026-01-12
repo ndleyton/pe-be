@@ -30,7 +30,7 @@ interface FinishWorkoutModalProps {
   onCancel: () => void;
   isLoading?: boolean;
   exercises?: Exercise[];
-  onSaveRecipe?: () => void;
+  onSaveRoutine?: () => void;
   workoutName?: string;
 }
 
@@ -40,7 +40,7 @@ const FinishWorkoutModal = ({
   onCancel,
   isLoading = false,
   exercises = [],
-  onSaveRecipe,
+  onSaveRoutine,
   workoutName,
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
@@ -226,7 +226,7 @@ const FinishWorkoutModal = ({
             </div>
           )}
 
-          {onSaveRecipe && exercises.length > 0 && (
+          {onSaveRoutine && exercises.length > 0 && (
             <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-3">
               <div className="mb-2 flex items-center space-x-2">
                 <span className="text-sm font-medium">📋 Save as Routine</span>
@@ -236,7 +236,7 @@ const FinishWorkoutModal = ({
                 future.
               </p>
               <Button
-                onClick={onSaveRecipe}
+                onClick={onSaveRoutine}
                 variant="outline"
                 size="sm"
                 className="w-full"
