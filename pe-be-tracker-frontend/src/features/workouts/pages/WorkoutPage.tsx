@@ -495,9 +495,9 @@ const WorkoutPage = () => {
       : "success";
 
   return (
-    <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
-      <div className="bg-card text-card-foreground mx-auto mt-2 max-w-2xl rounded-lg p-2 shadow-lg md:mt-4 md:p-4 lg:mt-8 lg:p-6">
-        <div className="mb-3 flex items-center gap-4 text-left sm:mb-4 md:mb-6">
+    <div className="mx-auto max-w-5xl p-8 text-center">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center justify-center gap-4">
           <Button
             variant="ghost"
             size="icon"
@@ -509,9 +509,9 @@ const WorkoutPage = () => {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h2 className="text-2xl font-bold">
+          <h1 className="text-2xl font-semibold">
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
-          </h2>
+          </h1>
         </div>
         <div
           ref={exerciseListContainerRef}
@@ -525,12 +525,13 @@ const WorkoutPage = () => {
             onExerciseDelete={handleExerciseDelete}
           />
         </div>
-        <div className="bg-primary mt-4 mb-4 h-px w-full" role="separator" />
-        <div className="flex items-center justify-center">
+
+        <div className="mt-8 flex items-center justify-center">
           <Button
             type="button"
             onClick={() => setShowAddExerciseModal(true)}
-            className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
+            variant="outline"
+            className="px-6"
             disabled={isAuthenticated && addExerciseMutation.isPending}
           >
             {isAuthenticated && addExerciseMutation.isPending

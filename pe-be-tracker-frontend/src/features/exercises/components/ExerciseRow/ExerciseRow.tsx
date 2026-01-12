@@ -15,9 +15,6 @@ import { GuestExerciseSet, useGuestStore } from "@/stores";
 import { useAuthStore } from "@/stores";
 import { ExerciseTypeMore } from "@/features/exercises/components/ExerciseTypeMore";
 import {
-  Card,
-  CardHeader,
-  CardContent,
   Button,
   Input,
   Dialog,
@@ -489,108 +486,106 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   };
 
   return (
-    <Card key={exercise.id} className="border-input">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <span className="text-primary-foreground text-sm font-bold">
-                {exercise.exercise_type.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-foreground font-semibold">
-                {exercise.exercise_type.name}
-              </h3>
-              <Dialog
-                open={exerciseNotesModal}
-                onOpenChange={(open) => {
-                  setExerciseNotesModal(open);
-                  if (!open) {
-                    setExerciseNotesValue("");
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
+    <div key={exercise.id} className="py-4 text-left">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
+            <span className="text-primary-foreground text-sm font-bold">
+              {exercise.exercise_type.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-foreground font-semibold">
+              {exercise.exercise_type.name}
+            </h3>
+            <Dialog
+              open={exerciseNotesModal}
+              onOpenChange={(open) => {
+                setExerciseNotesModal(open);
+                if (!open) {
+                  setExerciseNotesValue("");
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
+                  onClick={() => {
+                    setExerciseNotesValue(exercise.notes || "");
+                    setExerciseNotesModal(true);
+                  }}
+                >
+                  <StickyNote className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Exercise Notes</DialogTitle>
+                </DialogHeader>
+                <Textarea
+                  placeholder="Add notes for this exercise..."
+                  value={exerciseNotesValue}
+                  onChange={(e) => setExerciseNotesValue(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <div className="flex justify-end gap-2">
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
+                    variant="outline"
+                    onClick={() => setExerciseNotesModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
                     onClick={() => {
-                      setExerciseNotesValue(exercise.notes || "");
-                      setExerciseNotesModal(true);
+                      updateExerciseNotes(exerciseNotesValue);
+                      setExerciseNotesModal(false);
                     }}
                   >
-                    <StickyNote className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    Save
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Exercise Notes</DialogTitle>
-                  </DialogHeader>
-                  <Textarea
-                    placeholder="Add notes for this exercise..."
-                    value={exerciseNotesValue}
-                    onChange={(e) => setExerciseNotesValue(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setExerciseNotesModal(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        updateExerciseNotes(exerciseNotesValue);
-                        setExerciseNotesModal(false);
-                      }}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
-                asChild
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
+              asChild
+            >
+              <Link
+                to={`/exercise-types/${exercise.exercise_type.id}`}
+                aria-label={`View details for ${exercise.exercise_type.name}`}
+                title="View exercise details"
               >
-                <Link
-                  to={`/exercise-types/${exercise.exercise_type.id}`}
-                  aria-label={`View details for ${exercise.exercise_type.name}`}
-                  title="View exercise details"
-                >
-                  <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                </Link>
-              </Button>
-            </div>
+                <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </Link>
+            </Button>
           </div>
-          <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Exercise Settings</DialogTitle>
-              </DialogHeader>
-              <ExerciseTypeMore
-                currentIntensityUnit={currentIntensityUnit}
-                onIntensityUnitChange={handleIntensityUnitChange}
-                onExerciseDelete={handleExerciseDelete}
-                disableExerciseDelete={isUnsavedExercise}
-                onClose={() => setShowExerciseModal(false)}
-              />
-            </DialogContent>
-          </Dialog>
         </div>
-      </CardHeader>
+        <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Exercise Settings</DialogTitle>
+            </DialogHeader>
+            <ExerciseTypeMore
+              currentIntensityUnit={currentIntensityUnit}
+              onIntensityUnitChange={handleIntensityUnitChange}
+              onExerciseDelete={handleExerciseDelete}
+              disableExerciseDelete={isUnsavedExercise}
+              onClose={() => setShowExerciseModal(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      <CardContent className="p-4 pt-0">
+      <div className="pt-0">
         {/* Sets Table Header */}
         <div
           className="mb-2 grid gap-2 text-xs font-medium text-gray-500 sm:gap-4 dark:text-gray-400"
@@ -835,10 +830,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
           })}
         </div>
 
-        {/* Add Set Button */}
         <Button
           variant="outline"
-          className="border-input mt-4 w-full bg-transparent"
+          className="mt-4 w-full bg-transparent"
           data-testid="add-set-button"
           disabled={isUnsavedExercise}
           onClick={() => addSet(exercise.id)}
@@ -846,8 +840,9 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
           <Plus className="mr-2 h-4 w-4" />
           Add Set
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="bg-border mt-6 h-px w-full" />
+    </div>
   );
 };
 
