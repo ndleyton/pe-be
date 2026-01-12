@@ -830,16 +830,18 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
           })}
         </div>
 
-        <Button
-          variant="outline"
-          className="mt-4 w-full bg-transparent"
-          data-testid="add-set-button"
-          disabled={isUnsavedExercise}
-          onClick={() => addSet(exercise.id)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Set
-        </Button>
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            className="mt-4 w-1/2 min-w-[140px] max-w-xs rounded-xl bg-transparent"
+            data-testid="add-set-button"
+            disabled={isUnsavedExercise}
+            onClick={() => addSet(exercise.id)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Set
+          </Button>
+        </div>
       </div>
       <div className="bg-border mt-6 h-px w-full" />
     </div>
