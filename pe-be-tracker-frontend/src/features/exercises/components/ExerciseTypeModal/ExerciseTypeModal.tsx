@@ -336,7 +336,7 @@ const ExerciseTypeModal = ({
       <div className="bg-background flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl shadow-2xl transition-all border border-border/40">
         <div className="p-6 pb-2">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-foreground text-xl font-bold">
+            <h3 className="text-muted-foreground font-bold">
               Add Exercise
             </h3>
             <button
