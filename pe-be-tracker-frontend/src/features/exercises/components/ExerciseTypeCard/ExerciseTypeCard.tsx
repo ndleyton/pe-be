@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Eye, Flame } from "lucide-react";
+import { Eye } from "lucide-react";
 import type { ExerciseType } from "@/features/exercises/api";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 
@@ -9,7 +9,7 @@ interface ExerciseTypeCardProps {
 }
 
 export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
-  const { id, name, description, times_used, muscles } = exerciseType;
+  const { id, name, description, muscles } = exerciseType;
 
   return (
     <Link to={`/exercise-types/${id}`} className="group block">
@@ -40,16 +40,9 @@ export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
           </div>
         )}
 
-        <div className="text-muted-foreground flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1">
-            <Flame className="h-4 w-4" />
-            <span>{times_used} times used</span>
-          </div>
-
-          <div className="text-primary/70 group-hover:text-primary flex items-center gap-1 transition-colors">
-            <Eye className="h-4 w-4" />
-            <span>View Details</span>
-          </div>
+        <div className="text-primary/70 group-hover:text-primary flex items-center justify-end gap-1 text-sm transition-colors">
+          <Eye className="h-4 w-4" />
+          <span>View Details</span>
         </div>
       </div>
     </Link>

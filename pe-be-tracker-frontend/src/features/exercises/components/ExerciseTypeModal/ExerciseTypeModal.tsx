@@ -288,16 +288,9 @@ const ExerciseTypeModal = ({
                   </span>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-foreground text-base font-semibold">
-                      {exerciseType.name}
-                    </h4>
-                    {exerciseType.times_used > 0 && (
-                      <span className="text-muted-foreground whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                        {exerciseType.times_used} Used
-                      </span>
-                    )}
-                  </div>
+                  <h4 className="text-foreground text-base font-semibold">
+                    {exerciseType.name}
+                  </h4>
                   <p className="text-muted-foreground mt-1 text-sm">
                     {truncateWords(exerciseType.description, 4)}
                   </p>
