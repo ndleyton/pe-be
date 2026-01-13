@@ -486,10 +486,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   };
 
   return (
-    <div key={exercise.id} className="py-4 text-left">
-      <div className="mb-4 flex items-center justify-between">
+    <div key={exercise.id} className="py-6 text-left">
+      <div className="mb-4 flex items-center justify-between rounded-lg border-l-4 border-primary bg-primary/5 p-3">
         <div className="flex items-center gap-3">
-          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg shadow-sm">
             <span className="text-primary-foreground text-sm font-bold">
               {exercise.exercise_type.name.charAt(0).toUpperCase()}
             </span>
