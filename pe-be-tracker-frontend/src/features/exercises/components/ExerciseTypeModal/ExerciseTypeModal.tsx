@@ -279,7 +279,7 @@ const ExerciseTypeModal = ({
             <div
               key={exerciseType.id}
               onClick={() => handleSelect(exerciseType)}
-              className="hover:bg-accent/50 cursor-pointer rounded-xl p-4 transition-all active:scale-[0.98]"
+              className="bg-card border-border/20 hover:border-border/40 cursor-pointer rounded-xl border p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
             >
               <div className="flex items-center space-x-4">
                 <div className="bg-primary flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl shadow-sm">
