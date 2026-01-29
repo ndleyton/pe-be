@@ -272,10 +272,68 @@ const WorkoutPage = () => {
     }
   }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
-  // Simple create; refetch on success
+  type AddExercisePayload = {
+    data: CreateExerciseData;
+    exerciseType: ExerciseType;
+  };
+
+  // Optimistic create; replace optimistic entry with server response
   const addExerciseMutation = useMutation({
-    mutationFn: (data: CreateExerciseData) => createExercise(data),
-    onSuccess: () => {
+    mutationFn: ({ data }: AddExercisePayload) => createExercise(data),
+    onMutate: async ({ data, exerciseType }: AddExercisePayload) => {
+      await queryClient.cancelQueries({ queryKey: ["exercises", workoutId] });
+      const prev = queryClient.getQueryData<Exercise[]>([
+        "exercises",
+        workoutId,
+      ]);
+      const now = new Date().toISOString();
+      const optimisticId = `optimistic-${now}-${exerciseType.id}`;
+      const optimisticExercise: Exercise = {
+        id: optimisticId,
+        timestamp: data.timestamp ?? now,
+        notes: data.notes ?? null,
+        exercise_type_id: data.exercise_type_id,
+        workout_id: data.workout_id,
+        created_at: now,
+        updated_at: now,
+        exercise_type: exerciseType,
+        exercise_sets: [],
+      };
+
+      queryClient.setQueryData(
+        ["exercises", workoutId],
+        (old: Exercise[] | undefined) =>
+          old ? [...old, optimisticExercise] : [optimisticExercise],
+      );
+
+      return { prev, optimisticId, exerciseType };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(["exercises", workoutId], ctx.prev);
+      }
+    },
+    onSuccess: (createdExercise, _vars, ctx) => {
+      if (!ctx) return;
+      const mergedExercise: Exercise = {
+        ...createdExercise,
+        exercise_type:
+          createdExercise.exercise_type ?? ctx.exerciseType,
+        exercise_sets: createdExercise.exercise_sets ?? [],
+      };
+      queryClient.setQueryData(
+        ["exercises", workoutId],
+        (old: Exercise[] | undefined) => {
+          if (!old) return [mergedExercise];
+          return old.map((exercise) =>
+            String(exercise.id) === String(ctx.optimisticId)
+              ? mergedExercise
+              : exercise,
+          );
+        },
+      );
+    },
+    onSettled: () => {
       if (workoutId) {
         queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
       }
@@ -292,10 +350,13 @@ const WorkoutPage = () => {
 
     if (isAuthenticated) {
       addExerciseMutation.mutate({
-        exercise_type_id: Number(exerciseType.id),
-        workout_id: Number(workoutId),
-        timestamp,
-        notes: null,
+        data: {
+          exercise_type_id: Number(exerciseType.id),
+          workout_id: Number(workoutId),
+          timestamp,
+          notes: null,
+        },
+        exerciseType: exerciseType as ExerciseType,
       });
     } else {
       // Guest mode: update local store directly (final update, not optimistic)
