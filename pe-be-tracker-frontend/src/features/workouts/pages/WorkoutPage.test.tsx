@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { render } from "@/test/testUtils";
 import WorkoutPage from "./WorkoutPage";
 
@@ -16,15 +16,118 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+const mockExerciseType = {
+  id: 42,
+  name: "Bench Press",
+  description: "Chest",
+  default_intensity_unit: 1,
+  times_used: 0,
+  equipment: null,
+  instructions: null,
+  category: null,
+  created_at: "2024-01-01T00:00:00.000Z",
+  updated_at: "2024-01-01T00:00:00.000Z",
+  usage_count: 0,
+  muscles: [],
+  muscle_groups: [],
+};
+
+const exerciseComponentsMocks = vi.hoisted(() => ({
+  ExerciseListMock: vi.fn(
+    ({ exercises }: { exercises: { id: number | string }[] }) => (
+      <div data-testid="exercise-list">
+        {exercises.map((exercise) => (
+          <div key={String(exercise.id)}>{String(exercise.id)}</div>
+        ))}
+      </div>
+    ),
+  ),
+}));
+
 // Mock exercise-related components used by WorkoutPage
 vi.mock("@/features/exercises/components", () => ({
-  ExerciseList: () => <div data-testid="exercise-list">Mock Exercise List</div>,
-  ExerciseTypeModal: () => <div data-testid="exercise-type-modal" />,
+  ExerciseList: exerciseComponentsMocks.ExerciseListMock,
+  ExerciseTypeModal: ({
+    isOpen,
+    onSelect,
+  }: {
+    isOpen: boolean;
+    onSelect: (exerciseType: typeof mockExerciseType) => void;
+  }) =>
+    isOpen ? (
+      <button type="button" onClick={() => onSelect(mockExerciseType)}>
+        Select Exercise Type
+      </button>
+    ) : (
+      <div data-testid="exercise-type-modal" />
+    ),
+}));
+
+const exerciseApiMocks = vi.hoisted(() => ({
+  mockGetExercisesInWorkout: vi.fn(),
+  mockCreateExercise: vi.fn(),
+}));
+
+vi.mock("@/features/exercises/api", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/features/exercises/api")
+  >("@/features/exercises/api");
+  return {
+    ...actual,
+    getExercisesInWorkout: exerciseApiMocks.mockGetExercisesInWorkout,
+    createExercise: exerciseApiMocks.mockCreateExercise,
+  };
+});
+
+const mockGuestState = {
+  workouts: [],
+  hydrated: true,
+  deleteExercise: vi.fn(),
+  createExercisesFromRoutine: vi.fn(),
+  addExercise: vi.fn(),
+  updateExercise: vi.fn(),
+  updateWorkout: vi.fn(),
+};
+
+const mockAuthState = {
+  isAuthenticated: true,
+  loading: false,
+};
+
+const mockUIState = {
+  workoutTimer: { startTime: null },
+  startWorkoutTimer: vi.fn(),
+  stopWorkoutTimer: vi.fn(),
+  getFormattedWorkoutTime: vi.fn(() => "00:00"),
+};
+
+vi.mock("@/stores", () => ({
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
+    selector(mockAuthState),
+  useGuestStore: (
+    selector?: (state: typeof mockGuestState) => unknown,
+  ) => {
+    if (selector) return selector(mockGuestState);
+    return mockGuestState;
+  },
+  useUIStore: (selector: (state: typeof mockUIState) => unknown) =>
+    selector(mockUIState),
 }));
 
 describe("WorkoutPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    exerciseComponentsMocks.ExerciseListMock.mockClear();
+    exerciseApiMocks.mockGetExercisesInWorkout.mockReset();
+    exerciseApiMocks.mockCreateExercise.mockReset();
+    exerciseApiMocks.mockGetExercisesInWorkout.mockResolvedValue([]);
+    global.fetch = vi.fn();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response("<svg />", {
+        status: 200,
+        headers: { "Content-Type": "image/svg+xml" },
+      }),
+    );
   });
 
   it("renders workout page with correct heading", () => {
@@ -46,5 +149,51 @@ describe("WorkoutPage", () => {
   it('shows "Add Exercise" button', () => {
     render(<WorkoutPage />);
     expect(screen.getByRole("button", { name: /add exercise/i })).toBeInTheDocument();
+  });
+
+  it("optimistically adds an exercise before the server responds", async () => {
+    let exercisesResponse: Array<{ id: number; exercise_type: typeof mockExerciseType }> = [];
+    exerciseApiMocks.mockGetExercisesInWorkout.mockImplementation(
+      async () => exercisesResponse,
+    );
+
+    let resolveCreate: (value: unknown) => void;
+    const createPromise = new Promise((resolve) => {
+      resolveCreate = resolve;
+    });
+    exerciseApiMocks.mockCreateExercise.mockReturnValue(createPromise);
+
+    render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(exerciseComponentsMocks.ExerciseListMock).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /select exercise type/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/optimistic-/i)).toBeInTheDocument();
+    });
+
+    const createdExercise = {
+      id: 999,
+      timestamp: "2024-01-01T00:00:00.000Z",
+      notes: null,
+      exercise_type_id: mockExerciseType.id,
+      workout_id: Number(mockWorkoutId),
+      created_at: "2024-01-01T00:00:00.000Z",
+      updated_at: "2024-01-01T00:00:00.000Z",
+      exercise_type: mockExerciseType,
+      exercise_sets: [],
+    };
+    exercisesResponse = [createdExercise];
+    resolveCreate!(createdExercise);
+
+    await waitFor(() => {
+      expect(screen.getByText("999")).toBeInTheDocument();
+    });
   });
 });
