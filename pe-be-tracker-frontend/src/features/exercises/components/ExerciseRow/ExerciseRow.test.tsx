@@ -417,6 +417,41 @@ describe("ExerciseRow", () => {
     });
   });
 
+  it("disables authenticated writes for optimistic exercise ids", async () => {
+    const user = userEvent.setup();
+    const mockOnExerciseDelete = vi.fn();
+    const optimisticExercise: Exercise = {
+      ...mockExercise,
+      id: "optimistic-2024-01-01T00:00:00.000Z-1",
+      exercise_sets: [],
+    };
+
+    render(
+      <ExerciseRow
+        exercise={optimisticExercise}
+        onExerciseUpdate={mockOnExerciseUpdate}
+        onExerciseDelete={mockOnExerciseDelete}
+      />,
+    );
+
+    const addSetButton = screen.getByRole("button", { name: /add set/i });
+    expect(addSetButton).toBeDisabled();
+    await user.click(addSetButton);
+    expect(createExerciseSet).not.toHaveBeenCalled();
+    expect(mockOnExerciseUpdate).not.toHaveBeenCalled();
+
+    const moreButtons = screen.getAllByTestId("more-vertical-icon");
+    const exerciseSettingsButton = moreButtons[0].closest("button");
+    if (exerciseSettingsButton) {
+      await user.click(exerciseSettingsButton);
+      const deleteButton = screen.getByTestId("delete-exercise-button");
+      await user.click(deleteButton);
+    }
+
+    expect(deleteExercise).not.toHaveBeenCalled();
+    expect(mockOnExerciseDelete).not.toHaveBeenCalled();
+  });
+
   it("can change intensity unit", async () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
