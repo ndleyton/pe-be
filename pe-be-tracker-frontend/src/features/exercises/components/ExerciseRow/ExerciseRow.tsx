@@ -87,6 +87,10 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
   const queryClient = useQueryClient();
+  const isUnsavedExercise =
+    isAuthenticated &&
+    typeof exercise.id === "string" &&
+    exercise.id.startsWith("optimistic-");
 
   // Local state for sets
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(
@@ -387,6 +391,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   };
 
   const addSet = async (exerciseId: string | number) => {
+    if (isUnsavedExercise) return;
+
     const lastSet = exerciseSets[exerciseSets.length - 1];
 
     // Create optimistic new set with temporary ID
@@ -462,6 +468,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   };
 
   const handleExerciseDelete = async () => {
+    if (isUnsavedExercise) return;
+
     try {
       if (isAuthenticated) {
         await deleteExercise(exercise.id);
@@ -574,6 +582,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
                 currentIntensityUnit={currentIntensityUnit}
                 onIntensityUnitChange={handleIntensityUnitChange}
                 onExerciseDelete={handleExerciseDelete}
+                disableExerciseDelete={isUnsavedExercise}
                 onClose={() => setShowExerciseModal(false)}
               />
             </DialogContent>
@@ -831,6 +840,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
           variant="outline"
           className="border-input mt-4 w-full bg-transparent"
           data-testid="add-set-button"
+          disabled={isUnsavedExercise}
           onClick={() => addSet(exercise.id)}
         >
           <Plus className="mr-2 h-4 w-4" />

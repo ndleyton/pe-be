@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type InfiniteData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowLeft, Image, Plus } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import {
   getExerciseTypeById,
   getExerciseTypeStats,
+  type Exercise,
 } from "@/features/exercises/api";
 import { ProgressiveOverloadChart } from "@/features/exercises/components";
 import {
@@ -13,6 +19,7 @@ import {
   PersonalBestInfo,
 } from "@/features/exercises/components";
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
+import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
 import {
   Alert,
@@ -59,6 +66,12 @@ const ExerciseTypeDetailsPage = () => {
     retry: 1,
   });
 
+  type AddExerciseMutationContext = {
+    prevExercises?: Exercise[];
+    workoutId?: number | string;
+    optimisticId?: string;
+  };
+
   const addMutation = useMutation({
     mutationFn: () =>
       addExerciseToCurrentWorkout({
@@ -67,7 +80,51 @@ const ExerciseTypeDetailsPage = () => {
     onMutate: async () => {
       // Clear any previous error
       setAddExerciseError(null);
-      return {};
+      if (!exerciseType) return {};
+
+      const workoutsQuery = queryClient.getQueryData<
+        InfiniteData<{ data: Workout[]; next_cursor?: number | null }>
+      >(["workouts"]);
+
+      const allWorkouts =
+        workoutsQuery?.pages.flatMap((page) => page?.data ?? []) ?? [];
+      const activeWorkout = [...allWorkouts]
+        .reverse()
+        .find((workout) => !workout.end_time);
+
+      if (!activeWorkout) return {};
+
+      const workoutId = activeWorkout.id;
+      await queryClient.cancelQueries({
+        queryKey: ["exercises", workoutId],
+      });
+
+      const prevExercises = queryClient.getQueryData<Exercise[]>([
+        "exercises",
+        workoutId,
+      ]);
+
+      const now = new Date().toISOString();
+      const optimisticId = `optimistic-${now}-${exerciseType.id}`;
+      const optimisticExercise: Exercise = {
+        id: optimisticId,
+        timestamp: now,
+        notes: null,
+        exercise_type_id: exerciseType.id,
+        workout_id: workoutId,
+        created_at: now,
+        updated_at: now,
+        exercise_type: exerciseType,
+        exercise_sets: [],
+      };
+
+      queryClient.setQueryData(
+        ["exercises", workoutId],
+        (old: Exercise[] | undefined) =>
+          old ? [...old, optimisticExercise] : [optimisticExercise],
+      );
+
+      return { prevExercises, workoutId, optimisticId };
     },
     onSuccess: (workout) => {
       navigate(`/workouts/${workout.id}`);
@@ -78,8 +135,14 @@ const ExerciseTypeDetailsPage = () => {
         queryKey: ["exercises", workout.id.toString()],
       });
     },
-    onError: (error) => {
+    onError: (error, _vars, ctx) => {
       console.error("Failed to add exercise to workout:", error);
+      if (ctx?.workoutId && ctx.prevExercises) {
+        queryClient.setQueryData(
+          ["exercises", ctx.workoutId],
+          ctx.prevExercises,
+        );
+      }
       setAddExerciseError(
         error instanceof Error
           ? error.message
