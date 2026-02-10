@@ -1,5 +1,6 @@
 import React from "react";
 import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { startWorkoutFromRoutine } from "@/features/routines/api";
 import { useGuestStore, useAuthStore, GuestRoutine } from "@/stores";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +11,6 @@ import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
 import { Button } from "@/shared/components/ui/button";
-import { useInfiniteScroll } from "@/shared/hooks";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 
@@ -26,22 +26,22 @@ const MyWorkoutsPage = () => {
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
 
   const {
-    data: serverWorkouts,
+    data: serverWorkoutsResponse,
     isPending,
-    isFetchingNextPage,
     error,
     refetch,
-  } = useInfiniteScroll<Workout>({
+  } = useQuery({
     queryKey: ["workouts"],
-    queryFn: (cursor, limit) => getMyWorkouts(cursor, limit),
-    limit: 100,
+    queryFn: () => getMyWorkouts(undefined, 100),
     enabled: isAuthenticated,
   });
 
   // Use guest data if not authenticated, server data if authenticated
   const workouts: Workout[] = React.useMemo(() => {
-    if (isAuthenticated) {
-      return Array.isArray(serverWorkouts) ? serverWorkouts : [];
+      if (isAuthenticated) {
+      return Array.isArray(serverWorkoutsResponse?.data)
+        ? serverWorkoutsResponse.data
+        : [];
     } else {
       const guestWorkouts = Array.isArray(guestData?.workouts)
         ? guestData.workouts
@@ -56,7 +56,7 @@ const MyWorkoutsPage = () => {
         updated_at: gw.updated_at || getCurrentUTCTimestamp(),
       }));
     }
-  }, [isAuthenticated, serverWorkouts, guestData?.workouts]);
+  }, [isAuthenticated, serverWorkoutsResponse, guestData?.workouts]);
 
   const listPending = isAuthenticated && (authLoading || isPending);
   const listStatus: "pending" | "success" = listPending ? "pending" : "success";
@@ -241,12 +241,6 @@ const MyWorkoutsPage = () => {
                 ))}
               </div>
 
-              {/* Loading more indicator for authenticated users */}
-              {isAuthenticated && isFetchingNextPage && (
-                <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg"></span>
-                </div>
-              )}
             </>
           )}
         </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
-  type InfiniteData,
   useQuery,
   useMutation,
   useQueryClient,
@@ -66,12 +65,6 @@ const ExerciseTypeDetailsPage = () => {
     retry: 1,
   });
 
-  type AddExerciseMutationContext = {
-    prevExercises?: Exercise[];
-    workoutId?: number | string;
-    optimisticId?: string;
-  };
-
   const addMutation = useMutation({
     mutationFn: () =>
       addExerciseToCurrentWorkout({
@@ -83,11 +76,10 @@ const ExerciseTypeDetailsPage = () => {
       if (!exerciseType) return {};
 
       const workoutsQuery = queryClient.getQueryData<
-        InfiniteData<{ data: Workout[]; next_cursor?: number | null }>
+        { data: Workout[]; next_cursor?: number | null }
       >(["workouts"]);
 
-      const allWorkouts =
-        workoutsQuery?.pages.flatMap((page) => page?.data ?? []) ?? [];
+      const allWorkouts = workoutsQuery?.data ?? [];
       const activeWorkout = [...allWorkouts]
         .reverse()
         .find((workout) => !workout.end_time);
