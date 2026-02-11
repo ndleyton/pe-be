@@ -119,7 +119,9 @@ const ExerciseTypeDetailsPage = () => {
       return { prevExercises, workoutId, optimisticId };
     },
     onSuccess: (workout) => {
-      navigate(`/workouts/${workout.id}`);
+      navigate(`/workouts/${workout.id}`, {
+        state: { scrollToBottomOnLoad: true },
+      });
 
       // Update cache with real data and invalidate exercises to refresh
       queryClient.setQueryData(["workout", workout.id.toString()], workout);
