@@ -62,8 +62,12 @@ const WorkoutPage = () => {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const exerciseListContainerRef = useRef<HTMLDivElement | null>(null);
+  const didHandleRouteScrollRef = useRef(false);
 
   const routine = location.state?.routine as GuestRoutine | undefined;
+  const shouldScrollToBottomOnLoad = Boolean(
+    location.state?.scrollToBottomOnLoad,
+  );
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -273,6 +277,12 @@ const WorkoutPage = () => {
       }
     }
   }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
+
+  useEffect(() => {
+    if (!shouldScrollToBottomOnLoad || didHandleRouteScrollRef.current) return;
+    didHandleRouteScrollRef.current = true;
+    setShouldScrollToBottom(true);
+  }, [shouldScrollToBottomOnLoad]);
 
   useEffect(() => {
     if (!shouldScrollToBottom) return;
