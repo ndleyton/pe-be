@@ -60,14 +60,25 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const exerciseListContainerRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
+  const previousExerciseCountRef = useRef<number | null>(null);
 
   const routine = location.state?.routine as GuestRoutine | undefined;
   const shouldScrollToBottomOnLoad = Boolean(
     location.state?.scrollToBottomOnLoad,
   );
+
+  const scrollExerciseListToBottom = () => {
+    requestAnimationFrame(() => {
+      const container = exerciseListContainerRef.current;
+      if (!container) return;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  };
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -281,23 +292,16 @@ const WorkoutPage = () => {
   useEffect(() => {
     if (!shouldScrollToBottomOnLoad || didHandleRouteScrollRef.current) return;
     didHandleRouteScrollRef.current = true;
-    setShouldScrollToBottom(true);
+    scrollExerciseListToBottom();
   }, [shouldScrollToBottomOnLoad]);
 
   useEffect(() => {
-    if (!shouldScrollToBottom) return;
-
-    requestAnimationFrame(() => {
-      const container = exerciseListContainerRef.current;
-      if (!container) return;
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth",
-      });
-    });
-
-    setShouldScrollToBottom(false);
-  }, [shouldScrollToBottom, exercises.length]);
+    const prevCount = previousExerciseCountRef.current;
+    if (prevCount !== null && exercises.length > prevCount) {
+      scrollExerciseListToBottom();
+    }
+    previousExerciseCountRef.current = exercises.length;
+  }, [exercises.length]);
 
   type AddExercisePayload = {
     data: CreateExerciseData;
@@ -332,7 +336,6 @@ const WorkoutPage = () => {
         (old: Exercise[] | undefined) =>
           old ? [...old, optimisticExercise] : [optimisticExercise],
       );
-      setShouldScrollToBottom(true);
 
       return { prev, optimisticId, exerciseType };
     },
@@ -396,7 +399,6 @@ const WorkoutPage = () => {
         notes: null,
         exercise_type: guestType,
       });
-      setShouldScrollToBottom(true);
     }
   };
 
