@@ -115,8 +115,16 @@ vi.mock("@/stores", () => ({
 }));
 
 describe("WorkoutPage", () => {
+  let scrollToMock: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    scrollToMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      writable: true,
+      value: scrollToMock,
+    });
     exerciseComponentsMocks.ExerciseListMock.mockClear();
     exerciseApiMocks.mockGetExercisesInWorkout.mockReset();
     exerciseApiMocks.mockCreateExercise.mockReset();
@@ -176,6 +184,9 @@ describe("WorkoutPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/optimistic-/i)).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(scrollToMock).toHaveBeenCalled();
     });
 
     const createdExercise = {
