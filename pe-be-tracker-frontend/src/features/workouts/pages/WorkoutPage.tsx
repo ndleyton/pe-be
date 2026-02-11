@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -60,6 +60,8 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
+  const exerciseListContainerRef = useRef<HTMLDivElement | null>(null);
 
   const routine = location.state?.routine as GuestRoutine | undefined;
 
@@ -272,6 +274,21 @@ const WorkoutPage = () => {
     }
   }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
+  useEffect(() => {
+    if (!shouldScrollToBottom) return;
+
+    requestAnimationFrame(() => {
+      const container = exerciseListContainerRef.current;
+      if (!container) return;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+
+    setShouldScrollToBottom(false);
+  }, [shouldScrollToBottom, exercises.length]);
+
   type AddExercisePayload = {
     data: CreateExerciseData;
     exerciseType: ExerciseType;
@@ -305,6 +322,7 @@ const WorkoutPage = () => {
         (old: Exercise[] | undefined) =>
           old ? [...old, optimisticExercise] : [optimisticExercise],
       );
+      setShouldScrollToBottom(true);
 
       return { prev, optimisticId, exerciseType };
     },
@@ -368,6 +386,7 @@ const WorkoutPage = () => {
         notes: null,
         exercise_type: guestType,
       });
+      setShouldScrollToBottom(true);
     }
   };
 
@@ -490,7 +509,10 @@ const WorkoutPage = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div
+          ref={exerciseListContainerRef}
+          className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        >
           <ExerciseList
             exercises={exercises}
             status={listStatus}
