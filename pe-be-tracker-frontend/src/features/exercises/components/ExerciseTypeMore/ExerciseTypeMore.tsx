@@ -27,6 +27,7 @@ interface ExerciseTypeMoreProps {
   currentIntensityUnit?: IntensityUnit | GuestIntensityUnit;
   onIntensityUnitChange: (unit: IntensityUnit | GuestIntensityUnit) => void;
   onExerciseDelete: () => void;
+  disableExerciseDelete?: boolean;
   onClose?: () => void;
 }
 
@@ -34,6 +35,7 @@ const ExerciseTypeMore = ({
   currentIntensityUnit,
   onIntensityUnitChange,
   onExerciseDelete,
+  disableExerciseDelete = false,
   onClose,
 }: ExerciseTypeMoreProps) => {
   // Get state from stores
@@ -113,6 +115,7 @@ const ExerciseTypeMore = ({
               <Button
                 variant="outline"
                 className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                disabled={disableExerciseDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Exercise
@@ -130,6 +133,7 @@ const ExerciseTypeMore = ({
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={disableExerciseDelete}
                   onClick={onExerciseDelete}
                 >
                   Delete Exercise

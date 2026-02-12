@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -60,8 +60,25 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const exerciseListContainerRef = useRef<HTMLDivElement | null>(null);
+  const didHandleRouteScrollRef = useRef(false);
+  const previousExerciseCountRef = useRef<number | null>(null);
 
   const routine = location.state?.routine as GuestRoutine | undefined;
+  const shouldScrollToBottomOnLoad = Boolean(
+    location.state?.scrollToBottomOnLoad,
+  );
+
+  const scrollExerciseListToBottom = () => {
+    requestAnimationFrame(() => {
+      const container = exerciseListContainerRef.current;
+      if (!container) return;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  };
 
   // Fetch workout details (only when authenticated)
   const { data: serverWorkout } = useQuery({
@@ -272,10 +289,82 @@ const WorkoutPage = () => {
     }
   }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
 
-  // Simple create; refetch on success
+  useEffect(() => {
+    if (!shouldScrollToBottomOnLoad || didHandleRouteScrollRef.current) return;
+    didHandleRouteScrollRef.current = true;
+    scrollExerciseListToBottom();
+  }, [shouldScrollToBottomOnLoad]);
+
+  useEffect(() => {
+    const prevCount = previousExerciseCountRef.current;
+    if (prevCount !== null && exercises.length > prevCount) {
+      scrollExerciseListToBottom();
+    }
+    previousExerciseCountRef.current = exercises.length;
+  }, [exercises.length]);
+
+  type AddExercisePayload = {
+    data: CreateExerciseData;
+    exerciseType: ExerciseType;
+  };
+
+  // Optimistic create; replace optimistic entry with server response
   const addExerciseMutation = useMutation({
-    mutationFn: (data: CreateExerciseData) => createExercise(data),
-    onSuccess: () => {
+    mutationFn: ({ data }: AddExercisePayload) => createExercise(data),
+    onMutate: async ({ data, exerciseType }: AddExercisePayload) => {
+      await queryClient.cancelQueries({ queryKey: ["exercises", workoutId] });
+      const prev = queryClient.getQueryData<Exercise[]>([
+        "exercises",
+        workoutId,
+      ]);
+      const now = new Date().toISOString();
+      const optimisticId = `optimistic-${now}-${exerciseType.id}`;
+      const optimisticExercise: Exercise = {
+        id: optimisticId,
+        timestamp: data.timestamp ?? now,
+        notes: data.notes ?? null,
+        exercise_type_id: data.exercise_type_id,
+        workout_id: data.workout_id,
+        created_at: now,
+        updated_at: now,
+        exercise_type: exerciseType,
+        exercise_sets: [],
+      };
+
+      queryClient.setQueryData(
+        ["exercises", workoutId],
+        (old: Exercise[] | undefined) =>
+          old ? [...old, optimisticExercise] : [optimisticExercise],
+      );
+
+      return { prev, optimisticId, exerciseType };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(["exercises", workoutId], ctx.prev);
+      }
+    },
+    onSuccess: (createdExercise, _vars, ctx) => {
+      if (!ctx) return;
+      const mergedExercise: Exercise = {
+        ...createdExercise,
+        exercise_type:
+          createdExercise.exercise_type ?? ctx.exerciseType,
+        exercise_sets: createdExercise.exercise_sets ?? [],
+      };
+      queryClient.setQueryData(
+        ["exercises", workoutId],
+        (old: Exercise[] | undefined) => {
+          if (!old) return [mergedExercise];
+          return old.map((exercise) =>
+            String(exercise.id) === String(ctx.optimisticId)
+              ? mergedExercise
+              : exercise,
+          );
+        },
+      );
+    },
+    onSettled: () => {
       if (workoutId) {
         queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
       }
@@ -292,10 +381,13 @@ const WorkoutPage = () => {
 
     if (isAuthenticated) {
       addExerciseMutation.mutate({
-        exercise_type_id: Number(exerciseType.id),
-        workout_id: Number(workoutId),
-        timestamp,
-        notes: null,
+        data: {
+          exercise_type_id: Number(exerciseType.id),
+          workout_id: Number(workoutId),
+          timestamp,
+          notes: null,
+        },
+        exerciseType: exerciseType as ExerciseType,
       });
     } else {
       // Guest mode: update local store directly (final update, not optimistic)
@@ -429,7 +521,10 @@ const WorkoutPage = () => {
             {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
           </h2>
         </div>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div
+          ref={exerciseListContainerRef}
+          className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        >
           <ExerciseList
             exercises={exercises}
             status={listStatus}
