@@ -207,4 +207,33 @@ describe("WorkoutPage", () => {
       expect(screen.getByText("999")).toBeInTheDocument();
     });
   });
+
+  it("removes optimistic exercise on create failure when exercises cache was empty", async () => {
+    exerciseApiMocks.mockGetExercisesInWorkout.mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    let rejectCreate: (reason?: unknown) => void;
+    const createPromise = new Promise((_, reject) => {
+      rejectCreate = reject;
+    });
+    exerciseApiMocks.mockCreateExercise.mockReturnValue(createPromise);
+
+    render(<WorkoutPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /select exercise type/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/optimistic-/i)).toBeInTheDocument();
+    });
+
+    rejectCreate!(new Error("Create failed"));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/optimistic-/i)).not.toBeInTheDocument();
+    });
+  });
 });
