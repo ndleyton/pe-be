@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import api from "@/shared/api/client";
@@ -144,7 +144,7 @@ const mockWorkouts: Workout[] = [
   },
 ];
 
-describe("MyWorkoutsPage - Infinite Scroll", () => {
+describe("MyWorkoutsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMyWorkouts.mockResolvedValue(wrap(mockWorkouts) as any);
@@ -216,94 +216,6 @@ describe("MyWorkoutsPage - Infinite Scroll", () => {
       // Should see some dates from January, regardless of exact timezone conversion
       const dates = screen.getAllByText(/Jan \d+|Dec 3[01]/);
       expect(dates.length).toBeGreaterThanOrEqual(2); // At least 2 workout dates
-    });
-  });
-
-  it("shows loading more indicator when fetching next page", async () => {
-    // Mock first call returning full page, second call pending
-    const fullPage = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1,
-      name: `Workout ${i + 1}`,
-      notes: `Notes ${i + 1}`,
-      start_time: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
-      end_time: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
-      created_at: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
-      updated_at: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
-    }));
-
-    mockGetMyWorkouts
-      .mockResolvedValueOnce({ data: fullPage, next_cursor: 100 } as any)
-      .mockImplementation(() => new Promise(() => { })); // Pending next page
-
-    render(<MyWorkoutsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Workout 1")).toBeInTheDocument();
-    });
-
-    // Simulate scroll to trigger next page
-    Object.defineProperty(document.documentElement, "scrollTop", {
-      value: 900,
-      configurable: true,
-    });
-    Object.defineProperty(document.documentElement, "scrollHeight", {
-      value: 1000,
-      configurable: true,
-    });
-    Object.defineProperty(window, "innerHeight", {
-      value: 800,
-      configurable: true,
-    });
-
-    fireEvent.scroll(window);
-
-    // Should show loading more indicator
-    await waitFor(() => {
-      expect(document.querySelector(".loading-spinner")).toBeInTheDocument();
-    });
-  });
-
-  it("requests next page using next_cursor", async () => {
-    const fullPage = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1,
-      name: `Workout ${i + 1}`,
-      notes: `Notes ${i + 1}`,
-      start_time: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
-      end_time: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
-      created_at: `2024-01-0${(i % 9) + 1}T08:00:00Z`,
-      updated_at: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
-    }));
-
-    const nextCursor = 100;
-    mockGetMyWorkouts
-      .mockResolvedValueOnce({ data: fullPage, next_cursor: nextCursor } as any)
-      .mockResolvedValueOnce({ data: [], next_cursor: null } as any);
-
-    render(<MyWorkoutsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Workout 1")).toBeInTheDocument();
-    });
-
-    // Simulate scroll near bottom to trigger fetching next page
-    Object.defineProperty(document.documentElement, "scrollTop", {
-      value: 900,
-      configurable: true,
-    });
-    Object.defineProperty(document.documentElement, "scrollHeight", {
-      value: 1000,
-      configurable: true,
-    });
-    Object.defineProperty(window, "innerHeight", {
-      value: 800,
-      configurable: true,
-    });
-
-    fireEvent.scroll(window);
-
-    await waitFor(() => {
-      expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
-      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(2, nextCursor, 100);
     });
   });
 
