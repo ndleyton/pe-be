@@ -308,15 +308,21 @@ const WorkoutPage = () => {
     exerciseType: ExerciseType;
   };
 
+  type AddExerciseMutationContext = {
+    prev?: Exercise[];
+    hadPrev: boolean;
+    optimisticId: string;
+    exerciseType: ExerciseType;
+  };
+
   // Optimistic create; replace optimistic entry with server response
   const addExerciseMutation = useMutation({
     mutationFn: ({ data }: AddExercisePayload) => createExercise(data),
     onMutate: async ({ data, exerciseType }: AddExercisePayload) => {
+      const exercisesQueryKey = ["exercises", workoutId] as const;
       await queryClient.cancelQueries({ queryKey: ["exercises", workoutId] });
-      const prev = queryClient.getQueryData<Exercise[]>([
-        "exercises",
-        workoutId,
-      ]);
+      const prev = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
+      const hadPrev = prev !== undefined;
       const now = new Date().toISOString();
       const optimisticId = `optimistic-${now}-${exerciseType.id}`;
       const optimisticExercise: Exercise = {
@@ -332,16 +338,36 @@ const WorkoutPage = () => {
       };
 
       queryClient.setQueryData(
-        ["exercises", workoutId],
+        exercisesQueryKey,
         (old: Exercise[] | undefined) =>
           old ? [...old, optimisticExercise] : [optimisticExercise],
       );
 
-      return { prev, optimisticId, exerciseType };
+      return { prev, hadPrev, optimisticId, exerciseType };
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) {
-        queryClient.setQueryData(["exercises", workoutId], ctx.prev);
+    onError: (_err, _vars, ctx?: AddExerciseMutationContext) => {
+      if (!ctx) return;
+
+      const exercisesQueryKey = ["exercises", workoutId] as const;
+
+      queryClient.setQueryData(
+        exercisesQueryKey,
+        (old: Exercise[] | undefined) =>
+          old?.filter(
+            (exercise) => String(exercise.id) !== String(ctx.optimisticId),
+          ) ?? old,
+      );
+
+      if (ctx.hadPrev) {
+        queryClient.setQueryData(exercisesQueryKey, ctx.prev);
+      } else {
+        const current = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
+        if (!current || current.length === 0) {
+          queryClient.removeQueries({
+            queryKey: exercisesQueryKey,
+            exact: true,
+          });
+        }
       }
     },
     onSuccess: (createdExercise, _vars, ctx) => {
