@@ -95,6 +95,7 @@ const ExerciseTypeDetailsPage = () => {
         "exercises",
         workoutId,
       ]);
+      const hadPrev = prevExercises !== undefined;
 
       const now = new Date().toISOString();
       const optimisticId = `optimistic-${now}-${exerciseType.id}`;
@@ -116,7 +117,7 @@ const ExerciseTypeDetailsPage = () => {
           old ? [...old, optimisticExercise] : [optimisticExercise],
       );
 
-      return { prevExercises, workoutId, optimisticId };
+      return { prevExercises, hadPrev, workoutId, optimisticId };
     },
     onSuccess: (workout) => {
       navigate(`/workouts/${workout.id}`, {
@@ -131,11 +132,27 @@ const ExerciseTypeDetailsPage = () => {
     },
     onError: (error, _vars, ctx) => {
       console.error("Failed to add exercise to workout:", error);
-      if (ctx?.workoutId && ctx.prevExercises) {
+      if (ctx?.workoutId) {
+        const exercisesQueryKey = ["exercises", ctx.workoutId] as const;
         queryClient.setQueryData(
-          ["exercises", ctx.workoutId],
-          ctx.prevExercises,
+          exercisesQueryKey,
+          (old: Exercise[] | undefined) =>
+            old?.filter(
+              (exercise) => String(exercise.id) !== String(ctx.optimisticId),
+            ) ?? old,
         );
+
+        if (ctx.hadPrev) {
+          queryClient.setQueryData(exercisesQueryKey, ctx.prevExercises);
+        } else {
+          const current = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
+          if (!current || current.length === 0) {
+            queryClient.removeQueries({
+              queryKey: exercisesQueryKey,
+              exact: true,
+            });
+          }
+        }
       }
       setAddExerciseError(
         error instanceof Error
