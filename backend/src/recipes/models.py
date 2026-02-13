@@ -1,6 +1,6 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, Numeric, ForeignKey, Boolean
 from sqlalchemy import Enum as SAEnum
 from enum import Enum
 from sqlalchemy.orm import relationship, Mapped
@@ -20,8 +20,16 @@ class Recipe(Base):
 
     name = Column(String, nullable=False)
     description = Column(Text)
-    workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
-    creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    workout_type_id = Column(
+        Integer,
+        ForeignKey("workout_types.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    creator_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     # Visibility as an enum (private, public, link_only)
     # Use lowercase member names so SQLAlchemy binds names that match DB labels.
@@ -52,8 +60,16 @@ class ExerciseTemplate(Base):
 
     __tablename__ = "exercise_templates"
 
-    exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
-    recipe_id = Column(Integer, ForeignKey("recipes.id"), nullable=False)
+    exercise_type_id = Column(
+        Integer,
+        ForeignKey("exercise_types.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    recipe_id = Column(
+        Integer,
+        ForeignKey("recipes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     # Relationships
     exercise_type: Mapped["ExerciseType"] = relationship("ExerciseType", lazy="joined")
@@ -71,12 +87,16 @@ class SetTemplate(Base):
     __tablename__ = "set_templates"
 
     reps = Column(Integer)
-    intensity = Column(Float)
+    intensity = Column(Numeric(precision=7, scale=3))
     intensity_unit_id = Column(
-        Integer, ForeignKey("intensity_units.id"), nullable=False
+        Integer,
+        ForeignKey("intensity_units.id", ondelete="RESTRICT"),
+        nullable=False,
     )
     exercise_template_id = Column(
-        Integer, ForeignKey("exercise_templates.id"), nullable=False
+        Integer,
+        ForeignKey("exercise_templates.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     # Relationships

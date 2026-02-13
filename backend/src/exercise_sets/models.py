@@ -27,9 +27,15 @@ class ExerciseSet(Base):
     reps = Column(Integer)
     intensity = Column(Numeric(precision=7, scale=3))
     intensity_unit_id = Column(
-        Integer, ForeignKey("intensity_units.id"), nullable=False
+        Integer,
+        ForeignKey("intensity_units.id", ondelete="RESTRICT"),
+        nullable=False,
     )
-    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    exercise_id = Column(
+        Integer,
+        ForeignKey("exercises.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     rest_time_seconds = Column(Integer)
     done = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)
