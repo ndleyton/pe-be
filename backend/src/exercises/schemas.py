@@ -57,7 +57,7 @@ class ExerciseTypeCreate(BaseModel):
         ..., min_length=1, description="Human-readable exercise type name"
     )
     description: str = "Custom exercise"
-    default_intensity_unit: int = 1
+    default_intensity_unit: Optional[int] = None
     muscle_ids: Optional[List[int]] = Field(
         default=None,
         description="List of muscle IDs to associate with this exercise type (optional)",
@@ -102,7 +102,7 @@ class ExerciseTypeRead(BaseModel):
     id: int
     name: str
     description: str
-    default_intensity_unit: int
+    default_intensity_unit: Optional[int]
     times_used: int
     muscles: List[MuscleRead] = []
     images_url: Optional[str] = None
