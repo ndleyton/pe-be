@@ -2,6 +2,7 @@ from typing import Optional, List
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
@@ -80,7 +81,16 @@ async def update_workout(
     for field, value in update_data.items():
         setattr(workout, field, value)
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        error_message = str(e.orig) if e.orig is not None else str(e)
+        if "ck_workouts_end_time_gte_start_time" in error_message:
+            raise ValueError(
+                "end_time must be greater than or equal to start_time"
+            ) from e
+        raise
     await session.refresh(workout)
     return workout
 
