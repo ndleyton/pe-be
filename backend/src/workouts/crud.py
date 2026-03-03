@@ -22,7 +22,9 @@ def _get_constraint_name(error: IntegrityError) -> Optional[str]:
     return getattr(error.orig, "constraint_name", None)
 
 
-def _map_workout_integrity_error(error: IntegrityError) -> Optional[DomainValidationError]:
+def _map_workout_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
     constraint_name = _get_constraint_name(error)
     error_message = str(error.orig) if error.orig is not None else str(error)
     lowered = error_message.lower()
