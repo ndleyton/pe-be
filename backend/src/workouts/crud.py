@@ -2,9 +2,50 @@ from typing import Optional, List
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
+from src.core.errors import DomainValidationError
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
+
+
+def _get_constraint_name(error: IntegrityError) -> Optional[str]:
+    if error.orig is None:
+        return None
+
+    diag = getattr(error.orig, "diag", None)
+    if diag is not None:
+        constraint_name = getattr(diag, "constraint_name", None)
+        if constraint_name:
+            return constraint_name
+
+    return getattr(error.orig, "constraint_name", None)
+
+
+def _map_workout_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    if (
+        constraint_name == "ck_workouts_end_time_gte_start_time"
+        or "ck_workouts_end_time_gte_start_time" in error_message
+    ):
+        return DomainValidationError.invalid_range(
+            field="end_time",
+            message="end_time must be greater than or equal to start_time",
+        )
+
+    if (
+        constraint_name == "fk_workouts_workout_type_id_workout_types"
+        or constraint_name == "workouts_workout_type_id_fkey"
+        or ("workout_type_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(field="workout_type_id")
+
+    return None
 
 
 async def get_workout_by_date(
@@ -63,7 +104,14 @@ async def create_workout(
     """Create a new workout"""
     workout = Workout(**workout_create.dict(), owner_id=user_id)
     session.add(workout)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_workout_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(workout)
     return workout
 
@@ -80,7 +128,14 @@ async def update_workout(
     for field, value in update_data.items():
         setattr(workout, field, value)
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_workout_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(workout)
     return workout
 

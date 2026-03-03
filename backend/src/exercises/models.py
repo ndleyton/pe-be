@@ -26,7 +26,11 @@ class ExerciseType(Base):
 
     name = Column(String, unique=True)
     description = Column(String)
-    default_intensity_unit = Column(Integer, nullable=True)
+    default_intensity_unit = Column(
+        Integer,
+        ForeignKey("intensity_units.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     times_used = Column(Integer, default=0, nullable=False)
     external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
@@ -50,8 +54,16 @@ class Exercise(Base):
 
     timestamp = Column(DateTime(timezone=True))
     notes = Column(Text)
-    exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
-    workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
+    exercise_type_id = Column(
+        Integer,
+        ForeignKey("exercise_types.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    workout_id = Column(
+        Integer,
+        ForeignKey("workouts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
@@ -90,7 +102,11 @@ class Muscle(Base):
     __tablename__ = "muscles"
 
     name = Column(String, unique=True)
-    muscle_group_id = Column(Integer, ForeignKey("muscle_groups.id"), nullable=False)
+    muscle_group_id = Column(
+        Integer,
+        ForeignKey("muscle_groups.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
 
     # Relationships
     exercise_muscles: Mapped[List["ExerciseMuscle"]] = relationship(
@@ -106,8 +122,16 @@ class ExerciseMuscle(Base):
 
     __tablename__ = "exercise_muscles"
 
-    exercise_type_id = Column(Integer, ForeignKey("exercise_types.id"), nullable=False)
-    muscle_id = Column(Integer, ForeignKey("muscles.id"), nullable=False)
+    exercise_type_id = Column(
+        Integer,
+        ForeignKey("exercise_types.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    muscle_id = Column(
+        Integer,
+        ForeignKey("muscles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     is_primary = Column(Boolean, nullable=False, default=False, server_default="false")
 
     __table_args__ = (UniqueConstraint("exercise_type_id", "muscle_id"),)

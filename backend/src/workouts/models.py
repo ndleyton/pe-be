@@ -1,6 +1,14 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    ForeignKey,
+    CheckConstraint,
+)
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -24,12 +32,27 @@ class Workout(Base):
 
     __tablename__ = "workouts"
 
+    __table_args__ = (
+        CheckConstraint(
+            "end_time IS NULL OR start_time IS NULL OR end_time >= start_time",
+            name="ck_workouts_end_time_gte_start_time",
+        ),
+    )
+
     start_time = Column(DateTime(timezone=True))
     end_time = Column(DateTime(timezone=True))
     name = Column(String)
     notes = Column(Text)
-    workout_type_id = Column(Integer, ForeignKey("workout_types.id"), nullable=False)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    workout_type_id = Column(
+        Integer,
+        ForeignKey("workout_types.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     # Relationships
     owner: Mapped["User"] = relationship(back_populates="workouts")

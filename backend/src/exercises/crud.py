@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
 
+from src.core.errors import DomainValidationError
 from src.exercises.models import (
     Exercise,
     ExerciseType,
@@ -25,6 +26,43 @@ from src.exercises.schemas import (
 # considered a match.  Tweaking this value lets us control how permissive the
 # search is without hunting through the implementation.
 FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
+
+
+def _get_constraint_name(error: IntegrityError) -> Optional[str]:
+    if error.orig is None:
+        return None
+
+    diag = getattr(error.orig, "diag", None)
+    if diag is not None:
+        constraint_name = getattr(diag, "constraint_name", None)
+        if constraint_name:
+            return constraint_name
+
+    return getattr(error.orig, "constraint_name", None)
+
+
+def _map_exercise_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    if (
+        constraint_name == "fk_exercises_exercise_type_id_exercise_types"
+        or constraint_name == "exercises_exercise_type_id_fkey"
+        or ("exercise_type_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(field="exercise_type_id")
+
+    if (
+        constraint_name == "fk_exercises_workout_id_workouts"
+        or constraint_name == "exercises_workout_id_fkey"
+        or ("workout_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(field="workout_id")
+
+    return None
 
 
 async def get_exercise_by_id(
@@ -73,14 +111,20 @@ async def create_exercise(
     exercise = Exercise(**exercise_create.dict())
     session.add(exercise)
 
-    # Increment the times_used count for the selected exercise type
-    await session.execute(
-        update(ExerciseType)
-        .where(ExerciseType.id == exercise_create.exercise_type_id)
-        .values(times_used=ExerciseType.times_used + 1)
-    )
-
-    await session.commit()
+    try:
+        # Increment the times_used count for the selected exercise type
+        await session.execute(
+            update(ExerciseType)
+            .where(ExerciseType.id == exercise_create.exercise_type_id)
+            .values(times_used=ExerciseType.times_used + 1)
+        )
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_exercise_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(exercise)
 
     # Fetch the exercise with eager loading for the response

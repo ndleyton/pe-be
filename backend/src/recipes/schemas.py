@@ -1,5 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
+from decimal import Decimal
 from pydantic import ConfigDict, BaseModel, Field
 from src.recipes.models import Recipe as RecipeModel
 
@@ -10,7 +11,7 @@ class ExerciseTypeRead(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
-    default_intensity_unit: int
+    default_intensity_unit: Optional[int]
     times_used: int
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,7 +29,7 @@ class SetTemplateBase(BaseModel):
     """Base schema for set template data"""
 
     reps: Optional[int] = None
-    intensity: Optional[float] = None
+    intensity: Optional[Decimal] = None
     intensity_unit_id: int
 
 
