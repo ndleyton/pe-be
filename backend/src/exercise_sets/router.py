@@ -22,14 +22,9 @@ async def create_exercise_set(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise set"""
-    try:
-        return await ExerciseSetService.create_new_exercise_set(
-            session, exercise_set_in, user.id
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    return await ExerciseSetService.create_new_exercise_set(
+        session, exercise_set_in, user.id
+    )
 
 
 @router.get("/exercise/{exercise_id}", response_model=List[ExerciseSetRead])
@@ -52,14 +47,9 @@ async def update_exercise_set(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Update an exercise set"""
-    try:
-        exercise_set = await ExerciseSetService.update_exercise_set_data(
-            session, exercise_set_id, exercise_set_update, user.id
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    exercise_set = await ExerciseSetService.update_exercise_set_data(
+        session, exercise_set_id, exercise_set_update, user.id
+    )
     if not exercise_set:
         raise HTTPException(status_code=404, detail="Exercise set not found")
     return exercise_set

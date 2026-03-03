@@ -198,9 +198,4 @@ async def admin_create_routine(
     if not getattr(user, "is_superuser", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
 
-    try:
-        return await recipe_service.create_recipe_admin(session, recipe_in, user.id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    return await recipe_service.create_recipe_admin(session, recipe_in, user.id)

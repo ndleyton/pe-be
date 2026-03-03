@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
 
+from src.core.errors import DomainValidationError
 from src.exercises.models import (
     Exercise,
     ExerciseType,
@@ -40,22 +41,26 @@ def _get_constraint_name(error: IntegrityError) -> Optional[str]:
     return getattr(error.orig, "constraint_name", None)
 
 
-def _map_exercise_integrity_error(error: IntegrityError) -> Optional[str]:
+def _map_exercise_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
     constraint_name = _get_constraint_name(error)
     error_message = str(error.orig) if error.orig is not None else str(error)
     lowered = error_message.lower()
 
     if (
         constraint_name == "fk_exercises_exercise_type_id_exercise_types"
+        or constraint_name == "exercises_exercise_type_id_fkey"
         or ("exercise_type_id" in error_message and "foreign key constraint" in lowered)
     ):
-        return "exercise_type_id is invalid"
+        return DomainValidationError.invalid_reference(field="exercise_type_id")
 
     if (
         constraint_name == "fk_exercises_workout_id_workouts"
+        or constraint_name == "exercises_workout_id_fkey"
         or ("workout_id" in error_message and "foreign key constraint" in lowered)
     ):
-        return "workout_id is invalid"
+        return DomainValidationError.invalid_reference(field="workout_id")
 
     return None
 
@@ -116,9 +121,9 @@ async def create_exercise(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        error_message = _map_exercise_integrity_error(e)
-        if error_message:
-            raise ValueError(error_message) from e
+        mapped_error = _map_exercise_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
         raise
     await session.refresh(exercise)
 

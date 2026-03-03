@@ -45,12 +45,7 @@ async def create_recipe(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new routine"""
-    try:
-        return await recipe_service.create_recipe(session, recipe_in, user.id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    return await recipe_service.create_recipe(session, recipe_in, user.id)
 
 
 @router.put("/{recipe_id}", response_model=RecipeRead)
@@ -61,12 +56,7 @@ async def update_recipe(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Update an existing routine"""
-    try:
-        recipe = await recipe_service.update_recipe(session, recipe_id, recipe_in, user.id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    recipe = await recipe_service.update_recipe(session, recipe_id, recipe_in, user.id)
     if not recipe:
         raise HTTPException(status_code=404, detail="Routine not found")
     return recipe

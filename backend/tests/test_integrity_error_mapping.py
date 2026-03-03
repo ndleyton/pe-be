@@ -55,7 +55,10 @@ async def test_patch_workout_invalid_workout_type_returns_422(
             json={"workout_type_id": 999999},
         )
         assert response.status_code == 422
-        assert "workout_type_id" in response.json()["detail"]
+        body = response.json()
+        assert body["code"] == "invalid_reference"
+        assert body["field"] == "workout_type_id"
+        assert "workout_type_id" in body["detail"]
     finally:
         app.dependency_overrides.pop(current_active_user, None)
 
@@ -76,7 +79,10 @@ async def test_create_routine_invalid_workout_type_returns_422(
         }
         response = await async_client.post(f"{settings.API_PREFIX}/routines/", json=payload)
         assert response.status_code == 422
-        assert "workout_type_id" in response.json()["detail"]
+        body = response.json()
+        assert body["code"] == "invalid_reference"
+        assert body["field"] == "workout_type_id"
+        assert "workout_type_id" in body["detail"]
     finally:
         app.dependency_overrides.pop(current_active_user, None)
 
@@ -103,7 +109,10 @@ async def test_create_exercise_invalid_workout_id_returns_422(
         }
         response = await async_client.post(f"{settings.API_PREFIX}/exercises/", json=payload)
         assert response.status_code == 422
-        assert "workout_id" in response.json()["detail"]
+        body = response.json()
+        assert body["code"] == "invalid_reference"
+        assert body["field"] == "workout_id"
+        assert "workout_id" in body["detail"]
     finally:
         app.dependency_overrides.pop(current_active_user, None)
 
@@ -156,6 +165,9 @@ async def test_create_exercise_set_invalid_intensity_unit_returns_422(
             json=payload,
         )
         assert response.status_code == 422
-        assert "intensity_unit_id" in response.json()["detail"]
+        body = response.json()
+        assert body["code"] == "invalid_reference"
+        assert body["field"] == "intensity_unit_id"
+        assert "intensity_unit_id" in body["detail"]
     finally:
         app.dependency_overrides.pop(current_active_user, None)
