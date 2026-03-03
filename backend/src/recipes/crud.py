@@ -4,6 +4,7 @@ from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
+from src.core.errors import DomainValidationError
 from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
 from src.recipes.schemas import RecipeCreate, RecipeUpdate, AdminRecipeCreate
 
@@ -21,28 +22,35 @@ def _get_constraint_name(error: IntegrityError) -> Optional[str]:
     return getattr(error.orig, "constraint_name", None)
 
 
-def _map_recipe_integrity_error(error: IntegrityError) -> Optional[str]:
+def _map_recipe_integrity_error(error: IntegrityError) -> Optional[DomainValidationError]:
     constraint_name = _get_constraint_name(error)
     error_message = str(error.orig) if error.orig is not None else str(error)
     lowered = error_message.lower()
 
     if (
         constraint_name == "fk_recipes_workout_type_id_workout_types"
+        or constraint_name == "recipes_workout_type_id_fkey"
         or ("workout_type_id" in error_message and "foreign key constraint" in lowered)
     ):
-        return "workout_type_id is invalid"
+        return DomainValidationError.invalid_reference(field="workout_type_id")
 
     if (
         constraint_name == "fk_exercise_templates_exercise_type_id_exercise_types"
+        or constraint_name == "exercise_templates_exercise_type_id_fkey"
         or ("exercise_type_id" in error_message and "foreign key constraint" in lowered)
     ):
-        return "exercise_templates contains an invalid exercise_type_id"
+        return DomainValidationError.invalid_reference(
+            field="exercise_templates.exercise_type_id"
+        )
 
     if (
         constraint_name == "fk_set_templates_intensity_unit_id_intensity_units"
+        or constraint_name == "set_templates_intensity_unit_id_fkey"
         or ("intensity_unit_id" in error_message and "foreign key constraint" in lowered)
     ):
-        return "set_templates contains an invalid intensity_unit_id"
+        return DomainValidationError.invalid_reference(
+            field="exercise_templates.set_templates.intensity_unit_id"
+        )
 
     return None
 
@@ -163,9 +171,9 @@ async def create_recipe(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        error_message = _map_recipe_integrity_error(e)
-        if error_message:
-            raise ValueError(error_message) from e
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
         raise
     await session.refresh(recipe)
 
@@ -222,9 +230,9 @@ async def create_recipe_admin(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        error_message = _map_recipe_integrity_error(e)
-        if error_message:
-            raise ValueError(error_message) from e
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
         raise
     await session.refresh(recipe)
 
@@ -252,9 +260,9 @@ async def update_recipe(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        error_message = _map_recipe_integrity_error(e)
-        if error_message:
-            raise ValueError(error_message) from e
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
         raise
     await session.refresh(recipe)
     return recipe
