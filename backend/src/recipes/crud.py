@@ -2,9 +2,61 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 
+from src.core.errors import DomainValidationError
 from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
 from src.recipes.schemas import RecipeCreate, RecipeUpdate, AdminRecipeCreate
+
+
+def _get_constraint_name(error: IntegrityError) -> Optional[str]:
+    if error.orig is None:
+        return None
+
+    diag = getattr(error.orig, "diag", None)
+    if diag is not None:
+        constraint_name = getattr(diag, "constraint_name", None)
+        if constraint_name:
+            return constraint_name
+
+    return getattr(error.orig, "constraint_name", None)
+
+
+def _map_recipe_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    if (
+        constraint_name == "fk_recipes_workout_type_id_workout_types"
+        or constraint_name == "recipes_workout_type_id_fkey"
+        or ("workout_type_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(field="workout_type_id")
+
+    if (
+        constraint_name == "fk_exercise_templates_exercise_type_id_exercise_types"
+        or constraint_name == "exercise_templates_exercise_type_id_fkey"
+        or ("exercise_type_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(
+            field="exercise_templates.exercise_type_id"
+        )
+
+    if (
+        constraint_name == "fk_set_templates_intensity_unit_id_intensity_units"
+        or constraint_name == "set_templates_intensity_unit_id_fkey"
+        or (
+            "intensity_unit_id" in error_message and "foreign key constraint" in lowered
+        )
+    ):
+        return DomainValidationError.invalid_reference(
+            field="exercise_templates.set_templates.intensity_unit_id"
+        )
+
+    return None
 
 
 async def get_recipe_by_id_for_user(
@@ -90,36 +142,43 @@ async def create_recipe(
     session: AsyncSession, recipe_data: RecipeCreate, user_id: int
 ) -> Recipe:
     """Create a new recipe with exercise and set templates"""
-    # Create the recipe
-    recipe = Recipe(
-        name=recipe_data.name,
-        description=recipe_data.description,
-        workout_type_id=recipe_data.workout_type_id,
-        creator_id=user_id,
-    )
-    session.add(recipe)
-    await session.flush()  # Get the recipe ID
-
-    # Create exercise templates
-    for exercise_template_data in recipe_data.exercise_templates:
-        exercise_template = ExerciseTemplate(
-            exercise_type_id=exercise_template_data.exercise_type_id,
-            recipe_id=recipe.id,
+    try:
+        # Create the recipe
+        recipe = Recipe(
+            name=recipe_data.name,
+            description=recipe_data.description,
+            workout_type_id=recipe_data.workout_type_id,
+            creator_id=user_id,
         )
-        session.add(exercise_template)
-        await session.flush()  # Get the exercise template ID
+        session.add(recipe)
+        await session.flush()  # Get the recipe ID
 
-        # Create set templates
-        for set_template_data in exercise_template_data.set_templates:
-            set_template = SetTemplate(
-                reps=set_template_data.reps,
-                intensity=set_template_data.intensity,
-                intensity_unit_id=set_template_data.intensity_unit_id,
-                exercise_template_id=exercise_template.id,
+        # Create exercise templates
+        for exercise_template_data in recipe_data.exercise_templates:
+            exercise_template = ExerciseTemplate(
+                exercise_type_id=exercise_template_data.exercise_type_id,
+                recipe_id=recipe.id,
             )
-            session.add(set_template)
+            session.add(exercise_template)
+            await session.flush()  # Get the exercise template ID
 
-    await session.commit()
+            # Create set templates
+            for set_template_data in exercise_template_data.set_templates:
+                set_template = SetTemplate(
+                    reps=set_template_data.reps,
+                    intensity=set_template_data.intensity,
+                    intensity_unit_id=set_template_data.intensity_unit_id,
+                    exercise_template_id=exercise_template.id,
+                )
+                session.add(set_template)
+
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(recipe)
 
     # Return the recipe with all relationships loaded
@@ -147,31 +206,38 @@ async def create_recipe_admin(
     if recipe_data.is_readonly is not None:
         new_recipe_kwargs["is_readonly"] = recipe_data.is_readonly
 
-    # Create the recipe
-    recipe = Recipe(**new_recipe_kwargs)
-    session.add(recipe)
-    await session.flush()  # Get the recipe ID
+    try:
+        # Create the recipe
+        recipe = Recipe(**new_recipe_kwargs)
+        session.add(recipe)
+        await session.flush()  # Get the recipe ID
 
-    # Create exercise templates
-    for exercise_template_data in recipe_data.exercise_templates:
-        exercise_template = ExerciseTemplate(
-            exercise_type_id=exercise_template_data.exercise_type_id,
-            recipe_id=recipe.id,
-        )
-        session.add(exercise_template)
-        await session.flush()  # Get the exercise template ID
-
-        # Create set templates
-        for set_template_data in exercise_template_data.set_templates:
-            set_template = SetTemplate(
-                reps=set_template_data.reps,
-                intensity=set_template_data.intensity,
-                intensity_unit_id=set_template_data.intensity_unit_id,
-                exercise_template_id=exercise_template.id,
+        # Create exercise templates
+        for exercise_template_data in recipe_data.exercise_templates:
+            exercise_template = ExerciseTemplate(
+                exercise_type_id=exercise_template_data.exercise_type_id,
+                recipe_id=recipe.id,
             )
-            session.add(set_template)
+            session.add(exercise_template)
+            await session.flush()  # Get the exercise template ID
 
-    await session.commit()
+            # Create set templates
+            for set_template_data in exercise_template_data.set_templates:
+                set_template = SetTemplate(
+                    reps=set_template_data.reps,
+                    intensity=set_template_data.intensity,
+                    intensity_unit_id=set_template_data.intensity_unit_id,
+                    exercise_template_id=exercise_template.id,
+                )
+                session.add(set_template)
+
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(recipe)
 
     # Return with relationships loaded
@@ -194,7 +260,14 @@ async def update_recipe(
     if recipe_data.workout_type_id is not None:
         recipe.workout_type_id = recipe_data.workout_type_id
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_recipe_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(recipe)
     return recipe
 

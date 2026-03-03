@@ -2,12 +2,53 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 
+from src.core.errors import DomainValidationError
 from src.exercise_sets.models import ExerciseSet
 from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetUpdate
 from src.exercises.models import Exercise
 from src.workouts.models import Workout
+
+
+def _get_constraint_name(error: IntegrityError) -> Optional[str]:
+    if error.orig is None:
+        return None
+
+    diag = getattr(error.orig, "diag", None)
+    if diag is not None:
+        constraint_name = getattr(diag, "constraint_name", None)
+        if constraint_name:
+            return constraint_name
+
+    return getattr(error.orig, "constraint_name", None)
+
+
+def _map_exercise_set_integrity_error(
+    error: IntegrityError,
+) -> Optional[DomainValidationError]:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    if (
+        constraint_name == "fk_exercise_sets_intensity_unit_id_intensity_units"
+        or constraint_name == "exercise_sets_intensity_unit_id_fkey"
+        or (
+            "intensity_unit_id" in error_message and "foreign key constraint" in lowered
+        )
+    ):
+        return DomainValidationError.invalid_reference(field="intensity_unit_id")
+
+    if (
+        constraint_name == "fk_exercise_sets_exercise_id_exercises"
+        or constraint_name == "exercise_sets_exercise_id_fkey"
+        or ("exercise_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return DomainValidationError.invalid_reference(field="exercise_id")
+
+    return None
 
 
 async def get_exercise_set_by_id(
@@ -61,7 +102,14 @@ async def create_exercise_set(
     """Create a new exercise set"""
     exercise_set = ExerciseSet(**exercise_set_create.dict())
     session.add(exercise_set)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_exercise_set_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(exercise_set)
     return exercise_set
 
@@ -78,7 +126,14 @@ async def update_exercise_set(
     for field, value in exercise_set_update.dict(exclude_unset=True).items():
         setattr(exercise_set, field, value)
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        mapped_error = _map_exercise_set_integrity_error(e)
+        if mapped_error:
+            raise mapped_error from e
+        raise
     await session.refresh(exercise_set)
     return exercise_set
 

@@ -16,22 +16,22 @@ def get_test_exercise_types(suffix=""):
         ExerciseType(
             name=f"Test Biceps Curl {unique_id}",
             description="Arm exercise",
-            default_intensity_unit=1,
+            default_intensity_unit=None,
         ),
         ExerciseType(
             name=f"Test Triceps Extension {unique_id}",
             description="Arm exercise",
-            default_intensity_unit=1,
+            default_intensity_unit=None,
         ),
         ExerciseType(
             name=f"Test Squat {unique_id}",
             description="Leg exercise",
-            default_intensity_unit=1,
+            default_intensity_unit=None,
         ),
         ExerciseType(
             name=f"Test Deadlift {unique_id}",
             description="Full body exercise",
-            default_intensity_unit=1,
+            default_intensity_unit=None,
         ),
     ]
 
@@ -45,7 +45,7 @@ async def test_fuzzy_match_exercise_type_simple(db_session, async_client: AsyncC
     test_exercise = ExerciseType(
         name=f"UniqueTestBicepsCurl_{unique_suffix}",
         description="Test exercise for fuzzy matching",
-        default_intensity_unit=1,
+        default_intensity_unit=None,
     )
     db_session.add(test_exercise)
     await db_session.flush()
@@ -118,7 +118,7 @@ class TestExerciseTypesUsage:
         exercise_type = ExerciseType(
             name="Test Exercise",
             description="Test description",
-            default_intensity_unit=1,
+            default_intensity_unit=None,
             times_used=0,  # Explicitly set the default value for the test
         )
 

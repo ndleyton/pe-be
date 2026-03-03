@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime, timezone
-from pydantic import field_validator, ConfigDict, BaseModel, Field
+from decimal import Decimal
+from pydantic import field_validator, model_validator, ConfigDict, BaseModel, Field
 
 
 class WorkoutBase(BaseModel):
@@ -23,6 +24,16 @@ class WorkoutBase(BaseModel):
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
+
+    @model_validator(mode="after")
+    def validate_time_range(self):
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and self.end_time < self.start_time
+        ):
+            raise ValueError("end_time must be greater than or equal to start_time")
+        return self
 
 
 class WorkoutCreate(WorkoutBase):
@@ -88,7 +99,7 @@ class ParsedExerciseSet(BaseModel):
     """Schema for a parsed exercise set"""
 
     reps: Optional[int] = None
-    intensity: Optional[float] = None
+    intensity: Optional[Decimal] = None
     intensity_unit: str
     rest_time_seconds: Optional[int] = None
 
@@ -115,7 +126,7 @@ class ExerciseSetInput(BaseModel):
     """Input schema for a single exercise set when adding an exercise to the current workout"""
 
     reps: Optional[int] = None
-    intensity: Optional[float] = None
+    intensity: Optional[Decimal] = None
     intensity_unit_id: int
     rest_time_seconds: Optional[int] = None
 

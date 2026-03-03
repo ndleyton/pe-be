@@ -540,17 +540,6 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             )
 
             if exercise_type_id and muscle_id:
-                # Maintain association table for ORM relationships
-                await conn.execute(
-                    """
-                    INSERT INTO exercise_types_muscles (exercise_type_id, muscle_id)
-                    VALUES ($1, $2)
-                    ON CONFLICT (exercise_type_id, muscle_id) DO NOTHING
-                """,
-                    exercise_type_id,
-                    muscle_id,
-                )
-
                 # Insert into detailed exercise_muscles table with primary flag
                 await conn.execute(
                     """

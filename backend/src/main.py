@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 from httpx_oauth.oauth2 import OAuth2Error
 
 from src.core.config import settings
+from src.core.errors import DomainValidationError
 from src.users.router import router as users_router
 from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
@@ -92,7 +94,24 @@ def create_app() -> FastAPI:
         redirect_url = f"{settings.FRONTEND_URL.rstrip('/')}/?error={error_code}"
         return RedirectResponse(redirect_url)
 
+    async def domain_validation_exception_handler(
+        request: Request, exc: DomainValidationError
+    ):
+        response = {
+            "detail": exc.message,
+            "code": exc.code.value,
+        }
+        if exc.field is not None:
+            response["field"] = exc.field
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=response,
+        )
+
     app.add_exception_handler(OAuth2Error, oauth_exception_handler)
+    app.add_exception_handler(
+        DomainValidationError, domain_validation_exception_handler
+    )
 
     return app
 
