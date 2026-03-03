@@ -35,7 +35,9 @@ def _map_exercise_set_integrity_error(
     if (
         constraint_name == "fk_exercise_sets_intensity_unit_id_intensity_units"
         or constraint_name == "exercise_sets_intensity_unit_id_fkey"
-        or ("intensity_unit_id" in error_message and "foreign key constraint" in lowered)
+        or (
+            "intensity_unit_id" in error_message and "foreign key constraint" in lowered
+        )
     ):
         return DomainValidationError.invalid_reference(field="intensity_unit_id")
 

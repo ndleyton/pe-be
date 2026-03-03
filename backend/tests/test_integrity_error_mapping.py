@@ -77,7 +77,9 @@ async def test_create_routine_invalid_workout_type_returns_422(
             "workout_type_id": 999999,
             "exercise_templates": [],
         }
-        response = await async_client.post(f"{settings.API_PREFIX}/routines/", json=payload)
+        response = await async_client.post(
+            f"{settings.API_PREFIX}/routines/", json=payload
+        )
         assert response.status_code == 422
         body = response.json()
         assert body["code"] == "invalid_reference"
@@ -107,7 +109,9 @@ async def test_create_exercise_invalid_workout_id_returns_422(
             "exercise_type_id": exercise_type.id,
             "workout_id": 999999,
         }
-        response = await async_client.post(f"{settings.API_PREFIX}/exercises/", json=payload)
+        response = await async_client.post(
+            f"{settings.API_PREFIX}/exercises/", json=payload
+        )
         assert response.status_code == 422
         body = response.json()
         assert body["code"] == "invalid_reference"
