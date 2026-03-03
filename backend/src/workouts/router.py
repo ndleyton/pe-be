@@ -52,7 +52,12 @@ async def create_workout(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new workout"""
-    return await WorkoutService.create_new_workout(session, workout_in, user.id)
+    try:
+        return await WorkoutService.create_new_workout(session, workout_in, user.id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
 
 
 # ----- Workout types sub-router -----

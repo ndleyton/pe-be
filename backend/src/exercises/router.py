@@ -31,7 +31,12 @@ async def create_exercise(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise"""
-    return await ExerciseService.create_new_exercise(session, exercise_in)
+    try:
+        return await ExerciseService.create_new_exercise(session, exercise_in)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
 
 
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -27,6 +27,39 @@ from src.exercises.schemas import (
 FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
 
 
+def _get_constraint_name(error: IntegrityError) -> Optional[str]:
+    if error.orig is None:
+        return None
+
+    diag = getattr(error.orig, "diag", None)
+    if diag is not None:
+        constraint_name = getattr(diag, "constraint_name", None)
+        if constraint_name:
+            return constraint_name
+
+    return getattr(error.orig, "constraint_name", None)
+
+
+def _map_exercise_integrity_error(error: IntegrityError) -> Optional[str]:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    if (
+        constraint_name == "fk_exercises_exercise_type_id_exercise_types"
+        or ("exercise_type_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return "exercise_type_id is invalid"
+
+    if (
+        constraint_name == "fk_exercises_workout_id_workouts"
+        or ("workout_id" in error_message and "foreign key constraint" in lowered)
+    ):
+        return "workout_id is invalid"
+
+    return None
+
+
 async def get_exercise_by_id(
     session: AsyncSession, exercise_id: int
 ) -> Optional[Exercise]:
@@ -73,14 +106,20 @@ async def create_exercise(
     exercise = Exercise(**exercise_create.dict())
     session.add(exercise)
 
-    # Increment the times_used count for the selected exercise type
-    await session.execute(
-        update(ExerciseType)
-        .where(ExerciseType.id == exercise_create.exercise_type_id)
-        .values(times_used=ExerciseType.times_used + 1)
-    )
-
-    await session.commit()
+    try:
+        # Increment the times_used count for the selected exercise type
+        await session.execute(
+            update(ExerciseType)
+            .where(ExerciseType.id == exercise_create.exercise_type_id)
+            .values(times_used=ExerciseType.times_used + 1)
+        )
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        error_message = _map_exercise_integrity_error(e)
+        if error_message:
+            raise ValueError(error_message) from e
+        raise
     await session.refresh(exercise)
 
     # Fetch the exercise with eager loading for the response
