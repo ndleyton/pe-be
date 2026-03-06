@@ -75,10 +75,10 @@ async def test_users_crud_happy_paths(db_session):
     updated = await update_user(
         db_session,
         created.id,
-        UserUpdate(name="Updated Name", is_active=True),
+        UserUpdate(is_active=True, is_superuser=True),
     )
     assert updated is not None
-    assert updated.name == "Updated Name"
+    assert updated.is_superuser is True
 
     deleted = await delete_user(db_session, created.id)
     assert deleted is True
