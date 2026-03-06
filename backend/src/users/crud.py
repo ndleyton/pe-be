@@ -9,13 +9,13 @@ from src.users.schemas import UserCreate, UserUpdate
 async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
     """Get a user by ID"""
     result = await session.execute(select(User).where(User.id == user_id))
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
     """Get a user by email"""
     result = await session.execute(select(User).where(User.email == email))
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def create_user(session: AsyncSession, user_create: UserCreate) -> User:

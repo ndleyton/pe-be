@@ -6,6 +6,7 @@ from src.chat.schemas import (
     ChatRequest,
     ChatResponse,
     ConversationResponse,
+    ConversationMessageResponse,
     ConversationListResponse,
     ConversationCreate,
     ConversationUpdate,
@@ -23,6 +24,30 @@ from src.users.models import User
 from src.users.router import current_active_user
 
 router = APIRouter()
+
+
+def _to_conversation_response(
+    conv, include_messages: bool = False
+) -> ConversationResponse:
+    """Convert ORM conversation to response without forcing lazy loads."""
+    payload = {
+        "id": conv.id,
+        "title": conv.title,
+        "created_at": conv.created_at,
+        "updated_at": conv.updated_at,
+        "is_active": conv.is_active,
+        "messages": None,
+    }
+
+    if include_messages:
+        try:
+            payload["messages"] = [
+                ConversationMessageResponse.model_validate(msg) for msg in conv.messages
+            ]
+        except Exception:
+            payload["messages"] = []
+
+    return ConversationResponse(**payload)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -71,9 +96,7 @@ async def get_conversations(
         total = await count_user_conversations(session, user.id)
 
         return ConversationListResponse(
-            conversations=[
-                ConversationResponse.model_validate(conv) for conv in conversations
-            ],
+            conversations=[_to_conversation_response(conv) for conv in conversations],
             total=total,
             limit=limit,
             offset=offset,
@@ -96,7 +119,7 @@ async def get_conversation(
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        return ConversationResponse.model_validate(conversation)
+        return _to_conversation_response(conversation, include_messages=True)
 
     except HTTPException:
         raise
@@ -113,7 +136,7 @@ async def create_new_conversation(
     """Create a new conversation."""
     try:
         conversation = await create_conversation(session, request, user.id)
-        return ConversationResponse.model_validate(conversation)
+        return _to_conversation_response(conversation)
 
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to create conversation")
@@ -135,7 +158,7 @@ async def update_conversation_endpoint(
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        return ConversationResponse.model_validate(conversation)
+        return _to_conversation_response(conversation)
 
     except HTTPException:
         raise
