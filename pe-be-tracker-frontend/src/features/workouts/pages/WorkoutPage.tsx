@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -20,7 +20,6 @@ import {
   useGuestStore,
   useAuthStore,
   useUIStore,
-  GuestExercise,
   GuestRoutine,
   GuestExerciseType,
 } from "@/stores";
@@ -48,9 +47,17 @@ const WorkoutPage = () => {
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authLoading = useAuthStore((state) => state.loading);
-  const guestData = useGuestStore();
-  const guestActions = useGuestStore();
   const guestHydrated = useGuestStore((state) => state.hydrated);
+  const guestWorkout = useGuestStore((state) =>
+    state.workouts.find((workout) => workout.id === workoutId),
+  );
+  const guestAddExercise = useGuestStore((state) => state.addExercise);
+  const guestCreateExercisesFromRoutine = useGuestStore(
+    (state) => state.createExercisesFromRoutine,
+  );
+  const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
+  const guestUpdateExercise = useGuestStore((state) => state.updateExercise);
+  const guestUpdateWorkout = useGuestStore((state) => state.updateWorkout);
 
   // Get workout timer state and actions from UI store
   const startTime = useUIStore((state) => state.workoutTimer.startTime);
@@ -127,14 +134,13 @@ const WorkoutPage = () => {
     },
   });
 
-  const handleExerciseDelete = (exerciseId: number | string) => {
+  const handleExerciseDelete = useCallback((exerciseId: number | string) => {
     if (isAuthenticated) {
       deleteExerciseMutation.mutate(exerciseId);
     } else {
-      // Guest deletion via store
-      guestActions.deleteExercise(String(exerciseId));
+      guestDeleteExercise(String(exerciseId));
     }
-  };
+  }, [deleteExerciseMutation, guestDeleteExercise, isAuthenticated]);
 
   // Fetch exercises for this workout (only when authenticated)
   const {
@@ -148,63 +154,11 @@ const WorkoutPage = () => {
   });
 
   // Use guest data if not authenticated, server data if authenticated
-  const exercises: Exercise[] = useMemo(() => {
-    if (isAuthenticated) {
-      return Array.isArray(serverExercises) ? serverExercises : [];
-    } else {
-      const guestWorkout = guestData.workouts.find((w) => w.id === workoutId);
-      const guestExercises = guestWorkout?.exercises || [];
-      return Array.isArray(guestExercises)
-        ? guestExercises.map(
-          (guestExercise: GuestExercise): Exercise => ({
-            id: guestExercise.id,
-            timestamp: guestExercise.timestamp,
-            notes: guestExercise.notes,
-            exercise_type_id: guestExercise.exercise_type_id,
-            workout_id: guestExercise.workout_id,
-            created_at: guestExercise.created_at,
-            updated_at: guestExercise.updated_at,
-            exercise_type: {
-              id: parseInt(guestExercise.exercise_type.id) || 0,
-              name: guestExercise.exercise_type.name,
-              description: guestExercise.exercise_type.description,
-              default_intensity_unit:
-                guestExercise.exercise_type.default_intensity_unit,
-              times_used: guestExercise.exercise_type.times_used,
-              equipment: guestExercise.exercise_type.equipment || null,
-              instructions: guestExercise.exercise_type.instructions || null,
-              category: guestExercise.exercise_type.category || null,
-              created_at:
-                guestExercise.exercise_type.created_at ||
-                guestExercise.created_at,
-              updated_at:
-                guestExercise.exercise_type.updated_at ||
-                guestExercise.updated_at,
-              usage_count:
-                guestExercise.exercise_type.usage_count ||
-                guestExercise.exercise_type.times_used,
-              // Ensure muscles and muscle_groups are passed through
-              muscles: guestExercise.exercise_type.muscles || [],
-              muscle_groups: guestExercise.exercise_type.muscle_groups || [],
-            },
-            exercise_sets: Array.isArray(guestExercise.exercise_sets)
-              ? guestExercise.exercise_sets.map((guestSet) => ({
-                id: guestSet.id,
-                reps: guestSet.reps,
-                intensity: guestSet.intensity,
-                intensity_unit_id: guestSet.intensity_unit_id,
-                exercise_id: guestSet.exercise_id,
-                rest_time_seconds: guestSet.rest_time_seconds,
-                done: guestSet.done,
-                created_at: guestSet.created_at,
-                updated_at: guestSet.updated_at,
-              }))
-              : [],
-          }),
-        )
-        : [];
-    }
-  }, [isAuthenticated, serverExercises, guestData.workouts, workoutId]);
+  const exercises: Exercise[] = isAuthenticated
+    ? Array.isArray(serverExercises)
+      ? serverExercises
+      : []
+    : ((guestWorkout?.exercises ?? []) as unknown as Exercise[]);
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
@@ -232,7 +186,6 @@ const WorkoutPage = () => {
       }
     } else {
       if (guestHydrated) {
-        const guestWorkout = guestData.workouts.find((w) => w.id === workoutId);
         const ws = guestWorkout?.start_time ?? undefined;
         if (ws) {
           const d = new Date(ws);
@@ -270,7 +223,7 @@ const WorkoutPage = () => {
     serverWorkout,
     workoutId,
     isAuthenticated,
-    guestData.workouts,
+    guestWorkout,
     guestHydrated,
     startTime,
     startWorkoutTimer,
@@ -284,10 +237,16 @@ const WorkoutPage = () => {
         // This is simplified - would need to implement full API integration
       } else {
         // For guest users, create exercises from the routine
-        guestActions.createExercisesFromRoutine(routine, workoutId);
+        guestCreateExercisesFromRoutine(routine, workoutId);
       }
     }
-  }, [routine, workoutId, exercises?.length, isAuthenticated, guestActions]);
+  }, [
+    routine,
+    workoutId,
+    exercises.length,
+    isAuthenticated,
+    guestCreateExercisesFromRoutine,
+  ]);
 
   useEffect(() => {
     if (!shouldScrollToBottomOnLoad || didHandleRouteScrollRef.current) return;
@@ -397,7 +356,7 @@ const WorkoutPage = () => {
     },
   });
 
-  const handleSelectExerciseType = (
+  const handleSelectExerciseType = useCallback((
     exerciseType: ExerciseType | GuestExerciseType,
   ) => {
     setShowAddExerciseModal(false);
@@ -418,7 +377,7 @@ const WorkoutPage = () => {
     } else {
       // Guest mode: update local store directly (final update, not optimistic)
       const guestType = exerciseType as GuestExerciseType; // modal returns guest type in guest mode
-      guestActions.addExercise({
+      guestAddExercise({
         exercise_type_id: String(guestType.id),
         workout_id: String(workoutId),
         timestamp,
@@ -426,10 +385,10 @@ const WorkoutPage = () => {
         exercise_type: guestType,
       });
     }
-  };
+  }, [addExerciseMutation, guestAddExercise, isAuthenticated, workoutId]);
 
   // Handle exercise updates (sets added/modified)
-  const handleExerciseUpdate = (
+  const handleExerciseUpdate = useCallback((
     updatedExercise: Exercise,
     shouldInvalidateQuery: boolean = false,
   ) => {
@@ -456,13 +415,13 @@ const WorkoutPage = () => {
         exercise_id: String(set.exercise_id),
       }));
 
-      guestActions.updateExercise(String(updatedExercise.id), {
+      guestUpdateExercise(String(updatedExercise.id), {
         exercise_sets: guestExerciseSets,
       });
     }
-  };
+  }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
 
-  const handleFinishWorkout = () => {
+  const handleFinishWorkout = useCallback(() => {
     if (workoutId) {
       if (isAuthenticated) {
         finishWorkoutMutation.mutate(workoutId, {
@@ -472,7 +431,7 @@ const WorkoutPage = () => {
         });
       } else {
         // For guest mode, update the workout end time
-        guestActions.updateWorkout(workoutId, {
+        guestUpdateWorkout(workoutId, {
           end_time: getCurrentUTCTimestamp(),
         });
         stopWorkoutTimer();
@@ -482,7 +441,14 @@ const WorkoutPage = () => {
     } else {
       console.error("No workoutId available");
     }
-  };
+  }, [
+    finishWorkoutMutation,
+    guestUpdateWorkout,
+    isAuthenticated,
+    navigate,
+    stopWorkoutTimer,
+    workoutId,
+  ]);
 
   const handleCancelFinish = () => {
     setShowFinishModal(false);
@@ -497,7 +463,7 @@ const WorkoutPage = () => {
   // Determine workout name based on authentication state
   const workoutName = isAuthenticated
     ? (serverWorkout?.name ?? null)
-    : (guestData.workouts.find((w) => w.id === workoutId)?.name ?? null);
+    : (guestWorkout?.name ?? null);
 
   // Warn user on navigation/back while workout in progress
   useEffect(() => {
