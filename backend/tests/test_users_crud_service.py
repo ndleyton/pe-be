@@ -138,9 +138,12 @@ async def test_user_service_delegates_to_crud(monkeypatch, db_session):
         )
         == user
     )
-    assert await UserService.update_user_data(
-        db_session,
-        user.id,
-        UserUpdate(name="Updated"),
-    ) == user
+    assert (
+        await UserService.update_user_data(
+            db_session,
+            user.id,
+            UserUpdate(name="Updated"),
+        )
+        == user
+    )
     assert await UserService.remove_user(db_session, user.id) is True

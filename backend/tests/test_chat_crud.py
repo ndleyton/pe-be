@@ -47,7 +47,9 @@ async def test_chat_crud_conversation_lifecycle(db_session):
     assert conversation.user_id == owner.id
     assert conversation.is_active is True
 
-    found_for_owner = await get_conversation_by_id(db_session, conversation.id, owner.id)
+    found_for_owner = await get_conversation_by_id(
+        db_session, conversation.id, owner.id
+    )
     assert found_for_owner is not None
     assert found_for_owner.id == conversation.id
 
@@ -97,12 +99,15 @@ async def test_chat_crud_conversation_lifecycle(db_session):
 async def test_chat_crud_not_found_paths(db_session):
     user = await _seed_user(db_session, "chat-missing@example.com")
 
-    assert await update_conversation(
-        db_session,
-        99999,
-        ConversationUpdate(title="Missing"),
-        user.id,
-    ) is None
+    assert (
+        await update_conversation(
+            db_session,
+            99999,
+            ConversationUpdate(title="Missing"),
+            user.id,
+        )
+        is None
+    )
     assert await delete_conversation(db_session, 99999, user.id) is False
     assert (
         await add_message_to_conversation(

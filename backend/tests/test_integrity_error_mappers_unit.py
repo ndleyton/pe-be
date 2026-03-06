@@ -156,13 +156,15 @@ def test_get_constraint_name_returns_none_when_missing(constraint_getter):
         ),
         (
             _UNSET,
-            'Key (workout_type_id)=(999) is not present (FOREIGN KEY constraint)',
+            "Key (workout_type_id)=(999) is not present (FOREIGN KEY constraint)",
             ValidationErrorCode.INVALID_REFERENCE,
             "workout_type_id",
         ),
     ],
 )
-def test_map_workout_integrity_error(constraint_name, message, expected_code, expected_field):
+def test_map_workout_integrity_error(
+    constraint_name, message, expected_code, expected_field
+):
     error = _integrity_error(message=message, constraint_name=constraint_name)
     mapped = _map_workout_integrity_error(error)
     assert mapped is not None
@@ -172,7 +174,9 @@ def test_map_workout_integrity_error(constraint_name, message, expected_code, ex
 
 def test_map_workout_integrity_error_returns_none_for_unknown():
     mapped = _map_workout_integrity_error(
-        _integrity_error(message="random db error", constraint_name="some_other_constraint")
+        _integrity_error(
+            message="random db error", constraint_name="some_other_constraint"
+        )
     )
     assert mapped is None
 

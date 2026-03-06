@@ -9,10 +9,18 @@ from src.users.router import current_active_user
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_routines_router_error_branches(db_session: AsyncSession, async_client: AsyncClient):
+async def test_routines_router_error_branches(
+    db_session: AsyncSession, async_client: AsyncClient
+):
     """Exercise 404 branches for get/update/start and 204 for delete."""
     # Create a test user and override dependency
-    user = User(email="router-errors@example.com", hashed_password="x", is_active=True, is_superuser=False, is_verified=True)
+    user = User(
+        email="router-errors@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
     db_session.add(user)
     await db_session.flush()
 

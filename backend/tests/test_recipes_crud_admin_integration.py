@@ -3,7 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.recipes import crud
 from src.recipes.models import Recipe
-from src.recipes.schemas import AdminRecipeCreate, ExerciseTemplateCreate, SetTemplateCreate
+from src.recipes.schemas import (
+    AdminRecipeCreate,
+    ExerciseTemplateCreate,
+    SetTemplateCreate,
+)
 from src.users.models import User
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
@@ -11,7 +15,9 @@ from src.workouts.models import WorkoutType
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_recipe_admin_sets_visibility_and_readonly(db_session: AsyncSession):
+async def test_create_recipe_admin_sets_visibility_and_readonly(
+    db_session: AsyncSession,
+):
     """create_recipe_admin should honor visibility and is_readonly and create nested templates."""
     # Seed reference data
     wt = WorkoutType(name="Strength", description="desc")
@@ -19,7 +25,9 @@ async def test_create_recipe_admin_sets_visibility_and_readonly(db_session: Asyn
     db_session.add_all([wt, iu])
     await db_session.flush()
 
-    et = ExerciseType(name="CRUD Admin Exercise", description="x", default_intensity_unit=iu.id)
+    et = ExerciseType(
+        name="CRUD Admin Exercise", description="x", default_intensity_unit=iu.id
+    )
     db_session.add(et)
     await db_session.flush()
 
@@ -100,14 +108,21 @@ async def test_update_and_delete_recipe_paths(db_session: AsyncSession):
     # Update by non-owner -> None
     from src.recipes.schemas import RecipeUpdate
 
-    got_none = await crud.update_recipe(db_session, r.id, RecipeUpdate(name="X"), other.id)
+    got_none = await crud.update_recipe(
+        db_session, r.id, RecipeUpdate(name="X"), other.id
+    )
     assert got_none is None
 
     # Update by owner -> changed
     updated = await crud.update_recipe(
-        db_session, r.id, RecipeUpdate(name="Updated", description="d", workout_type_id=wt.id), owner.id
+        db_session,
+        r.id,
+        RecipeUpdate(name="Updated", description="d", workout_type_id=wt.id),
+        owner.id,
     )
-    assert updated is not None and updated.name == "Updated" and updated.description == "d"
+    assert (
+        updated is not None and updated.name == "Updated" and updated.description == "d"
+    )
 
     # Delete by non-owner -> False
     deleted = await crud.delete_recipe(db_session, r.id, other.id)
