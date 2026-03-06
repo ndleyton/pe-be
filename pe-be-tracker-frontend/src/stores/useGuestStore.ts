@@ -280,6 +280,177 @@ const migrateGuestData = (data: any): GuestData => {
   return migrated as GuestData;
 };
 
+const replaceAtIndex = <T,>(items: T[], index: number, nextItem: T): T[] => {
+  const nextItems = items.slice();
+  nextItems[index] = nextItem;
+  return nextItems;
+};
+
+const updateWorkoutById = (
+  workouts: GuestWorkout[],
+  workoutId: string,
+  updater: (workout: GuestWorkout) => GuestWorkout,
+): GuestWorkout[] => {
+  const workoutIndex = workouts.findIndex((workout) => workout.id === workoutId);
+  if (workoutIndex === -1) {
+    return workouts;
+  }
+
+  const currentWorkout = workouts[workoutIndex];
+  const nextWorkout = updater(currentWorkout);
+  if (nextWorkout === currentWorkout) {
+    return workouts;
+  }
+
+  return replaceAtIndex(workouts, workoutIndex, nextWorkout);
+};
+
+const updateExerciseById = (
+  workouts: GuestWorkout[],
+  exerciseId: string,
+  updater: (exercise: GuestExercise) => GuestExercise,
+): GuestWorkout[] => {
+  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
+    const workout = workouts[workoutIndex];
+    const exerciseIndex = workout.exercises.findIndex(
+      (exercise) => exercise.id === exerciseId,
+    );
+
+    if (exerciseIndex === -1) {
+      continue;
+    }
+
+    const currentExercise = workout.exercises[exerciseIndex];
+    const nextExercise = updater(currentExercise);
+    if (nextExercise === currentExercise) {
+      return workouts;
+    }
+
+    const nextExercises = replaceAtIndex(
+      workout.exercises,
+      exerciseIndex,
+      nextExercise,
+    );
+
+    return replaceAtIndex(workouts, workoutIndex, {
+      ...workout,
+      exercises: nextExercises,
+    });
+  }
+
+  return workouts;
+};
+
+const removeExerciseById = (
+  workouts: GuestWorkout[],
+  exerciseId: string,
+): GuestWorkout[] => {
+  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
+    const workout = workouts[workoutIndex];
+    const exerciseIndex = workout.exercises.findIndex(
+      (exercise) => exercise.id === exerciseId,
+    );
+
+    if (exerciseIndex === -1) {
+      continue;
+    }
+
+    return replaceAtIndex(workouts, workoutIndex, {
+      ...workout,
+      exercises: workout.exercises.filter((exercise) => exercise.id !== exerciseId),
+    });
+  }
+
+  return workouts;
+};
+
+const updateExerciseSetById = (
+  workouts: GuestWorkout[],
+  setId: string,
+  updater: (set: GuestExerciseSet) => GuestExerciseSet,
+): GuestWorkout[] => {
+  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
+    const workout = workouts[workoutIndex];
+
+    for (
+      let exerciseIndex = 0;
+      exerciseIndex < workout.exercises.length;
+      exerciseIndex += 1
+    ) {
+      const exercise = workout.exercises[exerciseIndex];
+      const setIndex = exercise.exercise_sets.findIndex((set) => set.id === setId);
+
+      if (setIndex === -1) {
+        continue;
+      }
+
+      const currentSet = exercise.exercise_sets[setIndex];
+      const nextSet = updater(currentSet);
+      if (nextSet === currentSet) {
+        return workouts;
+      }
+
+      const nextSets = replaceAtIndex(exercise.exercise_sets, setIndex, nextSet);
+      const nextExercise = {
+        ...exercise,
+        exercise_sets: nextSets,
+      };
+      const nextExercises = replaceAtIndex(
+        workout.exercises,
+        exerciseIndex,
+        nextExercise,
+      );
+
+      return replaceAtIndex(workouts, workoutIndex, {
+        ...workout,
+        exercises: nextExercises,
+      });
+    }
+  }
+
+  return workouts;
+};
+
+const removeExerciseSetById = (
+  workouts: GuestWorkout[],
+  setId: string,
+): GuestWorkout[] => {
+  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
+    const workout = workouts[workoutIndex];
+
+    for (
+      let exerciseIndex = 0;
+      exerciseIndex < workout.exercises.length;
+      exerciseIndex += 1
+    ) {
+      const exercise = workout.exercises[exerciseIndex];
+      const setIndex = exercise.exercise_sets.findIndex((set) => set.id === setId);
+
+      if (setIndex === -1) {
+        continue;
+      }
+
+      const nextSets = exercise.exercise_sets.filter((set) => set.id !== setId);
+      const nextExercise = {
+        ...exercise,
+        exercise_sets: nextSets,
+      };
+      const nextExercises = replaceAtIndex(
+        workout.exercises,
+        exerciseIndex,
+        nextExercise,
+      );
+
+      return replaceAtIndex(workouts, workoutIndex, {
+        ...workout,
+        exercises: nextExercises,
+      });
+    }
+  }
+
+  return workouts;
+};
+
 export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
@@ -298,7 +469,6 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
           workouts: [...state.workouts, newWorkout],
         }));
 
@@ -307,18 +477,16 @@ export const useGuestStore = create<GuestStore>()(
 
       updateWorkout: (id, updates) => {
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) =>
-            workout.id === id
-              ? { ...workout, ...updates, updated_at: getCurrentUTCTimestamp() }
-              : workout,
-          ),
+          workouts: updateWorkoutById(state.workouts, id, (workout) => ({
+            ...workout,
+            ...updates,
+            updated_at: getCurrentUTCTimestamp(),
+          })),
         }));
       },
 
       deleteWorkout: (id) => {
         set((state) => ({
-          ...state,
           workouts: state.workouts.filter((workout) => workout.id !== id),
         }));
       },
@@ -335,15 +503,14 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) =>
-            workout.id === exercise.workout_id
-              ? {
-                ...workout,
-                exercises: [...workout.exercises, newExercise],
-                updated_at: now,
-              }
-              : workout,
+          workouts: updateWorkoutById(
+            state.workouts,
+            exercise.workout_id,
+            (workout) => ({
+              ...workout,
+              exercises: [...workout.exercises, newExercise],
+              updated_at: now,
+            }),
           ),
         }));
 
@@ -353,41 +520,27 @@ export const useGuestStore = create<GuestStore>()(
       updateExercise: (id, updates) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) =>
-              exercise.id === id
-                ? { ...exercise, ...updates, updated_at: now }
-                : exercise,
-            ),
+          workouts: updateExerciseById(state.workouts, id, (exercise) => ({
+            ...exercise,
+            ...updates,
+            updated_at: now,
           })),
         }));
       },
 
       deleteExercise: (id) => {
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.filter(
-              (exercise) => exercise.id !== id,
-            ),
-          })),
+          workouts: removeExerciseById(state.workouts, id),
         }));
       },
 
       softDeleteExercise: (id) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) =>
-              exercise.id === id
-                ? { ...exercise, deleted_at: now, updated_at: now }
-                : exercise,
-            ),
+          workouts: updateExerciseById(state.workouts, id, (exercise) => ({
+            ...exercise,
+            deleted_at: now,
+            updated_at: now,
           })),
         }));
       },
@@ -395,14 +548,10 @@ export const useGuestStore = create<GuestStore>()(
       restoreExercise: (id) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) =>
-              exercise.id === id
-                ? { ...exercise, deleted_at: null, updated_at: now }
-                : exercise,
-            ),
+          workouts: updateExerciseById(state.workouts, id, (exercise) => ({
+            ...exercise,
+            deleted_at: null,
+            updated_at: now,
           })),
         }));
       },
@@ -419,19 +568,15 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) =>
-              exercise.id === exerciseSet.exercise_id
-                ? {
-                  ...exercise,
-                  exercise_sets: [...exercise.exercise_sets, newExerciseSet],
-                  updated_at: now,
-                }
-                : exercise,
-            ),
-          })),
+          workouts: updateExerciseById(
+            state.workouts,
+            exerciseSet.exercise_id,
+            (exercise) => ({
+              ...exercise,
+              exercise_sets: [...exercise.exercise_sets, newExerciseSet],
+              updated_at: now,
+            }),
+          ),
         }));
 
         return id;
@@ -440,48 +585,27 @@ export const useGuestStore = create<GuestStore>()(
       updateExerciseSet: (id, updates) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) => ({
-              ...exercise,
-              exercise_sets: exercise.exercise_sets.map((set) =>
-                set.id === id ? { ...set, ...updates, updated_at: now } : set,
-              ),
-            })),
+          workouts: updateExerciseSetById(state.workouts, id, (set) => ({
+            ...set,
+            ...updates,
+            updated_at: now,
           })),
         }));
       },
 
       deleteExerciseSet: (id) => {
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) => ({
-              ...exercise,
-              exercise_sets: exercise.exercise_sets.filter(
-                (set) => set.id !== id,
-              ),
-            })),
-          })),
+          workouts: removeExerciseSetById(state.workouts, id),
         }));
       },
 
       softDeleteExerciseSet: (id) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) => ({
-              ...exercise,
-              exercise_sets: exercise.exercise_sets.map((set) =>
-                set.id === id
-                  ? { ...set, deleted_at: now, updated_at: now }
-                  : set,
-              ),
-            })),
+          workouts: updateExerciseSetById(state.workouts, id, (set) => ({
+            ...set,
+            deleted_at: now,
+            updated_at: now,
           })),
         }));
       },
@@ -489,17 +613,10 @@ export const useGuestStore = create<GuestStore>()(
       restoreExerciseSet: (id) => {
         const now = getCurrentUTCTimestamp();
         set((state) => ({
-          ...state,
-          workouts: state.workouts.map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map((exercise) => ({
-              ...exercise,
-              exercise_sets: exercise.exercise_sets.map((set) =>
-                set.id === id
-                  ? { ...set, deleted_at: null, updated_at: now }
-                  : set,
-              ),
-            })),
+          workouts: updateExerciseSetById(state.workouts, id, (set) => ({
+            ...set,
+            deleted_at: null,
+            updated_at: now,
           })),
         }));
       },
@@ -513,7 +630,6 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
           exerciseTypes: [...state.exerciseTypes, newExerciseType],
         }));
 
@@ -522,7 +638,6 @@ export const useGuestStore = create<GuestStore>()(
 
       updateExerciseType: (id, updates) => {
         set((state) => ({
-          ...state,
           exerciseTypes: state.exerciseTypes.map((type) =>
             type.id === id ? { ...type, ...updates } : type,
           ),
@@ -537,7 +652,6 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
           workoutTypes: [...state.workoutTypes, newWorkoutType],
         }));
 
@@ -546,7 +660,6 @@ export const useGuestStore = create<GuestStore>()(
 
       updateWorkoutType: (id, updates) => {
         set((state) => ({
-          ...state,
           workoutTypes: state.workoutTypes.map((type) =>
             type.id === id ? { ...type, ...updates } : type,
           ),
@@ -565,7 +678,6 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
           routines: [...(state.routines || []), newRoutine],
         }));
 
@@ -574,7 +686,6 @@ export const useGuestStore = create<GuestStore>()(
       // Routine-named implementation
       deleteRoutine: (id) => {
         set((state) => ({
-          ...state,
           routines: (state.routines || []).filter((routine) => routine.id !== id),
         }));
       },
@@ -608,7 +719,6 @@ export const useGuestStore = create<GuestStore>()(
         };
 
         set((state) => ({
-          ...state,
           routines: [...(state.routines || []), newRoutine],
         }));
 

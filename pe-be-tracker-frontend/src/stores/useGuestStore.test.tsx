@@ -216,6 +216,239 @@ describe("useGuestStore", () => {
     expect(exercise!.exercise_sets[0].done).toBe(false);
   });
 
+  it("preserves untouched workout and exercise references when updating an exercise", () => {
+    const { result } = renderHook(() => useGuestStore());
+    let firstWorkoutId!: string;
+    let secondWorkoutId!: string;
+    let touchedExerciseId!: string;
+    let untouchedExerciseId!: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      const exerciseType = result.current.exerciseTypes[0];
+
+      firstWorkoutId = result.current.addWorkout({
+        name: "Workout A",
+        notes: null,
+        start_time: "2024-01-01T10:00:00Z",
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      secondWorkoutId = result.current.addWorkout({
+        name: "Workout B",
+        notes: null,
+        start_time: "2024-01-01T11:00:00Z",
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      touchedExerciseId = result.current.addExercise({
+        workout_id: firstWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Touched",
+        timestamp: "2024-01-01T10:00:00Z",
+      });
+
+      untouchedExerciseId = result.current.addExercise({
+        workout_id: firstWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Untouched",
+        timestamp: "2024-01-01T10:05:00Z",
+      });
+
+      result.current.addExercise({
+        workout_id: secondWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Other workout",
+        timestamp: "2024-01-01T11:00:00Z",
+      });
+    });
+
+    const firstWorkoutBefore = result.current.workouts.find(
+      (workout) => workout.id === firstWorkoutId,
+    )!;
+    const secondWorkoutBefore = result.current.workouts.find(
+      (workout) => workout.id === secondWorkoutId,
+    )!;
+    const touchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+
+    act(() => {
+      result.current.updateExercise(touchedExerciseId, {
+        notes: "Updated notes",
+      });
+    });
+
+    const firstWorkoutAfter = result.current.workouts.find(
+      (workout) => workout.id === firstWorkoutId,
+    )!;
+    const secondWorkoutAfter = result.current.workouts.find(
+      (workout) => workout.id === secondWorkoutId,
+    )!;
+    const touchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+
+    expect(firstWorkoutAfter).not.toBe(firstWorkoutBefore);
+    expect(secondWorkoutAfter).toBe(secondWorkoutBefore);
+    expect(touchedExerciseAfter).not.toBe(touchedExerciseBefore);
+    expect(untouchedExerciseAfter).toBe(untouchedExerciseBefore);
+    expect(touchedExerciseAfter.notes).toBe("Updated notes");
+  });
+
+  it("preserves untouched workouts, exercises, and sets when updating a set", () => {
+    const { result } = renderHook(() => useGuestStore());
+    let firstWorkoutId!: string;
+    let secondWorkoutId!: string;
+    let touchedExerciseId!: string;
+    let untouchedExerciseId!: string;
+    let touchedSetId!: string;
+    let untouchedSetId!: string;
+
+    act(() => {
+      const workoutType = result.current.workoutTypes[0];
+      const exerciseType = result.current.exerciseTypes[0];
+
+      firstWorkoutId = result.current.addWorkout({
+        name: "Workout A",
+        notes: null,
+        start_time: "2024-01-01T10:00:00Z",
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      secondWorkoutId = result.current.addWorkout({
+        name: "Workout B",
+        notes: null,
+        start_time: "2024-01-01T11:00:00Z",
+        end_time: null,
+        workout_type_id: workoutType.id,
+        workout_type: workoutType,
+        exercises: [],
+      });
+
+      touchedExerciseId = result.current.addExercise({
+        workout_id: firstWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Touched",
+        timestamp: "2024-01-01T10:00:00Z",
+      });
+
+      untouchedExerciseId = result.current.addExercise({
+        workout_id: firstWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Untouched",
+        timestamp: "2024-01-01T10:05:00Z",
+      });
+
+      result.current.addExercise({
+        workout_id: secondWorkoutId,
+        exercise_type_id: exerciseType.id,
+        exercise_type: exerciseType,
+        notes: "Other workout",
+        timestamp: "2024-01-01T11:00:00Z",
+      });
+
+      touchedSetId = result.current.addExerciseSet({
+        exercise_id: touchedExerciseId,
+        reps: 10,
+        intensity: 50,
+        intensity_unit_id: 2,
+        rest_time_seconds: 60,
+        done: false,
+      });
+
+      untouchedSetId = result.current.addExerciseSet({
+        exercise_id: touchedExerciseId,
+        reps: 8,
+        intensity: 55,
+        intensity_unit_id: 2,
+        rest_time_seconds: 60,
+        done: false,
+      });
+
+      result.current.addExerciseSet({
+        exercise_id: untouchedExerciseId,
+        reps: 12,
+        intensity: 40,
+        intensity_unit_id: 2,
+        rest_time_seconds: 90,
+        done: false,
+      });
+    });
+
+    const firstWorkoutBefore = result.current.workouts.find(
+      (workout) => workout.id === firstWorkoutId,
+    )!;
+    const secondWorkoutBefore = result.current.workouts.find(
+      (workout) => workout.id === secondWorkoutId,
+    )!;
+    const touchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+    const touchedSetBefore = touchedExerciseBefore.exercise_sets.find(
+      (set) => set.id === touchedSetId,
+    )!;
+    const untouchedSetBefore = touchedExerciseBefore.exercise_sets.find(
+      (set) => set.id === untouchedSetId,
+    )!;
+
+    act(() => {
+      result.current.updateExerciseSet(touchedSetId, {
+        done: true,
+      });
+    });
+
+    const firstWorkoutAfter = result.current.workouts.find(
+      (workout) => workout.id === firstWorkoutId,
+    )!;
+    const secondWorkoutAfter = result.current.workouts.find(
+      (workout) => workout.id === secondWorkoutId,
+    )!;
+    const touchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+    const touchedSetAfter = touchedExerciseAfter.exercise_sets.find(
+      (set) => set.id === touchedSetId,
+    )!;
+    const untouchedSetAfter = touchedExerciseAfter.exercise_sets.find(
+      (set) => set.id === untouchedSetId,
+    )!;
+
+    expect(firstWorkoutAfter).not.toBe(firstWorkoutBefore);
+    expect(secondWorkoutAfter).toBe(secondWorkoutBefore);
+    expect(touchedExerciseAfter).not.toBe(touchedExerciseBefore);
+    expect(untouchedExerciseAfter).toBe(untouchedExerciseBefore);
+    expect(touchedSetAfter).not.toBe(touchedSetBefore);
+    expect(untouchedSetAfter).toBe(untouchedSetBefore);
+    expect(touchedSetAfter.done).toBe(true);
+  });
+
   it("creates and manages routines", () => {
     const { result } = renderHook(() => useGuestStore());
 
