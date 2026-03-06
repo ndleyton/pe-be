@@ -1,6 +1,5 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
 
 from sqlalchemy import select, func
 from src.recipes.service import recipe_service
