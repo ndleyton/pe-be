@@ -244,7 +244,9 @@ async def test_create_exercise_invalid_exercise_type_returns_422(
     db_session: AsyncSession, async_client: AsyncClient
 ):
     user = await _override_authenticated_user(db_session)
-    workout_type = WorkoutType(name="Workout Type", description="Used in exercise tests")
+    workout_type = WorkoutType(
+        name="Workout Type", description="Used in exercise tests"
+    )
     db_session.add(workout_type)
     await db_session.flush()
 

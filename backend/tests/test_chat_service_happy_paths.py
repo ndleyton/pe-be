@@ -63,7 +63,8 @@ async def test_get_last_workout_summary_happy_path(monkeypatch):
         return [exercise]
 
     monkeypatch.setattr(
-        "src.chat.service.get_latest_workout_for_user", _fake_get_latest_workout_for_user
+        "src.chat.service.get_latest_workout_for_user",
+        _fake_get_latest_workout_for_user,
     )
     monkeypatch.setattr(
         "src.chat.service.get_exercises_for_workout", _fake_get_exercises_for_workout
@@ -99,7 +100,9 @@ async def test_get_workout_summary_by_date_happy_path(monkeypatch):
         assert workout_id == 5
         return [exercise]
 
-    monkeypatch.setattr("src.chat.service.get_workout_by_date", _fake_get_workout_by_date)
+    monkeypatch.setattr(
+        "src.chat.service.get_workout_by_date", _fake_get_workout_by_date
+    )
     monkeypatch.setattr(
         "src.chat.service.get_exercises_for_workout", _fake_get_exercises_for_workout
     )
@@ -130,7 +133,9 @@ async def test_generate_response_happy_path_without_persistence(monkeypatch):
         async def ainvoke(self, _messages):
             return FakeResponse("Use progressive overload.")
 
-    monkeypatch.setattr("src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM())
+    monkeypatch.setattr(
+        "src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM()
+    )
 
     result = await svc.generate_response(
         messages=[{"role": "user", "content": "How do I progress?"}],
@@ -157,7 +162,9 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
     async def _fake_add_message_to_conversation(
         session, conversation_id, message_data, user_id
     ):
-        saved_messages.append((conversation_id, message_data.role, message_data.content))
+        saved_messages.append(
+            (conversation_id, message_data.role, message_data.content)
+        )
         return SimpleNamespace(id=len(saved_messages))
 
     class FakeResponse:
@@ -180,7 +187,9 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
         "src.chat.service.add_message_to_conversation",
         _fake_add_message_to_conversation,
     )
-    monkeypatch.setattr("src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM())
+    monkeypatch.setattr(
+        "src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM()
+    )
 
     result = await svc.generate_response(
         messages=[{"role": "user", "content": "Log my pull day"}],

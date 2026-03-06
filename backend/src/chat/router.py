@@ -26,7 +26,9 @@ from src.users.router import current_active_user
 router = APIRouter()
 
 
-def _to_conversation_response(conv, include_messages: bool = False) -> ConversationResponse:
+def _to_conversation_response(
+    conv, include_messages: bool = False
+) -> ConversationResponse:
     """Convert ORM conversation to response without forcing lazy loads."""
     payload = {
         "id": conv.id,

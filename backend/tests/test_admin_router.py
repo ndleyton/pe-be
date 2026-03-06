@@ -26,7 +26,13 @@ async def test_admin_create_routine_requires_admin_and_accepts_admin_fields(
     await db_session.flush()
 
     # Non-admin user -> 403
-    non_admin = User(email="na@example.com", hashed_password="x", is_active=True, is_superuser=False, is_verified=True)
+    non_admin = User(
+        email="na@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
     db_session.add(non_admin)
     await db_session.flush()
 
@@ -56,7 +62,13 @@ async def test_admin_create_routine_requires_admin_and_accepts_admin_fields(
         app.dependency_overrides.pop(current_active_user, None)
 
     # Admin user -> 201
-    admin = User(email="admin@example.com", hashed_password="x", is_active=True, is_superuser=True, is_verified=True)
+    admin = User(
+        email="admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
     db_session.add(admin)
     await db_session.flush()
 
@@ -91,12 +103,20 @@ async def test_admin_create_routine_requires_admin_and_accepts_admin_fields(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_admin_generate_images_guards_and_import_status(async_client: AsyncClient, db_session: AsyncSession, monkeypatch):
+async def test_admin_generate_images_guards_and_import_status(
+    async_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
     # Ensure GOOGLE_AI_KEY empty so we get 400 when admin
     from src.core.config import settings
 
     # Non-admin -> 403
-    user = User(email="g-na@example.com", hashed_password="x", is_active=True, is_superuser=False, is_verified=True)
+    user = User(
+        email="g-na@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
     db_session.add(user)
     await db_session.flush()
 
@@ -111,7 +131,13 @@ async def test_admin_generate_images_guards_and_import_status(async_client: Asyn
         app.dependency_overrides.pop(current_active_user, None)
 
     # Admin without API key -> 400
-    admin = User(email="g-admin@example.com", hashed_password="x", is_active=True, is_superuser=True, is_verified=True)
+    admin = User(
+        email="g-admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
     db_session.add(admin)
     await db_session.flush()
 

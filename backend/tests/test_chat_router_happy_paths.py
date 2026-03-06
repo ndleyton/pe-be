@@ -33,7 +33,9 @@ async def authenticated_user(db_session):
         app.dependency_overrides.pop(current_active_user, None)
 
 
-async def test_chat_endpoint_happy_path(async_client: AsyncClient, authenticated_user, monkeypatch):
+async def test_chat_endpoint_happy_path(
+    async_client: AsyncClient, authenticated_user, monkeypatch
+):
     captured = {}
 
     class FakeChatService:
@@ -65,7 +67,9 @@ async def test_chat_endpoint_happy_path(async_client: AsyncClient, authenticated
     ]
 
 
-async def test_conversation_router_happy_flow(async_client: AsyncClient, authenticated_user):
+async def test_conversation_router_happy_flow(
+    async_client: AsyncClient, authenticated_user
+):
     create_resp = await async_client.post(
         "/api/v1/conversations/",
         json={"title": "Progress chat"},
