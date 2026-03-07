@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import {
+  makeOngoingWorkout,
+  makePaginatedWorkouts,
+  makeWorkout,
+  makeWorkoutWithStringId,
+} from "@/test/fixtures";
 import api from "@/shared/api/client";
 import MyWorkoutsPage from "./MyWorkoutsPage";
 import { getMyWorkouts } from "@/features/workouts";
-import type { Workout } from "@/features/workouts";
 
 vi.mock("@/features/workouts/components", () => ({
   WorkoutForm: () => <div data-testid="workout-form">Mock Workout Form</div>,
@@ -111,11 +116,8 @@ vi.mock(
 
 const mockGetMyWorkouts = vi.mocked(getMyWorkouts);
 
-// Helper to wrap workout arrays in cursor pagination shape
-const wrap = (workouts: Workout[]) => ({ data: workouts, next_cursor: null });
-
-const mockWorkouts: Workout[] = [
-  {
+const mockWorkouts = [
+  makeWorkout({
     id: 1,
     name: "Morning Workout",
     notes: "Great session",
@@ -123,8 +125,8 @@ const mockWorkouts: Workout[] = [
     end_time: "2024-01-01T09:00:00Z",
     created_at: "2024-01-01T08:00:00Z",
     updated_at: "2024-01-01T09:00:00Z",
-  },
-  {
+  }),
+  makeWorkout({
     id: 2,
     name: null,
     notes: null,
@@ -132,22 +134,21 @@ const mockWorkouts: Workout[] = [
     end_time: "2024-01-01T19:30:00Z",
     created_at: "2024-01-01T18:00:00Z",
     updated_at: "2024-01-01T19:30:00Z",
-  },
-  {
+  }),
+  makeOngoingWorkout({
     id: 3,
     name: "Evening Workout",
     notes: "Quick session",
     start_time: "2024-01-02T19:00:00Z",
-    end_time: null, // Ongoing workout
     created_at: "2024-01-02T19:00:00Z",
     updated_at: "2024-01-02T19:00:00Z",
-  },
+  }),
 ];
 
 describe("MyWorkoutsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetMyWorkouts.mockResolvedValue(wrap(mockWorkouts) as any);
+    mockGetMyWorkouts.mockResolvedValue(makePaginatedWorkouts(mockWorkouts) as any);
   });
 
   it("renders the page with heading", async () => {
@@ -161,7 +162,7 @@ describe("MyWorkoutsPage", () => {
   });
 
   it("shows message when no workouts exist", async () => {
-    mockGetMyWorkouts.mockResolvedValue(wrap([]) as any);
+    mockGetMyWorkouts.mockResolvedValue(makePaginatedWorkouts([]) as any);
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
@@ -365,19 +366,15 @@ describe("MyWorkoutsPage", () => {
   });
 
   it("handles workouts with string IDs", async () => {
-    const workoutsWithStringIds: Workout[] = [
-      {
+    const workoutsWithStringIds = [
+      makeWorkoutWithStringId({
         id: "workout-uuid-1",
-        name: "String ID Workout",
-        notes: "Test workout",
-        start_time: "2024-01-01T08:00:00Z",
-        end_time: "2024-01-01T09:00:00Z",
-        created_at: "2024-01-01T08:00:00Z",
-        updated_at: "2024-01-01T09:00:00Z",
-      },
+      }),
     ];
 
-    mockGetMyWorkouts.mockResolvedValue(wrap(workoutsWithStringIds) as any);
+    mockGetMyWorkouts.mockResolvedValue(
+      makePaginatedWorkouts(workoutsWithStringIds) as any,
+    );
 
     render(<MyWorkoutsPage />);
 
@@ -387,28 +384,30 @@ describe("MyWorkoutsPage", () => {
   });
 
   it("handles duration calculation edge cases", async () => {
-    const edgeCaseWorkouts: Workout[] = [
-      {
+    const edgeCaseWorkouts = [
+      makeWorkout({
         id: 1,
         name: "Short Workout",
         notes: null,
         start_time: "2024-01-01T08:00:00Z",
-        end_time: "2024-01-01T08:05:00Z", // 5 minutes
+        end_time: "2024-01-01T08:05:00Z",
         created_at: "2024-01-01T08:00:00Z",
         updated_at: "2024-01-01T08:05:00Z",
-      },
-      {
+      }),
+      makeWorkout({
         id: 2,
         name: "Long Workout",
         notes: null,
         start_time: "2024-01-01T08:00:00Z",
-        end_time: "2024-01-01T11:30:00Z", // 3.5 hours
+        end_time: "2024-01-01T11:30:00Z",
         created_at: "2024-01-01T08:00:00Z",
         updated_at: "2024-01-01T11:30:00Z",
-      },
+      }),
     ];
 
-    mockGetMyWorkouts.mockResolvedValue(wrap(edgeCaseWorkouts) as any);
+    mockGetMyWorkouts.mockResolvedValue(
+      makePaginatedWorkouts(edgeCaseWorkouts) as any,
+    );
 
     render(<MyWorkoutsPage />);
 

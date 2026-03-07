@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@/test/testUtils";
 import {
-  useGuestStore,
-  type GuestExercise,
-  type GuestExerciseSet,
-  type GuestWorkout,
-} from "./useGuestStore";
+  addGuestExercise,
+  addGuestSet,
+  addGuestWorkout,
+  makeGuestRoutineExercise,
+  makeGuestRoutineInput,
+  makeGuestRoutineSet,
+} from "@/test/fixtures";
+import { useGuestStore } from "./useGuestStore";
 
 // Mock IndexedDB storage
 vi.mock("./indexedDBStorage", () => ({
@@ -31,69 +34,6 @@ vi.mock("./useAuthStore", () => ({
     }),
   },
 }));
-
-type GuestStoreState = ReturnType<typeof useGuestStore.getState>;
-
-const addTestWorkout = (
-  store: GuestStoreState,
-  overrides: Partial<Omit<GuestWorkout, "id" | "created_at" | "updated_at">> = {},
-) => {
-  const workoutType = store.workoutTypes[0];
-
-  return store.addWorkout({
-    name: "Test Workout",
-    notes: null,
-    start_time: "2024-01-01T10:00:00Z",
-    end_time: null,
-    workout_type_id: workoutType.id,
-    workout_type: workoutType,
-    exercises: [],
-    ...overrides,
-  });
-};
-
-const addTestExercise = (
-  store: GuestStoreState,
-  workoutId: string,
-  overrides: Partial<
-    Omit<GuestExercise, "id" | "created_at" | "updated_at" | "exercise_sets">
-  > = {},
-) => {
-  const exerciseType = store.exerciseTypes[0];
-
-  return store.addExercise({
-    workout_id: workoutId,
-    exercise_type_id: exerciseType.id,
-    exercise_type: exerciseType,
-    notes: null,
-    timestamp: "2024-01-01T10:00:00Z",
-    ...overrides,
-  });
-};
-
-const addTestSet = (
-  store: GuestStoreState,
-  exerciseId: string,
-  overrides: Partial<Omit<GuestExerciseSet, "id" | "created_at" | "updated_at">> = {},
-) =>
-  store.addExerciseSet({
-    exercise_id: exerciseId,
-    reps: 10,
-    intensity: 50,
-    intensity_unit_id: 2,
-    rest_time_seconds: 60,
-    done: false,
-    ...overrides,
-  });
-
-const getWorkout = (store: GuestStoreState, workoutId: string) =>
-  store.workouts.find((workout) => workout.id === workoutId)!;
-
-const getExercise = (workout: GuestWorkout, exerciseId: string) =>
-  workout.exercises.find((exercise) => exercise.id === exerciseId)!;
-
-const getSet = (exercise: GuestExercise, setId: string) =>
-  exercise.exercise_sets.find((set) => set.id === setId)!;
 
 describe("useGuestStore", () => {
   beforeEach(async () => {
@@ -121,7 +61,7 @@ describe("useGuestStore", () => {
     const { result } = renderHook(() => useGuestStore());
 
     act(() => {
-      const workoutId = addTestWorkout(result.current, {
+      const workoutId = addGuestWorkout(result.current, {
         name: "Test Workout",
         notes: "Test notes",
       });
@@ -142,7 +82,7 @@ describe("useGuestStore", () => {
     let workoutId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current, {
+      workoutId = addGuestWorkout(result.current, {
         name: "Original Name",
         notes: "Original notes",
       });
@@ -168,7 +108,7 @@ describe("useGuestStore", () => {
     let workoutId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
+      workoutId = addGuestWorkout(result.current);
     });
 
     expect(result.current.workouts).toHaveLength(1);
@@ -185,11 +125,11 @@ describe("useGuestStore", () => {
     let workoutId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
+      workoutId = addGuestWorkout(result.current);
     });
 
     act(() => {
-      addTestExercise(result.current, workoutId, {
+      addGuestExercise(result.current, workoutId, {
         notes: "Exercise notes",
       });
     });
@@ -208,12 +148,12 @@ describe("useGuestStore", () => {
     let exerciseId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
-      exerciseId = addTestExercise(result.current, workoutId);
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
     });
 
     act(() => {
-      addTestSet(result.current, exerciseId);
+      addGuestSet(result.current, exerciseId);
     });
 
     const state = result.current;
@@ -233,40 +173,38 @@ describe("useGuestStore", () => {
     let untouchedExerciseId!: string;
 
     act(() => {
-      firstWorkoutId = addTestWorkout(result.current, {
+      firstWorkoutId = addGuestWorkout(result.current, {
         name: "Workout A",
       });
 
-      secondWorkoutId = addTestWorkout(result.current, {
+      secondWorkoutId = addGuestWorkout(result.current, {
         name: "Workout B",
         start_time: "2024-01-01T11:00:00Z",
       });
 
-      touchedExerciseId = addTestExercise(result.current, firstWorkoutId, {
+      touchedExerciseId = addGuestExercise(result.current, firstWorkoutId, {
         notes: "Touched",
       });
 
-      untouchedExerciseId = addTestExercise(result.current, firstWorkoutId, {
+      untouchedExerciseId = addGuestExercise(result.current, firstWorkoutId, {
         notes: "Untouched",
         timestamp: "2024-01-01T10:05:00Z",
       });
 
-      addTestExercise(result.current, secondWorkoutId, {
+      addGuestExercise(result.current, secondWorkoutId, {
         notes: "Other workout",
         timestamp: "2024-01-01T11:00:00Z",
       });
     });
 
-    const firstWorkoutBefore = getWorkout(result.current, firstWorkoutId);
-    const secondWorkoutBefore = getWorkout(result.current, secondWorkoutId);
-    const touchedExerciseBefore = getExercise(
-      firstWorkoutBefore,
-      touchedExerciseId,
-    );
-    const untouchedExerciseBefore = getExercise(
-      firstWorkoutBefore,
-      untouchedExerciseId,
-    );
+    const firstWorkoutBefore = result.current.getWorkout(firstWorkoutId)!;
+    const secondWorkoutBefore = result.current.getWorkout(secondWorkoutId)!;
+    const touchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
 
     act(() => {
       result.current.updateExercise(touchedExerciseId, {
@@ -274,13 +212,14 @@ describe("useGuestStore", () => {
       });
     });
 
-    const firstWorkoutAfter = getWorkout(result.current, firstWorkoutId);
-    const secondWorkoutAfter = getWorkout(result.current, secondWorkoutId);
-    const touchedExerciseAfter = getExercise(firstWorkoutAfter, touchedExerciseId);
-    const untouchedExerciseAfter = getExercise(
-      firstWorkoutAfter,
-      untouchedExerciseId,
-    );
+    const firstWorkoutAfter = result.current.getWorkout(firstWorkoutId)!;
+    const secondWorkoutAfter = result.current.getWorkout(secondWorkoutId)!;
+    const touchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
 
     expect(firstWorkoutAfter).not.toBe(firstWorkoutBefore);
     expect(secondWorkoutAfter).toBe(secondWorkoutBefore);
@@ -299,55 +238,57 @@ describe("useGuestStore", () => {
     let untouchedSetId!: string;
 
     act(() => {
-      firstWorkoutId = addTestWorkout(result.current, {
+      firstWorkoutId = addGuestWorkout(result.current, {
         name: "Workout A",
       });
 
-      secondWorkoutId = addTestWorkout(result.current, {
+      secondWorkoutId = addGuestWorkout(result.current, {
         name: "Workout B",
         start_time: "2024-01-01T11:00:00Z",
       });
 
-      touchedExerciseId = addTestExercise(result.current, firstWorkoutId, {
+      touchedExerciseId = addGuestExercise(result.current, firstWorkoutId, {
         notes: "Touched",
       });
 
-      untouchedExerciseId = addTestExercise(result.current, firstWorkoutId, {
+      untouchedExerciseId = addGuestExercise(result.current, firstWorkoutId, {
         notes: "Untouched",
         timestamp: "2024-01-01T10:05:00Z",
       });
 
-      addTestExercise(result.current, secondWorkoutId, {
+      addGuestExercise(result.current, secondWorkoutId, {
         notes: "Other workout",
         timestamp: "2024-01-01T11:00:00Z",
       });
 
-      touchedSetId = addTestSet(result.current, touchedExerciseId);
+      touchedSetId = addGuestSet(result.current, touchedExerciseId);
 
-      untouchedSetId = addTestSet(result.current, touchedExerciseId, {
+      untouchedSetId = addGuestSet(result.current, touchedExerciseId, {
         reps: 8,
         intensity: 55,
       });
 
-      addTestSet(result.current, untouchedExerciseId, {
+      addGuestSet(result.current, untouchedExerciseId, {
         reps: 12,
         intensity: 40,
         rest_time_seconds: 90,
       });
     });
 
-    const firstWorkoutBefore = getWorkout(result.current, firstWorkoutId);
-    const secondWorkoutBefore = getWorkout(result.current, secondWorkoutId);
-    const touchedExerciseBefore = getExercise(
-      firstWorkoutBefore,
-      touchedExerciseId,
-    );
-    const untouchedExerciseBefore = getExercise(
-      firstWorkoutBefore,
-      untouchedExerciseId,
-    );
-    const touchedSetBefore = getSet(touchedExerciseBefore, touchedSetId);
-    const untouchedSetBefore = getSet(touchedExerciseBefore, untouchedSetId);
+    const firstWorkoutBefore = result.current.getWorkout(firstWorkoutId)!;
+    const secondWorkoutBefore = result.current.getWorkout(secondWorkoutId)!;
+    const touchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseBefore = firstWorkoutBefore.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+    const touchedSetBefore = touchedExerciseBefore.exercise_sets.find(
+      (set) => set.id === touchedSetId,
+    )!;
+    const untouchedSetBefore = touchedExerciseBefore.exercise_sets.find(
+      (set) => set.id === untouchedSetId,
+    )!;
 
     act(() => {
       result.current.updateExerciseSet(touchedSetId, {
@@ -355,15 +296,20 @@ describe("useGuestStore", () => {
       });
     });
 
-    const firstWorkoutAfter = getWorkout(result.current, firstWorkoutId);
-    const secondWorkoutAfter = getWorkout(result.current, secondWorkoutId);
-    const touchedExerciseAfter = getExercise(firstWorkoutAfter, touchedExerciseId);
-    const untouchedExerciseAfter = getExercise(
-      firstWorkoutAfter,
-      untouchedExerciseId,
-    );
-    const touchedSetAfter = getSet(touchedExerciseAfter, touchedSetId);
-    const untouchedSetAfter = getSet(touchedExerciseAfter, untouchedSetId);
+    const firstWorkoutAfter = result.current.getWorkout(firstWorkoutId)!;
+    const secondWorkoutAfter = result.current.getWorkout(secondWorkoutId)!;
+    const touchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === touchedExerciseId,
+    )!;
+    const untouchedExerciseAfter = firstWorkoutAfter.exercises.find(
+      (exercise) => exercise.id === untouchedExerciseId,
+    )!;
+    const touchedSetAfter = touchedExerciseAfter.exercise_sets.find(
+      (set) => set.id === touchedSetId,
+    )!;
+    const untouchedSetAfter = touchedExerciseAfter.exercise_sets.find(
+      (set) => set.id === untouchedSetId,
+    )!;
 
     expect(firstWorkoutAfter).not.toBe(firstWorkoutBefore);
     expect(secondWorkoutAfter).toBe(secondWorkoutBefore);
@@ -380,11 +326,7 @@ describe("useGuestStore", () => {
     const initialLen = result.current.routines.length;
     let routineId = "";
     act(() => {
-      routineId = result.current.addRoutine({
-        name: "Test Routine",
-        description: "A test routine",
-        exercises: [],
-      });
+      routineId = result.current.addRoutine(makeGuestRoutineInput());
     });
 
     const state = result.current;
@@ -401,12 +343,12 @@ describe("useGuestStore", () => {
 
     // Create workout with exercise and sets
     act(() => {
-      workoutId = addTestWorkout(result.current);
-      exerciseId = addTestExercise(result.current, workoutId, {
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId, {
         notes: "Exercise notes",
       });
 
-      addTestSet(result.current, exerciseId);
+      addGuestSet(result.current, exerciseId);
     });
 
     // Create routine from workout
@@ -434,34 +376,12 @@ describe("useGuestStore", () => {
 
     // Create workout with exercise and sets
     act(() => {
-      const workoutType = result.current.workoutTypes[0];
-      workoutId = result.current.addWorkout({
-        name: "Test Workout",
-        notes: null,
-        start_time: "2024-01-01T10:00:00Z",
-        end_time: null,
-        workout_type_id: workoutType.id,
-        workout_type: workoutType,
-        exercises: [],
-      });
-
-      const exerciseType = result.current.exerciseTypes[0];
-      exerciseId = result.current.addExercise({
-        workout_id: workoutId,
-        exercise_type_id: exerciseType.id,
-        exercise_type: exerciseType,
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId, {
         notes: "Exercise notes",
-        timestamp: "2024-01-01T10:00:00Z",
       });
 
-      result.current.addExerciseSet({
-        exercise_id: exerciseId,
-        reps: 10,
-        intensity: 50,
-        intensity_unit_id: 2,
-        rest_time_seconds: 60,
-        done: false,
-      });
+      addGuestSet(result.current, exerciseId);
     });
 
     // Create routine from workout
@@ -488,28 +408,26 @@ describe("useGuestStore", () => {
 
     // Create workout and routine
     act(() => {
-      workoutId = addTestWorkout(result.current);
+      workoutId = addGuestWorkout(result.current);
 
-      result.current.addRoutine({
-        name: "Test Routine",
-        exercises: [
-          {
-            id: "routine-ex-1",
-            exercise_type_id: result.current.exerciseTypes[0].id,
-            exercise_type: result.current.exerciseTypes[0],
-            sets: [
-              {
-                id: "routine-set-1",
-                reps: 12,
-                intensity: 60,
-                intensity_unit_id: 2,
-                rest_time_seconds: 90,
-              },
-            ],
-            notes: "From routine",
-          },
-        ],
-      });
+      result.current.addRoutine(
+        makeGuestRoutineInput({
+          exercises: [
+            makeGuestRoutineExercise({
+              exercise_type: result.current.exerciseTypes[0],
+              sets: [
+                makeGuestRoutineSet({
+                  reps: 12,
+                  intensity: 60,
+                  intensity_unit_id: 2,
+                  rest_time_seconds: 90,
+                }),
+              ],
+              notes: "From routine",
+            }),
+          ],
+        }),
+      );
     });
 
     // Create exercises from the newly added routine (last item)
@@ -533,8 +451,8 @@ describe("useGuestStore", () => {
     let exerciseId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
-      exerciseId = addTestExercise(result.current, workoutId);
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
     });
 
     const workout = result.current.getWorkout(workoutId);
@@ -552,8 +470,8 @@ describe("useGuestStore", () => {
     let exerciseId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
-      exerciseId = addTestExercise(result.current, workoutId);
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
     });
 
     // Exercise should be active initially
@@ -590,9 +508,9 @@ describe("useGuestStore", () => {
     let setId!: string;
 
     act(() => {
-      workoutId = addTestWorkout(result.current);
-      exerciseId = addTestExercise(result.current, workoutId);
-      setId = addTestSet(result.current, exerciseId);
+      workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
+      setId = addGuestSet(result.current, exerciseId);
     });
 
     // Set should be active initially
@@ -638,11 +556,12 @@ describe("useGuestStore", () => {
     // Add some data to the clear test store
     const initialClearRoutinesLen = clearResult.current.routines.length;
     act(() => {
-      addTestWorkout(clearResult.current);
-      clearResult.current.addRoutine({
-        name: "Test Routine",
-        exercises: [],
-      });
+      addGuestWorkout(clearResult.current);
+      clearResult.current.addRoutine(
+        makeGuestRoutineInput({
+          description: undefined,
+        }),
+      );
     });
 
     // Verify data was added
@@ -693,7 +612,7 @@ describe("useGuestStore", () => {
     const { result } = renderHook(() => useGuestStore());
 
     act(() => {
-      addTestWorkout(result.current);
+      addGuestWorkout(result.current);
     });
 
     expect(result.current.workouts).toHaveLength(1);
