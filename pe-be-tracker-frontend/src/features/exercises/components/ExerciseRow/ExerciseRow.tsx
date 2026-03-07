@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Exercise,
@@ -851,4 +851,4 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({
   );
 };
 
-export default ExerciseRow;
+export default memo(ExerciseRow);

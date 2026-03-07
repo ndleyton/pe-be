@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import { Exercise } from "@/features/exercises/api";
 import ExerciseRow from "../ExerciseRow";
 import { ExerciseListSkeleton } from "@/shared/components/skeletons/ExerciseListSkeleton";
@@ -51,4 +52,4 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
   );
 };
 
-export default ExerciseList;
+export default memo(ExerciseList);
