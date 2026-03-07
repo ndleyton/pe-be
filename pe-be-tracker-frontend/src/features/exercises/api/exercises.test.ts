@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getExerciseTypes } from "./exercises";
+import { getExerciseTypes, getExercisesInWorkout } from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
 import api from "@/shared/api/client";
 
@@ -23,6 +23,43 @@ const wrap = (exerciseTypes: ExerciseType[]) => ({
 describe("exercises API - pagination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("getExercisesInWorkout", () => {
+    it("should return exercises from the workout endpoint without extra fetches", async () => {
+      const workoutExercises = [
+        {
+          id: 11,
+          timestamp: "2024-01-01T00:00:00Z",
+          notes: null,
+          exercise_type_id: 1,
+          workout_id: 5,
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+          exercise_type: {
+            id: 1,
+            name: "Push-ups",
+            description: "Classic bodyweight exercise",
+            default_intensity_unit: 1,
+            times_used: 10,
+            muscles: [],
+            images: [],
+            images_url: null,
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+          },
+          exercise_sets: [],
+        },
+      ];
+
+      mockApi.get.mockResolvedValueOnce({ data: workoutExercises });
+
+      const result = await getExercisesInWorkout("5");
+
+      expect(result).toEqual(workoutExercises);
+      expect(mockApi.get).toHaveBeenCalledTimes(1);
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/5/exercises");
+    });
   });
 
   describe("getExerciseTypes", () => {
