@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import {
+  makeExerciseType,
+  makeExerciseTypes,
+  makePaginatedExerciseTypes,
+} from "@/test/fixtures";
 import ExerciseTypesPage from "./ExerciseTypesPage";
 import { getExerciseTypes } from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
@@ -18,57 +23,42 @@ vi.mock("@/features/exercises/components", () => ({
 const mockGetExerciseTypes = vi.mocked(getExerciseTypes);
 
 const mockExerciseTypes: ExerciseType[] = [
-  {
+  makeExerciseType({
     id: 1,
     name: "Push-ups",
     description: "Classic bodyweight exercise",
     muscle_groups: ["chest", "triceps"],
-    equipment: null,
-    instructions: null,
-    category: null,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
     usage_count: 10,
     default_intensity_unit: 1,
     times_used: 10,
-  },
-  {
+  }),
+  makeExerciseType({
     id: 2,
     name: "Squats",
     description: "Lower body exercise",
     muscle_groups: ["quadriceps", "glutes"],
-    equipment: null,
-    instructions: null,
-    category: null,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
     usage_count: 8,
     default_intensity_unit: 1,
     times_used: 8,
-  },
-  {
+  }),
+  makeExerciseType({
     id: 3,
     name: "Pull-ups",
     description: "Upper body pulling exercise",
     muscle_groups: ["back", "biceps"],
     equipment: "pull-up bar",
-    instructions: null,
-    category: null,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
     usage_count: 6,
     default_intensity_unit: 1,
     times_used: 6,
-  },
+  }),
 ];
 
 describe("ExerciseTypesPage - Infinite Scroll", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetExerciseTypes.mockResolvedValue({
-      data: mockExerciseTypes,
-      next_cursor: null,
-    });
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes(mockExerciseTypes),
+    );
   });
 
   it("renders the page title and search controls", async () => {
@@ -184,23 +174,18 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
 
   it("shows loading more indicator when fetching next page", async () => {
     // Mock first call returning full page, second call for next page
-    const fullPage = Array.from({ length: 100 }, (_, i) => ({
+    const fullPage = makeExerciseTypes(100, (i) => ({
       id: i + 1,
       name: `Exercise ${i + 1}`,
       description: `Description ${i + 1}`,
       muscle_groups: ["test"],
-      equipment: null,
-      instructions: null,
-      category: null,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-01T00:00:00Z",
       usage_count: i + 1,
       default_intensity_unit: 1,
       times_used: i + 1,
     }));
 
     mockGetExerciseTypes
-      .mockResolvedValueOnce({ data: fullPage, next_cursor: 100 })
+      .mockResolvedValueOnce(makePaginatedExerciseTypes(fullPage, 100))
       .mockImplementation(() => new Promise(() => {})); // Pending next page
 
     render(<ExerciseTypesPage />);
@@ -266,7 +251,7 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
   });
 
   it("shows empty state when no exercise types exist", async () => {
-    mockGetExerciseTypes.mockResolvedValue({ data: [], next_cursor: null });
+    mockGetExerciseTypes.mockResolvedValue(makePaginatedExerciseTypes([]));
 
     render(<ExerciseTypesPage />);
 
@@ -293,25 +278,19 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
   });
 
   it("maintains infinite scroll functionality with filtering", async () => {
-    const manyExerciseTypes = Array.from({ length: 200 }, (_, i) => ({
+    const manyExerciseTypes = makeExerciseTypes(200, (i) => ({
       id: i + 1,
       name: i < 100 ? `Push Exercise ${i + 1}` : `Pull Exercise ${i + 1}`,
       description: `Description ${i + 1}`,
       muscle_groups: ["test"],
-      equipment: null,
-      instructions: null,
-      category: null,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-01T00:00:00Z",
       usage_count: i + 1,
       default_intensity_unit: 1,
       times_used: i + 1,
     }));
 
-    mockGetExerciseTypes.mockResolvedValue({
-      data: manyExerciseTypes,
-      next_cursor: null,
-    });
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes(manyExerciseTypes),
+    );
 
     render(<ExerciseTypesPage />);
 

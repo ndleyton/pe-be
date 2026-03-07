@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import api from "@/shared/api/client";
+import {
+  makeOngoingWorkout,
+  makePaginatedWorkouts,
+  makeWorkout,
+  makeWorkouts,
+  makeWorkoutWithStringId,
+} from "@/test/fixtures";
 
 vi.mock("@/shared/api/client", () => ({
   default: {
@@ -13,9 +20,6 @@ vi.mock("@/shared/api/client", () => ({
 
 const mockApi = api as any;
 
-// Helper to wrap workout arrays in cursor pagination shape
-const wrap = (workouts: Workout[]) => ({ data: workouts, next_cursor: null });
-
 describe("workouts API - pagination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -23,7 +27,7 @@ describe("workouts API - pagination", () => {
 
   describe("getMyWorkouts", () => {
     const mockWorkouts: Workout[] = [
-      {
+      makeWorkout({
         id: 1,
         name: "Morning Workout",
         notes: "Great session",
@@ -31,8 +35,8 @@ describe("workouts API - pagination", () => {
         end_time: "2024-01-01T09:00:00Z",
         created_at: "2024-01-01T08:00:00Z",
         updated_at: "2024-01-01T09:00:00Z",
-      },
-      {
+      }),
+      makeWorkout({
         id: 2,
         name: "Evening Workout",
         notes: null,
@@ -40,11 +44,13 @@ describe("workouts API - pagination", () => {
         end_time: "2024-01-01T19:30:00Z",
         created_at: "2024-01-01T18:00:00Z",
         updated_at: "2024-01-01T19:30:00Z",
-      },
+      }),
     ];
 
     it("should call API with default pagination parameters", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(mockWorkouts),
+      });
 
       const result = await getMyWorkouts();
 
@@ -53,7 +59,9 @@ describe("workouts API - pagination", () => {
     });
 
     it("should call API with custom pagination parameters", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(mockWorkouts),
+      });
 
       await getMyWorkouts(20, 50);
       expect(mockApi.get).toHaveBeenCalledWith(
@@ -62,7 +70,9 @@ describe("workouts API - pagination", () => {
     });
 
     it("should handle offset 0 and limit 100", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(mockWorkouts),
+      });
 
       await getMyWorkouts(0, 100);
       expect(mockApi.get).toHaveBeenCalledWith(
@@ -71,7 +81,7 @@ describe("workouts API - pagination", () => {
     });
 
     it("should handle large offset values", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap([]) });
+      mockApi.get.mockResolvedValue({ data: makePaginatedWorkouts([]) });
 
       await getMyWorkouts(1000, 100);
       expect(mockApi.get).toHaveBeenCalledWith(
@@ -80,7 +90,9 @@ describe("workouts API - pagination", () => {
     });
 
     it("should handle small limit values", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap(mockWorkouts.slice(0, 1)) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(mockWorkouts.slice(0, 1)),
+      });
 
       await getMyWorkouts(0, 1);
       expect(mockApi.get).toHaveBeenCalledWith(
@@ -89,7 +101,7 @@ describe("workouts API - pagination", () => {
     });
 
     it("should omit cursor param when null and include only limit", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap([]) });
+      mockApi.get.mockResolvedValue({ data: makePaginatedWorkouts([]) });
 
       await getMyWorkouts(null, 25);
 
@@ -98,7 +110,9 @@ describe("workouts API - pagination", () => {
 
     it("should pass through next_cursor from server", async () => {
       const next = 9999;
-      mockApi.get.mockResolvedValue({ data: { data: mockWorkouts, next_cursor: next } });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(mockWorkouts, next),
+      });
 
       const result = await getMyWorkouts();
 
@@ -125,7 +139,7 @@ describe("workouts API - pagination", () => {
     });
 
     it("should handle empty response", async () => {
-      mockApi.get.mockResolvedValue({ data: wrap([]) });
+      mockApi.get.mockResolvedValue({ data: makePaginatedWorkouts([]) });
 
       const result = await getMyWorkouts(100, 100);
       expect(result.data).toEqual([]);
@@ -135,7 +149,7 @@ describe("workouts API - pagination", () => {
     });
 
     it("should handle response with exactly limit items", async () => {
-      const fullPageData: Workout[] = Array.from({ length: 100 }, (_, i) => ({
+      const fullPageData: Workout[] = makeWorkouts(100, (i) => ({
         id: i + 1,
         name: `Workout ${i + 1}`,
         notes: `Notes ${i + 1}`,
@@ -145,7 +159,9 @@ describe("workouts API - pagination", () => {
         updated_at: `2024-01-0${(i % 9) + 1}T09:00:00Z`,
       }));
 
-      mockApi.get.mockResolvedValue({ data: wrap(fullPageData) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(fullPageData),
+      });
 
       const result = await getMyWorkouts(0, 100);
       expect(result.data).toHaveLength(100);
@@ -156,7 +172,9 @@ describe("workouts API - pagination", () => {
 
     it("should handle response with less than limit items", async () => {
       const partialPageData = mockWorkouts.slice(0, 1);
-      mockApi.get.mockResolvedValue({ data: wrap(partialPageData) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(partialPageData),
+      });
 
       const result = await getMyWorkouts(50, 100);
       expect(result.data).toHaveLength(1);
@@ -167,18 +185,19 @@ describe("workouts API - pagination", () => {
 
     it("should handle workouts with null values", async () => {
       const workoutsWithNulls: Workout[] = [
-        {
+        makeOngoingWorkout({
           id: 1,
           name: null,
           notes: null,
           start_time: "2024-01-01T08:00:00Z",
-          end_time: null, // Ongoing workout
           created_at: "2024-01-01T08:00:00Z",
           updated_at: "2024-01-01T08:00:00Z",
-        },
+        }),
       ];
 
-      mockApi.get.mockResolvedValue({ data: wrap(workoutsWithNulls) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(workoutsWithNulls),
+      });
 
       const result = await getMyWorkouts();
 
@@ -190,18 +209,14 @@ describe("workouts API - pagination", () => {
 
     it("should handle string IDs", async () => {
       const workoutsWithStringIds: Workout[] = [
-        {
+        makeWorkoutWithStringId({
           id: "workout-uuid-1",
-          name: "String ID Workout",
-          notes: "Test workout",
-          start_time: "2024-01-01T08:00:00Z",
-          end_time: "2024-01-01T09:00:00Z",
-          created_at: "2024-01-01T08:00:00Z",
-          updated_at: "2024-01-01T09:00:00Z",
-        },
+        }),
       ];
 
-      mockApi.get.mockResolvedValue({ data: wrap(workoutsWithStringIds) });
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedWorkouts(workoutsWithStringIds),
+      });
 
       const result = await getMyWorkouts();
 
