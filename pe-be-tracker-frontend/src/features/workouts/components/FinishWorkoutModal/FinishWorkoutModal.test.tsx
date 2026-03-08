@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
+import { makeExerciseForSummary } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
 
 const defaultProps = {
@@ -17,6 +18,8 @@ describe("FinishWorkoutModal", () => {
     // Mock fetch for AnatomicalImage component
     global.fetch = vi.fn(() =>
       Promise.resolve({
+        ok: true,
+        status: 200,
         text: () => Promise.resolve("<svg></svg>"),
       }),
     ) as any;
@@ -365,48 +368,17 @@ describe("FinishWorkoutModal", () => {
 
   describe("Muscle Group Summary", () => {
     const mockExercisesWithSets = [
-      {
-        exercise_type: {
-          name: "Bench Press",
-          muscles: [
-            {
-              id: 1,
-              name: "Pectoralis Major",
-              muscle_group_id: 1,
-              muscle_group: {
-                id: 1,
-                name: "Chest",
-                created_at: "2025-01-01T00:00:00Z",
-                updated_at: "2025-01-01T00:00:00Z",
-              },
-              created_at: "2025-01-01T00:00:00Z",
-              updated_at: "2025-01-01T00:00:00Z",
-            },
-          ],
-        },
-        exercise_sets: [{ done: true }, { done: true }, { done: false }],
-      },
-      {
-        exercise_type: {
-          name: "Squats",
-          muscles: [
-            {
-              id: 6,
-              name: "Quadriceps",
-              muscle_group_id: 3,
-              muscle_group: {
-                id: 3,
-                name: "Legs",
-                created_at: "2025-01-01T00:00:00Z",
-                updated_at: "2025-01-01T00:00:00Z",
-              },
-              created_at: "2025-01-01T00:00:00Z",
-              updated_at: "2025-01-01T00:00:00Z",
-            },
-          ],
-        },
-        exercise_sets: [{ done: true }, { done: true }, { done: true }],
-      },
+      makeExerciseForSummary({
+        name: "Bench Press",
+        muscleGroups: ["Chest"],
+        completedSets: 2,
+        pendingSets: 1,
+      }),
+      makeExerciseForSummary({
+        name: "Squats",
+        muscleGroups: ["Legs"],
+        completedSets: 3,
+      }),
     ];
 
     it("should display muscle group summary when exercises with completed sets are provided", () => {
@@ -439,10 +411,11 @@ describe("FinishWorkoutModal", () => {
 
     it("should not display muscle group summary when exercises have no completed sets", () => {
       const exercisesWithUncompletedSets = [
-        {
-          exercise_type: { name: "Bench Press" },
-          exercise_sets: [{ done: false }, { done: false }],
-        },
+        makeExerciseForSummary({
+          name: "Bench Press",
+          muscleGroups: ["Chest"],
+          pendingSets: 2,
+        }),
       ];
 
       render(
@@ -489,40 +462,11 @@ describe("FinishWorkoutModal", () => {
 
     it("should handle singular vs plural sets correctly", () => {
       const singleSetExercise = [
-        {
-          exercise_type: {
-            name: "Push-ups",
-            muscles: [
-              {
-                id: 1,
-                name: "Pectoralis Major",
-                muscle_group_id: 1,
-                muscle_group: {
-                  id: 1,
-                  name: "Chest",
-                  created_at: "2025-01-01T00:00:00Z",
-                  updated_at: "2025-01-01T00:00:00Z",
-                },
-                created_at: "2025-01-01T00:00:00Z",
-                updated_at: "2025-01-01T00:00:00Z",
-              },
-              {
-                id: 9,
-                name: "Triceps",
-                muscle_group_id: 5,
-                muscle_group: {
-                  id: 5,
-                  name: "Arms",
-                  created_at: "2025-01-01T00:00:00Z",
-                  updated_at: "2025-01-01T00:00:00Z",
-                },
-                created_at: "2025-01-01T00:00:00Z",
-                updated_at: "2025-01-01T00:00:00Z",
-              },
-            ],
-          },
-          exercise_sets: [{ done: true }],
-        },
+        makeExerciseForSummary({
+          name: "Push-ups",
+          muscleGroups: ["Chest", "Arms"],
+          completedSets: 1,
+        }),
       ];
 
       render(

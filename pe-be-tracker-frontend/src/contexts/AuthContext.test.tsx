@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render as rtlRender, screen, waitFor, act } from "@testing-library/react";
+import { makeUser } from "@/test/fixtures";
 import { AuthProvider, useAuth } from "./AuthContext";
 import api from "@/shared/api/client";
 
@@ -69,11 +70,9 @@ describe("AuthContext", () => {
     });
 
     it("should fetch user on mount and set authenticated state", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
-        email: "test@example.com",
-        name: "Test User",
-      };
+      });
 
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
 
@@ -105,11 +104,11 @@ describe("AuthContext", () => {
     });
 
     it("should handle user with no name field", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 2,
         email: "noname@example.com",
         name: null,
-      };
+      });
 
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
 
@@ -128,17 +127,17 @@ describe("AuthContext", () => {
 
   describe("refresh function", () => {
     it("should refetch user data and update loading state", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
         email: "initial@example.com",
         name: "Initial User",
-      };
+      });
 
-      const updatedUser = {
+      const updatedUser = makeUser({
         id: 1,
         email: "updated@example.com",
         name: "Updated User",
-      };
+      });
 
       // Initial fetch
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
@@ -168,11 +167,9 @@ describe("AuthContext", () => {
     });
 
     it("should handle refresh failure gracefully", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
-        email: "test@example.com",
-        name: "Test User",
-      };
+      });
 
       // Initial successful fetch
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
@@ -201,11 +198,9 @@ describe("AuthContext", () => {
 
   describe("signOut function", () => {
     it("should call logout endpoint and redirect to home", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
-        email: "test@example.com",
-        name: "Test User",
-      };
+      });
 
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
       mockApi.post.mockResolvedValueOnce({});
@@ -226,11 +221,9 @@ describe("AuthContext", () => {
     });
 
     it("should handle logout endpoint failure and still clear user state", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
-        email: "test@example.com",
-        name: "Test User",
-      };
+      });
 
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
       mockApi.post.mockRejectedValueOnce(new Error("Network error"));
@@ -266,11 +259,9 @@ describe("AuthContext", () => {
 
   describe("isAuthenticated helper", () => {
     it("should return true when user exists", async () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: 1,
-        email: "test@example.com",
-        name: "Test User",
-      };
+      });
 
       mockApi.get.mockResolvedValueOnce({ data: mockUser });
 
