@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncGuestDataToServer } from "./syncGuestData";
 import { endpoints } from "@/shared/api/endpoints";
 import type { GuestData } from "@/stores/useGuestStore";
+import {
+  makeGuestData,
+  makeGuestExercise,
+  makeGuestExerciseSet,
+  makeGuestExerciseType,
+  makeGuestRoutine,
+  makeGuestRoutineExercise,
+  makeGuestRoutineSet,
+  makeGuestWorkout,
+  makeGuestWorkoutType,
+} from "@/test/fixtures";
 
 // Mock the API client
 vi.mock("@/shared/api/client", () => ({
@@ -26,12 +37,7 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("returns success when no guest data to sync", async () => {
-    const emptyGuestData: GuestData = {
-      workouts: [],
-      exerciseTypes: [],
-      workoutTypes: [],
-      routines: [],
-    };
+    const emptyGuestData: GuestData = makeGuestData();
 
     const result = await syncGuestDataToServer(
       emptyGuestData,
@@ -49,59 +55,57 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("syncs workout data successfully", async () => {
-    const mockGuestData: GuestData = {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+      description: "Traditional strength training",
+    });
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "Push-ups",
+      description: "Upper body exercise",
+      default_intensity_unit: 1,
+      times_used: 1,
+    });
+    const exercise = makeGuestExercise({
+      id: "guest-exercise-1",
+      timestamp: "2023-01-01T10:30:00Z",
+      notes: "Exercise notes",
+      exercise_type: exerciseType,
+      exercise_type_id: exerciseType.id,
+      workout_id: "guest-workout-1",
+      created_at: "2023-01-01T10:00:00Z",
+      updated_at: "2023-01-01T10:00:00Z",
+      exercise_sets: [
+        makeGuestExerciseSet({
+          id: "guest-set-1",
+          reps: 10,
+          intensity: null,
+          intensity_unit_id: 1,
+          exercise_id: "guest-exercise-1",
+          rest_time_seconds: 60,
+          done: true,
+          created_at: "2023-01-01T10:30:00Z",
+          updated_at: "2023-01-01T10:30:00Z",
+        }),
+      ],
+    });
+    const mockGuestData: GuestData = makeGuestData({
       workouts: [
-        {
+        makeGuestWorkout({
           id: "guest-workout-1",
           name: "Test Workout",
           notes: "Test notes",
           start_time: "2023-01-01T10:00:00Z",
           end_time: "2023-01-01T11:00:00Z",
-          workout_type_id: "guest-wt-1",
-          workout_type: {
-            id: "guest-wt-1",
-            name: "Strength Training",
-            description: "Traditional strength training",
-          },
-          exercises: [
-            {
-              id: "guest-exercise-1",
-              timestamp: "2023-01-01T10:30:00Z",
-              notes: "Exercise notes",
-              exercise_type_id: "guest-et-1",
-              workout_id: "guest-workout-1",
-              created_at: "2023-01-01T10:00:00Z",
-              updated_at: "2023-01-01T10:00:00Z",
-              exercise_type: {
-                id: "guest-et-1",
-                name: "Push-ups",
-                description: "Upper body exercise",
-                default_intensity_unit: 1,
-                times_used: 1,
-              },
-              exercise_sets: [
-                {
-                  id: "guest-set-1",
-                  reps: 10,
-                  intensity: null,
-                  intensity_unit_id: 1,
-                  exercise_id: "guest-exercise-1",
-                  rest_time_seconds: 60,
-                  done: true,
-                  created_at: "2023-01-01T10:30:00Z",
-                  updated_at: "2023-01-01T10:30:00Z",
-                },
-              ],
-            },
-          ],
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
+          exercises: [exercise],
           created_at: "2023-01-01T10:00:00Z",
           updated_at: "2023-01-01T10:00:00Z",
-        },
+        }),
       ],
-      exerciseTypes: [],
-      workoutTypes: [],
-      routines: [],
-    };
+    });
 
     // Mock API responses
     (api.get as any)
@@ -152,29 +156,24 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("handles API errors gracefully", async () => {
-    const mockGuestData: GuestData = {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+      description: "Traditional strength training",
+    });
+    const mockGuestData: GuestData = makeGuestData({
       workouts: [
-        {
+        makeGuestWorkout({
           id: "guest-workout-1",
           name: "Test Workout",
-          notes: null,
           start_time: "2023-01-01T10:00:00Z",
-          end_time: null,
-          workout_type_id: "guest-wt-1",
-          workout_type: {
-            id: "guest-wt-1",
-            name: "Strength Training",
-            description: "Traditional strength training",
-          },
-          exercises: [],
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
           created_at: "2023-01-01T10:00:00Z",
           updated_at: "2023-01-01T10:00:00Z",
-        },
+        }),
       ],
-      exerciseTypes: [],
-      workoutTypes: [],
-      routines: [],
-    };
+    });
 
     // Mock API to throw an error
     (api.get as any).mockRejectedValue(new Error("Network error"));
@@ -197,47 +196,43 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("finds existing exercise and workout types instead of creating duplicates", async () => {
-    const mockGuestData: GuestData = {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+      description: "Traditional strength training",
+    });
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "push-ups",
+      description: "Upper body exercise",
+      default_intensity_unit: 1,
+      times_used: 1,
+    });
+    const mockGuestData: GuestData = makeGuestData({
       workouts: [
-        {
+        makeGuestWorkout({
           id: "guest-workout-1",
           name: "Test Workout",
-          notes: null,
           start_time: "2023-01-01T10:00:00Z",
-          end_time: null,
-          workout_type_id: "guest-wt-1",
-          workout_type: {
-            id: "guest-wt-1",
-            name: "Strength Training",
-            description: "Traditional strength training",
-          },
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
           exercises: [
-            {
+            makeGuestExercise({
               id: "guest-exercise-1",
               timestamp: "2023-01-01T10:30:00Z",
-              notes: null,
-              exercise_type_id: "guest-et-1",
+              exercise_type: exerciseType,
+              exercise_type_id: exerciseType.id,
               workout_id: "guest-workout-1",
               created_at: "2023-01-01T10:00:00Z",
               updated_at: "2023-01-01T10:00:00Z",
-              exercise_type: {
-                id: "guest-et-1",
-                name: "push-ups", // lowercase to test case-insensitive matching
-                description: "Upper body exercise",
-                default_intensity_unit: 1,
-                times_used: 1,
-              },
               exercise_sets: [],
-            },
+            }),
           ],
           created_at: "2023-01-01T10:00:00Z",
           updated_at: "2023-01-01T10:00:00Z",
-        },
+        }),
       ],
-      exerciseTypes: [],
-      workoutTypes: [],
-      routines: [],
-    };
+    });
 
     // Mock API responses with existing types
     (api.get as any)
@@ -281,43 +276,41 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("syncs routines successfully", async () => {
-    const mockGuestData: GuestData = {
-      workouts: [],
-      exerciseTypes: [],
-      workoutTypes: [],
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "Push-ups",
+      description: "Upper body",
+      default_intensity_unit: 1,
+      times_used: 1,
+    });
+    const mockGuestData: GuestData = makeGuestData({
       routines: [
-        {
+        makeGuestRoutine({
           id: "guest-routine-1",
           name: "My Routine",
           description: "A test routine",
           exercises: [
-            {
+            makeGuestRoutineExercise({
               id: "guest-routine-ex-1",
               exercise_type_id: "guest-et-1",
-              exercise_type: {
-                id: "guest-et-1",
-                name: "Push-ups",
-                description: "Upper body",
-                default_intensity_unit: 1,
-                times_used: 1,
-              },
+              exercise_type: exerciseType,
               sets: [
-                {
+                makeGuestRoutineSet({
                   id: "guest-set-1",
                   reps: 10,
                   intensity: 0,
                   intensity_unit_id: 1,
                   rest_time_seconds: 60,
-                }
+                }),
               ],
               notes: "Do it correctly",
-            }
+            }),
           ],
           created_at: "2023-01-01T10:00:00Z",
           updated_at: "2023-01-01T10:00:00Z",
-        }
+        }),
       ],
-    };
+    });
 
     // Mock API responses
     (api.get as any)
