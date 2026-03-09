@@ -142,7 +142,7 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     expect(
-      screen.getByRole("heading", { name: /workout: #123/i, level: 2 }),
+      screen.getByRole("heading", { name: /workout: #123/i, level: 1 }),
     ).toBeInTheDocument();
   });
 

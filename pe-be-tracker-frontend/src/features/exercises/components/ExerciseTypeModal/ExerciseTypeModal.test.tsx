@@ -21,7 +21,7 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.queryByText("Select Exercise Type")).not.toBeInTheDocument();
+    expect(screen.queryByText("Add Exercise")).not.toBeInTheDocument();
   });
 
   it("renders modal when open", () => {
@@ -33,7 +33,7 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.getByText("Select Exercise Type")).toBeInTheDocument();
+    expect(screen.getByText("Add Exercise")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /close modal/i }),
     ).toBeInTheDocument();
