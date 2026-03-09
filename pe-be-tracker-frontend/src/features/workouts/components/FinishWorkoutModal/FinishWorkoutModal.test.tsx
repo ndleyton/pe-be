@@ -409,7 +409,7 @@ describe("FinishWorkoutModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should not display muscle group summary when exercises have no completed sets", () => {
+    it("should display an empty summary state when exercises have no completed sets", () => {
       const exercisesWithUncompletedSets = [
         makeExerciseForSummary({
           name: "Bench Press",
@@ -425,12 +425,9 @@ describe("FinishWorkoutModal", () => {
         />,
       );
 
-      expect(
-        screen.queryByText("Great Training Session!"),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("Total Sets Completed:"),
-      ).not.toBeInTheDocument();
+      expect(screen.getByText("Great Training Session!")).toBeInTheDocument();
+      expect(screen.getByText("Total Sets Completed:")).toBeInTheDocument();
+      expect(screen.getByText("0")).toBeInTheDocument();
     });
 
     it("should handle exercises prop defaulting to empty array", () => {

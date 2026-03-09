@@ -75,6 +75,7 @@ const FinishWorkoutModal = ({
   if (!isOpen) return null;
 
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
+  const hasExercises = exercises.length > 0;
   const totalSets = muscleGroupSummary.reduce(
     (sum, group) => sum + group.setCount,
     0,
@@ -170,7 +171,7 @@ const FinishWorkoutModal = ({
         data-testid="finish-workout-modal"
       >
         <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
-          {muscleGroupSummary.length > 0 && (
+          {hasExercises && (
             <div
               ref={downloadAreaRef}
               className="bg-background mb-6 rounded-lg p-4"
@@ -198,6 +199,7 @@ const FinishWorkoutModal = ({
                 {workoutName ?? "Great Training Session!"}
               </h3>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
+
               <div className="space-y-2">
                 {muscleGroupSummary.map((group) => (
                   <div
@@ -211,6 +213,7 @@ const FinishWorkoutModal = ({
                   </div>
                 ))}
               </div>
+
               <div className="border-border mt-3 border-t pt-3">
                 <div className="flex items-center justify-between font-bold">
                   <span>Total Sets Completed:</span>
@@ -220,7 +223,7 @@ const FinishWorkoutModal = ({
             </div>
           )}
 
-          {muscleGroupSummary.length > 0 && (
+          {hasExercises && (
             <div className="mb-4">
               <DownloadImageButton onDownload={handleDownload} />
             </div>
