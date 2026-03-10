@@ -1,10 +1,9 @@
 from typing import Optional, List, Dict, Any
 from datetime import date
+
 from langfuse import Langfuse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from langchain_core.tools import Tool
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 from src.core.config import settings
@@ -14,10 +13,24 @@ from src.chat.crud import (
     get_conversation_by_id,
     get_user_conversations,
 )
+from src.chat.llm_client import (
+    ConversationMessage,
+    GeminiLangChainClient,
+    LLMClient,
+    ToolDefinition,
+)
 from src.chat.schemas import ConversationMessageCreate
 from src.exercises.crud import get_exercise_types, get_exercise_type_stats
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
 from src.exercises.crud import get_exercises_for_workout
+
+
+class LastExercisePerformanceArgs(BaseModel):
+    exercise_name: str
+
+
+class WorkoutSummaryByDateArgs(BaseModel):
+    workout_date: str
 
 
 class ChatService:
@@ -34,7 +47,6 @@ class ChatService:
         if not self.session:
             return "Database session not available."
 
-        # Find the exercise type by name
         exercise_types_response = await get_exercise_types(
             self.session, name=exercise_name, limit=1
         )
@@ -42,8 +54,6 @@ class ChatService:
             return f"No exercise named '{exercise_name}' found."
 
         exercise_type = exercise_types_response.data[0]
-
-        # Get stats for the exercise type
         stats = await get_exercise_type_stats(self.session, exercise_type.id)
 
         if not stats or not stats.get("lastWorkout"):
@@ -95,7 +105,6 @@ class ChatService:
             for exercise in exercises:
                 summary += f"- {exercise.exercise_type.name}\n"
                 for s in exercise.exercise_sets:
-                    # Handle intensity display safely
                     intensity_display = ""
                     if (
                         s.intensity
@@ -158,26 +167,12 @@ class ChatService:
     async def _parse_workout_and_save(self, **kwargs) -> str:
         """
         Receives structured workout data from the LLM and saves it to the database.
-        The LLM may pass either:
-        - Direct keyword arguments matching WorkoutParseResponse
-        - A single '__arg1' or 'kwargs' key containing a JSON string
         """
-        # Prevent duplicate saves in the same request
         if self._workout_saved_this_request:
             return "WORKOUT ALREADY SAVED. A workout has already been logged in this conversation turn. No action taken."
 
-        import json
-
         try:
             from src.workouts.schemas import WorkoutParseResponse
-
-            # Handle case where LLM passes JSON string as __arg1 or kwargs
-            for key in ("__arg1", "kwargs"):
-                if key in kwargs and len(kwargs) == 1:
-                    json_str = kwargs[key]
-                    if isinstance(json_str, str):
-                        kwargs = json.loads(json_str)
-                        break
 
             parsed_workout = WorkoutParseResponse(**kwargs)
 
@@ -196,19 +191,23 @@ class ChatService:
         except Exception as e:
             return f"Failed to save workout: {str(e)}"
 
-    def _get_tools(self) -> List[Tool]:
+    def _get_tools(self) -> List[ToolDefinition]:
         """
-        Returns a list of LangChain tools available to the LLM.
+        Returns the internal tool definitions available to the LLM.
         """
+        from src.workouts.schemas import WorkoutParseResponse
+
         return [
-            Tool(
+            ToolDefinition(
                 name="get_last_exercise_performance",
-                func=self._get_last_exercise_performance,
+                handler=self._get_last_exercise_performance,
+                args_model=LastExercisePerformanceArgs,
                 description="Useful for when you need to find out the user's last recorded performance for a specific exercise. Input should be the exact name of the exercise.",
             ),
-            Tool(
+            ToolDefinition(
                 name="parse_workout",
-                func=self._parse_workout_and_save,
+                handler=self._parse_workout_and_save,
+                args_model=WorkoutParseResponse,
                 description="""Use this tool when the user provides a workout they want to log.
 The input should be the structured workout data including:
 - name: A name for the workout
@@ -217,34 +216,45 @@ The input should be the structured workout data including:
 - exercises: List of exercises, each with exercise_type_name, optional notes, and sets (reps, intensity, intensity_unit, rest_time_seconds)
 """,
             ),
-            Tool(
+            ToolDefinition(
                 name="get_last_workout_summary",
-                func=self._get_last_workout_summary,
+                handler=self._get_last_workout_summary,
                 description="Use this tool when the user asks a general question about their most recent or last workout, like 'what did I do last time?' or 'give me my last workout'. This tool does not require any input.",
             ),
-            Tool(
+            ToolDefinition(
                 name="get_workout_summary_by_date",
-                func=self._get_workout_summary_by_date,
+                handler=self._get_workout_summary_by_date,
+                args_model=WorkoutSummaryByDateArgs,
                 description="Useful for when you need to find out what the user did in their workout on a specific date. Input should be the date in YYYY-MM-DD format.",
             ),
         ]
 
     """Service for handling chat interactions with Langfuse observability."""
 
-    def __init__(self, user_id: int, session: Optional[AsyncSession] = None):
+    def __init__(
+        self,
+        user_id: int,
+        session: Optional[AsyncSession] = None,
+        llm_client: Optional[LLMClient] = None,
+    ):
         self.user_id = user_id
         self.session = session
         self.langfuse = self._get_langfuse_client()
-        self._workout_saved_this_request = (
-            False  # Prevent duplicate saves in one request
-        )
-        # Free tier: 10 RPM (Requests Per Minute) = 1 request per 6 seconds
-        # Optimized for better UX while respecting quota limits
+        self._llm_client = llm_client
+        self._workout_saved_this_request = False
         self.rate_limiter = InMemoryRateLimiter(
-            requests_per_second=0.5,  # 1 request every 2 seconds (5x faster than current)
-            check_every_n_seconds=0.5,  # More granular rate limiting
-            max_bucket_size=3,  # Allows occasional bursts for better UX
+            requests_per_second=0.5,
+            check_every_n_seconds=0.5,
+            max_bucket_size=3,
         )
+
+    def _get_llm_client(self) -> LLMClient:
+        if self._llm_client is None:
+            self._llm_client = GeminiLangChainClient(
+                api_key=settings.GOOGLE_AI_KEY,
+                rate_limiter=self.rate_limiter,
+            )
+        return self._llm_client
 
     def _get_langfuse_client(self) -> Optional[Langfuse]:
         """Initialize Langfuse client if configured."""
@@ -264,14 +274,11 @@ The input should be the structured workout data including:
                     "fitness-chat-agent", label="production"
                 )
 
-                # Normalize to plain string for the LLM
                 raw_prompt = getattr(prompt, "prompt", prompt)
 
-                # Prefer dedicated conversion if available
                 if hasattr(prompt, "to_string") and callable(prompt.to_string):
                     return prompt.to_string()
 
-                # Handle common prompt structures (lists of parts/messages)
                 if isinstance(raw_prompt, str):
                     return raw_prompt
 
@@ -296,7 +303,6 @@ The input should be the structured workout data including:
                             collected_parts.append(part)
                     return "\n".join(collected_parts)
 
-                # Fallback: best-effort string conversion
                 return str(raw_prompt)
             except Exception as e:
                 print(f"Warning: Could not fetch prompt from Langfuse: {e}")
@@ -337,7 +343,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not settings.GOOGLE_AI_KEY:
             raise ValueError("Google AI API key not configured")
 
-        # Handle conversation persistence
         conversation = None
         if save_to_db and self.session:
             if conversation_id:
@@ -347,7 +352,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 if not conversation:
                     raise ValueError(f"Conversation {conversation_id} not found")
             else:
-                # Generate a title from the first user message if creating new conversation
                 first_user_msg = next(
                     (msg for msg in messages if msg["role"] == "user"), None
                 )
@@ -360,43 +364,37 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     self.session, self.user_id, title
                 )
 
+        llm_client = self._get_llm_client()
         trace = None
         if self.langfuse:
             trace = self.langfuse.trace(
                 name="fitness-chat-conversation",
                 user_id=str(self.user_id),
                 metadata={
-                    "model": "gemini-2.5-flash",
+                    "model": llm_client.model_name,
                     "conversation_id": conversation.id if conversation else None,
                 },
             )
 
         try:
-            # Initialize Gemini model
-            # max_retries=0 prevents LangChain from retrying on 429 quota errors
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-preview-09-2025",
-                google_api_key=settings.GOOGLE_AI_KEY,
-                temperature=0.7,
-                max_tokens=2000,
-                max_retries=2,
-                rate_limiter=self.rate_limiter,
-            )
+            tools = self._get_tools()
+            tool_registry = {tool.name: tool for tool in tools}
 
-            # Bind tools using the correct method for Gemini integration
-            llm = llm.bind_tools(self._get_tools())
-
-            # Convert messages to LangChain format
             system_prompt = self._get_system_prompt()
-            langchain_messages = [SystemMessage(content=system_prompt)]
+            conversation_messages = [ConversationMessage(role="system", content=system_prompt)]
 
             for message in messages:
                 if message["role"] == "user":
-                    langchain_messages.append(HumanMessage(content=message["content"]))
+                    conversation_messages.append(
+                        ConversationMessage(role="user", content=message["content"])
+                    )
                 elif message["role"] == "assistant":
-                    langchain_messages.append(AIMessage(content=message["content"]))
+                    conversation_messages.append(
+                        ConversationMessage(
+                            role="assistant", content=message["content"]
+                        )
+                    )
 
-            # Tool calling loop with safety limits
             max_tool_iterations = settings.CHAT_MAX_TOOL_ITERATIONS
             iteration_count = 0
             last_tool_outputs_texts: List[str] = []
@@ -405,7 +403,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             while True:
                 iteration_count += 1
                 if iteration_count > max_tool_iterations:
-                    # Safety break to avoid being stuck in a tool-call loop
                     if last_tool_outputs_texts:
                         response_text = (
                             "Here is the result from the requested tool:\n"
@@ -414,138 +411,61 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     else:
                         response_text = "I completed the requested operation."
                     break
-                # Get response from Gemini
-                response = await llm.ainvoke(langchain_messages)
+
+                response = await llm_client.acomplete(conversation_messages, tools)
+                conversation_messages.append(response.message)
 
                 if response.tool_calls:
-                    # If the LLM wants to call a tool, execute it
-                    print(
-                        f"DEBUG: Tool calls detected: {response.tool_calls}"
-                    )  # Debug logging
-                    tool_outputs = []
+                    print(f"DEBUG: Tool calls detected: {response.tool_calls}")
+                    tool_output_messages: List[ConversationMessage] = []
+
                     for tool_call in response.tool_calls:
-                        # Handle both object and dictionary formats
-                        if hasattr(tool_call, "name"):
-                            # Object format
-                            tool_name = tool_call.name
-                            tool_args = tool_call.args
-                            tool_call_id = tool_call.id
-                        else:
-                            # Dictionary format
-                            tool_name = tool_call.get("name")
-                            tool_args = tool_call.get("args", {})
-                            tool_call_id = tool_call.get("id")
-
                         print(
-                            f"DEBUG: Calling tool {tool_name} with args: {tool_args}"
-                        )  # Debug logging
-
-                        # Find the tool function by name
-                        tool_func = next(
-                            (t.func for t in self._get_tools() if t.name == tool_name),
-                            None,
+                            f"DEBUG: Calling tool {tool_call.name} with args: {tool_call.args}"
                         )
-                        if tool_func:
-                            # Execute the tool function
-                            try:
-                                # Check function signature and map args robustly
-                                import inspect
-
-                                sig = inspect.signature(tool_func)
-                                param_names = list(sig.parameters.keys())
-
-                                if len(param_names) == 0:
-                                    # Function takes no parameters
-                                    output = await tool_func()
-                                else:
-                                    # Build kwargs matching the function parameters
-                                    kwargs = {}
-
-                                    # First pass: direct name matches
-                                    for name in param_names:
-                                        if name in tool_args:
-                                            kwargs[name] = tool_args[name]
-
-                                    # Second pass: single-arg fallback mapping
-                                    # Some model/tooling stacks (incl. Gemini via LangChain) may emit a
-                                    # positional-only argument as a synthetic key like '__arg1'. When the
-                                    # tool function accepts a single parameter and the model didn't name
-                                    # it correctly, accept that value as the sole argument. As a last
-                                    # resort, accept the first provided value regardless of key.
-                                    if (
-                                        len(kwargs) == 0
-                                        and len(param_names) == 1
-                                        and len(tool_args) >= 1
-                                    ):
-                                        # Accept any single provided value (e.g., '__arg1', arbitrary key)
-                                        only_param = param_names[0]
-                                        if only_param in tool_args:
-                                            kwargs[only_param] = tool_args[only_param]
-                                        elif "__arg1" in tool_args:
-                                            kwargs[only_param] = tool_args["__arg1"]
-                                        else:
-                                            # Take the first value provided
-                                            first_value = next(iter(tool_args.values()))
-                                            kwargs[only_param] = first_value
-
-                                    output = await tool_func(**kwargs)
-
-                                print(f"DEBUG: Tool {tool_name} output: {output}")
-                            except Exception as e:
-                                print(f"DEBUG: Exception in tool {tool_name}: {str(e)}")
-                                output = f"Error executing tool {tool_name}: {str(e)}"
-
-                            tool_outputs.append(
-                                ToolMessage(
-                                    tool_call_id=tool_call_id, content=str(output)
-                                )
-                            )
+                        tool = tool_registry.get(tool_call.name)
+                        if tool is None:
+                            output = f"Error: Tool {tool_call.name} not found."
                         else:
-                            tool_outputs.append(
-                                ToolMessage(
-                                    tool_call_id=tool_call_id,
-                                    content=f"Error: Tool {tool_name} not found.",
+                            try:
+                                output = await tool.ainvoke(tool_call.args)
+                                print(
+                                    f"DEBUG: Tool {tool_call.name} output: {output}"
                                 )
+                            except Exception as e:
+                                print(
+                                    f"DEBUG: Exception in tool {tool_call.name}: {str(e)}"
+                                )
+                                output = (
+                                    f"Error executing tool {tool_call.name}: {str(e)}"
+                                )
+
+                        tool_output_messages.append(
+                            ConversationMessage(
+                                role="tool",
+                                content=str(output),
+                                tool_call_id=tool_call.call_id,
+                                tool_name=tool_call.name,
                             )
+                        )
 
-                    # Capture last tool outputs as plain texts for fallback messaging
-                    last_tool_outputs_texts = [tm.content for tm in tool_outputs]
+                    last_tool_outputs_texts = [
+                        message.content for message in tool_output_messages
+                    ]
+                    conversation_messages.extend(tool_output_messages)
+                    continue
 
-                    langchain_messages.append(
-                        response
-                    )  # Add the tool_call message from the LLM
-                    langchain_messages.extend(
-                        tool_outputs
-                    )  # Add the tool output messages
-
-                else:
-                    # If no tool call, this is the final response
-                    try:
-                        response_text = (response.content or "").strip()
-                    except Exception:
-                        # Ensure we always produce a text response
-                        response_text = ""
-                    break
-
-            # Map LangChain message types to role names for Langfuse
-            message_type_mapping = {
-                SystemMessage: "system",
-                HumanMessage: "user",
-                AIMessage: "assistant",
-                ToolMessage: "tool",  # Add ToolMessage to mapping
-            }
+                response_text = response.message.content.strip()
+                break
 
             generation = (
                 trace.generation(
                     name="user-query-generation",
                     input=[
-                        {
-                            "role": message_type_mapping.get(type(msg), "unknown"),
-                            "content": msg.content,
-                        }
-                        for msg in langchain_messages
+                        {"role": msg.role, "content": msg.content}
+                        for msg in conversation_messages
                     ],
-                    model="gemini-2.5-flash-preview-09-2025",
+                    model=llm_client.model_name,
                 )
                 if trace
                 else None
@@ -554,9 +474,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             if generation:
                 generation.end(output=response_text or "(no content)")
 
-            # Save messages to database if persistence is enabled
             if save_to_db and self.session and conversation:
-                # Save user message(s)
                 for message in messages:
                     if message["role"] in ["user", "assistant"]:
                         await add_message_to_conversation(
@@ -568,7 +486,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                             self.user_id,
                         )
 
-                # Save assistant response
                 await add_message_to_conversation(
                     self.session,
                     conversation.id,
@@ -576,7 +493,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     self.user_id,
                 )
 
-            # Provide a sensible fallback message if the model returned no text
             final_message = response_text
             if not final_message:
                 if last_tool_outputs_texts:
@@ -620,7 +536,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not conversation:
             raise ValueError(f"Conversation {conversation_id} not found")
 
-        # Convert messages to the format expected by the LLM
         messages = []
         for msg in conversation.messages:
             messages.append({"role": msg.role, "content": msg.content})
