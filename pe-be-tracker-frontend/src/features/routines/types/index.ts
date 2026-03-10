@@ -7,15 +7,15 @@ export interface IntensityUnit {
 export interface ExerciseType {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   default_intensity_unit: number;
   times_used: number;
 }
 
 export interface SetTemplate {
   id: number;
-  reps?: number;
-  intensity?: number;
+  reps?: number | null;
+  intensity?: number | null;
   intensity_unit_id: number;
   created_at: string;
   updated_at: string;
@@ -34,7 +34,7 @@ export interface ExerciseTemplate {
 export interface Routine {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   workout_type_id: number;
   creator_id: number;
   created_at: string;

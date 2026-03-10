@@ -52,6 +52,7 @@ const MyWorkoutsPage = () => {
         notes: gw.notes,
         start_time: gw.start_time,
         end_time: gw.end_time,
+        workout_type_id: Number(gw.workout_type_id),
         created_at: gw.created_at || getCurrentUTCTimestamp(),
         updated_at: gw.updated_at || getCurrentUTCTimestamp(),
       }));
