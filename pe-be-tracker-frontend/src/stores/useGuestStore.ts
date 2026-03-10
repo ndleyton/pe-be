@@ -170,6 +170,7 @@ interface GuestActions {
   addRoutine: (
     routine: Omit<GuestRoutine, "id" | "created_at" | "updated_at">,
   ) => string;
+  updateRoutine: (id: string, updates: Partial<GuestRoutine>) => void;
   deleteRoutine: (id: string) => void;
   createRoutineFromWorkout: (
     workoutName: string,
@@ -682,6 +683,20 @@ export const useGuestStore = create<GuestStore>()(
         }));
 
         return id;
+      },
+      updateRoutine: (id, updates) => {
+        const now = getCurrentUTCTimestamp();
+        set((state) => ({
+          routines: (state.routines || []).map((routine) =>
+            routine.id === id
+              ? {
+                  ...routine,
+                  ...updates,
+                  updated_at: now,
+                }
+              : routine,
+          ),
+        }));
       },
       // Routine-named implementation
       deleteRoutine: (id) => {

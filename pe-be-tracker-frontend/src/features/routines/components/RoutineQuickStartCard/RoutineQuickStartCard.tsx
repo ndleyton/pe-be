@@ -1,4 +1,3 @@
-
 import { GuestRoutine } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -8,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
+import { Link } from "react-router-dom";
 
 interface RoutineQuickStartCardProps {
   routine: GuestRoutine;
@@ -57,13 +57,23 @@ export const RoutineQuickStartCard = ({
             </div>
           )}
         </div>
-        <Button
-          onClick={() => onStartWorkout(routine)}
-          className="mt-2 w-full"
-          size="sm"
-        >
-          Start Workout
-        </Button>
+        <div className="mt-3 flex gap-2">
+          <Button
+            asChild
+            variant="outline"
+            className="flex-1"
+            size="sm"
+          >
+            <Link to={`/routines/${routine.id}`}>View Details</Link>
+          </Button>
+          <Button
+            onClick={() => onStartWorkout(routine)}
+            className="flex-1"
+            size="sm"
+          >
+            Start Workout
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
