@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.chat.llm_client import ConversationMessage, LLMResponse
 from src.chat.service import ChatService
 
 
@@ -118,24 +119,18 @@ async def test_generate_response_happy_path_without_persistence(monkeypatch):
         "src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False
     )
 
-    svc = ChatService(user_id=1, session=None)
+    class FakeClient:
+        model_name = "test-model"
+
+        async def acomplete(self, _messages, _tools):
+            return LLMResponse(
+                message=ConversationMessage(
+                    role="assistant", content="Use progressive overload."
+                )
+            )
+
+    svc = ChatService(user_id=1, session=None, llm_client=FakeClient())
     svc._get_system_prompt = lambda: "system prompt"
-
-    class FakeResponse:
-        def __init__(self, content):
-            self.tool_calls = []
-            self.content = content
-
-    class DummyLLM:
-        def bind_tools(self, _tools):
-            return self
-
-        async def ainvoke(self, _messages):
-            return FakeResponse("Use progressive overload.")
-
-    monkeypatch.setattr(
-        "src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM()
-    )
 
     result = await svc.generate_response(
         messages=[{"role": "user", "content": "How do I progress?"}],
@@ -150,10 +145,6 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
         "src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False
     )
 
-    svc = ChatService(user_id=77, session=object())
-    svc._get_system_prompt = lambda: "system prompt"
-    saved_messages = []
-
     async def _fake_get_or_create_active_conversation(session, user_id, title):
         assert user_id == 77
         assert title == "Log my pull day"
@@ -167,17 +158,19 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
         )
         return SimpleNamespace(id=len(saved_messages))
 
-    class FakeResponse:
-        def __init__(self, content):
-            self.tool_calls = []
-            self.content = content
+    class FakeClient:
+        model_name = "test-model"
 
-    class DummyLLM:
-        def bind_tools(self, _tools):
-            return self
+        async def acomplete(self, _messages, _tools):
+            return LLMResponse(
+                message=ConversationMessage(
+                    role="assistant", content="Pull day logged."
+                )
+            )
 
-        async def ainvoke(self, _messages):
-            return FakeResponse("Pull day logged.")
+    svc = ChatService(user_id=77, session=object(), llm_client=FakeClient())
+    svc._get_system_prompt = lambda: "system prompt"
+    saved_messages = []
 
     monkeypatch.setattr(
         "src.chat.service.get_or_create_active_conversation",
@@ -187,10 +180,6 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
         "src.chat.service.add_message_to_conversation",
         _fake_add_message_to_conversation,
     )
-    monkeypatch.setattr(
-        "src.chat.service.ChatGoogleGenerativeAI", lambda **_: DummyLLM()
-    )
-
     result = await svc.generate_response(
         messages=[{"role": "user", "content": "Log my pull day"}],
         save_to_db=True,
