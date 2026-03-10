@@ -730,6 +730,7 @@ const RoutineDetailsPage = () => {
                 </label>
                 <Input
                   id="routine-name"
+                  data-testid="routine-name-input"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Enter routine name"
@@ -745,6 +746,7 @@ const RoutineDetailsPage = () => {
                 </label>
                 <Textarea
                   id="routine-description"
+                  data-testid="routine-description-input"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   placeholder="Optional routine description"
@@ -753,6 +755,7 @@ const RoutineDetailsPage = () => {
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
+                  data-testid="save-routine-button"
                   onClick={() => saveMutation.mutate()}
                   disabled={
                     hasInvalidTemplates ||
@@ -765,6 +768,7 @@ const RoutineDetailsPage = () => {
                   {saveMutation.isPending ? "Saving..." : "Save Routine"}
                 </Button>
                 <Button
+                  data-testid="start-routine-workout-button"
                   onClick={() => startMutation.mutate()}
                   disabled={startMutation.isPending}
                   variant="outline"
@@ -774,6 +778,7 @@ const RoutineDetailsPage = () => {
                   {startMutation.isPending ? "Starting..." : "Start Workout"}
                 </Button>
                 <Button
+                  data-testid="delete-routine-button"
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
                   variant="destructive"
@@ -804,6 +809,7 @@ const RoutineDetailsPage = () => {
                   </CardDescription>
                 </div>
                 <Button
+                  data-testid="add-routine-exercise-button"
                   onClick={() => setExercisePickerTarget({ mode: "add" })}
                   size="sm"
                 >
@@ -822,6 +828,7 @@ const RoutineDetailsPage = () => {
                 editorTemplates.map((template, templateIndex) => (
                   <div
                     key={template.id}
+                    data-testid={`routine-template-${templateIndex}`}
                     className="rounded-lg border bg-muted/30 p-4"
                   >
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -838,6 +845,7 @@ const RoutineDetailsPage = () => {
                       </div>
                       <div className="flex gap-2">
                         <Button
+                          data-testid={`change-routine-exercise-${templateIndex}`}
                           variant="outline"
                           size="sm"
                           onClick={() =>
@@ -851,6 +859,7 @@ const RoutineDetailsPage = () => {
                           Change Exercise
                         </Button>
                         <Button
+                          data-testid={`remove-routine-template-${templateIndex}`}
                           variant="destructive"
                           size="sm"
                           onClick={() => removeTemplate(template.id)}
@@ -865,6 +874,7 @@ const RoutineDetailsPage = () => {
                       {template.set_templates.map((setTemplate, setIndex) => (
                         <div
                           key={setTemplate.id}
+                          data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
                           className="rounded-md border bg-background p-3"
                         >
                           <div className="mb-3 flex items-center justify-between gap-3">
@@ -875,6 +885,7 @@ const RoutineDetailsPage = () => {
                               </div>
                             </div>
                             <Button
+                              data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
                               variant="ghost"
                               size="sm"
                               onClick={() =>
@@ -896,6 +907,7 @@ const RoutineDetailsPage = () => {
                               </label>
                               <Input
                                 id={`${template.id}-${setTemplate.id}-reps`}
+                                data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
                                 type="number"
                                 min="0"
                                 step="1"
@@ -922,6 +934,7 @@ const RoutineDetailsPage = () => {
                               </label>
                               <Input
                                 id={`${template.id}-${setTemplate.id}-intensity`}
+                                data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
                                 inputMode="decimal"
                                 value={setTemplate.intensity ?? ""}
                                 onChange={(event) =>
@@ -938,6 +951,7 @@ const RoutineDetailsPage = () => {
                                 Intensity Unit
                               </span>
                               <Button
+                                data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
                                 variant="outline"
                                 className="justify-start"
                                 onClick={() =>
@@ -958,6 +972,7 @@ const RoutineDetailsPage = () => {
                     </div>
 
                     <Button
+                      data-testid={`add-routine-set-${templateIndex}`}
                       variant="secondary"
                       size="sm"
                       className="mt-3"
