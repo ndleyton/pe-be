@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 
@@ -23,6 +24,8 @@ from src.chat.schemas import ConversationMessageCreate
 from src.exercises.crud import get_exercise_types, get_exercise_type_stats
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
 from src.exercises.crud import get_exercises_for_workout
+
+logger = logging.getLogger(__name__)
 
 
 class LastExercisePerformanceArgs(BaseModel):
@@ -72,28 +75,44 @@ class ChatService:
         Returns:
             A string summarizing the last workout, or a message indicating no data found.
         """
-        print(f"DEBUG: _get_last_workout_summary called for user {self.user_id}")
+        logger.debug("Fetching last workout summary user_id=%s", self.user_id)
 
         if not self.session:
-            print("DEBUG: No database session available")
+            logger.debug(
+                "Cannot fetch last workout summary without a database session user_id=%s",
+                self.user_id,
+            )
             return "Database session not available."
 
         try:
             workout = await get_latest_workout_for_user(self.session, self.user_id)
-            print(f"DEBUG: Found workout: {workout}")
+            logger.debug(
+                "Last workout lookup completed user_id=%s found=%s",
+                self.user_id,
+                bool(workout),
+            )
         except Exception as e:
-            print(f"DEBUG: Error getting latest workout: {e}")
+            logger.exception("Failed to retrieve last workout user_id=%s", self.user_id)
             return f"Error retrieving workout: {str(e)}"
 
         if not workout:
-            print("DEBUG: No workout found")
+            logger.debug("No workout history found user_id=%s", self.user_id)
             return "No workout history found."
 
         try:
             exercises = await get_exercises_for_workout(self.session, workout.id)
-            print(f"DEBUG: Found {len(exercises) if exercises else 0} exercises")
+            logger.debug(
+                "Loaded exercises for last workout user_id=%s workout_id=%s count=%s",
+                self.user_id,
+                workout.id,
+                len(exercises) if exercises else 0,
+            )
         except Exception as e:
-            print(f"DEBUG: Error getting exercises: {e}")
+            logger.exception(
+                "Failed to retrieve exercises for last workout user_id=%s workout_id=%s",
+                self.user_id,
+                workout.id,
+            )
             return f"Error retrieving exercises: {str(e)}"
 
         if not exercises:
@@ -121,10 +140,19 @@ class ChatService:
                         f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
                     )
 
-            print(f"DEBUG: Generated summary: {summary}")
+            logger.debug(
+                "Generated last workout summary user_id=%s workout_id=%s exercise_count=%s",
+                self.user_id,
+                workout.id,
+                len(exercises),
+            )
             return summary
         except Exception as e:
-            print(f"DEBUG: Error generating summary: {e}")
+            logger.exception(
+                "Failed to generate last workout summary user_id=%s workout_id=%s",
+                self.user_id,
+                workout.id,
+            )
             return f"Error generating summary: {str(e)}"
 
     async def _get_workout_summary_by_date(self, workout_date: str) -> str:
@@ -304,8 +332,11 @@ The input should be the structured workout data including:
                     return "\n".join(collected_parts)
 
                 return str(raw_prompt)
-            except Exception as e:
-                print(f"Warning: Could not fetch prompt from Langfuse: {e}")
+            except Exception:
+                logger.warning(
+                    "Could not fetch chat prompt from Langfuse; using fallback prompt",
+                    exc_info=True,
+                )
 
         return """You are a friendly and encouraging fitness coach and personal trainer.
 
@@ -418,12 +449,18 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 conversation_messages.append(response.message)
 
                 if response.tool_calls:
-                    print(f"DEBUG: Tool calls detected: {response.tool_calls}")
+                    logger.debug(
+                        "Tool calls detected user_id=%s count=%s",
+                        self.user_id,
+                        len(response.tool_calls),
+                    )
                     tool_output_messages: List[ConversationMessage] = []
 
                     for tool_call in response.tool_calls:
-                        print(
-                            f"DEBUG: Calling tool {tool_call.name} with args: {tool_call.args}"
+                        logger.debug(
+                            "Calling tool user_id=%s tool_name=%s",
+                            self.user_id,
+                            tool_call.name,
                         )
                         tool = tool_registry.get(tool_call.name)
                         if tool is None:
@@ -431,10 +468,16 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         else:
                             try:
                                 output = await tool.ainvoke(tool_call.args)
-                                print(f"DEBUG: Tool {tool_call.name} output: {output}")
+                                logger.debug(
+                                    "Tool completed user_id=%s tool_name=%s",
+                                    self.user_id,
+                                    tool_call.name,
+                                )
                             except Exception as e:
-                                print(
-                                    f"DEBUG: Exception in tool {tool_call.name}: {str(e)}"
+                                logger.exception(
+                                    "Tool execution failed user_id=%s tool_name=%s",
+                                    self.user_id,
+                                    tool_call.name,
                                 )
                                 output = (
                                     f"Error executing tool {tool_call.name}: {str(e)}"

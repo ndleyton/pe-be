@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +36,8 @@ from src.exercise_sets.crud import create_exercise_set
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
 from src.exercises.crud import get_exercises_for_workout
+
+logger = logging.getLogger(__name__)
 
 
 # Seed data defines Strength Training workout type with ID = 4 (see migration 7df0abdd1d04)
@@ -459,9 +462,12 @@ class WorkoutParsingService:
                                 "label": "production",
                             },
                         )
-                except Exception as e:
+                except Exception:
                     # Fallback to hardcoded prompt if Langfuse fails
-                    print(f"Warning: Could not fetch prompt from Langfuse: {e}")
+                    logger.warning(
+                        "Could not fetch workout parser prompt from Langfuse; using fallback prompt",
+                        exc_info=True,
+                    )
                     system_prompt = WorkoutParsingService._get_fallback_prompt()
             else:
                 system_prompt = WorkoutParsingService._get_fallback_prompt()

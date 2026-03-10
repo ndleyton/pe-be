@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from fastapi.responses import RedirectResponse
@@ -13,6 +14,8 @@ from httpx_oauth.clients.google import GoogleOAuth2
 
 from src.core.config import settings
 from src.core.dependencies import get_user_db
+
+logger = logging.getLogger(__name__)
 
 SECRET = settings.SECRET_KEY
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
@@ -35,17 +38,17 @@ class UserManager(IntegerIDMixin, BaseUserManager):
     verification_token_secret = SECRET
 
     async def on_after_register(self, user, request: Optional[Request] = None):
-        print(f"User {user.id} has registered.")
+        logger.info("User registered user_id=%s", user.id)
 
     async def on_after_forgot_password(
         self, user, token: str, request: Optional[Request] = None
     ):
-        print(f"User {user.id} has forgot their password. Reset token: {token}")
+        logger.info("Password reset requested user_id=%s", user.id)
 
     async def on_after_request_verify(
         self, user, token: str, request: Optional[Request] = None
     ):
-        print(f"Verification requested for user {user.id}. Verification token: {token}")
+        logger.info("Verification requested user_id=%s", user.id)
 
 
 async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
@@ -63,11 +66,7 @@ class CookieTransportWithRedirect(CookieTransport):
         """
         # Ensures no double slashes if FRONTEND_URL ends with / and FRONTEND_POST_LOGIN_PATH starts with /
         redirect_url = f"{FRONTEND_URL.rstrip('/')}{FRONTEND_POST_LOGIN_PATH}"
-        print(
-            f"DEBUG: FRONTEND_URL='{FRONTEND_URL}', FRONTEND_POST_LOGIN_PATH='{FRONTEND_POST_LOGIN_PATH}'"
-        )
-        print(f"DEBUG: Constructed redirect_url='{redirect_url}'")
-        print(f"DEBUG: redirect_url repr: {repr(redirect_url)}")
+        logger.debug("Prepared login redirect redirect_url=%s", redirect_url)
         response = RedirectResponse(redirect_url, status_code=status.HTTP_302_FOUND)
         self._set_login_cookie(
             response, token

@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +27,7 @@ from src.exercises.schemas import (
 # considered a match.  Tweaking this value lets us control how permissive the
 # search is without hunting through the implementation.
 FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
+logger = logging.getLogger(__name__)
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -199,7 +201,11 @@ async def get_exercise_types(
                 limit * 3, 100
             ),  # Get more candidates than needed, but cap at 100
         )
-        print("FUZZY DEBUG", name, matches)
+        logger.debug(
+            "Computed fuzzy exercise type matches query=%r count=%s",
+            name,
+            len(matches),
+        )
         if matches:
             # Create a score lookup by ID
             score_lookup = {
