@@ -215,7 +215,9 @@ async def test_update_routine_endpoint_replaces_nested_templates(
         fetched = get_resp.json()
         assert fetched["name"] == "Updated Routine"
         assert len(fetched["exercise_templates"]) == 1
-        assert fetched["exercise_templates"][0]["exercise_type_id"] == exercise_type_b.id
+        assert (
+            fetched["exercise_templates"][0]["exercise_type_id"] == exercise_type_b.id
+        )
         assert len(fetched["exercise_templates"][0]["set_templates"]) == 2
     finally:
         app.dependency_overrides.pop(current_active_user, None)
