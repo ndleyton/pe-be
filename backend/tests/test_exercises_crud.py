@@ -429,8 +429,8 @@ async def test_create_exercise_type_rejects_missing_muscles_and_invalid_unit(db_
 
 
 async def test_get_intensity_units_and_exercise_type_by_id(db_session):
-    first = await _seed_intensity_unit(db_session, "Kilograms", "kg")
-    second = await _seed_intensity_unit(db_session, "Pounds", "lb")
+    await _seed_intensity_unit(db_session, "Kilograms", "kg")
+    await _seed_intensity_unit(db_session, "Pounds", "lb")
     exercise_type = await _seed_exercise_type(db_session, "Lookup Exercise")
     await db_session.commit()
 
