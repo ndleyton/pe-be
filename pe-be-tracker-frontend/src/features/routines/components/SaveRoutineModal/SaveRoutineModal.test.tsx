@@ -8,7 +8,6 @@ import { SaveRoutineModal } from "./SaveRoutineModal";
 const {
   mockCreateRoutine,
   mockUpdateExerciseSet,
-  mockCreateRoutineFromWorkout,
   mockAuthState,
   mockGuestState,
 } = vi.hoisted(() => {
