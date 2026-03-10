@@ -95,6 +95,8 @@ class Settings(BaseSettings):
         description="JWT token lifetime in seconds (default: 7 days)",
     )
 
+    LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
+
     # Environment indicator
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
 

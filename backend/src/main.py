@@ -1,3 +1,7 @@
+import logging
+from time import perf_counter
+from uuid import uuid4
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -6,6 +10,7 @@ from httpx_oauth.oauth2 import OAuth2Error
 
 from src.core.config import settings
 from src.core.errors import DomainValidationError
+from src.core.logging import configure_logging, reset_request_id, set_request_id
 from src.users.router import router as users_router
 from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
@@ -14,6 +19,9 @@ from src.recipes.router import router as recipes_router
 from src.admin.router import router as admin_router
 from src.health.router import router as health_router
 from src.chat.router import router as chat_router
+
+configure_logging(settings.LOG_LEVEL)
+logger = logging.getLogger("src.request")
 
 
 def create_app() -> FastAPI:
@@ -28,6 +36,39 @@ def create_app() -> FastAPI:
         fastapi_kwargs["proxy_headers"] = True
 
     app = FastAPI(**fastapi_kwargs)
+
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+        request.state.request_id = request_id
+        token = set_request_id(request_id)
+        started_at = perf_counter()
+
+        try:
+            try:
+                response = await call_next(request)
+            except Exception:
+                duration_ms = round((perf_counter() - started_at) * 1000, 2)
+                logger.exception(
+                    "%s %s -> 500 %.2fms",
+                    request.method,
+                    request.url.path,
+                    duration_ms,
+                )
+                raise
+
+            duration_ms = round((perf_counter() - started_at) * 1000, 2)
+            response.headers["X-Request-ID"] = request_id
+            logger.info(
+                "%s %s -> %s %.2fms",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
+            return response
+        finally:
+            reset_request_id(token)
 
     base_frontend = settings.FRONTEND_URL.rstrip("/")
     # Derive a 127.0.0.1 variant if the base contains 'localhost'
