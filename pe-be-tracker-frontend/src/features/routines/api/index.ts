@@ -18,7 +18,7 @@ export interface CreateRoutineData {
 
 export interface UpdateRoutineData {
   name?: string;
-  description?: string;
+  description?: string | null;
   workout_type_id?: number;
 }
 
