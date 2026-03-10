@@ -5,17 +5,29 @@ import type { Exercise } from "@/features/exercises/api";
 import { makeExerciseType } from "@/test/fixtures/exercises";
 import { SaveRoutineModal } from "./SaveRoutineModal";
 
-const mockCreateRoutine = vi.fn();
-const mockUpdateExerciseSet = vi.fn();
-const mockCreateRoutineFromWorkout = vi.fn();
+const {
+  mockCreateRoutine,
+  mockUpdateExerciseSet,
+  mockCreateRoutineFromWorkout,
+  mockAuthState,
+  mockGuestState,
+} = vi.hoisted(() => {
+  const mockCreateRoutine = vi.fn();
+  const mockUpdateExerciseSet = vi.fn();
+  const mockCreateRoutineFromWorkout = vi.fn();
 
-const mockAuthState = {
-  isAuthenticated: true,
-};
-
-const mockGuestState = {
-  createRoutineFromWorkout: mockCreateRoutineFromWorkout,
-};
+  return {
+    mockCreateRoutine,
+    mockUpdateExerciseSet,
+    mockCreateRoutineFromWorkout,
+    mockAuthState: {
+      isAuthenticated: true,
+    },
+    mockGuestState: {
+      createRoutineFromWorkout: mockCreateRoutineFromWorkout,
+    },
+  };
+});
 
 vi.mock("@/features/routines/api", () => ({
   createRoutine: mockCreateRoutine,
@@ -82,7 +94,6 @@ const exercises: Exercise[] = [
 describe("SaveRoutineModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(global, "setTimeout").mockImplementation(() => 0 as never);
     mockCreateRoutine.mockResolvedValue({ id: 99 });
     mockUpdateExerciseSet.mockResolvedValue({});
   });

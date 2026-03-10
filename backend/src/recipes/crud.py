@@ -91,10 +91,10 @@ async def get_recipe_by_id_for_user(
 
 
 async def get_user_recipe_by_id(
-    session: AsyncSession, recipe_id: int, user_id: int
+    session: AsyncSession, recipe_id: int, user_id: int, populate_existing: bool = False
 ) -> Optional[Recipe]:
     """Get a recipe by ID with relationships loaded (user-owned only)."""
-    result = await session.execute(
+    query = (
         select(Recipe)
         .options(
             selectinload(Recipe.exercise_templates)
@@ -107,6 +107,10 @@ async def get_user_recipe_by_id(
         )
         .where(and_(Recipe.id == recipe_id, Recipe.creator_id == user_id))
     )
+    if populate_existing:
+        query = query.execution_options(populate_existing=True)
+
+    result = await session.execute(query)
     return result.scalar_one_or_none()
 
 
@@ -298,9 +302,9 @@ async def update_recipe(
 
     # Reload the full tree eagerly so response serialization does not trigger
     # async lazy loads for nested templates after the replace operation.
-    refreshed_recipe_id = recipe.id
-    session.expire_all()
-    return await get_user_recipe_by_id(session, refreshed_recipe_id, user_id)
+    return await get_user_recipe_by_id(
+        session, recipe.id, user_id, populate_existing=True
+    )
 
 
 async def delete_recipe(session: AsyncSession, recipe_id: int, user_id: int) -> bool:
