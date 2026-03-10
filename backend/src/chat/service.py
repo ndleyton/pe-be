@@ -381,7 +381,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             tool_registry = {tool.name: tool for tool in tools}
 
             system_prompt = self._get_system_prompt()
-            conversation_messages = [ConversationMessage(role="system", content=system_prompt)]
+            conversation_messages = [
+                ConversationMessage(role="system", content=system_prompt)
+            ]
 
             for message in messages:
                 if message["role"] == "user":
@@ -429,9 +431,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         else:
                             try:
                                 output = await tool.ainvoke(tool_call.args)
-                                print(
-                                    f"DEBUG: Tool {tool_call.name} output: {output}"
-                                )
+                                print(f"DEBUG: Tool {tool_call.name} output: {output}")
                             except Exception as e:
                                 print(
                                     f"DEBUG: Exception in tool {tool_call.name}: {str(e)}"

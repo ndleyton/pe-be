@@ -1,5 +1,10 @@
 import pytest
-from src.chat.llm_client import ConversationMessage, LLMResponse, ToolCall, ToolDefinition
+from src.chat.llm_client import (
+    ConversationMessage,
+    LLMResponse,
+    ToolCall,
+    ToolDefinition,
+)
 from src.chat.service import ChatService
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -23,9 +28,7 @@ async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch)
                     message=ConversationMessage(
                         role="assistant",
                         content="",
-                        tool_calls=[
-                            ToolCall(call_id="1", name="dummy_tool", args={})
-                        ],
+                        tool_calls=[ToolCall(call_id="1", name="dummy_tool", args={})],
                     )
                 ),
                 LLMResponse(message=ConversationMessage(role="assistant", content="")),
