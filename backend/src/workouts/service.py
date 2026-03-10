@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from datetime import datetime, timezone, date, timedelta
+from datetime import datetime, timezone, timedelta
 from langfuse import Langfuse
 
 from src.workouts.crud import (
@@ -14,7 +14,6 @@ from src.workouts.crud import (
     get_workout_types,
     create_workout_type,
     get_user_workouts,
-    get_workout_by_date,
     get_latest_workout_for_user,
 )
 from src.workouts.models import Workout, WorkoutType
