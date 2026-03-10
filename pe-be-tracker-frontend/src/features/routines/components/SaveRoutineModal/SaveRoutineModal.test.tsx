@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/testUtils";
+import type { Exercise } from "@/features/exercises/api";
+import { makeExerciseType } from "@/test/fixtures/exercises";
 import { SaveRoutineModal } from "./SaveRoutineModal";
 
 const mockCreateRoutine = vi.fn();
@@ -34,7 +36,7 @@ vi.mock("@/stores", () => ({
   },
 }));
 
-const exercises = [
+const exercises: Exercise[] = [
   {
     id: 11,
     timestamp: "2026-03-09T10:00:00.000Z",
@@ -43,13 +45,13 @@ const exercises = [
     workout_id: 25,
     created_at: "2026-03-09T10:00:00.000Z",
     updated_at: "2026-03-09T10:00:00.000Z",
-    exercise_type: {
+    exercise_type: makeExerciseType({
       id: 7,
       name: "Bench Press",
       description: "Chest press",
       default_intensity_unit: 2,
       times_used: 0,
-    },
+    }),
     exercise_sets: [
       {
         id: 101,

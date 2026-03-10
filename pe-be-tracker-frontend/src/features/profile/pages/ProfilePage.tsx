@@ -59,6 +59,7 @@ const ProfilePage = () => {
             notes: gw.notes,
             start_time: gw.start_time,
             end_time: gw.end_time,
+            workout_type_id: Number(gw.workout_type_id),
             created_at: gw.created_at || new Date().toISOString(),
             updated_at: gw.updated_at || new Date().toISOString(),
           }))
