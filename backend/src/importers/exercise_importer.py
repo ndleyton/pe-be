@@ -585,9 +585,7 @@ async def import_exercises_to_database(data: Dict[str, Any]):
         if transaction:
             try:
                 await transaction.rollback()
-                logger.exception(
-                    "Exercise import transaction rolled back due to error"
-                )
+                logger.exception("Exercise import transaction rolled back due to error")
             except Exception:
                 logger.exception("Error during exercise import rollback")
         raise e
