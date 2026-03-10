@@ -8,7 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from src.core.errors import DomainValidationError
 from src.exercise_sets.models import ExerciseSet
 from src.exercises import crud
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
+from src.exercises.models import (
+    Exercise,
+    ExerciseType,
+    IntensityUnit,
+    Muscle,
+    MuscleGroup,
+)
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 from src.users.models import User
 from src.workouts.models import Workout, WorkoutType
@@ -201,7 +207,9 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
     ]
 
 
-async def test_create_exercise_increments_times_used_and_loads_relationships(db_session):
+async def test_create_exercise_increments_times_used_and_loads_relationships(
+    db_session,
+):
     owner = await _seed_user(db_session, "exercise-create@example.com")
     workout_type = await _seed_workout_type(db_session, "Hypertrophy")
     workout = await _seed_workout(db_session, owner.id, workout_type.id)
@@ -254,9 +262,7 @@ async def test_create_exercise_maps_invalid_foreign_keys(db_session, payload, fi
     await db_session.commit()
 
     resolved = {
-        key: value(
-            {"exercise_type_id": exercise_type.id, "workout_id": workout.id}
-        )
+        key: value({"exercise_type_id": exercise_type.id, "workout_id": workout.id})
         if callable(value)
         else value
         for key, value in payload.items()
@@ -397,16 +403,18 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
         ),
     )
     count = await db_session.scalar(
-        select(func.count()).select_from(ExerciseType).where(
-            ExerciseType.name == "Weighted Chin-Up"
-        )
+        select(func.count())
+        .select_from(ExerciseType)
+        .where(ExerciseType.name == "Weighted Chin-Up")
     )
 
     assert duplicate.id == created.id
     assert count == 1
 
 
-async def test_create_exercise_type_rejects_missing_muscles_and_invalid_unit(db_session):
+async def test_create_exercise_type_rejects_missing_muscles_and_invalid_unit(
+    db_session,
+):
     with pytest.raises(ValueError, match="Muscle IDs not found: 999"):
         await crud.create_exercise_type(
             db_session,
@@ -460,7 +468,9 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
 
     owner = await _seed_user(db_session, "stats@example.com")
     workout_type = await _seed_workout_type(db_session, "Stats Type")
-    workout = await _seed_workout(db_session, owner.id, workout_type.id, "Stats Workout")
+    workout = await _seed_workout(
+        db_session, owner.id, workout_type.id, "Stats Workout"
+    )
     unit = await _seed_intensity_unit(db_session, "Kilograms", "kg")
     exercise_type = await _seed_exercise_type(
         db_session,
@@ -657,4 +667,6 @@ async def test_exercise_owner_queries_respect_user_and_deleted_state(db_session)
     assert verified is not None
     assert verified.id == active.id
     assert await crud.verify_exercise_ownership(db_session, active.id, other.id) is None
-    assert await crud.verify_exercise_ownership(db_session, deleted.id, owner.id) is None
+    assert (
+        await crud.verify_exercise_ownership(db_session, deleted.id, owner.id) is None
+    )
