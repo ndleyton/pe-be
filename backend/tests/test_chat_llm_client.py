@@ -49,9 +49,7 @@ async def test_tool_definition_normalizes_json_payload():
         args_model=WorkoutArgs,
     )
 
-    normalized = tool.normalize_args(
-        {"__arg1": '{"name":"Upper","workout_type_id":4}'}
-    )
+    normalized = tool.normalize_args({"__arg1": '{"name":"Upper","workout_type_id":4}'})
 
     assert normalized == {"name": "Upper", "workout_type_id": 4}
 

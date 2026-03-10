@@ -150,7 +150,9 @@ class GeminiLangChainClient:
         response = await llm.ainvoke(self._to_langchain_messages(messages))
         return self._normalize_response(response)
 
-    def _to_langchain_messages(self, messages: Sequence[ConversationMessage]) -> list[Any]:
+    def _to_langchain_messages(
+        self, messages: Sequence[ConversationMessage]
+    ) -> list[Any]:
         normalized_messages: list[Any] = []
         for message in messages:
             if message.role == "system":
@@ -169,9 +171,7 @@ class GeminiLangChainClient:
                         }
                         for tool_call in message.tool_calls
                     ]
-                normalized_messages.append(
-                    AIMessage(content=message.content, **kwargs)
-                )
+                normalized_messages.append(AIMessage(content=message.content, **kwargs))
             elif message.role == "tool":
                 normalized_messages.append(
                     ToolMessage(
