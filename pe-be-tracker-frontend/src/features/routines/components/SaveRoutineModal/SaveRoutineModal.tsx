@@ -19,6 +19,7 @@ interface SaveRoutineModalProps {
   workoutName: string;
   exercises: Exercise[];
   workoutId?: string;
+  workoutTypeId?: number | string | null;
 }
 
 const convertToGuestExercises = (exercises: Exercise[]): GuestExercise[] => {
@@ -59,6 +60,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   workoutName,
   exercises,
   workoutId,
+  workoutTypeId,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestActions = useGuestStore();
@@ -96,15 +98,19 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
     setIsLoading(true);
     try {
       if (isAuthenticated) {
+        if (workoutTypeId == null) {
+          throw new Error("Workout type is required to save a routine");
+        }
+
         await updateExerciseSetsDoneStatus();
         const routineData: CreateRoutineData = {
           name: routineName,
-          workout_type_id: 1,
+          workout_type_id: Number(workoutTypeId),
           exercise_templates: exercises.map((exercise) => ({
             exercise_type_id: Number(exercise.exercise_type_id),
             set_templates: exercise.exercise_sets.map((set) => ({
-              reps: set.reps || 0,
-              intensity: set.intensity || 0,
+              reps: set.reps,
+              intensity: set.intensity,
               intensity_unit_id: Number(set.intensity_unit_id),
             })),
           })),
@@ -224,7 +230,11 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!routineName.trim() || isLoading}
+                disabled={
+                  !routineName.trim() ||
+                  isLoading ||
+                  (isAuthenticated && workoutTypeId == null)
+                }
                 className="flex-1"
               >
                 {isLoading ? "Saving..." : "Save Routine"}
