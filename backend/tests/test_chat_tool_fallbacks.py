@@ -1,4 +1,10 @@
 import pytest
+from src.chat.llm_client import (
+    ConversationMessage,
+    LLMResponse,
+    ToolCall,
+    ToolDefinition,
+)
 from src.chat.service import ChatService
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -10,47 +16,31 @@ async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch)
         "src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False
     )
 
-    svc = ChatService(user_id=1, session=None)
-
-    # Prepare a dummy tool list with a simple tool
     async def dummy_tool() -> str:
         return "dummy output"
 
-    # Monkeypatch _get_tools to return a single tool
-    from langchain_core.tools import Tool
+    class FakeClient:
+        model_name = "test-model"
 
+        def __init__(self):
+            self._responses = [
+                LLMResponse(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content="",
+                        tool_calls=[ToolCall(call_id="1", name="dummy_tool", args={})],
+                    )
+                ),
+                LLMResponse(message=ConversationMessage(role="assistant", content="")),
+            ]
+
+        async def acomplete(self, _messages, _tools):
+            return self._responses.pop(0)
+
+    svc = ChatService(user_id=1, session=None, llm_client=FakeClient())
     svc._get_tools = lambda: [
-        Tool(name="dummy_tool", func=dummy_tool, description="test tool")
+        ToolDefinition(name="dummy_tool", handler=dummy_tool, description="test tool")
     ]
-
-    class FakeResponse:
-        def __init__(self, tool_calls):
-            self.tool_calls = tool_calls
-            self.content = ""  # simulate no final text from model
-
-    # First return a tool call, then a response without content
-    calls = [
-        FakeResponse(
-            [{"name": "dummy_tool", "args": {}, "id": "1", "type": "tool_call"}]
-        ),
-        FakeResponse([]),
-    ]
-
-    async def fake_ainvoke(_):
-        return calls.pop(0)
-
-    # Monkeypatch model creation to inject our fake ainvoke
-    class DummyLLM:
-        def bind_tools(self, _tools):
-            return self
-
-        async def ainvoke(self, _msgs):
-            return await fake_ainvoke(_msgs)
-
-    def fake_llm(*args, **kwargs):
-        return DummyLLM()
-
-    monkeypatch.setattr("src.chat.service.ChatGoogleGenerativeAI", fake_llm)
 
     result = await svc.generate_response(
         messages=[{"role": "user", "content": "hi"}], save_to_db=False
