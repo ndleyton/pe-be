@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from langfuse import Langfuse
 
 from src.workouts.crud import (
@@ -15,6 +15,7 @@ from src.workouts.crud import (
     create_workout_type,
     get_user_workouts,
     get_workout_by_date,
+    get_latest_workout_for_user,
 )
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import (
@@ -37,9 +38,9 @@ from src.exercise_sets.schemas import ExerciseSetCreate
 from src.exercises.crud import get_exercises_for_workout
 
 
-# ------------------------------------------------------------------------------------
 # Seed data defines Strength Training workout type with ID = 4 (see migration 7df0abdd1d04)
 DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID = 4
+WORKOUT_REUSE_WINDOW_HOURS = 12
 
 
 class WorkoutService:
@@ -107,23 +108,30 @@ class WorkoutService:
         user_id: int,
         payload: AddExerciseRequest,
     ) -> Workout:
-        """Add an exercise to today's workout for the user, creating workout if necessary.
+        """Add an exercise to the current workout, creating one if necessary.
 
-        1. Fetch latest workout for user.
-        2. If not present or not from today (UTC), create new workout with default values.
-        3. Create exercise linked to that workout (if exercise not already there).
-        4. Optionally add initial set data.
-        5. Return the workout with relationships loaded (reusing get_workout).
+        Heuristic: Reuses the latest workout if it was started within the last 12 hours.
+        Otherwise, creates a new workout with a default name based on the current UTC date.
         """
-        # 1. Get today's workout if it exists
-        today = date.today()
-        workout = await get_workout_by_date(session, user_id, today)
+        # 1. Check if the latest workout is "recent enough" and NOT finished
+        now = datetime.now(timezone.utc)
+        workout = await get_latest_workout_for_user(session, user_id)
 
-        if not workout:
-            # Need to create a new workout for today
+        # A workout is "current" if:
+        # 1. It exists
+        # 2. It hasn't been finished (end_time is None)
+        # 3. It was started within the last X hours
+        is_current = (
+            workout
+            and workout.end_time is None
+            and (now - workout.start_time) < timedelta(hours=WORKOUT_REUSE_WINDOW_HOURS)
+        )
+
+        if not is_current:
+            # Need to create a new workout
             workout_create = WorkoutCreate(
-                name=today.strftime("Workout %Y-%m-%d"),
-                start_time=datetime.now(timezone.utc),
+                name=now.strftime("Workout %Y-%m-%d"),
+                start_time=now,
                 workout_type_id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,  # Default Strength Training
             )
             workout = await create_workout(session, workout_create, user_id)
