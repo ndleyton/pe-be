@@ -116,5 +116,4 @@ temp/
 .pre-commit-config.yaml
 
 # Agent instructions
-AGENTS.md
 backend/AGENTS.md
