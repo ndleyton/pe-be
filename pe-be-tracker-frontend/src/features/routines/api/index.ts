@@ -9,8 +9,8 @@ export interface CreateRoutineData {
   exercise_templates: Array<{
     exercise_type_id: number;
     set_templates: Array<{
-      reps?: number;
-      intensity?: number;
+      reps?: number | null;
+      intensity?: number | null;
       intensity_unit_id: number;
     }>;
   }>;
