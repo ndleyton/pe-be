@@ -110,7 +110,7 @@ export interface GuestRoutineExercise {
 export interface GuestRoutine {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   exercises: GuestRoutineExercise[];
   visibility?: "private" | "public" | "link_only";
   is_readonly?: boolean;
