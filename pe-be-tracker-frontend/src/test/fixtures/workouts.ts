@@ -17,6 +17,7 @@ export const makeWorkout = (overrides: Partial<Workout> = {}): Workout => ({
   notes: "Great session",
   start_time: DEFAULT_START,
   end_time: DEFAULT_END,
+  workout_type_id: 1,
   created_at: DEFAULT_START,
   updated_at: DEFAULT_END,
   ...overrides,

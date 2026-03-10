@@ -91,10 +91,10 @@ async def get_recipe_by_id_for_user(
 
 
 async def get_user_recipe_by_id(
-    session: AsyncSession, recipe_id: int, user_id: int
+    session: AsyncSession, recipe_id: int, user_id: int, populate_existing: bool = False
 ) -> Optional[Recipe]:
     """Get a recipe by ID with relationships loaded (user-owned only)."""
-    result = await session.execute(
+    query = (
         select(Recipe)
         .options(
             selectinload(Recipe.exercise_templates)
@@ -107,6 +107,10 @@ async def get_user_recipe_by_id(
         )
         .where(and_(Recipe.id == recipe_id, Recipe.creator_id == user_id))
     )
+    if populate_existing:
+        query = query.execution_options(populate_existing=True)
+
+    result = await session.execute(query)
     return result.scalar_one_or_none()
 
 
@@ -247,7 +251,11 @@ async def create_recipe_admin(
 async def update_recipe(
     session: AsyncSession, recipe_id: int, recipe_data: RecipeUpdate, user_id: int
 ) -> Optional[Recipe]:
-    """Update a recipe (user-owned only)"""
+    """Update a recipe (user-owned only).
+
+    When `exercise_templates` is provided, the existing nested template tree is
+    replaced transactionally using the submitted payload.
+    """
     recipe = await get_user_recipe_by_id(session, recipe_id, user_id)
     if not recipe:
         return None
@@ -260,6 +268,29 @@ async def update_recipe(
     if recipe_data.workout_type_id is not None:
         recipe.workout_type_id = recipe_data.workout_type_id
 
+    if recipe_data.exercise_templates is not None:
+        # Full-replace semantics for nested templates on update.
+        for existing_template in list(recipe.exercise_templates):
+            await session.delete(existing_template)
+        await session.flush()
+
+        for exercise_template_data in recipe_data.exercise_templates:
+            exercise_template = ExerciseTemplate(
+                exercise_type_id=exercise_template_data.exercise_type_id,
+                recipe_id=recipe.id,
+            )
+            session.add(exercise_template)
+            await session.flush()
+
+            for set_template_data in exercise_template_data.set_templates:
+                set_template = SetTemplate(
+                    reps=set_template_data.reps,
+                    intensity=set_template_data.intensity,
+                    intensity_unit_id=set_template_data.intensity_unit_id,
+                    exercise_template_id=exercise_template.id,
+                )
+                session.add(set_template)
+
     try:
         await session.commit()
     except IntegrityError as e:
@@ -268,8 +299,12 @@ async def update_recipe(
         if mapped_error:
             raise mapped_error from e
         raise
-    await session.refresh(recipe)
-    return recipe
+
+    # Reload the full tree eagerly so response serialization does not trigger
+    # async lazy loads for nested templates after the replace operation.
+    return await get_user_recipe_by_id(
+        session, recipe.id, user_id, populate_existing=True
+    )
 
 
 async def delete_recipe(session: AsyncSession, recipe_id: int, user_id: int) -> bool:

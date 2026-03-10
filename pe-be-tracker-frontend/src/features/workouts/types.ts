@@ -4,6 +4,7 @@ export interface Workout {
   notes: string | null;
   start_time: string;
   end_time: string | null;
+  workout_type_id: number;
   created_at: string;
   updated_at: string;
 }

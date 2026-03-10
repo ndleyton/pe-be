@@ -9,17 +9,27 @@ export interface CreateRoutineData {
   exercise_templates: Array<{
     exercise_type_id: number;
     set_templates: Array<{
-      reps?: number;
-      intensity?: number;
+      reps?: number | null;
+      intensity?: number | null;
       intensity_unit_id: number;
     }>;
   }>;
 }
 
+export interface RoutineTemplatePayload {
+  exercise_type_id: number;
+  set_templates: Array<{
+    reps?: number | null;
+    intensity?: number | null;
+    intensity_unit_id: number;
+  }>;
+}
+
 export interface UpdateRoutineData {
   name?: string;
-  description?: string;
+  description?: string | null;
   workout_type_id?: number;
+  exercise_templates?: RoutineTemplatePayload[];
 }
 
 export const getRoutines = async (

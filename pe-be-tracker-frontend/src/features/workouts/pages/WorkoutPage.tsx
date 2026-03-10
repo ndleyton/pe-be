@@ -464,6 +464,9 @@ const WorkoutPage = () => {
   const workoutName = isAuthenticated
     ? (serverWorkout?.name ?? null)
     : (guestWorkout?.name ?? null);
+  const workoutTypeId = isAuthenticated
+    ? (serverWorkout?.workout_type_id ?? null)
+    : (guestWorkout?.workout_type_id ?? null);
 
   // Warn user on navigation/back while workout in progress
   useEffect(() => {
@@ -563,6 +566,7 @@ const WorkoutPage = () => {
         workoutName={workoutName || "My Routine"}
         exercises={exercises}
         workoutId={workoutId}
+        workoutTypeId={workoutTypeId}
       />
 
       <ExerciseTypeModal
