@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+from types import SimpleNamespace
 
 from src.main import app
 from src.users.models import User
@@ -44,9 +45,10 @@ async def test_create_routine_endpoint_success(
     )
     db_session.add(user)
     await db_session.flush()
+    user_id = user.id
 
     async def override_user():
-        return user
+        return SimpleNamespace(id=user_id)
 
     app.dependency_overrides[current_active_user] = override_user
 
@@ -141,9 +143,10 @@ async def test_update_routine_endpoint_replaces_nested_templates(
     )
     db_session.add(user)
     await db_session.flush()
+    user_id = user.id
 
     async def override_user():
-        return user
+        return SimpleNamespace(id=user_id)
 
     app.dependency_overrides[current_active_user] = override_user
 

@@ -295,8 +295,12 @@ async def update_recipe(
         if mapped_error:
             raise mapped_error from e
         raise
-    await session.refresh(recipe)
-    return recipe
+
+    # Reload the full tree eagerly so response serialization does not trigger
+    # async lazy loads for nested templates after the replace operation.
+    refreshed_recipe_id = recipe.id
+    session.expire_all()
+    return await get_user_recipe_by_id(session, refreshed_recipe_id, user_id)
 
 
 async def delete_recipe(session: AsyncSession, recipe_id: int, user_id: int) -> bool:
