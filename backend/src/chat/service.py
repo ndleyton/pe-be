@@ -92,9 +92,7 @@ class ChatService:
                 bool(workout),
             )
         except Exception as e:
-            logger.exception(
-                "Failed to retrieve last workout user_id=%s", self.user_id
-            )
+            logger.exception("Failed to retrieve last workout user_id=%s", self.user_id)
             return f"Error retrieving workout: {str(e)}"
 
         if not workout:

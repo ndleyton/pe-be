@@ -23,8 +23,7 @@ async def test_logging_middleware_sets_request_id_and_logs_request(
     request_logs = [record for record in caplog.records if record.name == "src.request"]
     assert request_logs
     assert any(
-        record.request_id == "req-123"
-        and "GET /health -> 200" in record.getMessage()
+        record.request_id == "req-123" and "GET /health -> 200" in record.getMessage()
         for record in request_logs
     )
 
