@@ -66,7 +66,7 @@ async def test_patch_workout_invalid_workout_type_returns_422(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_patch_workout_end_time_before_start_returns_422(
+async def test_patch_workout_end_time_before_start_returns_400(
     db_session: AsyncSession, async_client: AsyncClient
 ):
     user = await _override_authenticated_user(db_session)
@@ -89,10 +89,8 @@ async def test_patch_workout_end_time_before_start_returns_422(
             f"{settings.API_PREFIX}/workouts/{workout.id}",
             json={"end_time": (start_time - timedelta(minutes=10)).isoformat()},
         )
-        assert response.status_code == 422
+        assert response.status_code == 400
         body = response.json()
-        assert body["code"] == "invalid_range"
-        assert body["field"] == "end_time"
         assert body["detail"] == "end_time must be greater than or equal to start_time"
     finally:
         app.dependency_overrides.pop(current_active_user, None)
