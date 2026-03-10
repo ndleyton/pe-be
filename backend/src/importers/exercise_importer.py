@@ -1,5 +1,6 @@
 import asyncpg
 import json
+import logging
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 import sys
@@ -8,6 +9,8 @@ import os
 # Add the backend directory to the path so we can import from src
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)
+
+logger = logging.getLogger(__name__)
 
 try:
     from src.core.config import settings
@@ -25,16 +28,20 @@ except ImportError:
         IMPORT_DATABASE_PASSWORD: str = os.getenv("IMPORT_DATABASE_PASSWORD", "")
 
     settings = FallbackSettings()
-    print("⚠️  Using fallback settings from environment variables")
+    logger.warning("Using fallback settings from environment variables")
 
 
 async def get_import_db_connection():
     """Get database connection to import source using environment variables from settings"""
     try:
-        print(
-            f"🔗 Connecting to import source database: {settings.IMPORT_DATABASE_USER}@{settings.IMPORT_DATABASE_HOST}:{settings.IMPORT_DATABASE_PORT}/{settings.IMPORT_DATABASE_NAME}"
+        logger.info(
+            "Connecting to import source database user=%s host=%s port=%s database=%s",
+            settings.IMPORT_DATABASE_USER,
+            settings.IMPORT_DATABASE_HOST,
+            settings.IMPORT_DATABASE_PORT,
+            settings.IMPORT_DATABASE_NAME,
         )
-        print("⏳ Attempting source connection with 30s timeout...")
+        logger.info("Attempting source database connection timeout_seconds=30")
         return await asyncpg.connect(
             user=settings.IMPORT_DATABASE_USER,
             password=settings.IMPORT_DATABASE_PASSWORD,
@@ -44,14 +51,14 @@ async def get_import_db_connection():
             timeout=30,  # 30 second timeout
             command_timeout=60,  # 60 second command timeout
         )
-    except Exception as e:
-        print(f"❌ Failed to connect to import source database: {e}")
-        print("📝 Make sure the following environment variables are set:")
-        print(f"   IMPORT_DATABASE_HOST={settings.IMPORT_DATABASE_HOST}")
-        print(f"   IMPORT_DATABASE_PORT={settings.IMPORT_DATABASE_PORT}")
-        print(f"   IMPORT_DATABASE_NAME={settings.IMPORT_DATABASE_NAME}")
-        print(f"   IMPORT_DATABASE_USER={settings.IMPORT_DATABASE_USER}")
-        print("   IMPORT_DATABASE_PASSWORD=*** (hidden)")
+    except Exception:
+        logger.exception(
+            "Failed to connect to import source database host=%s port=%s database=%s user=%s",
+            settings.IMPORT_DATABASE_HOST,
+            settings.IMPORT_DATABASE_PORT,
+            settings.IMPORT_DATABASE_NAME,
+            settings.IMPORT_DATABASE_USER,
+        )
         raise
 
 
@@ -65,10 +72,14 @@ async def get_target_db_connection():
         # Use default PostgreSQL port if not specified
         port = url.port or 5432
 
-        print(
-            f"🎯 Connecting to target database: {url.username}@{url.hostname}:{port}{url.path}"
+        logger.info(
+            "Connecting to target database user=%s host=%s port=%s database=%s",
+            url.username,
+            url.hostname,
+            port,
+            url.path.lstrip("/"),
         )
-        print("⏳ Attempting connection with 30s timeout...")
+        logger.info("Attempting target database connection timeout_seconds=30")
         return await asyncpg.connect(
             user=url.username,
             password=url.password,
@@ -78,9 +89,8 @@ async def get_target_db_connection():
             timeout=30,  # 30 second timeout
             command_timeout=60,  # 60 second command timeout
         )
-    except Exception as e:
-        print(f"❌ Failed to connect to target database: {e}")
-        print(f"📝 DATABASE_URL: {settings.DATABASE_URL}")
+    except Exception:
+        logger.exception("Failed to connect to target database")
         raise
 
 
@@ -313,8 +323,10 @@ async def extract_and_transform_exercises():
                 validate_exercise_data(exercise_type)
                 exercise_types.append(exercise_type)
             except ValidationError as e:
-                print(
-                    f"Skipping invalid exercise (row {row.get('id', 'unknown')}): {e}"
+                logger.warning(
+                    "Skipping invalid exercise row_id=%s error=%s",
+                    row.get("id", "unknown"),
+                    e,
                 )
                 continue
 
@@ -327,7 +339,7 @@ async def extract_and_transform_exercises():
                     default_unit = tentative_unit
                     intensity_units.add(tentative_unit)
                 except ValidationError as e:
-                    print(f"Warning: Invalid intensity unit: {e}")
+                    logger.warning("Skipping invalid intensity unit error=%s", e)
 
             # 3. MuscleGroup and Muscle Data
             primary_muscles = row.get("primary_muscles", []) or []
@@ -343,7 +355,9 @@ async def extract_and_transform_exercises():
                         (muscle_name, muscle_group)
                     )  # Store as tuple to preserve grouping
                 except ValidationError as e:
-                    print(f"Skipping invalid muscle '{muscle_name}': {e}")
+                    logger.warning(
+                        "Skipping invalid muscle name=%r error=%s", muscle_name, e
+                    )
                     continue
 
             # 4. exercise_muscles Relationship Data with primary/secondary flag
@@ -358,8 +372,10 @@ async def extract_and_transform_exercises():
                         }
                     )
                 except ValidationError as e:
-                    print(
-                        f"Skipping invalid primary exercise-muscle relationship for '{muscle_name}': {e}"
+                    logger.warning(
+                        "Skipping invalid primary exercise-muscle relationship muscle=%r error=%s",
+                        muscle_name,
+                        e,
                     )
                     continue
 
@@ -374,8 +390,10 @@ async def extract_and_transform_exercises():
                         }
                     )
                 except ValidationError as e:
-                    print(
-                        f"Skipping invalid secondary exercise-muscle relationship for '{muscle_name}': {e}"
+                    logger.warning(
+                        "Skipping invalid secondary exercise-muscle relationship muscle=%r error=%s",
+                        muscle_name,
+                        e,
                     )
                     continue
 
@@ -483,8 +501,10 @@ async def import_exercises_to_database(data: Dict[str, Any]):
                     now_ts,
                 )
             else:
-                print(
-                    f"Warning: Could not find muscle group '{muscle_group_name}' for muscle '{muscle_name}'"
+                logger.warning(
+                    "Could not find muscle group for imported muscle muscle=%r muscle_group=%r",
+                    muscle_name,
+                    muscle_group_name,
                 )
 
         # Insert exercise types
@@ -558,16 +578,16 @@ async def import_exercises_to_database(data: Dict[str, Any]):
 
         # Commit transaction
         await transaction.commit()
-        print("✅ All data imported successfully!")
+        logger.info("All exercise import data committed successfully")
 
     except Exception as e:
         # Rollback transaction on any error
         if transaction:
             try:
                 await transaction.rollback()
-                print(f"❌ Transaction rolled back due to error: {e}")
-            except Exception as rollback_error:
-                print(f"⚠️ Error during rollback: {rollback_error}")
+                logger.exception("Exercise import transaction rolled back due to error")
+            except Exception:
+                logger.exception("Error during exercise import rollback")
         raise e
     finally:
         await conn.close()
@@ -575,16 +595,18 @@ async def import_exercises_to_database(data: Dict[str, Any]):
 
 async def main():
     try:
-        print("🔄 Extracting and transforming exercise data...")
+        logger.info("Extracting and transforming exercise data")
         data = await extract_and_transform_exercises()
 
-        print(
-            f"📊 Extracted {len(data['exercise_types'])} exercise types, {len(data['muscles'])} muscles"
+        logger.info(
+            "Extracted import data exercise_types=%s muscles=%s",
+            len(data["exercise_types"]),
+            len(data["muscles"]),
         )
 
         # Pretty print the output for verification
-        print("\n📋 Data preview:")
-        print(
+        logger.info(
+            "Import data preview:\n%s",
             json.dumps(
                 {
                     "exercise_types_count": len(data["exercise_types"]),
@@ -596,7 +618,7 @@ async def main():
                     else None,
                 },
                 indent=2,
-            )
+            ),
         )
 
         # Ask for confirmation before importing
@@ -604,17 +626,19 @@ async def main():
             "\n🤔 Do you want to import this data to the database? (y/N): "
         )
         if response.lower() in ["y", "yes"]:
-            print("\n🚀 Starting database import...")
+            logger.info("Starting database import")
             await import_exercises_to_database(data)
         else:
-            print("\n⏹️ Import cancelled.")
+            logger.info("Import cancelled")
 
-    except Exception as e:
-        print(f"\n💥 Error: {e}")
+    except Exception:
+        logger.exception("Exercise import failed")
         raise
 
 
 if __name__ == "__main__":
     import asyncio
+    from src.core.logging import configure_logging
 
+    configure_logging()
     asyncio.run(main())
