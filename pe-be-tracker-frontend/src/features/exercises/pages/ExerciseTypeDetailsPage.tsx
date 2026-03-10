@@ -20,7 +20,6 @@ import {
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
-import { useAuthStore } from "@/stores";
 import {
   Alert,
   AlertDescription,
@@ -44,7 +43,6 @@ const ExerciseTypeDetailsPage = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const {
     data: exerciseType,
@@ -300,16 +298,15 @@ const ExerciseTypeDetailsPage = () => {
           <Button
             size="sm"
             className="shrink-0"
-            onClick={() => isAuthenticated && addMutation.mutate()}
-            disabled={!isAuthenticated || addMutation.isPending}
-            title={!isAuthenticated ? "Sign in to add to your workout" : undefined}
+            onClick={() => addMutation.mutate()}
+            disabled={addMutation.isPending}
           >
             {addMutation.isPending ? (
               "Adding..."
             ) : (
               <>
                 <Plus className="mr-1 h-4 w-4" />
-                {isAuthenticated ? "Add to Workout" : "Sign in to add"}
+                Add to Workout
               </>
             )}
           </Button>
