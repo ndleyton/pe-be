@@ -79,13 +79,17 @@ async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
     fake_get_workout_types = AsyncMock(return_value=[workout_type])
     fake_create_workout_type = AsyncMock(return_value=workout_type)
 
-    monkeypatch.setattr("src.workouts.service.get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(
+        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
+    )
     monkeypatch.setattr(
         "src.workouts.service.get_user_workouts", fake_get_user_workouts
     )
     monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
     monkeypatch.setattr("src.workouts.service.update_workout", fake_update_workout)
-    monkeypatch.setattr("src.workouts.service.get_workout_types", fake_get_workout_types)
+    monkeypatch.setattr(
+        "src.workouts.service.get_workout_types", fake_get_workout_types
+    )
     monkeypatch.setattr(
         "src.workouts.service.create_workout_type", fake_create_workout_type
     )
@@ -96,8 +100,12 @@ async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
     workout_type_create = WorkoutTypeCreate(name="Strength", description="Heavy")
 
     assert await WorkoutService.get_workout(session, 10, 7) is workout
-    assert await WorkoutService.get_my_workouts(session, 7, limit=5, cursor=2) == workouts
-    assert await WorkoutService.create_new_workout(session, workout_create, 7) is workout
+    assert (
+        await WorkoutService.get_my_workouts(session, 7, limit=5, cursor=2) == workouts
+    )
+    assert (
+        await WorkoutService.create_new_workout(session, workout_create, 7) is workout
+    )
     assert (
         await WorkoutService.update_workout_data(session, 10, workout_update, 7)
         is workout
@@ -155,7 +163,9 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     monkeypatch.setattr(
         "src.workouts.service.get_exercises_for_workout", fake_get_exercises_for_workout
     )
-    monkeypatch.setattr("src.workouts.service.get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(
+        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
+    )
     monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
     monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
     monkeypatch.setattr(
@@ -203,7 +213,9 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     monkeypatch.setattr(
         "src.workouts.service.create_exercise_set", fake_create_exercise_set
     )
-    monkeypatch.setattr("src.workouts.service.get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(
+        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
+    )
 
     payload = AddExerciseRequest(
         exercise_type_id=5,
@@ -395,7 +407,9 @@ async def test_prompt_to_string_handles_to_string_dict_and_exception_paths():
         def to_string(self):
             return "from helper"
 
-    assert WorkoutParsingService._prompt_to_string(PromptWithToString()) == "from helper"
+    assert (
+        WorkoutParsingService._prompt_to_string(PromptWithToString()) == "from helper"
+    )
     assert (
         WorkoutParsingService._prompt_to_string(SimpleNamespace(prompt="raw prompt"))
         == "raw prompt"
@@ -453,7 +467,9 @@ async def test_get_langfuse_client_handles_configured_and_missing_keys(monkeypat
 
 
 async def test_parse_workout_text_uses_langfuse_prompt_and_records_success(monkeypatch):
-    trace_langfuse = _FakeLangfuse(prompt=SimpleNamespace(to_string=lambda: "Prompt body"))
+    trace_langfuse = _FakeLangfuse(
+        prompt=SimpleNamespace(to_string=lambda: "Prompt body")
+    )
     llm_holder = {}
 
     def fake_llm_factory(**kwargs):
@@ -479,7 +495,9 @@ async def test_parse_workout_text_uses_langfuse_prompt_and_records_success(monke
     assert result.name == "Leg Day"
     assert trace_langfuse.trace_kwargs["name"] == "workout-parsing"
     assert trace_langfuse.trace_obj.generations[0]["name"] == "prompt-fetch"
-    assert trace_langfuse.trace_obj.generations[1]["name"] == "workout-parsing-generation"
+    assert (
+        trace_langfuse.trace_obj.generations[1]["name"] == "workout-parsing-generation"
+    )
     assert trace_langfuse.trace_obj.updates[-1]["metadata"]["status"] == "success"
     assert llm_holder["llm"].kwargs["google_api_key"] == "google-key"
     assert llm_holder["llm"].messages[0].content == "Prompt body"
@@ -585,7 +603,9 @@ async def test_parse_workout_text_wraps_general_errors(monkeypatch):
     )
     monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
 
-    with pytest.raises(ValueError, match="Error parsing workout with Gemini: network issue"):
+    with pytest.raises(
+        ValueError, match="Error parsing workout with Gemini: network issue"
+    ):
         await WorkoutParsingService.parse_workout_text("bad output")
 
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "error"
