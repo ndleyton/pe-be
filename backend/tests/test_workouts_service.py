@@ -70,6 +70,7 @@ class _FakeLLM:
 
 def _patch_workout_service_global(monkeypatch, method, name, value):
     monkeypatch.setitem(method.__globals__, name, value)
+    monkeypatch.setattr(workouts_service, name, value, raising=False)
 
 
 async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
@@ -145,6 +146,11 @@ async def test_remove_workout_is_idempotent_and_rolls_back_on_failure():
 
 
 async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypatch):
+    session = SimpleNamespace(
+        execute=AsyncMock(),
+        commit=AsyncMock(),
+        rollback=AsyncMock(),
+    )
     workout = SimpleNamespace(id=100)
     exercise = SimpleNamespace(id=200, exercise_type_id=3)
     final_workout = SimpleNamespace(id=100, name="Today")
@@ -180,7 +186,7 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     )
 
     result = await WorkoutService.add_exercise_to_current_workout(
-        session=object(),
+        session=session,
         user_id=8,
         payload=AddExerciseRequest(exercise_type_id=3),
     )
@@ -194,6 +200,11 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
 async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     monkeypatch,
 ):
+    session = SimpleNamespace(
+        execute=AsyncMock(),
+        commit=AsyncMock(),
+        rollback=AsyncMock(),
+    )
     created_workout = SimpleNamespace(id=101)
     created_exercise = SimpleNamespace(id=202)
     final_workout = SimpleNamespace(id=101, name="Workout")
@@ -243,7 +254,7 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     )
 
     result = await WorkoutService.add_exercise_to_current_workout(
-        session=object(),
+        session=session,
         user_id=6,
         payload=payload,
     )
