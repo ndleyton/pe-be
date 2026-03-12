@@ -152,7 +152,9 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     fake_create_exercise = AsyncMock()
     fake_create_exercise_set = AsyncMock()
 
-    monkeypatch.setattr(workouts_service, "get_workout_by_date", fake_get_workout_by_date)
+    monkeypatch.setattr(
+        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+    )
     monkeypatch.setattr(
         workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
     )
@@ -193,7 +195,9 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
         create_exercise_set_calls.append(payload)
         return SimpleNamespace(id=303)
 
-    monkeypatch.setattr(workouts_service, "get_workout_by_date", fake_get_workout_by_date)
+    monkeypatch.setattr(
+        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+    )
     monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
     monkeypatch.setattr(
         workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
@@ -304,7 +308,9 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
         return SimpleNamespace(id=workout_id, user_id=user_id, exercises=[])
 
     monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(workouts_service, "get_intensity_units", fake_get_intensity_units)
+    monkeypatch.setattr(
+        workouts_service, "get_intensity_units", fake_get_intensity_units
+    )
     monkeypatch.setattr(workouts_service, "get_exercise_types", fake_get_exercise_types)
     monkeypatch.setattr(
         workouts_service, "create_exercise_type", fake_create_exercise_type
@@ -366,7 +372,9 @@ async def test_create_workout_from_parsed_uses_empty_units_list_and_errors_on_se
         return SimpleNamespace(id=902)
 
     monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(workouts_service, "get_intensity_units", fake_get_intensity_units)
+    monkeypatch.setattr(
+        workouts_service, "get_intensity_units", fake_get_intensity_units
+    )
     monkeypatch.setattr(workouts_service, "get_exercise_types", fake_get_exercise_types)
     monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
 
