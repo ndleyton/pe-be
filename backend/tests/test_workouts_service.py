@@ -4,6 +4,9 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.core.config import settings
+import src.exercise_sets.crud as exercise_sets_crud
+import src.exercises.crud as exercises_crud
+import src.workouts.crud as workouts_crud
 import src.workouts.service as workouts_service
 from src.workouts.schemas import (
     AddExerciseRequest,
@@ -71,6 +74,9 @@ class _FakeLLM:
 def _patch_workout_service_global(monkeypatch, method, name, value):
     monkeypatch.setitem(method.__globals__, name, value)
     monkeypatch.setattr(workouts_service, name, value, raising=False)
+    monkeypatch.setattr(workouts_crud, name, value, raising=False)
+    monkeypatch.setattr(exercises_crud, name, value, raising=False)
+    monkeypatch.setattr(exercise_sets_crud, name, value, raising=False)
 
 
 async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
@@ -154,13 +160,27 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     workout = SimpleNamespace(id=100)
     exercise = SimpleNamespace(id=200, exercise_type_id=3)
     final_workout = SimpleNamespace(id=100, name="Today")
+    calls = {"get_workout_by_date": 0, "get_exercises_for_workout": 0}
 
-    fake_get_workout_by_date = AsyncMock(return_value=workout)
-    fake_get_exercises_for_workout = AsyncMock(return_value=[exercise])
-    fake_get_workout_by_id = AsyncMock(return_value=final_workout)
-    fake_create_workout = AsyncMock()
-    fake_create_exercise = AsyncMock()
-    fake_create_exercise_set = AsyncMock()
+    async def fake_get_workout_by_date(session_arg, user_id, today):
+        calls["get_workout_by_date"] += 1
+        return workout
+
+    async def fake_get_exercises_for_workout(session_arg, workout_id):
+        calls["get_exercises_for_workout"] += 1
+        return [exercise]
+
+    async def fake_get_workout_by_id(session_arg, workout_id, user_id):
+        return final_workout
+
+    async def fake_create_workout(*args, **kwargs):
+        raise AssertionError("create_workout should not be called")
+
+    async def fake_create_exercise(*args, **kwargs):
+        raise AssertionError("create_exercise should not be called")
+
+    async def fake_create_exercise_set(*args, **kwargs):
+        raise AssertionError("create_exercise_set should not be called")
 
     method = WorkoutService.add_exercise_to_current_workout
     _patch_workout_service_global(
@@ -192,9 +212,8 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     )
 
     assert result is final_workout
-    fake_create_workout.assert_not_called()
-    fake_create_exercise.assert_not_called()
-    fake_create_exercise_set.assert_not_called()
+    assert calls["get_workout_by_date"] == 1
+    assert calls["get_exercises_for_workout"] == 1
 
 
 async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
@@ -208,13 +227,27 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     created_workout = SimpleNamespace(id=101)
     created_exercise = SimpleNamespace(id=202)
     final_workout = SimpleNamespace(id=101, name="Workout")
+    calls = {"create_workout": 0, "create_exercise": 0}
     create_exercise_set_calls = []
 
-    fake_get_workout_by_date = AsyncMock(return_value=None)
-    fake_create_workout = AsyncMock(return_value=created_workout)
-    fake_get_exercises_for_workout = AsyncMock(return_value=[])
-    fake_create_exercise = AsyncMock(return_value=created_exercise)
-    fake_get_workout_by_id = AsyncMock(return_value=final_workout)
+    async def fake_get_workout_by_date(session_arg, user_id, today):
+        return None
+
+    async def fake_create_workout(session_arg, payload_arg, user_id):
+        calls["create_workout"] += 1
+        calls["workout_payload"] = payload_arg
+        return created_workout
+
+    async def fake_get_exercises_for_workout(session_arg, workout_id):
+        return []
+
+    async def fake_create_exercise(session_arg, payload_arg):
+        calls["create_exercise"] += 1
+        calls["exercise_payload"] = payload_arg
+        return created_exercise
+
+    async def fake_get_workout_by_id(session_arg, workout_id, user_id):
+        return final_workout
 
     async def fake_create_exercise_set(session, payload):
         create_exercise_set_calls.append(payload)
@@ -260,11 +293,13 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     )
 
     assert result is final_workout
-    created_payload = fake_create_workout.await_args.args[1]
+    assert calls["create_workout"] == 1
+    created_payload = calls["workout_payload"]
     assert created_payload.workout_type_id == DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID
     assert created_payload.name.startswith("Workout ")
 
-    exercise_payload = fake_create_exercise.await_args.args[1]
+    assert calls["create_exercise"] == 1
+    exercise_payload = calls["exercise_payload"]
     assert exercise_payload.exercise_type_id == 5
     assert exercise_payload.workout_id == created_workout.id
 
