@@ -7,7 +7,11 @@ from sqlalchemy.exc import IntegrityError
 
 import src.exercises.service as exercises_service
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
-from src.exercises.service import ExerciseService, ExerciseTypeService, IntensityUnitService
+from src.exercises.service import (
+    ExerciseService,
+    ExerciseTypeService,
+    IntensityUnitService,
+)
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -33,7 +37,9 @@ async def test_exercise_service_wrappers_forward_calls(monkeypatch):
     fake_get_exercises_for_workout = AsyncMock(return_value=exercises)
     fake_create_exercise = AsyncMock(return_value=created)
 
-    monkeypatch.setattr(exercises_service, "get_exercise_by_id", fake_get_exercise_by_id)
+    monkeypatch.setattr(
+        exercises_service, "get_exercise_by_id", fake_get_exercise_by_id
+    )
     monkeypatch.setattr(
         exercises_service, "get_exercises_for_workout", fake_get_exercises_for_workout
     )
@@ -107,7 +113,9 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     fake_create_exercise_type = AsyncMock(return_value=created_type)
     fake_get_intensity_units = AsyncMock(return_value=units)
 
-    monkeypatch.setattr(exercises_service, "get_exercise_types", fake_get_exercise_types)
+    monkeypatch.setattr(
+        exercises_service, "get_exercise_types", fake_get_exercise_types
+    )
     monkeypatch.setattr(
         exercises_service, "get_exercise_type_by_id", fake_get_exercise_type_by_id
     )
@@ -174,4 +182,3 @@ async def test_create_new_exercise_type_maps_errors(
 
     assert exc_info.value.status_code == status_code
     assert detail_fragment in exc_info.value.detail
-
