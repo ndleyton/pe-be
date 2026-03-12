@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.core.config import settings
+import src.workouts.service as workouts_service
 from src.workouts.schemas import (
     AddExerciseRequest,
     ExerciseSetInput,
@@ -79,19 +80,13 @@ async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
     fake_get_workout_types = AsyncMock(return_value=[workout_type])
     fake_create_workout_type = AsyncMock(return_value=workout_type)
 
+    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(workouts_service, "get_user_workouts", fake_get_user_workouts)
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "update_workout", fake_update_workout)
+    monkeypatch.setattr(workouts_service, "get_workout_types", fake_get_workout_types)
     monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.get_user_workouts", fake_get_user_workouts
-    )
-    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
-    monkeypatch.setattr("src.workouts.service.update_workout", fake_update_workout)
-    monkeypatch.setattr(
-        "src.workouts.service.get_workout_types", fake_get_workout_types
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.create_workout_type", fake_create_workout_type
+        workouts_service, "create_workout_type", fake_create_workout_type
     )
 
     session = object()
@@ -157,19 +152,15 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     fake_create_exercise = AsyncMock()
     fake_create_exercise_set = AsyncMock()
 
+    monkeypatch.setattr(workouts_service, "get_workout_by_date", fake_get_workout_by_date)
     monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_date", fake_get_workout_by_date
+        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
     )
+    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
     monkeypatch.setattr(
-        "src.workouts.service.get_exercises_for_workout", fake_get_exercises_for_workout
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
-    )
-    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
-    monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        "src.workouts.service.create_exercise_set", fake_create_exercise_set
+        workouts_service, "create_exercise_set", fake_create_exercise_set
     )
 
     result = await WorkoutService.add_exercise_to_current_workout(
@@ -202,20 +193,16 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
         create_exercise_set_calls.append(payload)
         return SimpleNamespace(id=303)
 
+    monkeypatch.setattr(workouts_service, "get_workout_by_date", fake_get_workout_by_date)
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
     monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_date", fake_get_workout_by_date
+        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
     )
-    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
     monkeypatch.setattr(
-        "src.workouts.service.get_exercises_for_workout", fake_get_exercises_for_workout
+        workouts_service, "create_exercise_set", fake_create_exercise_set
     )
-    monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        "src.workouts.service.create_exercise_set", fake_create_exercise_set
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
-    )
+    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
 
     payload = AddExerciseRequest(
         exercise_type_id=5,
@@ -316,23 +303,17 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
     async def fake_get_workout_by_id(session, workout_id, user_id):
         return SimpleNamespace(id=workout_id, user_id=user_id, exercises=[])
 
-    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "get_intensity_units", fake_get_intensity_units)
+    monkeypatch.setattr(workouts_service, "get_exercise_types", fake_get_exercise_types)
     monkeypatch.setattr(
-        "src.workouts.service.get_intensity_units", fake_get_intensity_units
+        workouts_service, "create_exercise_type", fake_create_exercise_type
     )
+    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
     monkeypatch.setattr(
-        "src.workouts.service.get_exercise_types", fake_get_exercise_types
+        workouts_service, "create_exercise_set", fake_create_exercise_set
     )
-    monkeypatch.setattr(
-        "src.workouts.service.create_exercise_type", fake_create_exercise_type
-    )
-    monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        "src.workouts.service.create_exercise_set", fake_create_exercise_set
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.get_workout_by_id", fake_get_workout_by_id
-    )
+    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
 
     result = await WorkoutService.create_workout_from_parsed(
         session=object(), user_id=11, parsed=parsed
@@ -384,14 +365,10 @@ async def test_create_workout_from_parsed_uses_empty_units_list_and_errors_on_se
     async def fake_create_exercise(session, exercise_create):
         return SimpleNamespace(id=902)
 
-    monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)
-    monkeypatch.setattr(
-        "src.workouts.service.get_intensity_units", fake_get_intensity_units
-    )
-    monkeypatch.setattr(
-        "src.workouts.service.get_exercise_types", fake_get_exercise_types
-    )
-    monkeypatch.setattr("src.workouts.service.create_exercise", fake_create_exercise)
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
+    monkeypatch.setattr(workouts_service, "get_intensity_units", fake_get_intensity_units)
+    monkeypatch.setattr(workouts_service, "get_exercise_types", fake_get_exercise_types)
+    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
 
     with pytest.raises(
         ValueError,
@@ -452,7 +429,7 @@ async def test_get_langfuse_client_handles_configured_and_missing_keys(monkeypat
         def __init__(self, public_key, secret_key, host):
             captured["args"] = (public_key, secret_key, host)
 
-    monkeypatch.setattr("src.workouts.service.Langfuse", FakeLangfuse)
+    monkeypatch.setattr(workouts_service, "Langfuse", FakeLangfuse)
     monkeypatch.setattr(settings, "LANGFUSE_PUBLIC_KEY", "pub")
     monkeypatch.setattr(settings, "LANGFUSE_SECRET_KEY", "sec")
     monkeypatch.setattr(settings, "LANGFUSE_HOST", "https://langfuse.test")
@@ -488,7 +465,7 @@ async def test_parse_workout_text_uses_langfuse_prompt_and_records_success(monke
         "_get_langfuse_client",
         staticmethod(lambda: trace_langfuse),
     )
-    monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
+    monkeypatch.setattr(workouts_service, "ChatGoogleGenerativeAI", fake_llm_factory)
 
     result = await WorkoutParsingService.parse_workout_text("squat 3x5")
 
@@ -528,7 +505,7 @@ async def test_parse_workout_text_falls_back_when_prompt_fetch_fails(monkeypatch
         "_get_fallback_prompt",
         staticmethod(lambda: "fallback prompt"),
     )
-    monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
+    monkeypatch.setattr(workouts_service, "ChatGoogleGenerativeAI", fake_llm_factory)
 
     result = await WorkoutParsingService.parse_workout_text("run")
 
@@ -555,7 +532,7 @@ async def test_parse_workout_text_without_langfuse_uses_fallback_prompt(monkeypa
         "_get_langfuse_client",
         staticmethod(lambda: None),
     )
-    monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
+    monkeypatch.setattr(workouts_service, "ChatGoogleGenerativeAI", fake_llm_factory)
 
     result = await WorkoutParsingService.parse_workout_text("swim session")
 
@@ -581,7 +558,7 @@ async def test_parse_workout_text_wraps_json_decode_errors(monkeypatch):
         "_get_langfuse_client",
         staticmethod(lambda: langfuse),
     )
-    monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
+    monkeypatch.setattr(workouts_service, "ChatGoogleGenerativeAI", fake_llm_factory)
 
     with pytest.raises(ValueError, match="Failed to parse LLM response as JSON"):
         await WorkoutParsingService.parse_workout_text("bad output")
@@ -601,7 +578,7 @@ async def test_parse_workout_text_wraps_general_errors(monkeypatch):
         "_get_langfuse_client",
         staticmethod(lambda: langfuse),
     )
-    monkeypatch.setattr("src.workouts.service.ChatGoogleGenerativeAI", fake_llm_factory)
+    monkeypatch.setattr(workouts_service, "ChatGoogleGenerativeAI", fake_llm_factory)
 
     with pytest.raises(
         ValueError, match="Error parsing workout with Gemini: network issue"
