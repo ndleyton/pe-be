@@ -55,7 +55,9 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
     assert found.exercise.workout.owner_id == owner.id
     assert await crud.get_exercise_set_by_id(db_session, deleted_set.id) is None
 
-    active_owner = await crud.get_exercise_set_owner_and_deleted(db_session, active_set.id)
+    active_owner = await crud.get_exercise_set_owner_and_deleted(
+        db_session, active_set.id
+    )
     assert active_owner == (owner.id, None)
 
     deleted_owner = await crud.get_exercise_set_owner_and_deleted(
@@ -178,7 +180,9 @@ async def test_update_exercise_set_handles_missing_deleted_and_invalid_reference
     assert updated.notes == "updated"
     assert updated.type == "backoff"
 
-    assert await crud.update_exercise_set(db_session, 999999, ExerciseSetUpdate()) is None
+    assert (
+        await crud.update_exercise_set(db_session, 999999, ExerciseSetUpdate()) is None
+    )
     assert (
         await crud.update_exercise_set(db_session, deleted_set.id, ExerciseSetUpdate())
         is None
@@ -232,6 +236,11 @@ async def test_soft_delete_delete_and_verify_exercise_ownership(db_session):
     assert await crud.soft_delete_exercise_set(db_session, already_deleted.id) is True
     assert await crud.delete_exercise_set(db_session, active_set.id) is True
 
-    assert await crud.verify_exercise_ownership(db_session, exercise.id, owner.id) is not None
-    assert await crud.verify_exercise_ownership(db_session, exercise.id, other.id) is None
+    assert (
+        await crud.verify_exercise_ownership(db_session, exercise.id, owner.id)
+        is not None
+    )
+    assert (
+        await crud.verify_exercise_ownership(db_session, exercise.id, other.id) is None
+    )
     assert await crud.verify_exercise_ownership(db_session, 999999, owner.id) is None

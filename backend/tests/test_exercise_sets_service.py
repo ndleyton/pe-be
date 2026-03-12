@@ -24,9 +24,7 @@ async def test_get_exercise_set_handles_success_missing_and_forbidden(monkeypatc
         exercise=SimpleNamespace(workout=SimpleNamespace(owner_id=99)),
     )
 
-    fake_get_exercise_set_by_id = AsyncMock(
-        side_effect=[None, foreign_set, owned_set]
-    )
+    fake_get_exercise_set_by_id = AsyncMock(side_effect=[None, foreign_set, owned_set])
     monkeypatch.setattr(
         exercise_sets_service, "get_exercise_set_by_id", fake_get_exercise_set_by_id
     )
@@ -114,9 +112,7 @@ async def test_update_exercise_set_data_handles_missing_forbidden_and_success(
     )
     updated = SimpleNamespace(id=7, reps=12, done=True)
 
-    fake_get_exercise_set_by_id = AsyncMock(
-        side_effect=[None, foreign_set, owned_set]
-    )
+    fake_get_exercise_set_by_id = AsyncMock(side_effect=[None, foreign_set, owned_set])
     fake_update_exercise_set = AsyncMock(return_value=updated)
 
     monkeypatch.setattr(
@@ -188,4 +184,3 @@ async def test_remove_exercise_set_is_idempotent_authorized_and_rolls_back_on_fa
     with pytest.raises(RuntimeError, match="commit failed"):
         await ExerciseSetService.remove_exercise_set(failing_session, 5, 10)
     failing_session.rollback.assert_awaited_once()
-
