@@ -84,7 +84,9 @@ async def test_get_workout_by_date_and_id_scope_queries(db_session):
     assert other_by_date is not None
     assert other_by_date.id == other_users_workout.id
 
-    assert await crud.get_workout_by_date(db_session, owner.id, date(2026, 3, 3)) is None
+    assert (
+        await crud.get_workout_by_date(db_session, owner.id, date(2026, 3, 3)) is None
+    )
 
     found = await crud.get_workout_by_id(db_session, early.id, owner.id)
     assert found is not None
@@ -281,7 +283,9 @@ async def test_delete_workout_and_workout_type_queries(db_session):
     )
 
     workout_types = await crud.get_workout_types(db_session)
-    assert {(workout_type.name, workout_type.description) for workout_type in workout_types} == {
+    assert {
+        (workout_type.name, workout_type.description) for workout_type in workout_types
+    } == {
         ("Strength", "Barbell work"),
         ("Cardio", "Conditioning"),
     }
