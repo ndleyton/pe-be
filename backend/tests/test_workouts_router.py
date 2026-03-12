@@ -66,15 +66,22 @@ def override_workout_user():
         app.dependency_overrides.pop(current_active_user, None)
 
 
-async def test_get_my_workouts_returns_next_cursor(async_client: AsyncClient, monkeypatch, override_workout_user):
+async def test_get_my_workouts_returns_next_cursor(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
     fake_get_my_workouts = AsyncMock(
-        return_value=[SimpleNamespace(**_workout_payload(3)), SimpleNamespace(**_workout_payload(2))]
+        return_value=[
+            SimpleNamespace(**_workout_payload(3)),
+            SimpleNamespace(**_workout_payload(2)),
+        ]
     )
     monkeypatch.setattr(
         "src.workouts.router.WorkoutService.get_my_workouts", fake_get_my_workouts
     )
 
-    response = await async_client.get(f"{settings.API_PREFIX}/workouts/mine?limit=2&cursor=5")
+    response = await async_client.get(
+        f"{settings.API_PREFIX}/workouts/mine?limit=2&cursor=5"
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -83,7 +90,9 @@ async def test_get_my_workouts_returns_next_cursor(async_client: AsyncClient, mo
     fake_get_my_workouts.assert_awaited_once()
 
 
-async def test_get_my_workouts_returns_no_cursor_for_partial_page(async_client: AsyncClient, monkeypatch, override_workout_user):
+async def test_get_my_workouts_returns_no_cursor_for_partial_page(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
     fake_get_my_workouts = AsyncMock(return_value=[_workout_payload(1)])
     monkeypatch.setattr(
         "src.workouts.router.WorkoutService.get_my_workouts", fake_get_my_workouts
@@ -95,7 +104,9 @@ async def test_get_my_workouts_returns_no_cursor_for_partial_page(async_client: 
     assert response.json()["next_cursor"] is None
 
 
-async def test_workout_router_create_and_types_endpoints(async_client: AsyncClient, monkeypatch, override_workout_user):
+async def test_workout_router_create_and_types_endpoints(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
     created_workout = _workout_payload(10)
     workout_types = [
         {
@@ -133,7 +144,9 @@ async def test_workout_router_create_and_types_endpoints(async_client: AsyncClie
     assert create_response.status_code == 201
     assert create_response.json()["id"] == 10
 
-    types_response = await async_client.get(f"{settings.API_PREFIX}/workouts/workout-types/")
+    types_response = await async_client.get(
+        f"{settings.API_PREFIX}/workouts/workout-types/"
+    )
     assert types_response.status_code == 200
     assert types_response.json()[0]["name"] == "Strength"
 
@@ -158,7 +171,9 @@ async def test_get_workout_and_update_workout_handle_not_found(
     fake_get_workout = AsyncMock(side_effect=[None, _workout_payload(7)])
     fake_update_workout = AsyncMock(side_effect=[None, _workout_payload(7)])
 
-    monkeypatch.setattr("src.workouts.router.WorkoutService.get_workout", fake_get_workout)
+    monkeypatch.setattr(
+        "src.workouts.router.WorkoutService.get_workout", fake_get_workout
+    )
     monkeypatch.setattr(
         "src.workouts.router.WorkoutService.update_workout_data", fake_update_workout
     )
@@ -186,7 +201,9 @@ async def test_get_workout_and_update_workout_handle_not_found(
     assert found_patch.json()["id"] == 7
 
 
-async def test_delete_workout_returns_204(async_client: AsyncClient, monkeypatch, override_workout_user):
+async def test_delete_workout_returns_204(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
     fake_remove_workout = AsyncMock(return_value=True)
     monkeypatch.setattr(
         "src.workouts.router.WorkoutService.remove_workout", fake_remove_workout
@@ -204,7 +221,9 @@ async def test_get_exercises_in_workout_handles_not_found_and_success(
     fake_get_workout = AsyncMock(side_effect=[None, _workout_payload(8)])
     fake_get_workout_exercises = AsyncMock(return_value=[_exercise_payload(1, 8)])
 
-    monkeypatch.setattr("src.workouts.router.WorkoutService.get_workout", fake_get_workout)
+    monkeypatch.setattr(
+        "src.workouts.router.WorkoutService.get_workout", fake_get_workout
+    )
     monkeypatch.setattr(
         "src.workouts.router.ExerciseService.get_workout_exercises",
         fake_get_workout_exercises,
