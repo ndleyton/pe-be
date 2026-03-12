@@ -68,6 +68,10 @@ class _FakeLLM:
         return SimpleNamespace(content=self.response_text)
 
 
+def _patch_workout_service_global(monkeypatch, method, name, value):
+    monkeypatch.setitem(method.__globals__, name, value)
+
+
 async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
     workout = SimpleNamespace(id=10)
     workouts = [SimpleNamespace(id=1), SimpleNamespace(id=2)]
@@ -152,17 +156,27 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypa
     fake_create_exercise = AsyncMock()
     fake_create_exercise_set = AsyncMock()
 
-    monkeypatch.setattr(
-        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+    method = WorkoutService.add_exercise_to_current_workout
+    _patch_workout_service_global(
+        monkeypatch, method, "get_workout_by_date", fake_get_workout_by_date
     )
-    monkeypatch.setattr(
-        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
+    _patch_workout_service_global(
+        monkeypatch,
+        method,
+        "get_exercises_for_workout",
+        fake_get_exercises_for_workout,
     )
-    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
-    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        workouts_service, "create_exercise_set", fake_create_exercise_set
+    _patch_workout_service_global(
+        monkeypatch, method, "get_workout_by_id", fake_get_workout_by_id
+    )
+    _patch_workout_service_global(
+        monkeypatch, method, "create_workout", fake_create_workout
+    )
+    _patch_workout_service_global(
+        monkeypatch, method, "create_exercise", fake_create_exercise
+    )
+    _patch_workout_service_global(
+        monkeypatch, method, "create_exercise_set", fake_create_exercise_set
     )
 
     result = await WorkoutService.add_exercise_to_current_workout(
@@ -195,18 +209,28 @@ async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
         create_exercise_set_calls.append(payload)
         return SimpleNamespace(id=303)
 
-    monkeypatch.setattr(
-        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+    method = WorkoutService.add_exercise_to_current_workout
+    _patch_workout_service_global(
+        monkeypatch, method, "get_workout_by_date", fake_get_workout_by_date
     )
-    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(
-        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
+    _patch_workout_service_global(
+        monkeypatch, method, "create_workout", fake_create_workout
     )
-    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        workouts_service, "create_exercise_set", fake_create_exercise_set
+    _patch_workout_service_global(
+        monkeypatch,
+        method,
+        "get_exercises_for_workout",
+        fake_get_exercises_for_workout,
     )
-    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
+    _patch_workout_service_global(
+        monkeypatch, method, "create_exercise", fake_create_exercise
+    )
+    _patch_workout_service_global(
+        monkeypatch, method, "create_exercise_set", fake_create_exercise_set
+    )
+    _patch_workout_service_global(
+        monkeypatch, method, "get_workout_by_id", fake_get_workout_by_id
+    )
 
     payload = AddExerciseRequest(
         exercise_type_id=5,
