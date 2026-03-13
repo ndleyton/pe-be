@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Literal, Optional, Protocol, Sequence
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.tools import StructuredTool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from google import genai
+from google.genai import types
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
 
 ChatRole = Literal["system", "user", "assistant", "tool"]
 ToolHandler = Callable[..., Awaitable[str]]
@@ -46,17 +47,41 @@ class ToolDefinition:
     handler: ToolHandler
     args_model: Optional[type[BaseModel]] = None
 
-    def to_langchain_tool(self) -> StructuredTool:
-        kwargs: dict[str, Any] = {
-            "name": self.name,
-            "description": self.description,
-            "coroutine": self.handler,
-        }
-        if self.args_model is not None:
-            kwargs["args_schema"] = self.args_model
-            kwargs["infer_schema"] = False
+    def to_genai_tool_declaration(self) -> types.FunctionDeclaration:
+        schema = None
+        if self.args_model:
+            schema_dict = self.args_model.model_json_schema()
+            schema = self._clean_pydantic_schema(schema_dict)
 
-        return StructuredTool.from_function(**kwargs)
+        return types.FunctionDeclaration(
+            name=self.name,
+            description=self.description,
+            parameters=schema,
+        )
+
+    def _clean_pydantic_schema(self, s: Any) -> Any:
+        if not isinstance(s, dict):
+            return s
+        out = {}
+        for k, v in s.items():
+            # Skip keys that Gemini schema doesn't care about
+            if k in ("title", "default", "description", "example"):
+                if k == "description":
+                    out[k] = v
+                continue
+            if isinstance(v, dict):
+                out[k] = self._clean_pydantic_schema(v)
+            elif isinstance(v, list):
+                out[k] = [self._clean_pydantic_schema(x) for x in v]
+            else:
+                out[k] = v
+        
+        # Translate lower string type to UPPER enum required by Gemini SDK if present
+        if "type" in out and isinstance(out["type"], str):
+            out["type"] = out["type"].upper()
+            if out["type"] == "NULL":
+                out["type"] = "STRING" # fallback
+        return out
 
     def normalize_args(self, raw_args: Optional[dict[str, Any]]) -> dict[str, Any]:
         if self.args_model is None:
@@ -115,13 +140,13 @@ class LLMClient(Protocol):
         """Generate the next assistant message for the given conversation."""
 
 
-class GeminiLangChainClient:
+class GeminiGenAIClient:
     def __init__(
         self,
         *,
         api_key: str,
-        rate_limiter: Any,
-        model_name: str = "gemini-2.5-flash-preview-09-2025",
+        rate_limiter: Any = None,
+        model_name: str = "gemini-2.5-flash",
         temperature: float = 0.7,
         max_tokens: int = 2000,
         max_retries: int = 2,
@@ -132,100 +157,96 @@ class GeminiLangChainClient:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_retries = max_retries
+        self.client = genai.Client(api_key=self.api_key)
 
     async def acomplete(
         self,
         messages: Sequence[ConversationMessage],
         tools: Sequence[ToolDefinition],
     ) -> LLMResponse:
-        llm = ChatGoogleGenerativeAI(
-            model=self.model_name,
-            google_api_key=self.api_key,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            max_retries=self.max_retries,
-            rate_limiter=self.rate_limiter,
-        )
-        llm = llm.bind_tools([tool.to_langchain_tool() for tool in tools])
-        response = await llm.ainvoke(self._to_langchain_messages(messages))
-        return self._normalize_response(response)
+        
+        system_instruction = None
+        contents = []
 
-    def _to_langchain_messages(
-        self, messages: Sequence[ConversationMessage]
-    ) -> list[Any]:
-        normalized_messages: list[Any] = []
         for message in messages:
             if message.role == "system":
-                normalized_messages.append(SystemMessage(content=message.content))
+                # System prompt gets pulled out
+                system_instruction = message.content
             elif message.role == "user":
-                normalized_messages.append(HumanMessage(content=message.content))
+                contents.append(
+                    types.Content(role="user", parts=[types.Part.from_text(text=message.content)])
+                )
             elif message.role == "assistant":
-                kwargs: dict[str, Any] = {}
-                if message.tool_calls:
-                    kwargs["tool_calls"] = [
-                        {
-                            "name": tool_call.name,
-                            "args": tool_call.args,
-                            "id": tool_call.call_id,
-                            "type": "tool_call",
-                        }
-                        for tool_call in message.tool_calls
-                    ]
-                normalized_messages.append(AIMessage(content=message.content, **kwargs))
+                parts = []
+                if message.content:
+                    parts.append(types.Part.from_text(text=message.content))
+                
+                # Reconstruct tool call parts
+                for tool_call in message.tool_calls:
+                    parts.append(
+                        types.Part.from_function_call(
+                            name=tool_call.name,
+                            args=tool_call.args,
+                        )
+                    )
+                contents.append(types.Content(role="model", parts=parts))
             elif message.role == "tool":
-                normalized_messages.append(
-                    ToolMessage(
-                        content=message.content,
-                        tool_call_id=message.tool_call_id or "",
+                contents.append(
+                    types.Content(
+                        role="user", 
+                        parts=[
+                            types.Part.from_function_response(
+                                name=message.tool_name or "unknown",
+                                response={"result": message.content}
+                            )
+                        ]
                     )
                 )
 
-        return normalized_messages
+        gemini_tools = None
+        if tools:
+            declarations = [tool.to_genai_tool_declaration() for tool in tools]
+            gemini_tools = [types.Tool(function_declarations=declarations)]
+
+        config = types.GenerateContentConfig(
+            temperature=self.temperature,
+            max_output_tokens=self.max_tokens,
+            system_instruction=system_instruction,
+            tools=gemini_tools,
+        )
+
+        response = await self.client.aio.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            config=config,
+        )
+
+        return self._normalize_response(response)
 
     def _normalize_response(self, response: Any) -> LLMResponse:
         tool_calls = []
-        for index, tool_call in enumerate(getattr(response, "tool_calls", []) or []):
-            if hasattr(tool_call, "name"):
-                tool_name = tool_call.name
-                tool_args = tool_call.args
-                tool_call_id = tool_call.id
-            else:
-                tool_name = tool_call.get("name")
-                tool_args = tool_call.get("args", {})
-                tool_call_id = tool_call.get("id")
+        text_content = ""
 
-            tool_calls.append(
-                ToolCall(
-                    call_id=tool_call_id or f"tool_call_{index}",
-                    name=tool_name or "",
-                    args=tool_args or {},
-                )
-            )
+        if response.candidates and response.candidates[0].content:
+            for part in response.candidates[0].content.parts:
+                if part.text:
+                    if text_content:
+                        text_content += "\n" + part.text
+                    else:
+                        text_content = part.text
+                if part.function_call:
+                    tool_calls.append(
+                        ToolCall(
+                            call_id=f"call_{len(tool_calls)}", # Gemini doesn't always provide rigorous IDs for calls like OpenAI does
+                            name=part.function_call.name,
+                            args=part.function_call.args if hasattr(part.function_call, "args") else {},
+                        )
+                    )
 
         return LLMResponse(
             message=ConversationMessage(
                 role="assistant",
-                content=self._normalize_content(getattr(response, "content", "")),
+                content=text_content,
                 tool_calls=tool_calls,
             )
         )
-
-    def _normalize_content(self, content: Any) -> str:
-        if isinstance(content, str):
-            return content
-
-        if isinstance(content, list):
-            collected_parts: list[str] = []
-            for part in content:
-                if isinstance(part, str):
-                    collected_parts.append(part)
-                elif isinstance(part, dict):
-                    text = part.get("text")
-                    if isinstance(text, str):
-                        collected_parts.append(text)
-            return "\n".join(collected_parts)
-
-        if content is None:
-            return ""
-
-        return str(content)

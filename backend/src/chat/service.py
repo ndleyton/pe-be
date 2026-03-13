@@ -5,8 +5,6 @@ from datetime import date
 from langfuse import Langfuse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from langchain_core.rate_limiters import InMemoryRateLimiter
-
 from src.core.config import settings
 from src.chat.crud import (
     get_or_create_active_conversation,
@@ -16,7 +14,7 @@ from src.chat.crud import (
 )
 from src.chat.llm_client import (
     ConversationMessage,
-    GeminiLangChainClient,
+    GeminiGenAIClient,
     LLMClient,
     ToolDefinition,
 )
@@ -270,15 +268,11 @@ The input should be the structured workout data including:
         self.langfuse = self._get_langfuse_client()
         self._llm_client = llm_client
         self._workout_saved_this_request = False
-        self.rate_limiter = InMemoryRateLimiter(
-            requests_per_second=0.5,
-            check_every_n_seconds=0.5,
-            max_bucket_size=3,
-        )
+        self.rate_limiter = None
 
     def _get_llm_client(self) -> LLMClient:
         if self._llm_client is None:
-            self._llm_client = GeminiLangChainClient(
+            self._llm_client = GeminiGenAIClient(
                 api_key=settings.GOOGLE_AI_KEY,
                 rate_limiter=self.rate_limiter,
             )
