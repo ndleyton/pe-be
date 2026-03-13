@@ -2,7 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
 from pydantic import ConfigDict, BaseModel, Field
-from src.recipes.models import Routine as RoutineModel
+from src.routines.models import Routine as RoutineModel
 
 
 class ExerciseTypeRead(BaseModel):

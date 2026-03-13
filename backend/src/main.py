@@ -15,7 +15,7 @@ from src.users.router import router as users_router
 from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
 from src.exercise_sets.router import router as exercise_sets_router
-from src.recipes.router import router as routines_router
+from src.routines.router import router as routines_router
 from src.admin.router import router as admin_router
 from src.health.router import router as health_router
 from src.chat.router import router as chat_router

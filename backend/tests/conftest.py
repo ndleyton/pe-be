@@ -41,7 +41,7 @@ import src.exercises.models  # noqa: F401
 import src.workouts.models  # noqa: F401
 import src.exercise_sets.models  # noqa: F401
 import src.users.models  # noqa: F401
-import src.recipes.models  # noqa: F401
+import src.routines.models  # noqa: F401
 import src.chat.models  # noqa: F401
 
 
