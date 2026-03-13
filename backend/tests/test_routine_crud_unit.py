@@ -3,20 +3,20 @@ Unit tests for routine CRUD operations using mocks.
 These tests focus on the CRUD logic without requiring database setup.
 """
 
-from src.recipes.crud import (
+from src.routines.crud import (
     create_routine,
     get_routine_by_id_for_user,
     get_user_routines,
     update_routine,
     delete_routine,
 )
-from src.recipes.schemas import (
+from src.routines.schemas import (
     RoutineCreate,
     RoutineUpdate,
     ExerciseTemplateCreate,
     SetTemplateCreate,
 )
-from src.recipes.models import Routine, ExerciseTemplate, SetTemplate
+from src.routines.models import Routine, ExerciseTemplate, SetTemplate
 
 
 class TestRoutineCRUDUnit:
