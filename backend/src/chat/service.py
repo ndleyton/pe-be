@@ -123,10 +123,12 @@ class ChatService:
                 summary += f"- {exercise.exercise_type.name}\n"
                 for s in exercise.exercise_sets:
                     intensity_display = ""
+                    # Test missing abbreviation logic (simulating what might happen if missing)
                     if (
                         s.intensity
                         and hasattr(s, "intensity_unit")
                         and s.intensity_unit
+                        and getattr(s.intensity_unit, "abbreviation", None)
                     ):
                         intensity_display = (
                             f" at {s.intensity} {s.intensity_unit.abbreviation}"
@@ -186,7 +188,20 @@ class ChatService:
         for exercise in exercises:
             summary += f"- {exercise.exercise_type.name}\n"
             for s in exercise.exercise_sets:
-                summary += f"  - Set {s.id}: {s.reps} reps at {s.intensity} {s.intensity_unit.abbreviation}\n"
+                intensity_display = ""
+                if (
+                    s.intensity
+                    and hasattr(s, "intensity_unit")
+                    and s.intensity_unit
+                    and getattr(s.intensity_unit, "abbreviation", None)
+                ):
+                    intensity_display = (
+                        f" at {s.intensity} {s.intensity_unit.abbreviation}"
+                    )
+                elif s.intensity:
+                    intensity_display = f" at {s.intensity}"
+
+                summary += f"  - Set {s.id}: {s.reps or '?'} reps{intensity_display}\n"
 
         return summary
 
