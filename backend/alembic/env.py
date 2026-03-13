@@ -23,7 +23,7 @@ from src.users.models import User, OAuthAccount
 from src.workouts.models import Workout, WorkoutType
 from src.exercises.models import Exercise, ExerciseType, ExerciseMuscle, IntensityUnit, MuscleGroup, Muscle
 from src.exercise_sets.models import ExerciseSet
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
+from src.recipes.models import Routine, ExerciseTemplate, SetTemplate
 from src.chat.models import Conversation, ConversationMessage
 
 # --- Load .env file from the project root ---

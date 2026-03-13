@@ -15,8 +15,8 @@ from src.exercises.service import ExerciseTypeService
 from src.genai.google_images import (
     generate_exercise_phase_image,
 )
-from src.recipes.schemas import RecipeRead, AdminRecipeCreate
-from src.recipes.service import recipe_service
+from src.recipes.schemas import RoutineRead, AdminRoutineCreate
+from src.recipes.service import routine_service
 
 logger = logging.getLogger(__name__)
 
@@ -177,25 +177,24 @@ async def generate_exercise_type_images(
 
 @router.post(
     "/routines",
-    response_model=RecipeRead,
+    response_model=RoutineRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Admin: Create a new routine (recipe)",
+    summary="Admin: Create a new routine",
 )
 async def admin_create_routine(
-    recipe_in: AdminRecipeCreate,
+    routine_in: AdminRoutineCreate,
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
-) -> RecipeRead:
+) -> RoutineRead:
     """
-    Create a new routine (recipe) under the authenticated admin user.
+    Create a new routine under the authenticated admin user.
 
     Notes:
-    - Although the database model/table is named "recipes", the API exposes
-      these as "routines" for users and admins alike.
+    - The backing database model/table is still named "recipes".
     - This endpoint is restricted to superusers.
     """
     # Enforce admin access
     if not getattr(user, "is_superuser", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
 
-    return await recipe_service.create_recipe_admin(session, recipe_in, user.id)
+    return await routine_service.create_routine_admin(session, routine_in, user.id)
