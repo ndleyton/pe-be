@@ -136,7 +136,6 @@ async def create_new_conversation(
     """Create a new conversation."""
     try:
         conversation = await create_conversation(session, request, user.id)
-        print("MOC MOC MOC router hit!")
         return _to_conversation_response(conversation)
 
     except Exception:
