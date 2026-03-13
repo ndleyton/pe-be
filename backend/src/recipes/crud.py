@@ -317,9 +317,7 @@ async def update_routine(
     )
 
 
-async def delete_routine(
-    session: AsyncSession, routine_id: int, user_id: int
-) -> bool:
+async def delete_routine(session: AsyncSession, routine_id: int, user_id: int) -> bool:
     """Delete a routine (user-owned only)."""
     routine = await get_user_routine_by_id(session, routine_id, user_id)
     if not routine:
