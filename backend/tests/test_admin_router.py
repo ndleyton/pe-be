@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.main import app
 from src.users.router import current_active_user
 from src.users.models import User
-from src.recipes.models import Recipe
+from src.recipes.models import Routine
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
 
@@ -95,7 +95,7 @@ async def test_admin_create_routine_requires_admin_and_accepts_admin_fields(
         resp = await async_client.post("/api/v1/admin/routines", json=payload)
         assert resp.status_code == 201, resp.text
         data = resp.json()
-        assert data["visibility"] == Recipe.RecipeVisibility.public
+        assert data["visibility"] == Routine.RoutineVisibility.public
         assert data["is_readonly"] is True
     finally:
         app.dependency_overrides.pop(current_active_user, None)
