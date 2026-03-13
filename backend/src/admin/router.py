@@ -15,8 +15,8 @@ from src.exercises.service import ExerciseTypeService
 from src.genai.google_images import (
     generate_exercise_phase_image,
 )
-from src.recipes.schemas import RoutineRead, AdminRoutineCreate
-from src.recipes.service import routine_service
+from src.routines.schemas import RoutineRead, AdminRoutineCreate
+from src.routines.service import routine_service
 
 logger = logging.getLogger(__name__)
 
