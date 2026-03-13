@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.recipes import crud
-from src.recipes.models import Routine
-from src.recipes.schemas import (
+from src.routines import crud
+from src.routines.models import Routine
+from src.routines.schemas import (
     AdminRoutineCreate,
     ExerciseTemplateCreate,
     SetTemplateCreate,

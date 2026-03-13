@@ -5,8 +5,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.core.errors import DomainValidationError
-from src.recipes.models import Routine, ExerciseTemplate, SetTemplate
-from src.recipes.schemas import (
+from src.routines.models import Routine, ExerciseTemplate, SetTemplate
+from src.routines.schemas import (
     AdminRoutineCreate,
     RoutineCreate,
     RoutineUpdate,

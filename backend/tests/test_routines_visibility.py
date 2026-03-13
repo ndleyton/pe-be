@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.users.models import User
 from src.workouts.models import WorkoutType
-from src.recipes.models import Routine
-from src.recipes import crud
+from src.routines.models import Routine
+from src.routines import crud
 
 
 @pytest.mark.integration
