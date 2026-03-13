@@ -61,9 +61,7 @@ class RoutineService:
         user_id: int,
     ) -> Optional[RoutineRead]:
         """Update an existing routine."""
-        routine = await crud.update_routine(
-            session, routine_id, routine_data, user_id
-        )
+        routine = await crud.update_routine(session, routine_id, routine_data, user_id)
         if routine:
             return RoutineRead.model_validate(routine)
         return None
@@ -141,4 +139,6 @@ class RoutineService:
 
         # Return the workout with relationships loaded
         return await get_workout_by_id(session, workout.id, user_id)
+
+
 routine_service = RoutineService()

@@ -67,7 +67,9 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
     await db_session.flush()
 
     # Call CRUD directly
-    results = await crud.get_user_routines(db_session, user_id=me.id, offset=0, limit=50)
+    results = await crud.get_user_routines(
+        db_session, user_id=me.id, offset=0, limit=50
+    )
     names = {r.name for r in results}
 
     assert "Mine Private" in names
