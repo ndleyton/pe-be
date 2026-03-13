@@ -3,8 +3,8 @@ from typing import Optional, List
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from google import genai
+from google.genai import types
 from datetime import datetime, timezone, timedelta
 from langfuse import Langfuse
 
@@ -473,22 +473,29 @@ class WorkoutParsingService:
                 system_prompt = WorkoutParsingService._get_fallback_prompt()
 
             # Set up Gemini client
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash-exp",
-                google_api_key=settings.GOOGLE_AI_KEY,
+            client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
+
+            config = types.GenerateContentConfig(
                 temperature=0.1,
-                max_tokens=1000,
+                max_output_tokens=1000,
+                system_instruction=system_prompt,
             )
 
             # Prepare messages for Gemini
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=f"Parse this workout:\n\n{workout_text}"),
+            contents = [
+                types.Content(
+                    role="user", 
+                    parts=[types.Part.from_text(text=f"Parse this workout:\n\n{workout_text}")]
+                )
             ]
 
             # Call Gemini API
-            response = await llm.ainvoke(messages)
-            response_text = response.content.strip()
+            response = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=contents,
+                config=config,
+            )
+            response_text = response.text or ""
 
             # Log generation to Langfuse
             if trace:
