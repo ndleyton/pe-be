@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from datetime import datetime, timezone
 
-from src.recipes import crud
-from src.recipes.schemas import (
+from src.routines import crud
+from src.routines.schemas import (
     RecipeCreate,
     RecipeRead,
     RecipeUpdate,
@@ -12,7 +12,7 @@ from src.recipes.schemas import (
 )
 from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
-from src.recipes.models import Recipe
+from src.routines.models import Recipe
 from src.workouts.crud import create_workout, get_workout_by_id
 from src.exercises.schemas import ExerciseCreate
 from src.exercise_sets.schemas import ExerciseSetCreate

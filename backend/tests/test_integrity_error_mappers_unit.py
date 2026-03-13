@@ -10,7 +10,7 @@ from src.exercises.crud import (
     _get_constraint_name as get_exercise_constraint_name,
     _map_exercise_integrity_error,
 )
-from src.recipes.crud import (
+from src.routines.crud import (
     _get_constraint_name as get_recipe_constraint_name,
     _map_recipe_integrity_error,
 )

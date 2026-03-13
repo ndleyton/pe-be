@@ -1,7 +1,7 @@
 from typing import List, Optional, TYPE_CHECKING
 
 from src.workouts.models import Workout
-from src.recipes.models import Recipe
+from src.routines.models import Recipe
 
 from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column

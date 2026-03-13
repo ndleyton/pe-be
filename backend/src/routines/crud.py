@@ -5,8 +5,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.core.errors import DomainValidationError
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
-from src.recipes.schemas import RecipeCreate, RecipeUpdate, AdminRecipeCreate
+from src.routines.models import Recipe, ExerciseTemplate, SetTemplate
+from src.routines.schemas import RecipeCreate, RecipeUpdate, AdminRecipeCreate
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:

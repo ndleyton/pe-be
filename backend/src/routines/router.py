@@ -2,9 +2,9 @@ from typing import List
 from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.recipes.schemas import RecipeRead, RecipeCreate, RecipeUpdate
+from src.routines.schemas import RecipeRead, RecipeCreate, RecipeUpdate
 from src.workouts.schemas import WorkoutRead
-from src.recipes.service import recipe_service
+from src.routines.service import recipe_service
 from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User

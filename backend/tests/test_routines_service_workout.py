@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import select, func
-from src.recipes.service import recipe_service
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
+from src.routines.service import recipe_service
+from src.routines.models import Recipe, ExerciseTemplate, SetTemplate
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.exercises.models import Exercise
 from src.workouts.models import WorkoutType

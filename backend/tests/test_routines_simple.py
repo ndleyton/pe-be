@@ -6,7 +6,7 @@ These tests validate the Recipe models, schemas, and basic CRUD operations.
 import pytest
 from pydantic import ValidationError
 
-from src.recipes.schemas import (
+from src.routines.schemas import (
     RecipeCreate,
     RecipeUpdate,
     ExerciseTemplateCreate,

@@ -3,20 +3,20 @@ Unit tests for Recipe CRUD operations using mocks.
 These tests focus on the CRUD logic without requiring database setup.
 """
 
-from src.recipes.crud import (
+from src.routines.crud import (
     create_recipe,
     get_recipe_by_id_for_user,
     get_user_recipes,
     update_recipe,
     delete_recipe,
 )
-from src.recipes.schemas import (
+from src.routines.schemas import (
     RecipeCreate,
     RecipeUpdate,
     ExerciseTemplateCreate,
     SetTemplateCreate,
 )
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
+from src.routines.models import Recipe, ExerciseTemplate, SetTemplate
 
 
 class TestRecipeCRUDUnit:

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.main import app
 from src.users.router import current_active_user
 from src.users.models import User
-from src.recipes.models import Recipe
+from src.routines.models import Recipe
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
 

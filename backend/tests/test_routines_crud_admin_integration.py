@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.recipes import crud
-from src.recipes.models import Recipe
-from src.recipes.schemas import (
+from src.routines import crud
+from src.routines.models import Recipe
+from src.routines.schemas import (
     AdminRecipeCreate,
     ExerciseTemplateCreate,
     SetTemplateCreate,
@@ -106,7 +106,7 @@ async def test_update_and_delete_recipe_paths(db_session: AsyncSession):
     await db_session.flush()
 
     # Update by non-owner -> None
-    from src.recipes.schemas import RecipeUpdate
+    from src.routines.schemas import RecipeUpdate
 
     got_none = await crud.update_recipe(
         db_session, r.id, RecipeUpdate(name="X"), other.id
