@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import select, func
-from src.recipes.service import recipe_service
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
+from src.recipes.service import routine_service
+from src.recipes.models import Routine, ExerciseTemplate, SetTemplate
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.exercises.models import Exercise
 from src.workouts.models import WorkoutType
@@ -12,8 +12,8 @@ from src.users.models import User
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_workout_from_recipe_success(db_session: AsyncSession):
-    """Service creates a workout from a recipe with nested templates."""
+async def test_create_workout_from_routine_success(db_session: AsyncSession):
+    """Service creates a workout from a routine with nested templates."""
     wt = WorkoutType(name="Strength Svc", description="desc")
     iu = IntensityUnit(name="Kilograms", abbreviation="kg")
     db_session.add_all([wt, iu])
@@ -35,12 +35,12 @@ async def test_create_workout_from_recipe_success(db_session: AsyncSession):
     db_session.add(user)
     await db_session.flush()
 
-    # Create a recipe with one exercise template and two set templates
-    r = Recipe(name="Svc Recipe", workout_type_id=wt.id, creator_id=user.id)
+    # Create a routine with one exercise template and two set templates
+    r = Routine(name="Svc Recipe", workout_type_id=wt.id, creator_id=user.id)
     db_session.add(r)
     await db_session.flush()
 
-    etmpl = ExerciseTemplate(exercise_type_id=et.id, recipe_id=r.id)
+    etmpl = ExerciseTemplate(exercise_type_id=et.id, routine_id=r.id)
     db_session.add(etmpl)
     await db_session.flush()
 
@@ -63,7 +63,9 @@ async def test_create_workout_from_recipe_success(db_session: AsyncSession):
     await db_session.commit()
 
     # Act
-    workout = await recipe_service.create_workout_from_recipe(db_session, user.id, r.id)
+    workout = await routine_service.create_workout_from_routine(
+        db_session, user.id, r.id
+    )
 
     # Assert workout created
     assert workout is not None
@@ -96,11 +98,11 @@ async def test_create_workout_from_recipe_success(db_session: AsyncSession):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_workout_from_recipe_not_accessible_raises(
+async def test_create_workout_from_routine_not_accessible_raises(
     db_session: AsyncSession,
 ):
-    """Service raises ValueError when recipe not accessible or missing."""
-    # Two users, recipe owned by one
+    """Service raises ValueError when the routine is not accessible or missing."""
+    # Two users, routine owned by one
     wt = WorkoutType(name="Strength Svc2", description="desc")
     db_session.add(wt)
     await db_session.flush()
@@ -122,14 +124,14 @@ async def test_create_workout_from_recipe_not_accessible_raises(
     db_session.add_all([u1, u2])
     await db_session.flush()
 
-    r = Recipe(name="Private", workout_type_id=wt.id, creator_id=u1.id)
+    r = Routine(name="Private", workout_type_id=wt.id, creator_id=u1.id)
     db_session.add(r)
     await db_session.commit()
 
     # Different user cannot access -> ValueError
     with pytest.raises(ValueError):
-        await recipe_service.create_workout_from_recipe(db_session, u2.id, r.id)
+        await routine_service.create_workout_from_routine(db_session, u2.id, r.id)
 
     # Non-existent id also raises
     with pytest.raises(ValueError):
-        await recipe_service.create_workout_from_recipe(db_session, u1.id, 999999)
+        await routine_service.create_workout_from_routine(db_session, u1.id, 999999)
