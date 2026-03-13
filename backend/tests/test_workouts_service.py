@@ -1,10 +1,15 @@
+from datetime import date, datetime, time, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from src.core.config import settings
+import src.exercise_sets.crud as exercise_sets_crud
+import src.exercises.crud as exercises_crud
+import src.workouts.crud as workouts_crud
 import src.workouts.service as workouts_service
+from src.workouts.models import WorkoutType
 from src.workouts.schemas import (
     AddExerciseRequest,
     ExerciseSetInput,
@@ -20,6 +25,13 @@ from src.workouts.service import (
     WorkoutParsingService,
     WorkoutService,
     WorkoutTypeService,
+)
+from tests.test_exercises_crud import (
+    _seed_exercise,
+    _seed_exercise_type,
+    _seed_intensity_unit,
+    _seed_user,
+    _seed_workout,
 )
 
 
@@ -66,6 +78,14 @@ class _FakeLLM:
         if self.error:
             raise self.error
         return SimpleNamespace(content=self.response_text)
+
+
+def _patch_workout_service_global(monkeypatch, method, name, value):
+    monkeypatch.setitem(method.__globals__, name, value)
+    monkeypatch.setattr(workouts_service, name, value, raising=False)
+    monkeypatch.setattr(workouts_crud, name, value, raising=False)
+    monkeypatch.setattr(exercises_crud, name, value, raising=False)
+    monkeypatch.setattr(exercise_sets_crud, name, value, raising=False)
 
 
 async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
@@ -140,104 +160,88 @@ async def test_remove_workout_is_idempotent_and_rolls_back_on_failure():
     failing_session.rollback.assert_awaited_once()
 
 
-async def test_add_exercise_to_current_workout_reuses_existing_exercise(monkeypatch):
-    workout = SimpleNamespace(id=100)
-    exercise = SimpleNamespace(id=200, exercise_type_id=3)
-    final_workout = SimpleNamespace(id=100, name="Today")
-
-    fake_get_workout_by_date = AsyncMock(return_value=workout)
-    fake_get_exercises_for_workout = AsyncMock(return_value=[exercise])
-    fake_get_workout_by_id = AsyncMock(return_value=final_workout)
-    fake_create_workout = AsyncMock()
-    fake_create_exercise = AsyncMock()
-    fake_create_exercise_set = AsyncMock()
-
-    monkeypatch.setattr(
-        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+async def test_add_exercise_to_current_workout_reuses_existing_exercise(db_session):
+    owner = await _seed_user(db_session, "workout-service-reuse@example.com")
+    db_session.add(
+        WorkoutType(
+            id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+            name="Strength Training",
+            description="Seeded for service tests",
+        )
     )
-    monkeypatch.setattr(
-        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
+    await db_session.flush()
+    exercise_type = await _seed_exercise_type(db_session, "Service Bench Press")
+    workout = await _seed_workout(
+        db_session,
+        owner.id,
+        DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+        name="Today",
     )
-    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
-    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        workouts_service, "create_exercise_set", fake_create_exercise_set
+    workout.start_time = datetime.combine(
+        date.today(), time(12, 0), tzinfo=timezone.utc
     )
+    existing_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=workout.start_time,
+    )
+    await db_session.commit()
 
     result = await WorkoutService.add_exercise_to_current_workout(
-        session=object(),
-        user_id=8,
-        payload=AddExerciseRequest(exercise_type_id=3),
+        session=db_session,
+        user_id=owner.id,
+        payload=AddExerciseRequest(exercise_type_id=exercise_type.id),
     )
 
-    assert result is final_workout
-    fake_create_workout.assert_not_called()
-    fake_create_exercise.assert_not_called()
-    fake_create_exercise_set.assert_not_called()
+    assert result.id == workout.id
+    exercises = await exercises_crud.get_exercises_for_workout(db_session, workout.id)
+    assert [exercise.id for exercise in exercises] == [existing_exercise.id]
 
 
 async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
-    monkeypatch,
+    db_session,
 ):
-    created_workout = SimpleNamespace(id=101)
-    created_exercise = SimpleNamespace(id=202)
-    final_workout = SimpleNamespace(id=101, name="Workout")
-    create_exercise_set_calls = []
-
-    fake_get_workout_by_date = AsyncMock(return_value=None)
-    fake_create_workout = AsyncMock(return_value=created_workout)
-    fake_get_exercises_for_workout = AsyncMock(return_value=[])
-    fake_create_exercise = AsyncMock(return_value=created_exercise)
-    fake_get_workout_by_id = AsyncMock(return_value=final_workout)
-
-    async def fake_create_exercise_set(session, payload):
-        create_exercise_set_calls.append(payload)
-        return SimpleNamespace(id=303)
-
-    monkeypatch.setattr(
-        workouts_service, "get_workout_by_date", fake_get_workout_by_date
+    owner = await _seed_user(db_session, "workout-service-create@example.com")
+    db_session.add(
+        WorkoutType(
+            id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+            name="Strength Training",
+            description="Seeded for service tests",
+        )
     )
-    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
-    monkeypatch.setattr(
-        workouts_service, "get_exercises_for_workout", fake_get_exercises_for_workout
-    )
-    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
-    monkeypatch.setattr(
-        workouts_service, "create_exercise_set", fake_create_exercise_set
-    )
-    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
+    await db_session.flush()
+    exercise_type = await _seed_exercise_type(db_session, "Service Incline Press")
+    intensity_unit = await _seed_intensity_unit(db_session, "Kilograms", "kg")
+    await db_session.commit()
 
-    payload = AddExerciseRequest(
-        exercise_type_id=5,
-        initial_set=ExerciseSetInput(
-            reps=8,
-            intensity=80,
-            intensity_unit_id=9,
-            rest_time_seconds=120,
+    result = await WorkoutService.add_exercise_to_current_workout(
+        session=db_session,
+        user_id=owner.id,
+        payload=AddExerciseRequest(
+            exercise_type_id=exercise_type.id,
+            initial_set=ExerciseSetInput(
+                reps=8,
+                intensity=80,
+                intensity_unit_id=intensity_unit.id,
+                rest_time_seconds=120,
+            ),
         ),
     )
 
-    result = await WorkoutService.add_exercise_to_current_workout(
-        session=object(),
-        user_id=6,
-        payload=payload,
+    assert result.id is not None
+    assert result.workout_type_id == DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID
+
+    exercises = await exercises_crud.get_exercises_for_workout(db_session, result.id)
+    assert len(exercises) == 1
+    assert exercises[0].exercise_type_id == exercise_type.id
+
+    exercise_sets = await exercise_sets_crud.get_exercise_sets_for_exercise(
+        db_session, exercises[0].id
     )
-
-    assert result is final_workout
-    created_payload = fake_create_workout.await_args.args[1]
-    assert created_payload.workout_type_id == DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID
-    assert created_payload.name.startswith("Workout ")
-
-    exercise_payload = fake_create_exercise.await_args.args[1]
-    assert exercise_payload.exercise_type_id == 5
-    assert exercise_payload.workout_id == created_workout.id
-
-    assert len(create_exercise_set_calls) == 1
-    set_payload = create_exercise_set_calls[0]
-    assert set_payload.exercise_id == created_exercise.id
-    assert set_payload.done is False
-    assert set_payload.intensity_unit_id == 9
+    assert len(exercise_sets) == 1
+    assert exercise_sets[0].done is False
+    assert exercise_sets[0].intensity_unit_id == intensity_unit.id
 
 
 async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
