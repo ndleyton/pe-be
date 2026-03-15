@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -43,6 +44,51 @@ class Settings(BaseSettings):
         3,
         validation_alias="CHAT_MAX_TOOL_ITERATIONS",
         description="Max number of tool-calling iterations in chat loop",
+    )
+    CHAT_ATTACHMENT_STORAGE_DIR: str = Field(
+        str(Path(__file__).resolve().parents[2] / ".chat_attachments"),
+        validation_alias="CHAT_ATTACHMENT_STORAGE_DIR",
+        description="Filesystem path for uploaded chat attachments",
+    )
+    CHAT_ATTACHMENT_MAX_BYTES: int = Field(
+        10 * 1024 * 1024,
+        validation_alias="CHAT_ATTACHMENT_MAX_BYTES",
+        description="Max accepted chat attachment size in bytes",
+    )
+    CHAT_ATTACHMENT_ALLOWED_MIME_TYPES: tuple[str, ...] = Field(
+        ("image/png", "image/jpeg", "image/webp"),
+        validation_alias="CHAT_ATTACHMENT_ALLOWED_MIME_TYPES",
+        description="Allowed MIME types for chat image uploads",
+    )
+    CHAT_ATTACHMENT_ORPHAN_TTL_HOURS: int = Field(
+        24,
+        validation_alias="CHAT_ATTACHMENT_ORPHAN_TTL_HOURS",
+        description="Delete unattached chat uploads older than this many hours",
+    )
+    CHAT_ATTACHMENT_CLEANUP_BATCH_SIZE: int = Field(
+        25,
+        validation_alias="CHAT_ATTACHMENT_CLEANUP_BATCH_SIZE",
+        description="Max number of stale chat uploads to clean up per sweep",
+    )
+    CHAT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        60,
+        validation_alias="CHAT_RATE_LIMIT_WINDOW_SECONDS",
+        description="Time window for chat request rate limiting",
+    )
+    CHAT_RATE_LIMIT_MAX_REQUESTS: int = Field(
+        20,
+        validation_alias="CHAT_RATE_LIMIT_MAX_REQUESTS",
+        description="Max chat requests allowed per window",
+    )
+    CHAT_ATTACHMENT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        60,
+        validation_alias="CHAT_ATTACHMENT_RATE_LIMIT_WINDOW_SECONDS",
+        description="Time window for chat attachment upload rate limiting",
+    )
+    CHAT_ATTACHMENT_RATE_LIMIT_MAX_REQUESTS: int = Field(
+        10,
+        validation_alias="CHAT_ATTACHMENT_RATE_LIMIT_MAX_REQUESTS",
+        description="Max chat attachment uploads allowed per window",
     )
 
     # Langfuse configuration
