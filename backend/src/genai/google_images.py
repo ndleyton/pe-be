@@ -4,6 +4,9 @@ import asyncio
 from dataclasses import dataclass
 from typing import Dict, List
 
+from google import genai
+from google.genai import types
+
 from src.core.config import settings
 
 
@@ -38,10 +41,9 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
         "Focus on correct joint alignment and body positioning."
     )
 
-    # Explicitly specify the requested phase to minimize ambiguity
     phase_directive = f"Render the {name} at the {phase_label} position."
 
-    prompt = (
+    return (
         f"Exercise: {name}.\n"
         f"Phase: {phase_label}.\n"
         f"Muscles: {muscles_line}.\n"
@@ -49,40 +51,35 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
         f"{style}\n"
         f"{phase_directive}\n"
         "Frame the full body as needed to show posture clearly. "
-        "If equipment is typical for this exercise (e.g., barbell, dumbbells, cable), include a minimal representation. "
+        "If equipment is typical for this exercise (e.g., barbell, dumbbells, cable), "
+        "include a minimal representation. "
         "Avoid captions and text. Output only an image."
     )
-    return prompt
 
 
 def _generate_image_sync(prompt: str) -> ExerciseImageResult:
-    try:
-        # Import locally to avoid failing module import at startup if the package is missing
-        from google import generativeai as genai  # type: ignore
-    except Exception as e:  # pragma: no cover - import-time environment dependent
-        raise RuntimeError(
-            "google-generativeai package not available. Please ensure it is installed "
-            "(it is typically installed via langchain-google-genai)."
-        ) from e
-
-    genai.configure(api_key=settings.GOOGLE_AI_KEY)
-    model = genai.GenerativeModel(MODEL_NAME)
-
-    # Request a PNG image response
-    response = model.generate_content(
-        [prompt],
-        generation_config={"response_mime_type": DEFAULT_MIME},
+    client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+            response_mime_type=DEFAULT_MIME,
+        ),
     )
 
-    # Navigate the response to find inline image data
     try:
         candidate = response.candidates[0]
-        parts = candidate.content.parts
         inline = next(
-            (p.inline_data for p in parts if getattr(p, "inline_data", None)), None
+            (
+                part.inline_data
+                for part in candidate.content.parts
+                if getattr(part, "inline_data", None)
+            ),
+            None,
         )
-    except Exception as e:  # pragma: no cover - defensive path
-        raise ValueError(f"Unexpected response structure from model: {e}") from e
+    except Exception as exc:  # pragma: no cover - defensive path
+        raise ValueError(f"Unexpected response structure from model: {exc}") from exc
 
     if not inline or not getattr(inline, "data", None):
         raise ValueError("Model did not return image data")
@@ -98,10 +95,5 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
 async def generate_exercise_phase_image(
     context: Dict, phase_label: str
 ) -> ExerciseImageResult:
-    """
-    Generate a single exercise image for the specified phase using Gemini.
-
-    Runs the blocking client in a thread to avoid blocking the event loop.
-    """
     prompt = _build_prompt(context, phase_label)
     return await asyncio.to_thread(_generate_image_sync, prompt)

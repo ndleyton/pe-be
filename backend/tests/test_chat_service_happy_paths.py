@@ -3,8 +3,15 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.chat.models import (
+    ChatAttachment,
+    Conversation,
+    ConversationMessage as ConversationMessageModel,
+    ConversationMessagePart,
+)
 from src.chat.llm_client import ConversationMessage, LLMResponse
 from src.chat.service import ChatService
+from src.users.models import User
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -148,7 +155,7 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
     async def _fake_get_or_create_active_conversation(session, user_id, title):
         assert user_id == 77
         assert title == "Log my pull day"
-        return SimpleNamespace(id=88)
+        return SimpleNamespace(id=88, messages=[])
 
     async def _fake_add_message_to_conversation(
         session, conversation_id, message_data, user_id
@@ -196,8 +203,8 @@ async def test_chat_service_history_and_conversation_list_happy_path(monkeypatch
     svc = ChatService(user_id=10, session=object())
     conversation = SimpleNamespace(
         messages=[
-            SimpleNamespace(role="user", content="hello"),
-            SimpleNamespace(role="assistant", content="hi"),
+            SimpleNamespace(role="user", content="hello", parts=[]),
+            SimpleNamespace(role="assistant", content="hi", parts=[]),
         ]
     )
     conversations = [
@@ -230,11 +237,98 @@ async def test_chat_service_history_and_conversation_list_happy_path(monkeypatch
 
     history = await svc.load_conversation_history(5)
     assert history == [
-        {"role": "user", "content": "hello"},
-        {"role": "assistant", "content": "hi"},
+        {
+            "role": "user",
+            "content": "hello",
+            "parts": [{"type": "text", "text": "hello"}],
+        },
+        {
+            "role": "assistant",
+            "content": "hi",
+            "parts": [{"type": "text", "text": "hi"}],
+        },
     ]
 
     conv_list = await svc.get_user_conversation_list()
     assert conv_list[0]["id"] == 1
     assert conv_list[0]["title"] == "Chat 1"
     assert conv_list[0]["is_active"] is True
+
+
+async def test_cleanup_orphaned_attachments_deletes_only_stale_unlinked_files(
+    db_session, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        "src.chat.service.settings.CHAT_ATTACHMENT_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    user = User(
+        email="cleanup-chat@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    stale_orphan = ChatAttachment(
+        user_id=user.id,
+        original_filename="stale.png",
+        storage_key="stale.png",
+        mime_type="image/png",
+        size_bytes=3,
+        sha256="a" * 64,
+        created_at=datetime(2026, 3, 10, tzinfo=timezone.utc),
+    )
+    attached = ChatAttachment(
+        user_id=user.id,
+        original_filename="attached.png",
+        storage_key="attached.png",
+        mime_type="image/png",
+        size_bytes=3,
+        sha256="b" * 64,
+        created_at=datetime(2026, 3, 10, tzinfo=timezone.utc),
+    )
+    db_session.add_all([stale_orphan, attached])
+    await db_session.commit()
+    await db_session.refresh(stale_orphan)
+    await db_session.refresh(attached)
+
+    conversation = Conversation(user_id=user.id, title="Cleanup", is_active=True)
+    db_session.add(conversation)
+    await db_session.commit()
+    await db_session.refresh(conversation)
+
+    message = ConversationMessageModel()
+    message.conversation_id = conversation.id
+    message.role = "user"
+    message.content = "linked image"
+    db_session.add(message)
+    await db_session.commit()
+    await db_session.refresh(message)
+
+    linked_part = ConversationMessagePart(
+        conversation_message_id=message.id,
+        order_index=0,
+        part_type="image",
+        attachment_id=attached.id,
+    )
+    db_session.add(linked_part)
+    await db_session.commit()
+
+    (tmp_path / "stale.png").write_bytes(b"old")
+    (tmp_path / "attached.png").write_bytes(b"new")
+
+    deleted_count = await ChatService.cleanup_orphaned_attachments(
+        db_session,
+        older_than_hours=24,
+        batch_size=10,
+    )
+
+    assert deleted_count == 1
+    assert not (tmp_path / "stale.png").exists()
+    assert (tmp_path / "attached.png").exists()

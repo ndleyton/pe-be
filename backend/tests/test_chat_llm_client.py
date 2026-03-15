@@ -1,9 +1,13 @@
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 from pydantic import BaseModel
 from google.genai import types
 
 from src.chat.llm_client import (
+    ContentPart,
+    ConversationMessage,
     GeminiGenAIClient,
+    ToolCall,
     ToolDefinition,
 )
 
@@ -124,9 +128,6 @@ async def test_parse_json_dict_invalid():
     assert tool._parse_json_dict("invalid json") is None
     assert tool._parse_json_dict('["list", "not", "dict"]') is None
 
-from unittest.mock import AsyncMock, patch, MagicMock
-from src.chat.llm_client import ConversationMessage, ToolCall
-
 @patch("google.genai.Client")
 async def test_gemini_client_acomplete_messages(mock_client_class):
     mock_client = MagicMock()
@@ -161,6 +162,29 @@ async def test_gemini_client_acomplete_messages(mock_client_class):
     
     # Assert generate was called inside
     mock_aio.models.generate_content.assert_called_once()
+
+
+async def test_gemini_client_builds_image_parts_from_uri():
+    client = GeminiGenAIClient(api_key="test")
+    message = ConversationMessage(
+        role="user",
+        content="How does this look?",
+        parts=[
+            ContentPart(
+                type="image",
+                attachment_id=1,
+                mime_type="image/png",
+                file_uri="gs://chat/test.png",
+            ),
+            ContentPart(type="text", text="How does this look?"),
+        ],
+    )
+
+    parts = client._to_genai_user_parts(message)
+
+    assert parts[0].file_data.file_uri == "gs://chat/test.png"
+    assert parts[0].file_data.mime_type == "image/png"
+    assert parts[1].text == "How does this look?"
 
 async def test_tool_normalize_args_no_model():
     tool = ToolDefinition(name="test_tool", description="A tool", handler=_unused_handler, args_model=None)

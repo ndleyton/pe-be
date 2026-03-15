@@ -150,6 +150,50 @@ async def test_generate_response_saves_to_db_with_multiple_messages(
     assert last_call_args[0][2].content == "llm output"
     assert last_call_args[0][2].role == "assistant"
 
+
+@pytest.mark.asyncio
+@patch("src.chat.service.ChatService._get_llm_client")
+@patch("src.chat.service.get_conversation_by_id")
+@patch("src.chat.service.add_message_to_conversation")
+async def test_generate_response_deduplicates_persisted_history(
+    mock_add_message,
+    mock_get_conversation,
+    mock_get_llm,
+    chat_service_with_db,
+):
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        mock_llm = AsyncMock()
+        mock_llm.model_name = "test-model"
+        mock_llm.acomplete.return_value = MagicMock(
+            message=ConversationMessage(role="assistant", content="New reply"),
+            tool_calls=[],
+            metadata={},
+        )
+        mock_get_llm.return_value = mock_llm
+
+        mock_get_conversation.return_value = MagicMock(
+            id=5,
+            messages=[
+                MagicMock(role="user", content="old user", parts=[]),
+                MagicMock(role="assistant", content="old assistant", parts=[]),
+            ],
+        )
+
+        result = await chat_service_with_db.generate_response(
+            messages=[
+                {"role": "user", "content": "old user"},
+                {"role": "assistant", "content": "old assistant"},
+                {"role": "user", "content": "new user"},
+            ],
+            conversation_id=5,
+            save_to_db=True,
+        )
+
+    assert result["message"] == "New reply"
+    assert mock_add_message.call_count == 2
+    assert mock_add_message.call_args_list[0][0][2].content == "new user"
+    assert mock_add_message.call_args_list[1][0][2].content == "New reply"
+
 @pytest.mark.asyncio
 @patch("src.chat.service.ChatService._get_llm_client")
 async def test_generate_response_empty_final_message_gets_tool_fallback(mock_get_llm, chat_service_no_db):
@@ -213,8 +257,7 @@ async def test_generate_response_empty_final_message_no_tool_fallback(mock_get_l
         
 def test_get_system_prompt_handling(chat_service_no_db):
     chat_service_no_db.langfuse = MagicMock()
-    mock_prompt_obj = MagicMock()
-    
+
     # Case 1: String prompt
     # Note: langfuse's Prompt._get_prompt() internally is returning string, we set the `.prompt` attribute
     # but the logic in `_get_system_prompt()` looks at `getattr(prompt, "prompt", prompt)`
