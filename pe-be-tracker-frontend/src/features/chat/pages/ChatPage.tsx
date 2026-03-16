@@ -207,6 +207,7 @@ const ChatPage = () => {
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
     [],
   );
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -401,19 +402,6 @@ const ChatPage = () => {
     }
   };
 
-  const appendSystemMessage = (content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-system`,
-        role: "system",
-        content,
-        parts: [{ type: "text", text: content }],
-        timestamp: new Date(),
-      },
-    ]);
-  };
-
   const buildUserParts = async (
     messageContent: string,
     attachments: PendingAttachment[],
@@ -456,6 +444,7 @@ const ChatPage = () => {
     }
 
     setIsLoading(true);
+    setAttachmentError(null);
 
     const attachmentsSnapshot = [...pendingAttachments];
     setInputValue("");
@@ -523,7 +512,7 @@ const ChatPage = () => {
         conversationId,
       });
     } catch (error) {
-      appendSystemMessage(
+      setAttachmentError(
         extractErrorMessage(
           error,
           "I couldn't upload one of the images. Check the file type/size and try again.",
@@ -543,7 +532,7 @@ const ChatPage = () => {
       (file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type as (typeof ALLOWED_ATTACHMENT_TYPES)[number]),
     );
     if (invalidType) {
-      appendSystemMessage(
+      setAttachmentError(
         `${invalidType.name} is not supported. Use PNG, JPEG, or WebP.`,
       );
       event.target.value = "";
@@ -552,12 +541,14 @@ const ChatPage = () => {
 
     const oversized = files.find((file) => file.size > MAX_ATTACHMENT_BYTES);
     if (oversized) {
-      appendSystemMessage(
+      setAttachmentError(
         `${oversized.name} is too large. The limit is 10 MB per image.`,
       );
       event.target.value = "";
       return;
     }
+
+    setAttachmentError(null);
 
     setPendingAttachments((current) => {
       const remainingSlots = MAX_ATTACHMENTS - current.length;
@@ -879,6 +870,11 @@ const ChatPage = () => {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+          {attachmentError && (
+            <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {attachmentError}
             </div>
           )}
           <form onSubmit={handleSubmit} className="flex gap-2">
