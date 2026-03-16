@@ -109,6 +109,37 @@ async def test_tool_clean_pydantic_schema_nested():
     assert "description" in cleaned["properties"]["prop1"]
     assert "example" not in cleaned["properties"]["prop2"][0]
 
+
+async def test_tool_clean_pydantic_schema_inlines_defs_refs():
+    tool = ToolDefinition(name="x", description="y", handler=_unused_handler)
+    schema = {
+        "$defs": {
+            "Child": {
+                "title": "Child",
+                "type": "object",
+                "properties": {
+                    "value": {"title": "Value", "type": "string"},
+                },
+                "required": ["value"],
+            }
+        },
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/Child"},
+            }
+        },
+        "required": ["items"],
+    }
+
+    cleaned = tool._clean_pydantic_schema(schema)
+
+    assert "$defs" not in cleaned
+    assert "$ref" not in str(cleaned)
+    assert cleaned["properties"]["items"]["items"]["type"] == "OBJECT"
+    assert cleaned["properties"]["items"]["items"]["properties"]["value"]["type"] == "STRING"
+
 async def test_coerce_raw_args_list_value():
     tool = ToolDefinition(name="x", description="y", handler=_unused_handler, args_model=ExerciseArgs)
     res = tool._coerce_raw_args({"some_key": "some_val"})

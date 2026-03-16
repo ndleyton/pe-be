@@ -108,12 +108,27 @@ class ToolDefinition:
 
     @classmethod
     def _clean_pydantic_schema(cls, schema: Any) -> Any:
+        defs = schema.get("$defs", {}) if isinstance(schema, dict) else {}
+        return cls._clean_pydantic_schema_inner(schema, defs)
+
+    @classmethod
+    def _clean_pydantic_schema_inner(
+        cls, schema: Any, defs: dict[str, Any]
+    ) -> Any:
         if isinstance(schema, dict):
+            ref = schema.get("$ref")
+            if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                ref_name = ref.removeprefix("#/$defs/")
+                resolved = defs.get(ref_name)
+                if resolved is None:
+                    raise ValueError(f"Unsupported schema reference: {ref}")
+                return cls._clean_pydantic_schema_inner(resolved, defs)
+
             cleaned: dict[str, Any] = {}
             for key, value in schema.items():
-                if key in {"title", "default", "example"}:
+                if key in {"$defs", "$ref", "title", "default", "example"}:
                     continue
-                cleaned[key] = cls._clean_pydantic_schema(value)
+                cleaned[key] = cls._clean_pydantic_schema_inner(value, defs)
 
             schema_type = cleaned.get("type")
             if isinstance(schema_type, str):
@@ -123,7 +138,7 @@ class ToolDefinition:
             return cleaned
 
         if isinstance(schema, list):
-            return [cls._clean_pydantic_schema(item) for item in schema]
+            return [cls._clean_pydantic_schema_inner(item, defs) for item in schema]
 
         return schema
 
