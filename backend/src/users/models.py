@@ -1,7 +1,7 @@
 from typing import List, Optional, TYPE_CHECKING
 
 from src.workouts.models import Workout
-from src.recipes.models import Recipe
+from src.routines.models import Routine
 
 from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -45,8 +45,8 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     # Forward reference for workouts (will be imported by workouts domain)
     workouts: Mapped[List["Workout"]] = relationship(back_populates="owner")
 
-    # Forward reference for recipes (will be imported by recipes domain)
-    recipes: Mapped[List["Recipe"]] = relationship(back_populates="creator")
+    # Forward reference for routines (backed by the `recipes` table)
+    routines: Mapped[List["Routine"]] = relationship(back_populates="creator")
 
     # Forward reference for conversations (will be imported by chat domain)
     conversations: Mapped[List["Conversation"]] = relationship(back_populates="user")

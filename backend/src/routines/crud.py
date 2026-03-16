@@ -5,8 +5,12 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.core.errors import DomainValidationError
-from src.recipes.models import Recipe, ExerciseTemplate, SetTemplate
-from src.recipes.schemas import RecipeCreate, RecipeUpdate, AdminRecipeCreate
+from src.routines.models import Routine, ExerciseTemplate, SetTemplate
+from src.routines.schemas import (
+    AdminRoutineCreate,
+    RoutineCreate,
+    RoutineUpdate,
+)
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -22,7 +26,7 @@ def _get_constraint_name(error: IntegrityError) -> Optional[str]:
     return getattr(error.orig, "constraint_name", None)
 
 
-def _map_recipe_integrity_error(
+def _map_routine_integrity_error(
     error: IntegrityError,
 ) -> Optional[DomainValidationError]:
     constraint_name = _get_constraint_name(error)
@@ -59,30 +63,30 @@ def _map_recipe_integrity_error(
     return None
 
 
-async def get_recipe_by_id_for_user(
-    session: AsyncSession, recipe_id: int, user_id: int
-) -> Optional[Recipe]:
-    """Get a recipe by ID with relationships loaded.
+async def get_routine_by_id_for_user(
+    session: AsyncSession, routine_id: int, user_id: int
+) -> Optional[Routine]:
+    """Get a routine by ID with relationships loaded.
 
     Accessible when owned by the user OR marked public.
     """
     result = await session.execute(
-        select(Recipe)
+        select(Routine)
         .options(
-            selectinload(Recipe.exercise_templates)
+            selectinload(Routine.exercise_templates)
             .selectinload(ExerciseTemplate.set_templates)
             .selectinload(SetTemplate.intensity_unit),
-            selectinload(Recipe.exercise_templates).selectinload(
+            selectinload(Routine.exercise_templates).selectinload(
                 ExerciseTemplate.exercise_type
             ),
-            selectinload(Recipe.workout_type),
+            selectinload(Routine.workout_type),
         )
         .where(
             and_(
-                Recipe.id == recipe_id,
+                Routine.id == routine_id,
                 or_(
-                    Recipe.creator_id == user_id,
-                    Recipe.visibility == Recipe.RecipeVisibility.public,
+                    Routine.creator_id == user_id,
+                    Routine.visibility == Routine.RoutineVisibility.public,
                 ),
             )
         )
@@ -90,22 +94,25 @@ async def get_recipe_by_id_for_user(
     return result.scalar_one_or_none()
 
 
-async def get_user_recipe_by_id(
-    session: AsyncSession, recipe_id: int, user_id: int, populate_existing: bool = False
-) -> Optional[Recipe]:
-    """Get a recipe by ID with relationships loaded (user-owned only)."""
+async def get_user_routine_by_id(
+    session: AsyncSession,
+    routine_id: int,
+    user_id: int,
+    populate_existing: bool = False,
+) -> Optional[Routine]:
+    """Get a routine by ID with relationships loaded (user-owned only)."""
     query = (
-        select(Recipe)
+        select(Routine)
         .options(
-            selectinload(Recipe.exercise_templates)
+            selectinload(Routine.exercise_templates)
             .selectinload(ExerciseTemplate.set_templates)
             .selectinload(SetTemplate.intensity_unit),
-            selectinload(Recipe.exercise_templates).selectinload(
+            selectinload(Routine.exercise_templates).selectinload(
                 ExerciseTemplate.exercise_type
             ),
-            selectinload(Recipe.workout_type),
+            selectinload(Routine.workout_type),
         )
-        .where(and_(Recipe.id == recipe_id, Recipe.creator_id == user_id))
+        .where(and_(Routine.id == routine_id, Routine.creator_id == user_id))
     )
     if populate_existing:
         query = query.execution_options(populate_existing=True)
@@ -114,54 +121,53 @@ async def get_user_recipe_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_user_recipes(
+async def get_user_routines(
     session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
-) -> List[Recipe]:
-    """Get all recipes for a specific user with pagination"""
+) -> List[Routine]:
+    """Get all routines visible to a specific user with pagination."""
     result = await session.execute(
-        select(Recipe)
+        select(Routine)
         .options(
-            selectinload(Recipe.exercise_templates)
+            selectinload(Routine.exercise_templates)
             .selectinload(ExerciseTemplate.set_templates)
             .selectinload(SetTemplate.intensity_unit),
-            selectinload(Recipe.exercise_templates).selectinload(
+            selectinload(Routine.exercise_templates).selectinload(
                 ExerciseTemplate.exercise_type
             ),
-            selectinload(Recipe.workout_type),
+            selectinload(Routine.workout_type),
         )
         .where(
             or_(
-                Recipe.creator_id == user_id,
-                Recipe.visibility == Recipe.RecipeVisibility.public,
+                Routine.creator_id == user_id,
+                Routine.visibility == Routine.RoutineVisibility.public,
             )
         )
-        .order_by(Recipe.created_at.desc())
+        .order_by(Routine.created_at.desc())
         .offset(offset)
         .limit(limit)
     )
     return result.scalars().all()
 
 
-async def create_recipe(
-    session: AsyncSession, recipe_data: RecipeCreate, user_id: int
-) -> Recipe:
-    """Create a new recipe with exercise and set templates"""
+async def create_routine(
+    session: AsyncSession, routine_data: RoutineCreate, user_id: int
+) -> Routine:
+    """Create a new routine with exercise and set templates."""
     try:
-        # Create the recipe
-        recipe = Recipe(
-            name=recipe_data.name,
-            description=recipe_data.description,
-            workout_type_id=recipe_data.workout_type_id,
+        routine = Routine(
+            name=routine_data.name,
+            description=routine_data.description,
+            workout_type_id=routine_data.workout_type_id,
             creator_id=user_id,
         )
-        session.add(recipe)
-        await session.flush()  # Get the recipe ID
+        session.add(routine)
+        await session.flush()  # Get the backing recipe ID
 
         # Create exercise templates
-        for exercise_template_data in recipe_data.exercise_templates:
+        for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
-                recipe_id=recipe.id,
+                routine_id=routine.id,
             )
             session.add(exercise_template)
             await session.flush()  # Get the exercise template ID
@@ -179,48 +185,49 @@ async def create_recipe(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        mapped_error = _map_recipe_integrity_error(e)
+        mapped_error = _map_routine_integrity_error(e)
         if mapped_error:
             raise mapped_error from e
         raise
-    await session.refresh(recipe)
+    await session.refresh(routine)
 
-    # Return the recipe with all relationships loaded
-    return await get_user_recipe_by_id(session, recipe.id, user_id)
+    # Return the routine with all relationships loaded
+    return await get_user_routine_by_id(session, routine.id, user_id)
 
 
-async def create_recipe_admin(
-    session: AsyncSession, recipe_data: AdminRecipeCreate, user_id: int
-) -> Recipe:
-    """Create a new recipe with admin controls for visibility and read-only.
+async def create_routine_admin(
+    session: AsyncSession, routine_data: AdminRoutineCreate, user_id: int
+) -> Routine:
+    """Create a new routine with admin controls for visibility and read-only.
 
-    Mirrors create_recipe but allows setting `visibility` and `is_readonly`.
+    Mirrors create_routine but allows setting `visibility` and `is_readonly`.
     """
     # Base fields
-    new_recipe_kwargs = {
-        "name": recipe_data.name,
-        "description": recipe_data.description,
-        "workout_type_id": recipe_data.workout_type_id,
+    new_routine_kwargs = {
+        "name": routine_data.name,
+        "description": routine_data.description,
+        "workout_type_id": routine_data.workout_type_id,
         "creator_id": user_id,
     }
 
     # Optional admin-only fields
-    if recipe_data.visibility is not None:
-        new_recipe_kwargs["visibility"] = recipe_data.visibility
-    if recipe_data.is_readonly is not None:
-        new_recipe_kwargs["is_readonly"] = recipe_data.is_readonly
+    if routine_data.visibility is not None:
+        new_routine_kwargs["visibility"] = Routine.RoutineVisibility(
+            routine_data.visibility.value
+        )
+    if routine_data.is_readonly is not None:
+        new_routine_kwargs["is_readonly"] = routine_data.is_readonly
 
     try:
-        # Create the recipe
-        recipe = Recipe(**new_recipe_kwargs)
-        session.add(recipe)
-        await session.flush()  # Get the recipe ID
+        routine = Routine(**new_routine_kwargs)
+        session.add(routine)
+        await session.flush()  # Get the backing recipe ID
 
         # Create exercise templates
-        for exercise_template_data in recipe_data.exercise_templates:
+        for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
-                recipe_id=recipe.id,
+                routine_id=routine.id,
             )
             session.add(exercise_template)
             await session.flush()  # Get the exercise template ID
@@ -238,46 +245,49 @@ async def create_recipe_admin(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        mapped_error = _map_recipe_integrity_error(e)
+        mapped_error = _map_routine_integrity_error(e)
         if mapped_error:
             raise mapped_error from e
         raise
-    await session.refresh(recipe)
+    await session.refresh(routine)
 
     # Return with relationships loaded
-    return await get_user_recipe_by_id(session, recipe.id, user_id)
+    return await get_user_routine_by_id(session, routine.id, user_id)
 
 
-async def update_recipe(
-    session: AsyncSession, recipe_id: int, recipe_data: RecipeUpdate, user_id: int
-) -> Optional[Recipe]:
-    """Update a recipe (user-owned only).
+async def update_routine(
+    session: AsyncSession,
+    routine_id: int,
+    routine_data: RoutineUpdate,
+    user_id: int,
+) -> Optional[Routine]:
+    """Update a routine (user-owned only).
 
     When `exercise_templates` is provided, the existing nested template tree is
     replaced transactionally using the submitted payload.
     """
-    recipe = await get_user_recipe_by_id(session, recipe_id, user_id)
-    if not recipe:
+    routine = await get_user_routine_by_id(session, routine_id, user_id)
+    if not routine:
         return None
 
     # Update fields if provided
-    if recipe_data.name is not None:
-        recipe.name = recipe_data.name
-    if recipe_data.description is not None:
-        recipe.description = recipe_data.description
-    if recipe_data.workout_type_id is not None:
-        recipe.workout_type_id = recipe_data.workout_type_id
+    if routine_data.name is not None:
+        routine.name = routine_data.name
+    if routine_data.description is not None:
+        routine.description = routine_data.description
+    if routine_data.workout_type_id is not None:
+        routine.workout_type_id = routine_data.workout_type_id
 
-    if recipe_data.exercise_templates is not None:
+    if routine_data.exercise_templates is not None:
         # Full-replace semantics for nested templates on update.
-        for existing_template in list(recipe.exercise_templates):
+        for existing_template in list(routine.exercise_templates):
             await session.delete(existing_template)
         await session.flush()
 
-        for exercise_template_data in recipe_data.exercise_templates:
+        for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
-                recipe_id=recipe.id,
+                routine_id=routine.id,
             )
             session.add(exercise_template)
             await session.flush()
@@ -295,24 +305,24 @@ async def update_recipe(
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        mapped_error = _map_recipe_integrity_error(e)
+        mapped_error = _map_routine_integrity_error(e)
         if mapped_error:
             raise mapped_error from e
         raise
 
     # Reload the full tree eagerly so response serialization does not trigger
     # async lazy loads for nested templates after the replace operation.
-    return await get_user_recipe_by_id(
-        session, recipe.id, user_id, populate_existing=True
+    return await get_user_routine_by_id(
+        session, routine.id, user_id, populate_existing=True
     )
 
 
-async def delete_recipe(session: AsyncSession, recipe_id: int, user_id: int) -> bool:
-    """Delete a recipe (user-owned only)"""
-    recipe = await get_user_recipe_by_id(session, recipe_id, user_id)
-    if not recipe:
+async def delete_routine(session: AsyncSession, routine_id: int, user_id: int) -> bool:
+    """Delete a routine (user-owned only)."""
+    routine = await get_user_routine_by_id(session, routine_id, user_id)
+    if not routine:
         return False
 
-    await session.delete(recipe)
+    await session.delete(routine)
     await session.commit()
     return True

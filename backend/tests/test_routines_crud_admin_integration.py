@@ -1,12 +1,13 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.recipes import crud
-from src.recipes.models import Recipe
-from src.recipes.schemas import (
-    AdminRecipeCreate,
+from src.routines import crud
+from src.routines.models import Routine
+from src.routines.schemas import (
+    AdminRoutineCreate,
     ExerciseTemplateCreate,
     SetTemplateCreate,
+    RoutineUpdate,
 )
 from src.users.models import User
 from src.exercises.models import ExerciseType, IntensityUnit
@@ -15,10 +16,10 @@ from src.workouts.models import WorkoutType
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_recipe_admin_sets_visibility_and_readonly(
+async def test_create_routine_admin_sets_visibility_and_readonly(
     db_session: AsyncSession,
 ):
-    """create_recipe_admin should honor visibility and is_readonly and create nested templates."""
+    """create_routine_admin should honor visibility and is_readonly and create nested templates."""
     # Seed reference data
     wt = WorkoutType(name="Strength", description="desc")
     iu = IntensityUnit(name="Pounds", abbreviation="lb")
@@ -41,11 +42,11 @@ async def test_create_recipe_admin_sets_visibility_and_readonly(
     db_session.add(user)
     await db_session.flush()
 
-    payload = AdminRecipeCreate(
+    payload = AdminRoutineCreate(
         name="Admin Recipe",
         description="via admin",
         workout_type_id=wt.id,
-        visibility=Recipe.RecipeVisibility.public,
+        visibility=Routine.RoutineVisibility.public,
         is_readonly=True,
         exercise_templates=[
             ExerciseTemplateCreate(
@@ -58,10 +59,10 @@ async def test_create_recipe_admin_sets_visibility_and_readonly(
     )
 
     # Act
-    created = await crud.create_recipe_admin(db_session, payload, user.id)
+    created = await crud.create_routine_admin(db_session, payload, user.id)
 
     # Assert basic fields
-    assert created.visibility == Recipe.RecipeVisibility.public
+    assert created.visibility == Routine.RoutineVisibility.public
     assert created.is_readonly is True
     assert created.creator_id == user.id
 
@@ -77,7 +78,7 @@ async def test_create_recipe_admin_sets_visibility_and_readonly(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_update_and_delete_recipe_paths(db_session: AsyncSession):
+async def test_update_and_delete_routine_paths(db_session: AsyncSession):
     """Cover update success/None branches and delete True/False paths."""
     wt = WorkoutType(name="Strength2", description="desc")
     db_session.add(wt)
@@ -100,24 +101,22 @@ async def test_update_and_delete_recipe_paths(db_session: AsyncSession):
     db_session.add_all([owner, other])
     await db_session.flush()
 
-    # Create directly minimal recipe
-    r = Recipe(name="To Update", workout_type_id=wt.id, creator_id=owner.id)
+    # Create directly minimal routine
+    r = Routine(name="To Update", workout_type_id=wt.id, creator_id=owner.id)
     db_session.add(r)
     await db_session.flush()
 
     # Update by non-owner -> None
-    from src.recipes.schemas import RecipeUpdate
-
-    got_none = await crud.update_recipe(
-        db_session, r.id, RecipeUpdate(name="X"), other.id
+    got_none = await crud.update_routine(
+        db_session, r.id, RoutineUpdate(name="X"), other.id
     )
     assert got_none is None
 
     # Update by owner -> changed
-    updated = await crud.update_recipe(
+    updated = await crud.update_routine(
         db_session,
         r.id,
-        RecipeUpdate(name="Updated", description="d", workout_type_id=wt.id),
+        RoutineUpdate(name="Updated", description="d", workout_type_id=wt.id),
         owner.id,
     )
     assert (
@@ -125,9 +124,9 @@ async def test_update_and_delete_recipe_paths(db_session: AsyncSession):
     )
 
     # Delete by non-owner -> False
-    deleted = await crud.delete_recipe(db_session, r.id, other.id)
+    deleted = await crud.delete_routine(db_session, r.id, other.id)
     assert deleted is False
 
     # Delete by owner -> True
-    deleted2 = await crud.delete_recipe(db_session, r.id, owner.id)
+    deleted2 = await crud.delete_routine(db_session, r.id, owner.id)
     assert deleted2 is True

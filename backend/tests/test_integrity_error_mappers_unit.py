@@ -10,9 +10,9 @@ from src.exercises.crud import (
     _get_constraint_name as get_exercise_constraint_name,
     _map_exercise_integrity_error,
 )
-from src.recipes.crud import (
-    _get_constraint_name as get_recipe_constraint_name,
-    _map_recipe_integrity_error,
+from src.routines.crud import (
+    _get_constraint_name as get_routine_constraint_name,
+    _map_routine_integrity_error,
 )
 from src.workouts.crud import (
     _get_constraint_name as get_workout_constraint_name,
@@ -82,7 +82,7 @@ def test_domain_validation_error_factories():
     "constraint_getter",
     [
         get_workout_constraint_name,
-        get_recipe_constraint_name,
+        get_routine_constraint_name,
         get_exercise_constraint_name,
         get_exercise_set_constraint_name,
     ],
@@ -100,7 +100,7 @@ def test_get_constraint_name_prefers_diag_value(constraint_getter):
     "constraint_getter",
     [
         get_workout_constraint_name,
-        get_recipe_constraint_name,
+        get_routine_constraint_name,
         get_exercise_constraint_name,
         get_exercise_set_constraint_name,
     ],
@@ -117,7 +117,7 @@ def test_get_constraint_name_falls_back_to_orig(constraint_getter):
     "constraint_getter",
     [
         get_workout_constraint_name,
-        get_recipe_constraint_name,
+        get_routine_constraint_name,
         get_exercise_constraint_name,
         get_exercise_set_constraint_name,
     ],
@@ -223,8 +223,8 @@ def test_map_workout_integrity_error_returns_none_for_unknown():
         ),
     ],
 )
-def test_map_recipe_integrity_error(constraint_name, message, expected_field):
-    mapped = _map_recipe_integrity_error(
+def test_map_routine_integrity_error(constraint_name, message, expected_field):
+    mapped = _map_routine_integrity_error(
         _integrity_error(message=message, constraint_name=constraint_name)
     )
     assert mapped is not None
@@ -232,8 +232,8 @@ def test_map_recipe_integrity_error(constraint_name, message, expected_field):
     assert mapped.field == expected_field
 
 
-def test_map_recipe_integrity_error_returns_none_for_unknown():
-    mapped = _map_recipe_integrity_error(
+def test_map_routine_integrity_error_returns_none_for_unknown():
+    mapped = _map_routine_integrity_error(
         _integrity_error(message="random db error", constraint_name="unknown")
     )
     assert mapped is None

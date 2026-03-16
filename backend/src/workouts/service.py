@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, List
 import json
+from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from google import genai
@@ -43,6 +44,54 @@ logger = logging.getLogger(__name__)
 # Seed data defines Strength Training workout type with ID = 4 (see migration 7df0abdd1d04)
 DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID = 4
 WORKOUT_REUSE_WINDOW_HOURS = 12
+
+
+class ChatGoogleGenerativeAI:
+    """Compatibility adapter over google.genai used by workout parsing tests."""
+
+    def __init__(
+        self,
+        *,
+        google_api_key: str,
+        model: str,
+        temperature: float,
+        max_output_tokens: int,
+    ) -> None:
+        self.google_api_key = google_api_key
+        self.model = model
+        self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
+        self.client = genai.Client(api_key=google_api_key)
+
+    async def ainvoke(self, messages):
+        system_instruction = None
+        contents = []
+
+        for message in messages:
+            role = getattr(message, "type", None) or getattr(message, "role", "user")
+            content = getattr(message, "content", "")
+
+            if role == "system":
+                system_instruction = content
+                continue
+
+            contents.append(
+                types.Content(
+                    role="user" if role in {"human", "user"} else "model",
+                    parts=[types.Part.from_text(text=content)],
+                )
+            )
+
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_output_tokens,
+                system_instruction=system_instruction,
+            ),
+        )
+        return SimpleNamespace(content=response.text or "")
 
 
 class WorkoutService:
@@ -472,30 +521,23 @@ class WorkoutParsingService:
             else:
                 system_prompt = WorkoutParsingService._get_fallback_prompt()
 
-            # Set up Gemini client
-            client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
-
-            config = types.GenerateContentConfig(
+            llm = ChatGoogleGenerativeAI(
+                google_api_key=settings.GOOGLE_AI_KEY,
+                model="gemini-2.5-flash",
                 temperature=0.1,
                 max_output_tokens=1000,
-                system_instruction=system_prompt,
             )
 
-            # Prepare messages for Gemini
-            contents = [
-                types.Content(
-                    role="user", 
-                    parts=[types.Part.from_text(text=f"Parse this workout:\n\n{workout_text}")]
-                )
+            messages = [
+                SimpleNamespace(type="system", content=system_prompt),
+                SimpleNamespace(
+                    type="human",
+                    content=f"Parse this workout:\n\n{workout_text}",
+                ),
             ]
 
-            # Call Gemini API
-            response = await client.aio.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=contents,
-                config=config,
-            )
-            response_text = response.text or ""
+            response = await llm.ainvoke(messages)
+            response_text = response.content or ""
 
             # Log generation to Langfuse
             if trace:
