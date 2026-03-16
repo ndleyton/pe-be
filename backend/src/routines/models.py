@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from src.exercises.models import ExerciseType, IntensityUnit
 
 
-class Recipe(Base):
-    """Model for workout recipes/templates"""
+class Routine(Base):
+    """Model for workout routines/templates."""
 
     __tablename__ = "recipes"
 
@@ -33,30 +33,30 @@ class Recipe(Base):
 
     # Visibility as an enum (private, public, link_only)
     # Use lowercase member names so SQLAlchemy binds names that match DB labels.
-    class RecipeVisibility(str, Enum):
+    class RoutineVisibility(str, Enum):
         private = "private"
         public = "public"
         link_only = "link_only"
 
     # Native PostgreSQL enum uses the same lowercase labels, so no adapter needed.
     visibility = Column(
-        SAEnum(RecipeVisibility, name="recipe_visibility"),
+        SAEnum(RoutineVisibility, name="recipe_visibility"),
         nullable=False,
-        default=RecipeVisibility.private,
+        default=RoutineVisibility.private,
     )
     # Mutability control for canonical content
     is_readonly = Column(Boolean, default=False, nullable=False)
 
     # Relationships
-    creator: Mapped["User"] = relationship("User", back_populates="recipes")
+    creator: Mapped["User"] = relationship("User", back_populates="routines")
     workout_type: Mapped["WorkoutType"] = relationship("WorkoutType", lazy="joined")
     exercise_templates: Mapped[List["ExerciseTemplate"]] = relationship(
-        "ExerciseTemplate", back_populates="recipe", cascade="all, delete-orphan"
+        "ExerciseTemplate", back_populates="routine", cascade="all, delete-orphan"
     )
 
 
 class ExerciseTemplate(Base):
-    """Model for exercise templates within recipes"""
+    """Model for exercise templates within routines."""
 
     __tablename__ = "exercise_templates"
 
@@ -65,7 +65,8 @@ class ExerciseTemplate(Base):
         ForeignKey("exercise_types.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    recipe_id = Column(
+    routine_id = Column(
+        "recipe_id",
         Integer,
         ForeignKey("recipes.id", ondelete="CASCADE"),
         nullable=False,
@@ -73,8 +74,8 @@ class ExerciseTemplate(Base):
 
     # Relationships
     exercise_type: Mapped["ExerciseType"] = relationship("ExerciseType", lazy="joined")
-    recipe: Mapped["Recipe"] = relationship(
-        "Recipe", back_populates="exercise_templates"
+    routine: Mapped["Routine"] = relationship(
+        "Routine", back_populates="exercise_templates"
     )
     set_templates: Mapped[List["SetTemplate"]] = relationship(
         "SetTemplate", back_populates="exercise_template", cascade="all, delete-orphan"

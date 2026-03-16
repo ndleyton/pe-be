@@ -19,6 +19,24 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.core.database import Base
 
 # Import all models to ensure they're registered with SQLAlchemy
+from src.users.models import User, OAuthAccount  # noqa: F401
+from src.workouts.models import Workout, WorkoutType  # noqa: F401
+from src.exercises.models import (  # noqa: F401
+    Exercise,
+    ExerciseType,
+    ExerciseMuscle,
+    IntensityUnit,
+    MuscleGroup,
+    Muscle,
+)
+from src.exercise_sets.models import ExerciseSet  # noqa: F401
+from src.routines.models import Routine, ExerciseTemplate, SetTemplate  # noqa: F401
+from src.chat.models import (  # noqa: F401
+    ChatAttachment,
+    Conversation,
+    ConversationMessage,
+    ConversationMessagePart,
+)
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv

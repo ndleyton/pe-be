@@ -2,11 +2,11 @@ from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
 from pydantic import ConfigDict, BaseModel, Field
-from src.recipes.models import Recipe as RecipeModel
+from src.routines.models import Routine as RoutineModel
 
 
 class ExerciseTypeRead(BaseModel):
-    """Schema for reading exercise types in recipes"""
+    """Schema for reading exercise types in routines"""
 
     id: int
     name: str
@@ -17,7 +17,7 @@ class ExerciseTypeRead(BaseModel):
 
 
 class IntensityUnitRead(BaseModel):
-    """Schema for reading intensity units in recipes"""
+    """Schema for reading intensity units in routines"""
 
     id: int
     name: str
@@ -72,26 +72,26 @@ class ExerciseTemplateRead(ExerciseTemplateBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RecipeBase(BaseModel):
-    """Base schema for recipe data"""
+class RoutineBase(BaseModel):
+    """Base schema for routine data"""
 
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     workout_type_id: int
 
 
-class RecipeCreate(RecipeBase):
-    """Schema for creating recipes"""
+class RoutineCreate(RoutineBase):
+    """Schema for creating routines"""
 
     exercise_templates: List[ExerciseTemplateCreate] = []
 
 
-class RecipeRead(RecipeBase):
-    """Schema for reading recipes"""
+class RoutineRead(RoutineBase):
+    """Schema for reading routines"""
 
     id: int
     creator_id: int
-    visibility: RecipeModel.RecipeVisibility
+    visibility: RoutineModel.RoutineVisibility
     is_readonly: bool
     created_at: datetime
     updated_at: datetime
@@ -99,8 +99,8 @@ class RecipeRead(RecipeBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RecipeUpdate(BaseModel):
-    """Schema for updating recipes"""
+class RoutineUpdate(BaseModel):
+    """Schema for updating routines"""
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
@@ -108,16 +108,12 @@ class RecipeUpdate(BaseModel):
     exercise_templates: Optional[List[ExerciseTemplateCreate]] = None
 
 
-# Pydantic schema reuses model enum to avoid drift
-RecipeVisibility = RecipeModel.RecipeVisibility
-
-
-class AdminRecipeCreate(RecipeBase):
+class AdminRoutineCreate(RoutineBase):
     """Admin-only creation schema with additional controls.
 
     Allows setting visibility and is_readonly at creation time.
     """
 
     exercise_templates: List[ExerciseTemplateCreate] = []
-    visibility: Optional[RecipeVisibility] = None
+    visibility: Optional[RoutineModel.RoutineVisibility] = None
     is_readonly: Optional[bool] = None
