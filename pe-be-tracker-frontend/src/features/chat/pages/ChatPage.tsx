@@ -97,6 +97,12 @@ interface ChatApiMessage {
 }
 
 const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+] as const;
 
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
@@ -107,10 +113,27 @@ const uploadChatAttachment = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await api.post(endpoints.chatAttachments, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await api.post(endpoints.chatAttachments, formData);
   return response.data;
+};
+
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response &&
+    typeof error.response.data === "object" &&
+    error.response.data !== null &&
+    "detail" in error.response.data &&
+    typeof error.response.data.detail === "string"
+  ) {
+    return error.response.data.detail;
+  }
+
+  return fallback;
 };
 
 const sendChatMessage = async (
@@ -378,6 +401,19 @@ const ChatPage = () => {
     }
   };
 
+  const appendSystemMessage = (content: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-system`,
+        role: "system",
+        content,
+        parts: [{ type: "text", text: content }],
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
   const buildUserParts = async (
     messageContent: string,
     attachments: PendingAttachment[],
@@ -486,23 +522,13 @@ const ChatPage = () => {
         ],
         conversationId,
       });
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-upload-error`,
-          role: "system",
-          content:
-            "I couldn't upload one of the images. Check the file type/size and try again.",
-          parts: [
-            {
-              type: "text",
-              text: "I couldn't upload one of the images. Check the file type/size and try again.",
-            },
-          ],
-          timestamp: new Date(),
-        },
-      ]);
+    } catch (error) {
+      appendSystemMessage(
+        extractErrorMessage(
+          error,
+          "I couldn't upload one of the images. Check the file type/size and try again.",
+        ),
+      );
       setIsLoading(false);
     }
   };
@@ -510,6 +536,26 @@ const ChatPage = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) {
+      return;
+    }
+
+    const invalidType = files.find(
+      (file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type as (typeof ALLOWED_ATTACHMENT_TYPES)[number]),
+    );
+    if (invalidType) {
+      appendSystemMessage(
+        `${invalidType.name} is not supported. Use PNG, JPEG, or WebP.`,
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const oversized = files.find((file) => file.size > MAX_ATTACHMENT_BYTES);
+    if (oversized) {
+      appendSystemMessage(
+        `${oversized.name} is too large. The limit is 10 MB per image.`,
+      );
+      event.target.value = "";
       return;
     }
 
