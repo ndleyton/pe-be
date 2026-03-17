@@ -86,8 +86,12 @@ class ChatAttachment(Base):
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     width: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     height: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    provider_file_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    provider_file_uri: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    provider_file_name: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    provider_file_uri: Mapped[Optional[str]] = mapped_column(
+        String(1024), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -436,9 +436,13 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
         new_messages = self._split_new_messages(normalized_messages, persisted_history)
 
-        llm_messages = [ConversationMessage(role="system", content=self._get_system_prompt())]
+        llm_messages = [
+            ConversationMessage(role="system", content=self._get_system_prompt())
+        ]
         llm_messages.extend(
-            await self._build_conversation_messages(persisted_history, upload_missing=False)
+            await self._build_conversation_messages(
+                persisted_history, upload_missing=False
+            )
         )
         llm_messages.extend(
             await self._build_conversation_messages(new_messages, upload_missing=True)
@@ -499,9 +503,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                                     self.user_id,
                                     tool_call.name,
                                 )
-                                output = (
-                                    f"Error executing tool {tool_call.name}: {exc}"
-                                )
+                                output = f"Error executing tool {tool_call.name}: {exc}"
 
                         tool_output_messages.append(
                             ConversationMessage(
@@ -617,7 +619,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             raise ValueError("Uploaded file content does not match MIME type")
 
         mime_type = detected_mime_type
-        suffix = Path(filename or "upload").suffix or self._suffix_for_mime_type(mime_type)
+        suffix = Path(filename or "upload").suffix or self._suffix_for_mime_type(
+            mime_type
+        )
         storage_key = f"{uuid4().hex}{suffix}"
         storage_dir = self._attachment_storage_dir()
         storage_dir.mkdir(parents=True, exist_ok=True)
@@ -825,7 +829,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not persisted_history:
             return incoming_messages
 
-        persisted_signature = [self._message_signature(msg) for msg in persisted_history]
+        persisted_signature = [
+            self._message_signature(msg) for msg in persisted_history
+        ]
         incoming_signature = [self._message_signature(msg) for msg in incoming_messages]
 
         if (
@@ -857,7 +863,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
     def _summarize_parts(self, parts: List[ChatMessagePart]) -> str:
         text_segments = [
-            (part.text or "").strip() for part in parts if part.type == "text" and part.text
+            (part.text or "").strip()
+            for part in parts
+            if part.type == "text" and part.text
         ]
         if text_segments:
             return "\n".join(segment for segment in text_segments if segment)

@@ -178,7 +178,9 @@ async def add_message_to_conversation(
     session.add(db_message)
     await session.flush()
 
-    for index, part in enumerate(message_data.parts or _parts_from_content(message_data.content)):
+    for index, part in enumerate(
+        message_data.parts or _parts_from_content(message_data.content)
+    ):
         session.add(
             ConversationMessagePart(
                 conversation_message_id=db_message.id,
