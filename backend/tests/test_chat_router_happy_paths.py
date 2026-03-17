@@ -265,22 +265,35 @@ async def test_direct_router_calls_for_coverage():
     # Mock crud
     mock_conv = MagicMock(id=1, title="Test", is_active=True, messages=[])
 
-    with patch("src.chat.router.create_conversation", new_callable=AsyncMock) as mock_create, \
-         patch("src.chat.router.update_conversation", new_callable=AsyncMock) as mock_update, \
-         patch("src.chat.router.get_user_conversations", new_callable=AsyncMock) as mock_get, \
-         patch("src.chat.router.count_user_conversations", new_callable=AsyncMock) as mock_count:
-
+    with (
+        patch(
+            "src.chat.router.create_conversation", new_callable=AsyncMock
+        ) as mock_create,
+        patch(
+            "src.chat.router.update_conversation", new_callable=AsyncMock
+        ) as mock_update,
+        patch(
+            "src.chat.router.get_user_conversations", new_callable=AsyncMock
+        ) as mock_get,
+        patch(
+            "src.chat.router.count_user_conversations", new_callable=AsyncMock
+        ) as mock_count,
+    ):
         mock_create.return_value = mock_conv
         mock_update.return_value = mock_conv
         mock_get.return_value = [mock_conv]
         mock_count.return_value = 1
 
         # Call create
-        res1 = await create_new_conversation(ConversationCreate(title="Test"), mock_user, mock_session)
+        res1 = await create_new_conversation(
+            ConversationCreate(title="Test"), mock_user, mock_session
+        )
         assert res1.id == 1
 
         # Call update
-        res2 = await update_conversation_endpoint(1, ConversationUpdate(title="Test updated"), mock_user, mock_session)
+        res2 = await update_conversation_endpoint(
+            1, ConversationUpdate(title="Test updated"), mock_user, mock_session
+        )
         assert res2.id == 1
 
         # Call get list

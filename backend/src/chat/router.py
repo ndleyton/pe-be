@@ -92,7 +92,9 @@ async def handle_chat(
         )
         chat_service = ChatService(user_id=user.id, session=session)
         result = await chat_service.generate_response(
-            messages=[message.model_dump(exclude_none=True) for message in request.messages],
+            messages=[
+                message.model_dump(exclude_none=True) for message in request.messages
+            ],
             conversation_id=request.conversation_id,
             save_to_db=True,
         )
@@ -191,7 +193,8 @@ async def get_conversations(
         total = await count_user_conversations(session, user.id)
         return ConversationListResponse(
             conversations=[
-                _to_conversation_response(conversation) for conversation in conversations
+                _to_conversation_response(conversation)
+                for conversation in conversations
             ],
             total=total,
             limit=limit,

@@ -1,4 +1,9 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, {
+  AxiosHeaders,
+  AxiosInstance,
+  AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from "axios";
 import { config } from "@/app/config/env";
 
 // Centralized Axios configuration leveraging Vite environment variables.
@@ -6,18 +11,43 @@ import { config } from "@/app/config/env";
 const apiConfig: AxiosRequestConfig = {
   baseURL: config.apiBaseUrl,
   timeout: config.apiTimeout,
-  headers: {
-    "Content-Type": "application/json",
-  },
   // Automatically send/receive cookies (needed for FastAPI session auth)
   withCredentials: true,
 };
 
 export const apiClient: AxiosInstance = axios.create(apiConfig);
 
+export const applyDefaultRequestHeaders = (
+  request: InternalAxiosRequestConfig,
+): InternalAxiosRequestConfig => {
+  if (request.data instanceof FormData) {
+    if (request.headers instanceof AxiosHeaders) {
+      request.headers.delete("Content-Type");
+    } else if (request.headers) {
+      delete request.headers["Content-Type"];
+    }
+    return request;
+  }
+
+  if (request.headers instanceof AxiosHeaders) {
+    if (!request.headers.has("Content-Type")) {
+      request.headers.set("Content-Type", "application/json");
+    }
+    return request;
+  }
+
+  const existingHeaders = AxiosHeaders.from(request.headers);
+  if (!existingHeaders.has("Content-Type")) {
+    existingHeaders.set("Content-Type", "application/json");
+  }
+  request.headers = existingHeaders;
+  return request;
+};
+
 // Request interceptor for auth token injection
 apiClient.interceptors.request.use(
   (request) => {
+    applyDefaultRequestHeaders(request);
     // Log outgoing requests in development
     if (config.enableLogging) {
       // eslint-disable-next-line no-console

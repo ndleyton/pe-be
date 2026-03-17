@@ -112,9 +112,7 @@ class ToolDefinition:
         return cls._clean_pydantic_schema_inner(schema, defs)
 
     @classmethod
-    def _clean_pydantic_schema_inner(
-        cls, schema: Any, defs: dict[str, Any]
-    ) -> Any:
+    def _clean_pydantic_schema_inner(cls, schema: Any, defs: dict[str, Any]) -> Any:
         if isinstance(schema, dict):
             ref = schema.get("$ref")
             if isinstance(ref, str) and ref.startswith("#/$defs/"):
@@ -324,7 +322,9 @@ class GeminiGenAIClient:
             for index, part in enumerate(candidates[0].content.parts or []):
                 if getattr(part, "text", None):
                     text = part.text
-                    text_content = f"{text_content}\n{text}".strip() if text_content else text
+                    text_content = (
+                        f"{text_content}\n{text}".strip() if text_content else text
+                    )
 
                 function_call = getattr(part, "function_call", None)
                 if function_call:
@@ -345,7 +345,9 @@ class GeminiGenAIClient:
                 role="assistant",
                 content=text_content,
                 parts=(
-                    [ContentPart(type="text", text=text_content)] if text_content else []
+                    [ContentPart(type="text", text=text_content)]
+                    if text_content
+                    else []
                 ),
                 tool_calls=tool_calls,
             ),
@@ -355,11 +357,18 @@ class GeminiGenAIClient:
     def _extract_metadata(self, response: Any) -> dict[str, Any]:
         metadata: dict[str, Any] = {}
 
-        for attr in ("usage_metadata", "prompt_feedback", "model_version", "response_id"):
+        for attr in (
+            "usage_metadata",
+            "prompt_feedback",
+            "model_version",
+            "response_id",
+        ):
             value = getattr(response, attr, None)
             if value is None:
                 continue
-            metadata[attr] = value.model_dump() if hasattr(value, "model_dump") else value
+            metadata[attr] = (
+                value.model_dump() if hasattr(value, "model_dump") else value
+            )
 
         candidates = getattr(response, "candidates", None) or []
         if candidates:
@@ -373,7 +382,9 @@ class GeminiGenAIClient:
             finish_reason = getattr(candidate, "finish_reason", None)
             if finish_reason is not None:
                 metadata["finish_reason"] = (
-                    finish_reason.value if hasattr(finish_reason, "value") else finish_reason
+                    finish_reason.value
+                    if hasattr(finish_reason, "value")
+                    else finish_reason
                 )
 
         return metadata
