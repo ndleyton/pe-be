@@ -42,6 +42,12 @@ def upgrade() -> None:
                 server_default=sa.text("now()"),
                 nullable=False,
             ),
+            sa.Column(
+                "updated_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=False,
+            ),
             sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="cascade"),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("storage_key"),
@@ -70,6 +76,12 @@ def upgrade() -> None:
             sa.Column("attachment_id", sa.Integer(), nullable=True),
             sa.Column(
                 "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=False,
+            ),
+            sa.Column(
+                "updated_at",
                 sa.DateTime(timezone=True),
                 server_default=sa.text("now()"),
                 nullable=False,
