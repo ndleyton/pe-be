@@ -102,6 +102,7 @@ tmp/
 temp/
 *.tmp
 *.temp
+backend/.chat_attachments/
 
 # CI/CD artifacts
 *.tar.gz
