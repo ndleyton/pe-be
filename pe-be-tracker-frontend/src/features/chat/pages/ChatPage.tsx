@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -32,44 +32,6 @@ interface ChatMessage {
   content: string;
   parts?: UIMessagePart[];
   timestamp: Date;
-  workoutData?: ParsedWorkout;
-  showSaveButton?: boolean;
-}
-
-interface ParsedWorkout {
-  name: string;
-  notes?: string;
-  workout_type_id: number;
-  exercises: {
-    exercise_type_name: string;
-    notes?: string;
-    sets: {
-      reps?: number;
-      intensity?: number;
-      intensity_unit: string;
-      rest_time_seconds?: number;
-    }[];
-  }[];
-}
-
-interface SavedWorkout {
-  id: number;
-  name: string;
-  start_time: string;
-}
-
-interface ExerciseType {
-  id: number;
-  name: string;
-  description: string;
-  default_intensity_unit: number;
-  times_used: number;
-}
-
-interface IntensityUnit {
-  id: number;
-  name: string;
-  abbreviation: string;
 }
 
 interface PendingAttachment {
@@ -170,58 +132,7 @@ const sendChatMessage = async (
   return response.data;
 };
 
-const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
-  const response = await api.get(endpoints.exerciseTypes);
-  return response.data;
-};
-
-const fetchIntensityUnits = async (): Promise<IntensityUnit[]> => {
-  const response = await api.get(endpoints.intensityUnits);
-  return response.data;
-};
-
-const createWorkout = async (workoutData: {
-  name: string;
-  notes?: string;
-  workout_type_id: number;
-  start_time: string;
-}): Promise<SavedWorkout> => {
-  const response = await api.post(endpoints.workouts, workoutData);
-  return response.data;
-};
-
-const createExerciseType = async (exerciseTypeData: {
-  name: string;
-  description: string;
-  default_intensity_unit: number;
-}): Promise<ExerciseType> => {
-  const response = await api.post(endpoints.exerciseTypes, exerciseTypeData);
-  return response.data;
-};
-
-const createExercise = async (exerciseData: {
-  exercise_type_id: number;
-  workout_id: number;
-  notes?: string;
-}) => {
-  const response = await api.post(endpoints.exercises, exerciseData);
-  return response.data;
-};
-
-const createExerciseSet = async (setData: {
-  exercise_id: number;
-  reps?: number;
-  intensity?: number;
-  intensity_unit_id: number;
-  rest_time_seconds?: number;
-  done: boolean;
-}) => {
-  const response = await api.post(endpoints.exerciseSets, setData);
-  return response.data;
-};
-
 const ChatPage = () => {
-  const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -243,18 +154,6 @@ const ChatPage = () => {
     ],
     [],
   );
-
-  const { data: exerciseTypes = [] } = useQuery({
-    queryKey: ["exercise-types"],
-    queryFn: fetchExerciseTypes,
-    enabled: isAuthenticated,
-  });
-
-  const { data: intensityUnits = [] } = useQuery({
-    queryKey: ["intensity-units"],
-    queryFn: fetchIntensityUnits,
-    enabled: isAuthenticated,
-  });
 
   const chatMutation = useMutation({
     mutationFn: ({
@@ -303,103 +202,6 @@ const ChatPage = () => {
         },
       ]);
       setIsLoading(false);
-    },
-  });
-
-  const saveWorkoutMutation = useMutation({
-    mutationFn: async (parsedWorkout: ParsedWorkout) => {
-      const workout = await createWorkout({
-        name: parsedWorkout.name,
-        notes: parsedWorkout.notes,
-        workout_type_id: parsedWorkout.workout_type_id,
-        start_time: new Date().toISOString(),
-      });
-
-      for (const parsedExercise of parsedWorkout.exercises) {
-        let exerciseType = exerciseTypes.find(
-          (exercise) =>
-            exercise.name.toLowerCase() ===
-            parsedExercise.exercise_type_name.toLowerCase(),
-        );
-
-        if (!exerciseType) {
-          const defaultIntensityUnit =
-            intensityUnits.find(
-              (unit) =>
-                unit.abbreviation === "kg" || unit.abbreviation === "lbs",
-            )?.id || 1;
-
-          exerciseType = await createExerciseType({
-            name: parsedExercise.exercise_type_name,
-            description: "Exercise created from workout parsing",
-            default_intensity_unit: defaultIntensityUnit,
-          });
-        }
-
-        const exercise = await createExercise({
-          exercise_type_id: exerciseType.id,
-          workout_id: workout.id,
-          notes: parsedExercise.notes,
-        });
-
-        for (const parsedSet of parsedExercise.sets) {
-          const intensityUnit = intensityUnits.find(
-            (unit) =>
-              unit.abbreviation.toLowerCase() ===
-              parsedSet.intensity_unit.toLowerCase(),
-          );
-
-          if (intensityUnit) {
-            await createExerciseSet({
-              exercise_id: exercise.id,
-              reps: parsedSet.reps,
-              intensity: parsedSet.intensity,
-              intensity_unit_id: intensityUnit.id,
-              rest_time_seconds: parsedSet.rest_time_seconds,
-              done: true,
-            });
-          }
-        }
-      }
-
-      return workout;
-    },
-    onSuccess: (savedWorkout) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-success`,
-          role: "system",
-          content: `Workout "${savedWorkout.name}" has been saved successfully! You can find it in your workouts list.`,
-          parts: [
-            {
-              type: "text",
-              text: `Workout "${savedWorkout.name}" has been saved successfully! You can find it in your workouts list.`,
-            },
-          ],
-          timestamp: new Date(),
-        },
-      ]);
-
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-    },
-    onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-save-error`,
-          role: "system",
-          content:
-            "Sorry, I couldn't save the workout. Please try again or create it manually.",
-          parts: [
-            {
-              type: "text",
-              text: "Sorry, I couldn't save the workout. Please try again or create it manually.",
-            },
-          ],
-          timestamp: new Date(),
-        },
-      ]);
     },
   });
 
@@ -606,10 +408,6 @@ const ChatPage = () => {
     }, 100);
   };
 
-  const handleSaveWorkout = (workoutData: ParsedWorkout) => {
-    saveWorkoutMutation.mutate(workoutData);
-  };
-
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     void handleSendMessage();
@@ -812,34 +610,7 @@ const ChatPage = () => {
                   }`}
                 >
                   {renderMessageParts(message)}
-                  {message.showSaveButton && message.workoutData && (
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        size="sm"
-                        className="h-8 rounded-xl text-xs"
-                        onClick={() => handleSaveWorkout(message.workoutData!)}
-                        disabled={saveWorkoutMutation.isPending}
-                      >
-                        {saveWorkoutMutation.isPending ? "Saving..." : "Save Workout"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-xl text-xs"
-                        onClick={() => {
-                          setMessages((prev) =>
-                            prev.map((item) =>
-                              item.id === message.id
-                                ? { ...item, showSaveButton: false }
-                                : item,
-                            ),
-                          );
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+                  {/* TODO: Render a dedicated workout widget here when chat responses can surface workout-creation events. */}
                 </div>
               </div>
             </div>
