@@ -48,6 +48,11 @@ export const endpoints = {
   // Routine endpoints (recipes in backend, routines for users)
   routines: "/routines/",
   routineById: (id: string | number) => `/routines/${id}`,
+
+  // Chat endpoints
+  chat: "/chat",
+  chatAttachments: "/chat/attachments",
+  chatAttachmentById: (id: string | number) => `/chat/attachments/${id}`,
 } as const;
 
 // Type helpers for endpoints

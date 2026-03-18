@@ -1,309 +1,211 @@
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, MessageCircle, Bot } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+import { config } from "@/app/config/env";
 import api from "@/shared/api/client";
-import { useAuthStore } from "@/stores";
+import { endpoints } from "@/shared/api/endpoints";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { useAuthStore } from "@/stores";
+
+interface TextMessagePart {
+  type: "text";
+  text: string;
+}
+
+interface ImageMessagePart {
+  type: "image";
+  attachment_id: number;
+  mime_type?: string;
+  filename?: string;
+  url: string;
+}
+
+type UIMessagePart = TextMessagePart | ImageMessagePart;
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  parts?: UIMessagePart[];
   timestamp: Date;
-  workoutData?: ParsedWorkout;
-  showSaveButton?: boolean;
 }
 
-interface ParsedWorkout {
-  name: string;
-  notes?: string;
-  workout_type_id: number;
-  exercises: {
-    exercise_type_name: string;
-    notes?: string;
-    sets: {
-      reps?: number;
-      intensity?: number;
-      intensity_unit: string;
-      rest_time_seconds?: number;
-    }[];
-  }[];
+interface PendingAttachment {
+  localId: string;
+  file: File;
+  previewUrl: string;
 }
 
-interface SavedWorkout {
-  id: number;
-  name: string;
-  start_time: string;
+interface UploadedAttachment {
+  attachment_id: number;
+  mime_type: string;
+  filename: string;
 }
 
-interface ExerciseType {
-  id: number;
-  name: string;
-  description: string;
-  default_intensity_unit: number;
-  times_used: number;
+interface ChatApiPart {
+  type: "text" | "image";
+  text?: string;
+  attachment_id?: number;
 }
 
-interface IntensityUnit {
-  id: number;
-  name: string;
-  abbreviation: string;
+interface ChatApiMessage {
+  role: string;
+  content?: string;
+  parts?: ChatApiPart[];
 }
 
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+] as const;
 
-// Send chat message to general chat endpoint
+const buildAttachmentUrl = (attachmentId: number) =>
+  `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
+
+const uploadChatAttachment = async (
+  file: File,
+): Promise<UploadedAttachment> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post(endpoints.chatAttachments, formData);
+  return response.data;
+};
+
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response &&
+    typeof error.response.data === "object" &&
+    error.response.data !== null &&
+    "detail" in error.response.data
+  ) {
+    const { detail } = error.response.data;
+
+    if (typeof detail === "string") {
+      return detail;
+    }
+
+    if (Array.isArray(detail)) {
+      const message = detail
+        .map((item) => {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            "msg" in item &&
+            typeof item.msg === "string"
+          ) {
+            return item.msg;
+          }
+          return null;
+        })
+        .find((value): value is string => Boolean(value));
+
+      if (message) {
+        return message;
+      }
+    }
+  }
+
+  return fallback;
+};
+
 const sendChatMessage = async (
-  messages: Array<{ role: string; content: string }>,
+  messages: ChatApiMessage[],
   conversationId?: number,
 ): Promise<{ message: string; conversation_id: number }> => {
-  const response = await api.post("/chat", {
+  const response = await api.post(endpoints.chat, {
     messages,
     conversation_id: conversationId,
   });
   return response.data;
 };
 
-// (workout types fetch removed; not used in current UI)
-
-// Get exercise types
-const fetchExerciseTypes = async (): Promise<ExerciseType[]> => {
-  const response = await api.get("/exercises/exercise-types/");
-  return response.data;
-};
-
-// Get intensity units
-const fetchIntensityUnits = async (): Promise<IntensityUnit[]> => {
-  const response = await api.get("/exercises/intensity-units/");
-  return response.data;
-};
-
-// Create workout
-const createWorkout = async (workoutData: {
-  name: string;
-  notes?: string;
-  workout_type_id: number;
-  start_time: string;
-}): Promise<SavedWorkout> => {
-  const response = await api.post("/workouts/", workoutData);
-  return response.data;
-};
-
-// Create exercise type if it doesn't exist
-const createExerciseType = async (exerciseTypeData: {
-  name: string;
-  description: string;
-  default_intensity_unit: number;
-}): Promise<ExerciseType> => {
-  const response = await api.post(
-    "/exercises/exercise-types/",
-    exerciseTypeData,
-  );
-  return response.data;
-};
-
-// Create exercise
-const createExercise = async (exerciseData: {
-  exercise_type_id: number;
-  workout_id: number;
-  notes?: string;
-}) => {
-  const response = await api.post("/exercises/", exerciseData);
-  return response.data;
-};
-
-// Create exercise set
-const createExerciseSet = async (setData: {
-  exercise_id: number;
-  reps?: number;
-  intensity?: number;
-  intensity_unit_id: number;
-  rest_time_seconds?: number;
-  done: boolean;
-}) => {
-  const response = await api.post("/exercise-sets/", setData);
-  return response.data;
-};
-
 const ChatPage = () => {
-  const queryClient = useQueryClient();
-  // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<number | undefined>(
-    undefined,
+  const [conversationId, setConversationId] = useState<number | undefined>();
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
+    [],
   );
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const examplePrompts = [
-    "I did 3 sets of bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4. Then squats: 3 sets of 185lbs x 10.",
-    "What exercises should I do to improve my bench press?",
-    "I ran 3 miles in 24 minutes today, feeling great!",
-    "Can you suggest a good leg workout based on my recent training?",
-  ];
-
-  // Fetch reference data
-  // Fetching workout types is currently unused; enable if needed in the future
-
-  const { data: exerciseTypes = [] } = useQuery({
-    queryKey: ["exercise-types"],
-    queryFn: fetchExerciseTypes,
-    enabled: isAuthenticated,
-  });
-
-  const { data: intensityUnits = [] } = useQuery({
-    queryKey: ["intensity-units"],
-    queryFn: fetchIntensityUnits,
-    enabled: isAuthenticated,
-  });
+  const examplePrompts = useMemo(
+    () => [
+      "I did 3 sets of bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4. Then squats: 3 sets of 185lbs x 10.",
+      "What exercises should I do to improve my bench press?",
+      "I ran 3 miles in 24 minutes today, feeling great!",
+      "Can you suggest a good leg workout based on my recent training?",
+    ],
+    [],
+  );
 
   const chatMutation = useMutation({
     mutationFn: ({
       messages: chatMessages,
       conversationId: convId,
     }: {
-      messages: Array<{ role: string; content: string }>;
+      messages: ChatApiMessage[];
       conversationId?: number;
     }) => sendChatMessage(chatMessages, convId),
     onSuccess: (response) => {
-      // Set conversation ID from response
       if (response.conversation_id && !conversationId) {
         setConversationId(response.conversation_id);
       }
 
-      // Regular conversational response
-      const assistantMessage: ChatMessage = {
-        id: Date.now().toString() + "-assistant",
-        role: "assistant",
-        content: response.message,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          role: "assistant",
+          content: response.message,
+          parts: [{ type: "text", text: response.message }],
+          timestamp: new Date(),
+        },
+      ]);
 
       setIsLoading(false);
-
-      // Force scroll after a short delay to ensure content has rendered
       setTimeout(() => {
         scrollToBottom();
       }, 50);
     },
-    onError: (error) => {
-      console.error("Failed to send chat message:", error);
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString() + "-error",
-        role: "assistant",
-        content:
-          "Sorry, I encountered an error processing your message. Please try again.",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
+    onError: () => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-error`,
+          role: "assistant",
+          content:
+            "Sorry, I encountered an error processing your message. Please try again.",
+          parts: [
+            {
+              type: "text",
+              text: "Sorry, I encountered an error processing your message. Please try again.",
+            },
+          ],
+          timestamp: new Date(),
+        },
+      ]);
       setIsLoading(false);
     },
   });
 
-  const saveWorkoutMutation = useMutation({
-    mutationFn: async (parsedWorkout: ParsedWorkout) => {
-      // Step 1: Create the workout
-      const workout = await createWorkout({
-        name: parsedWorkout.name,
-        notes: parsedWorkout.notes,
-        workout_type_id: parsedWorkout.workout_type_id,
-        start_time: new Date().toISOString(),
-      });
-
-      // Step 2: For each exercise, create exercise type if needed, then exercise and sets
-      for (const parsedExercise of parsedWorkout.exercises) {
-        // Find or create exercise type
-        let exerciseType = exerciseTypes.find(
-          (et) =>
-            et.name.toLowerCase() ===
-            parsedExercise.exercise_type_name.toLowerCase(),
-        );
-
-        if (!exerciseType) {
-          // Create new exercise type - find appropriate intensity unit
-          const defaultIntensityUnit =
-            intensityUnits.find(
-              (iu) => iu.abbreviation === "kg" || iu.abbreviation === "lbs",
-            )?.id || 1;
-
-          exerciseType = await createExerciseType({
-            name: parsedExercise.exercise_type_name,
-            description: `Exercise created from workout parsing`,
-            default_intensity_unit: defaultIntensityUnit,
-          });
-        }
-
-        // Create exercise
-        const exercise = await createExercise({
-          exercise_type_id: exerciseType.id,
-          workout_id: workout.id,
-          notes: parsedExercise.notes,
-        });
-
-        // Create sets
-        for (const parsedSet of parsedExercise.sets) {
-          // Find intensity unit ID
-          const intensityUnit = intensityUnits.find(
-            (iu) =>
-              iu.abbreviation.toLowerCase() ===
-              parsedSet.intensity_unit.toLowerCase(),
-          );
-
-          if (intensityUnit) {
-            await createExerciseSet({
-              exercise_id: exercise.id,
-              reps: parsedSet.reps,
-              intensity: parsedSet.intensity,
-              intensity_unit_id: intensityUnit.id,
-              rest_time_seconds: parsedSet.rest_time_seconds,
-              done: true, // Mark as completed since it's from past workout
-            });
-          }
-        }
-      }
-
-      return workout;
-    },
-    onSuccess: (savedWorkout) => {
-      const successMessage: ChatMessage = {
-        id: Date.now().toString() + "-success",
-        role: "system",
-        content: `✅ Workout "${savedWorkout.name}" has been saved successfully! You can find it in your workouts list.`,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, successMessage]);
-
-      // Refresh workouts list
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-    },
-    onError: (error) => {
-      console.error("Failed to save workout:", error);
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString() + "-save-error",
-        role: "system",
-        content:
-          "Sorry, I couldn't save the workout. Please try again or create it manually.",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
-    },
-  });
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    // Use a slight delay to ensure DOM has updated
     const timer = setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -311,79 +213,326 @@ const ChatPage = () => {
     return () => clearTimeout(timer);
   }, [messages, isLoading]);
 
-  const processMessage = async (messageContent: string) => {
-    if (!messageContent.trim() || isLoading) return;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content: messageContent,
-      timestamp: new Date(),
+  const clearPendingAttachments = () => {
+    pendingAttachments.forEach((attachment) => {
+      URL.revokeObjectURL(attachment.previewUrl);
+    });
+    setPendingAttachments([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const buildUserParts = async (
+    messageContent: string,
+    attachments: PendingAttachment[],
+  ): Promise<{ uiParts: UIMessagePart[]; apiParts: ChatApiPart[] }> => {
+    const uploadedAttachments = await Promise.all(
+      attachments.map((attachment) => uploadChatAttachment(attachment.file)),
+    );
+
+    const imageUiParts: UIMessagePart[] = attachments.map((_, index) => ({
+      type: "image",
+      attachment_id: uploadedAttachments[index].attachment_id,
+      mime_type: uploadedAttachments[index].mime_type,
+      filename: uploadedAttachments[index].filename,
+      url: buildAttachmentUrl(uploadedAttachments[index].attachment_id),
+    }));
+
+    const textPart = messageContent.trim();
+    const textUiParts: UIMessagePart[] = textPart
+      ? [{ type: "text", text: textPart }]
+      : [];
+
+    const apiParts: ChatApiPart[] = [
+      ...uploadedAttachments.map((attachment) => ({
+        type: "image" as const,
+        attachment_id: attachment.attachment_id,
+      })),
+      ...(textPart ? [{ type: "text" as const, text: textPart }] : []),
+    ];
+
+    return {
+      uiParts: [...imageUiParts, ...textUiParts],
+      apiParts,
     };
+  };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    setInputValue("");
-
-    if (!isAuthenticated) {
-      setTimeout(() => {
-        const response: ChatMessage = {
-          id: Date.now().toString() + "-response",
-          role: "assistant",
-          content: "Please sign in to use the AI fitness coach features.",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, response]);
-        setIsLoading(false);
-      }, 1000);
+  const processMessage = async (messageContent: string) => {
+    const trimmedMessage = messageContent.trim();
+    if ((!trimmedMessage && pendingAttachments.length === 0) || isLoading) {
       return;
     }
 
-    // Build conversation history for context
-    const conversationMessages = messages.map((msg) => ({
-      role: msg.role === "system" ? "assistant" : msg.role,
-      content: msg.content,
-    }));
+    setIsLoading(true);
+    setAttachmentError(null);
 
-    // Add the new user message
-    conversationMessages.push({
-      role: "user",
-      content: messageContent,
+    const attachmentsSnapshot = [...pendingAttachments];
+    setInputValue("");
+
+    if (!isAuthenticated) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-user`,
+          role: "user",
+          content: trimmedMessage,
+          parts: trimmedMessage ? [{ type: "text", text: trimmedMessage }] : [],
+          timestamp: new Date(),
+        },
+      ]);
+
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-response`,
+            role: "assistant",
+            content: "Please sign in to use the AI fitness coach features.",
+            parts: [
+              {
+                type: "text",
+                text: "Please sign in to use the AI fitness coach features.",
+              },
+            ],
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+      }, 400);
+      return;
+    }
+
+    try {
+      const { uiParts, apiParts } = await buildUserParts(
+        trimmedMessage,
+        attachmentsSnapshot,
+      );
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-user`,
+          role: "user",
+          content: trimmedMessage,
+          parts: uiParts,
+          timestamp: new Date(),
+        },
+      ]);
+
+      clearPendingAttachments();
+
+      chatMutation.mutate({
+        messages: [
+          {
+            role: "user",
+            content: trimmedMessage || undefined,
+            parts: apiParts.length > 0 ? apiParts : undefined,
+          },
+        ],
+        conversationId,
+      });
+    } catch (error) {
+      setAttachmentError(
+        extractErrorMessage(
+          error,
+          "I couldn't upload one of the images. Check the file type/size and try again.",
+        ),
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    const invalidType = files.find(
+      (file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type as (typeof ALLOWED_ATTACHMENT_TYPES)[number]),
+    );
+    if (invalidType) {
+      setAttachmentError(
+        `${invalidType.name} is not supported. Use PNG, JPEG, or WebP.`,
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const oversized = files.find((file) => file.size > MAX_ATTACHMENT_BYTES);
+    if (oversized) {
+      setAttachmentError(
+        `${oversized.name} is too large. The limit is 10 MB per image.`,
+      );
+      event.target.value = "";
+      return;
+    }
+
+    setAttachmentError(null);
+
+    setPendingAttachments((current) => {
+      const remainingSlots = MAX_ATTACHMENTS - current.length;
+      const nextFiles = files.slice(0, Math.max(remainingSlots, 0));
+      const nextAttachments = nextFiles.map((file) => ({
+        localId: `${file.name}-${file.size}-${Math.random().toString(36).slice(2)}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      return [...current, ...nextAttachments];
     });
+  };
 
-    chatMutation.mutate({
-      messages: conversationMessages,
-      conversationId,
+  const handleRemoveAttachment = (localId: string) => {
+    setPendingAttachments((current) => {
+      const attachment = current.find((item) => item.localId === localId);
+      if (attachment) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+      return current.filter((item) => item.localId !== localId);
     });
   };
 
   const handleSendMessage = async () => {
-    const messageToSend = inputValue;
-    await processMessage(messageToSend);
+    await processMessage(inputValue);
   };
 
   const handleExamplePrompt = async (prompt: string) => {
     setInputValue(prompt);
-    // Auto-submit the example prompt
     setTimeout(async () => {
       await processMessage(prompt);
     }, 100);
   };
 
-  const handleSaveWorkout = (workoutData: ParsedWorkout) => {
-    saveWorkoutMutation.mutate(workoutData);
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void handleSendMessage();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSendMessage();
+  const renderMessageParts = (message: ChatMessage) => {
+    const parts = message.parts ?? [];
+    const imageParts = parts.filter(
+      (part): part is ImageMessagePart => part.type === "image",
+    );
+    const textParts = parts.filter(
+      (part): part is TextMessagePart => part.type === "text",
+    );
+    const markdown = textParts.map((part) => part.text).join("\n\n") || message.content;
+
+    return (
+      <>
+        {imageParts.length > 0 && (
+          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+            {imageParts.map((part) => (
+              <img
+                key={`${message.id}-${part.attachment_id}`}
+                src={part.url}
+                alt={part.filename || "Chat attachment"}
+                className="border-border/30 max-h-64 w-full rounded-2xl border object-cover"
+              />
+            ))}
+          </div>
+        )}
+        <div className="text-sm">
+          {message.role === "assistant" ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children, ...props }) => (
+                  <p className="mb-2 leading-relaxed last:mb-0" {...props}>
+                    {children}
+                  </p>
+                ),
+                ul: ({ children, ...props }) => (
+                  <ul className="mb-2 list-inside list-disc space-y-1" {...props}>
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children, ...props }) => (
+                  <ol
+                    className="mb-2 list-inside list-decimal space-y-1"
+                    {...props}
+                  >
+                    {children}
+                  </ol>
+                ),
+                li: ({ children, ...props }) => (
+                  <li className="mb-0.5" {...props}>
+                    {children}
+                  </li>
+                ),
+                strong: ({ children, ...props }) => (
+                  <strong className="font-semibold" {...props}>
+                    {children}
+                  </strong>
+                ),
+                em: ({ children, ...props }) => (
+                  <em className="italic" {...props}>
+                    {children}
+                  </em>
+                ),
+                code: ({ children, ...props }) => {
+                  const isInline = !props.className?.includes("language-");
+                  return isInline ? (
+                    <code
+                      className="bg-background/50 rounded-md px-1.5 py-0.5 font-mono text-xs"
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  ) : (
+                    <code {...props}>{children}</code>
+                  );
+                },
+                pre: ({ children, ...props }) => (
+                  <pre
+                    className="bg-background/50 mb-2 overflow-x-auto rounded-lg p-2 text-xs"
+                    {...props}
+                  >
+                    {children}
+                  </pre>
+                ),
+                h1: ({ children, ...props }) => (
+                  <h1 className="mb-2 text-base font-bold" {...props}>
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children, ...props }) => (
+                  <h2 className="mb-1.5 text-sm font-bold" {...props}>
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children, ...props }) => (
+                  <h3 className="mb-1 text-sm font-semibold" {...props}>
+                    {children}
+                  </h3>
+                ),
+                blockquote: ({ children, ...props }) => (
+                  <blockquote
+                    className="border-border my-2 border-l-2 pl-3 italic"
+                    {...props}
+                  >
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {markdown || ""}
+            </ReactMarkdown>
+          ) : (
+            <p className="leading-relaxed">{markdown}</p>
+          )}
+        </div>
+      </>
+    );
   };
 
   return (
     <div className="bg-background flex h-screen flex-col">
-      {/* Header - Fixed */}
       <div className="bg-card border-border/20 flex shrink-0 items-center gap-3 border-b px-4 py-3 shadow-sm">
         <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
           <Dumbbell className="text-primary h-5 w-5" />
@@ -392,11 +541,10 @@ const ChatPage = () => {
           <h1 className="text-base leading-tight font-semibold">
             AI Personal Trainer
           </h1>
-          <p className="text-muted-foreground text-xs">Always here to help</p>
+          <p className="text-muted-foreground text-xs">Text + image coaching</p>
         </div>
       </div>
 
-      {/* Messages - Scrollable */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <div className="mx-auto max-w-4xl">
           {messages.length === 0 && (
@@ -405,19 +553,19 @@ const ChatPage = () => {
                 <Bot className="text-primary h-8 w-8" />
               </div>
               <h3 className="mb-2 text-lg font-semibold">
-                Welcome to your AI Personal Trainer!
+                Welcome to your AI Personal Trainer
               </h3>
               <p className="text-muted-foreground mb-6 text-sm">
-                I can help you log workouts and provide personalized fitness
-                advice.
+                Ask questions, log workouts, or attach photos for Gemini to
+                analyze.
               </p>
               <div className="mx-auto max-w-md space-y-2">
                 <p className="text-muted-foreground mb-3 text-xs font-medium">
                   Try these examples:
                 </p>
-                {examplePrompts.map((prompt, index) => (
+                {examplePrompts.map((prompt) => (
                   <button
-                    key={index}
+                    key={prompt}
                     onClick={() => handleExamplePrompt(prompt)}
                     className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors"
                   >
@@ -428,7 +576,7 @@ const ChatPage = () => {
               {!isAuthenticated && (
                 <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
                   <p className="text-destructive text-sm">
-                    ⚠️ Sign in to parse and save workouts
+                    Sign in to chat with Gemini and upload images.
                   </p>
                 </div>
               )}
@@ -441,9 +589,8 @@ const ChatPage = () => {
               className={`mb-2 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`flex max-w-[85%] gap-2 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                className={`flex max-w-[88%] gap-2 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
               >
-                {/* Avatar - only show for assistant/system */}
                 {message.role !== "user" && (
                   <div
                     className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
@@ -462,141 +609,8 @@ const ChatPage = () => {
                         : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
                   }`}
                 >
-                  <div className="text-sm">
-                    {message.role === "assistant" ? (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p: ({ children, ...props }) => (
-                            <p
-                              className="mb-2 leading-relaxed last:mb-0"
-                              {...props}
-                            >
-                              {children}
-                            </p>
-                          ),
-                          ul: ({ children, ...props }) => (
-                            <ul
-                              className="mb-2 list-inside list-disc space-y-1"
-                              {...props}
-                            >
-                              {children}
-                            </ul>
-                          ),
-                          ol: ({ children, ...props }) => (
-                            <ol
-                              className="mb-2 list-inside list-decimal space-y-1"
-                              {...props}
-                            >
-                              {children}
-                            </ol>
-                          ),
-                          li: ({ children, ...props }) => (
-                            <li className="mb-0.5" {...props}>
-                              {children}
-                            </li>
-                          ),
-                          strong: ({ children, ...props }) => (
-                            <strong className="font-semibold" {...props}>
-                              {children}
-                            </strong>
-                          ),
-                          em: ({ children, ...props }) => (
-                            <em className="italic" {...props}>
-                              {children}
-                            </em>
-                          ),
-                          code: ({ children, ...props }) => {
-                            const isInline =
-                              !props.className?.includes("language-");
-                            return isInline ? (
-                              <code
-                                className="bg-background/50 rounded-md px-1.5 py-0.5 font-mono text-xs"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            ) : (
-                              <code {...props}>{children}</code>
-                            );
-                          },
-                          pre: ({ children, ...props }) => (
-                            <pre
-                              className="bg-background/50 mb-2 overflow-x-auto rounded-lg p-2 text-xs"
-                              {...props}
-                            >
-                              {children}
-                            </pre>
-                          ),
-                          h1: ({ children, ...props }) => (
-                            <h1 className="mb-2 text-base font-bold" {...props}>
-                              {children}
-                            </h1>
-                          ),
-                          h2: ({ children, ...props }) => (
-                            <h2 className="mb-1.5 text-sm font-bold" {...props}>
-                              {children}
-                            </h2>
-                          ),
-                          h3: ({ children, ...props }) => (
-                            <h3
-                              className="mb-1 text-sm font-semibold"
-                              {...props}
-                            >
-                              {children}
-                            </h3>
-                          ),
-                          blockquote: ({ children, ...props }) => (
-                            <blockquote
-                              className="border-border my-2 border-l-2 pl-3 italic"
-                              {...props}
-                            >
-                              {children}
-                            </blockquote>
-                          ),
-                        }}
-                      >
-                        {message.content || ""}
-                      </ReactMarkdown>
-                    ) : (
-                      <p className="leading-relaxed">{message.content}</p>
-                    )}
-                  </div>
-                  {message.showSaveButton && message.workoutData && (
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        size="sm"
-                        className="h-8 rounded-xl text-xs"
-                        onClick={() => handleSaveWorkout(message.workoutData!)}
-                        disabled={saveWorkoutMutation.isPending}
-                      >
-                        {saveWorkoutMutation.isPending ? (
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                            Saving...
-                          </div>
-                        ) : (
-                          "💾 Save Workout"
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-xl text-xs"
-                        onClick={() => {
-                          setMessages((prev) =>
-                            prev.map((msg) =>
-                              msg.id === message.id
-                                ? { ...msg, showSaveButton: false }
-                                : msg,
-                            ),
-                          );
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+                  {renderMessageParts(message)}
+                  {/* TODO: Render a dedicated workout widget here when chat responses can surface workout-creation events. */}
                 </div>
               </div>
             </div>
@@ -627,20 +641,67 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* Input - Fixed at bottom */}
       <div className="border-border/20 bg-card shrink-0 border-t p-3 shadow-sm">
         <div className="mx-auto max-w-4xl">
+          {pendingAttachments.length > 0 && (
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              {pendingAttachments.map((attachment) => (
+                <div
+                  key={attachment.localId}
+                  className="bg-muted relative h-20 w-20 flex-none overflow-hidden rounded-2xl border"
+                >
+                  <img
+                    src={attachment.previewUrl}
+                    alt={attachment.file.name}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(attachment.localId)}
+                    className="bg-background/80 absolute right-1 top-1 rounded-full p-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {attachmentError && (
+            <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {attachmentError}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-11 shrink-0 rounded-xl p-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || pendingAttachments.length >= MAX_ATTACHMENTS}
+            >
+              <ImagePlus className="h-5 w-5" />
+            </Button>
             <Input
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(event) => setInputValue(event.target.value)}
               placeholder="Message..."
               className="border-border/30 bg-muted/30 focus:bg-background h-11 flex-1 rounded-xl transition-colors"
               disabled={isLoading}
             />
             <Button
               type="submit"
-              disabled={isLoading || !inputValue.trim()}
+              disabled={
+                isLoading ||
+                (!inputValue.trim() && pendingAttachments.length === 0)
+              }
               className="h-11 w-11 shrink-0 rounded-xl p-0"
             >
               <MessageCircle className="h-5 w-5" />

@@ -31,7 +31,12 @@ from src.exercises.models import (  # noqa: F401
 )
 from src.exercise_sets.models import ExerciseSet  # noqa: F401
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate  # noqa: F401
-from src.chat.models import Conversation, ConversationMessage  # noqa: F401
+from src.chat.models import (  # noqa: F401
+    ChatAttachment,
+    Conversation,
+    ConversationMessage,
+    ConversationMessagePart,
+)
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv

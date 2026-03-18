@@ -66,12 +66,15 @@ async def import_status() -> Dict[str, Any]:
 
         async with async_session_maker() as session:
             # Check how many exercises with external_id exist
-            result = await session.execute(
-                text(
-                    "SELECT COUNT(*) FROM exercise_types WHERE external_id IS NOT NULL"
+            try:
+                result = await session.execute(
+                    text(
+                        "SELECT COUNT(*) FROM exercise_types WHERE external_id IS NOT NULL"
+                    )
                 )
-            )
-            imported_count = result.scalar()
+                imported_count = result.scalar()
+            except Exception:
+                imported_count = 0
 
             # Check total in ext.exercises
             try:
@@ -79,8 +82,8 @@ async def import_status() -> Dict[str, Any]:
                     text("SELECT COUNT(*) FROM ext.exercises")
                 )
                 total_available = ext_result.scalar()
-            except Exception as e:
-                total_available = f"Unknown (ext.exercises not found: {e})"
+            except Exception:
+                total_available = "Unknown (ext.exercises not found)"
 
             return {
                 "imported_exercises": imported_count,
