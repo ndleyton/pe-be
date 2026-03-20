@@ -2,6 +2,7 @@
 import type { MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
+import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import { useAuthStore } from "@/stores";
 
 // Guest intensity unit type (simplified)
@@ -34,16 +35,8 @@ const IntensityUnitModal = ({
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
-  // For guest mode, use hardcoded intensity units
-  const guestIntensityUnits: GuestIntensityUnit[] = [
-    { id: 1, name: "Bodyweight", abbreviation: "bw" },
-    { id: 2, name: "Kilograms", abbreviation: "kg" },
-    { id: 3, name: "Pounds", abbreviation: "lbs" },
-  ];
-
-  const intensityUnits = isAuthenticated
-    ? serverIntensityUnits
-    : guestIntensityUnits;
+  const intensityUnits: Array<IntensityUnit | GuestIntensityUnit> =
+    isAuthenticated ? serverIntensityUnits : GUEST_INTENSITY_UNITS;
 
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
