@@ -54,17 +54,14 @@ class ChatService:
     @classmethod
     def _format_set_summary(cls, exercise_set: Any) -> str:
         intensity_display = ""
-        if (
-            getattr(exercise_set, "intensity", None) is not None
-            and hasattr(exercise_set, "intensity_unit")
-            and exercise_set.intensity_unit
-        ):
-            intensity_display = (
-                f" at {exercise_set.intensity} "
-                f"{exercise_set.intensity_unit.abbreviation}"
-            )
-        elif getattr(exercise_set, "intensity", None) is not None:
-            intensity_display = f" at {exercise_set.intensity}"
+        intensity = getattr(exercise_set, "intensity", None)
+        intensity_unit = getattr(exercise_set, "intensity_unit", None)
+        unit_abbreviation = getattr(intensity_unit, "abbreviation", None)
+
+        if intensity is not None and unit_abbreviation:
+            intensity_display = f" at {intensity} {unit_abbreviation}"
+        elif intensity is not None:
+            intensity_display = f" at {intensity}"
 
         summary = (
             f"  - Set {exercise_set.id}: "
