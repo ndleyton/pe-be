@@ -23,6 +23,7 @@ import {
   type ExerciseType,
   type IntensityUnit,
 } from "@/features/exercises/api";
+import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import {
   ExerciseTypeModal,
   IntensityUnitModal,
@@ -59,11 +60,7 @@ const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = {
   day: "numeric",
 };
 
-const guestIntensityUnits: GuestIntensityUnit[] = [
-  { id: 1, name: "Bodyweight", abbreviation: "bw" },
-  { id: 2, name: "Kilograms", abbreviation: "kg" },
-  { id: 3, name: "Pounds", abbreviation: "lbs" },
-];
+const guestIntensityUnits: GuestIntensityUnit[] = [...GUEST_INTENSITY_UNITS];
 
 type RoutineExerciseTypeOption = {
   id: string | number;

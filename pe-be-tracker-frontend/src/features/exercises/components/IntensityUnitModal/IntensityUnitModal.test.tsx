@@ -146,7 +146,7 @@ describe("IntensityUnitModal", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("bw - Bodyweight")).toBeInTheDocument();
+      expect(screen.getByText("BW - Bodyweight")).toBeInTheDocument();
       expect(screen.getByText("kg - Kilograms")).toBeInTheDocument();
       expect(screen.getByText("lbs - Pounds")).toBeInTheDocument();
     });
@@ -166,9 +166,9 @@ describe("IntensityUnitModal", () => {
       );
 
       expect(onSelect).toHaveBeenCalledWith({
-        id: 1,
+        id: 5,
         name: "Bodyweight",
-        abbreviation: "bw",
+        abbreviation: "BW",
       });
     });
 
@@ -371,7 +371,7 @@ describe("IntensityUnitModal", () => {
 
       expect(
         screen.getByRole("button", { name: /select bodyweight \(bw\)/i }),
-      ).toHaveAttribute("aria-label", "Select Bodyweight (bw)");
+      ).toHaveAttribute("aria-label", "Select Bodyweight (BW)");
       expect(
         screen.getByRole("button", { name: /select kilograms \(kg\)/i }),
       ).toHaveAttribute("aria-label", "Select Kilograms (kg)");
