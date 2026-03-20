@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
+import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import { useAuthStore } from "@/stores";
 import {
   Button,
@@ -50,16 +51,8 @@ const ExerciseTypeMore = ({
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
-  // For guest mode, use hardcoded intensity units (match backend)
-  const guestIntensityUnits: GuestIntensityUnit[] = [
-    { id: 1, name: "Kilograms", abbreviation: "kg" },
-    { id: 2, name: "Pounds", abbreviation: "lbs" },
-    { id: 5, name: "Bodyweight", abbreviation: "BW" },
-  ];
-
-  const intensityUnits = isAuthenticated
-    ? serverIntensityUnits
-    : guestIntensityUnits;
+  const intensityUnits: Array<IntensityUnit | GuestIntensityUnit> =
+    isAuthenticated ? serverIntensityUnits : GUEST_INTENSITY_UNITS;
 
   return (
     <div className="space-y-4 p-4">
