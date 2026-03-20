@@ -22,6 +22,7 @@ async def test_parse_workout_returns_error_when_session_missing():
                         "intensity": 135.0,
                         "intensity_unit": "lbs",
                         "rest_time_seconds": 60,
+                        "notes": "Last rep was a grind",
                     }
                 ],
             }

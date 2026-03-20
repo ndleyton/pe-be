@@ -45,6 +45,55 @@ class WorkoutSummaryByDateArgs(BaseModel):
 
 
 class ChatService:
+    @staticmethod
+    def _format_optional_notes(label: str, notes: Optional[str]) -> str:
+        if not notes:
+            return ""
+        return f"{label}: {notes}\n"
+
+    @classmethod
+    def _format_set_summary(cls, exercise_set: Any) -> str:
+        intensity_display = ""
+        if (
+            getattr(exercise_set, "intensity", None) is not None
+            and hasattr(exercise_set, "intensity_unit")
+            and exercise_set.intensity_unit
+        ):
+            intensity_display = (
+                f" at {exercise_set.intensity} "
+                f"{exercise_set.intensity_unit.abbreviation}"
+            )
+        elif getattr(exercise_set, "intensity", None) is not None:
+            intensity_display = f" at {exercise_set.intensity}"
+
+        summary = (
+            f"  - Set {exercise_set.id}: "
+            f"{getattr(exercise_set, 'reps', None) or '?'} reps{intensity_display}\n"
+        )
+        summary += cls._format_optional_notes(
+            "    Set notes", getattr(exercise_set, "notes", None)
+        )
+        return summary
+
+    @classmethod
+    def _format_workout_with_exercises(
+        cls, intro: str, workout: Any, exercises: List[Any]
+    ) -> str:
+        summary = f"{intro}\n"
+        summary += cls._format_optional_notes(
+            "Workout notes", getattr(workout, "notes", None)
+        )
+
+        for exercise in exercises:
+            summary += f"- {exercise.exercise_type.name}\n"
+            summary += cls._format_optional_notes(
+                "  Exercise notes", getattr(exercise, "notes", None)
+            )
+            for exercise_set in exercise.exercise_sets:
+                summary += cls._format_set_summary(exercise_set)
+
+        return summary
+
     def __init__(
         self,
         user_id: int,
@@ -132,33 +181,15 @@ class ChatService:
             )
 
         try:
-            summary = (
-                f"Your last workout was '{workout.name}' on "
-                f"{workout.start_time.strftime('%Y-%m-%d')}. "
-                "You did the following exercises:\n"
+            summary = self._format_workout_with_exercises(
+                (
+                    f"Your last workout was '{workout.name}' on "
+                    f"{workout.start_time.strftime('%Y-%m-%d')}. "
+                    "You did the following exercises:"
+                ),
+                workout,
+                exercises,
             )
-
-            for exercise in exercises:
-                summary += f"- {exercise.exercise_type.name}\n"
-                for exercise_set in exercise.exercise_sets:
-                    intensity_display = ""
-                    if (
-                        exercise_set.intensity
-                        and hasattr(exercise_set, "intensity_unit")
-                        and exercise_set.intensity_unit
-                        and getattr(exercise_set.intensity_unit, "abbreviation", None)
-                    ):
-                        intensity_display = (
-                            f" at {exercise_set.intensity} "
-                            f"{exercise_set.intensity_unit.abbreviation}"
-                        )
-                    elif exercise_set.intensity:
-                        intensity_display = f" at {exercise_set.intensity}"
-
-                    summary += (
-                        f"  - Set {exercise_set.id}: "
-                        f"{exercise_set.reps or '?'} reps{intensity_display}\n"
-                    )
 
             logger.debug(
                 "Generated last workout summary user_id=%s workout_id=%s exercise_count=%s",
@@ -197,34 +228,11 @@ class ChatService:
                 "doesn't have any exercises logged."
             )
 
-        summary = (
-            f"On your workout on {workout_date} ('{workout.name}'), "
-            "you did the following exercises:\n"
+        return self._format_workout_with_exercises(
+            f"On your workout on {workout_date} ('{workout.name}'), you did the following exercises:",
+            workout,
+            exercises,
         )
-
-        for exercise in exercises:
-            summary += f"- {exercise.exercise_type.name}\n"
-            for exercise_set in exercise.exercise_sets:
-                intensity_display = ""
-                if (
-                    exercise_set.intensity
-                    and hasattr(exercise_set, "intensity_unit")
-                    and exercise_set.intensity_unit
-                    and getattr(exercise_set.intensity_unit, "abbreviation", None)
-                ):
-                    intensity_display = (
-                        f" at {exercise_set.intensity} "
-                        f"{exercise_set.intensity_unit.abbreviation}"
-                    )
-                elif exercise_set.intensity:
-                    intensity_display = f" at {exercise_set.intensity}"
-
-                summary += (
-                    f"  - Set {exercise_set.id}: "
-                    f"{exercise_set.reps or '?'} reps{intensity_display}\n"
-                )
-
-        return summary
 
     async def _parse_workout_and_save(self, **kwargs) -> str:
         if self._workout_saved_this_request:
@@ -283,7 +291,7 @@ class ChatService:
                     "- notes: Optional workout notes\n"
                     "- exercises: List of exercises, each with exercise_type_name, "
                     "optional notes, and sets (reps, intensity, intensity_unit, "
-                    "rest_time_seconds)\n"
+                    "rest_time_seconds, optional notes)\n"
                 ),
             ),
             ToolDefinition(

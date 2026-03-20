@@ -49,15 +49,18 @@ async def test_get_last_workout_summary_happy_path(monkeypatch):
         id=7,
         name="Upper Strength",
         start_time=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        notes="Felt strong throughout",
     )
     exercise = SimpleNamespace(
         exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Paused first rep",
         exercise_sets=[
             SimpleNamespace(
                 id=1,
                 reps=8,
                 intensity=185,
                 intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Last rep slowed down",
             )
         ],
     )
@@ -80,21 +83,26 @@ async def test_get_last_workout_summary_happy_path(monkeypatch):
 
     summary = await svc._get_last_workout_summary()
     assert "Upper Strength" in summary
+    assert "Workout notes: Felt strong throughout" in summary
     assert "Bench Press" in summary
+    assert "Exercise notes: Paused first rep" in summary
     assert "8 reps at 185 lbs" in summary
+    assert "Set notes: Last rep slowed down" in summary
 
 
 async def test_get_workout_summary_by_date_happy_path(monkeypatch):
     svc = ChatService(user_id=333, session=object())
-    workout = SimpleNamespace(id=5, name="Conditioning")
+    workout = SimpleNamespace(id=5, name="Conditioning", notes="Short session")
     exercise = SimpleNamespace(
         exercise_type=SimpleNamespace(name="Row"),
+        notes="Keep stroke rate steady",
         exercise_sets=[
             SimpleNamespace(
                 id=10,
                 reps=15,
                 intensity=50,
                 intensity_unit=SimpleNamespace(abbreviation="kg"),
+                notes="Could have gone heavier",
             )
         ],
     )
@@ -117,8 +125,11 @@ async def test_get_workout_summary_by_date_happy_path(monkeypatch):
 
     summary = await svc._get_workout_summary_by_date("2026-02-20")
     assert "Conditioning" in summary
+    assert "Workout notes: Short session" in summary
     assert "Row" in summary
+    assert "Exercise notes: Keep stroke rate steady" in summary
     assert "15 reps at 50 kg" in summary
+    assert "Set notes: Could have gone heavier" in summary
 
 
 async def test_generate_response_happy_path_without_persistence(monkeypatch):

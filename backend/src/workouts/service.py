@@ -383,6 +383,7 @@ class WorkoutService:
                     intensity=parsed_set.intensity,
                     intensity_unit_id=unit_id,
                     rest_time_seconds=parsed_set.rest_time_seconds,
+                    notes=parsed_set.notes,
                     exercise_id=exercise.id,
                     done=True,
                 )
@@ -610,7 +611,7 @@ Given a workout description, extract:
 4. List of exercises with:
    - Exercise name (standardized, e.g., "Bench Press", "Squat", "Deadlift")
    - Exercise notes (optional)
-   - Sets with reps, weight/intensity, and intensity unit
+   - Sets with reps, weight/intensity, intensity unit, and optional set notes
 
 Intensity units should be one of: "kg", "lbs", "km/h", "mph", "BW" (bodyweight)
 
@@ -628,7 +629,8 @@ Return ONLY valid JSON in this exact format:
           "reps": number or null,
           "intensity": number or null,
           "intensity_unit": "string",
-          "rest_time_seconds": number or null
+          "rest_time_seconds": number or null,
+          "notes": "string or null"
         }
       ]
     }
