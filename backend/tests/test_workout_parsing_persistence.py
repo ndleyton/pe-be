@@ -26,6 +26,7 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
                         intensity=30.0,
                         intensity_unit="minutes",
                         rest_time_seconds=None,
+                        notes="Easy pace",
                     )
                 ],
             )
@@ -120,6 +121,7 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
     assert set_payload.done is True
     assert set_payload.intensity == 30.0
     assert set_payload.intensity_unit_id == 99
+    assert set_payload.notes == "Easy pace"
     # Final return comes from get_workout_by_id
     assert result.name == "Walking"
 

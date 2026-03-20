@@ -102,6 +102,7 @@ class ParsedExerciseSet(BaseModel):
     intensity: Optional[Decimal] = None
     intensity_unit: str
     rest_time_seconds: Optional[int] = None
+    notes: Optional[str] = None
 
 
 class ParsedExercise(BaseModel):
