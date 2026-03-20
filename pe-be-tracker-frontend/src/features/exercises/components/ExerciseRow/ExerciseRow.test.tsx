@@ -34,7 +34,7 @@ vi.mock("../ExerciseTypeMore", () => ({
       <span>Current unit: {currentIntensityUnit.abbreviation}</span>
       <button
         onClick={() =>
-          onIntensityUnitChange({ id: 3, name: "Pounds", abbreviation: "lbs" })
+          onIntensityUnitChange({ id: 2, name: "Pounds", abbreviation: "lbs" })
         }
         data-testid="change-unit-button"
       >
