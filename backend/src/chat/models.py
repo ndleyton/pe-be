@@ -35,7 +35,7 @@ class Conversation(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False, index=True
@@ -73,7 +73,7 @@ class ConversationMessage(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("conversations.id", ondelete="cascade"),
@@ -102,7 +102,7 @@ class ChatAttachment(Base):
 
     __tablename__ = "chat_attachments"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False, index=True
     )
@@ -134,7 +134,7 @@ class ConversationMessagePart(Base):
 
     __tablename__ = "conversation_message_parts"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_message_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("conversation_messages.id", ondelete="cascade"),
