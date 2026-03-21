@@ -1,7 +1,17 @@
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Index,
+    desc,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -15,6 +25,15 @@ class Conversation(Base):
     """Conversation model for chat sessions."""
 
     __tablename__ = "conversations"
+
+    __table_args__ = (
+        Index(
+            "ix_conversations_user_active_updated_at_desc",
+            "user_id",
+            desc("updated_at"),
+            postgresql_where=text("is_active"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -45,6 +64,14 @@ class ConversationMessage(Base):
     """Individual message within a conversation."""
 
     __tablename__ = "conversation_messages"
+
+    __table_args__ = (
+        Index(
+            "ix_conversation_messages_conversation_id_created_at",
+            "conversation_id",
+            "created_at",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     conversation_id: Mapped[int] = mapped_column(

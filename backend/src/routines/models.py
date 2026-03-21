@@ -1,6 +1,16 @@
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Column, Integer, String, Text, Numeric, ForeignKey, Boolean
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Numeric,
+    ForeignKey,
+    Boolean,
+    Index,
+    desc,
+)
 from sqlalchemy import Enum as SAEnum
 from enum import Enum
 from sqlalchemy.orm import relationship, Mapped
@@ -17,6 +27,20 @@ class Routine(Base):
     """Model for workout routines/templates."""
 
     __tablename__ = "recipes"
+
+    __table_args__ = (
+        Index("ix_recipes_creator_visibility", "creator_id", "visibility"),
+        Index(
+            "ix_recipes_creator_id_created_at_desc",
+            "creator_id",
+            desc("created_at"),
+        ),
+        Index(
+            "ix_recipes_visibility_created_at_desc",
+            "visibility",
+            desc("created_at"),
+        ),
+    )
 
     name = Column(String, nullable=False)
     description = Column(Text)
@@ -60,6 +84,8 @@ class ExerciseTemplate(Base):
 
     __tablename__ = "exercise_templates"
 
+    __table_args__ = (Index("ix_exercise_templates_recipe_id", "recipe_id"),)
+
     exercise_type_id = Column(
         Integer,
         ForeignKey("exercise_types.id", ondelete="RESTRICT"),
@@ -86,6 +112,10 @@ class SetTemplate(Base):
     """Model for set templates within exercise templates"""
 
     __tablename__ = "set_templates"
+
+    __table_args__ = (
+        Index("ix_set_templates_exercise_template_id", "exercise_template_id"),
+    )
 
     reps = Column(Integer)
     intensity = Column(Numeric(precision=7, scale=3))

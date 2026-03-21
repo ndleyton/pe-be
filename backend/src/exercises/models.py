@@ -9,6 +9,9 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
     Boolean,
+    Index,
+    desc,
+    text,
 )
 from sqlalchemy.orm import relationship, Mapped
 
@@ -23,6 +26,10 @@ class ExerciseType(Base):
     """Model for exercise types"""
 
     __tablename__ = "exercise_types"
+
+    __table_args__ = (
+        Index("ix_exercise_types_times_used_name", desc("times_used"), "name"),
+    )
 
     name = Column(String, unique=True)
     description = Column(String)
@@ -51,6 +58,20 @@ class Exercise(Base):
     """Model for exercises within workouts"""
 
     __tablename__ = "exercises"
+
+    __table_args__ = (
+        Index(
+            "ix_exercises_workout_id_active_id",
+            "workout_id",
+            "id",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        Index(
+            "ix_exercises_exercise_type_id_created_at_desc",
+            "exercise_type_id",
+            desc("created_at"),
+        ),
+    )
 
     timestamp = Column(DateTime(timezone=True))
     notes = Column(Text)
