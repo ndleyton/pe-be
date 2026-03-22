@@ -9,6 +9,8 @@ from sqlalchemy import (
     String,
     DateTime,
     Numeric,
+    Index,
+    text,
 )
 from sqlalchemy.orm import relationship, Mapped
 
@@ -23,6 +25,15 @@ class ExerciseSet(Base):
     """Model for individual exercise sets"""
 
     __tablename__ = "exercise_sets"
+
+    __table_args__ = (
+        Index(
+            "ix_exercise_sets_exercise_id_active_id",
+            "exercise_id",
+            "id",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
 
     reps = Column(Integer)
     intensity = Column(Numeric(precision=7, scale=3))

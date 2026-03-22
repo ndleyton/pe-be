@@ -8,6 +8,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     CheckConstraint,
+    Index,
+    desc,
 )
 from sqlalchemy.orm import relationship, Mapped
 
@@ -36,6 +38,12 @@ class Workout(Base):
         CheckConstraint(
             "end_time IS NULL OR start_time IS NULL OR end_time >= start_time",
             name="ck_workouts_end_time_gte_start_time",
+        ),
+        Index("ix_workouts_owner_id_id_desc", "owner_id", desc("id")),
+        Index(
+            "ix_workouts_owner_id_start_time_desc",
+            "owner_id",
+            desc("start_time"),
         ),
     )
 
