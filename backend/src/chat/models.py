@@ -1,7 +1,17 @@
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Index,
+    desc,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -16,7 +26,16 @@ class Conversation(Base):
 
     __tablename__ = "conversations"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    __table_args__ = (
+        Index(
+            "ix_conversations_user_active_updated_at_desc",
+            "user_id",
+            desc("updated_at"),
+            postgresql_where=text("is_active"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False, index=True
@@ -46,7 +65,15 @@ class ConversationMessage(Base):
 
     __tablename__ = "conversation_messages"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    __table_args__ = (
+        Index(
+            "ix_conversation_messages_conversation_id_created_at",
+            "conversation_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("conversations.id", ondelete="cascade"),
@@ -75,7 +102,7 @@ class ChatAttachment(Base):
 
     __tablename__ = "chat_attachments"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False, index=True
     )
@@ -107,7 +134,7 @@ class ConversationMessagePart(Base):
 
     __tablename__ = "conversation_message_parts"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_message_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("conversation_messages.id", ondelete="cascade"),
