@@ -142,14 +142,26 @@ class Settings(BaseSettings):
     )
 
     LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
-    SENTRY_DSN: str = Field("", validation_alias="SENTRY_DSN")
-    SENTRY_RELEASE: str = Field("", validation_alias="SENTRY_RELEASE")
-    SENTRY_TRACES_SAMPLE_RATE: float = Field(
-        0.0, validation_alias="SENTRY_TRACES_SAMPLE_RATE"
+    OTEL_ENABLED: bool = Field(False, validation_alias="OTEL_ENABLED")
+    OTEL_SERVICE_NAME: str = Field(
+        "pe-be-backend", validation_alias="OTEL_SERVICE_NAME"
     )
-    SENTRY_PROFILES_SAMPLE_RATE: float = Field(
-        0.0, validation_alias="SENTRY_PROFILES_SAMPLE_RATE"
+    OTEL_SERVICE_VERSION: str = Field(
+        "", validation_alias="OTEL_SERVICE_VERSION"
     )
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+    )
+    OTEL_EXPORTER_OTLP_HEADERS: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    OTEL_TRACES_SAMPLER_ARG: float = Field(
+        0.1, validation_alias="OTEL_TRACES_SAMPLER_ARG"
+    )
+    OTEL_EXCLUDED_URLS: str = Field("/health", validation_alias="OTEL_EXCLUDED_URLS")
 
     # Environment indicator
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
@@ -178,11 +190,11 @@ class Settings(BaseSettings):
 
         return v
 
-    @field_validator("SENTRY_TRACES_SAMPLE_RATE", "SENTRY_PROFILES_SAMPLE_RATE")
+    @field_validator("OTEL_TRACES_SAMPLER_ARG")
     @classmethod
     def validate_sample_rate(cls, v: float) -> float:
         if not 0 <= v <= 1:
-            raise ValueError("Sentry sample rates must be between 0 and 1")
+            raise ValueError("OTEL trace sampler arg must be between 0 and 1")
         return v
 
 
