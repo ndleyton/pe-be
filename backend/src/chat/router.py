@@ -190,7 +190,9 @@ async def download_chat_attachment(
             user.id,
             attachment_id,
         )
-        raise HTTPException(status_code=500, detail="Failed to load attachment") from exc
+        raise HTTPException(
+            status_code=500, detail="Failed to load attachment"
+        ) from exc
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
