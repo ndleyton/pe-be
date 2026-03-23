@@ -142,6 +142,26 @@ class Settings(BaseSettings):
     )
 
     LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
+    OTEL_ENABLED: bool = Field(False, validation_alias="OTEL_ENABLED")
+    OTEL_SERVICE_NAME: str = Field(
+        "pe-be-backend", validation_alias="OTEL_SERVICE_NAME"
+    )
+    OTEL_SERVICE_VERSION: str = Field(
+        "", validation_alias="OTEL_SERVICE_VERSION"
+    )
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+    )
+    OTEL_EXPORTER_OTLP_HEADERS: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    OTEL_TRACES_SAMPLER_ARG: float = Field(
+        0.1, validation_alias="OTEL_TRACES_SAMPLER_ARG"
+    )
+    OTEL_EXCLUDED_URLS: str = Field("/health", validation_alias="OTEL_EXCLUDED_URLS")
 
     # Environment indicator
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
@@ -168,6 +188,13 @@ class Settings(BaseSettings):
                 "DATABASE_URL contains placeholder values. Please set a valid DATABASE_URL environment variable."
             )
 
+        return v
+
+    @field_validator("OTEL_TRACES_SAMPLER_ARG")
+    @classmethod
+    def validate_sample_rate(cls, v: float) -> float:
+        if not 0 <= v <= 1:
+            raise ValueError("OTEL trace sampler arg must be between 0 and 1")
         return v
 
 
