@@ -114,7 +114,9 @@ class ChatService:
             return f"No exercise named '{exercise_name}' found."
 
         exercise_type = exercise_types_response.data[0]
-        stats = await get_exercise_type_stats(self.session, exercise_type.id)
+        stats = await get_exercise_type_stats(
+            self.session, exercise_type.id, self.user_id
+        )
 
         if not stats or not stats.get("lastWorkout"):
             return f"No workout data found for {exercise_name}."

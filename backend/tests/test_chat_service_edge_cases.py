@@ -43,6 +43,7 @@ async def test_get_last_exercise_performance_no_stats(
 
     result = await chat_service_with_db._get_last_exercise_performance("squat")
     assert result == "No workout data found for squat."
+    mock_stats.assert_awaited_once_with(chat_service_with_db.session, 1, 1)
 
 
 @pytest.mark.asyncio
