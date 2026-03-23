@@ -24,6 +24,16 @@ import {
   GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
+import NotFoundPage from "@/pages/NotFoundPage";
+
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error !== "object" || error === null || !("response" in error)) {
+    return null;
+  }
+
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === "number" ? response.status : null;
+};
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   const response = await api.patch(`/workouts/${workoutId}`, {
@@ -88,7 +98,11 @@ const WorkoutPage = () => {
   };
 
   // Fetch workout details (only when authenticated)
-  const { data: serverWorkout } = useQuery({
+  const {
+    data: serverWorkout,
+    error: workoutError,
+    isPending: workoutPending,
+  } = useQuery({
     queryKey: ["workout", workoutId],
     queryFn: () => fetchWorkout(workoutId as string),
     enabled: !!workoutId && isAuthenticated,
@@ -467,9 +481,16 @@ const WorkoutPage = () => {
   const workoutTypeId = isAuthenticated
     ? (serverWorkout?.workout_type_id ?? null)
     : (guestWorkout?.workout_type_id ?? null);
+  const hasValidWorkout = isAuthenticated
+    ? Boolean(serverWorkout)
+    : guestHydrated && Boolean(guestWorkout);
 
   // Warn user on navigation/back while workout in progress
   useEffect(() => {
+    if (!hasValidWorkout) {
+      return;
+    }
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -486,16 +507,45 @@ const WorkoutPage = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [hasValidWorkout]);
 
   // Streamlined status computation
   // For guests, avoid showing the skeleton; only show when authenticated
-  const listPending = isAuthenticated && (authLoading || exercisesLoading);
+  const workoutErrorStatus = getErrorStatus(workoutError);
+  const showNotFound = !workoutId
+    || (!isAuthenticated && guestHydrated && !guestWorkout)
+    || (isAuthenticated
+      && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
+  const listPending =
+    isAuthenticated
+    && (authLoading || workoutPending || exercisesLoading);
   const listStatus: "pending" | "success" | "error" = listPending
     ? "pending"
     : isAuthenticated && exercisesError
       ? "error"
       : "success";
+
+  if (isAuthenticated && (authLoading || workoutPending)) {
+    return (
+      <div className="mx-auto max-w-5xl p-4 text-center">
+        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
+          Loading workout...
+        </div>
+      </div>
+    );
+  }
+
+  if (showNotFound) {
+    return <NotFoundPage />;
+  }
+
+  if (isAuthenticated && workoutError) {
+    return (
+      <div className="p-4 text-center text-destructive">
+        Failed to load workout.
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
