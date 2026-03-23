@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
+import { Sentry } from "@/instrument";
 import { initializeAuth, useAuthStore } from "./useAuthStore";
 import { useGuestStore } from "./useGuestStore";
 
@@ -35,6 +36,11 @@ export const StoreInitializer = ({ children }: StoreInitializerProps) => {
     if (user) {
       const distinctId = String(user.id);
       if (lastIdentifiedIdRef.current !== distinctId) {
+        Sentry.setUser({ id: distinctId });
+        Sentry.setTag("guest", "false");
+        Sentry.setTag("is_authenticated", "true");
+        Sentry.setTag("environment", config.environment);
+
         posthog.identify(distinctId, {
           email: user.email,
           name: user.name ?? undefined,
@@ -50,6 +56,9 @@ export const StoreInitializer = ({ children }: StoreInitializerProps) => {
       }
     } else if (lastIdentifiedIdRef.current) {
       // User signed out; reset identification to anonymous
+      Sentry.setUser(null);
+      Sentry.setTag("guest", "true");
+      Sentry.setTag("is_authenticated", "false");
       posthog.reset();
       lastIdentifiedIdRef.current = null;
     }

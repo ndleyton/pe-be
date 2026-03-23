@@ -142,6 +142,14 @@ class Settings(BaseSettings):
     )
 
     LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
+    SENTRY_DSN: str = Field("", validation_alias="SENTRY_DSN")
+    SENTRY_RELEASE: str = Field("", validation_alias="SENTRY_RELEASE")
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(
+        0.0, validation_alias="SENTRY_TRACES_SAMPLE_RATE"
+    )
+    SENTRY_PROFILES_SAMPLE_RATE: float = Field(
+        0.0, validation_alias="SENTRY_PROFILES_SAMPLE_RATE"
+    )
 
     # Environment indicator
     ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
@@ -168,6 +176,13 @@ class Settings(BaseSettings):
                 "DATABASE_URL contains placeholder values. Please set a valid DATABASE_URL environment variable."
             )
 
+        return v
+
+    @field_validator("SENTRY_TRACES_SAMPLE_RATE", "SENTRY_PROFILES_SAMPLE_RATE")
+    @classmethod
+    def validate_sample_rate(cls, v: float) -> float:
+        if not 0 <= v <= 1:
+            raise ValueError("Sentry sample rates must be between 0 and 1")
         return v
 
 

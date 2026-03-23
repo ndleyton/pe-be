@@ -5,6 +5,15 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { config } from "@/app/config/env";
+import { Sentry, sentryEnabled } from "@/instrument";
+
+type RequestMetadata = {
+  requestId?: string;
+};
+
+type RequestWithMetadata = InternalAxiosRequestConfig & {
+  metadata?: RequestMetadata;
+};
 
 // Centralized Axios configuration leveraging Vite environment variables.
 // NOTE: Only variables prefixed with `VITE_` are exposed to the browser bundle.
@@ -16,6 +25,94 @@ const apiConfig: AxiosRequestConfig = {
 };
 
 export const apiClient: AxiosInstance = axios.create(apiConfig);
+
+const createRequestId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const getHeaderValue = (
+  headers: unknown,
+  key: string,
+): string | undefined => {
+  if (!headers) {
+    return undefined;
+  }
+  if (headers instanceof AxiosHeaders) {
+    const value = headers.get(key);
+    return value == null ? undefined : String(value);
+  }
+  if (typeof headers === "object") {
+    const record = headers as Record<string, unknown>;
+    const value =
+      record[key] ?? record[key.toLowerCase()] ?? record[key.toUpperCase()];
+    if (Array.isArray(value)) {
+      return value.join(",");
+    }
+    return typeof value === "string" ? value : undefined;
+  }
+  return undefined;
+};
+
+const setHeaderValue = (
+  request: InternalAxiosRequestConfig,
+  key: string,
+  value: string,
+): void => {
+  if (request.headers instanceof AxiosHeaders) {
+    request.headers.set(key, value);
+    return;
+  }
+
+  const headers = AxiosHeaders.from(request.headers);
+  headers.set(key, value);
+  request.headers = headers;
+};
+
+const captureApiError = (error: unknown): void => {
+  if (
+    !sentryEnabled ||
+    !axios.isAxiosError(error) ||
+    error.code === "ERR_CANCELED"
+  ) {
+    return;
+  }
+
+  const status = error.response?.status;
+  if (status && status < 500) {
+    return;
+  }
+
+  const request = error.config as RequestWithMetadata | undefined;
+  const requestId =
+    request?.metadata?.requestId ||
+    getHeaderValue(request?.headers, "X-Request-ID") ||
+    getHeaderValue(error.response?.headers, "x-request-id");
+
+  Sentry.withScope((scope) => {
+    scope.setTag("error_source", "axios");
+    if (request?.method) {
+      scope.setTag("http_method", request.method.toUpperCase());
+    }
+    if (status) {
+      scope.setTag("http_status", String(status));
+    }
+    if (requestId) {
+      scope.setTag("request_id", requestId);
+    }
+    scope.setContext("api", {
+      baseUrl: request?.baseURL,
+      url: request?.url,
+      status,
+      code: error.code,
+      requestId,
+      responseRequestId: getHeaderValue(error.response?.headers, "x-request-id"),
+    });
+    Sentry.captureException(error);
+  });
+};
 
 export const applyDefaultRequestHeaders = (
   request: InternalAxiosRequestConfig,
@@ -48,6 +145,13 @@ export const applyDefaultRequestHeaders = (
 apiClient.interceptors.request.use(
   (request) => {
     applyDefaultRequestHeaders(request);
+    const requestId = createRequestId();
+    (request as RequestWithMetadata).metadata = {
+      ...(request as RequestWithMetadata).metadata,
+      requestId,
+    };
+    setHeaderValue(request, "X-Request-ID", requestId);
+
     // Log outgoing requests in development
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
@@ -70,6 +174,7 @@ apiClient.interceptors.response.use(
   (error) => {
     // The browser will handle cookie expiration/invalidation.
     // Let components handle guest mode rather than forcing redirects.
+    captureApiError(error);
 
     if (config.enableLogging) {
       // eslint-disable-next-line no-console
