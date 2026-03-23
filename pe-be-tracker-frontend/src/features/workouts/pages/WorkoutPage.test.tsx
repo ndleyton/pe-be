@@ -138,6 +138,18 @@ vi.mock("@/stores", () => ({
 
 describe("WorkoutPage", () => {
   let scrollToMock: ReturnType<typeof vi.fn>;
+  const buildApiGetImplementation = (
+    workoutHandler?: () => Promise<{ data: unknown }>,
+  ) =>
+    vi.fn((url: string) => {
+      if (url === `/workouts/${mockWorkoutId}`) {
+        return workoutHandler
+          ? workoutHandler()
+          : Promise.resolve({ data: mockWorkout });
+      }
+
+      return Promise.resolve({ data: null });
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -145,7 +157,7 @@ describe("WorkoutPage", () => {
     mockAuthState.loading = false;
     mockGuestState.workouts = [];
     mockGuestState.hydrated = true;
-    vi.mocked(api.get).mockResolvedValue({ data: mockWorkout });
+    vi.mocked(api.get).mockImplementation(buildApiGetImplementation());
     scrollToMock = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
@@ -269,7 +281,11 @@ describe("WorkoutPage", () => {
   });
 
   it("shows not found when the workout does not exist", async () => {
-    vi.mocked(api.get).mockRejectedValueOnce({ response: { status: 404 } });
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject({ response: { status: 404 } }),
+      ),
+    );
 
     render(<WorkoutPage />);
 
@@ -282,7 +298,11 @@ describe("WorkoutPage", () => {
   });
 
   it("shows not found when the user lacks access to the workout", async () => {
-    vi.mocked(api.get).mockRejectedValueOnce({ response: { status: 403 } });
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject({ response: { status: 403 } }),
+      ),
+    );
 
     render(<WorkoutPage />);
 
@@ -305,5 +325,22 @@ describe("WorkoutPage", () => {
     expect(vi.mocked(api.get)).not.toHaveBeenCalledWith(
       `/workouts/${mockWorkoutId}`,
     );
+  });
+
+  it("shows a generic error for server failures", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject({ response: { status: 500 } }),
+      ),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByText(/failed to load workout\./i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /page not found/i, level: 2 }),
+    ).not.toBeInTheDocument();
   });
 });
