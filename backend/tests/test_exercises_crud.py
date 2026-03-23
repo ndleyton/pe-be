@@ -457,7 +457,9 @@ async def test_get_intensity_units_and_exercise_type_by_id(db_session):
 async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases(
     db_session,
 ):
-    missing = await crud.get_exercise_type_stats(db_session, 999999)
+    owner = await _seed_user(db_session, "stats@example.com")
+
+    missing = await crud.get_exercise_type_stats(db_session, 999999, owner.id)
     assert missing == {
         "progressiveOverload": [],
         "lastWorkout": None,
@@ -466,7 +468,6 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "intensityUnit": None,
     }
 
-    owner = await _seed_user(db_session, "stats@example.com")
     workout_type = await _seed_workout_type(db_session, "Stats Type")
     workout = await _seed_workout(
         db_session, owner.id, workout_type.id, "Stats Workout"
@@ -479,7 +480,7 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
     )
     await db_session.commit()
 
-    empty = await crud.get_exercise_type_stats(db_session, exercise_type.id)
+    empty = await crud.get_exercise_type_stats(db_session, exercise_type.id, owner.id)
     assert empty == {
         "progressiveOverload": [],
         "lastWorkout": None,
@@ -501,6 +502,25 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         exercise_type_id=exercise_type.id,
         created_at=datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc),
         notes="second",
+    )
+    deleted_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 7, 12, 0, tzinfo=timezone.utc),
+        notes="deleted exercise",
+        deleted_at=datetime(2026, 1, 8, tzinfo=timezone.utc),
+    )
+    other_owner = await _seed_user(db_session, "other-stats@example.com")
+    other_workout = await _seed_workout(
+        db_session, other_owner.id, workout_type.id, "Other Stats Workout"
+    )
+    other_exercise = await _seed_exercise(
+        db_session,
+        workout_id=other_workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 9, 12, 0, tzinfo=timezone.utc),
+        notes="other owner",
     )
     deleted_at = datetime(2026, 1, 6, tzinfo=timezone.utc)
     await _seed_exercise_set(
@@ -539,9 +559,23 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         intensity=90,
         reps=None,
     )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=deleted_exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=400,
+        reps=1,
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=other_exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=500,
+        reps=1,
+    )
     await db_session.commit()
 
-    stats = await crud.get_exercise_type_stats(db_session, exercise_type.id)
+    stats = await crud.get_exercise_type_stats(db_session, exercise_type.id, owner.id)
 
     assert stats["progressiveOverload"] == [
         {"date": "2026-01-01", "maxWeight": 105, "totalVolume": 815, "reps": 8},
@@ -566,6 +600,27 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "name": "Kilograms",
         "abbreviation": "kg",
     }
+
+    other_owner_stats = await crud.get_exercise_type_stats(
+        db_session, exercise_type.id, other_owner.id
+    )
+    assert other_owner_stats["progressiveOverload"] == [
+        {"date": "2026-01-09", "maxWeight": 500, "totalVolume": 500, "reps": 1}
+    ]
+    assert other_owner_stats["lastWorkout"] == {
+        "date": "2026-01-09T12:00:00+00:00",
+        "sets": 1,
+        "totalReps": 1,
+        "maxWeight": 500,
+        "totalVolume": 500,
+    }
+    assert other_owner_stats["personalBest"] == {
+        "date": "2026-01-09T12:00:00+00:00",
+        "weight": 500,
+        "reps": 1,
+        "volume": 500,
+    }
+    assert other_owner_stats["totalSets"] == 1
 
 
 async def test_soft_delete_exercise_marks_active_sets_and_handles_missing(db_session):

@@ -124,10 +124,10 @@ class ExerciseTypeService:
 
     @staticmethod
     async def get_exercise_type_statistics(
-        session: AsyncSession, exercise_type_id: int
+        session: AsyncSession, exercise_type_id: int, user_id: int
     ) -> Dict[str, Any]:
         """Get exercise type statistics including progressive overload data"""
-        return await get_exercise_type_stats(session, exercise_type_id)
+        return await get_exercise_type_stats(session, exercise_type_id, user_id)
 
     @staticmethod
     async def create_new_exercise_type(
