@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,7 @@ from src.users.models import User
 from src.users.router import current_active_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _to_part_response(part) -> ConversationMessagePartResponse:
@@ -109,8 +112,11 @@ async def handle_chat(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+    except Exception as exc:
+        logger.exception("Chat request failed user_id=%s", user.id)
+        raise HTTPException(
+            status_code=500, detail="An unexpected error occurred."
+        ) from exc
 
 
 @router.post("/chat/attachments", response_model=ChatAttachmentUploadResponse)
@@ -149,8 +155,11 @@ async def upload_chat_attachment(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to upload attachment")
+    except Exception as exc:
+        logger.exception("Chat attachment upload failed user_id=%s", user.id)
+        raise HTTPException(
+            status_code=500, detail="Failed to upload attachment"
+        ) from exc
 
 
 @router.get("/chat/attachments/{attachment_id}")
@@ -175,8 +184,13 @@ async def download_chat_attachment(
         raise HTTPException(status_code=404, detail=str(exc))
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to load attachment")
+    except Exception as exc:
+        logger.exception(
+            "Chat attachment download failed user_id=%s attachment_id=%s",
+            user.id,
+            attachment_id,
+        )
+        raise HTTPException(status_code=500, detail="Failed to load attachment") from exc
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
@@ -200,8 +214,11 @@ async def get_conversations(
             limit=limit,
             offset=offset,
         )
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to retrieve conversations")
+    except Exception as exc:
+        logger.exception("Conversation list retrieval failed user_id=%s", user.id)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve conversations"
+        ) from exc
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -219,8 +236,15 @@ async def get_conversation(
         return _to_conversation_response(conversation, include_messages=True)
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to retrieve conversation")
+    except Exception as exc:
+        logger.exception(
+            "Conversation retrieval failed user_id=%s conversation_id=%s",
+            user.id,
+            conversation_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve conversation"
+        ) from exc
 
 
 @router.post("/conversations/", response_model=ConversationResponse)
@@ -232,8 +256,11 @@ async def create_new_conversation(
     try:
         conversation = await create_conversation(session, request, user.id)
         return _to_conversation_response(conversation)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to create conversation")
+    except Exception as exc:
+        logger.exception("Conversation creation failed user_id=%s", user.id)
+        raise HTTPException(
+            status_code=500, detail="Failed to create conversation"
+        ) from exc
 
 
 @router.put("/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -254,8 +281,15 @@ async def update_conversation_endpoint(
         return _to_conversation_response(conversation)
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to update conversation")
+    except Exception as exc:
+        logger.exception(
+            "Conversation update failed user_id=%s conversation_id=%s",
+            user.id,
+            conversation_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to update conversation"
+        ) from exc
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)
@@ -268,5 +302,12 @@ async def delete_conversation_endpoint(
         await delete_conversation(session, conversation_id, user.id)
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to delete conversation")
+    except Exception as exc:
+        logger.exception(
+            "Conversation deletion failed user_id=%s conversation_id=%s",
+            user.id,
+            conversation_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to delete conversation"
+        ) from exc

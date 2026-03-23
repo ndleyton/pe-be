@@ -26,6 +26,7 @@ dependencies = [
     "python-levenshtein>=0.25.1,<0.26",
     "google-genai>=1.2.0",
     "pillow>=11.1.0,<12",
+    "sentry-sdk>=2.55.0",
 ]
 
 [dependency-groups]

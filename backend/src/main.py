@@ -11,6 +11,7 @@ from httpx_oauth.oauth2 import OAuth2Error
 from src.core.config import settings
 from src.core.errors import DomainValidationError
 from src.core.logging import configure_logging, reset_request_id, set_request_id
+from src.core.sentry import configure_sentry
 from src.users.router import router as users_router
 from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
@@ -21,6 +22,7 @@ from src.health.router import router as health_router
 from src.chat.router import router as chat_router
 
 configure_logging(settings.LOG_LEVEL)
+configure_sentry()
 logger = logging.getLogger("src.request")
 
 
