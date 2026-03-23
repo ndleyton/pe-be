@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from httpx_oauth.oauth2 import OAuth2Error
 
 from src.core.config import settings
+from src.core.observability import configure_observability
 from src.core.errors import DomainValidationError
 from src.core.logging import configure_logging, reset_request_id, set_request_id
 from src.users.router import router as users_router
@@ -153,6 +154,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(
         DomainValidationError, domain_validation_exception_handler
     )
+    configure_observability(app)
 
     return app
 
