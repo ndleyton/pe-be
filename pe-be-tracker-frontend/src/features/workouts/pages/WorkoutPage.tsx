@@ -35,6 +35,17 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof response?.status === "number" ? response.status : null;
 };
 
+const isNetworkError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.includes("Network Error")
+    || error.message.includes("Failed to fetch")
+  );
+};
+
 const updateWorkoutEndTime = async (workoutId: string) => {
   const response = await api.patch(`/workouts/${workoutId}`, {
     end_time: getCurrentUTCTimestamp(),
@@ -102,6 +113,8 @@ const WorkoutPage = () => {
     data: serverWorkout,
     error: workoutError,
     isPending: workoutPending,
+    refetch: refetchWorkout,
+    isFetching: workoutFetching,
   } = useQuery({
     queryKey: ["workout", workoutId],
     queryFn: () => fetchWorkout(workoutId as string),
@@ -516,6 +529,8 @@ const WorkoutPage = () => {
     || (!isAuthenticated && guestHydrated && !guestWorkout)
     || (isAuthenticated
       && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
+  const showRecoverableWorkoutError =
+    isAuthenticated && Boolean(workoutError) && !showNotFound;
   const listPending =
     isAuthenticated
     && (authLoading || workoutPending || exercisesLoading);
@@ -539,10 +554,31 @@ const WorkoutPage = () => {
     return <NotFoundPage />;
   }
 
-  if (isAuthenticated && workoutError) {
+  if (showRecoverableWorkoutError) {
+    const recoveryMessage = isNetworkError(workoutError)
+      ? "Check your connection and try again."
+      : "This may be temporary. Try again or go back to your workouts.";
+
     return (
-      <div className="p-4 text-center text-destructive">
-        Failed to load workout.
+      <div className="mx-auto max-w-5xl p-4 text-center">
+        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
+          <h2 className="text-2xl font-bold">We couldn&apos;t load this workout.</h2>
+          <p className="text-muted-foreground mt-3">{recoveryMessage}</p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button
+              type="button"
+              onClick={() => {
+                void refetchWorkout();
+              }}
+              disabled={workoutFetching}
+            >
+              {workoutFetching ? "Retrying..." : "Retry"}
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/workouts">Back to Workouts</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
