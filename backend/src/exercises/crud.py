@@ -373,7 +373,7 @@ async def get_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
 
 
 async def get_exercise_type_stats(
-    session: AsyncSession, exercise_type_id: int
+    session: AsyncSession, exercise_type_id: int, user_id: int
 ) -> Dict[str, Any]:
     """Get exercise type statistics with optimized database queries"""
 
@@ -399,10 +399,15 @@ async def get_exercise_type_stats(
     # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
         select(Exercise)
+        .join(Workout, Exercise.workout_id == Workout.id)
         .options(
             selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
         )
-        .where(Exercise.exercise_type_id == exercise_type_id)
+        .where(
+            Exercise.exercise_type_id == exercise_type_id,
+            Exercise.deleted_at.is_(None),
+            Workout.owner_id == user_id,
+        )
         .order_by(Exercise.created_at.desc())
     )
     exercises = exercises_result.scalars().all()
