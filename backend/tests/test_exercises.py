@@ -2,9 +2,13 @@ from fastapi.testclient import TestClient
 import pytest
 import uuid
 from httpx import AsyncClient
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from src.core.config import settings
 from src.exercises.models import ExerciseType
+from src.main import app
+from src.users.router import current_active_user
 
 
 def get_test_exercise_types(suffix=""):
@@ -107,6 +111,57 @@ class TestExercisesAPI:
         """Test deleting exercise without authentication."""
         response = client.delete(f"{settings.API_PREFIX}/exercises/1")
         assert response.status_code == 401
+
+    def test_get_exercise_type_stats_unauthorized(self, client: TestClient):
+        """Test getting exercise stats without authentication."""
+        response = client.get(f"{settings.API_PREFIX}/exercises/exercise-types/1/stats")
+        assert response.status_code == 401
+
+
+@pytest.fixture
+def override_exercise_user():
+    async def _override_user():
+        return SimpleNamespace(id=123)
+
+    app.dependency_overrides[current_active_user] = _override_user
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.asyncio
+async def test_get_exercise_type_stats_passes_current_user_to_service(
+    async_client: AsyncClient, monkeypatch, override_exercise_user
+):
+    fake_get_exercise_type = AsyncMock(return_value=SimpleNamespace(id=9))
+    fake_get_stats = AsyncMock(
+        return_value={
+            "progressiveOverload": [],
+            "lastWorkout": None,
+            "personalBest": None,
+            "totalSets": 0,
+            "intensityUnit": None,
+        }
+    )
+
+    monkeypatch.setattr(
+        "src.exercises.router.ExerciseTypeService.get_exercise_type",
+        fake_get_exercise_type,
+    )
+    monkeypatch.setattr(
+        "src.exercises.router.ExerciseTypeService.get_exercise_type_statistics",
+        fake_get_stats,
+    )
+
+    response = await async_client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types/9/stats"
+    )
+
+    assert response.status_code == 200
+    fake_get_exercise_type.assert_awaited_once()
+    fake_get_stats.assert_awaited_once()
+    assert fake_get_stats.await_args.args[1:] == (9, 123)
 
 
 class TestExerciseTypesUsage:
