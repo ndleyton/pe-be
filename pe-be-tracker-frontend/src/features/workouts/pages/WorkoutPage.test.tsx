@@ -328,19 +328,55 @@ describe("WorkoutPage", () => {
   });
 
   it("shows a generic error for server failures", async () => {
+    let attempts = 0;
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => {
+        attempts += 1;
+        return attempts === 1
+          ? Promise.reject({ response: { status: 500 } })
+          : Promise.resolve({ data: mockWorkout });
+      }),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /we couldn't load this workout\./i,
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/this may be temporary\. try again or go back to your workouts\./i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to workouts/i }),
+    ).toHaveAttribute("href", "/workouts");
+    expect(
+      screen.queryByRole("heading", { name: /page not found/i, level: 2 }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: /chest day/i, level: 2 }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a network-specific recovery message", async () => {
     vi.mocked(api.get).mockImplementation(
       buildApiGetImplementation(() =>
-        Promise.reject({ response: { status: 500 } }),
+        Promise.reject(new Error("Network Error")),
       ),
     );
 
     render(<WorkoutPage />);
 
     expect(
-      await screen.findByText(/failed to load workout\./i),
+      await screen.findByText(/check your connection and try again\./i),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: /page not found/i, level: 2 }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: /back to workouts/i }),
+    ).toHaveAttribute("href", "/workouts");
   });
 });
