@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
 
 from src.core.errors import DomainValidationError
+from src.core.observability import traced_model_validate
 from src.exercises.models import (
     Exercise,
     ExerciseType,
@@ -67,6 +68,29 @@ async def _hydrate_exercise_types_by_ids(
             for exercise_type_id in exercise_type_ids
             if exercise_type_id in hydrated_by_id
         ]
+
+
+def _build_paginated_exercise_types_response(
+    *,
+    exercise_types: list[ExerciseType],
+    next_cursor: Optional[int],
+    offset: int,
+    limit: int,
+    name: Optional[str],
+    order_by: str,
+) -> PaginatedExerciseTypesResponse:
+    return traced_model_validate(
+        PaginatedExerciseTypesResponse,
+        {"data": exercise_types, "next_cursor": next_cursor},
+        span_name="exercises.get_exercise_types.response_model_validate",
+        attributes={
+            "query.offset": offset,
+            "query.limit": limit,
+            "query.has_name_filter": name is not None,
+            "query.order_by": order_by,
+            "serialization.item_count": len(exercise_types),
+        },
+    )
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -196,7 +220,7 @@ async def get_exercise_types(
 
     if name:
         with tracer.start_as_current_span(
-            "exercise_types.search.fetch_candidates"
+            "exercises.crud.get_exercise_types.fetch_candidates"
         ) as span:
             span.set_attribute(
                 "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
@@ -224,8 +248,13 @@ async def get_exercise_types(
                 session, paged_exact_match_ids
             )
             next_cursor = _next_cursor_for_page(offset, limit, total_results)
-            return PaginatedExerciseTypesResponse(
-                data=exercise_types, next_cursor=next_cursor
+            return _build_paginated_exercise_types_response(
+                exercise_types=exercise_types,
+                next_cursor=next_cursor,
+                offset=offset,
+                limit=limit,
+                name=name,
+                order_by=order_by,
             )
 
         # Filter out None/empty names to avoid TypeError from thefuzz
@@ -243,7 +272,9 @@ async def get_exercise_types(
         }
         candidate_names = list(name_to_id.keys())
 
-        with tracer.start_as_current_span("exercise_types.search.fuzzy_rank") as span:
+        with tracer.start_as_current_span(
+            "exercises.crud.get_exercise_types.fuzzy_matching"
+        ) as span:
             span.set_attribute(
                 "exercise_types.search.valid_candidate_count", len(candidate_names)
             )
@@ -257,11 +288,11 @@ async def get_exercise_types(
                 ),  # Get more candidates than needed, but cap at 100
             )
             span.set_attribute("exercise_types.search.match_count", len(matches))
-            logger.debug(
-                "Computed fuzzy exercise type matches query=%r count=%s",
-                name,
-                len(matches),
-            )
+        logger.debug(
+            "Computed fuzzy exercise type matches query=%r count=%s",
+            name,
+            len(matches),
+        )
         if matches:
             # Create a score lookup by ID
             score_lookup = {
@@ -300,11 +331,18 @@ async def get_exercise_types(
             next_cursor = _next_cursor_for_page(offset, limit, total_results)
         else:
             # Last-resort: take the single best match with a minimum acceptance threshold
-            best = (
-                process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
-                if candidate_names
-                else None
-            )
+            with tracer.start_as_current_span(
+                "exercises.crud.get_exercise_types.fuzzy_matching_fallback"
+            ) as span:
+                span.set_attribute(
+                    "exercise_types.search.valid_candidate_count",
+                    len(candidate_names),
+                )
+                best = (
+                    process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
+                    if candidate_names
+                    else None
+                )
             if best and best[1] >= 60:
                 matched_name = best[0]
                 matched_id = name_to_id.get(matched_name)
@@ -335,7 +373,14 @@ async def get_exercise_types(
         exercise_types = result.scalars().all()
         next_cursor = offset + limit if len(exercise_types) == limit else None
 
-    return PaginatedExerciseTypesResponse(data=exercise_types, next_cursor=next_cursor)
+    return _build_paginated_exercise_types_response(
+        exercise_types=exercise_types,
+        next_cursor=next_cursor,
+        offset=offset,
+        limit=limit,
+        name=name,
+        order_by=order_by,
+    )
 
 
 async def get_exercise_type_by_id(
