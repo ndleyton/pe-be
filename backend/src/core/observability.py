@@ -82,6 +82,19 @@ def traced_model_validate_many(
         return [model_type.model_validate(item) for item in item_list]
 
 
+def traced_model_validate(
+    model_type: type[ModelT],
+    item: Any,
+    *,
+    span_name: str,
+    attributes: dict[str, Any] | None = None,
+) -> ModelT:
+    with _tracer.start_as_current_span(span_name) as span:
+        _set_span_attributes(span, attributes)
+        span.set_attribute("serialization.model", model_type.__name__)
+        return model_type.model_validate(item)
+
+
 def traced_model_dump_many(
     items: Iterable[BaseModel],
     *,
@@ -95,6 +108,18 @@ def traced_model_dump_many(
         if item_list:
             span.set_attribute("serialization.model", type(item_list[0]).__name__)
         return [item.model_dump(mode="json") for item in item_list]
+
+
+def traced_model_dump(
+    item: BaseModel,
+    *,
+    span_name: str,
+    attributes: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    with _tracer.start_as_current_span(span_name) as span:
+        _set_span_attributes(span, attributes)
+        span.set_attribute("serialization.model", type(item).__name__)
+        return item.model_dump(mode="json")
 
 
 def configure_observability(app: FastAPI) -> None:
