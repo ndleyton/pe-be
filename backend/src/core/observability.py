@@ -1,8 +1,11 @@
+from typing import Any, Iterable, TypeVar
+
 from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from pydantic import BaseModel
 from opentelemetry.sdk.resources import (
     DEPLOYMENT_ENVIRONMENT,
     SERVICE_NAME,
@@ -21,6 +24,18 @@ from src.core.database import engine
 _configured = False
 _sqlalchemy_instrumentor = SQLAlchemyInstrumentor()
 _fastapi_instrumentor = FastAPIInstrumentor()
+_tracer = trace.get_tracer(__name__)
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def _set_span_attributes(span: Span, attributes: dict[str, Any] | None) -> None:
+    if not span or not span.is_recording() or not attributes:
+        return
+
+    for key, value in attributes.items():
+        if value is None:
+            continue
+        span.set_attribute(key, value)
 
 
 def _build_resource() -> Resource:
@@ -50,6 +65,36 @@ def _server_request_hook(span: Span, scope: dict) -> None:
     request_id = headers.get("x-request-id")
     if request_id:
         span.set_attribute("request.id", request_id)
+
+
+def traced_model_validate_many(
+    model_type: type[ModelT],
+    items: Iterable[Any],
+    *,
+    span_name: str,
+    attributes: dict[str, Any] | None = None,
+) -> list[ModelT]:
+    item_list = list(items)
+    with _tracer.start_as_current_span(span_name) as span:
+        _set_span_attributes(span, attributes)
+        span.set_attribute("serialization.model", model_type.__name__)
+        span.set_attribute("serialization.item_count", len(item_list))
+        return [model_type.model_validate(item) for item in item_list]
+
+
+def traced_model_dump_many(
+    items: Iterable[BaseModel],
+    *,
+    span_name: str,
+    attributes: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    item_list = list(items)
+    with _tracer.start_as_current_span(span_name) as span:
+        _set_span_attributes(span, attributes)
+        span.set_attribute("serialization.item_count", len(item_list))
+        if item_list:
+            span.set_attribute("serialization.model", type(item_list[0]).__name__)
+        return [item.model_dump(mode="json") for item in item_list]
 
 
 def configure_observability(app: FastAPI) -> None:
