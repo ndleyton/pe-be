@@ -24,6 +24,27 @@ import {
   GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
+import NotFoundPage from "@/pages/NotFoundPage";
+
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error !== "object" || error === null || !("response" in error)) {
+    return null;
+  }
+
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === "number" ? response.status : null;
+};
+
+const isNetworkError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.includes("Network Error")
+    || error.message.includes("Failed to fetch")
+  );
+};
 
 const updateWorkoutEndTime = async (workoutId: string) => {
   const response = await api.patch(`/workouts/${workoutId}`, {
@@ -88,7 +109,13 @@ const WorkoutPage = () => {
   };
 
   // Fetch workout details (only when authenticated)
-  const { data: serverWorkout } = useQuery({
+  const {
+    data: serverWorkout,
+    error: workoutError,
+    isPending: workoutPending,
+    refetch: refetchWorkout,
+    isFetching: workoutFetching,
+  } = useQuery({
     queryKey: ["workout", workoutId],
     queryFn: () => fetchWorkout(workoutId as string),
     enabled: !!workoutId && isAuthenticated,
@@ -467,9 +494,16 @@ const WorkoutPage = () => {
   const workoutTypeId = isAuthenticated
     ? (serverWorkout?.workout_type_id ?? null)
     : (guestWorkout?.workout_type_id ?? null);
+  const hasValidWorkout = isAuthenticated
+    ? Boolean(serverWorkout)
+    : guestHydrated && Boolean(guestWorkout);
 
   // Warn user on navigation/back while workout in progress
   useEffect(() => {
+    if (!hasValidWorkout) {
+      return;
+    }
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -486,16 +520,68 @@ const WorkoutPage = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [hasValidWorkout]);
 
   // Streamlined status computation
   // For guests, avoid showing the skeleton; only show when authenticated
-  const listPending = isAuthenticated && (authLoading || exercisesLoading);
+  const workoutErrorStatus = getErrorStatus(workoutError);
+  const showNotFound = !workoutId
+    || (!isAuthenticated && guestHydrated && !guestWorkout)
+    || (isAuthenticated
+      && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
+  const showRecoverableWorkoutError =
+    isAuthenticated && Boolean(workoutError) && !showNotFound;
+  const listPending =
+    isAuthenticated
+    && (authLoading || workoutPending || exercisesLoading);
   const listStatus: "pending" | "success" | "error" = listPending
     ? "pending"
     : isAuthenticated && exercisesError
       ? "error"
       : "success";
+
+  if (isAuthenticated && (authLoading || workoutPending)) {
+    return (
+      <div className="mx-auto max-w-5xl p-4 text-center">
+        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
+          Loading workout...
+        </div>
+      </div>
+    );
+  }
+
+  if (showNotFound) {
+    return <NotFoundPage />;
+  }
+
+  if (showRecoverableWorkoutError) {
+    const recoveryMessage = isNetworkError(workoutError)
+      ? "Check your connection and try again."
+      : "This may be temporary. Try again or go back to your workouts.";
+
+    return (
+      <div className="mx-auto max-w-5xl p-4 text-center">
+        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
+          <h2 className="text-2xl font-bold">We couldn&apos;t load this workout.</h2>
+          <p className="text-muted-foreground mt-3">{recoveryMessage}</p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button
+              type="button"
+              onClick={() => {
+                void refetchWorkout();
+              }}
+              disabled={workoutFetching}
+            >
+              {workoutFetching ? "Retrying..." : "Retry"}
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/workouts">Back to Workouts</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
