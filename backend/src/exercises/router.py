@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import Depends, APIRouter, status, Query, HTTPException
+from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exercises.schemas import (
@@ -21,6 +22,7 @@ from src.users.router import current_active_user
 from src.users.models import User
 
 router = APIRouter(tags=["exercises"])
+tracer = trace.get_tracer(__name__)
 
 
 # Exercise endpoints
@@ -74,15 +76,18 @@ async def get_exercise_type(
     exercise_type_id: int, session: AsyncSession = Depends(get_async_session)
 ):
     """Get an exercise type by ID."""
-    exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
-    )
+    with tracer.start_as_current_span("exercise_types.fetch"):
+        exercise_type = await ExerciseTypeService.get_exercise_type(
+            session, exercise_type_id
+        )
     if not exercise_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Exercise type with ID {exercise_type_id} not found",
         )
-    return exercise_type
+
+    with tracer.start_as_current_span("exercise_types.serialize"):
+        return ExerciseTypeRead.model_validate(exercise_type)
 
 
 @exercise_types_router.get(
