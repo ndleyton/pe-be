@@ -2,9 +2,12 @@ from fastapi.testclient import TestClient
 import pytest
 import uuid
 from httpx import AsyncClient
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from src.core.config import settings
 from src.exercises.models import ExerciseType
+from src.exercises.schemas import ExerciseTypeRead
 
 
 def get_test_exercise_types(suffix=""):
@@ -151,6 +154,52 @@ class TestExerciseTypesUsage:
         # Check that times_used is in the schema
         assert "times_used" in annotations
         assert annotations["times_used"] is int
+
+
+@pytest.mark.asyncio
+async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
+    from src.exercises import router as exercises_router
+
+    exercise_type = SimpleNamespace(
+        id=275,
+        name="Bench Press",
+        description="Chest press",
+        default_intensity_unit=None,
+        times_used=12,
+        images_url=None,
+        created_at="2026-03-24T10:00:00+00:00",
+        updated_at="2026-03-24T10:00:00+00:00",
+        exercise_muscles=[
+            SimpleNamespace(
+                muscle=SimpleNamespace(
+                    id=3,
+                    name="Pectorals",
+                    muscle_group_id=1,
+                    created_at="2026-03-24T10:00:00+00:00",
+                    updated_at="2026-03-24T10:00:00+00:00",
+                    muscle_group=SimpleNamespace(
+                        id=1,
+                        name="Chest",
+                        created_at="2026-03-24T10:00:00+00:00",
+                        updated_at="2026-03-24T10:00:00+00:00",
+                    ),
+                )
+            )
+        ],
+    )
+
+    monkeypatch.setattr(
+        exercises_router.ExerciseTypeService,
+        "get_exercise_type",
+        AsyncMock(return_value=exercise_type),
+    )
+
+    result = await exercises_router.get_exercise_type(275, session=object())
+
+    assert isinstance(result, ExerciseTypeRead)
+    assert result.id == 275
+    assert result.muscles[0].name == "Pectorals"
+    assert result.muscles[0].muscle_group.name == "Chest"
 
 
 def test_exercise_deletion_cascade_logic():

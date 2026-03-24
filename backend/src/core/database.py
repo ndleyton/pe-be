@@ -60,10 +60,38 @@ def get_database_url():
     return db_url
 
 
+def _get_bool_env(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+
+    return int(raw_value)
+
+
+def get_engine_kwargs() -> dict[str, int | bool]:
+    """Build engine kwargs with pool-friendly defaults for asyncpg."""
+    return {
+        "pool_pre_ping": _get_bool_env("DATABASE_POOL_PRE_PING", True),
+        "pool_use_lifo": _get_bool_env("DATABASE_POOL_USE_LIFO", True),
+        "pool_size": _get_int_env("DATABASE_POOL_SIZE", 5),
+        "max_overflow": _get_int_env("DATABASE_MAX_OVERFLOW", 10),
+        "pool_timeout": _get_int_env("DATABASE_POOL_TIMEOUT", 30),
+        "pool_recycle": _get_int_env("DATABASE_POOL_RECYCLE", 1800),
+    }
+
+
 DATABASE_URL = get_database_url()
 
 # Database engine and session factory
-engine = create_async_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL, **get_engine_kwargs())
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 

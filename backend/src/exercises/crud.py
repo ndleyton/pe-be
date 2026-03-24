@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
 
@@ -281,13 +281,13 @@ async def get_exercise_type_by_id(
     result = await session.execute(
         select(ExerciseType)
         .options(
-            selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group)
+            joinedload(ExerciseType.exercise_muscles)
+            .joinedload(ExerciseMuscle.muscle)
+            .joinedload(Muscle.muscle_group)
         )
         .where(ExerciseType.id == exercise_type_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def create_exercise_type(
