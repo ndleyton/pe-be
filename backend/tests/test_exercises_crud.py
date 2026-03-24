@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -10,6 +11,7 @@ from src.exercise_sets.models import ExerciseSet
 from src.exercises import crud
 from src.exercises.models import (
     Exercise,
+    ExerciseMuscle,
     ExerciseType,
     IntensityUnit,
     Muscle,
@@ -452,6 +454,42 @@ async def test_get_intensity_units_and_exercise_type_by_id(db_session):
     assert found is not None
     assert found.id == exercise_type.id
     assert await crud.get_exercise_type_by_id(db_session, 999999) is None
+
+
+async def test_get_exercise_type_by_id_uses_single_joined_query(db_session):
+    group = await _seed_muscle_group(db_session, "Back")
+    muscle = await _seed_muscle(db_session, "Lats", group.id)
+    exercise_type = await _seed_exercise_type(db_session, "Pull-Up")
+    exercise_type_id = exercise_type.id
+    db_session.add(
+        ExerciseMuscle(
+            exercise_type_id=exercise_type_id,
+            muscle_id=muscle.id,
+            is_primary=True,
+        )
+    )
+    await db_session.commit()
+    db_session.expire_all()
+
+    statements: list[str] = []
+
+    def capture_selects(
+        conn, cursor, statement, parameters, context, executemany
+    ) -> None:
+        if statement.lstrip().upper().startswith("SELECT"):
+            statements.append(statement)
+
+    sync_engine = db_session.bind.sync_engine
+    event.listen(sync_engine, "before_cursor_execute", capture_selects)
+    try:
+        found = await crud.get_exercise_type_by_id(db_session, exercise_type_id)
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", capture_selects)
+
+    assert found is not None
+    assert len(statements) == 1
+    assert found.exercise_muscles[0].muscle.name == "Lats"
+    assert found.exercise_muscles[0].muscle.muscle_group.name == "Back"
 
 
 async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases(
