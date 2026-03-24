@@ -1,7 +1,9 @@
 from typing import List, Optional
 from fastapi import Depends, APIRouter, status, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.observability import traced_model_dump_many, traced_model_validate_many
 from src.workouts.schemas import (
     WorkoutRead,
     WorkoutCreate,
@@ -162,4 +164,17 @@ async def get_exercises_in_workout(
         raise HTTPException(status_code=404, detail="Workout not found")
 
     # Get exercises for this workout
-    return await ExerciseService.get_workout_exercises(session, workout_id)
+    exercises = await ExerciseService.get_workout_exercises(session, workout_id)
+    span_attributes = {"workout.id": workout_id, "user.id": user.id}
+    response_models = traced_model_validate_many(
+        ExerciseRead,
+        exercises,
+        span_name="workouts.get_workout_exercises.response_model_validate",
+        attributes=span_attributes,
+    )
+    response_payload = traced_model_dump_many(
+        response_models,
+        span_name="workouts.get_workout_exercises.response_model_dump",
+        attributes=span_attributes,
+    )
+    return JSONResponse(content=response_payload)
