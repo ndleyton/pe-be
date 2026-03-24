@@ -94,7 +94,9 @@ async def get_exercise_type(
     "/{exercise_type_id}/stats", response_model=ExerciseTypeStats
 )
 async def get_exercise_type_stats(
-    exercise_type_id: int, session: AsyncSession = Depends(get_async_session)
+    exercise_type_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get exercise type statistics including progressive overload data."""
     # First check if exercise type exists
@@ -108,7 +110,7 @@ async def get_exercise_type_stats(
         )
 
     return await ExerciseTypeService.get_exercise_type_statistics(
-        session, exercise_type_id
+        session, exercise_type_id, user.id
     )
 
 
