@@ -372,6 +372,32 @@ async def test_get_exercise_types_uses_extract_one_fallback(db_session, monkeypa
     assert rejected.next_cursor is None
 
 
+async def test_get_exercise_types_preserves_fuzzy_order_after_hydration(
+    db_session, monkeypatch
+):
+    first = await _seed_exercise_type(db_session, "First Ranked Lift")
+    second = await _seed_exercise_type(db_session, "Second Ranked Lift")
+    await db_session.commit()
+
+    monkeypatch.setattr(
+        crud.process,
+        "extractBests",
+        lambda *args, **kwargs: [
+            ("Second Ranked Lift", 95),
+            ("First Ranked Lift", 90),
+        ],
+    )
+
+    result = await crud.get_exercise_types(db_session, name="ranked", limit=10)
+
+    assert [item.id for item in result.data] == [second.id, first.id]
+    assert [item.name for item in result.data] == [
+        "Second Ranked Lift",
+        "First Ranked Lift",
+    ]
+    assert result.next_cursor is None
+
+
 async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session):
     unit = await _seed_intensity_unit(db_session, "Pounds", "lb")
     group = await _seed_muscle_group(db_session, "Upper Body")
