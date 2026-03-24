@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
+from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, update
 from sqlalchemy.orm import joinedload, selectinload
@@ -27,7 +28,45 @@ from src.exercises.schemas import (
 # considered a match.  Tweaking this value lets us control how permissive the
 # search is without hunting through the implementation.
 FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
+MAX_FUZZY_SEARCH_RESULTS = 1000
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
+
+
+def _exercise_type_relationship_option():
+    return (
+        selectinload(ExerciseType.exercise_muscles)
+        .selectinload(ExerciseMuscle.muscle)
+        .selectinload(Muscle.muscle_group)
+    )
+
+
+def _next_cursor_for_page(offset: int, limit: int, total_results: int) -> Optional[int]:
+    return offset + limit if offset + limit < total_results else None
+
+
+async def _hydrate_exercise_types_by_ids(
+    session: AsyncSession, exercise_type_ids: List[int]
+) -> List[ExerciseType]:
+    if not exercise_type_ids:
+        return []
+
+    with tracer.start_as_current_span("exercise_types.search.hydrate_matches") as span:
+        span.set_attribute("exercise_types.search.match_count", len(exercise_type_ids))
+        result = await session.execute(
+            select(ExerciseType)
+            .options(_exercise_type_relationship_option())
+            .where(ExerciseType.id.in_(exercise_type_ids))
+        )
+        hydrated_types = result.scalars().all()
+        hydrated_by_id = {
+            exercise_type.id: exercise_type for exercise_type in hydrated_types
+        }
+        return [
+            hydrated_by_id[exercise_type_id]
+            for exercise_type_id in exercise_type_ids
+            if exercise_type_id in hydrated_by_id
+        ]
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -153,70 +192,81 @@ async def get_exercise_types(
     limit: int = 100,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
-    query = select(ExerciseType).options(
-        selectinload(ExerciseType.exercise_muscles)
-        .selectinload(ExerciseMuscle.muscle)
-        .selectinload(Muscle.muscle_group)
-    )
+    query = select(ExerciseType).options(_exercise_type_relationship_option())
 
     if name:
-        # If a name is provided, fetch all and perform fuzzy matching
-        MAX_FUZZY_SEARCH_RESULTS = 1000
-        result = await session.execute(query.limit(MAX_FUZZY_SEARCH_RESULTS))
-        all_types = result.scalars().all()
+        with tracer.start_as_current_span(
+            "exercise_types.search.fetch_candidates"
+        ) as span:
+            span.set_attribute(
+                "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
+            )
+            result = await session.execute(
+                select(ExerciseType.id, ExerciseType.name).limit(
+                    MAX_FUZZY_SEARCH_RESULTS
+                )
+            )
+            candidate_rows = result.all()
+            span.set_attribute(
+                "exercise_types.search.candidate_count", len(candidate_rows)
+            )
 
         # Quick path: exact (case-insensitive) name match for determinism
-        exact_matches = [
-            t for t in all_types if t.name and t.name.lower() == name.lower()
+        exact_match_ids = [
+            exercise_type_id
+            for exercise_type_id, candidate_name in candidate_rows
+            if candidate_name and candidate_name.lower() == name.lower()
         ]
-        if exact_matches:
-            exercise_types = exact_matches
-            total_results = len(exact_matches)
-            exercise_types = exercise_types[offset : offset + limit]
-            next_cursor = offset + limit if offset + limit < total_results else None
+        if exact_match_ids:
+            total_results = len(exact_match_ids)
+            paged_exact_match_ids = exact_match_ids[offset : offset + limit]
+            exercise_types = await _hydrate_exercise_types_by_ids(
+                session, paged_exact_match_ids
+            )
+            next_cursor = _next_cursor_for_page(offset, limit, total_results)
             return PaginatedExerciseTypesResponse(
                 data=exercise_types, next_cursor=next_cursor
             )
 
         # Filter out None/empty names to avoid TypeError from thefuzz
-        valid_types = [
-            t for t in all_types if isinstance(t.name, str) and t.name.strip()
+        valid_candidates = [
+            (exercise_type_id, candidate_name)
+            for exercise_type_id, candidate_name in candidate_rows
+            if isinstance(candidate_name, str) and candidate_name.strip()
         ]
-
-        # Create a mapping of exercise types by ID for quick lookup
-        types_by_id = {t.id: t for t in valid_types}
 
         # Use name->id mapping and pass only names to thefuzz to avoid tuple-order
         # differences across versions when passing a dict. Map back to ids afterward.
-        name_to_id = {str(t.name): t.id for t in valid_types}
+        name_to_id = {
+            str(candidate_name): exercise_type_id
+            for exercise_type_id, candidate_name in valid_candidates
+        }
         candidate_names = list(name_to_id.keys())
 
-        # Perform fuzzy matching with a single call
-        matches = process.extractBests(
-            name,
-            candidate_names,
-            scorer=fuzz.WRatio,  # Using WRatio for better overall matching
-            score_cutoff=FUZZY_SCORE_CUTOFF,
-            limit=min(
-                limit * 3, 100
-            ),  # Get more candidates than needed, but cap at 100
-        )
-        logger.debug(
-            "Computed fuzzy exercise type matches query=%r count=%s",
-            name,
-            len(matches),
-        )
+        with tracer.start_as_current_span("exercise_types.search.fuzzy_rank") as span:
+            span.set_attribute(
+                "exercise_types.search.valid_candidate_count", len(candidate_names)
+            )
+            matches = process.extractBests(
+                name,
+                candidate_names,
+                scorer=fuzz.WRatio,  # Using WRatio for better overall matching
+                score_cutoff=FUZZY_SCORE_CUTOFF,
+                limit=min(
+                    limit * 3, 100
+                ),  # Get more candidates than needed, but cap at 100
+            )
+            span.set_attribute("exercise_types.search.match_count", len(matches))
+            logger.debug(
+                "Computed fuzzy exercise type matches query=%r count=%s",
+                name,
+                len(matches),
+            )
         if matches:
             # Create a score lookup by ID
             score_lookup = {
                 name_to_id[m[0]]: m[1] for m in matches if m and m[0] in name_to_id
             }
-            matched_ids = list(score_lookup.keys())
-
-            # Get matched exercise types
-            exercise_types = [
-                types_by_id[id] for id in matched_ids if id in types_by_id
-            ]
 
             # Simple sort key function that prioritizes:
             # 1. Starts with query (case-insensitive)
@@ -226,31 +276,45 @@ async def get_exercise_types(
             query_lower = name.lower()
 
             def _sort_key(t):
-                name_lower = t.name.lower()
+                name_lower = t[1].lower()
                 starts_with = 0 if name_lower.startswith(query_lower) else 1
                 contains = 0 if query_lower in name_lower else 1
-                return (starts_with, contains, -score_lookup[t.id], name_lower)
+                return (starts_with, contains, -score_lookup[t[0]], name_lower)
 
-            exercise_types.sort(key=_sort_key)
+            sorted_matches = sorted(
+                (
+                    (matched_id, candidate_name)
+                    for candidate_name, matched_id in name_to_id.items()
+                    if matched_id in score_lookup
+                ),
+                key=_sort_key,
+            )
+            matched_ids = [matched_id for matched_id, _ in sorted_matches]
 
             # Apply pagination
-            total_results = len(exercise_types)
-            exercise_types = exercise_types[offset : offset + limit]
-            next_cursor = offset + limit if offset + limit < total_results else None
+            total_results = len(matched_ids)
+            paged_matched_ids = matched_ids[offset : offset + limit]
+            exercise_types = await _hydrate_exercise_types_by_ids(
+                session, paged_matched_ids
+            )
+            next_cursor = _next_cursor_for_page(offset, limit, total_results)
         else:
             # Last-resort: take the single best match with a minimum acceptance threshold
-            best = process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
+            best = (
+                process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
+                if candidate_names
+                else None
+            )
             if best and best[1] >= 60:
                 matched_name = best[0]
                 matched_id = name_to_id.get(matched_name)
-                if matched_id is not None and matched_id in types_by_id:
-                    exercise_types = [types_by_id[matched_id]]
+                if matched_id is not None:
                     total_results = 1
-                    # Apply pagination
-                    exercise_types = exercise_types[offset : offset + limit]
-                    next_cursor = (
-                        None if offset + limit >= total_results else offset + limit
+                    paged_matched_ids = [matched_id][offset : offset + limit]
+                    exercise_types = await _hydrate_exercise_types_by_ids(
+                        session, paged_matched_ids
                     )
+                    next_cursor = _next_cursor_for_page(offset, limit, total_results)
                 else:
                     exercise_types = []
                     next_cursor = None
