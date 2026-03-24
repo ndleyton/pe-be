@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { render } from "@/test/testUtils";
+import api from "@/shared/api/client";
 import WorkoutPage from "./WorkoutPage";
 
 // Mock react-router-dom
@@ -79,6 +80,16 @@ vi.mock("@/features/exercises/api", async () => {
   };
 });
 
+vi.mock("@/shared/api/client", () => ({
+  default: {
+    get: vi.fn(),
+    patch: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
 const mockGuestState = {
   workouts: [],
   hydrated: true,
@@ -101,6 +112,17 @@ const mockUIState = {
   getFormattedWorkoutTime: vi.fn(() => "00:00"),
 };
 
+const mockWorkout = {
+  id: Number(mockWorkoutId),
+  name: "Chest Day",
+  notes: null,
+  start_time: "2024-01-01T10:00:00.000Z",
+  end_time: null,
+  workout_type_id: 1,
+  created_at: "2024-01-01T10:00:00.000Z",
+  updated_at: "2024-01-01T10:00:00.000Z",
+};
+
 vi.mock("@/stores", () => ({
   useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
     selector(mockAuthState),
@@ -116,9 +138,26 @@ vi.mock("@/stores", () => ({
 
 describe("WorkoutPage", () => {
   let scrollToMock: ReturnType<typeof vi.fn>;
+  const buildApiGetImplementation = (
+    workoutHandler?: () => Promise<{ data: unknown }>,
+  ) =>
+    vi.fn((url: string) => {
+      if (url === `/workouts/${mockWorkoutId}`) {
+        return workoutHandler
+          ? workoutHandler()
+          : Promise.resolve({ data: mockWorkout });
+      }
+
+      return Promise.resolve({ data: null });
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthState.isAuthenticated = true;
+    mockAuthState.loading = false;
+    mockGuestState.workouts = [];
+    mockGuestState.hydrated = true;
+    vi.mocked(api.get).mockImplementation(buildApiGetImplementation());
     scrollToMock = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
@@ -141,22 +180,32 @@ describe("WorkoutPage", () => {
   it("renders workout page with correct heading", () => {
     render(<WorkoutPage />);
 
-    expect(
-      screen.getByRole("heading", { name: /workout: #123/i, level: 2 }),
-    ).toBeInTheDocument();
+    return expect(
+      screen.findByRole("heading", { name: /chest day/i, level: 2 }),
+    ).resolves.toBeInTheDocument();
   });
 
   it("shows floating action button", () => {
     render(<WorkoutPage />);
 
-    expect(
-      screen.getByLabelText(/floating action button/i),
-    ).toBeInTheDocument();
+    return expect(
+      screen.findByLabelText(/floating action button/i),
+    ).resolves.toBeInTheDocument();
   });
 
   it('shows "Add Exercise" button', () => {
     render(<WorkoutPage />);
-    expect(screen.getByRole("button", { name: /add exercise/i })).toBeInTheDocument();
+    return expect(
+      screen.findByRole("button", { name: /add exercise/i }),
+    ).resolves.toBeInTheDocument();
+  });
+
+  it("shows the back link without hiding it on large screens", () => {
+    render(<WorkoutPage />);
+
+    const backLink = screen.getByLabelText(/go back/i);
+    expect(backLink).toBeInTheDocument();
+    expect(backLink).not.toHaveClass("lg:hidden");
   });
 
   it("optimistically adds an exercise before the server responds", async () => {
@@ -221,7 +270,9 @@ describe("WorkoutPage", () => {
 
     render(<WorkoutPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /add exercise/i }),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: /select exercise type/i }),
     );
@@ -235,5 +286,105 @@ describe("WorkoutPage", () => {
     await waitFor(() => {
       expect(screen.queryByText(/optimistic-/i)).not.toBeInTheDocument();
     });
+  });
+
+  it("shows not found when the workout does not exist", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject({ response: { status: 404 } }),
+      ),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /add exercise/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows not found when the user lacks access to the workout", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject({ response: { status: 403 } }),
+      ),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /add exercise/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows not found for a missing guest workout", async () => {
+    mockAuthState.isAuthenticated = false;
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+    ).toBeInTheDocument();
+    expect(vi.mocked(api.get)).not.toHaveBeenCalledWith(
+      `/workouts/${mockWorkoutId}`,
+    );
+  });
+
+  it("shows a generic error for server failures", async () => {
+    let attempts = 0;
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => {
+        attempts += 1;
+        return attempts === 1
+          ? Promise.reject({ response: { status: 500 } })
+          : Promise.resolve({ data: mockWorkout });
+      }),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /we couldn't load this workout\./i,
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/this may be temporary\. try again or go back to your workouts\./i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to workouts/i }),
+    ).toHaveAttribute("href", "/workouts");
+    expect(
+      screen.queryByRole("heading", { name: /page not found/i, level: 2 }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: /chest day/i, level: 2 }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a network-specific recovery message", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() =>
+        Promise.reject(new Error("Network Error")),
+      ),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByText(/check your connection and try again\./i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to workouts/i }),
+    ).toHaveAttribute("href", "/workouts");
   });
 });

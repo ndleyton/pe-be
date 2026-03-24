@@ -25,8 +25,9 @@ async def test_get_last_exercise_performance_happy_path(monkeypatch):
         assert limit == 1
         return SimpleNamespace(data=[SimpleNamespace(id=9)])
 
-    async def _fake_get_exercise_type_stats(session, exercise_type_id):
+    async def _fake_get_exercise_type_stats(session, exercise_type_id, user_id):
         assert exercise_type_id == 9
+        assert user_id == 123
         return {
             "lastWorkout": {"date": "2026-02-28", "sets": 5, "maxWeight": 315},
             "intensityUnit": {"abbreviation": "lbs"},
