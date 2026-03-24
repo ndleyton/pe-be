@@ -78,6 +78,13 @@ Notes:
 - Preserve trailing slashes on collection endpoints used by the frontend client to avoid FastAPI `307` redirects on `POST`.
 - Do not expose new user-facing API/UI copy as "recipes" unless you are intentionally referring to the backend model/table names. Use "routines" in the product surface.
 
+## Backend Performance
+
+- For detail endpoints that return a single entity plus a small fixed relationship graph, prefer `joinedload` over nested `selectinload` to avoid N+1-style multi-query fetches.
+- For collection endpoints, choose `selectinload` vs `joinedload` deliberately based on expected row fanout; do not default blindly to one strategy.
+- When investigating latency, instrument handler-local phases explicitly, especially DB fetch, schema serialization, and any ORM-to-response mapping that would otherwise be hidden inside framework overhead.
+- Backend database pooling is configurable through `DATABASE_POOL_PRE_PING`, `DATABASE_POOL_USE_LIFO`, `DATABASE_POOL_SIZE`, `DATABASE_MAX_OVERFLOW`, `DATABASE_POOL_TIMEOUT`, and `DATABASE_POOL_RECYCLE`; check those settings before assuming per-request connection setup is an application bug.
+
 Useful current route examples:
 - Routines API: `/api/v1/routines/`
 - Workouts list API: `/api/v1/workouts/mine`
