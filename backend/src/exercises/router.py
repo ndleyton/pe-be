@@ -1,8 +1,10 @@
 from typing import List, Optional
 from fastapi import Depends, APIRouter, status, Query, HTTPException
+from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.observability import traced_model_dump
 from src.exercises.schemas import (
     ExerciseRead,
     ExerciseCreate,
@@ -66,9 +68,21 @@ async def get_exercise_types(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
-    return await ExerciseTypeService.get_all_exercise_types(
+    response_model = await ExerciseTypeService.get_all_exercise_types(
         session, name, order_by, offset, limit
     )
+    response_payload = traced_model_dump(
+        response_model,
+        span_name="exercises.get_exercise_types.response_model_dump",
+        attributes={
+            "query.offset": offset,
+            "query.limit": limit,
+            "query.has_name_filter": name is not None,
+            "query.order_by": order_by,
+            "serialization.item_count": len(response_model.data),
+        },
+    )
+    return JSONResponse(content=response_payload)
 
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
