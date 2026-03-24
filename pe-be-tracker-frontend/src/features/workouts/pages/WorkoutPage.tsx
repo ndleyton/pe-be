@@ -592,7 +592,6 @@ const WorkoutPage = () => {
             size="icon"
             asChild
             aria-label="Go back"
-            className="lg:hidden"
           >
             <Link to="/workouts">
               <ArrowLeft className="h-5 w-5" />

@@ -200,6 +200,14 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
+  it("shows the back link without hiding it on large screens", () => {
+    render(<WorkoutPage />);
+
+    const backLink = screen.getByLabelText(/go back/i);
+    expect(backLink).toBeInTheDocument();
+    expect(backLink).not.toHaveClass("lg:hidden");
+  });
+
   it("optimistically adds an exercise before the server responds", async () => {
     let exercisesResponse: Array<{ id: number; exercise_type: typeof mockExerciseType }> = [];
     exerciseApiMocks.mockGetExercisesInWorkout.mockImplementation(
