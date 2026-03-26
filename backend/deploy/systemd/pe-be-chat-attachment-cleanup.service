@@ -7,5 +7,4 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/srv/pe-be
 EnvironmentFile=-/srv/pe-be/.env
-ExecStart=/usr/bin/docker compose run --rm backend python -m src.jobs.chat_attachment_cleanup
-
+ExecStart=/usr/bin/docker compose run --rm -T backend python -m src.jobs.chat_attachment_cleanup
