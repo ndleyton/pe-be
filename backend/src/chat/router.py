@@ -132,7 +132,6 @@ async def upload_chat_attachment(
             limit=settings.CHAT_ATTACHMENT_RATE_LIMIT_MAX_REQUESTS,
             window_seconds=settings.CHAT_ATTACHMENT_RATE_LIMIT_WINDOW_SECONDS,
         )
-        await ChatService.cleanup_orphaned_attachments(session)
         chat_service = ChatService(user_id=user.id, session=session)
         attachment = await chat_service.save_uploaded_attachment(
             filename=file.filename or "upload",
