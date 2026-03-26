@@ -1,29 +1,19 @@
-from types import SimpleNamespace
-
 import pytest
 
 from src.chat import cleanup
+from src.jobs.shared import JobRunResult
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_run_cleanup_uses_session_factory(monkeypatch):
-    class FakeSessionContext:
-        async def __aenter__(self):
-            return "session"
+async def test_legacy_cleanup_wrapper_returns_deleted_count(monkeypatch):
+    async def _fake_run():
+        return JobRunResult(
+            job_name="chat_attachment_cleanup",
+            status="success",
+            metrics={"deleted_count": 7},
+        )
 
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-    async def _fake_cleanup(session):
-        assert session == "session"
-        return 7
-
-    monkeypatch.setattr(cleanup, "async_session_maker", lambda: FakeSessionContext())
-    monkeypatch.setattr(
-        cleanup,
-        "ChatService",
-        SimpleNamespace(cleanup_orphaned_attachments=_fake_cleanup),
-    )
+    monkeypatch.setattr(cleanup, "run", _fake_run)
 
     assert await cleanup._run_cleanup() == 7
 

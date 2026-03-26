@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 
-from src.chat.service import ChatService
-from src.core.database import async_session_maker
+from src.jobs.chat_attachment_cleanup import run
 
 
 async def _run_cleanup() -> int:
-    async with async_session_maker() as session:
-        return await ChatService.cleanup_orphaned_attachments(session)
+    result = await run()
+    return int(result.metrics.get("deleted_count", 0))
 
 
 def main() -> None:
