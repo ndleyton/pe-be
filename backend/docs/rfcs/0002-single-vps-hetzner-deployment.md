@@ -21,15 +21,15 @@ This preserves the current auth model and browser contract while moving the stat
 
 This repo already has most of the application packaging needed for a VPS deployment:
 
-- backend Docker image in [`backend/Dockerfile`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/backend/Dockerfile)
-- a local-oriented Compose file in [`docker-compose.yml`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/docker-compose.yml)
-- new production deployment files in [`docker-compose.prod.yml`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/docker-compose.prod.yml), [`Caddyfile`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/Caddyfile), and [`backend/.env.production.template`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/backend/.env.production.template)
+- backend Docker image in [`backend/Dockerfile`](../../Dockerfile)
+- a local-oriented Compose file in [`docker-compose.yml`](../../../docker-compose.yml)
+- new production deployment files in [`docker-compose.prod.yml`](../../../docker-compose.prod.yml), [`Caddyfile`](../../../Caddyfile), and [`backend/.env.production.template`](../../.env.production.template)
 
 The current app auth flow is designed around a same-host public callback:
 
-- the backend sets a session cookie on login in [`backend/src/core/security.py`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/backend/src/core/security.py)
+- the backend sets a session cookie on login in [`backend/src/core/security.py`](../../src/core/security.py)
 - the configured Google callback is currently `https://app.personalbestie.com/api/v1/auth/google/callback`
-- the frontend uses cookie-based authenticated requests with `withCredentials: true` in [`pe-be-tracker-frontend/src/shared/api/client.ts`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/pe-be-tracker-frontend/src/shared/api/client.ts)
+- the frontend uses cookie-based authenticated requests with `withCredentials: true` in [`pe-be-tracker-frontend/src/shared/api/client.ts`](../../../pe-be-tracker-frontend/src/shared/api/client.ts)
 
 That means the safest migration path is not "move the browser to `api.personalbestie.com`". The safest path is:
 
@@ -166,9 +166,9 @@ The production files added in this repo implement the VPS side as:
 
 See:
 
-- [`docker-compose.prod.yml`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/docker-compose.prod.yml)
-- [`Caddyfile`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/Caddyfile)
-- [`backend/.env.production.template`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/backend/.env.production.template)
+- [`docker-compose.prod.yml`](../../../docker-compose.prod.yml)
+- [`Caddyfile`](../../../Caddyfile)
+- [`backend/.env.production.template`](../../.env.production.template)
 
 ## Resource Expectations
 
@@ -224,7 +224,7 @@ There is no need to expose a public `api.personalbestie.com` hostname for the fi
 
 ## Deploy Flow
 
-1. Copy [`backend/.env.production.template`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/backend/.env.production.template) to `backend/.env.production` and populate secrets.
+1. Copy [`backend/.env.production.template`](../../.env.production.template) to `backend/.env.production` and populate secrets.
 2. Point `origin-api.personalbestie.com` at the Hetzner VPS.
 3. Run:
    - `docker compose -f docker-compose.prod.yml up -d --build`
@@ -257,7 +257,7 @@ If `FRONTEND_URL`, `GOOGLE_REDIRECT_URI`, or the Render rewrite drift apart, sig
 
 ## Rollout Plan
 
-1. Deploy the VPS-side stack from [`docker-compose.prod.yml`](/Users/ndleyton/.codex/worktrees/bc2c/pe-be/docker-compose.prod.yml).
+1. Deploy the VPS-side stack from [`docker-compose.prod.yml`](../../../docker-compose.prod.yml).
 2. Validate `origin-api.personalbestie.com` directly.
 3. Switch the Render `/api` rewrite to the new Hetzner origin.
 4. Validate end-to-end login and session behavior on `app.personalbestie.com`.
