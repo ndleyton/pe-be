@@ -1,0 +1,145 @@
+name: Deploy VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "docker-compose.prod.yml"
+      - "Caddyfile"
+      - ".github/workflows/deploy-vps.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Write production env file
+        run: |
+          cat <<'ENVEOF' > backend/.env.production
+          # Public hostnames
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          FRONTEND_POST_LOGIN_PATH=${{ secrets.FRONTEND_POST_LOGIN_PATH }}
+          API_ORIGIN_DOMAIN=${{ secrets.API_ORIGIN_DOMAIN }}
+          GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+
+          # Backend runtime
+          ENVIRONMENT=production
+          LOG_LEVEL=${{ secrets.LOG_LEVEL }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          JWT_LIFETIME_SECONDS=${{ secrets.JWT_LIFETIME_SECONDS }}
+          COOKIE_SECURE=true
+          COOKIE_SAMESITE=lax
+
+          # Database
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+
+          # Google OAuth
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+
+          # AI / tracing
+          GOOGLE_AI_KEY=${{ secrets.GOOGLE_AI_KEY }}
+          LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST }}
+
+          # OpenTelemetry
+          OTEL_ENABLED=${{ secrets.OTEL_ENABLED }}
+          OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+          OTEL_SERVICE_NAME=personalbestie-backend
+          OTEL_SERVICE_VERSION=${{ github.sha }}
+          OTEL_TRACES_SAMPLER_ARG=${{ secrets.OTEL_TRACES_SAMPLER_ARG }}
+
+          # App settings
+          IMAGE_URL_PREFIX=${{ secrets.IMAGE_URL_PREFIX }}
+          ENVEOF
+
+      - name: Prepare deployment directory on VPS
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "mkdir -p '${DEPLOY_PATH}'"
+
+      - name: Sync repository to VPS
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "backend/.venv/" \
+            --exclude "backend/.pytest_cache/" \
+            --exclude "backend/.ruff_cache/" \
+            --exclude "pe-be-tracker-frontend/" \
+            ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
+
+      - name: Deploy on VPS
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'DEPLOYEOF'
+          set -euo pipefail
+
+          cd "${DEPLOY_PATH}"
+
+          # Build the backend image
+          docker compose -f docker-compose.prod.yml build backend
+
+          # Ensure database is up and healthy
+          docker compose -f docker-compose.prod.yml up -d db
+          echo "Waiting for database to be healthy..."
+          timeout 60 bash -c 'until docker compose -f docker-compose.prod.yml exec -T db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" 2>/dev/null; do sleep 2; done' || true
+
+          # Run migrations
+          docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+
+          # Bring up backend and caddy
+          docker compose -f docker-compose.prod.yml up -d backend caddy
+
+          # Show running containers
+          docker compose -f docker-compose.prod.yml ps
+
+          # Health check: backend directly
+          echo "Checking backend health..."
+          docker compose -f docker-compose.prod.yml exec -T backend \
+            curl -fsS --retry 5 --retry-delay 3 http://localhost:8000/health
+
+          echo ""
+          echo "Deployment complete."
+          DEPLOYEOF
