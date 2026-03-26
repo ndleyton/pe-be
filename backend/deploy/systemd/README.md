@@ -36,6 +36,13 @@ JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=true
 JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=true
 ```
 
+Env flow for these jobs is:
+
+1. `systemd` starts the oneshot service in `/srv/pe-be`.
+2. `docker compose run` reads `/srv/pe-be/.env` for Compose variable interpolation.
+3. Compose injects the configured job env vars into the ephemeral `backend` container from `docker-compose.yml`.
+4. The backend process reads those env vars through `src.core.config.Settings`.
+
 To disable the job without masking the timer:
 
 ```bash

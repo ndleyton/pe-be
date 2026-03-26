@@ -9,7 +9,7 @@ The design follows [RFC 0003](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backen
 - jobs are safe against overlap through Postgres advisory locks
 - jobs log start, finish, duration, and outcome in UTC
 
-## Current Job
+## Current Jobs
 
 - [chat_attachment_cleanup.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/chat_attachment_cleanup.py)
 - [close_stale_open_workouts.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/close_stale_open_workouts.py)
