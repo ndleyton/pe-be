@@ -57,6 +57,8 @@ Each job in this package should follow the same pattern:
 - records UTC timestamps and total `duration_ms`
 - releases the advisory lock when the run completes
 
+It does not commit or roll back the session for you. Transaction ownership stays with the job callable or the service layer it invokes. The current chat cleanup job relies on `ChatService.cleanup_orphaned_attachments(...)` to perform its own `session.commit()`.
+
 ## Logging
 
 Jobs should emit structured log fields through the standard backend logger. The helper currently logs:
