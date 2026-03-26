@@ -81,7 +81,12 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          ssh "${VPS_USER}@${VPS_HOST}" "mkdir -p '${DEPLOY_PATH}'"
+          ssh "${VPS_USER}@${VPS_HOST}" "\
+            mkdir -p '${DEPLOY_PATH}' \
+              '${DEPLOY_PATH}/config' \
+              '${DEPLOY_PATH}/data' \
+              '${DEPLOY_PATH}/logs' \
+              '${DEPLOY_PATH}/backups'"
 
       - name: Sync repository to VPS
         env:
@@ -92,9 +97,13 @@ jobs:
           rsync -az --delete \
             --exclude ".git/" \
             --exclude ".github/" \
+            --exclude "backups/" \
             --exclude "backend/.venv/" \
             --exclude "backend/.pytest_cache/" \
             --exclude "backend/.ruff_cache/" \
+            --exclude "config/" \
+            --exclude "data/" \
+            --exclude "logs/" \
             --exclude "pe-be-tracker-frontend/" \
             ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
 
