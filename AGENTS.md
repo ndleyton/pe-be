@@ -57,6 +57,14 @@ Notes:
 
 ## Architecture Notes
 
+### Deployment
+
+- Production frontend traffic is served from Render at `app.personalbestie.com`.
+- Production backend and PostgreSQL now run on a Hetzner VPS, not on Render.
+- The public browser-facing API remains `https://app.personalbestie.com/api/...` via a frontend-side rewrite/proxy to the VPS origin.
+- The current backend origin hostname is `origin-api.personalbestie.com`.
+- When changing backend config, auth redirects, cookie behavior, or API routing, preserve the `app.personalbestie.com/api/...` public contract unless the task explicitly changes the deployment model.
+
 ### Backend
 
 - The backend uses feature slices under `backend/src`, including `users`, `workouts`, `exercises`, `exercise_sets`, `recipes`, `chat`, `admin`, and `health`.
