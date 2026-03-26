@@ -56,5 +56,6 @@ describe("guestStoreMigration", () => {
     expect(migrated.workouts[0].exercises[0].exercise_sets[0].updated_at).toBeNull();
     expect(migrated.exerciseTypes).toEqual([]);
     expect(migrated.workoutTypes).toEqual([]);
+    expect(migrated.routines).toEqual([{ id: "legacy-recipe-1" }]);
   });
 });

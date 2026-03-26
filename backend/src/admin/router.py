@@ -232,7 +232,7 @@ async def admin_create_routine(
     Create a new routine under the authenticated admin user.
 
     Notes:
-    - The backing database model/table is still named "recipes".
+    - The legacy backing table is still named `recipes`.
     - This endpoint is restricted to superusers.
     """
     try:

@@ -79,7 +79,7 @@ async def test_create_routine_endpoint_success(
             ],
         }
 
-        # Create the routine (recipe)
+        # Create the routine
         resp = await async_client.post("/api/v1/routines/", json=payload)
         assert resp.status_code == 201, resp.text
 

@@ -33,17 +33,17 @@ class TestRoutineCRUDUnit:
     def test_routine_model_attributes(self):
         """Test that Routine model has expected attributes."""
         # Test that we can create a Routine instance (validates model structure)
-        recipe = Routine(
-            name="Test Recipe",
+        routine = Routine(
+            name="Test Routine",
             description="Test description",
             workout_type_id=1,
             creator_id=1,
         )
 
-        assert recipe.name == "Test Recipe"
-        assert recipe.description == "Test description"
-        assert recipe.workout_type_id == 1
-        assert recipe.creator_id == 1
+        assert routine.name == "Test Routine"
+        assert routine.description == "Test description"
+        assert routine.workout_type_id == 1
+        assert routine.creator_id == 1
         # Note: id, created_at, updated_at are set by the Base class
 
     def test_exercise_template_model_attributes(self):
@@ -66,8 +66,8 @@ class TestRoutineCRUDUnit:
 
     def test_routine_create_schema_to_model_mapping(self):
         """Test that RoutineCreate schema maps correctly to Routine model structure."""
-        recipe_data = RoutineCreate(
-            name="Schema Test Recipe",
+        routine_data = RoutineCreate(
+            name="Schema Test Routine",
             description="Testing schema to model mapping",
             workout_type_id=2,
             exercise_templates=[
@@ -81,12 +81,12 @@ class TestRoutineCRUDUnit:
         )
 
         # Verify the schema structure matches what we expect for model creation
-        assert recipe_data.name == "Schema Test Recipe"
-        assert recipe_data.workout_type_id == 2
-        assert len(recipe_data.exercise_templates) == 1
-        assert recipe_data.exercise_templates[0].exercise_type_id == 3
-        assert len(recipe_data.exercise_templates[0].set_templates) == 1
-        assert recipe_data.exercise_templates[0].set_templates[0].reps == 12
+        assert routine_data.name == "Schema Test Routine"
+        assert routine_data.workout_type_id == 2
+        assert len(routine_data.exercise_templates) == 1
+        assert routine_data.exercise_templates[0].exercise_type_id == 3
+        assert len(routine_data.exercise_templates[0].set_templates) == 1
+        assert routine_data.exercise_templates[0].set_templates[0].reps == 12
 
     def test_routine_update_schema_partial_updates(self):
         """Test that RoutineUpdate allows partial updates."""
@@ -103,8 +103,8 @@ class TestRoutineCRUDUnit:
         assert update_desc_only.workout_type_id is None
 
         # Test updating multiple fields
-        update_multiple = RoutineUpdate(name="Updated Recipe", workout_type_id=3)
-        assert update_multiple.name == "Updated Recipe"
+        update_multiple = RoutineUpdate(name="Updated Routine", workout_type_id=3)
+        assert update_multiple.name == "Updated Routine"
         assert update_multiple.description is None
         assert update_multiple.workout_type_id == 3
 
@@ -116,7 +116,7 @@ class TestRoutineCRUDLogic:
         """Test the expected data flow for routine creation."""
         # Simulate the data that would flow through create_routine function
 
-        recipe_create_data = RoutineCreate(
+        routine_create_data = RoutineCreate(
             name="Data Flow Test",
             description="Testing data transformation",
             workout_type_id=1,
@@ -138,16 +138,16 @@ class TestRoutineCRUDLogic:
         )
 
         # Verify the structure that would be passed to the database
-        assert recipe_create_data.name == "Data Flow Test"
-        assert len(recipe_create_data.exercise_templates) == 2
+        assert routine_create_data.name == "Data Flow Test"
+        assert len(routine_create_data.exercise_templates) == 2
 
         # First exercise template
-        first_template = recipe_create_data.exercise_templates[0]
+        first_template = routine_create_data.exercise_templates[0]
         assert first_template.exercise_type_id == 5
         assert len(first_template.set_templates) == 2
 
         # Second exercise template
-        second_template = recipe_create_data.exercise_templates[1]
+        second_template = routine_create_data.exercise_templates[1]
         assert second_template.exercise_type_id == 6
         assert len(second_template.set_templates) == 1
         assert second_template.set_templates[0].reps == 15
@@ -157,7 +157,7 @@ class TestRoutineCRUDLogic:
         # This test documents the expected pattern for user ownership checks
 
         # Routine creation should associate with the correct user
-        recipe_data = RoutineCreate(name="Ownership Test", workout_type_id=1)
+        routine_data = RoutineCreate(name="Ownership Test", workout_type_id=1)
 
         # In actual CRUD operations, these patterns would be used:
         # 1. create_routine(session, routine_data, user_id) -> routine.creator_id = user_id
@@ -165,13 +165,13 @@ class TestRoutineCRUDLogic:
         # 3. get_routine_by_id_for_user(session, routine_id, different_user_id) -> returns None when not public
 
         # This test validates the schema supports the ownership pattern
-        assert recipe_data.name == "Ownership Test"
+        assert routine_data.name == "Ownership Test"
         # Note: creator_id is set in the CRUD function, not in the schema
 
     def test_cascade_delete_expectations(self):
         """Test the expected cascade deletion behavior."""
         # This test documents what should happen during cascade deletion
-        recipe_data = RoutineCreate(
+        routine_data = RoutineCreate(
             name="Cascade Test",
             workout_type_id=1,
             exercise_templates=[
@@ -191,8 +191,8 @@ class TestRoutineCRUDLogic:
         # 3. Associated SetTemplates deleted (cascade="all, delete-orphan")
 
         # Verify the nested structure that would be affected
-        assert len(recipe_data.exercise_templates) == 1
-        assert len(recipe_data.exercise_templates[0].set_templates) == 2
+        assert len(routine_data.exercise_templates) == 1
+        assert len(routine_data.exercise_templates[0].set_templates) == 2
 
     def test_routine_query_patterns(self):
         """Test the expected query patterns for routine operations."""
@@ -230,12 +230,12 @@ class TestRoutineBusinessRules:
         ]
 
         for name in valid_names:
-            recipe = RoutineCreate(name=name, workout_type_id=1)
-            assert recipe.name == name
+            routine = RoutineCreate(name=name, workout_type_id=1)
+            assert routine.name == name
 
     def test_empty_routine_business_logic(self):
         """Test business logic for routines with no exercises."""
-        empty_recipe = RoutineCreate(
+        empty_routine = RoutineCreate(
             name="Rest Day Protocol",
             description="Light stretching and mobility work",
             workout_type_id=2,
@@ -243,8 +243,8 @@ class TestRoutineBusinessRules:
         )
 
         # Empty routines should be valid (useful for rest days, warm-ups, etc.)
-        assert empty_recipe.name == "Rest Day Protocol"
-        assert len(empty_recipe.exercise_templates) == 0
+        assert empty_routine.name == "Rest Day Protocol"
+        assert len(empty_routine.exercise_templates) == 0
 
     def test_complex_workout_structure_validation(self):
         """Test validation of complex workout structures."""

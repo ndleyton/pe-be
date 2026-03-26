@@ -43,24 +43,24 @@ export interface Exercise {
   exercise_sets: ExerciseSet[];
 }
 
-export interface Recipe {
+export interface Routine {
   id: string;
   name: string;
   description?: string;
-  exercises: RecipeExercise[];
+  exercises: RoutineExercise[];
   created_at: string;
   updated_at: string;
 }
 
-export interface RecipeExercise {
+export interface RoutineExercise {
   id: string;
   exercise_type_id: number | string;
   exercise_type: ExerciseType;
-  sets: RecipeSet[];
+  sets: RoutineSet[];
   notes?: string;
 }
 
-export interface RecipeSet {
+export interface RoutineSet {
   id: string;
   reps: number | null;
   duration_seconds?: number | null;

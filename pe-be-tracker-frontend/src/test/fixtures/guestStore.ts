@@ -122,6 +122,7 @@ export const makeGuestData = (
   workouts: [],
   exerciseTypes: [],
   workoutTypes: [],
+  routines: [],
   ...overrides,
 });
 

@@ -73,9 +73,9 @@ Notes:
 
 ### Backend
 
-- The backend uses feature slices under `backend/src`, including `users`, `workouts`, `exercises`, `exercise_sets`, `recipes`, `chat`, `admin`, and `health`.
+- The backend uses feature slices under `backend/src`, including `users`, `workouts`, `exercises`, `exercise_sets`, `routines`, `chat`, `admin`, and `health`.
 - The API mounts under `/api/v1` by default.
-- User-facing "routines" are still implemented with `Recipe`, `ExerciseTemplate`, and `SetTemplate` models and the `recipes` table.
+- User-facing routines are implemented with the `Routine`, `ExerciseTemplate`, and `SetTemplate` models. The legacy backing table remains `recipes`, and `exercise_templates.recipe_id` remains a legacy column name.
 - AI-related backend code currently uses `langchain-google-genai` and `langfuse`; do not assume `openai` is the only active integration.
 - **Post-Workout AI Recap**: The backend features an automated, evidence-based coaching recap triggered asynchronously upon workout completion.
   - **Service**: `src/workouts/recap.py` (WorkoutRecapService) handles metric gathering and Gemini generation.

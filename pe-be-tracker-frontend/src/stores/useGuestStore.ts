@@ -100,7 +100,8 @@ export interface GuestData {
   workouts: GuestWorkout[];
   exerciseTypes: GuestExerciseType[];
   workoutTypes: GuestWorkoutType[];
-  recipes?: never; // Deprecated
+  recipes?: never; // Deprecated legacy persisted key
+  routines: Routine[];
 }
 
 interface GuestState extends GuestData {
@@ -501,6 +502,7 @@ export const useGuestStore = create<GuestStore>()(
         workouts: state.workouts,
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
+        routines: state.routines,
         hasAttemptedSync: state.hasAttemptedSync,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {

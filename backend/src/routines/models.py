@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 class Routine(Base):
     """Model for workout routines/templates."""
 
+    # Legacy database table name kept for compatibility with existing data.
     __tablename__ = "recipes"
 
     __table_args__ = (

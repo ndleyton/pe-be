@@ -56,9 +56,9 @@ class TestRoutineSchemas:
 
     def test_routine_create_valid(self):
         """Test creating a valid RoutineCreate."""
-        recipe_data = RoutineCreate(
-            name="Test Recipe",
-            description="A test workout recipe",
+        routine_data = RoutineCreate(
+            name="Test Routine",
+            description="A test workout routine",
             workout_type_id=1,
             exercise_templates=[
                 ExerciseTemplateCreate(
@@ -69,18 +69,18 @@ class TestRoutineSchemas:
                 )
             ],
         )
-        assert recipe_data.name == "Test Recipe"
-        assert recipe_data.description == "A test workout recipe"
-        assert recipe_data.workout_type_id == 1
-        assert len(recipe_data.exercise_templates) == 1
+        assert routine_data.name == "Test Routine"
+        assert routine_data.description == "A test workout routine"
+        assert routine_data.workout_type_id == 1
+        assert len(routine_data.exercise_templates) == 1
 
     def test_routine_create_minimal(self):
         """Test RoutineCreate with minimal required fields."""
-        recipe_data = RoutineCreate(name="Minimal Recipe", workout_type_id=1)
-        assert recipe_data.name == "Minimal Recipe"
-        assert recipe_data.description is None
-        assert recipe_data.workout_type_id == 1
-        assert len(recipe_data.exercise_templates) == 0
+        routine_data = RoutineCreate(name="Minimal Routine", workout_type_id=1)
+        assert routine_data.name == "Minimal Routine"
+        assert routine_data.description is None
+        assert routine_data.workout_type_id == 1
+        assert len(routine_data.exercise_templates) == 0
 
     def test_routine_create_invalid_name_empty(self):
         """Test RoutineCreate with invalid empty name."""
@@ -110,9 +110,9 @@ class TestRoutineSchemas:
     def test_routine_update_all_fields(self):
         """Test RoutineUpdate with all fields."""
         update_data = RoutineUpdate(
-            name="Updated Recipe", description="Updated description", workout_type_id=2
+            name="Updated Routine", description="Updated description", workout_type_id=2
         )
-        assert update_data.name == "Updated Recipe"
+        assert update_data.name == "Updated Routine"
         assert update_data.description == "Updated description"
         assert update_data.workout_type_id == 2
 
@@ -149,7 +149,7 @@ class TestRoutineBusinessLogic:
             ),
         ]
 
-        recipe_data = RoutineCreate(
+        routine_data = RoutineCreate(
             name="Push Day Workout",
             description="Upper body push workout focusing on chest and triceps",
             workout_type_id=1,
@@ -157,11 +157,11 @@ class TestRoutineBusinessLogic:
         )
 
         # Validate the routine structure
-        assert recipe_data.name == "Push Day Workout"
-        assert len(recipe_data.exercise_templates) == 2
+        assert routine_data.name == "Push Day Workout"
+        assert len(routine_data.exercise_templates) == 2
 
         # Validate first exercise (Bench Press)
-        bench_press = recipe_data.exercise_templates[0]
+        bench_press = routine_data.exercise_templates[0]
         assert bench_press.exercise_type_id == 1
         assert len(bench_press.set_templates) == 3
 
@@ -172,14 +172,14 @@ class TestRoutineBusinessLogic:
         assert sets[2].reps == 6 and sets[2].intensity == 175.0
 
         # Validate second exercise (Squats)
-        squats = recipe_data.exercise_templates[1]
+        squats = routine_data.exercise_templates[1]
         assert squats.exercise_type_id == 2
         assert len(squats.set_templates) == 2
 
     def test_routine_update_preserves_structure(self):
         """Test that routine updates preserve existing structure."""
-        original_recipe = RoutineCreate(
-            name="Original Recipe",
+        original_routine = RoutineCreate(
+            name="Original Routine",
             description="Original description",
             workout_type_id=1,
             exercise_templates=[
@@ -192,26 +192,26 @@ class TestRoutineBusinessLogic:
 
         # Simulate partial update
         update_data = RoutineUpdate(
-            name="Updated Recipe Name", description="Updated description"
+            name="Updated Routine Name", description="Updated description"
         )
 
         # Verify update data is separate from original
-        assert update_data.name == "Updated Recipe Name"
+        assert update_data.name == "Updated Routine Name"
         assert update_data.workout_type_id is None  # Not being updated
-        assert original_recipe.name == "Original Recipe"  # Original unchanged
+        assert original_routine.name == "Original Routine"  # Original unchanged
 
     def test_empty_routine_valid(self):
         """Test that a routine with no exercises is valid."""
-        empty_recipe = RoutineCreate(
-            name="Empty Recipe", workout_type_id=1, exercise_templates=[]
+        empty_routine = RoutineCreate(
+            name="Empty Routine", workout_type_id=1, exercise_templates=[]
         )
 
-        assert empty_recipe.name == "Empty Recipe"
-        assert len(empty_recipe.exercise_templates) == 0
+        assert empty_routine.name == "Empty Routine"
+        assert len(empty_routine.exercise_templates) == 0
 
     def test_complex_workout_routine(self):
         """Test a complex routine with multiple exercises and varied set schemes."""
-        complex_recipe = RoutineCreate(
+        complex_routine = RoutineCreate(
             name="Full Body Strength",
             description="Comprehensive full body workout with compound movements",
             workout_type_id=1,
@@ -248,10 +248,10 @@ class TestRoutineBusinessLogic:
             ],
         )
 
-        assert len(complex_recipe.exercise_templates) == 3
-        assert len(complex_recipe.exercise_templates[0].set_templates) == 5  # Deadlifts
-        assert len(complex_recipe.exercise_templates[1].set_templates) == 3  # Pull-ups
-        assert len(complex_recipe.exercise_templates[2].set_templates) == 1  # Cardio
+        assert len(complex_routine.exercise_templates) == 3
+        assert len(complex_routine.exercise_templates[0].set_templates) == 5  # Deadlifts
+        assert len(complex_routine.exercise_templates[1].set_templates) == 3  # Pull-ups
+        assert len(complex_routine.exercise_templates[2].set_templates) == 1  # Cardio
 
 
 class TestRoutineValidation:
@@ -283,13 +283,13 @@ class TestRoutineValidation:
     def test_routine_name_whitespace_handling(self):
         """Test routine name with various whitespace scenarios."""
         # Leading/trailing whitespace should be handled by validation
-        recipe_data = RoutineCreate(name="  Valid Recipe Name  ", workout_type_id=1)
+        routine_data = RoutineCreate(name="  Valid Routine Name  ", workout_type_id=1)
         # Note: Pydantic doesn't automatically strip whitespace unless configured
-        assert recipe_data.name == "  Valid Recipe Name  "
+        assert routine_data.name == "  Valid Routine Name  "
 
 
 # Test data constants that could be used in integration tests
-SAMPLE_RECIPES = {
+SAMPLE_ROUTINES = {
     "beginner_push": RoutineCreate(
         name="Beginner Push Workout",
         description="Basic upper body push exercises for beginners",

@@ -13,8 +13,8 @@ from src.routines import crud
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSession):
-    """CRUD: authenticated list returns user-owned and public, excludes others' private/link_only."""
-    # Seed: one workout type (recipes require workout_type_id)
+    """CRUD: list returns user-owned and public, excludes others' private/link_only."""
+    # Seed: one workout type (routines require workout_type_id)
     wt = WorkoutType(name="Strength", description="Strength training")
     db_session.add(wt)
     await db_session.flush()
@@ -37,7 +37,7 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
     db_session.add_all([me, other])
     await db_session.flush()
 
-    # Seed recipes: mine (private), other's private, other's public, other's link_only
+    # Seed routines: mine (private), other's private, other's public, other's link_only
     r_mine_private = Routine(
         name="Mine Private",
         workout_type_id=wt.id,
