@@ -123,8 +123,12 @@ jobs:
 
           # Ensure database is up and healthy
           docker compose -f docker-compose.prod.yml up -d db
-          echo "Waiting for database to be healthy..."
-          timeout 60 bash -c 'until docker compose -f docker-compose.prod.yml exec -T db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" 2>/dev/null; do sleep 2; done' || true
+          echo "Waiting for database to become healthy..."
+          timeout 90 bash -c '
+            until [ "$(docker inspect -f "{{.State.Health.Status}}" pe-be-postgres 2>/dev/null)" = "healthy" ]; do
+              sleep 2
+            done
+          '
 
           # Run migrations
           docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
