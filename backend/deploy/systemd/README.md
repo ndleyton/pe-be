@@ -36,11 +36,7 @@ To disable the job without masking the timer:
 JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=false
 ```
 
-Then reload or restart the next run environment:
-
-```bash
-sudo systemctl restart pe-be-chat-attachment-cleanup.timer
-```
+Because the service uses `docker compose run`, Compose re-reads `.env` on each invocation. No timer restart is required for the next scheduled run to pick up the new value.
 
 ## Verify
 
@@ -75,4 +71,3 @@ To verify on the VPS:
 3. Confirm the second run logs `Job skipped ... status=skipped`.
 
 The repo also has unit coverage for this behavior in `backend/tests/test_jobs_shared.py`.
-
