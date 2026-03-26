@@ -1,17 +1,21 @@
 from fastapi import APIRouter, Depends
-from fastapi_users import FastAPIUsers
 
 from src.users.models import User, OAuthAccount
 from src.users.schemas import UserRead, UserCreate, UserUpdate
 from src.core.config import settings
-from src.core.security import auth_backend, get_user_manager, google_oauth_client
+from src.core.security import (
+    TracedFastAPIUsers,
+    auth_backend,
+    get_user_manager,
+    google_oauth_client,
+)
 from src.core.dependencies import set_user_models
 
 # Set user models for dependencies
 set_user_models(User, OAuthAccount)
 
 # Initialize FastAPI Users
-fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
+fastapi_users = TracedFastAPIUsers[User, int](get_user_manager, [auth_backend])
 
 # Create router
 router = APIRouter()

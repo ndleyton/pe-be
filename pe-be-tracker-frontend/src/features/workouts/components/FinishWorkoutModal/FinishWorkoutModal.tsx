@@ -75,6 +75,8 @@ const FinishWorkoutModal = ({
   if (!isOpen) return null;
 
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
+  const hasExercises = exercises.length > 0;
+  const hasCompletedSets = muscleGroupSummary.length > 0;
   const totalSets = muscleGroupSummary.reduce(
     (sum, group) => sum + group.setCount,
     0,
@@ -170,7 +172,7 @@ const FinishWorkoutModal = ({
         data-testid="finish-workout-modal"
       >
         <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
-          {muscleGroupSummary.length > 0 && (
+          {hasExercises && (
             <div
               ref={downloadAreaRef}
               className="bg-background mb-6 rounded-lg p-4"
@@ -198,19 +200,21 @@ const FinishWorkoutModal = ({
                 {workoutName ?? "Great Training Session!"}
               </h3>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
-              <div className="space-y-2">
-                {muscleGroupSummary.map((group) => (
-                  <div
-                    key={group.name}
-                    className="bg-muted flex items-center justify-between rounded px-3 py-2"
-                  >
-                    <span className="font-medium">{group.name}</span>
-                    <span className="text-primary font-bold">
-                      {group.setCount} set{group.setCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {hasCompletedSets && (
+                <div className="space-y-2">
+                  {muscleGroupSummary.map((group) => (
+                    <div
+                      key={group.name}
+                      className="bg-muted flex items-center justify-between rounded px-3 py-2"
+                    >
+                      <span className="font-medium">{group.name}</span>
+                      <span className="text-primary font-bold">
+                        {group.setCount} set{group.setCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="border-border mt-3 border-t pt-3">
                 <div className="flex items-center justify-between font-bold">
                   <span>Total Sets Completed:</span>
@@ -220,7 +224,7 @@ const FinishWorkoutModal = ({
             </div>
           )}
 
-          {muscleGroupSummary.length > 0 && (
+          {hasExercises && (
             <div className="mb-4">
               <DownloadImageButton onDownload={handleDownload} />
             </div>
