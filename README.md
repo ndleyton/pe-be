@@ -1,94 +1,215 @@
 # PersonalBestie
 
-PersonalBestie is a full-stack application designed to help users track their workouts with a (coming soon) AI agent Personal Trainer. It provides a robust backend API for data management and a responsive frontend for an intuitive user experience.
+PersonalBestie is a full-stack fitness tracker with a FastAPI backend, a React frontend, and an AI-powered coaching layer built around server-side function calling. The product centers on workouts, exercises, exercise sets, and routines, with local-first guest usage in the frontend and authenticated sync once a user signs in.
 
-## Tech Stack
+What makes the project technically interesting is that the AI layer is not just free-form chat. The backend exposes application-owned tools to Gemini, validates tool inputs with typed schemas, executes those tools server-side, and uses the results to answer questions grounded in real workout data.
+
+## What Lives Here
+
+| Path | Purpose |
+| --- | --- |
+| `backend/` | FastAPI API, SQLAlchemy models, Alembic migrations, tests |
+| `pe-be-tracker-frontend/` | React 19 + Vite frontend |
+| `docker-compose.yml` | Optional full-stack local environment |
+| `AGENTS.md` | Repository-specific development instructions |
+
+## Stack
 
 ### Backend
--   **Language:** Python
--   **Framework:** FastAPI
--   **Database:** PostgreSQL (managed via Docker)
--   **ORM/Migrations:** SQLAlchemy with Alembic
--   **Dependency Management:** uv
--   **Containerization:** Docker
+
+- Python
+- FastAPI
+- SQLAlchemy + Alembic
+- PostgreSQL
+- `uv` for dependency management and command execution
+- Google Gemini integration via `google-genai`
+- Server-side function calling over application-owned tools
+- Langfuse observability
 
 ### Frontend
--   **Language:** TypeScript / JavaScript
--   **Framework:** React
--   **Build Tool:** Vite
--   **Styling:** Tailwind CSS
--   **Testing:** Vitest (Unit/Component), Playwright (E2E)
--   **Containerization:** Docker
 
-### Overall
--   **Orchestration:** Docker Compose
+- React 19
+- TypeScript
+- Vite
+- React Router v7
+- TanStack Query
+- Tailwind CSS v4
+- Zustand
+- Vitest and Playwright
 
-## CI Caching
+## Local Development
 
-- GitHub Actions cache the backend virtualenv (`backend/.venv`) and uv download cache (`~/.cache/uv`).
-- Cache key includes OS, Python version, and `backend/uv.lock`, so cache refreshes on lockfile updates or Python version changes.
-- Installs use `uv sync` (build jobs use `--frozen`) to stay consistent with the committed lockfile.
-
-## How to Run
-
-To get the PersonalBestie application up and running on your local machine, follow these steps:
+The recommended workflow is to run the backend and frontend separately from their own directories.
 
 ### Prerequisites
 
-Ensure you have the following installed:
--   [Docker](https://docs.docker.com/get-docker/)
--   [Docker Compose](https://docs.docker.com/compose/install/)
+- Python 3.10 to 3.12
+- [`uv`](https://docs.astral.sh/uv/)
+- Node.js and npm
+- PostgreSQL
 
-### Steps
+### 1. Start the Backend
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd pe-be
-    ```
+From [`backend/`](backend/):
 
-2.  **Start the application using Docker Compose:**
-    This command will build the Docker images for both the backend and frontend, set up the PostgreSQL database, and start all services.
-    ```bash
-    docker compose up --build
-    ```
+```bash
+cp .env.example .env
+uv sync
+uv run alembic upgrade head
+uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-3.  **Access the application:**
-    Once all services are running, the frontend application should be accessible in your web browser at `http://localhost:5173` (or the port configured in `docker-compose.yml` and `vite.config.js`).
+Make sure Postgres is running first. If you want to use Docker just for the database, `docker compose up db -d` from the repo root is enough.
 
-    The backend API will be available at `http://localhost:8000`.
+Important backend env vars:
 
-### Stopping the application
+- `DATABASE_URL`
+- `SECRET_KEY`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `FRONTEND_URL`
 
-To stop the running services and remove the containers, networks, and volumes created by `docker compose up`:
+Default local API base:
+
+```text
+http://localhost:8000/api/v1
+```
+
+Health check:
+
+```text
+http://localhost:8000/health
+```
+
+### 2. Start the Frontend
+
+From [`pe-be-tracker-frontend/`](pe-be-tracker-frontend/):
+
+```bash
+npm install
+cp env.example .env.development
+npm run dev
+```
+
+Minimum frontend env vars:
+
+- `VITE_API_BASE_URL=http://localhost:8000/api/v1`
+
+Also required outside test mode:
+
+- `VITE_PUBLIC_POSTHOG_KEY`
+- `VITE_PUBLIC_POSTHOG_HOST`
+
+Default local frontend URL:
+
+```text
+http://localhost:5173
+```
+
+## Docker Compose
+
+If you want a containerized setup instead, run this from the repo root:
+
+```bash
+docker compose up --build
+```
+
+Default compose ports:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Postgres: `localhost:5432`
+
+Stop and remove containers plus the Postgres volume:
 
 ```bash
 docker compose down -v
 ```
 
-This will ensure a clean shutdown and remove the database volume, allowing you to start fresh if needed.
+## Common Commands
 
-## Timezone & Date Handling
+Run commands from the relevant subdirectory unless noted otherwise.
 
-PersonalBestie follows a **UTC-first** strategy:
+### Backend
 
-1. **Storage & Transport (Always UTC)**
-   * All `DateTime` columns in Postgres are declared with `timezone=True` so they map to the `timestamptz` type.
-   * The backend converts every inbound timestamp to UTC via Pydantic validators (`ensure_utc`) and generates server-side timestamps with `datetime.now(timezone.utc)`.
-   * FastAPI serialises these aware `datetime` objects as ISO-8601 strings that end with `Z` (e.g. `2024-06-17T13:45:00Z`).
-   * The React frontend sends timestamps in the same format, using the helper `toUTCISOString()` to convert user input to UTC before an API call.
+```bash
+uv run pytest
+uv run pytest --no-cov tests/test_file.py
+uv run ruff check .
+uv run ruff check . --fix
+uv run alembic current
+uv run alembic upgrade head
+```
 
-2. **Presentation (User Local by Default)**
-   * Timestamps received from the API are kept in UTC but **rendered** in the user’s local time zone via `formatDisplayDate()` and `formatRelativeTime()`.
-   * If you need to show the actual zone, pass `includeTimezone: true` to `formatDisplayDate` and it will append the short zone label (e.g. `PDT`).
+Notes:
 
-3. **HTML `<input type="datetime-local">` Quirk**
-   * This control emits a string **without** a time-zone designator. `toUTCISOString()` detects this case and appends the user’s offset so the value is stored correctly.
+- Full backend test runs enforce coverage via `backend/pytest.ini`.
+- Focused test runs should usually use `--no-cov`.
+- Tests load `ENV_FILE` if set, otherwise `backend/.env.test`.
+- Test safety checks require a dedicated test database whose name contains `test`.
 
-### Quick Rules for Contributors
+### Frontend
 
-* **When sending data to the backend:** always run human input through `toUTCISOString()` or send `null`.
-* **When displaying a timestamp:** use `formatDisplayDate()` or `formatRelativeTime()`—do **not** call `new Date().toLocaleString()` directly unless you have a special case.
-* **Never store local time** in the database; every timestamp must be timezone-aware UTC.
+```bash
+npm run dev
+npm run lint
+npm run typecheck
+npm test
+npm run test:coverage
+npm run test:e2e
+```
 
-By centralising conversions in these helpers we avoid silent bugs, ensure consistent UX, and make future locale/timezone requirements easier to implement.
+## Architecture Notes
+
+### AI Layer
+
+- The chat assistant uses Gemini with backend-owned tool definitions rather than relying on prompt-only behavior.
+- Tool inputs are defined as typed schemas and validated before execution.
+- Tool execution stays server-side, which keeps access to user workout data and domain actions inside the application boundary.
+- Langfuse is used for prompt and trace visibility around AI interactions.
+
+### Backend
+
+- API routes mount under `/api/v1` by default.
+- Feature slices live under [`backend/src/`](backend/src/), including `users`, `workouts`, `exercises`, `exercise_sets`, `routines`, `chat`, `admin`, and `health`.
+- User-facing "routines" are the product term. Avoid reintroducing "recipes" in UI or API copy unless you are intentionally referring to older backend model names.
+
+Useful routes:
+
+- `/api/v1/routines/`
+- `/api/v1/workouts/mine`
+- `/api/v1/workouts/workout-types/`
+- `/api/v1/exercises/exercise-types/`
+- `/api/v1/exercise-sets/exercise/{exercise_id}`
+- `/api/v1/auth/session`
+
+### Frontend
+
+- Guest mode is local-first and persisted through a Zustand store, not React context.
+- IndexedDB is the primary storage for guest state, with localStorage fallback.
+- Guest-to-authenticated sync logic lives in [`pe-be-tracker-frontend/src/utils/syncGuestData.ts`](pe-be-tracker-frontend/src/utils/syncGuestData.ts).
+- Shared endpoint constants live in [`pe-be-tracker-frontend/src/shared/api/endpoints.ts`](pe-be-tracker-frontend/src/shared/api/endpoints.ts).
+
+## Conventions That Matter
+
+- Preserve trailing slashes on collection endpoints used by the frontend client to avoid FastAPI `307` redirects on `POST`.
+- Prefer endpoint constants over hardcoded frontend API paths.
+- For backend detail endpoints with a small fixed relationship graph, prefer `joinedload` deliberately instead of defaulting to nested `selectinload`.
+- Keep Alembic migrations defensive when changing existing schema objects.
+
+## Time and Timezone Handling
+
+The app follows a UTC-first model:
+
+- Store and transport timestamps in UTC.
+- Convert user input to UTC before sending it to the backend.
+- Render timestamps in the user's local timezone in the UI.
+
+If you touch date handling, preserve the existing helpers and avoid ad hoc formatting or local-time storage.
+
+## Related Docs
+
+- Repo instructions: [`AGENTS.md`](AGENTS.md)
+- Backend setup details: [`backend/README.md`](backend/README.md)
+- Frontend setup details: [`pe-be-tracker-frontend/README.md`](pe-be-tracker-frontend/README.md)
+- Langfuse notes: [`backend/LANGFUSE_INTEGRATION.md`](backend/LANGFUSE_INTEGRATION.md)
