@@ -1,0 +1,11 @@
+[Unit]
+Description=PE Backend chat attachment cleanup
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/pe-be
+EnvironmentFile=-/srv/pe-be/.env
+ExecStart=/usr/bin/docker compose run --rm backend python -m src.jobs.chat_attachment_cleanup
+

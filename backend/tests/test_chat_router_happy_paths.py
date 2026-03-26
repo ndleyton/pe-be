@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from PIL import Image
@@ -155,6 +156,55 @@ async def test_chat_attachment_upload_and_download(
     assert download_response.status_code == 200, download_response.text
     assert download_response.headers["content-type"] == "image/png"
     assert download_response.content
+
+
+async def test_chat_attachment_upload_does_not_run_cleanup(
+    async_client: AsyncClient, authenticated_user, monkeypatch
+):
+    captured = {}
+
+    class FakeChatService:
+        def __init__(self, user_id, session):
+            captured["user_id"] = user_id
+            captured["session"] = session
+
+        @classmethod
+        async def cleanup_orphaned_attachments(cls, session):
+            raise AssertionError("upload route should not trigger cleanup")
+
+        async def save_uploaded_attachment(self, filename, content_type, data):
+            captured["filename"] = filename
+            captured["content_type"] = content_type
+            captured["data"] = data
+            return SimpleNamespace(
+                id=99,
+                mime_type="image/png",
+                original_filename=filename,
+                size_bytes=len(data),
+                width=4,
+                height=4,
+            )
+
+    monkeypatch.setattr("src.chat.router.ChatService", FakeChatService)
+
+    response = await async_client.post(
+        "/api/v1/chat/attachments",
+        files={"file": ("pose.png", b"fake-png-bytes", "image/png")},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "attachment_id": 99,
+        "mime_type": "image/png",
+        "filename": "pose.png",
+        "size_bytes": len(b"fake-png-bytes"),
+        "width": 4,
+        "height": 4,
+    }
+    assert captured["user_id"] == authenticated_user.id
+    assert captured["filename"] == "pose.png"
+    assert captured["content_type"] == "image/png"
+    assert captured["data"] == b"fake-png-bytes"
 
 
 async def test_chat_attachment_upload_rejects_mime_mismatch(

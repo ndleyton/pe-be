@@ -14,6 +14,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=${JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy
