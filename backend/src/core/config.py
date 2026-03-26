@@ -70,6 +70,11 @@ class Settings(BaseSettings):
         validation_alias="CHAT_ATTACHMENT_CLEANUP_BATCH_SIZE",
         description="Max number of stale chat uploads to clean up per sweep",
     )
+    JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED: bool = Field(
+        True,
+        validation_alias="JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED",
+        description="Enable the scheduled chat attachment cleanup job",
+    )
     CHAT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
         60,
         validation_alias="CHAT_RATE_LIMIT_WINDOW_SECONDS",

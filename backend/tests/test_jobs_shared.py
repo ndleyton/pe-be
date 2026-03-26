@@ -77,6 +77,44 @@ async def test_run_managed_job_skips_when_lock_is_held(monkeypatch, caplog):
     assert "Job skipped" in caplog.text
 
 
+@pytest.mark.asyncio(loop_scope="session")
+async def test_run_managed_job_releases_lock_and_reraises_on_failure(
+    monkeypatch, caplog
+):
+    events: list[tuple[str, int]] = []
+
+    async def _fake_try_acquire(session, *, lock_key):
+        assert session == "session"
+        events.append(("acquire", lock_key))
+        return True
+
+    async def _fake_release(session, *, lock_key):
+        assert session == "session"
+        events.append(("release", lock_key))
+        return True
+
+    async def _failing_job(session):
+        assert session == "session"
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(shared, "async_session_maker", lambda: FakeSessionContext())
+    monkeypatch.setattr(shared, "_try_acquire_advisory_lock", _fake_try_acquire)
+    monkeypatch.setattr(shared, "_release_advisory_lock", _fake_release)
+
+    caplog.set_level(logging.INFO)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await shared.run_managed_job(
+            job_name="chat_attachment_cleanup",
+            job_callable=_failing_job,
+        )
+
+    assert events[0][0] == "acquire"
+    assert events[1][0] == "release"
+    assert "Job started" in caplog.text
+    assert "Job failed" in caplog.text
+
+
 def test_advisory_lock_key_for_job_is_stable():
     first = shared.advisory_lock_key_for_job("chat_attachment_cleanup")
     second = shared.advisory_lock_key_for_job("chat_attachment_cleanup")
