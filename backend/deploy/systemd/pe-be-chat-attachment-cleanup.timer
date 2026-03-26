@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PE Backend chat attachment cleanup hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
