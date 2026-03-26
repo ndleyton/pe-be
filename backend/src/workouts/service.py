@@ -17,6 +17,7 @@ from src.workouts.crud import (
     create_workout_type,
     get_user_workouts,
     get_latest_workout_for_user,
+    get_stale_open_workouts,
 )
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import (
@@ -132,6 +133,37 @@ class WorkoutService:
         """Update workout data with business logic validation"""
         # Add any business logic here (e.g., validation, authorization)
         return await update_workout(session, workout_id, workout_data, user_id)
+
+    @staticmethod
+    async def close_stale_open_workouts(
+        session: AsyncSession,
+        *,
+        max_age_hours: int = 24,
+    ) -> int:
+        """Auto-close open workouts whose start time is older than the max age.
+
+        The close timestamp is capped at `start_time + max_age_hours` so the
+        stored workout duration does not grow indefinitely while the workout is
+        left open.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+        workouts = await get_stale_open_workouts(session, older_than=cutoff)
+        if not workouts:
+            return 0
+
+        close_delta = timedelta(hours=max_age_hours)
+        closed_count = 0
+        for workout in workouts:
+            if workout.start_time is None:
+                continue
+            workout.end_time = workout.start_time + close_delta
+            closed_count += 1
+
+        if closed_count == 0:
+            return 0
+
+        await session.commit()
+        return closed_count
 
     @staticmethod
     async def remove_workout(

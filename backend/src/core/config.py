@@ -75,6 +75,16 @@ class Settings(BaseSettings):
         validation_alias="JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED",
         description="Enable the scheduled chat attachment cleanup job",
     )
+    JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED: bool = Field(
+        True,
+        validation_alias="JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED",
+        description="Enable the scheduled stale open workout auto-close job",
+    )
+    JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS: int = Field(
+        24,
+        validation_alias="JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS",
+        description="Max age in hours before an open workout is auto-closed",
+    )
     CHAT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
         60,
         validation_alias="CHAT_RATE_LIMIT_WINDOW_SECONDS",
