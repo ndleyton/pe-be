@@ -22,6 +22,14 @@ uv run python -m src.jobs.chat_attachment_cleanup
 
 This job cleans up stale orphaned chat attachments by calling `ChatService.cleanup_orphaned_attachments(...)`.
 
+Operator kill switch:
+
+```bash
+JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=false
+```
+
+When disabled, the job exits cleanly without doing work. This lets operators stop a broken scheduled job through environment config while leaving the VPS timer in place.
+
 ## Package Structure
 
 - [shared.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/shared.py): common runtime helper for jobs

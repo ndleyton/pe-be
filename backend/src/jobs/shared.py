@@ -18,7 +18,7 @@ from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-JobStatus = Literal["success", "skipped"]
+JobStatus = Literal["success", "skipped", "failed", "disabled"]
 JobCallable = Callable[[AsyncSession], Awaitable[Mapping[str, Any] | None]]
 
 
@@ -170,4 +170,3 @@ async def run_managed_job(
                             }
                         ),
                     )
-
