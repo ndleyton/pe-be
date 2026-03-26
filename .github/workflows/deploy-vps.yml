@@ -60,16 +60,16 @@ jobs:
           GOOGLE_AI_KEY=${{ secrets.GOOGLE_AI_KEY }}
           LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
-          LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST }}
+          LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST || 'https://us.cloud.langfuse.com' }}
 
           # OpenTelemetry
-          OTEL_ENABLED=${{ secrets.OTEL_ENABLED }}
-          OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_ENABLED=${{ secrets.OTEL_ENABLED || 'false' }}
+          OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT || '' }}
+          OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS || '' }}
           OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
           OTEL_SERVICE_NAME=personalbestie-backend
           OTEL_SERVICE_VERSION=${{ github.sha }}
-          OTEL_TRACES_SAMPLER_ARG=${{ secrets.OTEL_TRACES_SAMPLER_ARG }}
+          OTEL_TRACES_SAMPLER_ARG=${{ secrets.OTEL_TRACES_SAMPLER_ARG || '0.1' }}
 
           # App settings
           IMAGE_URL_PREFIX=${{ secrets.IMAGE_URL_PREFIX }}
