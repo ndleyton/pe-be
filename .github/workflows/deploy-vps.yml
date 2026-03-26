@@ -1,0 +1,128 @@
+name: Deploy VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - "pe-be-tracker-frontend/**"
+      - ".github/workflows/deploy-vps.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Write production env file
+        run: |
+          cat <<EOF > .env.production
+          APP_DOMAIN=${{ secrets.APP_DOMAIN }}
+          ACME_EMAIL=${{ secrets.ACME_EMAIL }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+          FRONTEND_POST_LOGIN_PATH=${{ secrets.FRONTEND_POST_LOGIN_PATH }}
+          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
+          COOKIE_SAMESITE=${{ secrets.COOKIE_SAMESITE }}
+          LOG_LEVEL=${{ secrets.LOG_LEVEL }}
+          GOOGLE_AI_KEY=${{ secrets.GOOGLE_AI_KEY }}
+          LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST }}
+          VITE_API_BASE_URL=/api/v1
+          VITE_API_TIMEOUT=10000
+          VITE_ENABLE_LOGGING=false
+          VITE_ENVIRONMENT=production
+          VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_PUBLIC_POSTHOG_KEY=${{ secrets.VITE_PUBLIC_POSTHOG_KEY }}
+          VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+          EOF
+
+      - name: Prepare deployment directory on VPS
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "mkdir -p '${DEPLOY_PATH}'"
+
+      - name: Sync repository to VPS
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "backend/.venv/" \
+            --exclude "backend/.pytest_cache/" \
+            --exclude "backend/.ruff_cache/" \
+            --exclude "pe-be-tracker-frontend/node_modules/" \
+            --exclude "pe-be-tracker-frontend/dist/" \
+            --exclude "pe-be-tracker-frontend/coverage/" \
+            --exclude "pe-be-tracker-frontend/playwright-report/" \
+            --exclude "pe-be-tracker-frontend/test-results/" \
+            ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
+
+      - name: Upload production env file
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          scp .env.production "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/.env.production"
+
+      - name: Deploy on VPS
+        env:
+          APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' APP_DOMAIN='${APP_DOMAIN}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          cd "${DEPLOY_PATH}"
+
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production build backend frontend
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production up -d db
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production run --rm backend alembic upgrade head
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production up -d backend frontend caddy
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production ps
+
+          docker compose -f deploy/docker-compose.prod.yml --env-file .env.production exec -T backend \
+            curl -fsS http://localhost:8000/health
+
+          curl -kfsS --retry 10 --retry-delay 5 --resolve "${APP_DOMAIN}:443:127.0.0.1" \
+            "https://${APP_DOMAIN}/health" >/dev/null
+          EOF

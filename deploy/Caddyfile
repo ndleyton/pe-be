@@ -1,0 +1,18 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	@api path /api/* /health
+	reverse_proxy @api backend:8000
+
+	reverse_proxy frontend:80
+}
