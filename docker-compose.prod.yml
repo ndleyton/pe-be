@@ -1,0 +1,73 @@
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: pe-be-caddy
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    networks:
+      - edge
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pe-be-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+
+  db:
+    image: postgres:17-alpine
+    container_name: pe-be-postgres
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
