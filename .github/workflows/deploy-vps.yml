@@ -2,14 +2,6 @@ name: Deploy VPS
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "docker-compose.prod.yml"
-      - "Caddyfile"
-      - ".github/workflows/deploy-vps.yml"
 
 permissions:
   contents: read
@@ -48,9 +40,9 @@ jobs:
 
           # Backend runtime
           ENVIRONMENT=production
-          LOG_LEVEL=${{ secrets.LOG_LEVEL }}
+          LOG_LEVEL=INFO
           SECRET_KEY=${{ secrets.SECRET_KEY }}
-          JWT_LIFETIME_SECONDS=${{ secrets.JWT_LIFETIME_SECONDS }}
+          JWT_LIFETIME_SECONDS=604800
           COOKIE_SECURE=true
           COOKIE_SAMESITE=lax
 
@@ -58,7 +50,7 @@ jobs:
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          DATABASE_URL=postgresql+asyncpg://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ secrets.POSTGRES_DB }}
 
           # Google OAuth
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
@@ -134,7 +126,7 @@ jobs:
           docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 
           # Bring up backend and caddy
-          docker compose -f docker-compose.prod.yml up -d backend caddy
+          docker compose -f docker-compose.prod.yml up -d --force-recreate backend caddy
 
           # Show running containers
           docker compose -f docker-compose.prod.yml ps
