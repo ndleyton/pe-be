@@ -12,6 +12,7 @@ The design follows [RFC 0003](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backen
 ## Current Job
 
 - [chat_attachment_cleanup.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/chat_attachment_cleanup.py)
+- [close_stale_open_workouts.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/close_stale_open_workouts.py)
 
 Manual run:
 
@@ -30,10 +31,34 @@ JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=false
 
 When disabled, the job exits cleanly without doing work. This lets operators stop a broken scheduled job through environment config while leaving the VPS timer in place.
 
+The stale open workout job closes workouts whose `end_time` is still `NULL` more than 24 hours after `start_time`.
+
+Manual run:
+
+```bash
+cd backend
+uv run python -m src.jobs.close_stale_open_workouts
+```
+
+Operator kill switch:
+
+```bash
+JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=false
+```
+
+By default, it auto-closes workouts older than 24 hours by setting:
+
+```text
+end_time = start_time + 24 hours
+```
+
+That caps the stored workout duration instead of letting a stale open workout appear to last for days.
+
 ## Package Structure
 
 - [shared.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/shared.py): common runtime helper for jobs
 - [chat_attachment_cleanup.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/chat_attachment_cleanup.py): first standardized recurring job
+- [close_stale_open_workouts.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/close_stale_open_workouts.py): auto-close for stale open workouts
 
 ## Job Contract
 

@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -180,3 +180,21 @@ async def get_latest_workout_for_user(
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def get_stale_open_workouts(
+    session: AsyncSession,
+    *,
+    older_than: datetime,
+) -> List[Workout]:
+    """Return open workouts whose start_time is older than the cutoff."""
+    result = await session.execute(
+        select(Workout)
+        .where(
+            Workout.end_time.is_(None),
+            Workout.start_time.is_not(None),
+            Workout.start_time <= older_than,
+        )
+        .order_by(Workout.start_time.asc(), Workout.id.asc())
+    )
+    return result.scalars().all()

@@ -1,0 +1,12 @@
+[Unit]
+Description=PE Backend close stale open workouts
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/pe-be
+EnvironmentFile=-/srv/pe-be/.env
+TimeoutStartSec=300
+ExecStart=/usr/bin/docker compose run --rm -T backend python -m src.jobs.close_stale_open_workouts
+
