@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import Response
 from fastapi_users import FastAPIUsers
 
 from src.users.models import User, OAuthAccount
@@ -65,3 +66,8 @@ current_active_user = fastapi_users.current_user(active=True)
 @router.get("/auth/session", response_model=UserRead, tags=["auth"])
 async def get_auth_session(user: User = Depends(current_active_user)):
     return user
+
+
+@router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT, tags=["auth"])
+async def logout() -> Response:
+    return await auth_backend.transport.get_logout_response()

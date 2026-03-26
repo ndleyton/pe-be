@@ -73,6 +73,31 @@ class CookieTransportWithRedirect(CookieTransport):
         )  # Use the parent's method to set the cookie
         return response
 
+    async def get_logout_response(self) -> Response:
+        """Clear auth cookies defensively for both current and legacy setups."""
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        response.delete_cookie(
+            self.cookie_name,
+            path=self.cookie_path,
+            domain=self.cookie_domain,
+            secure=self.cookie_secure,
+            httponly=self.cookie_httponly,
+            samesite=self.cookie_samesite,
+        )
+
+        # Also clear a host-only cookie when the deployment has since started
+        # using an explicit cookie domain.
+        if self.cookie_domain is not None:
+            response.delete_cookie(
+                self.cookie_name,
+                path=self.cookie_path,
+                secure=self.cookie_secure,
+                httponly=self.cookie_httponly,
+                samesite=self.cookie_samesite,
+            )
+
+        return response
+
 
 def get_jwt_strategy() -> JWTStrategy:
     """JWT strategy for authentication"""

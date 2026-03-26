@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 
 interface User {
   id: number;
@@ -46,8 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // FastAPI-Users exposes this route on the auth router
-      await api.post("/auth/jwt/logout");
+      await api.post(endpoints.auth.logout);
     } catch {
       /* ignore */
     } finally {

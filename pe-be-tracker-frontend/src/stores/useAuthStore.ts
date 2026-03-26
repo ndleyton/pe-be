@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 
 interface User {
   id: number;
@@ -65,7 +66,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   signOut: async () => {
     try {
-      await api.post("/auth/jwt/logout");
+      await api.post(endpoints.auth.logout);
     } catch {
       /* ignore */
     } finally {
