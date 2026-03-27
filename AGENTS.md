@@ -150,5 +150,11 @@ Prefer defensive migrations for schema changes that may hit drifted environments
 1. Run `ruff` and the relevant backend tests before handoff.
 2. Use focused tests during iteration, then run broader coverage before finalizing backend changes.
 3. For frontend work, run the relevant npm checks from `pe-be-tracker-frontend/`.
-4. Keep database migrations defensive and easy to reason about.
-5. Keep changes focused; avoid mixing unrelated work in one PR.
+4. Before merging a feature branch, rebase it onto the current `origin/main` instead of merging `main` into the branch:
+   ```bash
+   git fetch origin
+   git switch my-branch
+   git rebase origin/main
+   ```
+5. Keep database migrations defensive and easy to reason about.
+6. Keep changes focused; avoid mixing unrelated work in one PR.
