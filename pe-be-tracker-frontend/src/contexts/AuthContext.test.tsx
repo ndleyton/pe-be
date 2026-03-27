@@ -215,7 +215,7 @@ describe("AuthContext", () => {
         screen.getByTestId("signout-btn").click();
       });
 
-      expect(mockApi.post).toHaveBeenCalledWith("/auth/jwt/logout");
+      expect(mockApi.post).toHaveBeenCalledWith("/auth/logout");
       expect(screen.getByTestId("authenticated")).toHaveTextContent("false");
       expect(mockLocation.href).toBe("/");
     });
@@ -238,7 +238,7 @@ describe("AuthContext", () => {
         screen.getByTestId("signout-btn").click();
       });
 
-      expect(mockApi.post).toHaveBeenCalledWith("/auth/jwt/logout");
+      expect(mockApi.post).toHaveBeenCalledWith("/auth/logout");
       expect(screen.getByTestId("authenticated")).toHaveTextContent("false");
       expect(mockLocation.href).toBe("/");
     });
