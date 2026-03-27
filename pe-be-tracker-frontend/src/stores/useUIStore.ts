@@ -10,6 +10,9 @@ interface WorkoutTimer {
   intervalId: number | null;
   /** When paused, the epoch milliseconds of pause start */
   pausedAt: number | null;
+  /** Canonical workout identity used to sync the timer without clobbering pause/resume math */
+  sourceWorkoutId: string | null;
+  sourceStartTime: number | null;
 }
 
 interface UIState {
@@ -25,11 +28,22 @@ interface UIActions {
    * Start the workout timer at an optional absolute time (epoch ms).
    * If omitted, starts at "now".
    */
-  startWorkoutTimer: (atMs?: number) => void;
+  startWorkoutTimer: (
+    atMs?: number,
+    source?: {
+      sourceWorkoutId?: string | null;
+      sourceStartTime?: number | null;
+    },
+  ) => void;
   pauseWorkoutTimer: () => void;
   resumeWorkoutTimer: () => void;
   toggleWorkoutTimer: () => void;
   stopWorkoutTimer: () => void;
+  syncWorkoutTimer: (workout: {
+    id: string | number;
+    startTime: number | string | Date | null;
+    endTime?: number | string | Date | null;
+  } | null) => void;
   getFormattedWorkoutTime: () => string;
   /** Parse persisted dates, fix elapsed, and start/stop interval appropriately */
   rehydrateWorkoutTimer: () => void;
@@ -48,6 +62,21 @@ const formatTime = (totalSeconds: number): string => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
+const normalizeEpochMs = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const ms = new Date(value).getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }
+  if (value && typeof value === "object" && typeof (value as Date).getTime === "function") {
+    const ms = (value as Date).getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }
+  return null;
+};
+
 export const useUIStore = create<UIStore>()(
   persist(
     (set, get) => ({
@@ -58,6 +87,8 @@ export const useUIStore = create<UIStore>()(
     paused: false,
     intervalId: null,
     pausedAt: null,
+    sourceWorkoutId: null,
+    sourceStartTime: null,
   },
 
   openDrawer: () => set({ isDrawerOpen: true }),
@@ -66,7 +97,13 @@ export const useUIStore = create<UIStore>()(
 
   toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
 
-  startWorkoutTimer: (atMs?: number) => {
+  startWorkoutTimer: (
+    atMs?: number,
+    source?: {
+      sourceWorkoutId?: string | null;
+      sourceStartTime?: number | null;
+    },
+  ) => {
     const { workoutTimer } = get();
 
     // Clear any existing interval to prevent memory leaks
@@ -99,6 +136,8 @@ export const useUIStore = create<UIStore>()(
         paused: false,
         intervalId,
         pausedAt: null,
+        sourceWorkoutId: source?.sourceWorkoutId ?? null,
+        sourceStartTime: source?.sourceStartTime ?? startTimeMs,
       },
     });
   },
@@ -177,7 +216,39 @@ export const useUIStore = create<UIStore>()(
         paused: false,
         intervalId: null,
         pausedAt: null,
+        sourceWorkoutId: null,
+        sourceStartTime: null,
       },
+    });
+  },
+
+  syncWorkoutTimer: (workout) => {
+    const { workoutTimer } = get();
+    const nextWorkoutId = workout ? String(workout.id) : null;
+    const nextStartTime = normalizeEpochMs(workout?.startTime);
+    const nextEndTime = normalizeEpochMs(workout?.endTime ?? null);
+
+    if (!nextWorkoutId || nextStartTime == null || nextEndTime != null) {
+      if (
+        workoutTimer.startTime !== null
+        || workoutTimer.elapsedSeconds !== 0
+        || workoutTimer.sourceWorkoutId !== null
+      ) {
+        get().stopWorkoutTimer();
+      }
+      return;
+    }
+
+    if (
+      workoutTimer.sourceWorkoutId === nextWorkoutId
+      && workoutTimer.sourceStartTime === nextStartTime
+    ) {
+      return;
+    }
+
+    get().startWorkoutTimer(nextStartTime, {
+      sourceWorkoutId: nextWorkoutId,
+      sourceStartTime: nextStartTime,
     });
   },
 
@@ -189,33 +260,11 @@ export const useUIStore = create<UIStore>()(
     // Normalize persisted values to epoch ms, recompute elapsed, and (re)start interval if needed
     set((state) => {
       const t = state.workoutTimer;
-      const startTime: number | null = (() => {
-        const s: any = t.startTime as any;
-        if (typeof s === "number") return s;
-        if (typeof s === "string") {
-          const ms = new Date(s).getTime();
-          return isNaN(ms) ? null : ms;
-        }
-        if (s && typeof s === "object" && typeof s.getTime === "function") {
-          const ms = (s as Date).getTime();
-          return isNaN(ms) ? null : ms;
-        }
-        return null;
-      })();
-
-      const pausedAt: number | null = (() => {
-        const p: any = t.pausedAt as any;
-        if (typeof p === "number") return p;
-        if (typeof p === "string") {
-          const ms = new Date(p).getTime();
-          return isNaN(ms) ? null : ms;
-        }
-        if (p && typeof p === "object" && typeof p.getTime === "function") {
-          const ms = (p as Date).getTime();
-          return isNaN(ms) ? null : ms;
-        }
-        return null;
-      })();
+      const startTime = normalizeEpochMs(t.startTime);
+      const pausedAt = normalizeEpochMs(t.pausedAt);
+      const sourceStartTime = normalizeEpochMs(
+        t.sourceStartTime ?? t.startTime,
+      );
 
       let elapsedSeconds = 0;
       if (typeof startTime === "number") {
@@ -227,7 +276,15 @@ export const useUIStore = create<UIStore>()(
         }
       }
 
-      const next: WorkoutTimer = { ...t, startTime, pausedAt, elapsedSeconds } as WorkoutTimer;
+      const next: WorkoutTimer = {
+        ...t,
+        startTime,
+        pausedAt,
+        elapsedSeconds,
+        sourceWorkoutId:
+          typeof t.sourceWorkoutId === "string" ? t.sourceWorkoutId : null,
+        sourceStartTime,
+      } as WorkoutTimer;
 
       // If running and no interval, start ticking
       if (!next.paused && next.startTime && !next.intervalId) {

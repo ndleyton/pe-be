@@ -109,6 +109,7 @@ const mockUIState = {
   workoutTimer: { startTime: null },
   startWorkoutTimer: vi.fn(),
   stopWorkoutTimer: vi.fn(),
+  syncWorkoutTimer: vi.fn(),
   getFormattedWorkoutTime: vi.fn(() => "00:00"),
 };
 
@@ -185,6 +186,18 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
+  it("syncs the timer from the workout lifecycle", async () => {
+    render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(mockUIState.syncWorkoutTimer).toHaveBeenCalledWith({
+        id: mockWorkout.id,
+        startTime: mockWorkout.start_time,
+        endTime: mockWorkout.end_time,
+      });
+    });
+  });
+
   it("shows floating action button", () => {
     render(<WorkoutPage />);
 
@@ -200,10 +213,10 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
-  it("shows the back link without hiding it on large screens", () => {
+  it("shows the back link without hiding it on large screens", async () => {
     render(<WorkoutPage />);
 
-    const backLink = screen.getByLabelText(/go back/i);
+    const backLink = await screen.findByLabelText(/go back/i);
     expect(backLink).toBeInTheDocument();
     expect(backLink).not.toHaveClass("lg:hidden");
   });
