@@ -8,14 +8,19 @@ import {
 import {
   generateRandomId,
   getCurrentUTCTimestamp,
-  toUTCISOString,
 } from "@/utils/date";
 import type { Routine } from "@/features/routines/types";
 import { useAuthStore } from "./useAuthStore";
 import { createIndexedDBStorage } from "./indexedDBStorage";
-import { buildExerciseTypes } from "./seeds/exerciseTypes";
-import { buildWorkoutTypes } from "./seeds/workoutTypes";
-import { generateExerciseTypeIds } from "./seeds/types";
+import { migrateGuestData } from "./guestStoreMigration";
+import { createInitialGuestData } from "./guestStoreSeedData";
+import {
+  removeExerciseById,
+  removeExerciseSetById,
+  updateExerciseById,
+  updateExerciseSetById,
+  updateWorkoutById,
+} from "./guestStoreWorkoutTree";
 
 export interface GuestExerciseType {
   id: string;
@@ -152,246 +157,10 @@ interface GuestActions {
 }
 
 type GuestStore = GuestState & GuestActions;
-
-const getInitialGuestData = (): GuestData => {
-  // Create consistent IDs for exercises
-  const exerciseTypeIds = generateExerciseTypeIds(generateRandomId);
-
-  const exerciseTypes = buildExerciseTypes(exerciseTypeIds);
-
-  const initialData = {
-    workouts: [],
-    exerciseTypes,
-    workoutTypes: buildWorkoutTypes(generateRandomId),
-  } satisfies GuestData;
-
-  return initialData;
-};
-
-
-const normalizeTimestamp = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return value == null ? null : String(value);
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const normalized = toUTCISOString(trimmed);
-  return normalized || trimmed;
-};
-
-const migrateGuestData = (data: any): GuestData => {
-  const migrated = { ...data };
-
-  // Normalize timestamps and ensure arrays exist
-  if (migrated.workouts) {
-    migrated.workouts = migrated.workouts.map((workout: any) => ({
-      ...workout,
-      start_time: normalizeTimestamp(workout.start_time),
-      end_time: normalizeTimestamp(workout.end_time),
-      created_at: normalizeTimestamp(workout.created_at),
-      updated_at: normalizeTimestamp(workout.updated_at),
-      exercises:
-        workout.exercises?.map((exercise: any) => ({
-          ...exercise,
-          timestamp: normalizeTimestamp(exercise.timestamp),
-          created_at: normalizeTimestamp(exercise.created_at),
-          updated_at: normalizeTimestamp(exercise.updated_at),
-          exercise_sets:
-            exercise.exercise_sets?.map((set: any) => ({
-              ...set,
-              created_at: normalizeTimestamp(set.created_at),
-              updated_at: normalizeTimestamp(set.updated_at),
-            })) ?? [],
-        })) ?? [],
-    }));
-  }
-
-  return {
-    workouts: migrated.workouts ?? [],
-    exerciseTypes: migrated.exerciseTypes ?? [],
-    workoutTypes: migrated.workoutTypes ?? [],
-  };
-};
-
-const replaceAtIndex = <T,>(items: T[], index: number, nextItem: T): T[] => {
-  const nextItems = items.slice();
-  nextItems[index] = nextItem;
-  return nextItems;
-};
-
-const updateWorkoutById = (
-  workouts: GuestWorkout[],
-  workoutId: string,
-  updater: (workout: GuestWorkout) => GuestWorkout,
-): GuestWorkout[] => {
-  const workoutIndex = workouts.findIndex((workout) => workout.id === workoutId);
-  if (workoutIndex === -1) {
-    return workouts;
-  }
-
-  const currentWorkout = workouts[workoutIndex];
-  const nextWorkout = updater(currentWorkout);
-  if (nextWorkout === currentWorkout) {
-    return workouts;
-  }
-
-  return replaceAtIndex(workouts, workoutIndex, nextWorkout);
-};
-
-const updateExerciseById = (
-  workouts: GuestWorkout[],
-  exerciseId: string,
-  updater: (exercise: GuestExercise) => GuestExercise,
-): GuestWorkout[] => {
-  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
-    const workout = workouts[workoutIndex];
-    const exerciseIndex = workout.exercises.findIndex(
-      (exercise) => exercise.id === exerciseId,
-    );
-
-    if (exerciseIndex === -1) {
-      continue;
-    }
-
-    const currentExercise = workout.exercises[exerciseIndex];
-    const nextExercise = updater(currentExercise);
-    if (nextExercise === currentExercise) {
-      return workouts;
-    }
-
-    const nextExercises = replaceAtIndex(
-      workout.exercises,
-      exerciseIndex,
-      nextExercise,
-    );
-
-    return replaceAtIndex(workouts, workoutIndex, {
-      ...workout,
-      exercises: nextExercises,
-    });
-  }
-
-  return workouts;
-};
-
-const removeExerciseById = (
-  workouts: GuestWorkout[],
-  exerciseId: string,
-): GuestWorkout[] => {
-  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
-    const workout = workouts[workoutIndex];
-    const exerciseIndex = workout.exercises.findIndex(
-      (exercise) => exercise.id === exerciseId,
-    );
-
-    if (exerciseIndex === -1) {
-      continue;
-    }
-
-    return replaceAtIndex(workouts, workoutIndex, {
-      ...workout,
-      exercises: workout.exercises.filter((exercise) => exercise.id !== exerciseId),
-    });
-  }
-
-  return workouts;
-};
-
-const updateExerciseSetById = (
-  workouts: GuestWorkout[],
-  setId: string,
-  updater: (set: GuestExerciseSet) => GuestExerciseSet,
-): GuestWorkout[] => {
-  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
-    const workout = workouts[workoutIndex];
-
-    for (
-      let exerciseIndex = 0;
-      exerciseIndex < workout.exercises.length;
-      exerciseIndex += 1
-    ) {
-      const exercise = workout.exercises[exerciseIndex];
-      const setIndex = exercise.exercise_sets.findIndex((set) => set.id === setId);
-
-      if (setIndex === -1) {
-        continue;
-      }
-
-      const currentSet = exercise.exercise_sets[setIndex];
-      const nextSet = updater(currentSet);
-      if (nextSet === currentSet) {
-        return workouts;
-      }
-
-      const nextSets = replaceAtIndex(exercise.exercise_sets, setIndex, nextSet);
-      const nextExercise = {
-        ...exercise,
-        exercise_sets: nextSets,
-      };
-      const nextExercises = replaceAtIndex(
-        workout.exercises,
-        exerciseIndex,
-        nextExercise,
-      );
-
-      return replaceAtIndex(workouts, workoutIndex, {
-        ...workout,
-        exercises: nextExercises,
-      });
-    }
-  }
-
-  return workouts;
-};
-
-const removeExerciseSetById = (
-  workouts: GuestWorkout[],
-  setId: string,
-): GuestWorkout[] => {
-  for (let workoutIndex = 0; workoutIndex < workouts.length; workoutIndex += 1) {
-    const workout = workouts[workoutIndex];
-
-    for (
-      let exerciseIndex = 0;
-      exerciseIndex < workout.exercises.length;
-      exerciseIndex += 1
-    ) {
-      const exercise = workout.exercises[exerciseIndex];
-      const setIndex = exercise.exercise_sets.findIndex((set) => set.id === setId);
-
-      if (setIndex === -1) {
-        continue;
-      }
-
-      const nextSets = exercise.exercise_sets.filter((set) => set.id !== setId);
-      const nextExercise = {
-        ...exercise,
-        exercise_sets: nextSets,
-      };
-      const nextExercises = replaceAtIndex(
-        workout.exercises,
-        exerciseIndex,
-        nextExercise,
-      );
-
-      return replaceAtIndex(workouts, workoutIndex, {
-        ...workout,
-        exercises: nextExercises,
-      });
-    }
-  }
-
-  return workouts;
-};
-
 export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
-      ...getInitialGuestData(),
+      ...createInitialGuestData(generateRandomId),
       hasAttemptedSync: false,
       hydrated: false,
 
@@ -644,7 +413,7 @@ export const useGuestStore = create<GuestStore>()(
       },
 
       clear: () => {
-        const initialData = getInitialGuestData();
+        const initialData = createInitialGuestData(generateRandomId);
         set({ ...initialData, hasAttemptedSync: false });
       },
 
@@ -734,7 +503,7 @@ export const useGuestStore = create<GuestStore>()(
         if (persistedVersion == null || persistedVersion < 3) {
           const guest = migrateGuestData(persistedState);
           return {
-            ...getInitialGuestData(),
+            ...createInitialGuestData(generateRandomId),
             ...guest,
             hasAttemptedSync: Boolean(
               (persistedState as any)?.hasAttemptedSync,
