@@ -119,6 +119,8 @@ describe("Workout Timer Interactions", () => {
     // Immediately after start, elapsed should be 0
     expect(useUIStore.getState().workoutTimer.elapsedSeconds).toBe(0);
     expect(useUIStore.getState().workoutTimer.startTime).toBe(baseNow);
+    expect(useUIStore.getState().workoutTimer.sourceWorkoutId).toBeNull();
+    expect(useUIStore.getState().workoutTimer.sourceStartTime).toBe(baseNow);
     expect(useUIStore.getState().workoutTimer.intervalId).not.toBeNull();
 
     // Advance 1s
@@ -206,6 +208,8 @@ describe("Workout Timer Interactions", () => {
     expect(stoppedState.elapsedSeconds).toBe(0);
     expect(stoppedState.paused).toBe(false);
     expect(stoppedState.intervalId).toBeNull();
+    expect(stoppedState.sourceWorkoutId).toBeNull();
+    expect(stoppedState.sourceStartTime).toBeNull();
   });
 
   it("toggles between pause and resume", async () => {
@@ -229,5 +233,67 @@ describe("Workout Timer Interactions", () => {
     // Let's tick 1s to see progress
     vi.advanceTimersByTime(1000);
     expect(useUIStore.getState().workoutTimer.elapsedSeconds).toBe(2);
+  });
+
+  it("syncs to the active workout and preserves pause state on re-sync", async () => {
+    const { useUIStore } = await import("./useUIStore");
+    const store = useUIStore.getState();
+    const activeWorkout = {
+      id: "workout-1",
+      startTime: baseNow - 10000,
+      endTime: null,
+    };
+
+    store.syncWorkoutTimer(activeWorkout);
+    expect(useUIStore.getState().workoutTimer.sourceWorkoutId).toBe("workout-1");
+    expect(useUIStore.getState().workoutTimer.sourceStartTime).toBe(baseNow - 10000);
+    expect(useUIStore.getState().workoutTimer.elapsedSeconds).toBe(10);
+
+    useUIStore.getState().pauseWorkoutTimer();
+    const pausedState = useUIStore.getState().workoutTimer;
+
+    vi.advanceTimersByTime(5000);
+    store.syncWorkoutTimer(activeWorkout);
+
+    expect(useUIStore.getState().workoutTimer).toMatchObject({
+      paused: true,
+      pausedAt: pausedState.pausedAt,
+      startTime: pausedState.startTime,
+      sourceWorkoutId: "workout-1",
+      sourceStartTime: baseNow - 10000,
+      elapsedSeconds: 10,
+    });
+  });
+
+  it("resets to idle when the synced workout is finished or missing", async () => {
+    const { useUIStore } = await import("./useUIStore");
+    const store = useUIStore.getState();
+
+    store.syncWorkoutTimer({
+      id: "workout-1",
+      startTime: baseNow - 10000,
+      endTime: null,
+    });
+    vi.advanceTimersByTime(3000);
+    expect(useUIStore.getState().workoutTimer.elapsedSeconds).toBe(13);
+
+    store.syncWorkoutTimer({
+      id: "workout-1",
+      startTime: baseNow - 10000,
+      endTime: baseNow,
+    });
+
+    expect(useUIStore.getState().workoutTimer).toMatchObject({
+      startTime: null,
+      elapsedSeconds: 0,
+      paused: false,
+      intervalId: null,
+      pausedAt: null,
+      sourceWorkoutId: null,
+      sourceStartTime: null,
+    });
+
+    store.syncWorkoutTimer(null);
+    expect(useUIStore.getState().workoutTimer.elapsedSeconds).toBe(0);
   });
 });

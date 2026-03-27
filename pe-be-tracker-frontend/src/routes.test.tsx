@@ -84,6 +84,7 @@ const mockUIState = {
   workoutTimer: { startTime: null },
   startWorkoutTimer: vi.fn(),
   stopWorkoutTimer: vi.fn(),
+  syncWorkoutTimer: vi.fn(),
   getFormattedWorkoutTime: vi.fn(() => "00:00"),
 };
 
