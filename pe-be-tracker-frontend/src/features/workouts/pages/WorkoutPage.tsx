@@ -81,9 +81,7 @@ const WorkoutPage = () => {
   const guestUpdateWorkout = useGuestStore((state) => state.updateWorkout);
 
   // Get workout timer state and actions from UI store
-  const startTime = useUIStore((state) => state.workoutTimer.startTime);
-  const startWorkoutTimer = useUIStore((state) => state.startWorkoutTimer);
-  const stopWorkoutTimer = useUIStore((state) => state.stopWorkoutTimer);
+  const syncWorkoutTimer = useUIStore((state) => state.syncWorkoutTimer);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
@@ -189,7 +187,30 @@ const WorkoutPage = () => {
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
-    onSuccess: () => {
+    onSuccess: (updatedWorkout, id) => {
+      queryClient.setQueryData(["workout", id], updatedWorkout);
+      queryClient.setQueryData(
+        ["workouts"],
+        (
+          current:
+            | { data: Workout[]; next_cursor?: number | null }
+            | undefined,
+        ) => {
+          if (!current?.data) {
+            return current;
+          }
+
+          return {
+            ...current,
+            data: current.data.map((workout) =>
+              String(workout.id) === String(updatedWorkout.id)
+                ? updatedWorkout
+                : workout,
+            ),
+          };
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
       setShowFinishModal(false);
       navigate("/workouts");
     },
@@ -199,61 +220,31 @@ const WorkoutPage = () => {
     },
   });
 
-  // Start or align the workout timer to the canonical start time
+  // Keep the timer aligned to the active workout lifecycle.
   useEffect(() => {
-    // Determine canonical start time from server (auth) or persisted guest data
-    let derived: Date | undefined;
     if (isAuthenticated) {
-      const ws = serverWorkout?.start_time ?? undefined;
-      if (ws) {
-        const d = new Date(ws);
-        if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
-          derived = d;
-        }
-      }
-    } else {
-      if (guestHydrated) {
-        const ws = guestWorkout?.start_time ?? undefined;
-        if (ws) {
-          const d = new Date(ws);
-          if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) {
-            derived = d;
-          }
-        }
-      } else {
-        // Wait for hydration before attempting to start in guest mode
-        return;
-      }
-    }
-
-    // If we have a derived start and timer hasn't started yet, start aligned to it.
-    // IMPORTANT: Only do this when startTime is null (timer not yet started).
-    // If startTime exists but differs from derivedMs, that's expected after pause/resume
-    // adjustments - we should NOT reset it back to the original time.
-    if (derived) {
-      if (startTime == null) {
-        startWorkoutTimer(derived.getTime());
-      }
+      if (!serverWorkout) return;
+      syncWorkoutTimer({
+        id: serverWorkout.id,
+        startTime: serverWorkout.start_time,
+        endTime: serverWorkout.end_time,
+      });
       return;
     }
 
-    // Fallbacks
-    // - Authenticated: wait for server value to avoid incorrect resets
-    // - Guest: after hydration, if no stored start is found, start now
-    if (!isAuthenticated) {
-      // Only auto-start when there's truly no startTime yet (null)
-      if (!derived && startTime == null && guestHydrated) {
-        startWorkoutTimer();
-      }
-    }
+    if (!guestHydrated || !guestWorkout) return;
+
+    syncWorkoutTimer({
+      id: guestWorkout.id,
+      startTime: guestWorkout.start_time,
+      endTime: guestWorkout.end_time,
+    });
   }, [
     serverWorkout,
-    workoutId,
     isAuthenticated,
     guestWorkout,
     guestHydrated,
-    startTime,
-    startWorkoutTimer,
+    syncWorkoutTimer,
   ]);
 
   // Auto-create exercises from routine when page loads
@@ -451,17 +442,12 @@ const WorkoutPage = () => {
   const handleFinishWorkout = useCallback(() => {
     if (workoutId) {
       if (isAuthenticated) {
-        finishWorkoutMutation.mutate(workoutId, {
-          onSuccess: () => {
-            stopWorkoutTimer();
-          },
-        });
+        finishWorkoutMutation.mutate(workoutId);
       } else {
         // For guest mode, update the workout end time
         guestUpdateWorkout(workoutId, {
           end_time: getCurrentUTCTimestamp(),
         });
-        stopWorkoutTimer();
         setShowFinishModal(false);
         navigate("/workouts");
       }
@@ -473,7 +459,6 @@ const WorkoutPage = () => {
     guestUpdateWorkout,
     isAuthenticated,
     navigate,
-    stopWorkoutTimer,
     workoutId,
   ]);
 
