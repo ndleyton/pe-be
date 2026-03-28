@@ -2,7 +2,6 @@ import React, { ReactElement } from "react";
 import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { AuthProvider } from "../contexts/AuthContext";
 import { vi } from "vitest";
 
 // Mock API client for all tests
@@ -41,9 +40,7 @@ const AllTheProviders = ({
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <MemoryRouter>{children}</MemoryRouter>
-      </AuthProvider>
+      <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
 };
