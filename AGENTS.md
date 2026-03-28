@@ -84,6 +84,7 @@ Notes:
 - For guest vs authenticated flows, prefer a single hook or adapter boundary that hides the branching from the presentational component.
 - If a hook or helper depends on nested server shapes, prefer shared fixtures in `pe-be-tracker-frontend/src/test/fixtures/` over large inline objects. Use server-style fixtures for authenticated flows and guest fixtures for local-first flows.
 - For debounced hook tests, be careful combining fake timers with `waitFor`; prefer advancing timers inside `act(...)` and asserting directly on the resulting state or mock calls.
+- Preserve progressive rendering. Thin pages should still render stable shells and section-level placeholders/skeletons when possible; avoid replacing an otherwise usable screen with a single full-page "Loading..." state unless the entire route is blocked on first load.
 
 ## API Conventions
 
@@ -157,11 +158,12 @@ Prefer defensive migrations for schema changes that may hit drifted environments
 3. For frontend work, run the relevant npm checks from `pe-be-tracker-frontend/`.
 4. When extracting significant frontend logic into custom hooks, add dedicated hook tests for the new behavior instead of relying only on page/component tests.
 5. If a refactor introduces new reusable frontend test data shapes, add them to `pe-be-tracker-frontend/src/test/fixtures/` and reuse them instead of copying nested objects between tests.
-6. Before merging a feature branch, rebase it onto the current `origin/main` instead of merging `main` into the branch:
+6. When refactoring frontend pages, preserve or improve partial rendering behavior. Prefer section loading states and skeletons over coarse route-level loading gates.
+7. Before merging a feature branch, rebase it onto the current `origin/main` instead of merging `main` into the branch:
    ```bash
    git fetch origin
    git switch my-branch
    git rebase origin/main
    ```
-7. Keep database migrations defensive and easy to reason about.
-8. Keep changes focused; avoid mixing unrelated work in one PR.
+8. Keep database migrations defensive and easy to reason about.
+9. Keep changes focused; avoid mixing unrelated work in one PR.
