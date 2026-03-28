@@ -1,13 +1,14 @@
 import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import Column, Integer, DateTime, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-from dotenv import load_dotenv
-from pathlib import Path
+from src.core.config import settings
 
 # Load dotenv with respect for ENV_FILE if provided, otherwise default to .env
 env_file = os.getenv("ENV_FILE", ".env")
@@ -46,15 +47,14 @@ class Base(DeclarativeBase):
     )
 
 
-def get_database_url():
-    """Get the database URL and ensure it's compatible with async operations."""
-    # Fallback URL for local development only - configure DATABASE_URL environment variable in production
-    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db")
+def get_database_url() -> str:
+    """Return the validated database URL in an async-driver-compatible form."""
+    db_url = settings.DATABASE_URL
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
     if db_url.startswith("postgresql://"):
         return db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif db_url.startswith("postgres://"):
+    if db_url.startswith("postgres://"):
         return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
     return db_url
