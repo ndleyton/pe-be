@@ -77,6 +77,7 @@ def _build_paginated_exercise_types_response(
     offset: int,
     limit: int,
     name: Optional[str],
+    muscle_group_id: Optional[int],
     order_by: str,
 ) -> PaginatedExerciseTypesResponse:
     return traced_model_validate(
@@ -87,6 +88,7 @@ def _build_paginated_exercise_types_response(
             "query.offset": offset,
             "query.limit": limit,
             "query.has_name_filter": name is not None,
+            "query.has_muscle_group_filter": muscle_group_id is not None,
             "query.order_by": order_by,
             "serialization.item_count": len(exercise_types),
         },
@@ -211,12 +213,19 @@ async def create_exercise(
 async def get_exercise_types(
     session: AsyncSession,
     name: Optional[str] = None,
+    muscle_group_id: Optional[int] = None,
     order_by: str = "usage",
     offset: int = 0,
     limit: int = 100,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
     query = select(ExerciseType).options(_exercise_type_relationship_option())
+    if muscle_group_id is not None:
+        query = query.where(
+            ExerciseType.exercise_muscles.any(
+                ExerciseMuscle.muscle.has(Muscle.muscle_group_id == muscle_group_id)
+            )
+        )
 
     if name:
         with tracer.start_as_current_span(
@@ -225,10 +234,17 @@ async def get_exercise_types(
             span.set_attribute(
                 "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
             )
-            result = await session.execute(
-                select(ExerciseType.id, ExerciseType.name).limit(
-                    MAX_FUZZY_SEARCH_RESULTS
+            candidate_query = select(ExerciseType.id, ExerciseType.name)
+            if muscle_group_id is not None:
+                candidate_query = candidate_query.where(
+                    ExerciseType.exercise_muscles.any(
+                        ExerciseMuscle.muscle.has(
+                            Muscle.muscle_group_id == muscle_group_id
+                        )
+                    )
                 )
+            result = await session.execute(
+                candidate_query.limit(MAX_FUZZY_SEARCH_RESULTS)
             )
             candidate_rows = result.all()
             span.set_attribute(
@@ -254,6 +270,7 @@ async def get_exercise_types(
                 offset=offset,
                 limit=limit,
                 name=name,
+                muscle_group_id=muscle_group_id,
                 order_by=order_by,
             )
 
@@ -379,6 +396,7 @@ async def get_exercise_types(
         offset=offset,
         limit=limit,
         name=name,
+        muscle_group_id=muscle_group_id,
         order_by=order_by,
     )
 

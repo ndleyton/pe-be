@@ -192,10 +192,13 @@ class TestExerciseTypesUsage:
 
         # Check that order_by parameter exists
         assert "order_by" in sig.parameters
+        assert "muscle_group_id" in sig.parameters
 
         # Check that order_by has a default value
         order_by_param = sig.parameters["order_by"]
         assert order_by_param.default is not None
+        muscle_group_param = sig.parameters["muscle_group_id"]
+        assert muscle_group_param.default is not None
 
     def test_exercise_type_schema_includes_times_used(self):
         """Test that ExerciseTypeRead schema includes times_used field."""
@@ -253,6 +256,35 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
     assert result.id == 275
     assert result.muscles[0].name == "Pectorals"
     assert result.muscles[0].muscle_group.name == "Chest"
+
+
+@pytest.mark.asyncio
+async def test_get_exercise_types_route_forwards_muscle_group_filter(monkeypatch):
+    from src.exercises import router as exercises_router
+
+    fake_get_all = AsyncMock(return_value=SimpleNamespace(data=[], next_cursor=None))
+    monkeypatch.setattr(
+        "src.exercises.router.ExerciseTypeService.get_all_exercise_types",
+        fake_get_all,
+    )
+    monkeypatch.setattr(
+        exercises_router,
+        "traced_model_dump",
+        lambda *args, **kwargs: {"data": [], "next_cursor": None},
+    )
+
+    response = await exercises_router.get_exercise_types(
+        name=None,
+        muscle_group_id=9,
+        order_by="usage",
+        offset=2,
+        limit=5,
+        session=object(),
+    )
+
+    assert response.status_code == 200
+    fake_get_all.assert_awaited_once()
+    assert fake_get_all.await_args.args[1:] == (None, 9, "usage", 2, 5)
 
 
 def test_exercise_deletion_cascade_logic():

@@ -134,7 +134,12 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
 
     assert (
         await ExerciseTypeService.get_all_exercise_types(
-            session, name="row", order_by="name", offset=5, limit=10
+            session,
+            name="row",
+            muscle_group_id=7,
+            order_by="name",
+            offset=5,
+            limit=10,
         )
         is paginated
     )
@@ -148,7 +153,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     )
     assert await IntensityUnitService.get_all_intensity_units(session) == units
 
-    fake_get_exercise_types.assert_awaited_once_with(session, "row", "name", 5, 10)
+    fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
     fake_get_exercise_type_by_id.assert_awaited_once_with(session, 5)
     fake_get_exercise_type_stats.assert_awaited_once_with(session, 5, 12)
     fake_create_exercise_type.assert_awaited_once_with(session, payload)

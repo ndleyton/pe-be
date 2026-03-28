@@ -59,6 +59,11 @@ async def get_exercise_types(
         default=None,
         description="Search for exercise types by name (case-insensitive)",
     ),
+    muscle_group_id: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Filter exercise types by muscle group ID",
+    ),
     order_by: Optional[str] = Query(
         default="usage",
         description="Sort order: 'usage' for usage-based sort, 'name' for alphabetical",
@@ -69,7 +74,7 @@ async def get_exercise_types(
 ):
     """Get all exercise types from the database with pagination."""
     response_model = await ExerciseTypeService.get_all_exercise_types(
-        session, name, order_by, offset, limit
+        session, name, muscle_group_id, order_by, offset, limit
     )
     response_payload = traced_model_dump(
         response_model,
@@ -78,6 +83,7 @@ async def get_exercise_types(
             "query.offset": offset,
             "query.limit": limit,
             "query.has_name_filter": name is not None,
+            "query.has_muscle_group_filter": muscle_group_id is not None,
             "query.order_by": order_by,
             "serialization.item_count": len(response_model.data),
         },
