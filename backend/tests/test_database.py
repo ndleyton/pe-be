@@ -1,6 +1,22 @@
 from src.core import database
 
 
+def test_get_database_url_uses_validated_settings_value(monkeypatch):
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql+asyncpg://env-user:env-pass@localhost:5432/env_db"
+    )
+    monkeypatch.setattr(
+        database.settings,
+        "DATABASE_URL",
+        "postgresql://settings-user:settings-pass@localhost:5432/settings_db",
+    )
+
+    assert (
+        database.get_database_url()
+        == "postgresql+asyncpg://settings-user:settings-pass@localhost:5432/settings_db"
+    )
+
+
 def test_get_engine_kwargs_uses_pooling_defaults(monkeypatch):
     monkeypatch.delenv("DATABASE_POOL_PRE_PING", raising=False)
     monkeypatch.delenv("DATABASE_POOL_USE_LIFO", raising=False)
