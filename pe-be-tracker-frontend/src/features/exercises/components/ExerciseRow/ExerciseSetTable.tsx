@@ -1,0 +1,293 @@
+import { Check, Minus, MoreVertical, Plus, Trash2 } from "lucide-react";
+
+import type { ExerciseSet } from "@/features/exercises/api";
+import {
+  EXERCISE_SETS_GRID_TEMPLATE,
+  formatIntensityInputValue,
+} from "@/features/exercises/lib/exerciseRow";
+import { formatDecimal, parseDecimalInput } from "@/utils/format";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Input,
+  Textarea,
+} from "@/shared/components/ui";
+
+type ExerciseSetTableProps = {
+  activeSetId: string | number | null;
+  currentIntensityUnitAbbreviation: string;
+  exerciseSets: ExerciseSet[];
+  intensityInputs: Record<string, string>;
+  isUnsavedExercise: boolean;
+  onAddSet: () => void;
+  onCloseSetOptions: () => void;
+  onDecrementReps: (setId: string | number) => void;
+  onDeleteSet: (setId: string | number) => void | Promise<void>;
+  onIncrementReps: (setId: string | number) => void;
+  onOpenSetOptions: (setId: string | number, initialNotes: string) => void;
+  onSetOptionsOpenChange: (open: boolean) => void;
+  onSetNotesValueChange: (value: string) => void;
+  onSetRepsInputValue: (setId: string | number, value: string) => void;
+  onSetWeightInputValue: (setId: string | number, value: string) => void;
+  onToggleSetCompletion: (setId: string | number) => void | Promise<void>;
+  onUpdateSetField: (
+    setId: string | number,
+    field: "weight" | "reps",
+    value: number | null,
+  ) => void;
+  repsInputs: Record<string, string>;
+  setNotesValue: string;
+};
+
+export const ExerciseSetTable = ({
+  activeSetId,
+  currentIntensityUnitAbbreviation,
+  exerciseSets,
+  intensityInputs,
+  isUnsavedExercise,
+  onAddSet,
+  onCloseSetOptions,
+  onDecrementReps,
+  onDeleteSet,
+  onIncrementReps,
+  onOpenSetOptions,
+  onSetOptionsOpenChange,
+  onSetNotesValueChange,
+  onSetRepsInputValue,
+  onSetWeightInputValue,
+  onToggleSetCompletion,
+  onUpdateSetField,
+  repsInputs,
+  setNotesValue,
+}: ExerciseSetTableProps) => (
+  <>
+    <div
+      className="mb-2 grid gap-2 text-xs font-medium text-gray-500 sm:gap-4 dark:text-gray-400"
+      style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
+    >
+      <div>SET</div>
+      <div>{currentIntensityUnitAbbreviation.toUpperCase()}</div>
+      <div>REPS</div>
+      <div className="text-right">DONE</div>
+      <div></div>
+    </div>
+
+    <div className="space-y-2">
+      {exerciseSets.map((set, index) => {
+        const setKey = String(set.id);
+        const savedIntensityValue = formatDecimal(set.intensity);
+        const intensityValue =
+          intensityInputs[setKey] ??
+          (savedIntensityValue === "-" ? "" : savedIntensityValue);
+        const savedRepsValue = set.reps === null ? "" : String(set.reps);
+        const repsValue = repsInputs[setKey] ?? savedRepsValue;
+
+        return (
+          <div
+            key={set.id}
+            className={`grid items-center gap-2 rounded p-2 sm:gap-4 ${
+              set.done ? "bg-done" : "bg-secondary"
+            }`}
+            style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
+          >
+            <div className="text-muted-foreground font-medium">
+              <span>{index + 1}</span>
+            </div>
+            <div>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={intensityValue}
+                data-testid="intensity-input"
+                onChange={(event) =>
+                  onSetWeightInputValue(set.id, event.target.value)
+                }
+                onBlur={(event) => {
+                  const parsedValue = parseDecimalInput(event.currentTarget.value);
+
+                  if (parsedValue === null) {
+                    onSetWeightInputValue(
+                      set.id,
+                      savedIntensityValue === "-" ? "" : savedIntensityValue,
+                    );
+                    return;
+                  }
+
+                  if (parsedValue === set.intensity) {
+                    onSetWeightInputValue(
+                      set.id,
+                      formatIntensityInputValue(parsedValue),
+                    );
+                    return;
+                  }
+
+                  onSetWeightInputValue(
+                    set.id,
+                    formatIntensityInputValue(parsedValue),
+                  );
+                  onUpdateSetField(set.id, "weight", parsedValue);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    onSetWeightInputValue(
+                      set.id,
+                      savedIntensityValue === "-" ? "" : savedIntensityValue,
+                    );
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
+                className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[6ch]"
+                disabled={set.done}
+              />
+            </div>
+
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-input h-6 w-6 border bg-transparent p-0"
+                onClick={() => onDecrementReps(set.id)}
+                disabled={set.done}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={repsValue}
+                onChange={(event) => {
+                  const { value } = event.target;
+                  if (value === "" || /^\d+$/.test(value)) {
+                    onSetRepsInputValue(set.id, value);
+                  }
+                }}
+                onBlur={(event) => {
+                  const value =
+                    event.target.value === ""
+                      ? null
+                      : Number.parseInt(event.target.value, 10);
+
+                  if (value === null || !Number.isNaN(value)) {
+                    onUpdateSetField(set.id, "reps", value);
+                    return;
+                  }
+
+                  onSetRepsInputValue(set.id, savedRepsValue);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
+                className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[8ch]"
+                disabled={set.done}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-input h-6 w-6 border bg-transparent p-0"
+                onClick={() => onIncrementReps(set.id)}
+                disabled={set.done}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                variant={set.done ? "default" : "outline"}
+                size="sm"
+                className={`h-8 w-8 p-0 ${
+                  set.done
+                    ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800"
+                    : "border-input border dark:border-gray-600"
+                }`}
+                onClick={() => onToggleSetCompletion(set.id)}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex justify-end">
+              <Dialog
+                open={String(activeSetId) === String(set.id)}
+                onOpenChange={onSetOptionsOpenChange}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
+                    onClick={() => onOpenSetOptions(set.id, set.notes || "")}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Set Notes & Options</DialogTitle>
+                    <DialogDescription>
+                      Add notes for this set or remove it from the exercise.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Notes for Set {index + 1}
+                      </label>
+                      <Textarea
+                        placeholder="Add notes for this set..."
+                        value={setNotesValue}
+                        onChange={(event) =>
+                          onSetNotesValueChange(event.target.value)
+                        }
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-2">
+                      <Button
+                        variant="outline"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                        onClick={() => {
+                          void onDeleteSet(set.id);
+                          onCloseSetOptions();
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Set
+                      </Button>
+                      <Button onClick={onCloseSetOptions}>Close</Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <Button
+      variant="outline"
+      className="border-input mt-4 w-full bg-transparent"
+      data-testid="add-set-button"
+      disabled={isUnsavedExercise}
+      onClick={onAddSet}
+    >
+      <Plus className="mr-2 h-4 w-4" />
+      Add Set
+    </Button>
+  </>
+);
