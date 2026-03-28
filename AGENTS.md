@@ -79,6 +79,11 @@ Notes:
 - That guest-store persistence uses IndexedDB first, with localStorage fallback, via `pe-be-tracker-frontend/src/stores/indexedDBStorage.ts`.
 - Guest-to-authenticated sync logic lives in `pe-be-tracker-frontend/src/utils/syncGuestData.ts`.
 - App-wide providers are configured in `pe-be-tracker-frontend/src/app/providers/AppProviders.tsx`.
+- Prefer thin route/page components. Move feature-specific behavior into feature hooks under `src/features/<feature>/hooks`, keep API calls in `api`, pure mapping/state helpers in `lib`, and rendering-heavy sections in smaller components.
+- When a component mixes rendering with guest/auth branching, optimistic writes, debounced persistence, or nested editor state, treat that as a refactor signal. Split transport/workflow concerns from JSX instead of growing the component further.
+- For guest vs authenticated flows, prefer a single hook or adapter boundary that hides the branching from the presentational component.
+- If a hook or helper depends on nested server shapes, prefer shared fixtures in `pe-be-tracker-frontend/src/test/fixtures/` over large inline objects. Use server-style fixtures for authenticated flows and guest fixtures for local-first flows.
+- For debounced hook tests, be careful combining fake timers with `waitFor`; prefer advancing timers inside `act(...)` and asserting directly on the resulting state or mock calls.
 
 ## API Conventions
 
@@ -150,11 +155,13 @@ Prefer defensive migrations for schema changes that may hit drifted environments
 1. Run `ruff` and the relevant backend tests before handoff.
 2. Use focused tests during iteration, then run broader coverage before finalizing backend changes.
 3. For frontend work, run the relevant npm checks from `pe-be-tracker-frontend/`.
-4. Before merging a feature branch, rebase it onto the current `origin/main` instead of merging `main` into the branch:
+4. When extracting significant frontend logic into custom hooks, add dedicated hook tests for the new behavior instead of relying only on page/component tests.
+5. If a refactor introduces new reusable frontend test data shapes, add them to `pe-be-tracker-frontend/src/test/fixtures/` and reuse them instead of copying nested objects between tests.
+6. Before merging a feature branch, rebase it onto the current `origin/main` instead of merging `main` into the branch:
    ```bash
    git fetch origin
    git switch my-branch
    git rebase origin/main
    ```
-5. Keep database migrations defensive and easy to reason about.
-6. Keep changes focused; avoid mixing unrelated work in one PR.
+7. Keep database migrations defensive and easy to reason about.
+8. Keep changes focused; avoid mixing unrelated work in one PR.
