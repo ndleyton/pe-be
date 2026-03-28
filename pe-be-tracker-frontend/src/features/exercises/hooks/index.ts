@@ -1,1 +1,2 @@
-// Exercise-specific hooks will be added here
+export { useExerciseRowState } from "./useExerciseRowState";
+export { useExerciseSetActions } from "./useExerciseSetActions";
