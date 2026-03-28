@@ -211,7 +211,7 @@ describe("AppBar", () => {
   });
 
   describe("Component Integration", () => {
-    it("should properly integrate with DrawerContext", () => {
+    it("should properly integrate with UI Store (drawer)", () => {
       render(<AppBar />);
 
       // Component should render without errors, indicating proper context integration
