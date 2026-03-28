@@ -46,7 +46,11 @@ export const useExerciseRowState = ({
   }, [exerciseSets]);
 
   useEffect(() => {
-    if (activeSetId === null || debouncedSetNotesValue === initialSetNotesValue) {
+    if (
+      activeSetId === null ||
+      debouncedSetNotesValue !== setNotesValue ||
+      debouncedSetNotesValue === initialSetNotesValue
+    ) {
       return;
     }
 
@@ -64,6 +68,7 @@ export const useExerciseRowState = ({
     debouncedSetNotesValue,
     exerciseSets,
     initialSetNotesValue,
+    setNotesValue,
     updateSetNotes,
   ]);
 
