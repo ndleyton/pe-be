@@ -7,6 +7,7 @@ import {
   useWorkoutPageData,
 } from "@/features/workouts/hooks";
 import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { SaveRoutineModal } from "@/features/routines/components/SaveRoutineModal/SaveRoutineModal";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
@@ -74,16 +75,7 @@ const WorkoutPage = () => {
   const handleSaveRoutine = () => {
     setShowSaveRoutineModal(true);
   };
-
-  if (isAuthenticated && (authLoading || workoutPending)) {
-    return (
-      <div className="mx-auto max-w-5xl p-4 text-center">
-        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
-          Loading workout...
-        </div>
-      </div>
-    );
-  }
+  const showWorkoutShellLoading = isAuthenticated && (authLoading || workoutPending);
 
   if (showNotFound) {
     return <NotFoundPage />;
@@ -128,9 +120,13 @@ const WorkoutPage = () => {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h2 className="text-2xl font-bold">
-            {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
-          </h2>
+          {showWorkoutShellLoading ? (
+            <Skeleton className="h-8 w-48" />
+          ) : (
+            <h2 className="text-2xl font-bold">
+              {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
+            </h2>
+          )}
         </div>
         <div
           ref={exerciseListContainerRef}
@@ -150,7 +146,7 @@ const WorkoutPage = () => {
             type="button"
             onClick={() => setShowAddExerciseModal(true)}
             className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
-            disabled={isAddingExercise}
+            disabled={showWorkoutShellLoading || isAddingExercise}
           >
             {isAddingExercise ? "Adding..." : "Add Exercise"}
           </Button>
@@ -159,7 +155,7 @@ const WorkoutPage = () => {
 
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
-        disabled={isFinishingWorkout}
+        disabled={showWorkoutShellLoading || isFinishingWorkout}
       >
         <span className="text-lg">✓</span>
       </FloatingActionButton>

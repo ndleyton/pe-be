@@ -170,11 +170,11 @@ describe("WorkoutPage", () => {
     exerciseApiMocks.mockCreateExercise.mockReset();
     exerciseApiMocks.mockGetExercisesInWorkout.mockResolvedValue([]);
     global.fetch = vi.fn();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response("<svg />", {
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+      Promise.resolve(new Response("<svg />", {
         status: 200,
         headers: { "Content-Type": "image/svg+xml" },
-      }),
+      })),
     );
   });
 
@@ -219,6 +219,18 @@ describe("WorkoutPage", () => {
     const backLink = await screen.findByLabelText(/go back/i);
     expect(backLink).toBeInTheDocument();
     expect(backLink).not.toHaveClass("lg:hidden");
+  });
+
+  it("keeps the page shell visible while the workout query is still loading", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => new Promise(() => {})),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(await screen.findByLabelText(/go back/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add exercise/i })).toBeDisabled();
+    expect(screen.queryByText(/loading workout/i)).not.toBeInTheDocument();
   });
 
   it("optimistically adds an exercise before the server responds", async () => {
@@ -283,9 +295,14 @@ describe("WorkoutPage", () => {
 
     render(<WorkoutPage />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /add exercise/i }),
-    );
+    const addExerciseButton = await screen.findByRole("button", {
+      name: /add exercise/i,
+    });
+    await waitFor(() => {
+      expect(addExerciseButton).toBeEnabled();
+    });
+
+    fireEvent.click(addExerciseButton);
     fireEvent.click(
       screen.getByRole("button", { name: /select exercise type/i }),
     );
