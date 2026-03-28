@@ -1,7 +1,7 @@
 import React from "react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { startWorkoutFromRoutine } from "@/features/routines/api";
+import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { useGuestStore, useAuthStore, GuestRoutine } from "@/stores";
 import { useNavigate } from "react-router-dom";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
@@ -22,6 +22,7 @@ const MyWorkoutsPage = () => {
   const authLoading = useAuthStore((state) => state.loading);
   const setUser = useAuthStore((state) => state.setUser);
   const guestData = useGuestStore();
+  const handleStartWorkoutFromRoutine = useStartWorkoutFromRoutine();
 
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
 
@@ -91,33 +92,6 @@ const MyWorkoutsPage = () => {
       preloadedRef.current = false;
     });
   }, []);
-
-  const handleStartWorkoutFromRoutine = async (routine: GuestRoutine) => {
-    try {
-      if (isAuthenticated) {
-        // Create full workout from routine on the server
-        const newWorkout = await startWorkoutFromRoutine(Number(routine.id));
-        navigate(`/workouts/${newWorkout.id}`);
-      } else {
-        // Create guest workout with default values
-        const defaultWorkoutType =
-          guestData.workoutTypes.find((wt) => wt.id === "8") ||
-          guestData.workoutTypes[0];
-        const newWorkoutId = useGuestStore.getState().addWorkout({
-          name: `${routine.name} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-          notes: null,
-          start_time: new Date().toISOString(),
-          end_time: null,
-          workout_type_id: defaultWorkoutType.id,
-          workout_type: defaultWorkoutType,
-          exercises: [],
-        });
-        navigate(`/workouts/${newWorkoutId}`, { state: { routine } });
-      }
-    } catch (error) {
-      console.error("Failed to start workout from routine:", error);
-    }
-  };
 
   // Track if we've detected an auth error to keep showing the message
   const [sessionExpired, setSessionExpired] = React.useState(false);
