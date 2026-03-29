@@ -64,6 +64,8 @@ Notes:
 - The public browser-facing API remains `https://app.personalbestie.com/api/...` via a frontend-side rewrite/proxy to the VPS origin.
 - The current backend origin hostname is `origin-api.personalbestie.com`.
 - When changing backend config, auth redirects, cookie behavior, or API routing, preserve the `app.personalbestie.com/api/...` public contract unless the task explicitly changes the deployment model.
+- Production recurring jobs are scheduled outside Docker Compose via host `systemd` timers, not by the FastAPI app and not by `docker compose up`.
+- A manual VPS redeploy such as `git pull` plus `docker compose -f docker-compose.prod.yml ...` does not install, reload, or enable `systemd` units. If a task changes scheduled jobs or depends on them existing, update `/etc/systemd/system/`, run `systemctl daemon-reload`, and verify the timer/service on the host.
 
 ### Backend
 
@@ -71,6 +73,7 @@ Notes:
 - The API mounts under `/api/v1` by default.
 - User-facing "routines" are still implemented with `Recipe`, `ExerciseTemplate`, and `SetTemplate` models and the `recipes` table.
 - AI-related backend code currently uses `langchain-google-genai` and `langfuse`; do not assume `openai` is the only active integration.
+- Standalone backend CLIs and scheduled jobs do not get FastAPI app startup imports for free. Before the first ORM query, ensure the SQLAlchemy model registry is loaded so string-based relationships like `"User"` and `"Workout"` resolve correctly.
 
 ### Frontend
 
@@ -167,3 +170,4 @@ Prefer defensive migrations for schema changes that may hit drifted environments
    ```
 8. Keep database migrations defensive and easy to reason about.
 9. Keep changes focused; avoid mixing unrelated work in one PR.
+10. For backend jobs, scripts, or one-off CLIs, verify the real entrypoint path and not just mocked unit tests. Prefer at least one manual `python -m ...` or `docker compose -f docker-compose.prod.yml run --rm ...` validation when the change affects standalone execution.
