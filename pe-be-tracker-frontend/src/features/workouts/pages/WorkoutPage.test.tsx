@@ -203,7 +203,7 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     expect(
-      await screen.findByRole("heading", { name: /workout: #123/i, level: 2 }),
+      await screen.findByRole("heading", { name: /loading workout/i, level: 2 }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /add exercise/i }),
@@ -211,6 +211,7 @@ describe("WorkoutPage", () => {
     expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
       "pending",
     );
+    expect(screen.queryByText(/workout: #123/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/loading workout\.\.\./i)).not.toBeInTheDocument();
   });
 

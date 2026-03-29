@@ -13,6 +13,7 @@ import { ExerciseList, ExerciseTypeModal } from "@/features/exercises/components
 import { FinishWorkoutModal } from "@/features/workouts/components";
 import { type Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { SaveRoutineModal } from "@/features/routines/components/SaveRoutineModal/SaveRoutineModal";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
@@ -522,6 +523,7 @@ const WorkoutPage = () => {
     : isAuthenticated && exercisesError
       ? "error"
       : "success";
+  const showLoadingTitle = pagePending && !workoutName;
 
   if (showNotFound) {
     return <NotFoundPage />;
@@ -571,7 +573,19 @@ const WorkoutPage = () => {
             </Link>
           </Button>
           <h2 className="text-2xl font-bold">
-            {workoutName ? `${workoutName}` : `Workout: #${workoutId}`}
+            {showLoadingTitle ? (
+              <>
+                <span className="sr-only">Loading workout</span>
+                <Skeleton
+                  aria-hidden="true"
+                  className="h-8 w-40 rounded md:w-52"
+                />
+              </>
+            ) : workoutName ? (
+              `${workoutName}`
+            ) : (
+              `Workout`
+            )}
           </h2>
         </div>
         <div
