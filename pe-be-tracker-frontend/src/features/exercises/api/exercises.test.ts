@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getExerciseTypes, getExercisesInWorkout } from "./exercises";
+import {
+  getExerciseTypes,
+  getExercisesInWorkout,
+  getMuscleGroups,
+} from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
 import api from "@/shared/api/client";
 import {
@@ -216,6 +220,38 @@ describe("exercises API - pagination", () => {
       expect(mockApi.get).toHaveBeenCalledWith(
         "/exercises/exercise-types/?order_by=usage&offset=50&limit=100",
       );
+    });
+
+    it("should include muscle group filter when provided", async () => {
+      mockApi.get.mockResolvedValue({
+        data: makePaginatedExerciseTypes(mockExerciseTypes),
+      });
+
+      const result = await getExerciseTypes("usage", 0, 100, 7);
+
+      expect(mockApi.get).toHaveBeenCalledWith(
+        "/exercises/exercise-types/?order_by=usage&offset=0&limit=100&muscle_group_id=7",
+      );
+      expect(result.data).toEqual(mockExerciseTypes);
+    });
+  });
+
+  describe("getMuscleGroups", () => {
+    it("should fetch muscle groups from the API", async () => {
+      const muscleGroups = [
+        {
+          id: 1,
+          name: "Chest",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+      ];
+      mockApi.get.mockResolvedValue({ data: muscleGroups });
+
+      const result = await getMuscleGroups();
+
+      expect(mockApi.get).toHaveBeenCalledWith("/exercises/muscle-groups/");
+      expect(result).toEqual(muscleGroups);
     });
   });
 });

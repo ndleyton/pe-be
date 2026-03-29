@@ -11,6 +11,7 @@ from src.exercises.service import (
     ExerciseService,
     ExerciseTypeService,
     IntensityUnitService,
+    MuscleGroupService,
 )
 
 
@@ -106,12 +107,14 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     stats = {"totalSets": 3}
     created_type = SimpleNamespace(id=6)
     units = [SimpleNamespace(id=1, name="kg")]
+    muscle_groups = [SimpleNamespace(id=2, name="Chest")]
 
     fake_get_exercise_types = AsyncMock(return_value=paginated)
     fake_get_exercise_type_by_id = AsyncMock(return_value=exercise_type)
     fake_get_exercise_type_stats = AsyncMock(return_value=stats)
     fake_create_exercise_type = AsyncMock(return_value=created_type)
     fake_get_intensity_units = AsyncMock(return_value=units)
+    fake_get_muscle_groups = AsyncMock(return_value=muscle_groups)
 
     monkeypatch.setattr(
         exercises_service, "get_exercise_types", fake_get_exercise_types
@@ -128,13 +131,23 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     monkeypatch.setattr(
         exercises_service, "get_intensity_units", fake_get_intensity_units
     )
+    monkeypatch.setattr(
+        exercises_service,
+        "get_muscle_groups",
+        fake_get_muscle_groups,
+    )
 
     session = object()
     payload = ExerciseTypeCreate(name="Rows", description="Back")
 
     assert (
         await ExerciseTypeService.get_all_exercise_types(
-            session, name="row", order_by="name", offset=5, limit=10
+            session,
+            name="row",
+            muscle_group_id=7,
+            order_by="name",
+            offset=5,
+            limit=10,
         )
         is paginated
     )
@@ -147,12 +160,14 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
         is created_type
     )
     assert await IntensityUnitService.get_all_intensity_units(session) == units
+    assert await MuscleGroupService.get_all_muscle_groups(session) == muscle_groups
 
-    fake_get_exercise_types.assert_awaited_once_with(session, "row", "name", 5, 10)
+    fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
     fake_get_exercise_type_by_id.assert_awaited_once_with(session, 5)
     fake_get_exercise_type_stats.assert_awaited_once_with(session, 5, 12)
     fake_create_exercise_type.assert_awaited_once_with(session, payload)
     fake_get_intensity_units.assert_awaited_once_with(session)
+    fake_get_muscle_groups.assert_awaited_once_with(session)
 
 
 @pytest.mark.parametrize(

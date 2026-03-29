@@ -172,13 +172,27 @@ export const getExerciseTypes = async (
   orderBy: "usage" | "name" = "usage",
   cursor?: number | null,
   limit: number = 1000,
+  muscleGroupId?: number,
 ): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
+  const params = new URLSearchParams({
+    order_by: orderBy,
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (muscleGroupId !== undefined) {
+    params.set("muscle_group_id", String(muscleGroupId));
+  }
   const response = await api.get(
-    `${endpoints.exerciseTypes}?order_by=${orderBy}&offset=${offset}&limit=${limit}`,
+    `${endpoints.exerciseTypes}?${params.toString()}`,
   );
 
   // Server returns: { data: [...], next_cursor: ... }
+  return response.data;
+};
+
+export const getMuscleGroups = async (): Promise<MuscleGroup[]> => {
+  const response = await api.get(endpoints.muscleGroups);
   return response.data;
 };
 
