@@ -30,12 +30,6 @@ except ImportError:
     settings = FallbackSettings()
     logger.warning("Using fallback settings from environment variables")
 
-from src.exercises.muscle_group_mapping import (  # noqa: E402
-    DEFAULT_MUSCLE_GROUP,
-    KNOWN_MUSCLE_GROUPS,
-    get_muscle_group_for_muscle,
-)
-
 
 async def get_import_db_connection():
     """Get database connection to import source using environment variables from settings"""
@@ -192,6 +186,90 @@ def validate_intensity_unit_data(unit_name: str) -> None:
         )
 
 
+# Mapping from individual muscle names to anatomical muscle groups
+# This ensures muscles are properly categorized for anatomical visualization
+MUSCLE_NAME_TO_GROUP = {
+    # Arms
+    "biceps": "Arms",
+    "triceps": "Arms",
+    "biceps brachii": "Arms",
+    "triceps brachii": "Arms",
+    # Forearms
+    "forearms": "Forearms",
+    "wrist flexors": "Forearms",
+    "wrist extensors": "Forearms",
+    # Chest
+    "chest": "Chest",
+    "pectorals": "Chest",
+    "pectoralis major": "Chest",
+    "pectoralis minor": "Chest",
+    # Back
+    "lats": "Back",
+    "latissimus dorsi": "Back",
+    "traps": "Back",
+    "trapezius": "Back",
+    "rhomboids": "Back",
+    "lower back": "Back",
+    "middle back": "Back",
+    "erector spinae": "Back",
+    "rear deltoids": "Back",
+    # Shoulders
+    "shoulders": "Shoulders",
+    "deltoids": "Shoulders",
+    "anterior deltoids": "Shoulders",
+    "lateral deltoids": "Shoulders",
+    "posterior deltoids": "Shoulders",
+    # Core
+    "abdominals": "Core",
+    "abs": "Core",
+    "core": "Core",
+    "obliques": "Core",
+    "rectus abdominis": "Core",
+    "transverse abdominis": "Core",
+    # Legs (quadriceps, hamstrings, calves, adductors, abductors)
+    "quadriceps": "Legs",
+    "hamstrings": "Legs",
+    "calves": "Legs",
+    "adductors": "Legs",
+    "abductors": "Legs",
+    "tibialis anterior": "Legs",
+    "gastrocnemius": "Legs",
+    "soleus": "Legs",
+    "vastus lateralis": "Legs",
+    "vastus medialis": "Legs",
+    "vastus intermedius": "Legs",
+    "rectus femoris": "Legs",
+    "biceps femoris": "Legs",
+    "semitendinosus": "Legs",
+    "semimembranosus": "Legs",
+    # Glutes
+    "glutes": "Glutes",
+    "gluteus maximus": "Glutes",
+    "gluteus medius": "Glutes",
+    "gluteus minimus": "Glutes",
+    # Neck
+    "neck": "Neck",
+    "sternocleidomastoid": "Neck",
+}
+
+
+def get_muscle_group_for_muscle(muscle_name: str) -> str:
+    """Get the appropriate muscle group for a given muscle name"""
+    muscle_lower = muscle_name.lower().strip()
+
+    # Try exact match first
+    if muscle_lower in MUSCLE_NAME_TO_GROUP:
+        return MUSCLE_NAME_TO_GROUP[muscle_lower]
+
+    # Try partial matches for common variations
+    for key, group in MUSCLE_NAME_TO_GROUP.items():
+        if key in muscle_lower or muscle_lower in key:
+            return group
+
+    # Fallback to "Imported" for unknown muscles
+    return "Imported"
+
+
 async def extract_and_transform_exercises():
     conn = await get_import_db_connection()
     try:
@@ -204,13 +282,11 @@ async def extract_and_transform_exercises():
         exercise_muscles = []
 
         # Add all known muscle groups
-        for group in KNOWN_MUSCLE_GROUPS:
-            if group == DEFAULT_MUSCLE_GROUP:
-                continue
+        for group in set(MUSCLE_NAME_TO_GROUP.values()):
             muscle_groups.add(group)
 
         # Add fallback muscle group for unknown muscles
-        default_muscle_group = DEFAULT_MUSCLE_GROUP
+        default_muscle_group = "Imported"
         muscle_groups.add(default_muscle_group)
 
         # Optional default intensity unit can be None (user-defined later)
