@@ -98,7 +98,14 @@ async def test_update_and_delete_routine_paths(db_session: AsyncSession):
         is_superuser=False,
         is_verified=True,
     )
-    db_session.add_all([owner, other])
+    admin = User(
+        email="admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    db_session.add_all([owner, other, admin])
     await db_session.flush()
 
     # Create directly minimal routine
@@ -123,10 +130,34 @@ async def test_update_and_delete_routine_paths(db_session: AsyncSession):
         updated is not None and updated.name == "Updated" and updated.description == "d"
     )
 
+    # Update by superuser -> changed
+    updated_by_admin = await crud.update_routine(
+        db_session,
+        r.id,
+        RoutineUpdate(name="Admin Updated"),
+        admin.id,
+        is_superuser=True,
+    )
+    assert updated_by_admin is not None and updated_by_admin.name == "Admin Updated"
+
     # Delete by non-owner -> False
     deleted = await crud.delete_routine(db_session, r.id, other.id)
     assert deleted is False
 
-    # Delete by owner -> True
+    # Delete by superuser -> True
+    deleted_by_admin = await crud.delete_routine(
+        db_session, r.id, admin.id, is_superuser=True
+    )
+    assert deleted_by_admin is True
+
+    # Delete by owner after superuser delete -> False
     deleted2 = await crud.delete_routine(db_session, r.id, owner.id)
-    assert deleted2 is True
+    assert deleted2 is False
+
+    # Create a fresh routine to keep owner delete coverage
+    r2 = Routine(name="Owner Delete", workout_type_id=wt.id, creator_id=owner.id)
+    db_session.add(r2)
+    await db_session.flush()
+
+    deleted3 = await crud.delete_routine(db_session, r2.id, owner.id)
+    assert deleted3 is True

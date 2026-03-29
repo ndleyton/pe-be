@@ -17,6 +17,7 @@ import type { Routine } from "@/features/routines/types";
 import { useGuestStore, type GuestRoutine } from "@/stores";
 
 export const useRoutineDetailsActions = ({
+  canEdit,
   description,
   editorTemplates,
   guestRoutine,
@@ -25,6 +26,7 @@ export const useRoutineDetailsActions = ({
   routine,
   routineId,
 }: {
+  canEdit: boolean;
   description: string;
   editorTemplates: RoutineEditorTemplate[];
   guestRoutine: GuestRoutine | undefined;
@@ -48,6 +50,10 @@ export const useRoutineDetailsActions = ({
     mutationFn: async () => {
       if (!routine) {
         throw new Error("Routine not found");
+      }
+
+      if (isAuthenticated && !canEdit) {
+        throw new Error("You do not have permission to edit this routine.");
       }
 
       const payload = {
@@ -87,6 +93,10 @@ export const useRoutineDetailsActions = ({
     mutationFn: async () => {
       if (!routine) {
         throw new Error("Routine not found");
+      }
+
+      if (isAuthenticated && !canEdit) {
+        throw new Error("You do not have permission to delete this routine.");
       }
 
       if (isAuthenticated) {
@@ -153,7 +163,7 @@ export const useRoutineDetailsActions = ({
   });
 
   const handleDelete = () => {
-    if (!routine) {
+    if (!routine || !canEdit) {
       return;
     }
 

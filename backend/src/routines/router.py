@@ -57,7 +57,7 @@ async def update_routine(
 ):
     """Update an existing routine"""
     routine = await routine_service.update_routine(
-        session, routine_id, routine_in, user.id
+        session, routine_id, routine_in, user.id, is_superuser=user.is_superuser
     )
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
@@ -92,4 +92,6 @@ async def delete_routine(
 ):
     """Delete a routine"""
     # Idempotent delete: 204 whether missing or not owned
-    await routine_service.delete_routine(session, routine_id, user.id)
+    await routine_service.delete_routine(
+        session, routine_id, user.id, is_superuser=user.is_superuser
+    )

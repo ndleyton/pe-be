@@ -48,7 +48,7 @@ async def test_create_routine_endpoint_success(
     user_id = user.id
 
     async def override_user():
-        return SimpleNamespace(id=user_id)
+        return SimpleNamespace(id=user_id, is_superuser=False)
 
     app.dependency_overrides[current_active_user] = override_user
 
@@ -146,7 +146,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
     user_id = user.id
 
     async def override_user():
-        return SimpleNamespace(id=user_id)
+        return SimpleNamespace(id=user_id, is_superuser=False)
 
     app.dependency_overrides[current_active_user] = override_user
 
@@ -222,5 +222,92 @@ async def test_update_routine_endpoint_replaces_nested_templates(
             fetched["exercise_templates"][0]["exercise_type_id"] == exercise_type_b.id
         )
         assert len(fetched["exercise_templates"][0]["set_templates"]) == 2
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_superuser_can_update_and_delete_other_users_routine(
+    db_session: AsyncSession, async_client: AsyncClient
+):
+    """Superusers can mutate routines they do not own."""
+
+    intensity_unit = IntensityUnit(name="Kilograms", abbreviation="kg")
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add_all([intensity_unit, workout_type])
+    await db_session.flush()
+
+    exercise_type = ExerciseType(
+        name="Front Squat",
+        description="Leg strength",
+        default_intensity_unit=intensity_unit.id,
+    )
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    owner = User(
+        email="routine-owner@example.com",
+        hashed_password="not-used-in-tests",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    admin = User(
+        email="routine-admin@example.com",
+        hashed_password="not-used-in-tests",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    db_session.add_all([owner, admin])
+    await db_session.flush()
+
+    async def override_owner():
+        return SimpleNamespace(id=owner.id, is_superuser=False)
+
+    app.dependency_overrides[current_active_user] = override_owner
+
+    try:
+        create_resp = await async_client.post(
+            "/api/v1/routines/",
+            json={
+                "name": "Owner Routine",
+                "description": "Created by owner",
+                "workout_type_id": workout_type.id,
+                "exercise_templates": [
+                    {
+                        "exercise_type_id": exercise_type.id,
+                        "set_templates": [
+                            {
+                                "reps": 5,
+                                "intensity": 80.0,
+                                "intensity_unit_id": intensity_unit.id,
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        routine_id = create_resp.json()["id"]
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    async def override_admin():
+        return SimpleNamespace(id=admin.id, is_superuser=True)
+
+    app.dependency_overrides[current_active_user] = override_admin
+
+    try:
+        update_resp = await async_client.put(
+            f"/api/v1/routines/{routine_id}",
+            json={"name": "Admin Updated Routine"},
+        )
+        assert update_resp.status_code == 200, update_resp.text
+        assert update_resp.json()["name"] == "Admin Updated Routine"
+
+        delete_resp = await async_client.delete(f"/api/v1/routines/{routine_id}")
+        assert delete_resp.status_code == 204, delete_resp.text
     finally:
         app.dependency_overrides.pop(current_active_user, None)

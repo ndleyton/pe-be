@@ -53,6 +53,8 @@ export const makeRoutine = (
   description: "A test routine",
   workout_type_id: 1,
   creator_id: 1,
+  visibility: "private",
+  is_readonly: false,
   created_at: DEFAULT_TIMESTAMP,
   updated_at: DEFAULT_TIMESTAMP,
   exercise_templates: [makeRoutineExerciseTemplate()],

@@ -59,26 +59,29 @@ class RoutineService:
         routine_id: int,
         routine_data: RoutineUpdate,
         user_id: int,
+        is_superuser: bool = False,
     ) -> Optional[RoutineRead]:
         """Update an existing routine."""
-        routine = await crud.update_routine(session, routine_id, routine_data, user_id)
+        routine = await crud.update_routine(
+            session, routine_id, routine_data, user_id, is_superuser=is_superuser
+        )
         if routine:
             return RoutineRead.model_validate(routine)
         return None
 
     async def delete_routine(
-        self, session: AsyncSession, routine_id: int, user_id: int
+        self,
+        session: AsyncSession,
+        routine_id: int,
+        user_id: int,
+        is_superuser: bool = False,
     ) -> bool:
-        """Delete a routine idempotently (no ownership info leak).
+        """Delete a routine idempotently without leaking ownership details."""
+        delete_query = delete(Routine).where(Routine.id == routine_id)
+        if not is_superuser:
+            delete_query = delete_query.where(Routine.creator_id == user_id)
 
-        Uses a conditional DELETE filtered by `creator_id` to ensure
-        repeated calls are no-ops and to avoid extra SELECTs.
-        """
-        await session.execute(
-            delete(Routine).where(
-                Routine.id == routine_id, Routine.creator_id == user_id
-            )
-        )
+        await session.execute(delete_query)
         try:
             await session.commit()
         except Exception:

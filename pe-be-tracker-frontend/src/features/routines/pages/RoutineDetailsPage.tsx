@@ -27,6 +27,8 @@ const RoutineDetailsPage = () => {
 
   const {
     availableIntensityUnits,
+    canEdit,
+    editAccessMessage,
     guestRoutine,
     isAuthenticated,
     routine,
@@ -62,6 +64,7 @@ const RoutineDetailsPage = () => {
 
   const { deleteMutation, handleDelete, saveMutation, startMutation } =
     useRoutineDetailsActions({
+      canEdit,
       description,
       editorTemplates,
       guestRoutine,
@@ -118,16 +121,24 @@ const RoutineDetailsPage = () => {
             </Button>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-2xl font-bold md:text-3xl">
-                Routine Editor
+                {canEdit ? "Routine Editor" : "Routine Details"}
               </h1>
               <p className="text-muted-foreground text-sm">
-                Edit the template directly. Changes save the full
-                `exercise_templates` and `set_templates` tree in one request.
+                {canEdit
+                  ? "Edit the template directly. Changes save the full `exercise_templates` and `set_templates` tree in one request."
+                  : "Review this routine template and start a workout from it."}
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 text-left">
+            {editAccessMessage && (
+              <Alert>
+                <AlertTitle>View-only routine</AlertTitle>
+                <AlertDescription>{editAccessMessage}</AlertDescription>
+              </Alert>
+            )}
+
             {actionError && (
               <Alert variant="destructive">
                 <AlertTitle>Action failed</AlertTitle>
@@ -140,6 +151,7 @@ const RoutineDetailsPage = () => {
             )}
 
             <RoutineInfoCard
+              canEdit={canEdit}
               deleteDisabled={deleteMutation.isPending}
               deleteLabel={deleteMutation.isPending ? "Deleting..." : "Delete Routine"}
               description={description}
@@ -159,6 +171,7 @@ const RoutineDetailsPage = () => {
             />
 
             <RoutineTemplatesCard
+              canEdit={canEdit}
               editorTemplates={editorTemplates}
               onAddExercise={() => openExercisePicker({ mode: "add" })}
               onAddSet={addSetToTemplate}

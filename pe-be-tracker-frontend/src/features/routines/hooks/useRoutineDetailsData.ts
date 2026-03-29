@@ -8,10 +8,15 @@ import {
   toRoutineFromGuest,
   type RoutineIntensityUnitOption,
 } from "@/features/routines/lib/routineEditor";
+import {
+  canEditRoutine,
+  getRoutineEditAccessMessage,
+} from "@/features/routines/lib/routinePermissions";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 export const useRoutineDetailsData = (routineId: string | undefined) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const currentUser = useAuthStore((state) => state.user);
 
   const guestRoutine = useGuestStore((state) =>
     state.routines.find((routine) => routine.id === routineId),
@@ -60,8 +65,32 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
     return toRoutineFromGuest(guestRoutine);
   }, [guestRoutine, isAuthenticated, serverRoutine]);
 
+  const canEdit = useMemo(
+    () =>
+      canEditRoutine({
+        currentUserId: currentUser?.id,
+        isAuthenticated,
+        isSuperuser: currentUser?.is_superuser,
+        routine,
+      }),
+    [currentUser?.id, currentUser?.is_superuser, isAuthenticated, routine],
+  );
+
+  const editAccessMessage = useMemo(
+    () =>
+      getRoutineEditAccessMessage({
+        currentUserId: currentUser?.id,
+        isAuthenticated,
+        isSuperuser: currentUser?.is_superuser,
+        routine,
+      }),
+    [currentUser?.id, currentUser?.is_superuser, isAuthenticated, routine],
+  );
+
   return {
     availableIntensityUnits,
+    canEdit,
+    editAccessMessage,
     guestRoutine,
     isAuthenticated,
     routine,

@@ -220,6 +220,8 @@ export const toRoutineFromGuest = (guestRoutine: GuestRoutine): Routine => ({
   description: guestRoutine.description ?? null,
   workout_type_id: 0,
   creator_id: 0,
+  visibility: "private",
+  is_readonly: false,
   created_at: guestRoutine.created_at,
   updated_at: guestRoutine.updated_at,
   exercise_templates: guestRoutine.exercises.map((exercise) => ({
