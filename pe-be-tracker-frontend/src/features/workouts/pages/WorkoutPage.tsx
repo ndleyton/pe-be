@@ -67,7 +67,7 @@ const WorkoutPage = () => {
 
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
+  const authInitialized = useAuthStore((state) => state.initialized);
   const guestHydrated = useGuestStore((state) => state.hydrated);
   const guestWorkout = useGuestStore((state) =>
     state.workouts.find((workout) => workout.id === workoutId),
@@ -507,33 +507,21 @@ const WorkoutPage = () => {
     };
   }, [hasValidWorkout]);
 
-  // Streamlined status computation
-  // For guests, avoid showing the skeleton; only show when authenticated
+  // Keep the route shell mounted and let the exercise section own its loading UI.
   const workoutErrorStatus = getErrorStatus(workoutError);
+  const pagePending = !authInitialized || (isAuthenticated && workoutPending);
   const showNotFound = !workoutId
-    || (!isAuthenticated && guestHydrated && !guestWorkout)
+    || (authInitialized && !isAuthenticated && guestHydrated && !guestWorkout)
     || (isAuthenticated
       && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
   const showRecoverableWorkoutError =
     isAuthenticated && Boolean(workoutError) && !showNotFound;
-  const listPending =
-    isAuthenticated
-    && (authLoading || workoutPending || exercisesLoading);
+  const listPending = pagePending || (isAuthenticated && exercisesLoading);
   const listStatus: "pending" | "success" | "error" = listPending
     ? "pending"
     : isAuthenticated && exercisesError
       ? "error"
       : "success";
-
-  if (isAuthenticated && (authLoading || workoutPending)) {
-    return (
-      <div className="mx-auto max-w-5xl p-4 text-center">
-        <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
-          Loading workout...
-        </div>
-      </div>
-    );
-  }
 
   if (showNotFound) {
     return <NotFoundPage />;

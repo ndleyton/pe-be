@@ -35,8 +35,15 @@ const mockExerciseType = {
 
 const exerciseComponentsMocks = vi.hoisted(() => ({
   ExerciseListMock: vi.fn(
-    ({ exercises }: { exercises: { id: number | string }[] }) => (
+    ({
+      exercises,
+      status,
+    }: {
+      exercises: { id: number | string }[];
+      status: "idle" | "pending" | "success" | "error";
+    }) => (
       <div data-testid="exercise-list">
+        <div data-testid="exercise-list-status">{status}</div>
         {exercises.map((exercise) => (
           <div key={String(exercise.id)}>{String(exercise.id)}</div>
         ))}
@@ -103,6 +110,7 @@ const mockGuestState = {
 const mockAuthState = {
   isAuthenticated: true,
   loading: false,
+  initialized: true,
 };
 
 const mockUIState = {
@@ -156,6 +164,7 @@ describe("WorkoutPage", () => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
     mockAuthState.loading = false;
+    mockAuthState.initialized = true;
     mockGuestState.workouts = [];
     mockGuestState.hydrated = true;
     vi.mocked(api.get).mockImplementation(buildApiGetImplementation());
@@ -184,6 +193,25 @@ describe("WorkoutPage", () => {
     return expect(
       screen.findByRole("heading", { name: /chest day/i, level: 2 }),
     ).resolves.toBeInTheDocument();
+  });
+
+  it("keeps the page shell visible while the workout query is pending", async () => {
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => new Promise(() => {})),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /workout: #123/i, level: 2 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /add exercise/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
+      "pending",
+    );
+    expect(screen.queryByText(/loading workout\.\.\./i)).not.toBeInTheDocument();
   });
 
   it("syncs the timer from the workout lifecycle", async () => {
