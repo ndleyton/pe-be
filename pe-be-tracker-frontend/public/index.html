@@ -42,8 +42,6 @@
             --ring: rgb(219, 146, 146);
             --input: rgb(206, 185, 185);
             --radius: 1rem;
-            --hero-glow-primary: rgba(204, 0, 51, 0.1);
-            --hero-glow-ring: rgba(219, 146, 146, 0.2);
             --grid-line: rgba(209, 183, 183, 0.3);
             --surface-soft: rgb(236, 231, 231);
             --metric-bg: rgb(232, 226, 226);
@@ -65,8 +63,6 @@
                 --border: rgb(62, 48, 48);
                 --ring: rgb(80, 47, 47);
                 --input: rgb(61, 48, 48);
-                --hero-glow-primary: rgba(255, 51, 102, 0.11);
-                --hero-glow-ring: rgba(80, 47, 47, 0.35);
                 --grid-line: rgba(62, 48, 48, 0.35);
                 --surface-soft: rgb(42, 35, 35);
                 --metric-bg: rgb(46, 38, 38);
@@ -98,10 +94,7 @@
         .app-shell {
             position: relative;
             min-height: 100vh;
-            background:
-                radial-gradient(circle at top right, var(--hero-glow-primary), transparent 32%),
-                radial-gradient(circle at top left, var(--hero-glow-ring), transparent 24%),
-                var(--background);
+            background: var(--background);
         }
 
         .app-shell::before {
