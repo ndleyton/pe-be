@@ -9,7 +9,7 @@ Files:
 - `pe-be-close-stale-open-workouts.service`
 - `pe-be-close-stale-open-workouts.timer`
 
-These units are intended for a Docker Compose deployment rooted at `/srv/pe-be`.
+These units are intended for a production Docker Compose deployment rooted at `/srv/pe-be` and launched through `docker-compose.prod.yml`.
 
 ## Install
 
@@ -29,7 +29,7 @@ If your checkout path is not `/srv/pe-be`, update `WorkingDirectory=` and `Envir
 
 ## Operator Controls
 
-The service reads `/srv/pe-be/.env` via `EnvironmentFile=`. The backend container receives:
+The service references `/srv/pe-be/backend/.env.production` via `EnvironmentFile=`. The backend container receives:
 
 ```bash
 JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=true
@@ -39,8 +39,8 @@ JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=true
 Env flow for these jobs is:
 
 1. `systemd` starts the oneshot service in `/srv/pe-be`.
-2. `docker compose run` reads `/srv/pe-be/.env` for Compose variable interpolation.
-3. Compose injects the configured job env vars into the ephemeral `backend` container from `docker-compose.yml`.
+2. The service runs `docker compose -f docker-compose.prod.yml run ...`.
+3. Compose injects the configured job env vars into the ephemeral `backend` container from `backend/.env.production` via `docker-compose.prod.yml`.
 4. The backend process reads those env vars through `src.core.config.Settings`.
 
 To disable the job without masking the timer:
@@ -50,7 +50,7 @@ JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=false
 JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=false
 ```
 
-Because the service uses `docker compose run`, Compose re-reads `.env` on each invocation. No timer restart is required for the next scheduled run to pick up the new value.
+Because the service uses `docker compose run`, Compose re-reads `backend/.env.production` on each invocation. No timer restart is required for the next scheduled run to pick up the new value.
 
 ## Verify
 
@@ -67,8 +67,8 @@ Run the job manually through the same container path used by the service:
 
 ```bash
 cd /srv/pe-be
-docker compose run --rm backend python -m src.jobs.chat_attachment_cleanup
-docker compose run --rm backend python -m src.jobs.close_stale_open_workouts
+docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.chat_attachment_cleanup
+docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.close_stale_open_workouts
 ```
 
 Inspect service logs:
