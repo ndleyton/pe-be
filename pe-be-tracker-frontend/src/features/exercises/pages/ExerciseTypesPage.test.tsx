@@ -8,7 +8,9 @@ import {
   makePaginatedExerciseTypes,
 } from "@/test/fixtures";
 import ExerciseTypesPage from "./ExerciseTypesPage";
-import { getExerciseTypes } from "@/features/exercises/api";
+import {
+  getExerciseTypes,
+} from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
 
 vi.mock("@/features/exercises/api");
@@ -31,6 +33,21 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 10,
     default_intensity_unit: 1,
     times_used: 10,
+    muscles: [
+      {
+        id: 101,
+        name: "Pectorals",
+        muscle_group_id: 1,
+        muscle_group: {
+          id: 1,
+          name: "Chest",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
   makeExerciseType({
     id: 2,
@@ -40,6 +57,21 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 8,
     default_intensity_unit: 1,
     times_used: 8,
+    muscles: [
+      {
+        id: 201,
+        name: "Quadriceps",
+        muscle_group_id: 2,
+        muscle_group: {
+          id: 2,
+          name: "Legs",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
   makeExerciseType({
     id: 3,
@@ -50,12 +82,30 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 6,
     default_intensity_unit: 1,
     times_used: 6,
+    muscles: [
+      {
+        id: 301,
+        name: "Lats",
+        muscle_group_id: 3,
+        muscle_group: {
+          id: 3,
+          name: "Back",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
 ];
 
 describe("ExerciseTypesPage - Infinite Scroll", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Element.prototype.hasPointerCapture ??= vi.fn(() => false);
+    Element.prototype.releasePointerCapture ??= vi.fn();
+    Element.prototype.scrollIntoView ??= vi.fn();
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes(mockExerciseTypes),
     );
@@ -70,7 +120,12 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     expect(
       screen.getByPlaceholderText(/Search exercises.../i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /order exercise types/i }),
+    ).toBeInTheDocument();
   });
 
   it("calls getExerciseTypes with default parameters on initial load", async () => {
@@ -81,6 +136,55 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
         "usage",
         undefined,
         100,
+        undefined,
+      );
+    });
+  });
+
+  it("reloads exercise types when a muscle group is selected", async () => {
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenLastCalledWith(
+        "usage",
+        undefined,
+        100,
+        1,
+      );
+    });
+  });
+
+  it("keeps the muscle-group selector usable when the lookup request fails", async () => {
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    const muscleGroupSelect = screen.getByRole("combobox", {
+      name: /filter by muscle group/i,
+    });
+
+    expect(muscleGroupSelect).toBeEnabled();
+
+    await userEvent.click(muscleGroupSelect);
+    await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenLastCalledWith(
+        "usage",
+        undefined,
+        100,
+        1,
       );
     });
   });
@@ -142,10 +246,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.type(searchInput, "nonexistent");
 
     expect(
-      screen.getByText(/no exercise types found matching your search/i),
+      screen.getByText(/no exercise types match your current filters/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /clear search/i }),
+      screen.getByRole("button", { name: /clear filters/i }),
     ).toBeInTheDocument();
   });
 
@@ -160,10 +264,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.type(searchInput, "nonexistent");
 
     expect(
-      screen.getByText(/no exercise types found matching your search/i),
+      screen.getByText(/no exercise types match your current filters/i),
     ).toBeInTheDocument();
 
-    const clearButton = screen.getByRole("button", { name: /clear search/i });
+    const clearButton = screen.getByRole("button", { name: /clear filters/i });
     await userEvent.click(clearButton);
 
     expect(searchInput).toHaveValue("");

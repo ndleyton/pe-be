@@ -148,6 +148,16 @@ async def _seed_muscle(db_session, name: str, muscle_group_id: int) -> Muscle:
     return muscle
 
 
+async def test_get_muscle_groups_orders_alphabetically(db_session):
+    await _seed_muscle_group(db_session, "Legs Crud")
+    await _seed_muscle_group(db_session, "Arms Crud")
+    await db_session.commit()
+
+    result = await crud.get_muscle_groups(db_session)
+
+    assert [group.name for group in result] == ["Arms Crud", "Legs Crud"]
+
+
 async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session):
     owner = await _seed_user(db_session, "exercise-queries@example.com")
     workout_type = await _seed_workout_type(db_session, "Strength")
@@ -343,6 +353,85 @@ async def test_get_exercise_types_orders_paginates_and_matches_names(db_session)
     )
     assert no_match.data == []
     assert no_match.next_cursor is None
+
+
+async def test_get_exercise_types_filters_by_muscle_group_before_pagination(
+    db_session,
+):
+    upper = await _seed_muscle_group(db_session, "Upper Body Filter")
+    lower = await _seed_muscle_group(db_session, "Lower Body Filter")
+    biceps = await _seed_muscle(db_session, "Biceps Filter", upper.id)
+    quads = await _seed_muscle(db_session, "Quads Filter", lower.id)
+    curl = await _seed_exercise_type(
+        db_session, "Filter Biceps Curl", times_used=10, description="arms"
+    )
+    row = await _seed_exercise_type(
+        db_session, "Filter Bent Row", times_used=8, description="back"
+    )
+    squat = await _seed_exercise_type(
+        db_session, "Filter Back Squat", times_used=12, description="legs"
+    )
+    db_session.add_all(
+        [
+            ExerciseMuscle(exercise_type_id=curl.id, muscle_id=biceps.id),
+            ExerciseMuscle(exercise_type_id=row.id, muscle_id=biceps.id),
+            ExerciseMuscle(exercise_type_id=squat.id, muscle_id=quads.id),
+        ]
+    )
+    await db_session.commit()
+
+    result = await crud.get_exercise_types(
+        db_session, muscle_group_id=upper.id, order_by="usage", limit=10
+    )
+
+    assert [item.id for item in result.data] == [curl.id, row.id]
+    assert [item.name for item in result.data] == [
+        "Filter Biceps Curl",
+        "Filter Bent Row",
+    ]
+    assert result.next_cursor is None
+
+
+async def test_get_exercise_types_applies_name_search_within_muscle_group_filter(
+    db_session,
+    monkeypatch,
+):
+    arms = await _seed_muscle_group(db_session, "Arms Search Filter")
+    legs = await _seed_muscle_group(db_session, "Legs Search Filter")
+    biceps = await _seed_muscle(db_session, "Biceps Search Filter", arms.id)
+    quads = await _seed_muscle(db_session, "Quads Search Filter", legs.id)
+    arms_type = await _seed_exercise_type(
+        db_session, "Search Filter Curl", description="arms"
+    )
+    legs_type = await _seed_exercise_type(
+        db_session, "Search Filter Squat", description="legs"
+    )
+    db_session.add_all(
+        [
+            ExerciseMuscle(exercise_type_id=arms_type.id, muscle_id=biceps.id),
+            ExerciseMuscle(exercise_type_id=legs_type.id, muscle_id=quads.id),
+        ]
+    )
+    await db_session.commit()
+
+    monkeypatch.setattr(crud.process, "extractBests", lambda *args, **kwargs: [])
+    monkeypatch.setattr(crud.process, "extractOne", lambda *args, **kwargs: None)
+
+    no_match = await crud.get_exercise_types(
+        db_session,
+        name="search filter squat",
+        muscle_group_id=arms.id,
+        limit=10,
+    )
+    assert no_match.data == []
+
+    exact = await crud.get_exercise_types(
+        db_session,
+        name="search filter curl",
+        muscle_group_id=arms.id,
+        limit=10,
+    )
+    assert [item.id for item in exact.data] == [arms_type.id]
 
 
 async def test_get_exercise_types_uses_extract_one_fallback(db_session, monkeypatch):

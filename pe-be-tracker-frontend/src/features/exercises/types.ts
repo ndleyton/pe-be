@@ -1,3 +1,5 @@
+import type { Muscle } from "@/shared/types";
+
 export interface ExerciseType {
   id: number;
   name: string;
@@ -12,5 +14,5 @@ export interface ExerciseType {
   default_intensity_unit: any;
   times_used: number;
   images?: string[];
-  muscles?: Array<{ id: number; name: string }>;
+  muscles?: Muscle[];
 }

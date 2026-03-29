@@ -14,9 +14,10 @@ from src.exercises.crud import (
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
+    get_muscle_groups,
     get_exercise_owner_id,
 )
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, MuscleGroup
 from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import (
     ExerciseCreate,
@@ -108,12 +109,15 @@ class ExerciseTypeService:
     async def get_all_exercise_types(
         session: AsyncSession,
         name: Optional[str] = None,
+        muscle_group_id: Optional[int] = None,
         order_by: str = "usage",
         offset: int = 0,
         limit: int = 100,
     ) -> PaginatedExerciseTypesResponse:
         """Get all exercise types with optional filtering, ordering and pagination"""
-        return await get_exercise_types(session, name, order_by, offset, limit)
+        return await get_exercise_types(
+            session, name, muscle_group_id, order_by, offset, limit
+        )
 
     @staticmethod
     async def get_exercise_type(
@@ -158,3 +162,12 @@ class IntensityUnitService:
     async def get_all_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
         """Get all intensity units"""
         return await get_intensity_units(session)
+
+
+class MuscleGroupService:
+    """Service layer for muscle-group lookup."""
+
+    @staticmethod
+    async def get_all_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
+        """Get all muscle groups."""
+        return await get_muscle_groups(session)
