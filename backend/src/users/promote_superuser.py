@@ -31,6 +31,17 @@ def _normalize_email(email: str) -> str:
     return normalized
 
 
+def _load_model_registry() -> None:
+    # Standalone CLIs do not import the FastAPI app, so load model modules
+    # explicitly before the first ORM query to resolve string relationships.
+    import src.chat.models  # noqa: F401
+    import src.exercise_sets.models  # noqa: F401
+    import src.exercises.models  # noqa: F401
+    import src.routines.models  # noqa: F401
+    import src.users.models  # noqa: F401
+    import src.workouts.models  # noqa: F401
+
+
 async def promote_user_to_superuser(
     session: AsyncSession, *, email: str
 ) -> PromotionResult:
@@ -65,6 +76,7 @@ async def promote_user_to_superuser(
 
 
 async def run(email: str) -> PromotionResult:
+    _load_model_registry()
     async with async_session_maker() as session:
         return await promote_user_to_superuser(session, email=email)
 
