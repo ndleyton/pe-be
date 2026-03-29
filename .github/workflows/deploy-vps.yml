@@ -62,6 +62,11 @@ jobs:
           LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST || 'https://us.cloud.langfuse.com' }}
 
+          # Scheduled jobs
+          JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=${{ secrets.JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED || 'true' }}
+          JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED || 'true' }}
+          JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS || '24' }}
+
           # OpenTelemetry
           OTEL_ENABLED=${{ secrets.OTEL_ENABLED || 'false' }}
           OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT || '' }}
@@ -144,6 +149,22 @@ jobs:
           echo "Checking backend health..."
           docker compose -f docker-compose.prod.yml exec -T backend \
             curl -fsS --retry 5 --retry-delay 3 http://localhost:8000/health
+
+          install_systemd_unit() {
+            local src="$1"
+            local dest="/etc/systemd/system/$(basename "$src")"
+            sed "s|/srv/pe-be|${DEPLOY_PATH}|g" "$src" | sudo tee "$dest" >/dev/null
+          }
+
+          # Install or refresh the backend job timer units with the actual deploy path.
+          install_systemd_unit backend/deploy/systemd/pe-be-chat-attachment-cleanup.service
+          install_systemd_unit backend/deploy/systemd/pe-be-chat-attachment-cleanup.timer
+          install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.service
+          install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.timer
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-close-stale-open-workouts.timer
+          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-close-stale-open-workouts.timer
 
           echo ""
           echo "Deployment complete."

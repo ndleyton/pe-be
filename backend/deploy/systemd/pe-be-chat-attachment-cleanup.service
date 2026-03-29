@@ -6,6 +6,6 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=/srv/pe-be
-EnvironmentFile=-/srv/pe-be/.env
+EnvironmentFile=-/srv/pe-be/backend/.env.production
 TimeoutStartSec=300
-ExecStart=/usr/bin/docker compose run --rm -T backend python -m src.jobs.chat_attachment_cleanup
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.chat_attachment_cleanup
