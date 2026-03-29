@@ -10,7 +10,6 @@ import {
 import ExerciseTypesPage from "./ExerciseTypesPage";
 import {
   getExerciseTypes,
-  getMuscleGroups,
 } from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
 
@@ -24,22 +23,6 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 const mockGetExerciseTypes = vi.mocked(getExerciseTypes);
-const mockGetMuscleGroups = vi.mocked(getMuscleGroups);
-
-const mockMuscleGroups = [
-  {
-    id: 1,
-    name: "Chest",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    name: "Legs",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-];
 
 const mockExerciseTypes: ExerciseType[] = [
   makeExerciseType({
@@ -50,6 +33,21 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 10,
     default_intensity_unit: 1,
     times_used: 10,
+    muscles: [
+      {
+        id: 101,
+        name: "Pectorals",
+        muscle_group_id: 1,
+        muscle_group: {
+          id: 1,
+          name: "Chest",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
   makeExerciseType({
     id: 2,
@@ -59,6 +57,21 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 8,
     default_intensity_unit: 1,
     times_used: 8,
+    muscles: [
+      {
+        id: 201,
+        name: "Quadriceps",
+        muscle_group_id: 2,
+        muscle_group: {
+          id: 2,
+          name: "Legs",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
   makeExerciseType({
     id: 3,
@@ -69,6 +82,21 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 6,
     default_intensity_unit: 1,
     times_used: 6,
+    muscles: [
+      {
+        id: 301,
+        name: "Lats",
+        muscle_group_id: 3,
+        muscle_group: {
+          id: 3,
+          name: "Back",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      },
+    ],
   }),
 ];
 
@@ -78,7 +106,6 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     Element.prototype.hasPointerCapture ??= vi.fn(() => false);
     Element.prototype.releasePointerCapture ??= vi.fn();
     Element.prototype.scrollIntoView ??= vi.fn();
-    mockGetMuscleGroups.mockResolvedValue(mockMuscleGroups);
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes(mockExerciseTypes),
     );
@@ -124,6 +151,32 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.click(
       screen.getByRole("combobox", { name: /filter by muscle group/i }),
     );
+    await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenLastCalledWith(
+        "usage",
+        undefined,
+        100,
+        1,
+      );
+    });
+  });
+
+  it("keeps the muscle-group selector usable when the lookup request fails", async () => {
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    const muscleGroupSelect = screen.getByRole("combobox", {
+      name: /filter by muscle group/i,
+    });
+
+    expect(muscleGroupSelect).toBeEnabled();
+
+    await userEvent.click(muscleGroupSelect);
     await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
 
     await waitFor(() => {

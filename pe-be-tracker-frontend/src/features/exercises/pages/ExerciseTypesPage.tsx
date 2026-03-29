@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import {
   getExerciseTypes,
-  getMuscleGroups,
   type ExerciseType,
 } from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
@@ -32,16 +30,6 @@ const ExerciseTypesPage = () => {
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
 
   const {
-    data: muscleGroups = [],
-    error: muscleGroupsError,
-    isPending: areMuscleGroupsPending,
-  } = useQuery({
-    queryKey: ["muscleGroups"],
-    queryFn: getMuscleGroups,
-    staleTime: 1000 * 60 * 10,
-  });
-
-  const {
     data: exerciseTypes,
     isPending,
     isFetchingNextPage,
@@ -66,6 +54,24 @@ const ExerciseTypesPage = () => {
             .includes(searchTerm.toLowerCase())),
     );
   }, [exerciseTypes, searchTerm]);
+  const fallbackMuscleGroups = useMemo(() => {
+    const groupsById = new Map<number, { id: number; name: string }>();
+
+    exerciseTypes.forEach((exerciseType) => {
+      exerciseType.muscles?.forEach((muscle) => {
+        groupsById.set(muscle.muscle_group.id, {
+          id: muscle.muscle_group.id,
+          name: muscle.muscle_group.name,
+        });
+      });
+    });
+
+    return Array.from(groupsById.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [exerciseTypes]);
+  const isMuscleGroupSelectorDisabled =
+    isPending && fallbackMuscleGroups.length === 0;
   const hasActiveFilters =
     searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
 
@@ -107,7 +113,7 @@ const ExerciseTypesPage = () => {
           <Select
             value={selectedMuscleGroupId}
             onValueChange={setSelectedMuscleGroupId}
-            disabled={areMuscleGroupsPending || !!muscleGroupsError}
+            disabled={isMuscleGroupSelectorDisabled}
           >
             <SelectTrigger
               aria-label="Filter by muscle group"
@@ -115,7 +121,7 @@ const ExerciseTypesPage = () => {
             >
               <SelectValue
                 placeholder={
-                  areMuscleGroupsPending
+                  isMuscleGroupSelectorDisabled
                     ? "Loading muscle groups..."
                     : "All muscle groups"
                 }
@@ -123,7 +129,7 @@ const ExerciseTypesPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All muscle groups</SelectItem>
-              {muscleGroups.map((muscleGroup) => (
+              {fallbackMuscleGroups.map((muscleGroup) => (
                 <SelectItem
                   key={muscleGroup.id}
                   value={String(muscleGroup.id)}
@@ -150,12 +156,6 @@ const ExerciseTypesPage = () => {
             </SelectContent>
           </Select>
         </div>
-
-        {muscleGroupsError && (
-          <p className="text-muted-foreground mb-6 text-sm text-left">
-            Muscle-group filtering is temporarily unavailable.
-          </p>
-        )}
 
         {/* Exercise Types Grid - Always show structure */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
