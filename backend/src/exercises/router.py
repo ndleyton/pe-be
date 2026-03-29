@@ -11,6 +11,7 @@ from src.exercises.schemas import (
     ExerciseTypeRead,
     ExerciseTypeCreate,
     IntensityUnitRead,
+    MuscleGroupRead,
     ExerciseTypeStats,
     PaginatedExerciseTypesResponse,
 )
@@ -18,6 +19,7 @@ from src.exercises.service import (
     ExerciseService,
     ExerciseTypeService,
     IntensityUnitService,
+    MuscleGroupService,
 )
 from src.core.database import get_async_session
 from src.users.router import current_active_user
@@ -51,6 +53,7 @@ async def delete_exercise(
 
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
+muscle_groups_router = APIRouter(prefix="/muscle-groups", tags=["muscle-groups"])
 
 
 @exercise_types_router.get("/", response_model=PaginatedExerciseTypesResponse)
@@ -145,6 +148,12 @@ async def create_exercise_type(
     return await ExerciseTypeService.create_new_exercise_type(session, exercise_type)
 
 
+@muscle_groups_router.get("/", response_model=List[MuscleGroupRead])
+async def get_muscle_groups(session: AsyncSession = Depends(get_async_session)):
+    """Get all muscle groups."""
+    return await MuscleGroupService.get_all_muscle_groups(session)
+
+
 # Intensity Units endpoints
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
@@ -158,3 +167,4 @@ async def get_intensity_units(session: AsyncSession = Depends(get_async_session)
 # Include sub-routers
 router.include_router(exercise_types_router)
 router.include_router(intensity_units_router)
+router.include_router(muscle_groups_router)

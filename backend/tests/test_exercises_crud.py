@@ -148,6 +148,16 @@ async def _seed_muscle(db_session, name: str, muscle_group_id: int) -> Muscle:
     return muscle
 
 
+async def test_get_muscle_groups_orders_alphabetically(db_session):
+    await _seed_muscle_group(db_session, "Legs Crud")
+    await _seed_muscle_group(db_session, "Arms Crud")
+    await db_session.commit()
+
+    result = await crud.get_muscle_groups(db_session)
+
+    assert [group.name for group in result] == ["Arms Crud", "Legs Crud"]
+
+
 async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session):
     owner = await _seed_user(db_session, "exercise-queries@example.com")
     workout_type = await _seed_workout_type(db_session, "Strength")

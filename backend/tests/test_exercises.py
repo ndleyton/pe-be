@@ -287,6 +287,31 @@ async def test_get_exercise_types_route_forwards_muscle_group_filter(monkeypatch
     assert fake_get_all.await_args.args[1:] == (None, 9, "usage", 2, 5)
 
 
+@pytest.mark.asyncio
+async def test_get_muscle_groups_route_returns_service_data(monkeypatch):
+    from src.exercises import router as exercises_router
+
+    fake_get_all = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                id=4,
+                name="Chest",
+                created_at="2026-03-24T10:00:00+00:00",
+                updated_at="2026-03-24T10:00:00+00:00",
+            )
+        ]
+    )
+    monkeypatch.setattr(
+        "src.exercises.router.MuscleGroupService.get_all_muscle_groups",
+        fake_get_all,
+    )
+
+    result = await exercises_router.get_muscle_groups(session=object())
+
+    assert result[0].name == "Chest"
+    fake_get_all.assert_awaited_once()
+
+
 def test_exercise_deletion_cascade_logic():
     """Test that the cascade deletion SQL logic is correct (unit test)."""
     from src.exercises.crud import soft_delete_exercise

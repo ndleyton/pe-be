@@ -14,6 +14,7 @@ export const endpoints = {
   // Exercise Types (nested under exercises)
   exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
+  muscleGroups: "/exercises/muscle-groups/",
 
   // Intensity Units (nested under exercises)
   intensityUnits: "/exercises/intensity-units/",

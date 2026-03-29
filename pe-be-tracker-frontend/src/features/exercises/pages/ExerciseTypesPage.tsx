@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { getExerciseTypes, type ExerciseType } from "@/features/exercises/api";
+import {
+  getExerciseTypes,
+  getMuscleGroups,
+  type ExerciseType,
+} from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -22,6 +27,19 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
+  const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
+  const activeMuscleGroupId =
+    selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
+
+  const {
+    data: muscleGroups = [],
+    error: muscleGroupsError,
+    isPending: areMuscleGroupsPending,
+  } = useQuery({
+    queryKey: ["muscleGroups"],
+    queryFn: getMuscleGroups,
+    staleTime: 1000 * 60 * 10,
+  });
 
   const {
     data: exerciseTypes,
@@ -30,8 +48,9 @@ const ExerciseTypesPage = () => {
     hasMore,
     error,
   } = useInfiniteScroll<ExerciseType>({
-    queryKey: ["exerciseTypes", orderBy],
-    queryFn: (cursor, limit) => getExerciseTypes(orderBy, cursor, limit),
+    queryKey: ["exerciseTypes", orderBy, selectedMuscleGroupId],
+    queryFn: (cursor, limit) =>
+      getExerciseTypes(orderBy, cursor, limit, activeMuscleGroupId),
     limit: 100,
   });
 
@@ -47,6 +66,8 @@ const ExerciseTypesPage = () => {
             .includes(searchTerm.toLowerCase())),
     );
   }, [exerciseTypes, searchTerm]);
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
 
   if (error) {
     return (
@@ -69,7 +90,7 @@ const ExerciseTypesPage = () => {
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row">
+        <div className="mb-8 flex flex-col gap-3 lg:flex-row">
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="text-muted-foreground h-5 w-5" />
@@ -84,10 +105,43 @@ const ExerciseTypesPage = () => {
           </div>
 
           <Select
+            value={selectedMuscleGroupId}
+            onValueChange={setSelectedMuscleGroupId}
+            disabled={areMuscleGroupsPending || !!muscleGroupsError}
+          >
+            <SelectTrigger
+              aria-label="Filter by muscle group"
+              className="border-border/30 bg-card h-12 w-full rounded-xl shadow-sm sm:w-[220px]"
+            >
+              <SelectValue
+                placeholder={
+                  areMuscleGroupsPending
+                    ? "Loading muscle groups..."
+                    : "All muscle groups"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All muscle groups</SelectItem>
+              {muscleGroups.map((muscleGroup) => (
+                <SelectItem
+                  key={muscleGroup.id}
+                  value={String(muscleGroup.id)}
+                >
+                  {muscleGroup.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
             value={orderBy}
             onValueChange={(value) => setOrderBy(value as "usage" | "name")}
           >
-            <SelectTrigger className="border-border/30 bg-card h-12 w-full rounded-xl shadow-sm sm:w-[180px]">
+            <SelectTrigger
+              aria-label="Order exercise types"
+              className="border-border/30 bg-card h-12 w-full rounded-xl shadow-sm sm:w-[180px]"
+            >
               <SelectValue placeholder="Order By" />
             </SelectTrigger>
             <SelectContent>
@@ -96,6 +150,12 @@ const ExerciseTypesPage = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {muscleGroupsError && (
+          <p className="text-muted-foreground mb-6 text-sm text-left">
+            Muscle-group filtering is temporarily unavailable.
+          </p>
+        )}
 
         {/* Exercise Types Grid - Always show structure */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -150,17 +210,20 @@ const ExerciseTypesPage = () => {
         {!isPending && filteredExerciseTypes.length === 0 && (
           <div className="py-12 text-center">
             <div className="text-muted-foreground mb-4">
-              {searchTerm
-                ? "No exercise types found matching your search."
+              {hasActiveFilters
+                ? "No exercise types match your current filters."
                 : "No exercise types available."}
             </div>
-            {searchTerm && (
+            {hasActiveFilters && (
               <Button
-                onClick={() => setSearchTerm("")}
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedMuscleGroupId("all");
+                }}
                 variant="outline"
                 size="sm"
               >
-                Clear Search
+                Clear Filters
               </Button>
             )}
           </div>

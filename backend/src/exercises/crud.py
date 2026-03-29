@@ -15,6 +15,7 @@ from src.exercises.models import (
     ExerciseType,
     IntensityUnit,
     Muscle,
+    MuscleGroup,
     ExerciseMuscle,
 )
 from src.exercise_sets.models import ExerciseSet
@@ -148,6 +149,12 @@ async def get_exercise_by_id(
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
+
+
+async def get_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
+    """Get all muscle groups ordered alphabetically."""
+    result = await session.execute(select(MuscleGroup).order_by(MuscleGroup.name))
+    return result.scalars().all()
 
 
 async def get_exercises_for_workout(

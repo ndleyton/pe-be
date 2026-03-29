@@ -8,7 +8,10 @@ import {
   makePaginatedExerciseTypes,
 } from "@/test/fixtures";
 import ExerciseTypesPage from "./ExerciseTypesPage";
-import { getExerciseTypes } from "@/features/exercises/api";
+import {
+  getExerciseTypes,
+  getMuscleGroups,
+} from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
 
 vi.mock("@/features/exercises/api");
@@ -21,6 +24,22 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 const mockGetExerciseTypes = vi.mocked(getExerciseTypes);
+const mockGetMuscleGroups = vi.mocked(getMuscleGroups);
+
+const mockMuscleGroups = [
+  {
+    id: 1,
+    name: "Chest",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 2,
+    name: "Legs",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+];
 
 const mockExerciseTypes: ExerciseType[] = [
   makeExerciseType({
@@ -56,6 +75,10 @@ const mockExerciseTypes: ExerciseType[] = [
 describe("ExerciseTypesPage - Infinite Scroll", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Element.prototype.hasPointerCapture ??= vi.fn(() => false);
+    Element.prototype.releasePointerCapture ??= vi.fn();
+    Element.prototype.scrollIntoView ??= vi.fn();
+    mockGetMuscleGroups.mockResolvedValue(mockMuscleGroups);
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes(mockExerciseTypes),
     );
@@ -70,7 +93,12 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     expect(
       screen.getByPlaceholderText(/Search exercises.../i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /order exercise types/i }),
+    ).toBeInTheDocument();
   });
 
   it("calls getExerciseTypes with default parameters on initial load", async () => {
@@ -81,6 +109,29 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
         "usage",
         undefined,
         100,
+        undefined,
+      );
+    });
+  });
+
+  it("reloads exercise types when a muscle group is selected", async () => {
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenLastCalledWith(
+        "usage",
+        undefined,
+        100,
+        1,
       );
     });
   });
@@ -142,10 +193,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.type(searchInput, "nonexistent");
 
     expect(
-      screen.getByText(/no exercise types found matching your search/i),
+      screen.getByText(/no exercise types match your current filters/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /clear search/i }),
+      screen.getByRole("button", { name: /clear filters/i }),
     ).toBeInTheDocument();
   });
 
@@ -160,10 +211,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.type(searchInput, "nonexistent");
 
     expect(
-      screen.getByText(/no exercise types found matching your search/i),
+      screen.getByText(/no exercise types match your current filters/i),
     ).toBeInTheDocument();
 
-    const clearButton = screen.getByRole("button", { name: /clear search/i });
+    const clearButton = screen.getByRole("button", { name: /clear filters/i });
     await userEvent.click(clearButton);
 
     expect(searchInput).toHaveValue("");
