@@ -466,27 +466,19 @@ const ExerciseTypeDetailsPage = () => {
             )}
           </div>
 
-          <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
-            <h2 className="mb-4 text-lg font-semibold">Usage Statistics</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <div className="bg-muted/50 rounded-xl p-5">
-                <div className="text-muted-foreground mb-1 text-sm font-medium">
-                  Times Used
-                </div>
-                <div className="text-2xl font-bold">
-                  {exerciseType.times_used}
-                </div>
-              </div>
-              {stats?.totalSets && (
+          {stats?.totalSets ? (
+            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
+              <h2 className="mb-4 text-lg font-semibold">Usage Statistics</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <div className="bg-muted/50 rounded-xl p-5">
                   <div className="text-muted-foreground mb-1 text-sm font-medium">
                     Total Sets
                   </div>
                   <div className="text-2xl font-bold">{stats.totalSets}</div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>
