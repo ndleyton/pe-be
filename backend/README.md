@@ -49,6 +49,17 @@ SECRET_KEY=your-strong-secret-key
 DATABASE_URL=your-production-db-url
 ```
 
+## Operator Commands
+
+Promote an existing Google-authenticated account to superuser:
+
+```bash
+cd backend
+uv run python -m src.users.promote_superuser --email you@example.com
+```
+
+This command only promotes an already-created user row.
+
 ## Stack
 - FastAPI
 - SQLAlchemy
