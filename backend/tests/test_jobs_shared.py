@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,6 +32,7 @@ async def test_run_managed_job_logs_success_and_releases_lock(monkeypatch, caplo
         assert session == "session"
         return {"deleted_count": 5}
 
+    monkeypatch.setattr(shared, "ensure_model_registry_loaded", lambda: None)
     monkeypatch.setattr(shared, "async_session_maker", lambda: FakeSessionContext())
     monkeypatch.setattr(shared, "_try_acquire_advisory_lock", _fake_try_acquire)
     monkeypatch.setattr(shared, "_release_advisory_lock", _fake_release)
@@ -62,6 +64,7 @@ async def test_run_managed_job_skips_when_lock_is_held(monkeypatch, caplog):
     async def _unexpected_job(session):
         raise AssertionError("job should not run when lock is held")
 
+    monkeypatch.setattr(shared, "ensure_model_registry_loaded", lambda: None)
     monkeypatch.setattr(shared, "async_session_maker", lambda: FakeSessionContext())
     monkeypatch.setattr(shared, "_try_acquire_advisory_lock", _fake_try_acquire)
     monkeypatch.setattr(shared, "_release_advisory_lock", _unexpected_release)
@@ -97,6 +100,7 @@ async def test_run_managed_job_releases_lock_and_reraises_on_failure(
         assert session == "session"
         raise RuntimeError("boom")
 
+    monkeypatch.setattr(shared, "ensure_model_registry_loaded", lambda: None)
     monkeypatch.setattr(shared, "async_session_maker", lambda: FakeSessionContext())
     monkeypatch.setattr(shared, "_try_acquire_advisory_lock", _fake_try_acquire)
     monkeypatch.setattr(shared, "_release_advisory_lock", _fake_release)
@@ -122,3 +126,26 @@ def test_advisory_lock_key_for_job_is_stable():
 
     assert first == second
     assert first != other
+
+
+def test_ensure_model_registry_loaded_imports_modules_once(monkeypatch):
+    imported: list[str] = []
+
+    def _fake_import_module(name: str):
+        imported.append(name)
+        return SimpleNamespace(__name__=name)
+
+    monkeypatch.setattr(shared, "importlib", SimpleNamespace(import_module=_fake_import_module))
+    monkeypatch.setattr(shared, "_MODEL_REGISTRY_LOADED", False)
+
+    shared.ensure_model_registry_loaded()
+    shared.ensure_model_registry_loaded()
+
+    assert imported == [
+        "src.chat.models",
+        "src.exercise_sets.models",
+        "src.exercises.models",
+        "src.routines.models",
+        "src.users.models",
+        "src.workouts.models",
+    ]

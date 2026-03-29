@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 JobStatus = Literal["success", "skipped", "failed", "disabled"]
 JobCallable = Callable[[AsyncSession], Awaitable[Mapping[str, Any] | None]]
+_MODEL_REGISTRY_LOADED = False
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,26 @@ class JobRunResult:
 
 def configure_job_runtime() -> None:
     configure_logging(settings.LOG_LEVEL)
+
+
+def ensure_model_registry_loaded() -> None:
+    global _MODEL_REGISTRY_LOADED
+    if _MODEL_REGISTRY_LOADED:
+        return
+
+    # Standalone jobs do not import the FastAPI app, so load model modules
+    # explicitly before the first ORM query to resolve string relationships.
+    for module_name in (
+        "src.chat.models",
+        "src.exercise_sets.models",
+        "src.exercises.models",
+        "src.routines.models",
+        "src.users.models",
+        "src.workouts.models",
+    ):
+        importlib.import_module(module_name)
+
+    _MODEL_REGISTRY_LOADED = True
 
 
 def advisory_lock_key_for_job(job_name: str) -> int:
@@ -77,6 +99,7 @@ async def run_managed_job(
     lock_key = advisory_lock_key_for_job(job_name)
     started_at = datetime.now(timezone.utc)
     started_timer = perf_counter()
+    ensure_model_registry_loaded()
 
     async with async_session_maker() as session:
         if not await _try_acquire_advisory_lock(session, lock_key=lock_key):
