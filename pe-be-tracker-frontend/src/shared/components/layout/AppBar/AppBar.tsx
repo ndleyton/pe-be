@@ -1,25 +1,13 @@
-import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { Menu, Pause, Play } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { Button } from "@/shared/components/ui/button";
-import { NAV_PATHS } from "@/shared/navigation/constants";
 
 const AppBar = () => {
-  const navigate = useNavigate();
   const toggleDrawer = useUIStore((state) => state.toggleDrawer);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialized = useAuthStore((state) => state.initialized);
-
-  const handleLogoClick = useCallback(() => {
-    if (isAuthenticated) {
-      navigate(NAV_PATHS.WORKOUTS);
-    } else {
-      navigate("/");
-    }
-  }, [navigate, isAuthenticated]);
 
   const googleSignIn = useGoogleSignIn();
 
@@ -48,11 +36,10 @@ const AppBar = () => {
         </Button>
       </div>
 
-      {/* Center section for the logo */}
-      <div className="flex items-center">
+      {/* Mobile-only brand. Desktop uses the sidebar logo as the primary home affordance. */}
+      <div className="flex items-center lg:hidden">
         <Button
           variant="ghost"
-          onClick={handleLogoClick}
           className="text-xl" // You can adjust styling here if needed
           aria-label="Go to home"
         >

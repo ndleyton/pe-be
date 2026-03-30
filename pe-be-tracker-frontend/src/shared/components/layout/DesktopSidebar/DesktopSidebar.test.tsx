@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@/test/testUtils";
+import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DesktopSidebar from "./DesktopSidebar";
 
@@ -71,39 +72,45 @@ describe("DesktopSidebar", () => {
       render(<DesktopSidebar />);
 
       expect(screen.getByTestId("home-logo")).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /go to workouts/i }),
+      ).toHaveAttribute("href", "/workouts");
     });
 
     it("should render all navigation items", () => {
       render(<DesktopSidebar />);
 
+      const nav = screen.getByRole("navigation", { name: /sidebar navigation/i });
+
       expect(
-        screen.getByRole("link", { name: /workouts/i }),
+        within(nav).getByRole("link", { name: /^workouts$/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: /exercises/i }),
+        within(nav).getByRole("link", { name: /exercises/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: /profile/i }),
+        within(nav).getByRole("link", { name: /profile/i }),
       ).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /chat/i })).toBeInTheDocument();
+      expect(within(nav).getByRole("link", { name: /chat/i })).toBeInTheDocument();
     });
 
     it("should have correct href attributes for navigation links", () => {
       render(<DesktopSidebar />);
+      const nav = screen.getByRole("navigation", { name: /sidebar navigation/i });
 
-      expect(screen.getByRole("link", { name: /workouts/i })).toHaveAttribute(
+      expect(within(nav).getByRole("link", { name: /^workouts$/i })).toHaveAttribute(
         "href",
         "/workouts",
       );
-      expect(screen.getByRole("link", { name: /exercises/i })).toHaveAttribute(
+      expect(within(nav).getByRole("link", { name: /exercises/i })).toHaveAttribute(
         "href",
         "/exercise-types",
       );
-      expect(screen.getByRole("link", { name: /profile/i })).toHaveAttribute(
+      expect(within(nav).getByRole("link", { name: /profile/i })).toHaveAttribute(
         "href",
         "/profile",
       );
-      expect(screen.getByRole("link", { name: /chat/i })).toHaveAttribute(
+      expect(within(nav).getByRole("link", { name: /chat/i })).toHaveAttribute(
         "href",
         "/chat",
       );
@@ -163,7 +170,10 @@ describe("DesktopSidebar", () => {
 
       // Tab through navigation items
       await user.tab();
-      expect(screen.getByRole("link", { name: /workouts/i })).toHaveFocus();
+      expect(screen.getByRole("link", { name: /go to workouts/i })).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByRole("link", { name: /^workouts$/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByRole("link", { name: /exercises/i })).toHaveFocus();

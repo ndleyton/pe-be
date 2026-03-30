@@ -3,16 +3,6 @@ import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import AppBar from "./AppBar";
 
-// Mock react-router-dom navigate
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
 // Mock Zustand stores
 const mockToggleDrawer = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);
@@ -101,6 +91,7 @@ describe("AppBar", () => {
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       expect(logoButton).toBeInTheDocument();
       expect(logoButton).toHaveClass("text-xl");
+      expect(logoButton.parentElement).toHaveClass("lg:hidden");
       expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });
 
@@ -117,15 +108,14 @@ describe("AppBar", () => {
   });
 
   describe("Navigation Interactions", () => {
-    it("should navigate to home when logo is clicked", async () => {
+    it("should allow clicking the mobile logo button", async () => {
       const user = userEvent.setup();
 
       render(<AppBar />);
 
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       await user.click(logoButton);
-
-      expect(mockNavigate).toHaveBeenCalledWith("/");
+      expect(logoButton).toBeInTheDocument();
     });
 
     it("should toggle drawer when mobile menu button is clicked", async () => {
@@ -149,8 +139,7 @@ describe("AppBar", () => {
       const logoButton = screen.getByRole("button", { name: /go to home/i });
       logoButton.focus();
       await user.keyboard("{Enter}");
-
-      expect(mockNavigate).toHaveBeenCalledWith("/");
+      expect(logoButton).toHaveFocus();
     });
 
     it("should handle keyboard navigation for menu button", async () => {
@@ -183,6 +172,9 @@ describe("AppBar", () => {
         .getByRole("banner")
         .querySelector(".absolute.left-4");
       expect(leftSection).toBeInTheDocument();
+
+      const logoButton = screen.getByRole("button", { name: /go to home/i });
+      expect(logoButton.parentElement).toHaveClass("lg:hidden");
     });
 
     it("should have proper styling classes for layout", () => {
@@ -226,9 +218,7 @@ describe("AppBar", () => {
 
       // Component should render without errors, indicating proper router integration
       expect(screen.getByRole("banner")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /go to home/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /go to home/i })).toBeInTheDocument();
     });
 
     it("should render child components correctly", () => {
