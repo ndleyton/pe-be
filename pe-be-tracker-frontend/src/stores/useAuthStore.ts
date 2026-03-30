@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       setLoading(true);
 
       try {
-        const { data } = await api.get<User>(endpoints.auth.session);
+        const { data } = await api.get<User>("/users/me");
         set({
           user: data,
           loading: false,
