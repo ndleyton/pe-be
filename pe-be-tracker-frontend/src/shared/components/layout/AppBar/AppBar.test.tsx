@@ -1,19 +1,33 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import AppBar from "./AppBar";
 
-// Mock Zustand stores
+let mockPathname = "/workouts";
+let mockAuthenticated = false;
+let mockTimerStartTime: string | null = null;
+let mockTimerPaused = false;
+let mockFormattedTime = "0:00";
+const mockToggleWorkoutTimer = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+
+  return {
+    ...actual,
+    useLocation: () => ({ pathname: mockPathname }),
+  };
+});
+
 const mockToggleDrawer = vi.fn();
-const mockIsAuthenticated = vi.fn(() => false);
-const mockSignOut = vi.fn();
+const mockGoogleSignIn = vi.fn();
 
 vi.mock("@/stores", () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {
-      isAuthenticated: mockIsAuthenticated(),
-      signOut: mockSignOut,
-      user: null,
+      isAuthenticated: mockAuthenticated,
       initialized: true,
     };
     return selector ? selector(state) : state;
@@ -22,9 +36,9 @@ vi.mock("@/stores", () => ({
     const state = {
       isDrawerOpen: false,
       workoutTimer: {
-        startTime: null,
+        startTime: mockTimerStartTime,
         elapsedSeconds: 0,
-        paused: false,
+        paused: mockTimerPaused,
         intervalId: null,
       },
       toggleDrawer: mockToggleDrawer,
@@ -33,292 +47,119 @@ vi.mock("@/stores", () => ({
       startWorkoutTimer: vi.fn(),
       pauseWorkoutTimer: vi.fn(),
       resumeWorkoutTimer: vi.fn(),
-      toggleWorkoutTimer: vi.fn(),
+      toggleWorkoutTimer: mockToggleWorkoutTimer,
       stopWorkoutTimer: vi.fn(),
-      getFormattedWorkoutTime: vi.fn(() => "0:00"),
+      getFormattedWorkoutTime: vi.fn(() => mockFormattedTime),
     };
     return selector ? selector(state) : state;
   }),
 }));
 
-// Mock API client
-vi.mock("@/shared/api/client", () => ({
-  default: {
-    get: vi.fn(),
-  },
+vi.mock("@/features/auth/hooks", () => ({
+  useGoogleSignIn: () => mockGoogleSignIn,
 }));
 
-// Mock child components
 vi.mock("../HomeLogo", () => ({
   default: () => <div data-testid="home-logo">PE Logo</div>,
-}));
-
-vi.mock("./DesktopNav", () => ({
-  default: () => <div data-testid="desktop-nav">Desktop Navigation</div>,
 }));
 
 describe("AppBar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPathname = "/workouts";
+    mockAuthenticated = false;
+    mockTimerStartTime = null;
+    mockTimerPaused = false;
+    mockFormattedTime = "0:00";
   });
 
-  afterEach(() => {
-    vi.clearAllTimers();
+  it("renders the app bar banner and mobile navigation controls", () => {
+    render(<AppBar />);
+
+    expect(screen.getByRole("banner")).toHaveAttribute(
+      "aria-label",
+      "Primary navigation",
+    );
+    expect(
+      screen.getByRole("button", { name: /open navigation menu/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /go to workouts/i })).toHaveAttribute(
+      "href",
+      "/workouts",
+    );
   });
 
-  describe("Rendering and Structure", () => {
-    it("should render the app bar with proper banner role", () => {
-      render(<AppBar />);
+  it("toggles the drawer from the mobile menu button", async () => {
+    const user = userEvent.setup();
 
-      const navbar = screen.getByRole("banner");
-      expect(navbar).toBeInTheDocument();
-      expect(navbar).toHaveAttribute("aria-label", "Primary navigation");
-      expect(navbar).toHaveClass(
-        "relative",
-        "flex",
-        "h-16",
-        "items-center",
-        "justify-center",
-        "border-b",
-        "bg-background",
-        "px-4",
-      );
-    });
+    render(<AppBar />);
 
-    it("should render the home logo button", () => {
-      render(<AppBar />);
+    await user.click(
+      screen.getByRole("button", { name: /open navigation menu/i }),
+    );
 
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      expect(logoButton).toBeInTheDocument();
-      expect(logoButton).toHaveClass("text-xl");
-      expect(logoButton.parentElement).toHaveClass("lg:hidden");
-      expect(screen.getByTestId("home-logo")).toBeInTheDocument();
-    });
-
-    it("should render the mobile menu button with proper accessibility", () => {
-      render(<AppBar />);
-
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      expect(menuButton).toBeInTheDocument();
-      expect(menuButton).toHaveClass("lg:hidden");
-      expect(menuButton).toHaveAttribute("aria-label", "Open navigation menu");
-    });
+    expect(mockToggleDrawer).toHaveBeenCalledTimes(1);
   });
 
-  describe("Navigation Interactions", () => {
-    it("should allow clicking the mobile logo button", async () => {
-      const user = userEvent.setup();
+  it("renders a desktop page title for collection routes", () => {
+    mockPathname = "/exercise-types";
 
-      render(<AppBar />);
+    render(<AppBar />);
 
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      await user.click(logoButton);
-      expect(logoButton).toBeInTheDocument();
-    });
-
-    it("should toggle drawer when mobile menu button is clicked", async () => {
-      const user = userEvent.setup();
-
-      render(<AppBar />);
-
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      await user.click(menuButton);
-
-      expect(mockToggleDrawer).toHaveBeenCalled();
-    });
-
-    it("should handle keyboard navigation for logo button", async () => {
-      const user = userEvent.setup();
-
-      render(<AppBar />);
-
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      logoButton.focus();
-      await user.keyboard("{Enter}");
-      expect(logoButton).toHaveFocus();
-    });
-
-    it("should handle keyboard navigation for menu button", async () => {
-      const user = userEvent.setup();
-
-      render(<AppBar />);
-
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      menuButton.focus();
-      await user.keyboard("{Enter}");
-
-      expect(mockToggleDrawer).toHaveBeenCalled();
-    });
+    expect(
+      screen.getByRole("heading", { name: /exercises/i }),
+    ).toBeInTheDocument();
   });
 
-  describe("Responsive Design", () => {
-    it("should have mobile-first responsive classes", () => {
-      render(<AppBar />);
+  it("renders a desktop page title for detail routes", () => {
+    mockPathname = "/routines/42";
 
-      // Mobile menu should be hidden on large desktop
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      expect(menuButton).toHaveClass("lg:hidden");
+    render(<AppBar />);
 
-      // Navbar still has left flex container
-      const leftSection = screen
-        .getByRole("banner")
-        .querySelector(".absolute.left-4");
-      expect(leftSection).toBeInTheDocument();
-
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      expect(logoButton.parentElement).toHaveClass("lg:hidden");
-    });
-
-    it("should have proper styling classes for layout", () => {
-      render(<AppBar />);
-
-      const navbar = screen.getByRole("banner");
-      expect(navbar).toHaveClass(
-        "relative",
-        "flex",
-        "h-16",
-        "items-center",
-        "justify-center",
-        "border-b",
-        "bg-background",
-        "px-4",
-      );
-
-      const startSection = navbar.querySelector(".absolute.left-4");
-      const centerSection = navbar.querySelector(".flex.items-center");
-      const endSection = navbar.querySelector(".absolute.right-4");
-
-      expect(startSection).toBeInTheDocument();
-      expect(centerSection).toBeInTheDocument();
-      expect(endSection).toBeInTheDocument();
-    });
+    expect(
+      screen.getByRole("heading", { name: /routine editor/i }),
+    ).toBeInTheDocument();
   });
 
-  describe("Component Integration", () => {
-    it("should properly integrate with UI Store (drawer)", () => {
-      render(<AppBar />);
+  it("falls back to a not found title for unknown routes", () => {
+    mockPathname = "/missing";
 
-      // Component should render without errors, indicating proper context integration
-      expect(screen.getByRole("banner")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /open navigation menu/i }),
-      ).toBeInTheDocument();
-    });
+    render(<AppBar />);
 
-    it("should properly integrate with React Router", () => {
-      render(<AppBar />);
-
-      // Component should render without errors, indicating proper router integration
-      expect(screen.getByRole("banner")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /go to home/i })).toBeInTheDocument();
-    });
-
-    it("should render child components correctly", () => {
-      render(<AppBar />);
-
-      // Check that mocked child components are rendered
-      expect(screen.getByTestId("home-logo")).toHaveTextContent("PE Logo");
-    });
+    expect(
+      screen.getByRole("heading", { name: /page not found/i }),
+    ).toBeInTheDocument();
   });
 
-  describe("Accessibility", () => {
-    it("should have proper ARIA labels and roles", () => {
-      render(<AppBar />);
+  it("shows sign in when the user is signed out", () => {
+    render(<AppBar />);
 
-      const navbar = screen.getByRole("banner");
-      expect(navbar).toHaveAttribute("aria-label", "Primary navigation");
-
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      expect(menuButton).toHaveAttribute("aria-label", "Open navigation menu");
-
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      expect(logoButton).toHaveAttribute("aria-label", "Go to home");
-    });
-
-    it("should be keyboard accessible", () => {
-      render(<AppBar />);
-
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-
-      // Both buttons should be focusable
-      expect(logoButton).toBeInTheDocument();
-      expect(menuButton).toBeInTheDocument();
-    });
-
-    it("should have semantic HTML structure", () => {
-      render(<AppBar />);
-
-      const banner = screen.getByRole("banner");
-      expect(banner).toBeInTheDocument();
-
-      // Interactive buttons should be properly typed (excluding dropdown buttons)
-      const explicitButtons = screen
-        .getAllByRole("button")
-        .filter(
-          (button) =>
-            button.hasAttribute("type") || button.getAttribute("aria-label"),
-        );
-      explicitButtons.forEach((button) => {
-        if (button.hasAttribute("type")) {
-          expect(button).toHaveAttribute("type", "button");
-        }
-      });
-    });
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
-  describe("Visual Design and Styling", () => {
-    it("should have proper button styling classes", () => {
-      render(<AppBar />);
+  it("hides sign in when the user is authenticated", () => {
+    mockAuthenticated = true;
 
-      const logoButton = screen.getByRole("button", { name: /go to home/i });
-      expect(logoButton).toHaveClass("text-xl");
+    render(<AppBar />);
 
-      const menuButton = screen.getByRole("button", {
-        name: /open navigation menu/i,
-      });
-      expect(menuButton).toHaveClass("lg:hidden");
-    });
-
-    it("should have consistent navbar theming", () => {
-      render(<AppBar />);
-
-      const navbar = screen.getByRole("banner");
-      expect(navbar).toHaveClass(
-        "relative",
-        "flex",
-        "h-16",
-        "items-center",
-        "justify-center",
-        "border-b",
-        "bg-background",
-        "px-4",
-      );
-    });
+    expect(
+      screen.queryByRole("button", { name: /sign in/i }),
+    ).not.toBeInTheDocument();
   });
 
-  describe("User Account Features", () => {
-    it("should have navbar-end with user account features", () => {
-      render(<AppBar />);
+  it("shows and toggles the workout timer", async () => {
+    const user = userEvent.setup();
+    mockAuthenticated = true;
+    mockTimerStartTime = "2026-03-30T00:00:00Z";
+    mockFormattedTime = "0:10";
 
-      const endSection = screen
-        .getByRole("banner")
-        .querySelector(".absolute.right-4");
-      expect(endSection).toBeInTheDocument();
-      // Should contain user account features (sign in button when not authenticated)
-      expect(endSection).not.toBeEmptyDOMElement();
-    });
+    render(<AppBar />);
+
+    const timerButton = screen.getByRole("button", { name: /pause timer/i });
+    expect(screen.getByLabelText(/workout timer/i)).toHaveTextContent("0:10");
+
+    await user.click(timerButton);
+
+    expect(mockToggleWorkoutTimer).toHaveBeenCalledTimes(1);
   });
 });
