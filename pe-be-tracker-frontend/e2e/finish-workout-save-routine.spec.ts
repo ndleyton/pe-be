@@ -30,7 +30,7 @@ async function dismissOverlays(page: any) {
 }
 
 test.describe("Finish workout routine creation", () => {
-  test("creates a routine from FinishWorkoutModal in guest mode", async ({
+  test("does not offer routine creation from FinishWorkoutModal in guest mode", async ({
     page,
   }) => {
     await page.goto("/workouts");
@@ -80,21 +80,14 @@ test.describe("Finish workout routine creation", () => {
     await expect(
       page.locator('[data-testid="finish-workout-modal"]'),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Save Routine" }).click();
-
-    const saveRoutineSheet = page
-      .locator("div")
-      .filter({ has: page.getByRole("heading", { name: "Save as Routine" }) });
     await expect(
-      saveRoutineSheet.getByRole("heading", { name: "Save as Routine" }),
-    ).toBeVisible();
-    const routineName = `E2E Routine ${Date.now()}`;
-    await saveRoutineSheet.getByLabel("Routine Name").fill(routineName);
-    await saveRoutineSheet.getByRole("button", { name: "Save Routine" }).click();
+      page.getByRole("button", { name: "Save Routine" }),
+    ).not.toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish Workout" })).toBeVisible();
 
-    await expect(
-      page.getByRole("heading", { name: "Routine Saved!" }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "Finish Workout" }).click();
+    await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
   });
 
   test.afterEach(async ({ page }) => {
