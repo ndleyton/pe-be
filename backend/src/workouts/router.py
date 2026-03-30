@@ -96,7 +96,8 @@ async def add_exercise_to_current_workout(
 ):
     """Add an exercise (and optional initial set) to the user's current workout.
 
-    If the user does not yet have a workout for today, one will be created automatically.
+    Reuses the user's latest unfinished workout if it was started within the last
+    12 hours. Otherwise, creates a new workout automatically.
     """
     workout = await WorkoutService.add_exercise_to_current_workout(
         session, user.id, request_body
