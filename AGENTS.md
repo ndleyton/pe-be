@@ -18,6 +18,10 @@ Notes:
 - Focused runs against a single file should usually use `--no-cov`, otherwise the global 80% coverage gate will still apply.
 - Tests load `ENV_FILE` if set, otherwise `backend/.env.test`.
 - Test safety checks require `DATABASE_URL` to point to a dedicated test database whose name contains `test`.
+- Do not call the real `asyncio.run(...)` from tests. This repo uses session-scoped pytest-asyncio event loops, and a real `asyncio.run(...)` inside a test can close the current loop and break later async tests with `RuntimeError: There is no current event loop in thread 'MainThread'`.
+- For CLI `main()` wrappers that use `asyncio.run(...)`, test the async `run(...)` function directly for behavior. When testing `main()`, monkeypatch the module-local `asyncio.run` and return a fake result after closing the passed coroutine.
+- If you add a new sync wrapper around async backend code, follow the existing job-wrapper test pattern instead of exercising the real event-loop boundary inside pytest.
+- When renaming or replacing CRUD/service helpers, update import/smoke tests in the same change so the suite does not fail during collection on stale symbols.
 
 ### Linting
 

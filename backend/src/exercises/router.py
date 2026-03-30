@@ -142,6 +142,7 @@ async def get_exercise_type_stats(
 )
 async def create_exercise_type(
     exercise_type: ExerciseTypeCreate,
+    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise type."""
