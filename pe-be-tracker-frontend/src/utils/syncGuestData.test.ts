@@ -272,4 +272,69 @@ describe("syncGuestDataToServer", () => {
     });
   });
 
+  it("returns failure and keeps guest data when a nested set sync fails", async () => {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+    });
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "Push-ups",
+      default_intensity_unit: 1,
+    });
+    const mockGuestData: GuestData = makeGuestData({
+      workouts: [
+        makeGuestWorkout({
+          id: "guest-workout-1",
+          name: "Test Workout",
+          start_time: "2023-01-01T10:00:00Z",
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
+          exercises: [
+            makeGuestExercise({
+              id: "guest-exercise-1",
+              exercise_type: exerciseType,
+              exercise_type_id: exerciseType.id,
+              workout_id: "guest-workout-1",
+              exercise_sets: [
+                makeGuestExerciseSet({
+                  id: "guest-set-1",
+                  exercise_id: "guest-exercise-1",
+                  intensity_unit_id: 1,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    (api.get as any)
+      .mockResolvedValueOnce({ data: { data: [] } })
+      .mockResolvedValueOnce({ data: [] });
+
+    (api.post as any)
+      .mockResolvedValueOnce({ data: { id: 1, name: "Push-ups" } })
+      .mockResolvedValueOnce({ data: { id: 1, name: "Strength Training" } })
+      .mockResolvedValueOnce({ data: { id: 1, name: "Test Workout" } })
+      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 1 } })
+      .mockRejectedValueOnce(new Error("Set sync failed"));
+
+    const result = await syncGuestDataToServer(
+      mockGuestData,
+      mockClearGuestData,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Some of your guest data could not be synced. Your local data was kept so you can retry.",
+      syncedWorkouts: 1,
+      syncedExercises: 1,
+      syncedSets: 0,
+      syncedRoutines: 0,
+    });
+    expect(mockClearGuestData).not.toHaveBeenCalled();
+  });
+
 });

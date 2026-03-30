@@ -12,6 +12,31 @@ export interface SyncResult {
   syncedRoutines: number;
 }
 
+const describeSyncError = (error: unknown) => {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    };
+  }
+
+  return {
+    value: error,
+  };
+};
+
+const logSyncFailure = (
+  stage: string,
+  context: Record<string, unknown>,
+  error: unknown,
+) => {
+  console.error(`Guest sync failed during ${stage}`, {
+    ...context,
+    error: describeSyncError(error),
+  });
+};
+
 // Helper function to find or create exercise types on the server
 const findOrCreateExerciseType = async (
   guestExerciseType: any,
@@ -112,6 +137,7 @@ export async function syncGuestDataToServer(
   let syncedExercises = 0;
   let syncedSets = 0;
   let syncedRoutines = 0;
+  let hadFailures = false;
 
   try {
     // If no guest data to sync, return early
@@ -232,34 +258,59 @@ export async function syncGuestDataToServer(
 
                 syncedSets++;
               } catch (setError) {
-                console.error(
-                  `Failed to sync exercise set for exercise ID ${createdExercise.id}. Set data:`,
-                  guestSet,
-                  "Error:",
+                hadFailures = true;
+                logSyncFailure(
+                  "exercise set sync",
+                  {
+                    createdExerciseId: createdExercise.id,
+                    guestSetId: guestSet.id,
+                    guestExerciseId: guestExercise.id,
+                    guestWorkoutId: guestWorkout.id,
+                  },
                   setError,
                 );
                 // Continue with other sets even if one fails
               }
             }
           } catch (exerciseError) {
-            console.error(
-              `Failed to sync exercise for workout ID ${createdWorkout.id}. Exercise data:`,
-              guestExercise,
-              "Error:",
+            hadFailures = true;
+            logSyncFailure(
+              "exercise sync",
+              {
+                createdWorkoutId: createdWorkout.id,
+                guestExerciseId: guestExercise.id,
+                guestExerciseTypeId: guestExercise.exercise_type_id,
+                guestWorkoutId: guestWorkout.id,
+              },
               exerciseError,
             );
             // Continue with other exercises even if one fails
           }
         }
       } catch (workoutError) {
-        console.error(
-          `Failed to sync workout. Workout data:`,
-          guestWorkout,
-          "Error:",
+        hadFailures = true;
+        logSyncFailure(
+          "workout sync",
+          {
+            guestWorkoutId: guestWorkout.id,
+            guestWorkoutTypeId: guestWorkout.workout_type_id,
+          },
           workoutError,
         );
         // Continue with other workouts even if one fails
       }
+    }
+
+    if (hadFailures) {
+      return {
+        success: false,
+        error:
+          "Some of your guest data could not be synced. Your local data was kept so you can retry.",
+        syncedWorkouts,
+        syncedExercises,
+        syncedSets,
+        syncedRoutines,
+      };
     }
 
     // Clear guest data after successful sync
@@ -273,7 +324,7 @@ export async function syncGuestDataToServer(
       syncedRoutines,
     };
   } catch (error) {
-    console.error("Failed to sync guest data to server:", error);
+    logSyncFailure("guest sync bootstrap", {}, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
@@ -287,7 +338,7 @@ export async function syncGuestDataToServer(
 
 // Helper function to show a toast notification
 export const showSyncSuccessToast = (result: SyncResult) => {
-  if (result.syncedWorkouts === 0) {
+  if (!result.success || result.syncedWorkouts === 0) {
     return; // No need to show toast if nothing was synced
   }
 
@@ -298,7 +349,7 @@ export const showSyncSuccessToast = (result: SyncResult) => {
 };
 
 export const showSyncErrorToast = (error: string) => {
-  const message = `Failed to sync your data: ${error}`;
+  const message = `Guest data sync incomplete: ${error}`;
 
   // For now, we'll use a simple alert, but this could be replaced with a proper toast library
   // TODO: Replace with proper toast notification system
