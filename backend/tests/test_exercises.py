@@ -118,6 +118,19 @@ class TestExercisesAPI:
         response = client.get(f"{settings.API_PREFIX}/exercises/exercise-types/1/stats")
         assert response.status_code == 401
 
+    def test_create_exercise_type_unauthorized(self, client: TestClient):
+        """Test creating exercise types without authentication."""
+        exercise_type_data = {
+            "name": "Unauthorized Test Exercise Type",
+            "description": "Should require authentication",
+            "muscle_ids": [],
+        }
+        response = client.post(
+            f"{settings.API_PREFIX}/exercises/exercise-types/",
+            json=exercise_type_data,
+        )
+        assert response.status_code == 401
+
 
 @pytest.fixture
 def override_exercise_user():
