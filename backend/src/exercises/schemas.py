@@ -8,8 +8,10 @@ from pydantic import (
     computed_field,
     model_validator,
 )
-import json
-from src.core.config import settings
+from src.exercises.image_assets import (
+    parse_image_url_list,
+    resolve_exercise_image_urls,
+)
 
 
 class ExerciseBase(BaseModel):
@@ -106,6 +108,10 @@ class ExerciseTypeRead(BaseModel):
     times_used: int
     muscles: List[MuscleRead] = []
     images_url: Optional[str] = None
+    reference_images_url: Optional[str] = None
+    instructions: Optional[str] = None
+    equipment: Optional[str] = None
+    category: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -157,38 +163,14 @@ class ExerciseTypeRead(BaseModel):
     @property
     def images(self) -> List[str]:
         """Process image URLs with IMAGE_URL_PREFIX for relative URLs"""
-        if not self.images_url:
-            return []
+        return resolve_exercise_image_urls(parse_image_url_list(self.images_url))
 
-        try:
-            image_list = (
-                json.loads(self.images_url)
-                if isinstance(self.images_url, str)
-                else self.images_url
-            )
-            if not isinstance(image_list, list):
-                return []
-
-            processed_images = []
-            for image_url in image_list:
-                if not image_url:
-                    continue
-
-                # If it's already an absolute URL, use as-is
-                if image_url.startswith(("http://", "https://")):
-                    processed_images.append(image_url)
-                else:
-                    # For relative URLs, prepend the IMAGE_URL_PREFIX
-                    if settings.IMAGE_URL_PREFIX:
-                        processed_images.append(
-                            f"{settings.IMAGE_URL_PREFIX.rstrip('/')}/{image_url.lstrip('/')}"
-                        )
-                    else:
-                        processed_images.append(image_url)
-
-            return processed_images
-        except (json.JSONDecodeError, TypeError):
-            return []
+    @computed_field
+    @property
+    def reference_images(self) -> List[str]:
+        return resolve_exercise_image_urls(
+            parse_image_url_list(self.reference_images_url)
+        )
 
     model_config = ConfigDict(from_attributes=True)
 

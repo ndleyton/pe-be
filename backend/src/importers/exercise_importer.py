@@ -233,6 +233,7 @@ async def extract_and_transform_exercises():
                     "name": row["name"],
                     "description": description,
                     "images_url": json.dumps(row.get("images", [])),
+                    "reference_images_url": json.dumps(row.get("images", [])),
                     "instructions": "\n".join(row.get("instructions", []) or [])
                     if row.get("instructions")
                     else None,
@@ -455,14 +456,15 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             await conn.execute(
                 """
                 INSERT INTO exercise_types
-                (external_id, name, description, images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+                (external_id, name, description, images_url, reference_images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
                 ON CONFLICT (external_id) DO NOTHING
             """,
                 exercise_type["external_id"],
                 exercise_type["name"],
                 exercise_type["description"],
                 exercise_type["images_url"],
+                exercise_type["reference_images_url"],
                 exercise_type["instructions"],
                 exercise_type["equipment"],
                 exercise_type["category"],

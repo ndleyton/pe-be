@@ -23,6 +23,7 @@ from src.users.models import User, OAuthAccount  # noqa: F401
 from src.workouts.models import Workout, WorkoutType  # noqa: F401
 from src.exercises.models import (  # noqa: F401
     Exercise,
+    ExerciseImageCandidate,
     ExerciseType,
     ExerciseMuscle,
     IntensityUnit,

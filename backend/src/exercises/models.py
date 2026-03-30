@@ -41,6 +41,7 @@ class ExerciseType(Base):
     times_used = Column(Integer, default=0, nullable=False)
     external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
+    reference_images_url = Column(Text, nullable=True)
     instructions = Column(Text, nullable=True)
     equipment = Column(String, nullable=True)
     category = Column(String, nullable=True)
@@ -51,6 +52,11 @@ class ExerciseType(Base):
     )
     exercises: Mapped[List["Exercise"]] = relationship(
         "Exercise", back_populates="exercise_type"
+    )
+    image_candidates: Mapped[List["ExerciseImageCandidate"]] = relationship(
+        "ExerciseImageCandidate",
+        back_populates="exercise_type",
+        cascade="all, delete-orphan",
     )
 
 
@@ -161,3 +167,42 @@ class ExerciseMuscle(Base):
         back_populates="exercise_muscles"
     )
     muscle: Mapped["Muscle"] = relationship(back_populates="exercise_muscles")
+
+
+class ExerciseImageCandidate(Base):
+    """Generated exercise image candidate derived from a reference image."""
+
+    __tablename__ = "exercise_image_candidates"
+
+    __table_args__ = (
+        UniqueConstraint("generation_key"),
+        UniqueConstraint("storage_path"),
+        Index(
+            "ix_exercise_image_candidates_exercise_type_option_source",
+            "exercise_type_id",
+            "option_key",
+            "source_image_index",
+        ),
+    )
+
+    exercise_type_id = Column(
+        Integer,
+        ForeignKey("exercise_types.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    generation_key = Column(String(64), nullable=False)
+    pipeline_key = Column(String(64), nullable=False)
+    option_key = Column(String(64), nullable=False)
+    option_label = Column(String(255), nullable=False)
+    option_description = Column(Text, nullable=True)
+    source_image_index = Column(Integer, nullable=False)
+    source_image_url = Column(Text, nullable=False)
+    model_name = Column(String(128), nullable=False)
+    prompt_version = Column(String(32), nullable=False)
+    prompt_summary = Column(Text, nullable=True)
+    mime_type = Column(String(64), nullable=False, server_default="image/png")
+    storage_path = Column(String(512), nullable=False)
+
+    exercise_type: Mapped["ExerciseType"] = relationship(
+        "ExerciseType", back_populates="image_candidates"
+    )
