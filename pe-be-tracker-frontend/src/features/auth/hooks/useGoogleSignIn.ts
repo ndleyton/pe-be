@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 
 /**
  * Returns a memoized callback that initiates the Google OAuth flow.
@@ -9,7 +10,7 @@ import api from "@/shared/api/client";
 export const useGoogleSignIn = () => {
   return useCallback(async () => {
     try {
-      const { data } = await api.get("/auth/google/authorize");
+      const { data } = await api.get(endpoints.auth.googleAuthorize);
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
       } else {
