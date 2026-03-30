@@ -21,13 +21,16 @@ const LoginPage = () => {
     () => getPostLoginDestination(location.search),
     [location.search],
   );
-  const shouldStartGoogleSignIn = useMemo(() => {
+  const { hasExplicitNextParam, shouldStartGoogleSignIn } = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get("auth_intent") === "google";
+    return {
+      hasExplicitNextParam: params.has("next"),
+      shouldStartGoogleSignIn: params.get("auth_intent") === "google",
+    };
   }, [location.search]);
 
   const handleTryAsGuest = () => {
-    navigate(NAV_PATHS.WORKOUTS);
+    navigate(nextPath);
   };
 
   useEffect(() => {
@@ -42,7 +45,9 @@ const LoginPage = () => {
     }
 
     if (shouldStartGoogleSignIn) {
-      persistPostLoginDestination(nextPath);
+      if (hasExplicitNextParam) {
+        persistPostLoginDestination(nextPath);
+      }
       pendingGoogleSignInRef.current = true;
       navigate(
         {
@@ -54,16 +59,17 @@ const LoginPage = () => {
       return;
     }
 
-    if (!pendingGoogleSignInRef.current) {
+    if (hasExplicitNextParam && !pendingGoogleSignInRef.current) {
       persistPostLoginDestination(nextPath);
     }
   }, [
+    hasExplicitNextParam,
     initialized,
     isAuthenticated,
     location.hash,
     location.pathname,
-    navigate,
     nextPath,
+    navigate,
     shouldStartGoogleSignIn,
   ]);
 

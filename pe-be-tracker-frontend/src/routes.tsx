@@ -3,11 +3,11 @@ import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
+import { LoginPage } from "@/features/auth/pages";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 
-import LoginPage from "./App";
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
 

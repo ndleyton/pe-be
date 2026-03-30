@@ -82,7 +82,7 @@ const OAuthCallbackPage = () => {
         // Wait a moment to show success state, then redirect
         setTimeout(() => {
           navigate(postLoginDestination, { replace: true });
-        }, 2000);
+        }, 1000);
       } catch (error) {
         console.error("OAuth callback error:", error);
         const errorMsg =

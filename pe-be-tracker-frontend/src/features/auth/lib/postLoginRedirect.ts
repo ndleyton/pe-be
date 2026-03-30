@@ -15,17 +15,22 @@ const getSessionStorage = (): Storage | null => {
 };
 
 const sanitizePostLoginDestination = (value: string | null): string | null => {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  if (
+    !value
+    || !value.startsWith("/")
+    || value.startsWith("//")
+    || typeof window === "undefined"
+  ) {
     return null;
   }
 
-  const origin =
-    typeof window === "undefined" ? "https://app.personalbestie.com" : window.location.origin;
-
   try {
-    const destination = new URL(value, origin);
+    const destination = new URL(value, window.location.origin);
 
-    if (destination.origin !== origin || destination.pathname === NAV_PATHS.LOGIN) {
+    if (
+      destination.origin !== window.location.origin
+      || destination.pathname === NAV_PATHS.LOGIN
+    ) {
       return null;
     }
 

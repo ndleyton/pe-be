@@ -96,4 +96,14 @@ describe("LoginPage", () => {
     expect(screen.getByTestId("location")).not.toHaveTextContent("auth_intent");
     expect(sessionStorage.getItem("auth:post-login-destination")).toBe("/chat");
   });
+
+  it("sends guest users to the requested next path", async () => {
+    renderLoginRoute("/login?next=/about");
+
+    await screen.getByRole("button", { name: "Try as Guest" }).click();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location")).toHaveTextContent("/about");
+    });
+  });
 });
