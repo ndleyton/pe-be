@@ -57,6 +57,15 @@ export const endpoints = {
       `/admin/exercise-types/${id}/reference-image-options/apply`,
   },
 
+  admin: {
+    exerciseTypeReferenceImageOptions: (id: string | number) =>
+      `/admin/exercise-types/${id}/reference-image-options`,
+    generateExerciseTypeReferenceImageOptions: (id: string | number) =>
+      `/admin/exercise-types/${id}/reference-image-options/generate`,
+    applyExerciseTypeReferenceImageOption: (id: string | number) =>
+      `/admin/exercise-types/${id}/reference-image-options/apply`,
+  },
+
   // Add exercise to current workout (or create workout if necessary)
   addExerciseToCurrentWorkout: "/workouts/add-exercise",
 

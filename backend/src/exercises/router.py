@@ -43,7 +43,6 @@ async def get_exercise_image_asset(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required for generated exercise images",
         )
-
     try:
         file_path = storage_path_for_relative_url(image_path)
     except ValueError as exc:
