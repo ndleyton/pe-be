@@ -10,11 +10,11 @@ import {
   getCurrentUTCTimestamp,
   toUTCISOString,
 } from "@/utils/date";
+import type { Routine } from "@/features/routines/types";
 import { useAuthStore } from "./useAuthStore";
 import { createIndexedDBStorage } from "./indexedDBStorage";
 import { buildExerciseTypes } from "./seeds/exerciseTypes";
 import { buildWorkoutTypes } from "./seeds/workoutTypes";
-import { buildRoutines } from "./seeds/routines";
 import { generateExerciseTypeIds } from "./seeds/types";
 
 export interface GuestExerciseType {
@@ -89,41 +89,11 @@ export interface GuestWorkout {
   updated_at: string;
 }
 
-export interface GuestRoutineSet {
-  id: string;
-  reps: number | null;
-  intensity: number | null;
-  intensity_unit_id: number;
-  rest_time_seconds: number | null;
-  notes?: string | null;
-  type?: string | null;
-}
-
-export interface GuestRoutineExercise {
-  id: string;
-  exercise_type_id: string;
-  exercise_type: GuestExerciseType;
-  sets: GuestRoutineSet[];
-  notes: string | null;
-}
-
-export interface GuestRoutine {
-  id: string;
-  name: string;
-  description?: string | null;
-  exercises: GuestRoutineExercise[];
-  visibility?: "private" | "public" | "link_only";
-  is_readonly?: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface GuestData {
   workouts: GuestWorkout[];
   exerciseTypes: GuestExerciseType[];
   workoutTypes: GuestWorkoutType[];
   recipes?: never; // Deprecated
-  routines: GuestRoutine[];
 }
 
 interface GuestState extends GuestData {
@@ -165,19 +135,8 @@ interface GuestActions {
 
   addWorkoutType: (workoutType: Omit<GuestWorkoutType, "id">) => string;
   updateWorkoutType: (id: string, updates: Partial<GuestWorkoutType>) => void;
-
-  // Routine-named actions
-  addRoutine: (
-    routine: Omit<GuestRoutine, "id" | "created_at" | "updated_at">,
-  ) => string;
-  updateRoutine: (id: string, updates: Partial<GuestRoutine>) => void;
-  deleteRoutine: (id: string) => void;
-  createRoutineFromWorkout: (
-    workoutName: string,
-    exercises: GuestExercise[],
-  ) => string;
   createExercisesFromRoutine: (
-    routine: GuestRoutine,
+    routine: Routine,
     workoutId: string,
   ) => string[];
 
@@ -204,7 +163,6 @@ const getInitialGuestData = (): GuestData => {
     workouts: [],
     exerciseTypes,
     workoutTypes: buildWorkoutTypes(generateRandomId),
-    routines: buildRoutines(exerciseTypeIds, generateRandomId),
   } satisfies GuestData;
 
   return initialData;
@@ -227,15 +185,6 @@ const normalizeTimestamp = (value: unknown): string | null => {
 
 const migrateGuestData = (data: any): GuestData => {
   const migrated = { ...data };
-
-  if (!migrated.routines) {
-    if (migrated.recipes) {
-      migrated.routines = migrated.recipes;
-      delete migrated.recipes;
-    } else {
-      migrated.routines = [];
-    }
-  }
 
   // Normalize timestamps and ensure arrays exist
   if (migrated.workouts) {
@@ -261,24 +210,11 @@ const migrateGuestData = (data: any): GuestData => {
     }));
   }
 
-  if (migrated.routines) {
-    migrated.routines = migrated.routines.map((routine: any) => ({
-      ...routine,
-      created_at: normalizeTimestamp(routine.created_at),
-      updated_at: normalizeTimestamp(routine.updated_at),
-      exercises:
-        routine.exercises?.map((exercise: any) => ({
-          ...exercise,
-          notes: exercise.notes ?? null,
-          sets:
-            exercise.sets?.map((set: any) => ({
-              ...set,
-            })) ?? [],
-        })) ?? [],
-    }));
-  }
-
-  return migrated as GuestData;
+  return {
+    workouts: migrated.workouts ?? [],
+    exerciseTypes: migrated.exerciseTypes ?? [],
+    workoutTypes: migrated.workoutTypes ?? [],
+  };
 };
 
 const replaceAtIndex = <T,>(items: T[], index: number, nextItem: T): T[] => {
@@ -666,102 +602,39 @@ export const useGuestStore = create<GuestStore>()(
           ),
         }));
       },
-
-      // Routine-named implementation
-      addRoutine: (routine) => {
-        const id = generateRandomId();
-        const now = getCurrentUTCTimestamp();
-        const newRoutine: GuestRoutine = {
-          ...routine,
-          id,
-          created_at: now,
-          updated_at: now,
-        };
-
-        set((state) => ({
-          routines: [...(state.routines || []), newRoutine],
-        }));
-
-        return id;
-      },
-      updateRoutine: (id, updates) => {
-        const now = getCurrentUTCTimestamp();
-        set((state) => ({
-          routines: (state.routines || []).map((routine) =>
-            routine.id === id
-              ? {
-                  ...routine,
-                  ...updates,
-                  updated_at: now,
-                }
-              : routine,
-          ),
-        }));
-      },
-      // Routine-named implementation
-      deleteRoutine: (id) => {
-        set((state) => ({
-          routines: (state.routines || []).filter((routine) => routine.id !== id),
-        }));
-      },
-      // Routine-named implementation
-      createRoutineFromWorkout: (workoutName, exercises) => {
-        const id = generateRandomId();
-        const now = getCurrentUTCTimestamp();
-
-        const routineExercises: GuestRoutineExercise[] = exercises.map(
-          (exercise) => ({
-            id: generateRandomId(),
-            exercise_type_id: exercise.exercise_type_id,
-            exercise_type: exercise.exercise_type,
-            sets: exercise.exercise_sets.map((set) => ({
-              id: generateRandomId(),
-              reps: set.reps,
-              intensity: set.intensity,
-              intensity_unit_id: set.intensity_unit_id,
-              rest_time_seconds: set.rest_time_seconds,
-            })),
-            notes: exercise.notes || null,
-          }),
-        );
-
-        const newRoutine: GuestRoutine = {
-          id,
-          name: workoutName || "My Routine",
-          exercises: routineExercises,
-          created_at: now,
-          updated_at: now,
-        };
-
-        set((state) => ({
-          routines: [...(state.routines || []), newRoutine],
-        }));
-
-        return id;
-      },
-      // Routine-named implementation
       createExercisesFromRoutine: (routine, workoutId) => {
         const exerciseIds: string[] = [];
         const { addExercise, addExerciseSet } = get();
 
-        routine.exercises.forEach((routineExercise) => {
+        routine.exercise_templates.forEach((routineExercise) => {
+          const exerciseType = routineExercise.exercise_type;
+          if (!exerciseType) {
+            return;
+          }
+
           const exerciseId = addExercise({
             workout_id: workoutId,
-            exercise_type_id: routineExercise.exercise_type_id,
-            exercise_type: routineExercise.exercise_type,
-            notes: routineExercise.notes,
+            exercise_type_id: String(routineExercise.exercise_type_id),
+            exercise_type: {
+              id: String(exerciseType.id),
+              name: exerciseType.name,
+              description: exerciseType.description ?? null,
+              default_intensity_unit: exerciseType.default_intensity_unit,
+              times_used: exerciseType.times_used,
+            },
+            notes: null,
             timestamp: getCurrentUTCTimestamp(),
           });
 
           exerciseIds.push(exerciseId);
 
-          routineExercise.sets.forEach((routineSet) => {
+          routineExercise.set_templates.forEach((routineSet) => {
             addExerciseSet({
               exercise_id: exerciseId,
-              reps: routineSet.reps,
-              intensity: routineSet.intensity,
+              reps: routineSet.reps ?? null,
+              intensity: routineSet.intensity ?? null,
               intensity_unit_id: routineSet.intensity_unit_id,
-              rest_time_seconds: routineSet.rest_time_seconds,
+              rest_time_seconds: null,
               done: false,
             });
           });
@@ -849,18 +722,16 @@ export const useGuestStore = create<GuestStore>()(
     {
       name: "pe-guest-data",
       storage: createJSONStorage(() => createIndexedDBStorage()),
-      version: 2,
       // Persist only data fields; exclude ephemeral flags/actions
       partialize: (state) => ({
         workouts: state.workouts,
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
-        routines: state.routines,
         hasAttemptedSync: state.hasAttemptedSync,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
-        if (persistedVersion == null || persistedVersion < 2) {
+        if (persistedVersion == null || persistedVersion < 3) {
           const guest = migrateGuestData(persistedState);
           return {
             ...getInitialGuestData(),
@@ -873,6 +744,7 @@ export const useGuestStore = create<GuestStore>()(
         // Already at current version — return as-is
         return persistedState as GuestState;
       },
+      version: 3,
       onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);

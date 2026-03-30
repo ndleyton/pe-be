@@ -12,6 +12,7 @@ import {
 import { ExerciseList, ExerciseTypeModal } from "@/features/exercises/components";
 import { FinishWorkoutModal } from "@/features/workouts/components";
 import { type Workout } from "@/features/workouts/types";
+import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
@@ -21,7 +22,6 @@ import {
   useGuestStore,
   useAuthStore,
   useUIStore,
-  GuestRoutine,
   GuestExerciseType,
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
@@ -91,7 +91,7 @@ const WorkoutPage = () => {
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
 
-  const routine = location.state?.routine as GuestRoutine | undefined;
+  const routine = location.state?.routine as Routine | undefined;
   const shouldScrollToBottomOnLoad = Boolean(
     location.state?.scrollToBottomOnLoad,
   );
@@ -628,7 +628,7 @@ const WorkoutPage = () => {
         onCancel={handleCancelFinish}
         isLoading={isAuthenticated && finishWorkoutMutation.isPending}
         exercises={exercises}
-        onSaveRoutine={handleSaveRoutine}
+        onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
         workoutName={workoutName || undefined}
       />
 

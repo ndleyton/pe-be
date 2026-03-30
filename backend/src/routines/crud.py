@@ -139,22 +139,28 @@ async def get_public_routine_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_user_routines(
-    session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
+async def get_visible_routines(
+    session: AsyncSession,
+    user_id: int | None,
+    offset: int = 0,
+    limit: int = 100,
 ) -> List[Routine]:
-    """Get all routines visible to a specific user with pagination."""
-    result = await session.execute(
-        _routine_detail_query()
-        .where(
+    """Get routines visible to the current viewer with pagination."""
+    query = _routine_detail_query().order_by(Routine.created_at.desc()).offset(offset).limit(limit)
+
+    if user_id is None:
+        query = query.where(
+            Routine.visibility == Routine.RoutineVisibility.public
+        )
+    else:
+        query = query.where(
             or_(
                 Routine.creator_id == user_id,
                 Routine.visibility == Routine.RoutineVisibility.public,
             )
         )
-        .order_by(Routine.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+
+    result = await session.execute(query)
     return result.scalars().all()
 
 

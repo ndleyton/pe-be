@@ -11,10 +11,10 @@ import {
 } from "vitest";
 
 import {
-  makeGuestRoutine,
-  makeGuestRoutineExercise,
-  makeGuestRoutineSet,
   makeGuestWorkoutType,
+  makeRoutine,
+  makeRoutineExerciseTemplate,
+  makeRoutineSetTemplate,
 } from "@/test/fixtures";
 
 const mockNavigate = vi.fn();
@@ -92,7 +92,7 @@ describe("useStartWorkoutFromRoutine", () => {
   });
 
   it("starts a server workout for authenticated users", async () => {
-    const routine = makeGuestRoutine({ id: "42", name: "Push Day" });
+    const routine = makeRoutine({ id: 42, name: "Push Day" });
     const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
       wrapper: createWrapper(),
     });
@@ -116,12 +116,12 @@ describe("useStartWorkoutFromRoutine", () => {
     });
     mockGuestState.workoutTypes = [fallbackWorkoutType, defaultWorkoutType];
 
-    const routine = makeGuestRoutine({
-      id: "guest-routine-42",
+    const routine = makeRoutine({
+      id: 42,
       name: "Push Day",
-      exercises: [
-        makeGuestRoutineExercise({
-          sets: [makeGuestRoutineSet()],
+      exercise_templates: [
+        makeRoutineExerciseTemplate({
+          set_templates: [makeRoutineSetTemplate()],
         }),
       ],
     });
@@ -156,7 +156,7 @@ describe("useStartWorkoutFromRoutine", () => {
     });
     mockGuestState.workoutTypes = [fallbackWorkoutType];
 
-    const routine = makeGuestRoutine({ id: "guest-routine-42" });
+    const routine = makeRoutine({ id: 42 });
     const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
       wrapper: createWrapper(),
     });

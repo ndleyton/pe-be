@@ -2,11 +2,12 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { startWorkoutFromRoutine as startWorkoutFromRoutineRequest } from "@/features/routines/api";
+import type { Routine } from "@/features/routines/types";
 import {
   DATE_LABEL_LOCALE,
   DATE_LABEL_OPTIONS,
 } from "@/features/routines/lib/routineEditor";
-import { useAuthStore, useGuestStore, type GuestRoutine } from "@/stores";
+import { useAuthStore, useGuestStore } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
 const DEFAULT_GUEST_WORKOUT_TYPE_ID = "8";
@@ -24,12 +25,10 @@ export const useStartWorkoutFromRoutine = () => {
   const addGuestWorkout = useGuestStore((state) => state.addWorkout);
 
   return useCallback(
-    async (routine: GuestRoutine) => {
+    async (routine: Routine) => {
       try {
         if (isAuthenticated) {
-          const newWorkout = await startWorkoutFromRoutineRequest(
-            Number(routine.id),
-          );
+          const newWorkout = await startWorkoutFromRoutineRequest(routine.id);
           navigate(`/workouts/${newWorkout.id}`);
           return;
         }

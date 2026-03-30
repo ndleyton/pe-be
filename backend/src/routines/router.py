@@ -15,14 +15,20 @@ router = APIRouter(tags=["routines"])
 
 
 @router.get("/", response_model=List[RoutineRead])
-async def get_user_routines(
-    user: User = Depends(current_active_user),
+async def get_visible_routines(
+    user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
     offset: int = 0,
     limit: int = 100,
 ):
-    """Get all routines for the authenticated user"""
-    return await routine_service.get_user_routines(session, user.id, offset, limit)
+    """Get routines visible to the current viewer.
+
+    Signed-out users receive only public routines.
+    Signed-in users receive their own routines plus public routines.
+    """
+    return await routine_service.get_visible_routines(
+        session, user.id if user else None, offset, limit
+    )
 
 
 @router.get("/{routine_id}", response_model=RoutineRead)

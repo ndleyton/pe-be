@@ -7,20 +7,7 @@ import {
 } from "@/features/routines/lib/routinePermissions";
 
 describe("routinePermissions", () => {
-  it("allows guests to edit their local routines", () => {
-    const routine = makeRoutine();
-
-    expect(
-      canEditRoutine({
-        currentUserId: null,
-        isGuestRoutine: true,
-        isAuthenticated: false,
-        routine,
-      }),
-    ).toBe(true);
-  });
-
-  it("allows the creator to edit a non-readonly routine", () => {
+  it("allows the creator to edit a routine", () => {
     const routine = makeRoutine({
       creator_id: 42,
       is_readonly: false,
@@ -29,7 +16,6 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
-        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -46,7 +32,6 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
-        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -54,7 +39,6 @@ describe("routinePermissions", () => {
     expect(
       getRoutineEditAccessMessage({
         currentUserId: 42,
-        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -71,25 +55,8 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
-        isGuestRoutine: false,
         isAuthenticated: true,
         isSuperuser: true,
-        routine,
-      }),
-    ).toBe(true);
-  });
-
-  it("still allows the owner to edit a readonly routine", () => {
-    const routine = makeRoutine({
-      creator_id: 42,
-      is_readonly: true,
-    });
-
-    expect(
-      canEditRoutine({
-        currentUserId: 42,
-        isGuestRoutine: false,
-        isAuthenticated: true,
         routine,
       }),
     ).toBe(true);
@@ -104,7 +71,6 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: null,
-        isGuestRoutine: false,
         isAuthenticated: false,
         routine,
       }),
@@ -112,7 +78,6 @@ describe("routinePermissions", () => {
     expect(
       getRoutineEditAccessMessage({
         currentUserId: null,
-        isGuestRoutine: false,
         isAuthenticated: false,
         routine,
       }),

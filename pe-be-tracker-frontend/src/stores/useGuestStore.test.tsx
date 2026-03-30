@@ -4,9 +4,7 @@ import {
   addGuestExercise,
   addGuestSet,
   addGuestWorkout,
-  makeGuestRoutineExercise,
-  makeGuestRoutineInput,
-  makeGuestRoutineSet,
+  makeRoutine,
 } from "@/test/fixtures";
 import { useGuestStore } from "./useGuestStore";
 
@@ -53,7 +51,6 @@ describe("useGuestStore", () => {
     expect(state.workouts).toEqual([]);
     expect(state.exerciseTypes).toHaveLength(22); // Updated default exercise types
     expect(state.workoutTypes).toHaveLength(4); // Default workout types
-    expect(state.routines.length).toBeGreaterThan(0); // Seeded routines available in guest mode
     expect(state.hasAttemptedSync).toBe(false);
   });
 
@@ -320,126 +317,56 @@ describe("useGuestStore", () => {
     expect(touchedSetAfter.done).toBe(true);
   });
 
-  it("creates and manages routines", () => {
-    const { result } = renderHook(() => useGuestStore());
-
-    const initialLen = result.current.routines.length;
-    let routineId = "";
-    act(() => {
-      routineId = result.current.addRoutine(makeGuestRoutineInput());
-    });
-
-    const state = result.current;
-    expect(state.routines.length).toBe(initialLen + 1);
-    const created = state.routines.find((r) => r.id === routineId)!;
-    expect(created.name).toBe("Test Routine");
-    expect(created.description).toBe("A test routine");
-  });
-
-  it("creates routine from workout", () => {
-    const { result } = renderHook(() => useGuestStore());
-    let workoutId!: string;
-    let exerciseId!: string;
-
-    // Create workout with exercise and sets
-    act(() => {
-      workoutId = addGuestWorkout(result.current);
-      exerciseId = addGuestExercise(result.current, workoutId, {
-        notes: "Exercise notes",
-      });
-
-      addGuestSet(result.current, exerciseId);
-    });
-
-    // Create routine from workout
-    let routineId = "";
-    act(() => {
-      const workout = result.current.workouts.find((w) => w.id === workoutId)!;
-      routineId = result.current.createRoutineFromWorkout(
-        "My Routine",
-        workout.exercises,
-      );
-    });
-
-    const state = result.current;
-    const routine = state.routines.find((r) => r.id === routineId)!;
-    expect(routine.name).toBe("My Routine");
-    expect(routine.exercises).toHaveLength(1);
-    expect(routine.exercises[0].sets).toHaveLength(1);
-    expect(routine.exercises[0].sets[0].reps).toBe(10);
-  });
-
-  it("creates routine from workout", () => {
-    const { result } = renderHook(() => useGuestStore());
-    let workoutId!: string;
-    let exerciseId!: string;
-
-    // Create workout with exercise and sets
-    act(() => {
-      workoutId = addGuestWorkout(result.current);
-      exerciseId = addGuestExercise(result.current, workoutId, {
-        notes: "Exercise notes",
-      });
-
-      addGuestSet(result.current, exerciseId);
-    });
-
-    // Create routine from workout
-    let routineId = "";
-    act(() => {
-      const workout = result.current.workouts.find((w) => w.id === workoutId)!;
-      routineId = result.current.createRoutineFromWorkout(
-        "My Routine",
-        workout.exercises,
-      );
-    });
-
-    const state = result.current;
-    const routine = state.routines.find((r) => r.id === routineId)!;
-    expect(routine.name).toBe("My Routine");
-    expect(routine.exercises).toHaveLength(1);
-    expect(routine.exercises[0].sets).toHaveLength(1);
-    expect(routine.exercises[0].sets[0].reps).toBe(10);
-  });
-
-  it("creates exercises from routine", () => {
+  it("creates exercises from a server routine", () => {
     const { result } = renderHook(() => useGuestStore());
     let workoutId!: string;
 
-    // Create workout and routine
     act(() => {
       workoutId = addGuestWorkout(result.current);
+    });
 
-      result.current.addRoutine(
-        makeGuestRoutineInput({
-          exercises: [
-            makeGuestRoutineExercise({
-              exercise_type: result.current.exerciseTypes[0],
-              sets: [
-                makeGuestRoutineSet({
-                  reps: 12,
-                  intensity: 60,
-                  intensity_unit_id: 2,
-                  rest_time_seconds: 90,
-                }),
-              ],
-              notes: "From routine",
-            }),
+    const routine = makeRoutine({
+      exercise_templates: [
+        {
+          id: 11,
+          exercise_type_id: 7,
+          created_at: "2024-01-01T10:00:00Z",
+          updated_at: "2024-01-01T10:00:00Z",
+          exercise_type: {
+            id: 7,
+            name: "Bench Press",
+            description: "Chest press",
+            default_intensity_unit: 2,
+            times_used: 0,
+          },
+          set_templates: [
+            {
+              id: 21,
+              reps: 12,
+              intensity: 60,
+              intensity_unit_id: 2,
+              created_at: "2024-01-01T10:00:00Z",
+              updated_at: "2024-01-01T10:00:00Z",
+              intensity_unit: {
+                id: 2,
+                name: "Kilograms",
+                abbreviation: "kg",
+              },
+            },
           ],
-        }),
-      );
+        },
+      ],
     });
 
-    // Create exercises from the newly added routine (last item)
     act(() => {
-      const routine = result.current.routines[result.current.routines.length - 1];
       result.current.createExercisesFromRoutine(routine, workoutId);
     });
 
     const state = result.current;
     const workout = state.workouts.find((w) => w.id === workoutId)!;
     expect(workout.exercises).toHaveLength(1);
-    expect(workout.exercises[0].notes).toBe("From routine");
+    expect(workout.exercises[0].notes).toBeNull();
+    expect(workout.exercises[0].exercise_type.name).toBe("Bench Press");
     expect(workout.exercises[0].exercise_sets).toHaveLength(1);
     expect(workout.exercises[0].exercise_sets[0].reps).toBe(12);
     expect(workout.exercises[0].exercise_sets[0].done).toBe(false);
@@ -549,24 +476,16 @@ describe("useGuestStore", () => {
       workouts: freshResult.current.workouts,
       exerciseTypes: freshResult.current.exerciseTypes,
       workoutTypes: freshResult.current.workoutTypes,
-      routines: freshResult.current.routines,
       hasAttemptedSync: freshResult.current.hasAttemptedSync,
     };
 
     // Add some data to the clear test store
-    const initialClearRoutinesLen = clearResult.current.routines.length;
     act(() => {
       addGuestWorkout(clearResult.current);
-      clearResult.current.addRoutine(
-        makeGuestRoutineInput({
-          description: undefined,
-        }),
-      );
     });
 
     // Verify data was added
     expect(clearResult.current.workouts).toHaveLength(1);
-    expect(clearResult.current.routines.length).toBe(initialClearRoutinesLen + 1);
 
     // Clear the store
     act(() => {
@@ -578,17 +497,11 @@ describe("useGuestStore", () => {
       workouts: clearResult.current.workouts,
       exerciseTypes: clearResult.current.exerciseTypes,
       workoutTypes: clearResult.current.workoutTypes,
-      routines: clearResult.current.routines,
       hasAttemptedSync: clearResult.current.hasAttemptedSync,
     };
 
     // Compare structures (excluding specific IDs since they're random)
     expect(clearedState.workouts).toEqual(freshState.workouts);
-    // Routines are seeded with random IDs; compare stable fields
-    expect(clearedState.routines.length).toBe(freshState.routines.length);
-    expect(clearedState.routines.map((r) => r.name)).toEqual(
-      freshState.routines.map((r) => r.name),
-    );
     expect(clearedState.hasAttemptedSync).toEqual(freshState.hasAttemptedSync);
 
     // Compare exercise types (same count and names)
@@ -623,7 +536,6 @@ describe("useGuestStore", () => {
 
     const state = result.current;
     expect(state.workouts).toEqual([]);
-    expect(state.routines.length).toBeGreaterThan(0);
     expect(state.hasAttemptedSync).toBe(false);
     // Should still have default exercise types and workout types
     expect(state.exerciseTypes.length).toBeGreaterThan(0);

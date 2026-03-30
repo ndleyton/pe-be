@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { clearGuestData, seedGuestData } from "./utils/storage";
+import { clearGuestData } from "./utils/storage";
 
 const apiBase = "**/api/v1";
 
@@ -453,7 +453,7 @@ test.describe("Routine editor", () => {
     ).toBeVisible();
   });
 
-  test("guest users start workouts from the current editor state, not stale routine data", async ({
+  test("unauthenticated users can start a workout from a public routine", async ({
     page,
   }) => {
     const guestAuthHandler = (route: any) => {
@@ -465,84 +465,91 @@ test.describe("Routine editor", () => {
     await page.route("**/users/me", guestAuthHandler);
     await page.route(`${apiBase}/users/me`, guestAuthHandler);
 
-    await page.goto("/workouts");
-    await page.waitForURL(/\/workouts$/);
-
-    await seedGuestData(page, {
-      workouts: [],
-      exerciseTypes: [
-        {
-          id: "1",
-          name: "Push-ups",
-          description: null,
-          default_intensity_unit: 1,
-          times_used: 0,
-        },
-        {
-          id: "2",
-          name: "Squat",
-          description: null,
-          default_intensity_unit: 2,
-          times_used: 0,
-        },
-      ],
-      workoutTypes: [
-        { id: "8", name: "Other", description: "General workout session" },
-      ],
-      routines: [
-        {
-          id: "routine-1",
+    await page.route("**/api/v1/routines/321*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 321,
           name: "Starter Routine",
-          exercises: [
+          description: "Public quick start",
+          workout_type_id: 4,
+          creator_id: 999,
+          visibility: "public",
+          is_readonly: false,
+          created_at: "2026-03-10T10:00:00.000Z",
+          updated_at: "2026-03-10T10:00:00.000Z",
+          exercise_templates: [
             {
-              id: "ex-1",
-              exercise_type_id: "1",
+              id: 7001,
+              exercise_type_id: 11,
+              created_at: "2026-03-10T10:00:00.000Z",
+              updated_at: "2026-03-10T10:00:00.000Z",
               exercise_type: {
-                id: "1",
-                name: "Push-ups",
-                description: "",
-                default_intensity_unit: 1,
-                times_used: 0,
+                id: 11,
+                name: "Bench Press",
+                description: "Chest press",
+                default_intensity_unit: 3,
+                times_used: 10,
               },
-              sets: [
+              set_templates: [
                 {
-                  id: "set-1",
-                  reps: 10,
-                  intensity: null,
-                  intensity_unit_id: 1,
-                  rest_time_seconds: null,
+                  id: 8001,
+                  reps: 8,
+                  intensity: 135,
+                  intensity_unit_id: 3,
+                  created_at: "2026-03-10T10:00:00.000Z",
+                  updated_at: "2026-03-10T10:00:00.000Z",
+                  intensity_unit: {
+                    id: 3,
+                    name: "Pounds",
+                    abbreviation: "lbs",
+                  },
                 },
               ],
-              notes: null,
+            },
+            {
+              id: 7002,
+              exercise_type_id: 22,
+              created_at: "2026-03-10T10:00:00.000Z",
+              updated_at: "2026-03-10T10:00:00.000Z",
+              exercise_type: {
+                id: 22,
+                name: "Pull Up",
+                description: "Vertical pull",
+                default_intensity_unit: 1,
+                times_used: 8,
+              },
+              set_templates: [
+                {
+                  id: 8002,
+                  reps: 5,
+                  intensity: null,
+                  intensity_unit_id: 1,
+                  created_at: "2026-03-10T10:00:00.000Z",
+                  updated_at: "2026-03-10T10:00:00.000Z",
+                  intensity_unit: {
+                    id: 1,
+                    name: "Bodyweight",
+                    abbreviation: "bw",
+                  },
+                },
+              ],
             },
           ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
+        }),
+      });
     });
 
-    await page.reload();
-    await page.goto("/routines/routine-1");
+    await page.goto("/routines/321");
     await expect(
-      page.getByRole("heading", { name: "Routine Editor" }),
+      page.getByRole("heading", { name: "Routine Details" }),
     ).toBeVisible();
-
-    await page.getByTestId("routine-name-input").fill("Edited Guest Routine");
-    await page.getByTestId("add-routine-exercise-button").click();
-    await expect(
-      page.getByRole("heading", { name: "Select Exercise Type" }),
-    ).toBeVisible();
-    await page.getByText("Squat", { exact: true }).click();
-    await page.getByTestId("routine-set-reps-1-0").fill("5");
 
     await page.getByTestId("start-routine-workout-button").click();
 
     await expect(page).toHaveURL(/\/workouts\/.+$/);
-    await expect(
-      page.getByRole("heading", { name: /Edited Guest Routine/i, level: 2 }),
-    ).toBeVisible();
-    await expect(page.getByText("Push-ups", { exact: true })).toBeVisible();
-    await expect(page.getByText("Squat", { exact: true })).toBeVisible();
+    await expect(page.getByText("Bench Press", { exact: true })).toBeVisible();
+    await expect(page.getByText("Pull Up", { exact: true })).toBeVisible();
   });
 });

@@ -377,3 +377,59 @@ async def test_unauthenticated_users_can_view_public_routine_only(
 
     private_resp = await async_client.get(f"/api/v1/routines/{private_routine_id}")
     assert private_resp.status_code == 404, private_resp.text
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_unauthenticated_users_list_only_public_routines(
+    db_session: AsyncSession,
+    async_client: AsyncClient,
+):
+    """Unauthenticated users can list public routines but not private/link-only ones."""
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    owner = User(
+        email="routine-public-list-owner@example.com",
+        hashed_password="not-used-in-tests",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add_all([workout_type, owner])
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            Routine(
+                name="Public Routine",
+                description="Visible to signed-out visitors",
+                workout_type_id=workout_type.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.public,
+                is_readonly=True,
+            ),
+            Routine(
+                name="Private Routine",
+                description="Hidden from signed-out visitors",
+                workout_type_id=workout_type.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.private,
+                is_readonly=False,
+            ),
+            Routine(
+                name="Link Only Routine",
+                description="Not listed publicly",
+                workout_type_id=workout_type.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.link_only,
+                is_readonly=True,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    resp = await async_client.get("/api/v1/routines/?offset=0&limit=10")
+    assert resp.status_code == 200, resp.text
+
+    names = {item["name"] for item in resp.json()}
+    assert names == {"Public Routine"}

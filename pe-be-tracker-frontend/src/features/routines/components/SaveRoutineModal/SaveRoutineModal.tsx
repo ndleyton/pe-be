@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGuestStore, useAuthStore, GuestExercise } from "@/stores";
+import { useAuthStore } from "@/stores";
 import { Exercise, updateExerciseSet } from "@/features/exercises/api";
 import { createRoutine, type CreateRoutineData } from "@/features/routines/api";
 import { Button } from "@/shared/components/ui/button";
@@ -22,38 +22,6 @@ interface SaveRoutineModalProps {
   workoutTypeId?: number | string | null;
 }
 
-const convertToGuestExercises = (exercises: Exercise[]): GuestExercise[] => {
-  return exercises.map(
-    (exercise): GuestExercise => ({
-      id: exercise.id as string,
-      timestamp: exercise.timestamp,
-      notes: exercise.notes,
-      exercise_type_id: exercise.exercise_type_id as string,
-      workout_id: exercise.workout_id as string,
-      created_at: exercise.created_at,
-      updated_at: exercise.updated_at,
-      exercise_type: {
-        id: exercise.exercise_type.id.toString(),
-        name: exercise.exercise_type.name,
-        description: exercise.exercise_type.description,
-        default_intensity_unit: exercise.exercise_type.default_intensity_unit,
-        times_used: exercise.exercise_type.times_used || 0,
-      },
-      exercise_sets: exercise.exercise_sets.map((set) => ({
-        id: set.id as string,
-        reps: set.reps,
-        intensity: set.intensity,
-        intensity_unit_id: set.intensity_unit_id,
-        exercise_id: set.exercise_id as string,
-        rest_time_seconds: set.rest_time_seconds,
-        done: set.done,
-        created_at: set.created_at,
-        updated_at: set.updated_at,
-      })),
-    }),
-  );
-};
-
 export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   isOpen,
   onClose,
@@ -63,7 +31,6 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   workoutTypeId,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const guestActions = useGuestStore();
   const queryClient = useQueryClient();
   const [routineName, setRoutineName] = useState(workoutName || "My Routine");
   const [isLoading, setIsLoading] = useState(false);
@@ -95,34 +62,30 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
 
   const handleSave = async () => {
     if (!routineName.trim()) return;
+    if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      if (isAuthenticated) {
-        if (workoutTypeId == null) {
-          throw new Error("Workout type is required to save a routine");
-        }
+      if (workoutTypeId == null) {
+        throw new Error("Workout type is required to save a routine");
+      }
 
-        await updateExerciseSetsDoneStatus();
-        const routineData: CreateRoutineData = {
-          name: routineName,
-          workout_type_id: Number(workoutTypeId),
-          exercise_templates: exercises.map((exercise) => ({
-            exercise_type_id: Number(exercise.exercise_type_id),
-            set_templates: exercise.exercise_sets.map((set) => ({
-              reps: set.reps,
-              intensity: set.intensity,
-              intensity_unit_id: Number(set.intensity_unit_id),
-            })),
+      await updateExerciseSetsDoneStatus();
+      const routineData: CreateRoutineData = {
+        name: routineName,
+        workout_type_id: Number(workoutTypeId),
+        exercise_templates: exercises.map((exercise) => ({
+          exercise_type_id: Number(exercise.exercise_type_id),
+          set_templates: exercise.exercise_sets.map((set) => ({
+            reps: set.reps,
+            intensity: set.intensity,
+            intensity_unit_id: Number(set.intensity_unit_id),
           })),
-        };
-        await createRoutine(routineData);
-        queryClient.invalidateQueries({ queryKey: ["routines"] });
-        if (workoutId) {
-          queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-        }
-      } else {
-        const guestExercises = convertToGuestExercises(exercises);
-        guestActions.createRoutineFromWorkout(routineName, guestExercises);
+        })),
+      };
+      await createRoutine(routineData);
+      queryClient.invalidateQueries({ queryKey: ["routines"] });
+      if (workoutId) {
+        queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
       }
 
       // Show success message
@@ -233,7 +196,8 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
                 disabled={
                   !routineName.trim() ||
                   isLoading ||
-                  (isAuthenticated && workoutTypeId == null)
+                  !isAuthenticated ||
+                  workoutTypeId == null
                 }
                 className="flex-1"
               >

@@ -5,25 +5,18 @@ import { getIntensityUnits } from "@/features/exercises/api";
 import { getRoutine } from "@/features/routines/api";
 import {
   guestIntensityUnits,
-  toRoutineFromGuest,
   type RoutineIntensityUnitOption,
 } from "@/features/routines/lib/routineEditor";
 import {
   canEditRoutine,
   getRoutineEditAccessMessage,
 } from "@/features/routines/lib/routinePermissions";
-import { useAuthStore, useGuestStore } from "@/stores";
+import { useAuthStore } from "@/stores";
 
 export const useRoutineDetailsData = (routineId: string | undefined) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentUser = useAuthStore((state) => state.user);
-
-  const guestRoutine = useGuestStore((state) =>
-    state.routines.find((routine) => routine.id === routineId),
-  );
-  const isGuestRoutine = guestRoutine != null;
-  const canFetchServerRoutine =
-    routineId != null && /^\d+$/.test(routineId) && !isGuestRoutine;
+  const canFetchServerRoutine = routineId != null && /^\d+$/.test(routineId);
 
   const {
     data: serverRoutine,
@@ -57,18 +50,13 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   );
 
   const routine = useMemo(() => {
-    if (guestRoutine) {
-      return toRoutineFromGuest(guestRoutine);
-    }
-
     return serverRoutine ?? null;
-  }, [guestRoutine, serverRoutine]);
+  }, [serverRoutine]);
 
   const canEdit = useMemo(
     () =>
       canEditRoutine({
         currentUserId: currentUser?.id,
-        isGuestRoutine,
         isAuthenticated,
         isSuperuser: currentUser?.is_superuser,
         routine,
@@ -77,7 +65,6 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
       currentUser?.id,
       currentUser?.is_superuser,
       isAuthenticated,
-      isGuestRoutine,
       routine,
     ],
   );
@@ -86,7 +73,6 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
     () =>
       getRoutineEditAccessMessage({
         currentUserId: currentUser?.id,
-        isGuestRoutine,
         isAuthenticated,
         isSuperuser: currentUser?.is_superuser,
         routine,
@@ -95,7 +81,6 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
       currentUser?.id,
       currentUser?.is_superuser,
       isAuthenticated,
-      isGuestRoutine,
       routine,
     ],
   );
@@ -104,11 +89,10 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
     availableIntensityUnits,
     canEdit,
     editAccessMessage,
-    guestRoutine,
     isAuthenticated,
     routine,
     routineError,
-    routinePending,
+    routinePending: canFetchServerRoutine ? routinePending : false,
     unitsPending,
   };
 };

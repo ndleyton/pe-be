@@ -1,4 +1,4 @@
-import { GuestRoutine } from "@/stores";
+import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -10,17 +10,17 @@ import {
 import { Link } from "react-router-dom";
 
 interface RoutineQuickStartCardProps {
-  routine: GuestRoutine;
-  onStartWorkout: (routine: GuestRoutine) => void;
+  routine: Routine;
+  onStartWorkout: (routine: Routine) => void;
 }
 
 export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
 }: RoutineQuickStartCardProps) => {
-  const exerciseCount = routine.exercises.length;
-  const totalSets = routine.exercises.reduce(
-    (total, exercise) => total + exercise.sets.length,
+  const exerciseCount = routine.exercise_templates.length;
+  const totalSets = routine.exercise_templates.reduce(
+    (total, exercise) => total + exercise.set_templates.length,
     0,
   );
 
@@ -44,16 +44,16 @@ export const RoutineQuickStartCard = ({
       </CardHeader>
       <CardContent className="pt-0">
         <div>
-          {routine.exercises.slice(0, 3).map((exercise) => (
+          {routine.exercise_templates.slice(0, 3).map((exercise) => (
             <div key={exercise.id} className="text-muted-foreground text-sm">
-              {exercise.exercise_type.name} • {exercise.sets.length} set
-              {exercise.sets.length !== 1 ? "s" : ""}
+              {exercise.exercise_type?.name ?? "Unknown Exercise"} • {exercise.set_templates.length} set
+              {exercise.set_templates.length !== 1 ? "s" : ""}
             </div>
           ))}
-          {routine.exercises.length > 3 && (
+          {routine.exercise_templates.length > 3 && (
             <div className="text-muted-foreground text-sm">
-              +{routine.exercises.length - 3} more exercise
-              {routine.exercises.length - 3 !== 1 ? "s" : ""}
+              +{routine.exercise_templates.length - 3} more exercise
+              {routine.exercise_templates.length - 3 !== 1 ? "s" : ""}
             </div>
           )}
         </div>

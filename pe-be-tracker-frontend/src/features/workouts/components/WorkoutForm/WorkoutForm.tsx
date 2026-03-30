@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import type { Routine } from "@/features/routines/types";
 import api from "@/shared/api/client";
 import {
   toUTCISOString,
@@ -12,7 +13,6 @@ import WorkoutTypeModal, { WorkoutType } from "../WorkoutTypeModal";
 import {
   useGuestStore,
   useAuthStore,
-  GuestRoutine,
   GuestWorkoutType,
 } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
@@ -27,7 +27,7 @@ interface WorkoutFormData {
 
 interface WorkoutFormProps {
   onWorkoutCreated: (newWorkoutId: number | string) => void; // Can be number (server) or string (guest)
-  routine?: GuestRoutine | null;
+  routine?: Routine | null;
 }
 
 const createWorkout = async (data: WorkoutFormData) => {
@@ -222,12 +222,15 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
             </span>
           </div>
           <div className="text-muted-foreground text-sm">
-            {routine.exercises.length} exercise
-            {routine.exercises.length !== 1 ? "s" : ""} •{" "}
-            {routine.exercises.reduce((total, ex) => total + ex.sets.length, 0)}{" "}
+            {routine.exercise_templates.length} exercise
+            {routine.exercise_templates.length !== 1 ? "s" : ""} •{" "}
+            {routine.exercise_templates.reduce(
+              (total, ex) => total + ex.set_templates.length,
+              0,
+            )}{" "}
             set
-            {routine.exercises.reduce(
-              (total, ex) => total + ex.sets.length,
+            {routine.exercise_templates.reduce(
+              (total, ex) => total + ex.set_templates.length,
               0,
             ) !== 1
               ? "s"

@@ -23,11 +23,15 @@ from src.exercise_sets.crud import create_exercise_set
 class RoutineService:
     """Service layer for routine operations."""
 
-    async def get_user_routines(
-        self, session: AsyncSession, user_id: int, offset: int, limit: int
+    async def get_visible_routines(
+        self,
+        session: AsyncSession,
+        user_id: int | None,
+        offset: int,
+        limit: int,
     ) -> List[RoutineRead]:
-        """Get all routines for a user with pagination."""
-        routines = await crud.get_user_routines(session, user_id, offset, limit)
+        """Get routines visible to the current viewer with pagination."""
+        routines = await crud.get_visible_routines(session, user_id, offset, limit)
         return [RoutineRead.model_validate(routine) for routine in routines]
 
     async def get_routine(

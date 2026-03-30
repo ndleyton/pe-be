@@ -2,7 +2,8 @@ import React from "react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
-import { useGuestStore, useAuthStore, GuestRoutine } from "@/stores";
+import type { Routine } from "@/features/routines/types";
+import { useGuestStore, useAuthStore } from "@/stores";
 import { useNavigate } from "react-router-dom";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WorkoutForm } from "@/features/workouts/components";
@@ -80,7 +81,7 @@ const MyWorkoutsPage = () => {
   };
 
   const [selectedRoutine, setSelectedRoutine] =
-    React.useState<GuestRoutine | null>(null);
+    React.useState<Routine | null>(null);
 
   // preloading of the WorkoutPage lazy chunk to speed up navigation
   const preloadedRef = React.useRef(false);

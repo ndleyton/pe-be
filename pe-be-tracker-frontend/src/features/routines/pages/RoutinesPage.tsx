@@ -4,7 +4,7 @@ import { getRoutines } from "@/features/routines/api";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import type { Routine } from "@/features/routines/types";
 import { RoutineQuickStartCard } from "@/features/routines/components";
-import type { GuestRoutine } from "@/stores";
+import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -26,6 +26,7 @@ const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const {
     data: routines,
@@ -34,7 +35,7 @@ const RoutinesPage = () => {
     hasMore,
     error,
   } = useInfiniteScroll<Routine>({
-    queryKey: ["routines", orderBy],
+    queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
   });
@@ -49,41 +50,6 @@ const RoutinesPage = () => {
           routine.description.toLowerCase().includes(searchTerm.toLowerCase())),
     );
   }, [routines, searchTerm]);
-
-  const convertToGuestRoutine = (routine: Routine): GuestRoutine => ({
-    id: String(routine.id),
-    name: routine.name,
-    description: routine.description,
-    exercises: (routine.exercise_templates || []).map((t: any) => ({
-      id: String(t.id),
-      exercise_type_id: String(t.exercise_type_id),
-      exercise_type: t.exercise_type
-        ? {
-          id: String(t.exercise_type.id),
-          name: t.exercise_type.name,
-          description: t.exercise_type.description || "",
-          default_intensity_unit: t.exercise_type.default_intensity_unit,
-          times_used: t.exercise_type.times_used,
-        }
-        : {
-          id: String(t.exercise_type_id),
-          name: "Unknown Exercise",
-          description: "",
-          default_intensity_unit: 1,
-          times_used: 0,
-        },
-      sets: (t.set_templates || []).map((s: any) => ({
-        id: String(s.id),
-        reps: s.reps ?? null,
-        intensity: s.intensity ?? null,
-        intensity_unit_id: s.intensity_unit_id,
-        rest_time_seconds: null,
-      })),
-      notes: null,
-    })),
-    created_at: routine.created_at,
-    updated_at: routine.updated_at,
-  });
 
   if (error) {
     return (
@@ -159,7 +125,7 @@ const RoutinesPage = () => {
             {filteredRoutines.map((routine) => (
               <RoutineQuickStartCard
                 key={routine.id}
-                routine={convertToGuestRoutine(routine)}
+                routine={routine}
                 onStartWorkout={startWorkoutFromRoutine}
               />
             ))}
