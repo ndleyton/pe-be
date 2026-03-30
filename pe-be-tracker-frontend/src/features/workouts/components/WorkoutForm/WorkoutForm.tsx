@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import type { Routine } from "@/features/routines/types";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 import {
   toUTCISOString,
   toLocalDateTimeInputValue,
@@ -34,7 +35,7 @@ const createWorkout = async (data: WorkoutFormData) => {
   const startTimeISO = data.start_time ? toUTCISOString(data.start_time) : null;
   const endTimeISO = data.end_time ? toUTCISOString(data.end_time) : null;
 
-  const response = await api.post("/workouts/", {
+  const response = await api.post(endpoints.workouts, {
     name: data.name || null,
     notes: data.notes || null,
     start_time: startTimeISO || null,

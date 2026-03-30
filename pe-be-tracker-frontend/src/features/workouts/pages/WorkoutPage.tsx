@@ -15,6 +15,7 @@ import { type Workout } from "@/features/workouts/types";
 import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { endpoints } from "@/shared/api/endpoints";
 import { ArrowLeft } from "lucide-react";
 import { SaveRoutineModal } from "@/features/routines/components/SaveRoutineModal/SaveRoutineModal";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
@@ -48,7 +49,7 @@ const isNetworkError = (error: unknown): boolean => {
 };
 
 const updateWorkoutEndTime = async (workoutId: string) => {
-  const response = await api.patch(`/workouts/${workoutId}`, {
+  const response = await api.patch(endpoints.workoutById(workoutId), {
     end_time: getCurrentUTCTimestamp(),
   });
   return response.data;
@@ -56,7 +57,7 @@ const updateWorkoutEndTime = async (workoutId: string) => {
 
 // Fetch a single workout by ID (for authenticated users)
 const fetchWorkout = async (workoutId: string): Promise<Workout> => {
-  const response = await api.get(`/workouts/${workoutId}`);
+  const response = await api.get(endpoints.workoutById(workoutId));
   return response.data as Workout;
 };
 

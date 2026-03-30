@@ -9,6 +9,7 @@ import {
   showSyncErrorToast,
 } from "@/utils/syncGuestData";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 
 const OAuthCallbackPage = () => {
@@ -46,7 +47,7 @@ const OAuthCallbackPage = () => {
         }
 
         // Exchange code for token
-        await api.post("/auth/google/callback", {
+        await api.post(endpoints.auth.googleCallback, {
           code: code,
         });
 

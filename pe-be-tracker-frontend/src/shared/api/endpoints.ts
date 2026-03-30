@@ -10,6 +10,8 @@ export const endpoints = {
   exerciseById: (id: string | number) => `/exercises/${id}`,
   exercisesInWorkout: (workoutId: string | number) =>
     `/workouts/${workoutId}/exercises`,
+  exerciseTypeStats: (exerciseTypeId: string | number) =>
+    `/exercises/exercise-types/${exerciseTypeId}/stats`,
 
   // Exercise Types (nested under exercises)
   exerciseTypes: "/exercises/exercise-types/",
@@ -30,6 +32,7 @@ export const endpoints = {
   // Workout endpoints
   workouts: "/workouts/",
   workoutById: (id: string | number) => `/workouts/${id}`,
+  myWorkouts: "/workouts/mine",
 
   // Workout Types (nested under workouts)
   workoutTypes: "/workouts/workout-types/",
@@ -40,7 +43,9 @@ export const endpoints = {
     login: "/auth/login",
     logout: "/auth/logout",
     register: "/auth/register",
-    me: "/auth/me",
+    session: "/auth/session",
+    googleAuthorize: "/auth/google/authorize",
+    googleCallback: "/auth/google/callback",
   },
 
   // Add exercise to current workout (or create workout if necessary)
@@ -49,6 +54,7 @@ export const endpoints = {
   // Routine endpoints (recipes in backend, routines for users)
   routines: "/routines/",
   routineById: (id: string | number) => `/routines/${id}`,
+  startWorkoutFromRoutine: (id: string | number) => `/routines/${id}/start`,
 
   // Chat endpoints
   chat: "/chat",
