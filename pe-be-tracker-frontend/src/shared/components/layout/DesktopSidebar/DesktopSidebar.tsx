@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuthStore } from "@/stores";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { useNavigation } from "@/shared/hooks/useNavigation";
@@ -38,7 +39,13 @@ const DesktopSidebar = () => {
     <aside className="lg:bg-background hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:border-r">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex h-16 items-center border-b px-6">
-          <HomeLogo />
+          <NavLink
+            to={NAV_PATHS.WORKOUTS}
+            aria-label="Go to workouts"
+            className="rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            <HomeLogo />
+          </NavLink>
         </div>
         <nav
           className="flex-1 space-y-2 px-4 py-6"
