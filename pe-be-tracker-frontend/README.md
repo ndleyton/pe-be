@@ -95,16 +95,17 @@ The app includes comprehensive tests for:
 
 ### Key Components
 
-- **GuestDataContext**: React context managing local data and sync operations
+- **useGuestStore**: Persisted Zustand store managing guest workouts, exercise types, workout types, hydration state, and sync actions
+- **indexedDBStorage**: IndexedDB-first persistence layer with localStorage fallback for the guest store
 - **Forms**: WorkoutForm, ExerciseForm, AddExerciseSetForm with dual-mode support
 - **Pages**: MyWorkoutsPage and WorkoutPage showing appropriate data based on auth state
-- **Sync Utilities**: Functions to upload guest data to server APIs
+- **Sync Utilities**: Functions to upload guest data from the store to server APIs after sign-in
 
 ### Data Flow
 
 ```
 Guest Mode:
-User Input → Forms → GuestDataContext → IndexedDB
+User Input → Forms → useGuestStore (Zustand) → IndexedDB/localStorage
 
 Authenticated Mode:
 User Input → Forms → API Client → Server Database
