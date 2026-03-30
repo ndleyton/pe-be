@@ -1,6 +1,8 @@
 # CI/CD Pipeline Documentation
 
-This repository uses GitHub Actions for automated testing, building, and deployment.
+This repository uses GitHub Actions for automated testing, packaging, and deployment support.
+
+The deployment model is in transition after the migration from Render-hosted backend infrastructure to a Hetzner VPS. CI is active today, production VPS deployment is supported today through a manual GitHub Actions workflow, and fuller automatic deployment from `main` is an upcoming feature rather than the current state.
 
 ## 🚀 Workflows Overview
 
@@ -10,8 +12,8 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 **Jobs:**
 - **Test**: Linting, type checking, unit tests with coverage
 - **Build**: Create production build artifacts
-- **Deploy Staging**: Auto-deploy to staging on `develop` branch
-- **Deploy Production**: Auto-deploy to production on `main` branch
+- **Deploy Staging**: Placeholder job on `develop`
+- **Deploy Production**: Placeholder job on `main`
 
 ### 2. Backend CI/CD (`backend.yml`)
 **Triggers:** Push/PR to `main` or `develop` with backend changes
@@ -20,16 +22,20 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **Test**: Run pytest with PostgreSQL, generate coverage
 - **Security Scan**: Bandit security analysis on pushes to `main`/`develop`
 - **Build**: Create wheel package and Docker image on pushes to `main`/`develop`
-- **Deploy Staging**: Auto-deploy to staging on `develop` branch
-- **Deploy Production**: Auto-deploy to production on `main` branch
 
-### 3. Frontend E2E (`e2e.yml`)
+### 3. VPS Deployment (`deploy-vps.yml`)
+**Triggers:** Manual dispatch only
+
+**Jobs:**
+- **Deploy to Production VPS**: Sync repo contents to the Hetzner VPS, write production env config, build containers, run Alembic migrations, restart services, and refresh `systemd` timers for recurring jobs
+
+### 4. Frontend E2E (`e2e.yml`)
 **Triggers:** Pull requests to `main` or `develop` with frontend/backend changes, plus manual dispatch
 
 **Jobs:**
 - **E2E**: Boot backend + frontend and run Playwright tests
 
-### 4. PR Validation (`pr-validation.yml`)
+### 5. PR Validation (`pr-validation.yml`)
 **Triggers:** All pull requests
 
 **Jobs:**
@@ -37,7 +43,7 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **PR Validation**: Semantic PR titles, security checks
 - **Integration Tests**: Full stack testing when both frontend/backend change
 
-### 5. Dependency Updates (`dependency-update.yml`)
+### 6. Dependency Updates (`dependency-update.yml`)
 **Triggers:** Weekly schedule (Mondays 9 AM UTC) + manual dispatch
 
 **Jobs:**
@@ -45,13 +51,13 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **Backend Updates**: Auto-update uv dependencies
 - Creates PRs for review
 
-### 6. Release (`release.yml`)
+### 7. Release (`release.yml`)
 **Triggers:** Git tags starting with `v*`
 
 **Jobs:**
 - **Create Release**: Generate GitHub release with changelog
 - **Build & Package**: Create release artifacts (frontend build, Docker image)
-- **Deploy Production**: Deploy tagged release to production
+- **Deploy Production**: Placeholder release-stage job for future production automation
 
 ## 🔧 Setup Requirements
 
@@ -78,8 +84,7 @@ Configure these for `main` branch:
 
 ### Environments
 Create these environments in GitHub Settings:
-- `staging` - For development deployments
-- `production` - For production deployments
+- `production` - Used by VPS deployment and release workflows
 
 ## 📝 Development Workflow
 
@@ -89,20 +94,23 @@ Create these environments in GitHub Settings:
 3. Create PR to `develop`
 4. CI runs validation and tests
 5. After approval, merge to `develop`
-6. Auto-deployment to staging occurs
+6. Staging deployment remains a placeholder in GitHub Actions today
 
 ### For Production Release:
 1. Create PR from `develop` to `main`
 2. CI runs full validation
 3. After approval, merge to `main`
-4. Auto-deployment to production occurs
-5. Tag release with `git tag v1.0.0` for formal releases
+4. Production deployment is currently triggered manually through `deploy-vps.yml`
+5. Automatic deployment from `main` is an upcoming feature
+6. Tag release with `git tag v1.0.0` for formal releases and packaged artifacts
 
 ### For Hotfixes:
 1. Create hotfix branch from `main`
 2. Make critical fixes
 3. Create PR to `main`
-4. After approval, merge and tag
+4. After approval, merge
+5. Run the VPS deployment workflow manually if production rollout is needed immediately
+6. Tag if you want a formal release artifact
 
 ## 🧪 Testing Strategy
 
@@ -125,14 +133,15 @@ Create these environments in GitHub Settings:
 ## 🚢 Deployment Strategy
 
 ### Staging Environment
-- **Trigger**: Automatic on `develop` branch merges
-- **Purpose**: Pre-production testing and validation
-- **URL**: Configure your staging URL
+- **State Today**: Not fully wired as a real environment in GitHub Actions
+- **Purpose**: Reserved for future pre-production validation
+- **Note**: Current frontend staging/production deploy jobs are placeholders
 
 ### Production Environment
-- **Trigger**: Automatic on `main` branch merges
+- **State Today**: Production backend infrastructure runs on a Hetzner VPS
+- **Trigger Today**: Manual `workflow_dispatch` via `deploy-vps.yml`
+- **Upcoming**: Automatic production deployment from `main`
 - **Purpose**: Live application serving users
-- **URL**: Configure your production URL
 
 ### Rollback Strategy
 - Keep previous Docker images for quick rollback
@@ -165,8 +174,8 @@ Create these environments in GitHub Settings:
 
 To add your specific deployment commands:
 
-1. **For staging**: Edit the "Deploy to staging" steps in workflows
-2. **For production**: Edit the "Deploy to production" steps in workflows
+1. **For the current production VPS flow**: Edit `deploy-vps.yml`
+2. **For future automated staging/production flows**: Edit the placeholder deploy steps in `frontend.yml`, `backend.yml`, or `release.yml`
 
 Example deployment methods:
 ```yaml
