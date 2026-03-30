@@ -5,17 +5,18 @@ import { getIntensityUnits } from "@/features/exercises/api";
 import { getRoutine } from "@/features/routines/api";
 import {
   guestIntensityUnits,
-  toRoutineFromGuest,
   type RoutineIntensityUnitOption,
 } from "@/features/routines/lib/routineEditor";
-import { useAuthStore, useGuestStore } from "@/stores";
+import {
+  canEditRoutine,
+  getRoutineEditAccessMessage,
+} from "@/features/routines/lib/routinePermissions";
+import { useAuthStore } from "@/stores";
 
 export const useRoutineDetailsData = (routineId: string | undefined) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  const guestRoutine = useGuestStore((state) =>
-    state.routines.find((routine) => routine.id === routineId),
-  );
+  const currentUser = useAuthStore((state) => state.user);
+  const canFetchServerRoutine = routineId != null && /^\d+$/.test(routineId);
 
   const {
     data: serverRoutine,
@@ -24,7 +25,7 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   } = useQuery({
     queryKey: ["routine", routineId],
     queryFn: () => getRoutine(Number(routineId)),
-    enabled: isAuthenticated && !!routineId,
+    enabled: canFetchServerRoutine,
   });
 
   const {
@@ -49,24 +50,49 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   );
 
   const routine = useMemo(() => {
-    if (isAuthenticated) {
-      return serverRoutine ?? null;
-    }
+    return serverRoutine ?? null;
+  }, [serverRoutine]);
 
-    if (!guestRoutine) {
-      return null;
-    }
+  const canEdit = useMemo(
+    () =>
+      canEditRoutine({
+        currentUserId: currentUser?.id,
+        isAuthenticated,
+        isSuperuser: currentUser?.is_superuser,
+        routine,
+      }),
+    [
+      currentUser?.id,
+      currentUser?.is_superuser,
+      isAuthenticated,
+      routine,
+    ],
+  );
 
-    return toRoutineFromGuest(guestRoutine);
-  }, [guestRoutine, isAuthenticated, serverRoutine]);
+  const editAccessMessage = useMemo(
+    () =>
+      getRoutineEditAccessMessage({
+        currentUserId: currentUser?.id,
+        isAuthenticated,
+        isSuperuser: currentUser?.is_superuser,
+        routine,
+      }),
+    [
+      currentUser?.id,
+      currentUser?.is_superuser,
+      isAuthenticated,
+      routine,
+    ],
+  );
 
   return {
     availableIntensityUnits,
-    guestRoutine,
+    canEdit,
+    editAccessMessage,
     isAuthenticated,
     routine,
     routineError,
-    routinePending,
+    routinePending: canFetchServerRoutine ? routinePending : false,
     unitsPending,
   };
 };

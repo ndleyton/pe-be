@@ -10,7 +10,7 @@ from src.routines import crud
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSession):
-    """CRUD: list returns user-owned and public, excludes others' private/link_only."""
+    """CRUD: authenticated list returns user-owned and public, excludes others' private/link_only."""
     # Seed: one workout type (recipes require workout_type_id)
     wt = WorkoutType(name="Strength", description="Strength training")
     db_session.add(wt)
@@ -67,7 +67,7 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
     await db_session.flush()
 
     # Call CRUD directly
-    results = await crud.get_user_routines(
+    results = await crud.get_visible_routines(
         db_session, user_id=me.id, offset=0, limit=50
     )
     names = {r.name for r in results}
@@ -76,6 +76,59 @@ async def test_visibility_filtering_lists_mine_and_public(db_session: AsyncSessi
     assert "Other Public" in names
     assert "Other Private" not in names
     assert "Other Link Only" not in names
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_visibility_filtering_lists_public_only_for_signed_out_viewer(
+    db_session: AsyncSession,
+):
+    """CRUD: signed-out list returns only public routines."""
+    wt = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(wt)
+    await db_session.flush()
+
+    owner = User(
+        email="visibility-public-list@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(owner)
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            Routine(
+                name="Owner Private",
+                workout_type_id=wt.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.private,
+                is_readonly=False,
+            ),
+            Routine(
+                name="Owner Public",
+                workout_type_id=wt.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.public,
+                is_readonly=True,
+            ),
+            Routine(
+                name="Owner Link Only",
+                workout_type_id=wt.id,
+                creator_id=owner.id,
+                visibility=Routine.RoutineVisibility.link_only,
+                is_readonly=True,
+            ),
+        ]
+    )
+    await db_session.flush()
+
+    results = await crud.get_visible_routines(db_session, user_id=None, offset=0, limit=50)
+    names = {r.name for r in results}
+
+    assert names == {"Owner Public"}
 
 
 @pytest.mark.integration

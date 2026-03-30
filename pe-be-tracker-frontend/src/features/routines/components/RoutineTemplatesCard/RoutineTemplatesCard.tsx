@@ -17,6 +17,7 @@ import {
 import { Input } from "@/shared/components/ui/input";
 
 type RoutineTemplatesCardProps = {
+  canEdit: boolean;
   editorTemplates: RoutineEditorTemplate[];
   onAddExercise: () => void;
   onAddSet: (templateId: string) => void;
@@ -32,6 +33,7 @@ type RoutineTemplatesCardProps = {
 };
 
 export const RoutineTemplatesCard = ({
+  canEdit,
   editorTemplates,
   onAddExercise,
   onAddSet,
@@ -47,18 +49,21 @@ export const RoutineTemplatesCard = ({
         <div>
           <CardTitle>Exercise Templates</CardTitle>
           <CardDescription>
-            Build the routine the way `WorkoutPage` builds a live workout, but
-            without timer or completion state.
+            {canEdit
+              ? "Build the routine the way `WorkoutPage` builds a live workout, but without timer or completion state."
+              : "Review the exercise and set template structure for this routine."}
           </CardDescription>
         </div>
-        <Button
-          data-testid="add-routine-exercise-button"
-          onClick={onAddExercise}
-          size="sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Exercise
-        </Button>
+        {canEdit && (
+          <Button
+            data-testid="add-routine-exercise-button"
+            onClick={onAddExercise}
+            size="sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Exercise
+          </Button>
+        )}
       </div>
     </CardHeader>
     <CardContent className="space-y-4">
@@ -85,26 +90,28 @@ export const RoutineTemplatesCard = ({
                   template
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  data-testid={`change-routine-exercise-${templateIndex}`}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onChangeExercise(template.id)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Change Exercise
-                </Button>
-                <Button
-                  data-testid={`remove-routine-template-${templateIndex}`}
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onRemoveTemplate(template.id)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove
-                </Button>
-              </div>
+              {canEdit && (
+                <div className="flex gap-2">
+                  <Button
+                    data-testid={`change-routine-exercise-${templateIndex}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onChangeExercise(template.id)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Change Exercise
+                  </Button>
+                  <Button
+                    data-testid={`remove-routine-template-${templateIndex}`}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onRemoveTemplate(template.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -121,15 +128,17 @@ export const RoutineTemplatesCard = ({
                         {formatSetSummary(setTemplate)}
                       </div>
                     </div>
-                    <Button
-                      data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRemoveSet(template.id, setTemplate.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Remove Set
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemoveSet(template.id, setTemplate.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove Set
+                      </Button>
+                    )}
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-3">
@@ -147,6 +156,7 @@ export const RoutineTemplatesCard = ({
                         min="0"
                         step="1"
                         value={setTemplate.reps ?? ""}
+                        readOnly={!canEdit}
                         onChange={(event) => {
                           const nextValue = event.target.value;
                           onUpdateSet(template.id, setTemplate.id, {
@@ -172,6 +182,7 @@ export const RoutineTemplatesCard = ({
                         data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
                         inputMode="decimal"
                         value={setTemplate.intensity ?? ""}
+                        readOnly={!canEdit}
                         onChange={(event) =>
                           onUpdateSet(template.id, setTemplate.id, {
                             intensity: parseDecimalInput(event.target.value),
@@ -185,32 +196,42 @@ export const RoutineTemplatesCard = ({
                       <span className="text-sm font-medium">
                         Intensity Unit
                       </span>
-                      <Button
-                        data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
-                        variant="outline"
-                        className="justify-start"
-                        onClick={() => onSelectUnit(template.id, setTemplate.id)}
-                      >
-                        {setTemplate.intensity_unit
-                          ? `${setTemplate.intensity_unit.abbreviation} - ${setTemplate.intensity_unit.name}`
-                          : "Select unit"}
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
+                          variant="outline"
+                          className="justify-start"
+                          onClick={() => onSelectUnit(template.id, setTemplate.id)}
+                        >
+                          {setTemplate.intensity_unit
+                            ? `${setTemplate.intensity_unit.abbreviation} - ${setTemplate.intensity_unit.name}`
+                            : "Select unit"}
+                        </Button>
+                      ) : (
+                        <div className="bg-muted text-muted-foreground rounded-md border px-3 py-2 text-sm">
+                          {setTemplate.intensity_unit
+                            ? `${setTemplate.intensity_unit.abbreviation} - ${setTemplate.intensity_unit.name}`
+                            : "No unit selected"}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <Button
-              data-testid={`add-routine-set-${templateIndex}`}
-              variant="secondary"
-              size="sm"
-              className="mt-3"
-              onClick={() => onAddSet(template.id)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Set
-            </Button>
+            {canEdit && (
+              <Button
+                data-testid={`add-routine-set-${templateIndex}`}
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                onClick={() => onAddSet(template.id)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Set
+              </Button>
+            )}
           </div>
         ))
       )}

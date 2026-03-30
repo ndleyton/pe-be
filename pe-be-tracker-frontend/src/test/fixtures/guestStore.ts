@@ -3,9 +3,6 @@ import type {
   GuestExercise,
   GuestExerciseSet,
   GuestExerciseType,
-  GuestRoutine,
-  GuestRoutineExercise,
-  GuestRoutineSet,
   GuestWorkout,
   GuestWorkoutType,
 } from "@/stores/useGuestStore";
@@ -26,8 +23,6 @@ type GuestExerciseSetInput = Omit<
   GuestExerciseSet,
   "id" | "created_at" | "updated_at"
 >;
-type GuestRoutineInput = Omit<GuestRoutine, "id" | "created_at" | "updated_at">;
-
 type GuestStoreLike = {
   workouts: GuestWorkout[];
   workoutTypes: GuestWorkoutType[];
@@ -121,64 +116,12 @@ export const makeGuestWorkout = (
   };
 };
 
-export const makeGuestRoutineSet = (
-  overrides: Partial<GuestRoutineSet> = {},
-): GuestRoutineSet => ({
-  id: nextId("guest-routine-set"),
-  reps: 10,
-  intensity: 50,
-  intensity_unit_id: 1,
-  rest_time_seconds: 60,
-  ...overrides,
-});
-
-export const makeGuestRoutineExercise = (
-  overrides: Partial<GuestRoutineExercise> = {},
-): GuestRoutineExercise => {
-  const exerciseType = overrides.exercise_type ?? makeGuestExerciseType();
-  const exerciseTypeId = overrides.exercise_type_id ?? exerciseType.id;
-  const routineExercise = {
-    id: nextId("guest-routine-exercise"),
-    sets: [],
-    notes: null,
-    ...overrides,
-  };
-
-  return {
-    ...routineExercise,
-    exercise_type: exerciseType,
-    exercise_type_id: exerciseTypeId,
-  };
-};
-
-export const makeGuestRoutine = (
-  overrides: Partial<GuestRoutine> = {},
-): GuestRoutine => ({
-  id: nextId("guest-routine"),
-  name: "Test Routine",
-  description: "A test routine",
-  exercises: [],
-  created_at: DEFAULT_TIMESTAMP,
-  updated_at: DEFAULT_UPDATED_AT,
-  ...overrides,
-});
-
-export const makeGuestRoutineInput = (
-  overrides: Partial<GuestRoutineInput> = {},
-): GuestRoutineInput => ({
-  name: "Test Routine",
-  description: "A test routine",
-  exercises: [],
-  ...overrides,
-});
-
 export const makeGuestData = (
   overrides: Partial<GuestData> = {},
 ): GuestData => ({
   workouts: [],
   exerciseTypes: [],
   workoutTypes: [],
-  routines: [],
   ...overrides,
 });
 

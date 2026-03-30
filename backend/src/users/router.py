@@ -60,6 +60,7 @@ router.include_router(
 
 # Export current user dependency
 current_active_user = fastapi_users.current_user(active=True)
+current_optional_user = fastapi_users.current_user(optional=True, active=True)
 
 
 # Session probe endpoint: return current user if authenticated; 401 otherwise

@@ -114,10 +114,8 @@ export async function syncGuestDataToServer(
   let syncedRoutines = 0;
 
   try {
-    const routines = guestData.routines ?? [];
-
     // If no guest data to sync, return early
-    if (guestData.workouts.length === 0 && routines.length === 0) {
+    if (guestData.workouts.length === 0) {
       return {
         success: true,
         syncedWorkouts: 0,
@@ -135,17 +133,6 @@ export async function syncGuestDataToServer(
     const uniqueExerciseTypes = new Map();
     guestData.workouts.forEach((workout) => {
       workout.exercises.forEach((exercise) => {
-        if (!uniqueExerciseTypes.has(exercise.exercise_type.id)) {
-          uniqueExerciseTypes.set(
-            exercise.exercise_type.id,
-            exercise.exercise_type,
-          );
-        }
-      });
-    });
-
-    routines.forEach((routine) => {
-      routine.exercises.forEach((exercise) => {
         if (!uniqueExerciseTypes.has(exercise.exercise_type.id)) {
           uniqueExerciseTypes.set(
             exercise.exercise_type.id,
@@ -272,65 +259,6 @@ export async function syncGuestDataToServer(
           workoutError,
         );
         // Continue with other workouts even if one fails
-      }
-    }
-
-    // Now sync each routine
-    // We need a workout type for routines. Since guest routines don't store it,
-    // we'll use a default "Strength" type.
-    let defaultWorkoutTypeId: number | null = null;
-
-    if (routines.length > 0) {
-      try {
-        defaultWorkoutTypeId = await findOrCreateWorkoutType({
-          name: "Strength",
-          description: "Default workout type for synchronized routines",
-        });
-      } catch (e) {
-        console.error("Failed to get/create default workout type for routines", e);
-        // Fallback or skip routines? Use the first available if possible?
-        // For now we continue, but calls will fail if we pass null/undefined if strict check.
-        // But let's hope it works or we catch errors below.
-      }
-    }
-
-    for (const guestRoutine of routines) {
-      try {
-        if (!defaultWorkoutTypeId) {
-          console.warn("Skipping routine sync due to missing workout type");
-          continue;
-        }
-
-        const routinePayload = {
-          name: guestRoutine.name,
-          description: guestRoutine.description,
-          workout_type_id: defaultWorkoutTypeId,
-          exercise_templates: guestRoutine.exercises.map((ex: any) => {
-            const serverExerciseTypeId = exerciseTypeIdMap.get(ex.exercise_type_id);
-            if (!serverExerciseTypeId) {
-              throw new Error(`No server ID for exercise type ${ex.exercise_type_id} in routine`);
-            }
-            return {
-              exercise_type_id: serverExerciseTypeId,
-              set_templates: ex.sets.map((s: any) => ({
-                reps: s.reps,
-                intensity: s.intensity,
-                intensity_unit_id: s.intensity_unit_id,
-              }))
-            };
-          })
-        };
-
-        await api.post(endpoints.routines, routinePayload);
-        syncedRoutines++;
-
-      } catch (routineError) {
-        console.error(
-          `Failed to sync routine. Routine data:`,
-          guestRoutine,
-          "Error:",
-          routineError
-        );
       }
     }
 

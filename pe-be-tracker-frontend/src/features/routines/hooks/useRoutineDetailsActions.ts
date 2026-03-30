@@ -9,25 +9,25 @@ import {
 import {
   DATE_LABEL_LOCALE,
   DATE_LABEL_OPTIONS,
+  buildRoutineFromEditorState,
   buildRoutinePayload,
-  toGuestRoutineExercises,
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
 import type { Routine } from "@/features/routines/types";
-import { useGuestStore, type GuestRoutine } from "@/stores";
+import { useGuestStore } from "@/stores";
 
 export const useRoutineDetailsActions = ({
+  canEdit,
   description,
   editorTemplates,
-  guestRoutine,
   isAuthenticated,
   name,
   routine,
   routineId,
 }: {
+  canEdit: boolean;
   description: string;
   editorTemplates: RoutineEditorTemplate[];
-  guestRoutine: GuestRoutine | undefined;
   isAuthenticated: boolean;
   name: string;
   routine: Routine | null;
@@ -36,8 +36,6 @@ export const useRoutineDetailsActions = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const updateGuestRoutine = useGuestStore((state) => state.updateRoutine);
-  const deleteGuestRoutine = useGuestStore((state) => state.deleteRoutine);
   const addGuestWorkout = useGuestStore((state) => state.addWorkout);
   const createExercisesFromRoutine = useGuestStore(
     (state) => state.createExercisesFromRoutine,
@@ -50,6 +48,10 @@ export const useRoutineDetailsActions = ({
         throw new Error("Routine not found");
       }
 
+      if (!canEdit) {
+        throw new Error("You do not have permission to edit this routine.");
+      }
+
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
@@ -60,14 +62,7 @@ export const useRoutineDetailsActions = ({
       if (isAuthenticated) {
         return updateRoutine(routine.id, payload);
       }
-
-      updateGuestRoutine(guestRoutine?.id ?? String(routine.id), {
-        description: payload.description ?? undefined,
-        exercises: toGuestRoutineExercises(editorTemplates),
-        name: payload.name,
-      });
-
-      return null;
+      throw new Error("Sign in to edit this routine.");
     },
     onSuccess: async (updatedRoutine) => {
       if (!routineId) {
@@ -89,12 +84,15 @@ export const useRoutineDetailsActions = ({
         throw new Error("Routine not found");
       }
 
+      if (!canEdit) {
+        throw new Error("You do not have permission to delete this routine.");
+      }
+
       if (isAuthenticated) {
         await deleteRoutine(routine.id);
         return;
       }
-
-      deleteGuestRoutine(guestRoutine?.id ?? String(routine.id));
+      throw new Error("Sign in to delete this routine.");
     },
     onSuccess: () => {
       navigate("/routines");
@@ -131,16 +129,14 @@ export const useRoutineDetailsActions = ({
         workout_type_id: defaultWorkoutType.id,
       });
 
-      const guestRoutineForStart = {
-        created_at: guestRoutine?.created_at ?? routine.created_at,
-        description: description.trim() || undefined,
-        exercises: toGuestRoutineExercises(editorTemplates),
-        id: guestRoutine?.id ?? String(routine.id),
-        name: name.trim() || routine.name,
-        updated_at: guestRoutine?.updated_at ?? routine.updated_at,
-      } satisfies GuestRoutine;
+      const routineForStart = buildRoutineFromEditorState({
+        description,
+        name,
+        routine,
+        templates: editorTemplates,
+      });
 
-      createExercisesFromRoutine(guestRoutineForStart, newWorkoutId);
+      createExercisesFromRoutine(routineForStart, newWorkoutId);
       return { id: newWorkoutId };
     },
     onSuccess: (result) => {
@@ -153,7 +149,7 @@ export const useRoutineDetailsActions = ({
   });
 
   const handleDelete = () => {
-    if (!routine) {
+    if (!routine || !canEdit) {
       return;
     }
 

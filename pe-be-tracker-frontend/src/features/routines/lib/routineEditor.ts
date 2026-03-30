@@ -7,9 +7,6 @@ import type { Routine } from "@/features/routines/types";
 import type {
   GuestExerciseType,
   GuestIntensityUnit,
-  GuestRoutine,
-  GuestRoutineExercise,
-  GuestRoutineSet,
 } from "@/stores";
 
 export const DATE_LABEL_LOCALE = "en-US";
@@ -149,35 +146,6 @@ export const buildRoutinePayload = (
     })),
   }));
 
-export const toGuestRoutineExercises = (
-  templates: RoutineEditorTemplate[],
-): GuestRoutineExercise[] =>
-  templates.map((template) => ({
-    id: template.id,
-    exercise_type_id: String(template.exercise_type_id),
-    exercise_type: {
-      id: String(template.exercise_type?.id ?? template.exercise_type_id ?? ""),
-      name: template.exercise_type?.name ?? "Custom Exercise",
-      description: template.exercise_type?.description ?? null,
-      default_intensity_unit: Number(
-        template.exercise_type?.default_intensity_unit ??
-          template.set_templates[0]?.intensity_unit_id ??
-          1,
-      ),
-      times_used: template.exercise_type?.times_used ?? 0,
-    },
-    sets: template.set_templates.map(
-      (setTemplate): GuestRoutineSet => ({
-        id: setTemplate.id,
-        reps: setTemplate.reps,
-        intensity: setTemplate.intensity,
-        intensity_unit_id: setTemplate.intensity_unit_id,
-        rest_time_seconds: null,
-      }),
-    ),
-    notes: null,
-  }));
-
 export const buildComparableSnapshot = (
   name: string,
   description: string,
@@ -214,38 +182,48 @@ export const createDefaultSet = (
   };
 };
 
-export const toRoutineFromGuest = (guestRoutine: GuestRoutine): Routine => ({
-  id: Number.parseInt(guestRoutine.id, 10) || 0,
-  name: guestRoutine.name,
-  description: guestRoutine.description ?? null,
-  workout_type_id: 0,
-  creator_id: 0,
-  created_at: guestRoutine.created_at,
-  updated_at: guestRoutine.updated_at,
-  exercise_templates: guestRoutine.exercises.map((exercise) => ({
-    id: Number.parseInt(exercise.id, 10) || 0,
-    exercise_type_id: Number(exercise.exercise_type_id),
-    created_at: guestRoutine.created_at,
-    updated_at: guestRoutine.updated_at,
-    exercise_type: {
-      id: Number.parseInt(exercise.exercise_type.id, 10) || 0,
-      name: exercise.exercise_type.name,
-      description: exercise.exercise_type.description,
-      default_intensity_unit: exercise.exercise_type.default_intensity_unit,
-      times_used: exercise.exercise_type.times_used,
-    },
-    set_templates: exercise.sets.map((setTemplate) => ({
-      id: Number.parseInt(setTemplate.id, 10) || 0,
+export const buildRoutineFromEditorState = ({
+  description,
+  name,
+  routine,
+  templates,
+}: {
+  description: string;
+  name: string;
+  routine: Routine;
+  templates: RoutineEditorTemplate[];
+}): Routine => ({
+  ...routine,
+  name: name.trim() || routine.name,
+  description: description.trim() || null,
+  exercise_templates: templates.map((template, templateIndex) => ({
+    id: Number(template.id) || -(templateIndex + 1),
+    exercise_type_id: Number(template.exercise_type_id),
+    created_at: routine.created_at,
+    updated_at: routine.updated_at,
+    exercise_type: template.exercise_type
+      ? {
+          id: Number(template.exercise_type.id),
+          name: template.exercise_type.name,
+          description: template.exercise_type.description,
+          default_intensity_unit: template.exercise_type.default_intensity_unit,
+          times_used: template.exercise_type.times_used,
+        }
+      : undefined,
+    set_templates: template.set_templates.map((setTemplate, setIndex) => ({
+      id: Number(setTemplate.id) || -(templateIndex * 100 + setIndex + 1),
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
-      created_at: guestRoutine.created_at,
-      updated_at: guestRoutine.updated_at,
-      intensity_unit: {
-        id: setTemplate.intensity_unit_id,
-        name: "",
-        abbreviation: "",
-      },
+      created_at: routine.created_at,
+      updated_at: routine.updated_at,
+      intensity_unit: setTemplate.intensity_unit
+        ? {
+            id: setTemplate.intensity_unit.id,
+            name: setTemplate.intensity_unit.name,
+            abbreviation: setTemplate.intensity_unit.abbreviation,
+          }
+        : undefined,
     })),
   })),
 });
