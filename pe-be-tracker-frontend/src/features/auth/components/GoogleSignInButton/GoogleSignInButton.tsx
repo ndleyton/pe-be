@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 import { Button } from "@/shared/components/ui/button";
 
 interface GoogleSignInButtonState {
@@ -16,7 +17,7 @@ export default function GoogleSignInButton() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get("/auth/google/authorize");
+      const { data } = await api.get(endpoints.auth.googleAuthorize);
       if (data.authorization_url) {
         // User will be redirected to Google's OAuth page, then back to /oauth/callback
         window.location.href = data.authorization_url;

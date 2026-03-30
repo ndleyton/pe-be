@@ -70,7 +70,7 @@ export interface RecipeSet {
 export const getExercisesInWorkout = async (
   workoutId: string,
 ): Promise<Exercise[]> => {
-  const response = await api.get(`/workouts/${workoutId}/exercises`);
+  const response = await api.get(endpoints.exercisesInWorkout(workoutId));
   return response.data;
 };
 
@@ -124,7 +124,7 @@ export interface UpdateExerciseSetData {
 export const createExerciseSet = async (
   exerciseSetData: CreateExerciseSetData,
 ): Promise<ExerciseSet> => {
-  const response = await api.post("/exercise-sets/", exerciseSetData);
+  const response = await api.post(endpoints.exerciseSets, exerciseSetData);
   return response.data;
 };
 
@@ -132,7 +132,7 @@ export const createExerciseSet = async (
 export const getExerciseSets = async (
   exerciseId: number | string,
 ): Promise<ExerciseSet[]> => {
-  const response = await api.get(`/exercise-sets/exercise/${exerciseId}`);
+  const response = await api.get(endpoints.exerciseSetsByExercise(exerciseId));
   return response.data;
 };
 
@@ -141,7 +141,10 @@ export const updateExerciseSet = async (
   exerciseSetId: number | string,
   updateData: UpdateExerciseSetData,
 ): Promise<ExerciseSet> => {
-  const response = await api.put(`/exercise-sets/${exerciseSetId}`, updateData);
+  const response = await api.put(
+    endpoints.exerciseSetById(exerciseSetId),
+    updateData,
+  );
   return response.data;
 };
 
@@ -149,14 +152,14 @@ export const updateExerciseSet = async (
 export const deleteExerciseSet = async (
   exerciseSetId: number | string,
 ): Promise<void> => {
-  await api.delete(`/exercise-sets/${exerciseSetId}`);
+  await api.delete(endpoints.exerciseSetById(exerciseSetId));
 };
 
 // Delete an exercise
 export const deleteExercise = async (
   exerciseId: number | string,
 ): Promise<void> => {
-  await api.delete(`/exercises/${exerciseId}`);
+  await api.delete(endpoints.exerciseById(exerciseId));
 };
 
 // Exercise Type API functions
@@ -253,8 +256,6 @@ export interface ExerciseTypeStats {
 export const getExerciseTypeStats = async (
   exerciseTypeId: string,
 ): Promise<ExerciseTypeStats> => {
-  const response = await api.get(
-    `${endpoints.exerciseTypeById(exerciseTypeId)}/stats`,
-  );
+  const response = await api.get(endpoints.exerciseTypeStats(exerciseTypeId));
   return response.data;
 };

@@ -210,7 +210,7 @@ export async function syncGuestDataToServer(
           workout_type_id: serverWorkoutTypeId,
         };
         const { data: createdWorkout } = await api.post(
-          "/workouts/",
+          endpoints.workouts,
           workoutPayload,
         );
 
@@ -237,7 +237,7 @@ export async function syncGuestDataToServer(
               notes: guestExercise.notes,
             };
             const { data: createdExercise } = await api.post(
-              "/exercises/",
+              endpoints.exercises,
               exercisePayload,
             );
 
@@ -254,7 +254,7 @@ export async function syncGuestDataToServer(
                   rest_time_seconds: guestSet.rest_time_seconds,
                   done: guestSet.done,
                 };
-                await api.post("/exercise-sets/", setPayload);
+                await api.post(endpoints.exerciseSets, setPayload);
 
                 syncedSets++;
               } catch (setError) {
