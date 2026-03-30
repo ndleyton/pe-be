@@ -75,6 +75,8 @@ export const endpoints = {
   chat: "/chat",
   chatAttachments: "/chat/attachments",
   chatAttachmentById: (id: string | number) => `/chat/attachments/${id}`,
+  conversations: "/conversations",
+  conversationById: (id: string | number) => `/conversations/${id}`,
 } as const;
 
 // Type helpers for endpoints

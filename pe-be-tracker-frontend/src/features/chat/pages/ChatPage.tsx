@@ -1,34 +1,58 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  Bot,
+  Dumbbell,
+  History,
+  ImagePlus,
+  MessageCircle,
+  Plus,
+  X,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Link } from "react-router-dom";
 
-import { config } from "@/app/config/env";
+import {
+  getConversation,
+  getConversationHistory,
+  sendChatMessage,
+  uploadChatAttachment,
+  type ChatApiMessage,
+  type ChatApiPart,
+  type ChatApiWorkoutCreatedEvent,
+} from "@/features/chat/api";
+import {
+  buildAttachmentUrl,
+  mapConversationToUiMessages,
+  type ImageMessagePart,
+  type TextMessagePart,
+  type UIMessage,
+  type UIMessagePart,
+} from "@/features/chat/lib/chatMessageMappers";
 import { type Workout } from "@/features/workouts";
-import api from "@/shared/api/client";
-import { endpoints } from "@/shared/api/endpoints";
-import { NAV_PATHS } from "@/shared/navigation/constants";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 import { useAuthStore } from "@/stores";
 import { formatDisplayDate, parseWorkoutDuration } from "@/utils/date";
 
-interface TextMessagePart {
-  type: "text";
-  text: string;
+interface PendingAttachment {
+  localId: string;
+  file: File;
+  previewUrl: string;
 }
-
-interface ImageMessagePart {
-  type: "image";
-  attachment_id: number;
-  mime_type?: string;
-  filename?: string;
-  url: string;
-}
-
-type UIMessagePart = TextMessagePart | ImageMessagePart;
 
 type WorkoutWidgetData = Pick<
   Workout,
@@ -44,56 +68,8 @@ interface WorkoutCreatedEvent {
 
 type ChatEvent = WorkoutCreatedEvent;
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  parts?: UIMessagePart[];
+interface ChatMessage extends UIMessage {
   events?: ChatEvent[];
-  timestamp: Date;
-}
-
-interface PendingAttachment {
-  localId: string;
-  file: File;
-  previewUrl: string;
-}
-
-interface UploadedAttachment {
-  attachment_id: number;
-  mime_type: string;
-  filename: string;
-}
-
-interface ChatApiPart {
-  type: "text" | "image";
-  text?: string;
-  attachment_id?: number;
-}
-
-interface ChatApiMessage {
-  role: string;
-  content?: string;
-  parts?: ChatApiPart[];
-}
-
-interface ChatApiWorkoutCreatedEvent {
-  type: "workout_created";
-  title?: string | null;
-  cta_label?: string | null;
-  workout: {
-    id: Workout["id"];
-    name: string | null;
-    notes: string | null;
-    start_time: string;
-    end_time: string | null;
-  };
-}
-
-interface ChatResponse {
-  message: string;
-  conversation_id: number;
-  events?: ChatApiWorkoutCreatedEvent[];
 }
 
 const MAX_ATTACHMENTS = 4;
@@ -103,9 +79,6 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/jpeg",
   "image/webp",
 ] as const;
-
-const buildAttachmentUrl = (attachmentId: number) =>
-  `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
 
 const normalizeChatCopy = (message: string) =>
   message
@@ -176,16 +149,6 @@ const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
   );
 };
 
-const uploadChatAttachment = async (
-  file: File,
-): Promise<UploadedAttachment> => {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await api.post(endpoints.chatAttachments, formData);
-  return response.data;
-};
-
 const extractErrorMessage = (error: unknown, fallback: string): string => {
   if (
     typeof error === "object" &&
@@ -228,29 +191,37 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
-const sendChatMessage = async (
-  messages: ChatApiMessage[],
-  conversationId?: number,
-): Promise<ChatResponse> => {
-  const response = await api.post(endpoints.chat, {
-    messages,
-    conversation_id: conversationId,
-  });
-  return response.data;
-};
+const formatConversationTimestamp = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+
+const getConversationTitle = (title: string | null | undefined) =>
+  title?.trim() || "Untitled chat";
 
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<number | undefined>();
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(
+    null,
+  );
+  const [historyInitialized, setHistoryInitialized] = useState(false);
+  const [shouldLoadActiveConversation, setShouldLoadActiveConversation] =
+    useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
     [],
   );
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [conversationError, setConversationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
 
   const examplePrompts = useMemo(
     () => [
@@ -262,19 +233,32 @@ const ChatPage = () => {
     [],
   );
 
+  const conversationHistoryQuery = useQuery({
+    queryKey: ["chat", "conversations"],
+    queryFn: getConversationHistory,
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+  });
+
+  const activeConversationQuery = useQuery({
+    queryKey: ["chat", "conversation", activeConversationId],
+    queryFn: () => getConversation(activeConversationId as number),
+    enabled:
+      isAuthenticated &&
+      activeConversationId !== null &&
+      shouldLoadActiveConversation,
+    staleTime: 30_000,
+  });
+
   const chatMutation = useMutation({
     mutationFn: ({
       messages: chatMessages,
-      conversationId: convId,
+      conversationId,
     }: {
       messages: ChatApiMessage[];
       conversationId?: number;
-    }) => sendChatMessage(chatMessages, convId),
-    onSuccess: (response) => {
-      if (response.conversation_id && !conversationId) {
-        setConversationId(response.conversation_id);
-      }
-
+    }) => sendChatMessage(chatMessages, conversationId),
+    onSuccess: async (response) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -288,8 +272,17 @@ const ChatPage = () => {
       ]);
 
       setIsLoading(false);
-      setTimeout(() => {
-        scrollToBottom();
+      setConversationError(null);
+      setShouldLoadActiveConversation(false);
+
+      if (response.conversation_id) {
+        setActiveConversationId(response.conversation_id);
+        setHistoryInitialized(true);
+        await queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+      }
+
+      window.setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 50);
     },
     onError: (error) => {
@@ -306,12 +299,7 @@ const ChatPage = () => {
           id: `${Date.now()}-error`,
           role: "assistant",
           content: message,
-          parts: [
-            {
-              type: "text",
-              text: message,
-            },
-          ],
+          parts: [{ type: "text", text: message }],
           timestamp: new Date(),
         },
       ]);
@@ -320,21 +308,72 @@ const ChatPage = () => {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollToBottom();
+    pendingAttachmentsRef.current = pendingAttachments;
+  }, [pendingAttachments]);
+
+  useEffect(() => {
+    return () => {
+      pendingAttachmentsRef.current.forEach((attachment) => {
+        URL.revokeObjectURL(attachment.previewUrl);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [messages, isLoading]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setHistoryInitialized(false);
+      setShouldLoadActiveConversation(false);
+      setConversationError(null);
+      return;
+    }
+
+    if (historyInitialized || !conversationHistoryQuery.data) {
+      return;
+    }
+
+    const mostRecentConversation = conversationHistoryQuery.data[0];
+    setActiveConversationId(mostRecentConversation?.id ?? null);
+    setShouldLoadActiveConversation(Boolean(mostRecentConversation));
+    setHistoryInitialized(true);
+  }, [conversationHistoryQuery.data, historyInitialized, isAuthenticated]);
+
+  useEffect(() => {
+    if (!activeConversationQuery.data) {
+      return;
+    }
+
+    setMessages(mapConversationToUiMessages(activeConversationQuery.data));
+    setConversationError(null);
+    setShouldLoadActiveConversation(false);
+  }, [activeConversationQuery.data]);
+
+  useEffect(() => {
+    if (!activeConversationQuery.error || !shouldLoadActiveConversation) {
+      return;
+    }
+
+    setConversationError(
+      extractErrorMessage(
+        activeConversationQuery.error,
+        "I couldn't load that conversation.",
+      ),
+    );
+    setShouldLoadActiveConversation(false);
+  }, [activeConversationQuery.error, shouldLoadActiveConversation]);
 
   const clearPendingAttachments = () => {
-    pendingAttachments.forEach((attachment) => {
+    pendingAttachmentsRef.current.forEach((attachment) => {
       URL.revokeObjectURL(attachment.previewUrl);
     });
+    pendingAttachmentsRef.current = [];
     setPendingAttachments([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -349,12 +388,12 @@ const ChatPage = () => {
       attachments.map((attachment) => uploadChatAttachment(attachment.file)),
     );
 
-    const imageUiParts: UIMessagePart[] = attachments.map((_, index) => ({
+    const imageUiParts: UIMessagePart[] = uploadedAttachments.map((attachment) => ({
       type: "image",
-      attachment_id: uploadedAttachments[index].attachment_id,
-      mime_type: uploadedAttachments[index].mime_type,
-      filename: uploadedAttachments[index].filename,
-      url: buildAttachmentUrl(uploadedAttachments[index].attachment_id),
+      attachment_id: attachment.attachment_id,
+      mime_type: attachment.mime_type,
+      filename: attachment.filename,
+      url: buildAttachmentUrl(attachment.attachment_id),
     }));
 
     const textPart = messageContent.trim();
@@ -384,6 +423,8 @@ const ChatPage = () => {
 
     setIsLoading(true);
     setAttachmentError(null);
+    setConversationError(null);
+    setShouldLoadActiveConversation(false);
 
     const attachmentsSnapshot = [...pendingAttachments];
     setInputValue("");
@@ -400,7 +441,7 @@ const ChatPage = () => {
         },
       ]);
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setMessages((prev) => [
           ...prev,
           {
@@ -448,7 +489,7 @@ const ChatPage = () => {
             parts: apiParts.length > 0 ? apiParts : undefined,
           },
         ],
-        conversationId,
+        conversationId: activeConversationId ?? undefined,
       });
     } catch (error) {
       setAttachmentError(
@@ -461,14 +502,17 @@ const ChatPage = () => {
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) {
       return;
     }
 
     const invalidType = files.find(
-      (file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type as (typeof ALLOWED_ATTACHMENT_TYPES)[number]),
+      (file) =>
+        !ALLOWED_ATTACHMENT_TYPES.includes(
+          file.type as (typeof ALLOWED_ATTACHMENT_TYPES)[number],
+        ),
     );
     if (invalidType) {
       setAttachmentError(
@@ -517,14 +561,40 @@ const ChatPage = () => {
 
   const handleExamplePrompt = async (prompt: string) => {
     setInputValue(prompt);
-    setTimeout(async () => {
+    window.setTimeout(async () => {
       await processMessage(prompt);
     }, 100);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     void handleSendMessage();
+  };
+
+  const handleStartNewChat = () => {
+    setActiveConversationId(null);
+    setHistoryInitialized(true);
+    setShouldLoadActiveConversation(false);
+    setMessages([]);
+    setConversationError(null);
+    setAttachmentError(null);
+    setInputValue("");
+    clearPendingAttachments();
+  };
+
+  const handleSelectConversation = (conversationId: number) => {
+    if (conversationId === activeConversationId && !shouldLoadActiveConversation) {
+      return;
+    }
+
+    clearPendingAttachments();
+    setAttachmentError(null);
+    setConversationError(null);
+    setInputValue("");
+    setMessages([]);
+    setActiveConversationId(conversationId);
+    setHistoryInitialized(true);
+    setShouldLoadActiveConversation(true);
   };
 
   const renderMessageParts = (message: ChatMessage) => {
@@ -661,183 +731,281 @@ const ChatPage = () => {
     return <ChatWorkoutWidget event={workoutEvent} />;
   };
 
+  const isHydratingConversation =
+    shouldLoadActiveConversation &&
+    activeConversationId !== null &&
+    activeConversationQuery.isPending;
+  const showWelcomeState = messages.length === 0 && !isHydratingConversation;
+
   return (
-    <div className="bg-background flex h-screen flex-col">
-      <div className="bg-card border-border/20 flex shrink-0 items-center gap-3 border-b px-4 py-3 shadow-sm">
-        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-          <Dumbbell className="text-primary h-5 w-5" />
+    <div className="bg-background flex h-screen flex-col overflow-hidden lg:flex-row">
+      <aside className="bg-card border-border/20 flex shrink-0 flex-col border-b lg:w-80 lg:border-b-0 lg:border-r">
+        <div className="border-border/20 flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center gap-2">
+            <History className="text-muted-foreground h-4 w-4" />
+            <h2 className="text-sm font-semibold">Chat history</h2>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-lg"
+            onClick={handleStartNewChat}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New chat
+          </Button>
         </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-base leading-tight font-semibold">
-            AI Personal Trainer
-          </h1>
-          <p className="text-muted-foreground text-xs">Text + image coaching</p>
-        </div>
-      </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <div className="mx-auto max-w-4xl">
-          {messages.length === 0 && (
-            <div className="px-4 py-8 text-center">
-              <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                <Bot className="text-primary h-8 w-8" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold">
-                Welcome to your AI Personal Trainer
-              </h3>
-              <p className="text-muted-foreground mb-6 text-sm">
-                Ask questions, log workouts, or attach photos for coaching and
-                analysis.
-              </p>
-              <div className="mx-auto max-w-md space-y-2">
-                <p className="text-muted-foreground mb-3 text-xs font-medium">
-                  Try these examples:
-                </p>
-                {examplePrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => handleExamplePrompt(prompt)}
-                    className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-              {!isAuthenticated && (
-                <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
-                  <p className="text-destructive text-sm">
-                    Sign in to use chat and image uploads. This feature is for
-                    logged-in users.
-                  </p>
-                </div>
-              )}
+        <div className="min-h-0 max-h-56 overflow-y-auto p-2 lg:max-h-none lg:flex-1">
+          {!isAuthenticated ? (
+            <div className="text-muted-foreground rounded-2xl px-3 py-4 text-sm">
+              Sign in to access previous conversations.
             </div>
-          )}
-
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`mb-2 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`flex max-w-[88%] gap-2 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-              >
-                {message.role !== "user" && (
-                  <div
-                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      message.role === "system" ? "bg-accent/20" : "bg-muted"
-                    }`}
-                  >
-                    <Bot className="text-muted-foreground h-4 w-4" />
-                  </div>
-                )}
+          ) : conversationHistoryQuery.isPending ? (
+            <div className="space-y-2 p-2">
+              {Array.from({ length: 4 }).map((_, index) => (
                 <div
-                  className={`px-4 py-2.5 ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
-                      : message.role === "system"
-                        ? "bg-accent/50 text-accent-foreground rounded-2xl shadow-sm"
-                        : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
-                  }`}
-                >
-                  {renderMessageParts(message)}
-                  {renderMessageWidget(message)}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="mb-2 flex gap-2">
-              <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
-                <Bot className="text-muted-foreground h-4 w-4" />
-              </div>
-              <div className="bg-muted/80 rounded-2xl rounded-tl-sm px-4 py-3">
-                <div className="flex gap-1">
-                  <div className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"></div>
-                  <div
-                    className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      <div className="border-border/20 bg-card shrink-0 border-t p-3 shadow-sm">
-        <div className="mx-auto max-w-4xl">
-          {pendingAttachments.length > 0 && (
-            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-              {pendingAttachments.map((attachment) => (
-                <div
-                  key={attachment.localId}
-                  className="bg-muted relative h-20 w-20 flex-none overflow-hidden rounded-2xl border"
-                >
-                  <img
-                    src={attachment.previewUrl}
-                    alt={attachment.file.name}
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAttachment(attachment.localId)}
-                    className="bg-background/80 absolute right-1 top-1 rounded-full p-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
+                  key={index}
+                  className="bg-muted/60 h-16 animate-pulse rounded-2xl"
+                />
               ))}
             </div>
-          )}
-          {attachmentError && (
-            <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {attachmentError}
+          ) : conversationHistoryQuery.data?.length ? (
+            <div className="space-y-2">
+              {conversationHistoryQuery.data.map((conversation) => {
+                const isActive = conversation.id === activeConversationId;
+                return (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    onClick={() => handleSelectConversation(conversation.id)}
+                    className={`w-full rounded-2xl border px-3 py-3 text-left transition-colors ${
+                      isActive
+                        ? "border-primary/40 bg-primary/10"
+                        : "border-transparent bg-muted/40 hover:bg-muted"
+                    }`}
+                  >
+                    <p className="truncate text-sm font-medium">
+                      {getConversationTitle(conversation.title)}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {formatConversationTimestamp(conversation.updated_at)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-muted-foreground rounded-2xl px-3 py-4 text-sm">
+              Your saved chats will show up here after the first message.
             </div>
           )}
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-11 shrink-0 rounded-xl p-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || pendingAttachments.length >= MAX_ATTACHMENTS}
-            >
-              <ImagePlus className="h-5 w-5" />
-            </Button>
-            <Input
-              value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
-              placeholder="Message..."
-              className="border-border/30 bg-muted/30 focus:bg-background h-11 flex-1 rounded-xl transition-colors"
-              disabled={isLoading}
-            />
-            <Button
-              type="submit"
-              disabled={
-                isLoading ||
-                (!inputValue.trim() && pendingAttachments.length === 0)
-              }
-              className="h-11 w-11 shrink-0 rounded-xl p-0"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Button>
-          </form>
+        </div>
+      </aside>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="bg-card border-border/20 flex shrink-0 items-center gap-3 border-b px-4 py-3 shadow-sm">
+          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+            <Dumbbell className="text-primary h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base leading-tight font-semibold">
+              AI Personal Trainer
+            </h1>
+            <p className="text-muted-foreground truncate text-xs">
+              {activeConversationId
+                ? "Continuing saved conversation"
+                : "Text + image coaching"}
+            </p>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          <div className="mx-auto max-w-4xl">
+            {conversationError && (
+              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {conversationError}
+              </div>
+            )}
+
+            {isHydratingConversation && (
+              <div className="space-y-3 px-2 py-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${index % 2 === 0 ? "justify-start" : "justify-end"}`}
+                  >
+                    <div className="bg-muted/60 h-20 w-full max-w-xl animate-pulse rounded-2xl" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showWelcomeState && (
+              <div className="px-4 py-8 text-center">
+                <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <Bot className="text-primary h-8 w-8" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold">
+                  Welcome to your AI Personal Trainer
+                </h3>
+                <p className="text-muted-foreground mb-6 text-sm">
+                  Ask questions, log workouts, or attach photos for coaching and
+                  analysis.
+                </p>
+                <div className="mx-auto max-w-md space-y-2">
+                  <p className="text-muted-foreground mb-3 text-xs font-medium">
+                    Try these examples:
+                  </p>
+                  {examplePrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      onClick={() => handleExamplePrompt(prompt)}
+                      className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+                {!isAuthenticated && (
+                  <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
+                    <p className="text-destructive text-sm">
+                      Sign in to use chat and image uploads. This feature is for
+                      logged-in users.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`mb-2 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`flex max-w-[88%] gap-2 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                >
+                  {message.role !== "user" && (
+                    <div
+                      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                        message.role === "system" ? "bg-accent/20" : "bg-muted"
+                      }`}
+                    >
+                      <Bot className="text-muted-foreground h-4 w-4" />
+                    </div>
+                  )}
+                  <div
+                    className={`px-4 py-2.5 ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
+                        : message.role === "system"
+                          ? "bg-accent/50 text-accent-foreground rounded-2xl shadow-sm"
+                          : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
+                    }`}
+                  >
+                    {renderMessageParts(message)}
+                    {renderMessageWidget(message)}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="mb-2 flex gap-2">
+                <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                  <Bot className="text-muted-foreground h-4 w-4" />
+                </div>
+                <div className="bg-muted/80 rounded-2xl rounded-tl-sm px-4 py-3">
+                  <div className="flex gap-1">
+                    <div className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full" />
+                    <div
+                      className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
+                      style={{ animationDelay: "0.1s" }}
+                    />
+                    <div
+                      className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
+                      style={{ animationDelay: "0.2s" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        <div className="border-border/20 bg-card shrink-0 border-t p-3 shadow-sm">
+          <div className="mx-auto max-w-4xl">
+            {pendingAttachments.length > 0 && (
+              <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                {pendingAttachments.map((attachment) => (
+                  <div
+                    key={attachment.localId}
+                    className="bg-muted relative h-20 w-20 flex-none overflow-hidden rounded-2xl border"
+                  >
+                    <img
+                      src={attachment.previewUrl}
+                      alt={attachment.file.name}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttachment(attachment.localId)}
+                      className="bg-background/80 absolute right-1 top-1 rounded-full p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {attachmentError && (
+              <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {attachmentError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-11 shrink-0 rounded-xl p-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || pendingAttachments.length >= MAX_ATTACHMENTS}
+              >
+                <ImagePlus className="h-5 w-5" />
+              </Button>
+              <Input
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                placeholder="Message..."
+                className="border-border/30 bg-muted/30 focus:bg-background h-11 flex-1 rounded-xl transition-colors"
+                disabled={isLoading}
+              />
+              <Button
+                type="submit"
+                disabled={
+                  isLoading ||
+                  (!inputValue.trim() && pendingAttachments.length === 0)
+                }
+                className="h-11 w-11 shrink-0 rounded-xl p-0"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
