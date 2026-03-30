@@ -144,11 +144,20 @@ def test_main_returns_error_for_missing_user(monkeypatch, capsys):
     def _fake_configure_logging(log_level: str) -> None:
         assert log_level
 
+    def _fake_asyncio_run(coro):
+        coro.close()
+        return PromotionResult(
+            status="not_found",
+            email="missing@example.com",
+            user_id=None,
+        )
+
     monkeypatch.setattr("src.users.promote_superuser.run", _fake_run)
     monkeypatch.setattr(
         "src.users.promote_superuser.configure_logging",
         _fake_configure_logging,
     )
+    monkeypatch.setattr("src.users.promote_superuser.asyncio.run", _fake_asyncio_run)
 
     exit_code = main(["--email", "missing@example.com"])
 
@@ -169,11 +178,20 @@ def test_main_prints_success_message(monkeypatch, capsys):
     def _fake_configure_logging(log_level: str) -> None:
         assert log_level
 
+    def _fake_asyncio_run(coro):
+        coro.close()
+        return PromotionResult(
+            status="promoted",
+            email="admin@example.com",
+            user_id=42,
+        )
+
     monkeypatch.setattr("src.users.promote_superuser.run", _fake_run)
     monkeypatch.setattr(
         "src.users.promote_superuser.configure_logging",
         _fake_configure_logging,
     )
+    monkeypatch.setattr("src.users.promote_superuser.asyncio.run", _fake_asyncio_run)
 
     exit_code = main(["--email", "admin@example.com"])
 
