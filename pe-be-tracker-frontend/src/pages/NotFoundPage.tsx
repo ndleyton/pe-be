@@ -1,91 +1,88 @@
-import { useAuthStore } from "@/stores";
-import { useNavigate } from "react-router-dom";
-import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, AlertTriangle, Home } from "lucide-react";
 import { NAV_PATHS } from "@/shared/navigation/constants";
+import { Button } from "@/shared/components/ui/button";
+
+const helpfulLinks = [
+  { label: "Workouts", to: NAV_PATHS.WORKOUTS },
+  { label: "Exercises", to: NAV_PATHS.EXERCISES },
+  { label: "AI Chat", to: NAV_PATHS.CHAT },
+] as const;
 
 const NotFoundPage = () => {
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  const handleGoHome = () => {
-    // Navigate to workouts if authenticated, otherwise to landing page
-    navigate(isAuthenticated ? NAV_PATHS.WORKOUTS : "/");
-  };
 
   const handleGoBack = () => {
-    // Go back in browser history
-    window.history.back();
+    const historyIndex =
+      typeof window.history.state?.idx === "number"
+        ? window.history.state.idx
+        : 0;
+
+    if (historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(NAV_PATHS.WORKOUTS, { replace: true });
   };
 
   return (
-    <div className="bg-background mx-auto flex min-h-screen max-w-5xl items-center justify-center p-8 text-center">
-      <div className="w-full max-w-md">
-        {/* Error Icon */}
+    <div className="bg-background flex min-h-full items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+      <div className="bg-card w-full max-w-lg rounded-3xl border px-6 py-8 text-center shadow-sm sm:px-8">
         <div className="mb-6 flex justify-center">
-          <div className="bg-destructive/10 rounded-full p-6">
-            <AlertTriangle className="text-destructive h-16 w-16" />
+          <div className="bg-destructive/10 rounded-full p-4 sm:p-5">
+            <AlertTriangle className="text-destructive h-10 w-10 sm:h-12 sm:w-12" />
           </div>
         </div>
 
-        {/* Error Code */}
-        <h1 className="text-primary mb-2 text-8xl font-bold">404</h1>
-
-        {/* Error Message */}
-        <h2 className="text-foreground mb-4 text-2xl font-semibold">
-          Page Not Found
-        </h2>
-
-        <p className="text-muted-foreground mb-8 leading-relaxed">
-          Oops! The page you're looking for doesn't exist. It might have been
-          moved, deleted, or you entered the wrong URL.
+        <p className="text-primary mb-3 text-sm font-semibold tracking-[0.3em] uppercase">
+          404
         </p>
 
-        {/* Action Buttons */}
-        <div className="space-y-4">
-          <button
-            onClick={handleGoHome}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors duration-200"
-          >
-            <Home className="h-5 w-5" />
-            {isAuthenticated ? "Go to Workouts" : "Go to Home"}
-          </button>
+        <h1 className="text-foreground mb-3 text-3xl font-semibold text-balance sm:text-4xl">
+          Page Not Found
+        </h1>
 
-          <button
+        <p className="text-muted-foreground mx-auto mb-8 max-w-md text-sm leading-6 sm:text-base">
+          The page you tried to open does not exist anymore, or the link is
+          incorrect. Use one of the routes below to get back into the app.
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button asChild size="lg" className="w-full rounded-xl">
+            <Link to={NAV_PATHS.WORKOUTS}>
+              <Home className="h-5 w-5" />
+              Go to Workouts
+            </Link>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full rounded-xl"
             onClick={handleGoBack}
-            className="bg-muted hover:bg-accent text-muted-foreground flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors duration-200"
           >
             <ArrowLeft className="h-5 w-5" />
             Go Back
-          </button>
+          </Button>
         </div>
 
-        {/* Helpful Links */}
-        <div className="border-border mt-12 border-t pt-8">
+        <div className="border-border mt-8 border-t pt-6">
           <p className="text-muted-foreground mb-4 text-sm">
-            Need help? Try these:
+            Quick links
           </p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <button
-              onClick={() => navigate(NAV_PATHS.WORKOUTS)}
-              className="text-primary hover:text-primary/90 hover:underline"
-              disabled={!isAuthenticated}
-            >
-              Workouts
-            </button>
-            <button
-              onClick={() => navigate(NAV_PATHS.EXERCISES)}
-              className="text-primary hover:text-primary/90 hover:underline"
-              disabled={!isAuthenticated}
-            >
-              Exercises
-            </button>
-            <button
-              onClick={() => navigate(NAV_PATHS.CHAT)}
-              className="text-primary hover:text-primary/90 hover:underline"
-              disabled={!isAuthenticated}
-            >
-              AI Chat
-            </button>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {helpfulLinks.map((link) => (
+              <Button
+                key={link.to}
+                asChild
+                variant="ghost"
+                className="border-border hover:bg-accent h-auto rounded-xl border px-4 py-3"
+              >
+                <Link to={link.to}>{link.label}</Link>
+              </Button>
+            ))}
           </div>
         </div>
       </div>

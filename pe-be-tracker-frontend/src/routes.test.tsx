@@ -135,8 +135,44 @@ describe("routes", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+      await screen.findByRole("heading", { name: /page not found/i }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/loading workout/i)).not.toBeInTheDocument();
+  });
+
+  it("renders working recovery links for unmatched routes", async () => {
+    mockAuthState.isAuthenticated = false;
+
+    const router = createMemoryRouter(routes, {
+      initialEntries: ["/definitely-not-a-route"],
+    });
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /page not found/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /go to workouts/i }),
+    ).toHaveAttribute("href", "/workouts");
+    expect(
+      screen.getByRole("link", { name: /^workouts$/i }),
+    ).toHaveAttribute("href", "/workouts");
+    expect(
+      screen.getByRole("link", { name: /^exercises$/i }),
+    ).toHaveAttribute("href", "/exercise-types");
+    expect(
+      screen.getByRole("link", { name: /ai chat/i }),
+    ).toHaveAttribute("href", "/chat");
   });
 });
