@@ -1,5 +1,6 @@
 import api from "@/shared/api/client";
 import { Routine } from "@/features/routines/types";
+import { endpoints } from "@/shared/api/endpoints";
 
 // Create/Update payload types for routines
 export interface CreateRoutineData {
@@ -38,7 +39,7 @@ export const getRoutines = async (
   limit: number = 100,
 ): Promise<{ data: Routine[]; next_cursor?: number | null }> => {
   const currentOffset = cursor ?? 0;
-  const response = await api.get("/routines/", {
+  const response = await api.get(endpoints.routines, {
     params: {
       // Backend currently ignores order_by; safe to pass for future-proofing
       order_by: orderBy,
@@ -53,7 +54,7 @@ export const getRoutines = async (
 };
 
 export const getRoutine = async (id: number): Promise<Routine> => {
-  const response = await api.get(`/routines/${id}`);
+  const response = await api.get(endpoints.routineById(id));
   return response.data;
 };
 
@@ -61,7 +62,7 @@ export const createRoutine = async (
   routineData: CreateRoutineData,
 ): Promise<Routine> => {
   // Backend is mounted at /api/v1/routines/ and prefers trailing slash for POST
-  const response = await api.post("/routines/", routineData);
+  const response = await api.post(endpoints.routines, routineData);
   return response.data;
 };
 
@@ -69,19 +70,19 @@ export const updateRoutine = async (
   routineId: string | number,
   updateData: UpdateRoutineData,
 ): Promise<Routine> => {
-  const response = await api.put(`/routines/${routineId}`, updateData);
+  const response = await api.put(endpoints.routineById(routineId), updateData);
   return response.data;
 };
 
 export const deleteRoutine = async (
   routineId: string | number,
 ): Promise<void> => {
-  await api.delete(`/routines/${routineId}`);
+  await api.delete(endpoints.routineById(routineId));
 };
 
 export const startWorkoutFromRoutine = async (
   routineId: number | string,
 ): Promise<{ id: number }> => {
-  const response = await api.post(`/routines/${routineId}/start`);
+  const response = await api.post(endpoints.startWorkoutFromRoutine(routineId));
   return response.data;
 };
