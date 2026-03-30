@@ -7,9 +7,6 @@ import {
   makeGuestExercise,
   makeGuestExerciseSet,
   makeGuestExerciseType,
-  makeGuestRoutine,
-  makeGuestRoutineExercise,
-  makeGuestRoutineSet,
   makeGuestWorkout,
   makeGuestWorkoutType,
 } from "@/test/fixtures";
@@ -275,72 +272,4 @@ describe("syncGuestDataToServer", () => {
     });
   });
 
-  it("syncs routines successfully", async () => {
-    const exerciseType = makeGuestExerciseType({
-      id: "guest-et-1",
-      name: "Push-ups",
-      description: "Upper body",
-      default_intensity_unit: 1,
-      times_used: 1,
-    });
-    const mockGuestData: GuestData = makeGuestData({
-      routines: [
-        makeGuestRoutine({
-          id: "guest-routine-1",
-          name: "My Routine",
-          description: "A test routine",
-          exercises: [
-            makeGuestRoutineExercise({
-              id: "guest-routine-ex-1",
-              exercise_type_id: "guest-et-1",
-              exercise_type: exerciseType,
-              sets: [
-                makeGuestRoutineSet({
-                  id: "guest-set-1",
-                  reps: 10,
-                  intensity: 0,
-                  intensity_unit_id: 1,
-                  rest_time_seconds: 60,
-                }),
-              ],
-              notes: "Do it correctly",
-            }),
-          ],
-          created_at: "2023-01-01T10:00:00Z",
-          updated_at: "2023-01-01T10:00:00Z",
-        }),
-      ],
-    });
-
-    // Mock API responses
-    (api.get as any)
-      .mockResolvedValueOnce({ data: { data: [{ id: 5, name: "Push-ups" }] } }) // existing exercise type
-      .mockResolvedValueOnce({ data: [{ id: 10, name: "Strength" }] }); // existing "Strength" workout type for routine
-
-    (api.post as any)
-      .mockResolvedValueOnce({ data: { id: 100, name: "My Routine" } }); // create routine
-
-    const result = await syncGuestDataToServer(
-      mockGuestData,
-      mockClearGuestData
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.syncedRoutines).toBe(1);
-
-    expect(api.post).toHaveBeenCalledWith(endpoints.routines, expect.objectContaining({
-      name: "My Routine",
-      workout_type_id: 10,
-      exercise_templates: expect.arrayContaining([
-        expect.objectContaining({
-          exercise_type_id: 5,
-          set_templates: expect.arrayContaining([
-            expect.objectContaining({
-              reps: 10
-            })
-          ])
-        })
-      ])
-    }));
-  });
 });

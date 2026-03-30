@@ -13,6 +13,21 @@ from src.routines.schemas import (
 )
 
 
+def _routine_detail_query(*, populate_existing: bool = False):
+    query = select(Routine).options(
+        selectinload(Routine.exercise_templates)
+        .selectinload(ExerciseTemplate.set_templates)
+        .selectinload(SetTemplate.intensity_unit),
+        selectinload(Routine.exercise_templates).selectinload(
+            ExerciseTemplate.exercise_type
+        ),
+        selectinload(Routine.workout_type),
+    )
+    if populate_existing:
+        query = query.execution_options(populate_existing=True)
+    return query
+
+
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
     if error.orig is None:
         return None
@@ -71,17 +86,7 @@ async def get_routine_by_id_for_user(
     Accessible when owned by the user OR marked public.
     """
     result = await session.execute(
-        select(Routine)
-        .options(
-            selectinload(Routine.exercise_templates)
-            .selectinload(ExerciseTemplate.set_templates)
-            .selectinload(SetTemplate.intensity_unit),
-            selectinload(Routine.exercise_templates).selectinload(
-                ExerciseTemplate.exercise_type
-            ),
-            selectinload(Routine.workout_type),
-        )
-        .where(
+        _routine_detail_query().where(
             and_(
                 Routine.id == routine_id,
                 or_(
@@ -101,51 +106,61 @@ async def get_user_routine_by_id(
     populate_existing: bool = False,
 ) -> Optional[Routine]:
     """Get a routine by ID with relationships loaded (user-owned only)."""
-    query = (
-        select(Routine)
-        .options(
-            selectinload(Routine.exercise_templates)
-            .selectinload(ExerciseTemplate.set_templates)
-            .selectinload(SetTemplate.intensity_unit),
-            selectinload(Routine.exercise_templates).selectinload(
-                ExerciseTemplate.exercise_type
-            ),
-            selectinload(Routine.workout_type),
-        )
-        .where(and_(Routine.id == routine_id, Routine.creator_id == user_id))
+    query = _routine_detail_query(populate_existing=populate_existing).where(
+        and_(Routine.id == routine_id, Routine.creator_id == user_id)
     )
-    if populate_existing:
-        query = query.execution_options(populate_existing=True)
 
     result = await session.execute(query)
     return result.scalar_one_or_none()
 
 
-async def get_user_routines(
-    session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
-) -> List[Routine]:
-    """Get all routines visible to a specific user with pagination."""
+async def get_any_routine_by_id(
+    session: AsyncSession, routine_id: int, populate_existing: bool = False
+) -> Optional[Routine]:
+    """Get any routine by ID with relationships loaded."""
     result = await session.execute(
-        select(Routine)
-        .options(
-            selectinload(Routine.exercise_templates)
-            .selectinload(ExerciseTemplate.set_templates)
-            .selectinload(SetTemplate.intensity_unit),
-            selectinload(Routine.exercise_templates).selectinload(
-                ExerciseTemplate.exercise_type
-            ),
-            selectinload(Routine.workout_type),
+        _routine_detail_query(populate_existing=populate_existing).where(
+            Routine.id == routine_id
         )
-        .where(
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_public_routine_by_id(
+    session: AsyncSession, routine_id: int, populate_existing: bool = False
+) -> Optional[Routine]:
+    """Get a public routine by ID with relationships loaded."""
+    result = await session.execute(
+        _routine_detail_query(populate_existing=populate_existing).where(
+            Routine.id == routine_id,
+            Routine.visibility == Routine.RoutineVisibility.public,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_visible_routines(
+    session: AsyncSession,
+    user_id: int | None,
+    offset: int = 0,
+    limit: int = 100,
+) -> List[Routine]:
+    """Get routines visible to the current viewer with pagination."""
+    query = _routine_detail_query().order_by(Routine.created_at.desc()).offset(offset).limit(limit)
+
+    if user_id is None:
+        query = query.where(
+            Routine.visibility == Routine.RoutineVisibility.public
+        )
+    else:
+        query = query.where(
             or_(
                 Routine.creator_id == user_id,
                 Routine.visibility == Routine.RoutineVisibility.public,
             )
         )
-        .order_by(Routine.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+
+    result = await session.execute(query)
     return result.scalars().all()
 
 
@@ -260,13 +275,18 @@ async def update_routine(
     routine_id: int,
     routine_data: RoutineUpdate,
     user_id: int,
+    is_superuser: bool = False,
 ) -> Optional[Routine]:
-    """Update a routine (user-owned only).
+    """Update a routine.
 
     When `exercise_templates` is provided, the existing nested template tree is
     replaced transactionally using the submitted payload.
     """
-    routine = await get_user_routine_by_id(session, routine_id, user_id)
+    routine = await (
+        get_any_routine_by_id(session, routine_id)
+        if is_superuser
+        else get_user_routine_by_id(session, routine_id, user_id)
+    )
     if not routine:
         return None
 
@@ -312,14 +332,24 @@ async def update_routine(
 
     # Reload the full tree eagerly so response serialization does not trigger
     # async lazy loads for nested templates after the replace operation.
-    return await get_user_routine_by_id(
-        session, routine.id, user_id, populate_existing=True
+    return await (
+        get_any_routine_by_id(session, routine.id, populate_existing=True)
+        if is_superuser
+        else get_user_routine_by_id(
+            session, routine.id, user_id, populate_existing=True
+        )
     )
 
 
-async def delete_routine(session: AsyncSession, routine_id: int, user_id: int) -> bool:
-    """Delete a routine (user-owned only)."""
-    routine = await get_user_routine_by_id(session, routine_id, user_id)
+async def delete_routine(
+    session: AsyncSession, routine_id: int, user_id: int, is_superuser: bool = False
+) -> bool:
+    """Delete a routine (user-owned only unless performed by a superuser)."""
+    routine = await (
+        get_any_routine_by_id(session, routine_id)
+        if is_superuser
+        else get_user_routine_by_id(session, routine_id, user_id)
+    )
     if not routine:
         return False
 

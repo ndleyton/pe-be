@@ -37,6 +37,8 @@ export interface Routine {
   description?: string | null;
   workout_type_id: number;
   creator_id: number;
+  visibility: "private" | "public" | "link_only";
+  is_readonly: boolean;
   created_at: string;
   updated_at: string;
   exercise_templates: ExerciseTemplate[];

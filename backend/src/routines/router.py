@@ -6,7 +6,7 @@ from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
 from src.core.database import get_async_session
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
 # NOTE: The application exposes these as routines.
@@ -15,24 +15,35 @@ router = APIRouter(tags=["routines"])
 
 
 @router.get("/", response_model=List[RoutineRead])
-async def get_user_routines(
-    user: User = Depends(current_active_user),
+async def get_visible_routines(
+    user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
     offset: int = 0,
     limit: int = 100,
 ):
-    """Get all routines for the authenticated user"""
-    return await routine_service.get_user_routines(session, user.id, offset, limit)
+    """Get routines visible to the current viewer.
+
+    Signed-out users receive only public routines.
+    Signed-in users receive their own routines plus public routines.
+    """
+    return await routine_service.get_visible_routines(
+        session, user.id if user else None, offset, limit
+    )
 
 
 @router.get("/{routine_id}", response_model=RoutineRead)
 async def get_routine(
     routine_id: int,
-    user: User = Depends(current_active_user),
+    user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get a specific routine by ID"""
-    routine = await routine_service.get_routine(session, routine_id, user.id)
+    """Get a specific routine by ID.
+
+    Public routines are viewable without authentication.
+    """
+    routine = await routine_service.get_routine(
+        session, routine_id, user.id if user else None
+    )
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
     return routine
@@ -57,7 +68,7 @@ async def update_routine(
 ):
     """Update an existing routine"""
     routine = await routine_service.update_routine(
-        session, routine_id, routine_in, user.id
+        session, routine_id, routine_in, user.id, is_superuser=user.is_superuser
     )
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
@@ -92,4 +103,6 @@ async def delete_routine(
 ):
     """Delete a routine"""
     # Idempotent delete: 204 whether missing or not owned
-    await routine_service.delete_routine(session, routine_id, user.id)
+    await routine_service.delete_routine(
+        session, routine_id, user.id, is_superuser=user.is_superuser
+    )

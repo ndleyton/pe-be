@@ -12,6 +12,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 
 type RoutineInfoCardProps = {
+  canEdit: boolean;
   deleteDisabled: boolean;
   deleteLabel: string;
   description: string;
@@ -29,6 +30,7 @@ type RoutineInfoCardProps = {
 };
 
 export const RoutineInfoCard = ({
+  canEdit,
   deleteDisabled,
   deleteLabel,
   description,
@@ -48,8 +50,9 @@ export const RoutineInfoCard = ({
     <CardHeader>
       <CardTitle>Routine Info</CardTitle>
       <CardDescription>
-        Update the routine metadata and save the full template when you&apos;re
-        ready.
+        {canEdit
+          ? "Update the routine metadata and save the full template when you're ready."
+          : "This routine is view-only for your account."}
       </CardDescription>
     </CardHeader>
     <CardContent className="grid gap-4">
@@ -61,6 +64,7 @@ export const RoutineInfoCard = ({
           id="routine-name"
           data-testid="routine-name-input"
           value={name}
+          readOnly={!canEdit}
           onChange={(event) => onNameChange(event.target.value)}
           placeholder="Enter routine name"
         />
@@ -74,21 +78,24 @@ export const RoutineInfoCard = ({
           id="routine-description"
           data-testid="routine-description-input"
           value={description}
+          readOnly={!canEdit}
           onChange={(event) => onDescriptionChange(event.target.value)}
           placeholder="Optional routine description"
         />
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          data-testid="save-routine-button"
-          onClick={onSave}
-          disabled={saveDisabled}
-          className="flex-1"
-        >
-          <Save className="mr-2 h-4 w-4" />
-          {saveLabel}
-        </Button>
+        {canEdit && (
+          <Button
+            data-testid="save-routine-button"
+            onClick={onSave}
+            disabled={saveDisabled}
+            className="flex-1"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {saveLabel}
+          </Button>
+        )}
         <Button
           data-testid="start-routine-workout-button"
           onClick={onStartWorkout}
@@ -99,19 +106,21 @@ export const RoutineInfoCard = ({
           <Play className="mr-2 h-4 w-4" />
           {startLabel}
         </Button>
-        <Button
-          data-testid="delete-routine-button"
-          onClick={onDelete}
-          disabled={deleteDisabled}
-          variant="destructive"
-          className="flex-1"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          {deleteLabel}
-        </Button>
+        {canEdit && (
+          <Button
+            data-testid="delete-routine-button"
+            onClick={onDelete}
+            disabled={deleteDisabled}
+            variant="destructive"
+            className="flex-1"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {deleteLabel}
+          </Button>
+        )}
       </div>
 
-      {hasInvalidTemplates && (
+      {canEdit && hasInvalidTemplates && (
         <p className="text-sm text-muted-foreground">
           Every exercise template needs a selected exercise type and every set
           needs an intensity unit before you can save.
