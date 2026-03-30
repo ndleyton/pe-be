@@ -248,14 +248,14 @@ const WorkoutPage = () => {
     syncWorkoutTimer,
   ]);
 
-  // Auto-create exercises from routine when page loads
+  // Guest-only hydration from navigation state.
+  // Authenticated routine starts are created server-side before navigation.
   useEffect(() => {
     if (routine && workoutId && exercises?.length === 0) {
       if (isAuthenticated) {
-        // For authenticated users, we'd need to make API calls
-        // This is simplified - would need to implement full API integration
+        // No-op: authenticated users should already receive a populated workout.
       } else {
-        // For guest users, create exercises from the routine
+        // Guest users create workout exercises locally from the routine template.
         guestCreateExercisesFromRoutine(routine, workoutId);
       }
     }
