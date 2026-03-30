@@ -5,9 +5,10 @@ from types import SimpleNamespace
 
 from src.main import app
 from src.users.models import User
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
+from src.routines.models import Routine
 
 
 @pytest.mark.integration
@@ -51,6 +52,7 @@ async def test_create_routine_endpoint_success(
         return SimpleNamespace(id=user_id, is_superuser=False)
 
     app.dependency_overrides[current_active_user] = override_user
+    app.dependency_overrides[current_optional_user] = override_user
 
     try:
         payload = {
@@ -106,6 +108,7 @@ async def test_create_routine_endpoint_success(
     finally:
         # Clean up dependency override and dispose engine/session
         app.dependency_overrides.pop(current_active_user, None)
+        app.dependency_overrides.pop(current_optional_user, None)
 
 
 @pytest.mark.integration
@@ -149,6 +152,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
         return SimpleNamespace(id=user_id, is_superuser=False)
 
     app.dependency_overrides[current_active_user] = override_user
+    app.dependency_overrides[current_optional_user] = override_user
 
     try:
         create_payload = {
@@ -224,6 +228,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
         assert len(fetched["exercise_templates"][0]["set_templates"]) == 2
     finally:
         app.dependency_overrides.pop(current_active_user, None)
+        app.dependency_overrides.pop(current_optional_user, None)
 
 
 @pytest.mark.integration
@@ -311,3 +316,64 @@ async def test_superuser_can_update_and_delete_other_users_routine(
         assert delete_resp.status_code == 204, delete_resp.text
     finally:
         app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_unauthenticated_users_can_view_public_routine_only(
+    db_session: AsyncSession, async_client: AsyncClient
+):
+    """Unauthenticated users can fetch public routine detail but not private ones."""
+
+    intensity_unit = IntensityUnit(name="Pounds", abbreviation="lb")
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add_all([intensity_unit, workout_type])
+    await db_session.flush()
+
+    exercise_type = ExerciseType(
+        name="Bench Press",
+        description="Chest press",
+        default_intensity_unit=intensity_unit.id,
+    )
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    owner = User(
+        email="public-routine-owner@example.com",
+        hashed_password="not-used-in-tests",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(owner)
+    await db_session.flush()
+
+    public_routine = Routine(
+        name="Public Routine",
+        description="Visible to signed-out visitors",
+        workout_type_id=workout_type.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=False,
+    )
+    private_routine = Routine(
+        name="Private Routine",
+        description="Hidden from signed-out visitors",
+        workout_type_id=workout_type.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.private,
+        is_readonly=False,
+    )
+
+    db_session.add_all([public_routine, private_routine])
+    await db_session.flush()
+    public_routine_id = public_routine.id
+    private_routine_id = private_routine.id
+    await db_session.commit()
+
+    public_resp = await async_client.get(f"/api/v1/routines/{public_routine_id}")
+    assert public_resp.status_code == 200, public_resp.text
+    assert public_resp.json()["name"] == "Public Routine"
+
+    private_resp = await async_client.get(f"/api/v1/routines/{private_routine_id}")
+    assert private_resp.status_code == 404, private_resp.text

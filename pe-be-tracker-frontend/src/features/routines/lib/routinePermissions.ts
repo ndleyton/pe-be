@@ -2,6 +2,7 @@ import type { Routine } from "@/features/routines/types";
 
 type RoutineEditAccessArgs = {
   currentUserId?: number | null;
+  isGuestRoutine?: boolean;
   isAuthenticated: boolean;
   isSuperuser?: boolean;
   routine: Routine | null;
@@ -9,7 +10,7 @@ type RoutineEditAccessArgs = {
 
 export const canEditRoutine = ({
   currentUserId,
-  isAuthenticated,
+  isGuestRoutine = false,
   isSuperuser = false,
   routine,
 }: RoutineEditAccessArgs): boolean => {
@@ -17,7 +18,7 @@ export const canEditRoutine = ({
     return false;
   }
 
-  if (!isAuthenticated) {
+  if (isGuestRoutine) {
     return true;
   }
 
@@ -30,17 +31,26 @@ export const canEditRoutine = ({
 
 export const getRoutineEditAccessMessage = ({
   currentUserId,
+  isGuestRoutine = false,
   isAuthenticated,
   isSuperuser = false,
   routine,
 }: RoutineEditAccessArgs): string | null => {
-  if (!routine || !isAuthenticated || canEditRoutine({
-    currentUserId,
-    isAuthenticated,
-    isSuperuser,
-    routine,
-  })) {
+  if (
+    !routine ||
+    canEditRoutine({
+      currentUserId,
+      isGuestRoutine,
+      isAuthenticated,
+      isSuperuser,
+      routine,
+    })
+  ) {
     return null;
+  }
+
+  if (!isAuthenticated) {
+    return "Sign in as the routine creator or a superuser to edit this routine.";
   }
 
   return "Only the routine creator or a superuser can edit this routine.";

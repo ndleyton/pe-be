@@ -6,7 +6,7 @@ from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
 from src.core.database import get_async_session
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
 # NOTE: The application exposes these as routines.
@@ -28,11 +28,16 @@ async def get_user_routines(
 @router.get("/{routine_id}", response_model=RoutineRead)
 async def get_routine(
     routine_id: int,
-    user: User = Depends(current_active_user),
+    user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get a specific routine by ID"""
-    routine = await routine_service.get_routine(session, routine_id, user.id)
+    """Get a specific routine by ID.
+
+    Public routines are viewable without authentication.
+    """
+    routine = await routine_service.get_routine(
+        session, routine_id, user.id if user else None
+    )
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
     return routine

@@ -70,6 +70,13 @@ test.describe("Routine editor", () => {
 
     await page.route("**/users/me", guestAuthHandler);
     await page.route(`${apiBase}/users/me`, guestAuthHandler);
+    await page.route("**/api/v1/routines/123*", async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Routine not found" }),
+      });
+    });
 
     await page.goto("/routines/123");
 
@@ -83,6 +90,87 @@ test.describe("Routine editor", () => {
       page.getByRole("heading", { name: "Routine Editor" }),
     ).toHaveCount(0);
     await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
+  });
+
+  test("unauthenticated users can open an existing public routine but cannot edit it", async ({
+    page,
+  }) => {
+    const guestAuthHandler = (route: any) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    };
+    const routineState = {
+      id: 321,
+      name: "Public Routine",
+      description: "Visible to signed-out visitors",
+      workout_type_id: 4,
+      creator_id: 999,
+      visibility: "public",
+      is_readonly: false,
+      created_at: "2026-03-10T10:00:00.000Z",
+      updated_at: "2026-03-10T10:00:00.000Z",
+      exercise_templates: [
+        {
+          id: 7001,
+          exercise_type_id: 11,
+          created_at: "2026-03-10T10:00:00.000Z",
+          updated_at: "2026-03-10T10:00:00.000Z",
+          exercise_type: {
+            id: 11,
+            name: "Bench Press",
+            description: "Chest press",
+            default_intensity_unit: 3,
+            times_used: 10,
+          },
+          set_templates: [
+            {
+              id: 8001,
+              reps: 8,
+              intensity: 135,
+              intensity_unit_id: 3,
+              created_at: "2026-03-10T10:00:00.000Z",
+              updated_at: "2026-03-10T10:00:00.000Z",
+              intensity_unit: {
+                id: 3,
+                name: "Pounds",
+                abbreviation: "lbs",
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    await page.route("**/users/me", guestAuthHandler);
+    await page.route(`${apiBase}/users/me`, guestAuthHandler);
+    await page.route("**/api/v1/routines/321*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(routineState),
+      });
+    });
+
+    await page.goto("/routines/321");
+
+    await expect(
+      page.getByRole("heading", { name: "Routine Details" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Sign in as the routine creator or a superuser to edit this routine."),
+    ).toBeVisible();
+    await expect(page.getByTestId("routine-name-input")).toHaveValue(
+      "Public Routine",
+    );
+    await expect(page.getByTestId("routine-name-input")).not.toBeEditable();
+    await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
+    await expect(page.getByTestId("delete-routine-button")).toHaveCount(0);
+    await expect(page.getByTestId("add-routine-exercise-button")).toHaveCount(0);
+    await expect(
+      page.getByTestId("start-routine-workout-button"),
+    ).toBeVisible();
   });
 
   test("authenticated users can save a full routine replacement payload", async ({

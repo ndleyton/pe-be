@@ -126,6 +126,19 @@ async def get_any_routine_by_id(
     return result.scalar_one_or_none()
 
 
+async def get_public_routine_by_id(
+    session: AsyncSession, routine_id: int, populate_existing: bool = False
+) -> Optional[Routine]:
+    """Get a public routine by ID with relationships loaded."""
+    result = await session.execute(
+        _routine_detail_query(populate_existing=populate_existing).where(
+            Routine.id == routine_id,
+            Routine.visibility == Routine.RoutineVisibility.public,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_user_routines(
     session: AsyncSession, user_id: int, offset: int = 0, limit: int = 100
 ) -> List[Routine]:

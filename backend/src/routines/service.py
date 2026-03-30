@@ -31,10 +31,14 @@ class RoutineService:
         return [RoutineRead.model_validate(routine) for routine in routines]
 
     async def get_routine(
-        self, session: AsyncSession, routine_id: int, user_id: int
+        self, session: AsyncSession, routine_id: int, user_id: int | None
     ) -> Optional[RoutineRead]:
         """Get a specific routine by ID."""
-        routine = await crud.get_routine_by_id_for_user(session, routine_id, user_id)
+        routine = (
+            await crud.get_routine_by_id_for_user(session, routine_id, user_id)
+            if user_id is not None
+            else await crud.get_public_routine_by_id(session, routine_id)
+        )
         if routine:
             return RoutineRead.model_validate(routine)
         return None

@@ -13,6 +13,7 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: null,
+        isGuestRoutine: true,
         isAuthenticated: false,
         routine,
       }),
@@ -28,6 +29,7 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
+        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -44,6 +46,7 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
+        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -51,6 +54,7 @@ describe("routinePermissions", () => {
     expect(
       getRoutineEditAccessMessage({
         currentUserId: 42,
+        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
@@ -67,6 +71,7 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
+        isGuestRoutine: false,
         isAuthenticated: true,
         isSuperuser: true,
         routine,
@@ -83,9 +88,34 @@ describe("routinePermissions", () => {
     expect(
       canEditRoutine({
         currentUserId: 42,
+        isGuestRoutine: false,
         isAuthenticated: true,
         routine,
       }),
     ).toBe(true);
+  });
+
+  it("blocks signed-out users from editing a server routine", () => {
+    const routine = makeRoutine({
+      creator_id: 7,
+      visibility: "public",
+    });
+
+    expect(
+      canEditRoutine({
+        currentUserId: null,
+        isGuestRoutine: false,
+        isAuthenticated: false,
+        routine,
+      }),
+    ).toBe(false);
+    expect(
+      getRoutineEditAccessMessage({
+        currentUserId: null,
+        isGuestRoutine: false,
+        isAuthenticated: false,
+        routine,
+      }),
+    ).toBe("Sign in as the routine creator or a superuser to edit this routine.");
   });
 });

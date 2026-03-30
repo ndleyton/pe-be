@@ -74,7 +74,7 @@ const RoutineDetailsPage = () => {
       routineId,
     });
 
-  if (isAuthenticated && (routinePending || unitsPending)) {
+  if (routinePending || (isAuthenticated && unitsPending)) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Card>

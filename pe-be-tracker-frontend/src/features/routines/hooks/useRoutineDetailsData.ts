@@ -21,6 +21,9 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   const guestRoutine = useGuestStore((state) =>
     state.routines.find((routine) => routine.id === routineId),
   );
+  const isGuestRoutine = guestRoutine != null;
+  const canFetchServerRoutine =
+    routineId != null && /^\d+$/.test(routineId) && !isGuestRoutine;
 
   const {
     data: serverRoutine,
@@ -29,7 +32,7 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   } = useQuery({
     queryKey: ["routine", routineId],
     queryFn: () => getRoutine(Number(routineId)),
-    enabled: isAuthenticated && !!routineId,
+    enabled: canFetchServerRoutine,
   });
 
   const {
@@ -54,37 +57,47 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   );
 
   const routine = useMemo(() => {
-    if (isAuthenticated) {
-      return serverRoutine ?? null;
+    if (guestRoutine) {
+      return toRoutineFromGuest(guestRoutine);
     }
 
-    if (!guestRoutine) {
-      return null;
-    }
-
-    return toRoutineFromGuest(guestRoutine);
-  }, [guestRoutine, isAuthenticated, serverRoutine]);
+    return serverRoutine ?? null;
+  }, [guestRoutine, serverRoutine]);
 
   const canEdit = useMemo(
     () =>
       canEditRoutine({
         currentUserId: currentUser?.id,
+        isGuestRoutine,
         isAuthenticated,
         isSuperuser: currentUser?.is_superuser,
         routine,
       }),
-    [currentUser?.id, currentUser?.is_superuser, isAuthenticated, routine],
+    [
+      currentUser?.id,
+      currentUser?.is_superuser,
+      isAuthenticated,
+      isGuestRoutine,
+      routine,
+    ],
   );
 
   const editAccessMessage = useMemo(
     () =>
       getRoutineEditAccessMessage({
         currentUserId: currentUser?.id,
+        isGuestRoutine,
         isAuthenticated,
         isSuperuser: currentUser?.is_superuser,
         routine,
       }),
-    [currentUser?.id, currentUser?.is_superuser, isAuthenticated, routine],
+    [
+      currentUser?.id,
+      currentUser?.is_superuser,
+      isAuthenticated,
+      isGuestRoutine,
+      routine,
+    ],
   );
 
   return {
