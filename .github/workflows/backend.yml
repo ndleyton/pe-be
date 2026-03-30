@@ -16,6 +16,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: ./backend
@@ -107,6 +111,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     steps:
     - name: Checkout code
@@ -150,8 +155,9 @@ jobs:
       continue-on-error: true
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.HEAVY_RUNNER_LABELS_JSON != '' && vars.HEAVY_RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
     needs: test
+    if: github.event_name == 'push'
 
     steps:
     - name: Checkout code

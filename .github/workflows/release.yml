@@ -9,6 +9,10 @@ permissions:
   contents: write
   actions: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -52,7 +56,7 @@ jobs:
         prerelease: false
 
   build-and-release:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.HEAVY_RUNNER_LABELS_JSON != '' && vars.HEAVY_RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
     needs: create-release
 
     steps:
