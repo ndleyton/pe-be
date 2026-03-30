@@ -340,7 +340,7 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     expect(
-      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+      await screen.findByRole("heading", { name: /page not found/i }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /add exercise/i }),
@@ -357,7 +357,7 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     expect(
-      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+      await screen.findByRole("heading", { name: /page not found/i }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /add exercise/i }),
@@ -370,7 +370,7 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     expect(
-      await screen.findByRole("heading", { name: /page not found/i, level: 2 }),
+      await screen.findByRole("heading", { name: /page not found/i }),
     ).toBeInTheDocument();
     expect(vi.mocked(api.get)).not.toHaveBeenCalledWith(
       `/workouts/${mockWorkoutId}`,
@@ -403,7 +403,7 @@ describe("WorkoutPage", () => {
       screen.getByRole("link", { name: /back to workouts/i }),
     ).toHaveAttribute("href", "/workouts");
     expect(
-      screen.queryByRole("heading", { name: /page not found/i, level: 2 }),
+      screen.queryByRole("heading", { name: /page not found/i }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));

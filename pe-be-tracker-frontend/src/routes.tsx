@@ -178,16 +178,11 @@ const routes: RouteObject[] = [
           </PageWrapper>
         ),
       },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
     ],
-  },
-  // catch-all route
-  {
-    path: "*",
-    element: (
-      <PageWrapper>
-        <NotFoundPage />
-      </PageWrapper>
-    ),
   },
 ];
 
