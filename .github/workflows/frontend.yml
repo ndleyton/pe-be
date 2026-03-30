@@ -16,6 +16,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: ./pe-be-tracker-frontend
@@ -50,22 +54,6 @@ jobs:
           VITE_API_BASE_URL: http://localhost:8000
           VITE_API_TIMEOUT: 10000
           VITE_ENABLE_LOGGING: false
-
-      # Install Playwright browsers and dependencies
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: Run E2E tests
-        run: |
-          npm run dev:test &
-          npx wait-on http://localhost:5173
-          npm run test:e2e
-        env:
-          VITE_API_BASE_URL: http://localhost:8000/api/v1
-          VITE_API_TIMEOUT: 10000
-          VITE_ENABLE_LOGGING: false
-          VITE_PUBLIC_POSTHOG_KEY: ""
-          VITE_PUBLIC_POSTHOG_HOST: ""
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

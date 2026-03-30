@@ -18,12 +18,18 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 
 **Jobs:**
 - **Test**: Run pytest with PostgreSQL, generate coverage
-- **Security Scan**: Bandit security analysis
-- **Build**: Create wheel package and Docker image
+- **Security Scan**: Bandit security analysis on pushes to `main`/`develop`
+- **Build**: Create wheel package and Docker image on pushes to `main`/`develop`
 - **Deploy Staging**: Auto-deploy to staging on `develop` branch
 - **Deploy Production**: Auto-deploy to production on `main` branch
 
-### 3. PR Validation (`pr-validation.yml`)
+### 3. Frontend E2E (`e2e.yml`)
+**Triggers:** Pull requests to `main` or `develop` with frontend/backend changes, plus manual dispatch
+
+**Jobs:**
+- **E2E**: Boot backend + frontend and run Playwright tests
+
+### 4. PR Validation (`pr-validation.yml`)
 **Triggers:** All pull requests
 
 **Jobs:**
@@ -31,7 +37,7 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **PR Validation**: Semantic PR titles, security checks
 - **Integration Tests**: Full stack testing when both frontend/backend change
 
-### 4. Dependency Updates (`dependency-update.yml`)
+### 5. Dependency Updates (`dependency-update.yml`)
 **Triggers:** Weekly schedule (Mondays 9 AM UTC) + manual dispatch
 
 **Jobs:**
@@ -39,7 +45,7 @@ This repository uses GitHub Actions for automated testing, building, and deploym
 - **Backend Updates**: Auto-update uv dependencies
 - Creates PRs for review
 
-### 5. Release (`release.yml`)
+### 6. Release (`release.yml`)
 **Triggers:** Git tags starting with `v*`
 
 **Jobs:**
@@ -55,6 +61,14 @@ Set these in your GitHub repository settings:
 ```
 GITHUB_TOKEN  # Automatically provided by GitHub
 ```
+
+Optional repository variable for moving heavy jobs off GitHub-hosted minutes:
+
+```
+HEAVY_RUNNER_LABELS_JSON='["self-hosted","linux","x64","hetzner"]'
+```
+
+When that variable is set and the matching runner is registered on the VPS, the heavy Playwright and Docker jobs use the self-hosted runner. When it is unset, they fall back to `ubuntu-latest`.
 
 ### Branch Protection Rules
 Configure these for `main` branch:
