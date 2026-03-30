@@ -77,6 +77,8 @@ coverage.xml
 # Test artifacts
 .pytest_cache/
 .vitest/
+/pe-be-tracker-frontend/test-results.json
+/pe-be-tracker-frontend/bundle-analysis.html
 
 # Environment variables
 *.env
