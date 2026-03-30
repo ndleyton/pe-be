@@ -42,8 +42,6 @@
             --ring: rgb(219, 146, 146);
             --input: rgb(206, 185, 185);
             --radius: 1rem;
-            --hero-glow-primary: rgba(204, 0, 51, 0.1);
-            --hero-glow-ring: rgba(219, 146, 146, 0.2);
             --grid-line: rgba(209, 183, 183, 0.3);
             --surface-soft: rgb(236, 231, 231);
             --metric-bg: rgb(232, 226, 226);
@@ -65,8 +63,6 @@
                 --border: rgb(62, 48, 48);
                 --ring: rgb(80, 47, 47);
                 --input: rgb(61, 48, 48);
-                --hero-glow-primary: rgba(255, 51, 102, 0.11);
-                --hero-glow-ring: rgba(80, 47, 47, 0.35);
                 --grid-line: rgba(62, 48, 48, 0.35);
                 --surface-soft: rgb(42, 35, 35);
                 --metric-bg: rgb(46, 38, 38);
@@ -98,10 +94,7 @@
         .app-shell {
             position: relative;
             min-height: 100vh;
-            background:
-                radial-gradient(circle at top right, var(--hero-glow-primary), transparent 32%),
-                radial-gradient(circle at top left, var(--hero-glow-ring), transparent 24%),
-                var(--background);
+            background: var(--background);
         }
 
         .app-shell::before {
@@ -184,7 +177,7 @@
                     <div class="flex items-center gap-3">
                         <a href="#features" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">Features</a>
                         <a href="#flow" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">How it works</a>
-                        <a href="https://app.personalbestie.com" class="btn btn-primary px-4 py-2">Log In</a>
+                        <a href="https://app.personalbestie.com/workouts?auth=google&utm_source=landing&utm_medium=cta&utm_campaign=login" class="btn btn-primary px-4 py-2">Log In</a>
                     </div>
                 </div>
             </header>
@@ -226,87 +219,19 @@
                     </div>
 
                     <div class="surface p-4 sm:p-6">
-                        <div class="surface-soft px-5 py-4">
-                            <div class="flex items-center justify-between gap-4">
-                                <div>
-                                    <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Today</div>
-                                    <div class="mt-1 text-2xl font-semibold">Upper Body A</div>
-                                </div>
-                                <div class="rounded-md bg-[color:var(--primary)] px-3 py-2 text-sm font-medium text-[color:var(--primary-foreground)]">
-                                    Guest mode
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 grid gap-4 md:grid-cols-2">
-                            <div class="surface p-5">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Current exercise</div>
-                                        <div class="mt-2 text-xl font-semibold">Bench press</div>
-                                    </div>
-                                    <div class="rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" style="background: var(--badge-bg); color: var(--primary);">
-                                        Set 3
-                                    </div>
-                                </div>
-                                <div class="mt-4 space-y-3">
-                                    <div class="metric flex items-center justify-between px-4 py-3">
-                                        <span class="text-sm text-[color:var(--muted-foreground)]">8 reps</span>
-                                        <span class="font-semibold">75 kg</span>
-                                    </div>
-                                    <div class="metric flex items-center justify-between px-4 py-3">
-                                        <span class="text-sm text-[color:var(--muted-foreground)]">8 reps</span>
-                                        <span class="font-semibold">77.5 kg</span>
-                                    </div>
-                                    <div class="surface-soft flex items-center justify-between px-4 py-3">
-                                        <span class="text-sm text-[color:var(--muted-foreground)]">Target</span>
-                                        <span class="font-semibold text-[color:var(--primary)]">80 kg x 6</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="space-y-4">
-                                <div class="surface p-5">
-                                    <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Routine snapshot</div>
-                                    <div class="mt-4 space-y-3">
-                                        <div class="metric flex items-center justify-between px-4 py-3">
-                                            <span>Push</span>
-                                            <span class="font-semibold">Mon</span>
-                                        </div>
-                                        <div class="metric flex items-center justify-between px-4 py-3">
-                                            <span>Pull</span>
-                                            <span class="font-semibold">Wed</span>
-                                        </div>
-                                        <div class="metric flex items-center justify-between px-4 py-3">
-                                            <span>Legs</span>
-                                            <span class="font-semibold">Fri</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="surface p-5">
-                                    <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">AI note</div>
-                                    <p class="mt-3 text-sm leading-7 text-[color:var(--muted-foreground)]">
-                                        You completed every chest set last week. Add 2.5 kg to your top set today and keep rest periods under 2:30.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                            <div class="metric px-4 py-3">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">History</div>
-                                <div class="mt-1 text-lg font-semibold">14 workouts</div>
-                            </div>
-                            <div class="metric px-4 py-3">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Consistency</div>
-                                <div class="mt-1 text-lg font-semibold">4 weeks active</div>
-                            </div>
-                            <div class="metric px-4 py-3">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Sync</div>
-                                <div class="mt-1 text-lg font-semibold">Ready on sign-in</div>
-                            </div>
-                        </div>
+                        <picture>
+                            <source type="image/avif" srcset="finish-workout.avif">
+                            <img
+                                src="finish-workout.avif"
+                                alt="Workout summary showing muscle groups trained and total sets completed"
+                                width="430"
+                                height="760"
+                                class="block h-auto w-full rounded-lg border"
+                                style="border-color: var(--border);"
+                                decoding="async"
+                                fetchpriority="high"
+                            >
+                        </picture>
                     </div>
                 </section>
 
