@@ -79,7 +79,7 @@ def create_app() -> FastAPI:
         else None
     )
 
-    # Common dev hosts to allow
+    # Common dev hosts to allow.
     allowed_origins = {
         base_frontend,
         localhost_variant,
@@ -91,14 +91,20 @@ def create_app() -> FastAPI:
     # Remove any None entries
     allowed_origins = [origin for origin in allowed_origins if origin]
 
-    # Regex to match any localhost / 127.0.0.1 port (useful for hot-reload tools)
-    localhost_regex = r"http://(localhost|127\.0\.0\.1):\d+$"
+    # Regex to match local dev hosts and optionally preview hosts without
+    # hardcoding one ephemeral deployment URL into the application.
+    origin_regexes = [r"http://(localhost|127\.0\.0\.1):\d+$"]
+    if settings.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX:
+        origin_regexes.append(
+            f"(?:{settings.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX})"
+        )
+    allow_origin_regex = "|".join(origin_regexes)
 
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
-        allow_origin_regex=localhost_regex,
+        allow_origin_regex=allow_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
