@@ -148,6 +148,19 @@ async def _load_candidates(
     return result.scalars().all()
 
 
+async def _load_candidates_by_keys(
+    session: AsyncSession, generation_keys: list[str]
+) -> list[ExerciseImageCandidate]:
+    if not generation_keys:
+        return []
+    result = await session.execute(
+        select(ExerciseImageCandidate).where(
+            ExerciseImageCandidate.generation_key.in_(generation_keys)
+        )
+    )
+    return result.scalars().all()
+
+
 def _candidate_groups(
     *,
     candidates: list[ExerciseImageCandidate],
@@ -221,9 +234,24 @@ async def generate_reference_image_options(
         )
 
     context = _exercise_context(exercise_type)
+    model_name = exercise_type_reference_model()
+
+    # Pre-calculate keys to check for existing records globally
+    all_potential_keys = []
+    for source_image_index, source_image_url in enumerate(reference_images):
+        for option in REFERENCE_OPTION_SPECS:
+            key = _build_generation_key(
+                exercise_type_id=exercise_type.id,
+                source_image_url=source_image_url,
+                source_image_index=source_image_index,
+                option_key=option.key,
+                model_name=model_name,
+            )
+            all_potential_keys.append(key)
+
     existing_candidates = {
         candidate.generation_key: candidate
-        for candidate in await _load_candidates(session, exercise_type.id)
+        for candidate in await _load_candidates_by_keys(session, all_potential_keys)
     }
 
     pending_jobs: list[tuple[int, str, object, str, str, ExerciseImageCandidate | None]] = []
@@ -234,7 +262,7 @@ async def generate_reference_image_options(
                 source_image_url=source_image_url,
                 source_image_index=source_image_index,
                 option_key=option.key,
-                model_name=exercise_type_reference_model(),
+                model_name=model_name,
             )
             storage_path = _storage_path_for_candidate(
                 exercise_type.id,
