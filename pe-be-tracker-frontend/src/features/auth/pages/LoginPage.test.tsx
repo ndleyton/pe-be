@@ -70,6 +70,8 @@ describe("LoginPage", () => {
 
     renderLoginRoute("/login?auth_intent=google&next=/chat");
 
+    expect(screen.queryByText("Google Sign-In Button")).not.toBeInTheDocument();
+
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent("/chat");
     });
@@ -88,6 +90,9 @@ describe("LoginPage", () => {
 
   it("starts google sign-in after stripping auth intent from the URL", async () => {
     renderLoginRoute("/login?auth_intent=google&next=/chat&utm_source=landing");
+
+    expect(screen.getByText("Redirecting to Google...")).toBeInTheDocument();
+    expect(screen.queryByText("Google Sign-In Button")).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockGoogleSignIn).toHaveBeenCalledTimes(1);

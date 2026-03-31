@@ -10,6 +10,29 @@ import { HomeLogo } from "@/shared/components/layout";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 import { useAuthStore } from "@/stores/useAuthStore";
 
+const LoginPageStatus = ({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) => (
+  <div className="bg-background flex min-h-screen items-center justify-center">
+    <div
+      className="flex flex-col items-center gap-4 text-center"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="loading loading-spinner loading-lg" />
+      <div className="space-y-2">
+        <h1 className="text-foreground text-xl font-semibold">{title}</h1>
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
 const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +55,12 @@ const LoginPage = () => {
   const handleTryAsGuest = () => {
     navigate(nextPath);
   };
+
+  const showRedirectState = initialized && (
+    isAuthenticated
+    || shouldStartGoogleSignIn
+    || pendingGoogleSignInRef.current
+  );
 
   useEffect(() => {
     if (!initialized) {
@@ -87,13 +116,31 @@ const LoginPage = () => {
   }, [googleSignIn, initialized, isAuthenticated, shouldStartGoogleSignIn]);
 
   if (!initialized || loading) {
+    return shouldStartGoogleSignIn
+      ? (
+        <LoginPageStatus
+          title="Redirecting to Google..."
+          description="Preparing your sign-in."
+        />
+      )
+      : (
+        <LoginPageStatus
+          title="Checking your session..."
+          description="Please wait a moment."
+        />
+      );
+  }
+
+  if (showRedirectState) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="loading loading-spinner loading-lg" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
+      <LoginPageStatus
+        title={isAuthenticated ? "Redirecting..." : "Redirecting to Google..."}
+        description={
+          isAuthenticated
+            ? "Taking you to your destination."
+            : "Preparing your sign-in."
+        }
+      />
     );
   }
 
