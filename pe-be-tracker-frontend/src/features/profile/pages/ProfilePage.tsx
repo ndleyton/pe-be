@@ -1,4 +1,4 @@
- import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
@@ -18,9 +18,9 @@ const fetchWorkouts = async (): Promise<Workout[]> => {
 };
 
 const ProfilePage = () => {
-  // Use new store structure
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const loading = useAuthStore((state) => state.loading);
+  const setUser = useAuthStore((state) => state.setUser);
   const guestWorkouts = useGuestStore((state) => state.workouts);
 
   const {
@@ -30,44 +30,45 @@ const ProfilePage = () => {
   } = useQuery({
     queryKey: ["profile-workouts"],
     queryFn: fetchWorkouts,
-    // Only fetch server workouts if user is authenticated
     enabled: !loading && isAuthenticated,
-    retry: (failureCount, error: unknown) => {
-      if (
-        axios.isAxiosError(error) &&
-        (error.response?.status === 401 || error.response?.status === 403)
-      ) {
-        return false;
-      }
-      return failureCount < 3;
-    },
+    retry: false,
   });
 
+  const isAuthError =
+    axios.isAxiosError(error) &&
+    (error.response?.status === 401 || error.response?.status === 403);
+  const showWorkoutLoadWarning = isAuthenticated && !isAuthError && !!error;
+  const shouldUseServerWorkouts = isAuthenticated && !isAuthError;
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAuthError || typeof setUser !== "function") {
+      return;
+    }
+
+    setUser(null);
+  }, [isAuthError, isAuthenticated, setUser]);
+
   const workouts: Workout[] = useMemo(() => {
-    // Don't compute workouts until auth loading is complete
     if (loading) return [];
 
-    if (isAuthenticated) {
-      // For authenticated users, use server data (will be empty array until loaded)
+    if (shouldUseServerWorkouts) {
       return Array.isArray(serverWorkouts) ? serverWorkouts : [];
-    } else {
-      // For guest users, use guest data immediately
-      return Array.isArray(guestWorkouts)
-        ? guestWorkouts.map((gw) => ({
-            id: gw.id,
-            name: gw.name,
-            notes: gw.notes,
-            start_time: gw.start_time,
-            end_time: gw.end_time,
-            workout_type_id: Number(gw.workout_type_id),
-            created_at: gw.created_at || new Date().toISOString(),
-            updated_at: gw.updated_at || new Date().toISOString(),
-          }))
-        : [];
     }
-  }, [loading, isAuthenticated, serverWorkouts, guestWorkouts]);
 
-  // defensive programming to ensure arrays are always arrays
+    return Array.isArray(guestWorkouts)
+      ? guestWorkouts.map((gw) => ({
+          id: gw.id,
+          name: gw.name,
+          notes: gw.notes,
+          start_time: gw.start_time,
+          end_time: gw.end_time,
+          workout_type_id: Number(gw.workout_type_id),
+          created_at: gw.created_at || new Date().toISOString(),
+          updated_at: gw.updated_at || new Date().toISOString(),
+        }))
+      : [];
+  }, [guestWorkouts, loading, serverWorkouts, shouldUseServerWorkouts]);
+
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
   const completedWorkouts = safeWorkouts.filter((w) => w.end_time);
   const totalWorkouts = safeWorkouts.length;
@@ -86,19 +87,6 @@ const ProfilePage = () => {
         (1000 * 60) // Convert to minutes
       : 0;
 
-  if (isAuthenticated && error) {
-    return (
-      <div className="p-4">
-        <div className="mx-auto max-w-4xl">
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>Failed to load profile data</AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-5xl p-8 text-center">
       <div className="mx-auto max-w-4xl">
@@ -108,6 +96,16 @@ const ProfilePage = () => {
             Track your fitness journey
           </p>
         </div>
+
+        {showWorkoutLoadWarning && (
+          <Alert className="mb-6 text-left">
+            <AlertTitle>Workout history unavailable</AlertTitle>
+            <AlertDescription>
+              We couldn&apos;t refresh your workout stats right now. Your
+              account settings are still available.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <WeekTracking
           workouts={workouts}
@@ -169,11 +167,11 @@ const ProfilePage = () => {
             <div>
               <label className="text-muted-foreground text-sm">Status</label>
               <p className="font-medium">
-                {isAuthenticated ? "Signed In" : "Guest Mode"}
+                {shouldUseServerWorkouts ? "Signed In" : "Guest Mode"}
               </p>
             </div>
 
-            {!isAuthenticated && (
+            {!shouldUseServerWorkouts && (
               <Alert>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
