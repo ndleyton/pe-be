@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     FRONTEND_POST_LOGIN_PATH: str = Field(
         "/workouts", validation_alias="FRONTEND_POST_LOGIN_PATH"
     )
+    ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX: str = Field(
+        "",
+        validation_alias="ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX",
+        description="Optional regex for extra browser origins allowed to call the API",
+    )
     DATABASE_URL: str = Field(
         "postgresql+asyncpg://postgres:postgres@localhost:5432/pe_be",
         validation_alias="DATABASE_URL",
