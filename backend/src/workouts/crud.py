@@ -48,6 +48,16 @@ def _map_workout_integrity_error(
     return None
 
 
+def _is_workout_type_name_conflict(error: IntegrityError) -> bool:
+    constraint_name = _get_constraint_name(error)
+    error_message = str(error.orig) if error.orig is not None else str(error)
+    lowered = error_message.lower()
+
+    return constraint_name == "uq_workout_types_name" or (
+        "workout_types" in lowered and "name" in lowered and "unique" in lowered
+    )
+
+
 async def get_workout_by_date(
     session: AsyncSession, user_id: int, workout_date: date
 ) -> Optional[Workout]:
@@ -162,9 +172,25 @@ async def create_workout_type(
     session: AsyncSession, workout_type_create: WorkoutTypeCreate
 ) -> WorkoutType:
     """Create a new workout type"""
+    existing = await session.execute(
+        select(WorkoutType).where(WorkoutType.name == workout_type_create.name)
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise ValueError(
+            f"Workout type with name '{workout_type_create.name}' already exists"
+        )
+
     workout_type = WorkoutType(**workout_type_create.dict())
     session.add(workout_type)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        if _is_workout_type_name_conflict(e):
+            raise ValueError(
+                f"Workout type with name '{workout_type_create.name}' already exists"
+            ) from e
+        raise
     await session.refresh(workout_type)
     return workout_type
 

@@ -2,6 +2,8 @@ import logging
 from typing import Optional, List
 import json
 from types import SimpleNamespace
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from google import genai
@@ -438,8 +440,25 @@ class WorkoutTypeService:
         session: AsyncSession, workout_type_data: WorkoutTypeCreate
     ) -> WorkoutType:
         """Create a new workout type with business logic validation"""
-        # Add any business logic here (e.g., validation, default values)
-        return await create_workout_type(session, workout_type_data)
+        try:
+            return await create_workout_type(session, workout_type_data)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            ) from e
+        except IntegrityError as e:
+            if hasattr(e.orig, "pgcode") and e.orig.pgcode == "23505":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Workout type with name '{workout_type_data.name}' already exists"
+                    ),
+                ) from e
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create workout type due to database constraint",
+            ) from e
 
 
 class WorkoutParsingService:
