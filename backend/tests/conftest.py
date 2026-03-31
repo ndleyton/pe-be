@@ -1,6 +1,7 @@
 import pytest
 import pytest_asyncio
 import os
+import asyncio
 from typing import AsyncGenerator
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
@@ -183,3 +184,27 @@ def client():
     """Create a test client for sync tests (no database setup)."""
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture(autouse=True)
+def fail_fast_on_event_loop_leak(request):
+    """Fail the offending test immediately if it breaks pytest-asyncio's session loop."""
+    yield
+
+    try:
+        current_loop = asyncio.get_event_loop_policy().get_event_loop()
+    except RuntimeError as exc:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        pytest.fail(
+            f"{request.node.nodeid} left the main thread without a current event loop. "
+            "Do not call the real asyncio.run(...) in tests; patch the module-local "
+            f"asyncio.run and close the passed coroutine instead. Original error: {exc}"
+        )
+
+    if current_loop.is_closed():
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        pytest.fail(
+            f"{request.node.nodeid} closed the current event loop. "
+            "Do not call the real asyncio.run(...) in tests; patch the module-local "
+            "asyncio.run and close the passed coroutine instead."
+        )
