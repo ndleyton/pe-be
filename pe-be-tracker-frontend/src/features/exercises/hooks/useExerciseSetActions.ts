@@ -11,6 +11,7 @@ import {
   type UpdateExerciseSetData,
 } from "@/features/exercises/api";
 import {
+  sortExerciseSets,
   toGuestExerciseSets,
   type ExerciseRowProps,
 } from "@/features/exercises/lib/exerciseRow";
@@ -34,12 +35,24 @@ export const useExerciseSetActions = ({
     exercise.id.startsWith("optimistic-");
 
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(
-    exercise.exercise_sets || [],
+    sortExerciseSets(exercise.exercise_sets || []),
   );
+  const exerciseSetsRef = useRef(exerciseSets);
+  const latestExerciseRef = useRef(exercise);
 
   useEffect(() => {
-    setExerciseSets(exercise.exercise_sets || []);
+    const normalizedExerciseSets = sortExerciseSets(exercise.exercise_sets || []);
+    exerciseSetsRef.current = normalizedExerciseSets;
+    setExerciseSets(normalizedExerciseSets);
   }, [exercise.exercise_sets]);
+
+  useEffect(() => {
+    latestExerciseRef.current = exercise;
+  }, [exercise]);
+
+  useEffect(() => {
+    exerciseSetsRef.current = exerciseSets;
+  }, [exerciseSets]);
 
   const pendingUpdatesRef = useRef<
     Record<
@@ -56,12 +69,15 @@ export const useExerciseSetActions = ({
       return;
     }
 
-    onExerciseUpdate({
-      ...exercise,
+    const updatedExercise = {
+      ...latestExerciseRef.current,
       exercise_sets: isAuthenticated
         ? nextExerciseSets
         : toGuestExerciseSets(nextExerciseSets),
-    });
+    };
+
+    latestExerciseRef.current = updatedExercise;
+    onExerciseUpdate(updatedExercise);
   };
 
   const invalidateExerciseQuery = () => {
@@ -83,9 +99,21 @@ export const useExerciseSetActions = ({
     };
   }, []);
 
-  const setLocalExerciseSets = (nextExerciseSets: ExerciseSet[]) => {
+  const applyLocalExerciseSets = (
+    updater:
+      | ExerciseSet[]
+      | ((currentExerciseSets: ExerciseSet[]) => ExerciseSet[]),
+  ) => {
+    const nextExerciseSets = sortExerciseSets(
+      typeof updater === "function"
+        ? updater(exerciseSetsRef.current)
+        : updater,
+    );
+
+    exerciseSetsRef.current = nextExerciseSets;
     setExerciseSets(nextExerciseSets);
     publishExerciseUpdate(nextExerciseSets);
+    return nextExerciseSets;
   };
 
   const queueSetUpdate = (
@@ -125,16 +153,16 @@ export const useExerciseSetActions = ({
     field: SetField,
     value: number | null,
   ) => {
-    const updatedSets = exerciseSets.map((set) =>
-      String(set.id) === String(setId)
-        ? {
-            ...set,
-            [field === "weight" ? "intensity" : "reps"]: value,
-          }
-        : set,
+    applyLocalExerciseSets((currentExerciseSets) =>
+      currentExerciseSets.map((set) =>
+        String(set.id) === String(setId)
+          ? {
+              ...set,
+              [field === "weight" ? "intensity" : "reps"]: value,
+            }
+          : set,
+      ),
     );
-
-    setLocalExerciseSets(updatedSets);
 
     if (!isAuthenticated) {
       return;
@@ -147,33 +175,39 @@ export const useExerciseSetActions = ({
   };
 
   const incrementReps = (setId: string | number) => {
-    const currentSet = exerciseSets.find((set) => String(set.id) === String(setId));
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => String(set.id) === String(setId),
+    );
     const nextReps = (currentSet?.reps || 0) + 1;
     updateSetField(setId, "reps", nextReps);
   };
 
   const decrementReps = (setId: string | number) => {
-    const currentSet = exerciseSets.find((set) => String(set.id) === String(setId));
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => String(set.id) === String(setId),
+    );
     const nextReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSetField(setId, "reps", nextReps);
   };
 
   const toggleSetCompletion = async (setId: string | number) => {
-    const currentSet = exerciseSets.find((set) => String(set.id) === String(setId));
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => String(set.id) === String(setId),
+    );
     if (!currentSet) {
       return;
     }
 
-    const updatedSets = exerciseSets.map((set) =>
-      String(set.id) === String(setId)
-        ? {
-            ...set,
-            done: !set.done,
-          }
-        : set,
+    applyLocalExerciseSets((currentExerciseSets) =>
+      currentExerciseSets.map((set) =>
+        String(set.id) === String(setId)
+          ? {
+              ...set,
+              done: !set.done,
+            }
+          : set,
+      ),
     );
-
-    setLocalExerciseSets(updatedSets);
 
     if (!isAuthenticated) {
       return;
@@ -188,16 +222,16 @@ export const useExerciseSetActions = ({
   };
 
   const updateSetNotes = async (setId: string | number, notes: string) => {
-    const updatedSets = exerciseSets.map((set) =>
-      String(set.id) === String(setId)
-        ? {
-            ...set,
-            notes,
-          }
-        : set,
+    applyLocalExerciseSets((currentExerciseSets) =>
+      currentExerciseSets.map((set) =>
+        String(set.id) === String(setId)
+          ? {
+              ...set,
+              notes,
+            }
+          : set,
+      ),
     );
-
-    setLocalExerciseSets(updatedSets);
 
     if (!isAuthenticated) {
       return;
@@ -212,11 +246,9 @@ export const useExerciseSetActions = ({
   };
 
   const deleteSet = async (setId: string | number) => {
-    const updatedSets = exerciseSets.filter(
-      (set) => String(set.id) !== String(setId),
+    applyLocalExerciseSets((currentExerciseSets) =>
+      currentExerciseSets.filter((set) => String(set.id) !== String(setId)),
     );
-
-    setLocalExerciseSets(updatedSets);
 
     if (!isAuthenticated) {
       return;
@@ -235,9 +267,10 @@ export const useExerciseSetActions = ({
       return;
     }
 
-    const lastSet = exerciseSets[exerciseSets.length - 1];
+    const currentExerciseSets = exerciseSetsRef.current;
+    const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
     const tempId = `temp-${Date.now()}`;
-    const nextSetType = exerciseSets.length === 0 ? "warmup" : "working";
+    const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
     const optimisticSet: ExerciseSet = {
       id: tempId,
       reps: lastSet?.reps,
@@ -252,8 +285,10 @@ export const useExerciseSetActions = ({
       updated_at: new Date().toISOString(),
     };
 
-    const updatedSets = [...exerciseSets, optimisticSet];
-    setLocalExerciseSets(updatedSets);
+    applyLocalExerciseSets((existingExerciseSets) => [
+      ...existingExerciseSets,
+      optimisticSet,
+    ]);
 
     if (!isAuthenticated) {
       return;
@@ -272,11 +307,11 @@ export const useExerciseSetActions = ({
       };
 
       const createdSet = await createExerciseSet(payload);
-      const finalUpdatedSets = updatedSets.map((set) =>
-        String(set.id) === String(tempId) ? createdSet : set,
+      applyLocalExerciseSets((existingExerciseSets) =>
+        existingExerciseSets.map((set) =>
+          String(set.id) === String(tempId) ? createdSet : set,
+        ),
       );
-
-      setLocalExerciseSets(finalUpdatedSets);
     } catch (error) {
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
@@ -288,10 +323,13 @@ export const useExerciseSetActions = ({
       return;
     }
 
-    onExerciseUpdate({
-      ...exercise,
+    const updatedExercise = {
+      ...latestExerciseRef.current,
       notes,
-    });
+    };
+
+    latestExerciseRef.current = updatedExercise;
+    onExerciseUpdate(updatedExercise);
   };
 
   const handleExerciseDelete = async () => {

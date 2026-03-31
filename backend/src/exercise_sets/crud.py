@@ -89,9 +89,9 @@ async def get_exercise_sets_for_exercise(
 ) -> List[ExerciseSet]:
     """Get all exercise sets for a specific exercise (excluding soft-deleted)"""
     result = await session.execute(
-        select(ExerciseSet).where(
-            ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None)
-        )
+        select(ExerciseSet)
+        .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
+        .order_by(ExerciseSet.created_at.asc(), ExerciseSet.id.asc())
     )
     return result.scalars().all()
 
