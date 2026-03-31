@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://app.personalbestie.com/api/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
