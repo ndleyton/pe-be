@@ -173,7 +173,7 @@ async def generate_exercise_type_images(
             ),
         )
     except errors.ClientError as exc:
-        if exc.status_code == 429:
+        if exc.code == 429:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Gemini API quota exceeded. Please wait a minute and try again.",
@@ -272,7 +272,7 @@ async def generate_reference_options(
     except HTTPException:
         raise
     except errors.ClientError as exc:
-        if exc.status_code == 429:
+        if exc.code == 429:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Gemini API quota exceeded. Please wait a minute and try again.",

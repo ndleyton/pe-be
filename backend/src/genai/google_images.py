@@ -217,7 +217,7 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
             )
             return _extract_inline_result(response, prompt, MODEL_NAME)
         except errors.ClientError as exc:
-            if exc.status_code == 429 and attempt < max_retries - 1:
+            if exc.code == 429 and attempt < max_retries - 1:
                 wait_time = 15 * (attempt + 1)
                 logger.warning(
                     "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
@@ -307,7 +307,7 @@ def _generate_reference_image_sync(
                 settings.EXERCISE_IMAGE_REFERENCE_MODEL,
             )
         except errors.ClientError as exc:
-            if exc.status_code == 429 and attempt < max_retries - 1:
+            if exc.code == 429 and attempt < max_retries - 1:
                 wait_time = 15 * (attempt + 1)
                 logger.warning(
                     "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
