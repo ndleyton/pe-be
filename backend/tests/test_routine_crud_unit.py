@@ -6,7 +6,7 @@ These tests focus on the CRUD logic without requiring database setup.
 from src.routines.crud import (
     create_routine,
     get_routine_by_id_for_user,
-    get_user_routines,
+    get_visible_routines,
     update_routine,
     delete_routine,
 )
@@ -26,7 +26,7 @@ class TestRoutineCRUDUnit:
         """Test that all CRUD functions are properly importable."""
         assert callable(create_routine)
         assert callable(get_routine_by_id_for_user)
-        assert callable(get_user_routines)
+        assert callable(get_visible_routines)
         assert callable(update_routine)
         assert callable(delete_routine)
 
