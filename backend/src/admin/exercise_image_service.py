@@ -257,7 +257,7 @@ async def generate_reference_image_options(
                 )
             )
 
-    semaphore = asyncio.Semaphore(3)
+    semaphore = asyncio.Semaphore(1)
 
     async def _generate_job(
         source_image_url: str,
