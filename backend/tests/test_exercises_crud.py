@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from src.core.errors import DomainValidationError
 from src.exercise_sets.models import ExerciseSet
 from src.exercises import crud
+from src.exercises.intensity_units import normalize_intensity_for_storage
 from src.exercises.models import (
     Exercise,
     ExerciseMuscle,
@@ -124,10 +125,26 @@ async def _seed_exercise_set(
     deleted_at: datetime | None = None,
 ) -> ExerciseSet:
     timestamp = created_at or datetime.now(timezone.utc)
+    intensity_unit = await db_session.get(IntensityUnit, intensity_unit_id)
+    canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
+        intensity,
+        intensity_unit,
+    )
+    canonical_intensity_unit_id = intensity_unit_id
+    if canonical_unit_key is not None:
+        canonical_intensity_unit_id = (
+            await db_session.execute(
+                select(IntensityUnit).where(
+                    func.lower(IntensityUnit.abbreviation) == canonical_unit_key
+                )
+            )
+        ).scalar_one().id
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,
         intensity=intensity,
+        canonical_intensity=canonical_intensity,
+        canonical_intensity_unit_id=canonical_intensity_unit_id,
         reps=reps,
         created_at=timestamp,
         updated_at=timestamp,

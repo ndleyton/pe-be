@@ -6,25 +6,41 @@ from typing import Any, Optional
 
 
 THREE_DECIMAL_PLACES = Decimal("0.001")
+FIVE_DECIMAL_PLACES = Decimal("0.00001")
 
 
 @dataclass(frozen=True)
 class IntensityUnitDefinition:
     family: str
     to_base_factor: Decimal
+    canonical_unit_key: str
 
 
 _UNIT_DEFINITIONS = {
-    "kg": IntensityUnitDefinition(family="mass", to_base_factor=Decimal("1")),
-    "lbs": IntensityUnitDefinition(
-        family="mass", to_base_factor=Decimal("0.45359237")
+    "kg": IntensityUnitDefinition(
+        family="mass",
+        to_base_factor=Decimal("1"),
+        canonical_unit_key="kg",
     ),
-    "km/h": IntensityUnitDefinition(family="speed", to_base_factor=Decimal("1")),
+    "lbs": IntensityUnitDefinition(
+        family="mass",
+        to_base_factor=Decimal("0.45359237"),
+        canonical_unit_key="kg",
+    ),
+    "km/h": IntensityUnitDefinition(
+        family="speed",
+        to_base_factor=Decimal("1"),
+        canonical_unit_key="km/h",
+    ),
     "mph": IntensityUnitDefinition(
-        family="speed", to_base_factor=Decimal("1.609344")
+        family="speed",
+        to_base_factor=Decimal("1.609344"),
+        canonical_unit_key="km/h",
     ),
     "bw": IntensityUnitDefinition(
-        family="bodyweight", to_base_factor=Decimal("1")
+        family="bodyweight",
+        to_base_factor=Decimal("1"),
+        canonical_unit_key="bw",
     ),
 }
 
@@ -116,3 +132,32 @@ def convert_intensity_value(
     base_value = decimal_value * source_definition.to_base_factor
     converted_value = base_value / target_definition.to_base_factor
     return converted_value.quantize(THREE_DECIMAL_PLACES, rounding=ROUND_HALF_UP)
+
+
+def normalize_intensity_for_storage(
+    value: Decimal | float | int | None,
+    source_unit: Any,
+) -> tuple[Optional[Decimal], Optional[str]]:
+    if value is None:
+        return (None, None)
+
+    decimal_value = _to_decimal(value)
+    source_key = _normalize_unit_key(source_unit)
+    if not source_key:
+        return (
+            decimal_value.quantize(FIVE_DECIMAL_PLACES, rounding=ROUND_HALF_UP),
+            None,
+        )
+
+    source_definition = _UNIT_DEFINITIONS.get(source_key)
+    if not source_definition:
+        return (
+            decimal_value.quantize(FIVE_DECIMAL_PLACES, rounding=ROUND_HALF_UP),
+            None,
+        )
+
+    canonical_value = decimal_value * source_definition.to_base_factor
+    return (
+        canonical_value.quantize(FIVE_DECIMAL_PLACES, rounding=ROUND_HALF_UP),
+        source_definition.canonical_unit_key,
+    )

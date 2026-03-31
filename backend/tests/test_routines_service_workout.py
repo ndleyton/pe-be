@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from decimal import Decimal
 
 from sqlalchemy import select, func
 from src.routines.service import routine_service
@@ -88,12 +89,19 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
     from src.exercise_sets.models import ExerciseSet
 
     res3 = await db_session.execute(
-        select(func.count())
-        .select_from(ExerciseSet)
+        select(ExerciseSet)
         .where(ExerciseSet.exercise_id == ex_id)
+        .order_by(ExerciseSet.id)
     )
-    set_count = res3.scalar()
-    assert set_count == 2
+    created_sets = res3.scalars().all()
+    assert len(created_sets) == 2
+    assert {exercise_set.canonical_intensity for exercise_set in created_sets} == {
+        Decimal("30.00000"),
+        Decimal("35.00000"),
+    }
+    assert {exercise_set.canonical_intensity_unit_id for exercise_set in created_sets} == {
+        iu.id
+    }
 
 
 @pytest.mark.integration

@@ -26,7 +26,10 @@ from src.exercises.schemas import (
     ExerciseTypeCreate,
     PaginatedExerciseTypesResponse,
 )
-from src.exercises.intensity_units import convert_intensity_value
+from src.exercises.intensity_units import (
+    convert_intensity_value,
+    normalize_intensity_for_storage,
+)
 
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
@@ -102,6 +105,36 @@ def _serialize_numeric(value: Decimal) -> int | float:
     if value == value.to_integral_value():
         return int(value)
     return float(value)
+
+
+def _get_stats_intensity_value(
+    exercise_set: ExerciseSet,
+    *,
+    intensity_units_by_id: dict[int, IntensityUnit],
+    stats_intensity_unit: Optional[IntensityUnit],
+) -> Optional[Decimal]:
+    canonical_intensity = exercise_set.canonical_intensity
+    canonical_unit = intensity_units_by_id.get(exercise_set.canonical_intensity_unit_id)
+
+    if canonical_intensity is None:
+        canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
+            exercise_set.intensity,
+            exercise_set.intensity_unit,
+        )
+        canonical_unit = next(
+            (
+                unit
+                for unit in intensity_units_by_id.values()
+                if unit.abbreviation.lower() == canonical_unit_key
+            ),
+            None,
+        )
+
+    return convert_intensity_value(
+        canonical_intensity,
+        canonical_unit,
+        stats_intensity_unit,
+    )
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -613,10 +646,10 @@ async def get_exercise_type_stats(
             }
 
         for exercise_set in exercise.exercise_sets:
-            converted_intensity = convert_intensity_value(
-                exercise_set.intensity,
-                exercise_set.intensity_unit,
-                stats_intensity_unit,
+            converted_intensity = _get_stats_intensity_value(
+                exercise_set,
+                intensity_units_by_id=intensity_units_by_id,
+                stats_intensity_unit=stats_intensity_unit,
             )
             if converted_intensity:
                 date_groups[date]["maxWeight"] = max(
@@ -645,10 +678,10 @@ async def get_exercise_type_stats(
         total_reps = sum(s.reps or 0 for s in last_exercise.exercise_sets)
         max_weight = max(
             (
-                convert_intensity_value(
-                    s.intensity,
-                    s.intensity_unit,
-                    stats_intensity_unit,
+                _get_stats_intensity_value(
+                    s,
+                    intensity_units_by_id=intensity_units_by_id,
+                    stats_intensity_unit=stats_intensity_unit,
                 )
                 or Decimal("0")
                 for s in last_exercise.exercise_sets
@@ -658,10 +691,10 @@ async def get_exercise_type_stats(
         total_volume = sum(
             (
                 (
-                    convert_intensity_value(
-                        s.intensity,
-                        s.intensity_unit,
-                        stats_intensity_unit,
+                    _get_stats_intensity_value(
+                        s,
+                        intensity_units_by_id=intensity_units_by_id,
+                        stats_intensity_unit=stats_intensity_unit,
                     )
                     or Decimal("0")
                 )
@@ -686,10 +719,10 @@ async def get_exercise_type_stats(
 
     for exercise in exercises:
         for exercise_set in exercise.exercise_sets:
-            converted_intensity = convert_intensity_value(
-                exercise_set.intensity,
-                exercise_set.intensity_unit,
-                stats_intensity_unit,
+            converted_intensity = _get_stats_intensity_value(
+                exercise_set,
+                intensity_units_by_id=intensity_units_by_id,
+                stats_intensity_unit=stats_intensity_unit,
             )
             if converted_intensity and converted_intensity > best_weight:
                 best_weight = converted_intensity
@@ -697,10 +730,10 @@ async def get_exercise_type_stats(
                 best_exercise = exercise
 
     if best_set:
-        converted_best_intensity = convert_intensity_value(
-            best_set.intensity,
-            best_set.intensity_unit,
-            stats_intensity_unit,
+        converted_best_intensity = _get_stats_intensity_value(
+            best_set,
+            intensity_units_by_id=intensity_units_by_id,
+            stats_intensity_unit=stats_intensity_unit,
         ) or Decimal("0")
         volume = converted_best_intensity * (best_set.reps or 0)
         personal_best = {

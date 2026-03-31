@@ -37,10 +37,16 @@ class ExerciseSet(Base):
 
     reps = Column(Integer)
     intensity = Column(Numeric(precision=7, scale=3))
+    canonical_intensity = Column(Numeric(precision=10, scale=5), nullable=True)
     intensity_unit_id = Column(
         Integer,
         ForeignKey("intensity_units.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    canonical_intensity_unit_id = Column(
+        Integer,
+        ForeignKey("intensity_units.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     exercise_id = Column(
         Integer,
@@ -55,4 +61,9 @@ class ExerciseSet(Base):
 
     # Relationships
     exercise: Mapped["Exercise"] = relationship(back_populates="exercise_sets")
-    intensity_unit: Mapped["IntensityUnit"] = relationship()
+    intensity_unit: Mapped["IntensityUnit"] = relationship(
+        foreign_keys=[intensity_unit_id]
+    )
+    canonical_intensity_unit: Mapped["IntensityUnit"] = relationship(
+        foreign_keys=[canonical_intensity_unit_id]
+    )

@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from src.core.errors import DomainValidationError
 from src.exercise_sets.models import ExerciseSet
 from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetUpdate
-from src.exercises.models import Exercise
+from src.exercises.intensity_units import normalize_intensity_for_storage
+from src.exercises.models import Exercise, IntensityUnit
 from src.workouts.models import Workout
 
 
@@ -100,7 +101,24 @@ async def create_exercise_set(
     session: AsyncSession, exercise_set_create: ExerciseSetCreate
 ) -> ExerciseSet:
     """Create a new exercise set"""
-    exercise_set = ExerciseSet(**exercise_set_create.dict())
+    payload = exercise_set_create.model_dump()
+    source_unit = await session.get(IntensityUnit, payload["intensity_unit_id"])
+    canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
+        payload.get("intensity"),
+        source_unit,
+    )
+    canonical_intensity_unit_id = payload["intensity_unit_id"]
+    if canonical_unit_key is not None:
+        canonical_unit = await session.execute(
+            select(IntensityUnit).where(IntensityUnit.abbreviation.ilike(canonical_unit_key))
+        )
+        canonical_intensity_unit_id = (
+            canonical_unit.scalar_one_or_none() or source_unit
+        ).id
+    payload["canonical_intensity"] = canonical_intensity
+    payload["canonical_intensity_unit_id"] = canonical_intensity_unit_id
+
+    exercise_set = ExerciseSet(**payload)
     session.add(exercise_set)
     try:
         await session.commit()
@@ -123,7 +141,32 @@ async def update_exercise_set(
         return None
 
     # Update only the provided fields
-    for field, value in exercise_set_update.dict(exclude_unset=True).items():
+    updated_fields = exercise_set_update.model_dump(exclude_unset=True)
+    if "intensity" in updated_fields or "intensity_unit_id" in updated_fields:
+        next_intensity = updated_fields.get("intensity", exercise_set.intensity)
+        next_intensity_unit_id = updated_fields.get(
+            "intensity_unit_id",
+            exercise_set.intensity_unit_id,
+        )
+        source_unit = await session.get(IntensityUnit, next_intensity_unit_id)
+        canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
+            next_intensity,
+            source_unit,
+        )
+        canonical_intensity_unit_id = next_intensity_unit_id
+        if canonical_unit_key is not None:
+            canonical_unit = await session.execute(
+                select(IntensityUnit).where(
+                    IntensityUnit.abbreviation.ilike(canonical_unit_key)
+                )
+            )
+            canonical_intensity_unit_id = (
+                canonical_unit.scalar_one_or_none() or source_unit
+            ).id
+        updated_fields["canonical_intensity"] = canonical_intensity
+        updated_fields["canonical_intensity_unit_id"] = canonical_intensity_unit_id
+
+    for field, value in updated_fields.items():
         setattr(exercise_set, field, value)
 
     try:
