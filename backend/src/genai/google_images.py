@@ -200,7 +200,6 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
         contents=prompt,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
-            response_mime_type=DEFAULT_MIME,
         ),
     )
     return _extract_inline_result(response, prompt, MODEL_NAME)
@@ -263,7 +262,6 @@ def _generate_reference_image_sync(
         ],
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
-            response_mime_type=DEFAULT_MIME,
         ),
     )
     return _extract_inline_result(

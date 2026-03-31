@@ -3,8 +3,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.genai.google_images import (
+    ReferenceOptionSpec,
     _build_prompt,
     _generate_image_sync,
+    _generate_reference_image_sync,
     generate_exercise_phase_image,
 )
 
@@ -54,6 +56,12 @@ def test_generate_image_sync_success(mock_client_class, mock_settings):
     result = _generate_image_sync("My test prompt")
 
     mock_client.models.generate_content.assert_called_once()
+    _, kwargs = mock_client.models.generate_content.call_args
+    config = kwargs["config"]
+    assert config.response_modalities == ["IMAGE"]
+    # The fix ensures we don't pass response_mime_type for IMAGE modality
+    assert getattr(config, "response_mime_type", None) is None
+
     assert result.base64_data == "base64encodedimage"
     assert result.mime_type == "image/jpeg"
     assert result.prompt_summary == "My test prompt"
@@ -90,3 +98,56 @@ async def test_generate_exercise_phase_image_async(mock_sync):
 
     assert result == mock_result
     mock_sync.assert_called_once()
+@patch("src.genai.google_images.settings")
+@patch("src.genai.google_images.genai.Client")
+@patch("src.genai.google_images._normalize_reference_image")
+def test_generate_reference_image_sync_success(
+    mock_normalize, mock_client_class, mock_settings
+):
+    mock_settings.EXERCISE_IMAGE_REFERENCE_MODEL = "ref-model"
+    mock_settings.GOOGLE_AI_KEY = "test_key"
+
+    # Mocking normalization result
+    mock_prepared = MagicMock()
+    mock_prepared.image_bytes = b"refbytes"
+    mock_prepared.mime_type = "image/png"
+    mock_normalize.return_value = mock_prepared
+
+    mock_inline = MagicMock()
+    mock_inline.data = "base64redrawn"
+    mock_inline.mime_type = "image/png"
+
+    mock_part = MagicMock()
+    mock_part.inline_data = mock_inline
+
+    mock_candidate = MagicMock()
+    mock_candidate.content.parts = [mock_part]
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = MagicMock(
+        candidates=[mock_candidate]
+    )
+    mock_client_class.return_value = mock_client
+
+    option = ReferenceOptionSpec(
+        key="test",
+        label="Test",
+        description="Desc",
+        style_directive="Direct",
+    )
+
+    result = _generate_reference_image_sync(
+        context={"name": "Push Up"},
+        option=option,
+        source_image_url="exercises/old.png",
+    )
+
+    mock_client.models.generate_content.assert_called_once()
+    _, kwargs = mock_client.models.generate_content.call_args
+    assert kwargs["model"] == "ref-model"
+    config = kwargs["config"]
+    assert config.response_modalities == ["IMAGE"]
+    assert getattr(config, "response_mime_type", None) is None
+
+    assert result.base64_data == "base64redrawn"
+    assert result.mime_type == "image/png"
