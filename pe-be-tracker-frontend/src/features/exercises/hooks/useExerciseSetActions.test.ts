@@ -214,4 +214,91 @@ describe("useExerciseSetActions", () => {
     });
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
+
+  it("keeps exercise sets sorted when initial props arrive out of order", () => {
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 2,
+          exercise_id: 123,
+          created_at: "2024-01-02T00:00:00Z",
+        }),
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          created_at: "2024-01-01T00:00:00Z",
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+      }),
+    );
+
+    expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1, 2]);
+  });
+
+  it("does not let a late create response roll back newer local set edits", async () => {
+    let resolveCreateExerciseSet: ((value: ReturnType<typeof makeExerciseSet>) => void) | undefined;
+    mockCreateExerciseSet.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreateExerciseSet = resolve;
+        }),
+    );
+
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: 10,
+          intensity: 50,
+        }),
+      ],
+    });
+    const onExerciseUpdate = vi.fn();
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+        onExerciseUpdate,
+      }),
+    );
+
+    act(() => {
+      void result.current.addSet(2);
+    });
+
+    expect(result.current.exerciseSets).toHaveLength(2);
+    expect(String(result.current.exerciseSets[1].id)).toContain("temp-");
+
+    act(() => {
+      result.current.updateSetField(1, "reps", 12);
+    });
+
+    expect(result.current.exerciseSets[0].reps).toBe(12);
+
+    await act(async () => {
+      resolveCreateExerciseSet?.(
+        makeExerciseSet({
+          id: 999,
+          exercise_id: 123,
+          reps: 10,
+          intensity: 50,
+          intensity_unit_id: 2,
+          created_at: "2024-01-03T00:00:00Z",
+        }),
+      );
+      await Promise.resolve();
+    });
+
+    expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1, 999]);
+    expect(result.current.exerciseSets[0].reps).toBe(12);
+    expect(onExerciseUpdate).toHaveBeenCalled();
+  });
 });

@@ -120,13 +120,17 @@ async def _seed_exercise_set(
     intensity_unit_id: int,
     intensity,
     reps: int | None,
+    created_at: datetime | None = None,
     deleted_at: datetime | None = None,
 ) -> ExerciseSet:
+    timestamp = created_at or datetime.now(timezone.utc)
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,
         intensity=intensity,
         reps=reps,
+        created_at=timestamp,
+        updated_at=timestamp,
         deleted_at=deleted_at,
     )
     db_session.add(exercise_set)
@@ -189,12 +193,21 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         notes="third",
     )
 
-    kept_set = await _seed_exercise_set(
+    newer_kept_set = await _seed_exercise_set(
         db_session,
         exercise_id=first.id,
         intensity_unit_id=unit.id,
         intensity=100,
         reps=5,
+        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+    )
+    older_kept_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=first.id,
+        intensity_unit_id=unit.id,
+        intensity=95,
+        reps=8,
+        created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
     )
     await _seed_exercise_set(
         db_session,
@@ -202,6 +215,7 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         intensity_unit_id=unit.id,
         intensity=120,
         reps=1,
+        created_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
         deleted_at=deleted_at,
     )
     await db_session.commit()
@@ -209,13 +223,17 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
     found = await crud.get_exercise_by_id(db_session, first.id)
     assert found is not None
     assert found.id == first.id
-    assert [exercise_set.id for exercise_set in found.exercise_sets] == [kept_set.id]
+    assert [exercise_set.id for exercise_set in found.exercise_sets] == [
+        older_kept_set.id,
+        newer_kept_set.id,
+    ]
     assert await crud.get_exercise_by_id(db_session, deleted.id) is None
 
     exercises = await crud.get_exercises_for_workout(db_session, workout.id)
     assert [exercise.id for exercise in exercises] == [first.id, third.id]
     assert [exercise_set.id for exercise_set in exercises[0].exercise_sets] == [
-        kept_set.id
+        older_kept_set.id,
+        newer_kept_set.id,
     ]
 
 
