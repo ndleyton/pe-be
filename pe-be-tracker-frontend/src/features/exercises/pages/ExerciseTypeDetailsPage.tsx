@@ -5,13 +5,14 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ArrowLeft, Image, Plus } from "lucide-react";
+import { ArrowLeft, Image, ImagePlus, Plus } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import {
   getExerciseTypeById,
   getExerciseTypeStats,
   type Exercise,
 } from "@/features/exercises/api";
+import { useAuthStore } from "@/stores";
 import { ProgressiveOverloadChart } from "@/features/exercises/components";
 import {
   LastWorkoutInfo,
@@ -43,6 +44,7 @@ const ExerciseTypeDetailsPage = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isSuperuser = Boolean(useAuthStore((state) => state.user?.is_superuser));
 
   const {
     data: exerciseType,
@@ -295,21 +297,31 @@ const ExerciseTypeDetailsPage = () => {
                 ))
               : null}
           </div>
-          <Button
-            size="sm"
-            className="shrink-0"
-            onClick={() => addMutation.mutate()}
-            disabled={addMutation.isPending}
-          >
-            {addMutation.isPending ? (
-              "Adding..."
-            ) : (
-              <>
-                <Plus className="mr-1 h-4 w-4" />
-                Add to Workout
-              </>
-            )}
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            {isSuperuser ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/exercise-types/${exerciseTypeId}/admin-images`}>
+                  <ImagePlus className="mr-1 h-4 w-4" />
+                  Manage Images
+                </Link>
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={() => addMutation.mutate()}
+              disabled={addMutation.isPending}
+            >
+              {addMutation.isPending ? (
+                "Adding..."
+              ) : (
+                <>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add to Workout
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

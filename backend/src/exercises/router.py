@@ -1,10 +1,12 @@
 from typing import List, Optional
 from fastapi import Depends, APIRouter, status, Query, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.observability import traced_model_dump
+from src.exercises.image_assets import storage_path_for_relative_url
 from src.exercises.schemas import (
     ExerciseRead,
     ExerciseCreate,
@@ -22,14 +24,37 @@ from src.exercises.service import (
     MuscleGroupService,
 )
 from src.core.database import get_async_session
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
 router = APIRouter(tags=["exercises"])
 tracer = trace.get_tracer(__name__)
+assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
 
 
 # Exercise endpoints
+@assets_router.get("/{image_path:path}")
+async def get_exercise_image_asset(
+    image_path: str,
+    user: User | None = Depends(current_optional_user),
+):
+    if image_path.startswith("generated/") and user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required for generated exercise images",
+        )
+
+    try:
+        file_path = storage_path_for_relative_url(image_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Exercise image not found") from exc
+
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Exercise image not found")
+
+    return FileResponse(path=file_path)
+
+
 @router.post("/", response_model=ExerciseRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise(
     exercise_in: ExerciseCreate,
@@ -166,6 +191,7 @@ async def get_intensity_units(session: AsyncSession = Depends(get_async_session)
 
 
 # Include sub-routers
+router.include_router(assets_router)
 router.include_router(exercise_types_router)
 router.include_router(intensity_units_router)
 router.include_router(muscle_groups_router)

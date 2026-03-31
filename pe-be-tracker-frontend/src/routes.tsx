@@ -29,6 +29,9 @@ const ExerciseTypeDetailsPage = lazy(() =>
     default: m.ExerciseTypeDetailsPage,
   })),
 );
+const ExerciseTypeImageAdminPage = lazy(
+  () => import("./features/admin/pages/ExerciseTypeImageAdminPage"),
+);
 const RoutinesPage = lazy(
   () => import("./features/routines/pages/RoutinesPage"),
 );
@@ -145,6 +148,14 @@ const routes: RouteObject[] = [
           <ExerciseTypeDetailsPageWrapper>
             <ExerciseTypeDetailsPage />
           </ExerciseTypeDetailsPageWrapper>
+        ),
+      },
+      {
+        path: "exercise-types/:exerciseTypeId/admin-images",
+        element: (
+          <PageWrapper>
+            <ExerciseTypeImageAdminPage />
+          </PageWrapper>
         ),
       },
       {

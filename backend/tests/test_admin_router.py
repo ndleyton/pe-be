@@ -163,3 +163,91 @@ async def test_admin_generate_images_guards_and_import_status(
     # Import endpoint likely fails (no importer), but should not crash the app
     import_resp = await async_client.post("/api/v1/admin/import-exercises")
     assert import_resp.status_code in (200, 500)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_admin_reference_image_option_endpoints(
+    async_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
+    admin = User(
+        email="img-admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    db_session.add(admin)
+    await db_session.flush()
+
+    exercise_type = ExerciseType(name="Reference ET", description="d")
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    async def override_admin():
+        return admin
+
+    response_payload = {
+        "exercise_type_id": exercise_type.id,
+        "exercise_name": exercise_type.name,
+        "current_images": ["https://example.com/current.png"],
+        "reference_images": ["https://example.com/reference.png"],
+        "options": [
+            {
+                "key": "clean-outline",
+                "label": "Clean Outline",
+                "description": "desc",
+                "images": ["https://example.com/generated.png"],
+                "candidate_ids": [1],
+                "source_images": ["https://example.com/reference.png"],
+                "is_current": False,
+            }
+        ],
+    }
+
+    async def fake_build(*_args, **_kwargs):
+        return response_payload
+
+    async def fake_generate(*_args, **_kwargs):
+        return response_payload
+
+    async def fake_apply(*_args, **_kwargs):
+        return {
+            **response_payload,
+            "options": [{**response_payload["options"][0], "is_current": True}],
+        }
+
+    app.dependency_overrides[current_active_user] = override_admin
+    monkeypatch.setattr("src.admin.router.build_image_options_response", fake_build)
+    monkeypatch.setattr(
+        "src.admin.router.generate_reference_image_options",
+        fake_generate,
+    )
+    monkeypatch.setattr("src.admin.router.apply_reference_or_option", fake_apply)
+
+    from src.core.config import settings
+
+    original_key = settings.GOOGLE_AI_KEY
+    settings.GOOGLE_AI_KEY = "test-key"
+    try:
+        get_resp = await async_client.get(
+            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options"
+        )
+        assert get_resp.status_code == 200, get_resp.text
+        assert get_resp.json()["exercise_name"] == exercise_type.name
+
+        generate_resp = await async_client.post(
+            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/generate"
+        )
+        assert generate_resp.status_code == 200, generate_resp.text
+        assert generate_resp.json()["options"][0]["key"] == "clean-outline"
+
+        apply_resp = await async_client.post(
+            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/apply",
+            json={"option_key": "clean-outline"},
+        )
+        assert apply_resp.status_code == 200, apply_resp.text
+        assert apply_resp.json()["options"][0]["is_current"] is True
+    finally:
+        settings.GOOGLE_AI_KEY = original_key
+        app.dependency_overrides.pop(current_active_user, None)
