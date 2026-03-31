@@ -175,6 +175,10 @@ def _inline_data_to_bytes(data: bytes | str) -> bytes:
 def _extract_inline_result(response, prompt: str, model_name: str) -> ExerciseImageResult:
     try:
         candidate = response.candidates[0]
+        if not getattr(candidate, "content", None):
+            reason = getattr(candidate, "finish_reason", "UNKNOWN")
+            raise ValueError(f"Model did not return content. Finish reason: {reason}")
+
         inline = next(
             (
                 part.inline_data
@@ -183,7 +187,9 @@ def _extract_inline_result(response, prompt: str, model_name: str) -> ExerciseIm
             ),
             None,
         )
-    except Exception as exc:  # pragma: no cover - defensive path
+    except Exception as exc:
+        if isinstance(exc, ValueError):
+            raise
         raise ValueError(f"Unexpected response structure from model: {exc}") from exc
 
     if not inline or not getattr(inline, "data", None):
