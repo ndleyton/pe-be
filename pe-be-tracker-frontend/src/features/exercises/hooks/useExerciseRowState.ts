@@ -9,9 +9,14 @@ import {
   DEFAULT_INTENSITY_UNIT,
   buildIntensityInputs,
   buildRepsInputs,
-  type GuestIntensityUnit,
 } from "@/features/exercises/lib/exerciseRow";
+import {
+  resolveExerciseDisplayIntensityUnit,
+  type GuestIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
+import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
+import { useAuthStore } from "@/stores";
 
 export const useExerciseRowState = ({
   exercise,
@@ -22,8 +27,20 @@ export const useExerciseRowState = ({
   exerciseSets: ExerciseSet[];
   updateSetNotes: (setId: string | number, notes: string) => Promise<void>;
 }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const availableIntensityUnits = isAuthenticated
+    ? [DEFAULT_INTENSITY_UNIT, ...GUEST_INTENSITY_UNITS.slice(1)]
+    : GUEST_INTENSITY_UNITS;
+  const initialIntensityUnit = resolveExerciseDisplayIntensityUnit(
+    exercise,
+    availableIntensityUnits,
+    DEFAULT_INTENSITY_UNIT,
+  );
+  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<
+    IntensityUnit | GuestIntensityUnit
+  >(initialIntensityUnit);
   const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>(
-    () => buildIntensityInputs(exercise.exercise_sets || []),
+    () => buildIntensityInputs(exercise.exercise_sets || [], initialIntensityUnit.id),
   );
   const [repsInputs, setRepsInputs] = useState<Record<string, string>>(() =>
     buildRepsInputs(exercise.exercise_sets || []),
@@ -34,16 +51,13 @@ export const useExerciseRowState = ({
   const [setNotesValue, setSetNotesValue] = useState("");
   const [initialSetNotesValue, setInitialSetNotesValue] = useState("");
   const [exerciseSettingsOpen, setExerciseSettingsOpen] = useState(false);
-  const [currentIntensityUnit, setCurrentIntensityUnit] = useState<
-    IntensityUnit | GuestIntensityUnit
-  >(DEFAULT_INTENSITY_UNIT);
 
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000);
 
   useEffect(() => {
-    setIntensityInputs(buildIntensityInputs(exerciseSets));
+    setIntensityInputs(buildIntensityInputs(exerciseSets, currentIntensityUnit.id));
     setRepsInputs(buildRepsInputs(exerciseSets));
-  }, [exerciseSets]);
+  }, [currentIntensityUnit.id, exerciseSets]);
 
   useEffect(() => {
     if (

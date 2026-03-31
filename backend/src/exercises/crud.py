@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from opentelemetry import trace
@@ -25,6 +26,7 @@ from src.exercises.schemas import (
     ExerciseTypeCreate,
     PaginatedExerciseTypesResponse,
 )
+from src.exercises.intensity_units import convert_intensity_value
 
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
@@ -94,6 +96,12 @@ def _build_paginated_exercise_types_response(
             "serialization.item_count": len(exercise_types),
         },
     )
+
+
+def _serialize_numeric(value: Decimal) -> int | float:
+    if value == value.to_integral_value():
+        return int(value)
+    return float(value)
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -540,13 +548,11 @@ async def get_exercise_type_stats(
             "intensityUnit": None,
         }
 
-    # Get the intensity unit
-    intensity_unit_result = await session.execute(
-        select(IntensityUnit).where(
-            IntensityUnit.id == exercise_type.default_intensity_unit
-        )
-    )
-    intensity_unit = intensity_unit_result.scalar_one_or_none()
+    intensity_units_result = await session.execute(select(IntensityUnit))
+    intensity_units = intensity_units_result.scalars().all()
+    intensity_units_by_id = {unit.id: unit for unit in intensity_units}
+
+    stats_intensity_unit = intensity_units_by_id.get(exercise_type.default_intensity_unit)
 
     # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
@@ -554,6 +560,7 @@ async def get_exercise_type_stats(
         .join(Workout, Exercise.workout_id == Workout.id)
         .options(
             selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
+            .selectinload(ExerciseSet.intensity_unit)
         )
         .where(
             Exercise.exercise_type_id == exercise_type_id,
@@ -571,13 +578,26 @@ async def get_exercise_type_stats(
             "personalBest": None,
             "totalSets": 0,
             "intensityUnit": {
-                "id": intensity_unit.id,
-                "name": intensity_unit.name,
-                "abbreviation": intensity_unit.abbreviation,
+                "id": stats_intensity_unit.id,
+                "name": stats_intensity_unit.name,
+                "abbreviation": stats_intensity_unit.abbreviation,
             }
-            if intensity_unit
+            if stats_intensity_unit
             else None,
         }
+
+    if stats_intensity_unit is None:
+        first_set_with_unit = next(
+            (
+                exercise_set
+                for exercise in exercises
+                for exercise_set in exercise.exercise_sets
+                if exercise_set.intensity_unit is not None
+            ),
+            None,
+        )
+        if first_set_with_unit is not None:
+            stats_intensity_unit = first_set_with_unit.intensity_unit
 
     # Calculate progressive overload data (grouped by date)
     progressive_overload = []
@@ -586,16 +606,25 @@ async def get_exercise_type_stats(
     for exercise in exercises:
         date = exercise.created_at.date()
         if date not in date_groups:
-            date_groups[date] = {"maxWeight": 0, "totalVolume": 0, "totalReps": 0}
+            date_groups[date] = {
+                "maxWeight": Decimal("0"),
+                "totalVolume": Decimal("0"),
+                "totalReps": 0,
+            }
 
         for exercise_set in exercise.exercise_sets:
-            if exercise_set.intensity:
+            converted_intensity = convert_intensity_value(
+                exercise_set.intensity,
+                exercise_set.intensity_unit,
+                stats_intensity_unit,
+            )
+            if converted_intensity:
                 date_groups[date]["maxWeight"] = max(
-                    date_groups[date]["maxWeight"], exercise_set.intensity
+                    date_groups[date]["maxWeight"], converted_intensity
                 )
                 if exercise_set.reps:
                     date_groups[date]["totalVolume"] += (
-                        exercise_set.intensity * exercise_set.reps
+                        converted_intensity * exercise_set.reps
                     )
                     date_groups[date]["totalReps"] += exercise_set.reps
 
@@ -603,8 +632,8 @@ async def get_exercise_type_stats(
         progressive_overload.append(
             {
                 "date": date.isoformat(),
-                "maxWeight": data["maxWeight"],
-                "totalVolume": data["totalVolume"],
+                "maxWeight": _serialize_numeric(data["maxWeight"]),
+                "totalVolume": _serialize_numeric(data["totalVolume"]),
                 "reps": data["totalReps"],
             }
         )
@@ -615,40 +644,70 @@ async def get_exercise_type_stats(
         sets_count = len(last_exercise.exercise_sets)
         total_reps = sum(s.reps or 0 for s in last_exercise.exercise_sets)
         max_weight = max(
-            (s.intensity or 0 for s in last_exercise.exercise_sets), default=0
+            (
+                convert_intensity_value(
+                    s.intensity,
+                    s.intensity_unit,
+                    stats_intensity_unit,
+                )
+                or Decimal("0")
+                for s in last_exercise.exercise_sets
+            ),
+            default=Decimal("0"),
         )
         total_volume = sum(
-            (s.intensity or 0) * (s.reps or 0) for s in last_exercise.exercise_sets
+            (
+                (
+                    convert_intensity_value(
+                        s.intensity,
+                        s.intensity_unit,
+                        stats_intensity_unit,
+                    )
+                    or Decimal("0")
+                )
+                * (s.reps or 0)
+            )
+            for s in last_exercise.exercise_sets
         )
 
         last_workout = {
             "date": last_exercise.created_at.isoformat(),
             "sets": sets_count,
             "totalReps": total_reps,
-            "maxWeight": max_weight,
-            "totalVolume": total_volume,
+            "maxWeight": _serialize_numeric(max_weight),
+            "totalVolume": _serialize_numeric(total_volume),
         }
 
     # Get personal best (highest weight for single rep)
     personal_best = None
-    best_weight = 0
+    best_weight = Decimal("0")
     best_set = None
     best_exercise = None
 
     for exercise in exercises:
         for exercise_set in exercise.exercise_sets:
-            if exercise_set.intensity and exercise_set.intensity > best_weight:
-                best_weight = exercise_set.intensity
+            converted_intensity = convert_intensity_value(
+                exercise_set.intensity,
+                exercise_set.intensity_unit,
+                stats_intensity_unit,
+            )
+            if converted_intensity and converted_intensity > best_weight:
+                best_weight = converted_intensity
                 best_set = exercise_set
                 best_exercise = exercise
 
     if best_set:
-        volume = (best_set.intensity or 0) * (best_set.reps or 0)
+        converted_best_intensity = convert_intensity_value(
+            best_set.intensity,
+            best_set.intensity_unit,
+            stats_intensity_unit,
+        ) or Decimal("0")
+        volume = converted_best_intensity * (best_set.reps or 0)
         personal_best = {
             "date": best_exercise.created_at.isoformat(),
-            "weight": best_set.intensity,
+            "weight": _serialize_numeric(converted_best_intensity),
             "reps": best_set.reps or 0,
-            "volume": volume,
+            "volume": _serialize_numeric(volume),
         }
 
     # Calculate total sets across all exercises
@@ -660,11 +719,11 @@ async def get_exercise_type_stats(
         "personalBest": personal_best,
         "totalSets": total_sets,
         "intensityUnit": {
-            "id": intensity_unit.id,
-            "name": intensity_unit.name,
-            "abbreviation": intensity_unit.abbreviation,
+            "id": stats_intensity_unit.id,
+            "name": stats_intensity_unit.name,
+            "abbreviation": stats_intensity_unit.abbreviation,
         }
-        if intensity_unit
+        if stats_intensity_unit
         else None,
     }
 
