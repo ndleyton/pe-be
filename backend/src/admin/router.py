@@ -33,13 +33,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def _ensure_admin(user: User) -> None:
+def _require_superuser(user: User = Depends(current_active_user)) -> User:
     if not getattr(user, "is_superuser", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    return user
 
 
 @router.post("/import-exercises")
-async def import_exercises() -> Dict[str, Any]:
+async def import_exercises(user: User = Depends(_require_superuser)) -> Dict[str, Any]:
     """
     Import exercises from ext.exercises table to main application tables.
     This is a one-time operation for production setup.
@@ -73,7 +74,7 @@ async def import_exercises() -> Dict[str, Any]:
 
 
 @router.get("/import-exercises/status")
-async def import_status() -> Dict[str, Any]:
+async def import_status(user: User = Depends(_require_superuser)) -> Dict[str, Any]:
     """Check if exercises have been imported"""
     try:
         from src.core.database import async_session_maker
@@ -117,7 +118,7 @@ async def import_status() -> Dict[str, Any]:
 )
 async def generate_exercise_type_images(
     exercise_type_id: int,
-    user: User = Depends(current_active_user),
+    user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
@@ -127,8 +128,6 @@ async def generate_exercise_type_images(
 
     Note: Persistence/storage will be handled in a follow-up.
     """
-    _ensure_admin(user)
-
     # Ensure API key configured
     if not settings.GOOGLE_AI_KEY:
         raise HTTPException(
@@ -213,7 +212,7 @@ async def generate_exercise_type_images(
 )
 async def admin_create_routine(
     routine_in: AdminRoutineCreate,
-    user: User = Depends(current_active_user),
+    user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> RoutineRead:
     """
@@ -223,8 +222,6 @@ async def admin_create_routine(
     - The backing database model/table is still named "recipes".
     - This endpoint is restricted to superusers.
     """
-    _ensure_admin(user)
-
     return await routine_service.create_routine_admin(session, routine_in, user.id)
 
 
@@ -235,10 +232,9 @@ async def admin_create_routine(
 )
 async def get_reference_image_options(
     exercise_type_id: int,
-    user: User = Depends(current_active_user),
+    user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
-    _ensure_admin(user)
     exercise_type = await ExerciseTypeService.get_exercise_type(
         session, exercise_type_id
     )
@@ -255,10 +251,9 @@ async def get_reference_image_options(
 )
 async def generate_reference_options(
     exercise_type_id: int,
-    user: User = Depends(current_active_user),
+    user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
-    _ensure_admin(user)
     if not settings.GOOGLE_AI_KEY:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -302,10 +297,9 @@ async def generate_reference_options(
 async def apply_reference_option(
     exercise_type_id: int,
     selection: AdminApplyExerciseImageOptionRequest,
-    user: User = Depends(current_active_user),
+    user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
-    _ensure_admin(user)
     exercise_type = await ExerciseTypeService.get_exercise_type(
         session, exercise_type_id
     )
