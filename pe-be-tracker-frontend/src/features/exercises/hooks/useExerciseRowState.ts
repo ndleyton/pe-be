@@ -145,7 +145,7 @@ export const useExerciseRowState = ({
       setIntensityInputs((current) => ({
         ...current,
         [String(setId)]: value,
-      })),
+        })),
     setNotesValue,
     setRepsInputValue: (setId: string | number, value: string) =>
       setRepsInputs((current) => ({
