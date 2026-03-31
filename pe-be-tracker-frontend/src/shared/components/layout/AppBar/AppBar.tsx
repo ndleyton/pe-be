@@ -24,7 +24,7 @@ const AppBar = () => {
       role="banner"
       aria-label="Primary navigation"
     >
-      <div className="relative flex h-16 items-center justify-center">
+      <div className="relative flex h-16 items-center justify-center lg:justify-end">
         <div className="absolute left-0 flex items-center lg:hidden">
           <Button
             variant="ghost"
@@ -37,7 +37,7 @@ const AppBar = () => {
           </Button>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center lg:hidden">
           <Button asChild variant="ghost" className="text-xl">
             <Link to={NAV_PATHS.WORKOUTS} aria-label="Go to workouts">
               <HomeLogo />
@@ -45,7 +45,7 @@ const AppBar = () => {
           </Button>
         </div>
 
-        <div className="absolute right-0 flex items-center space-x-2">
+        <div className="absolute right-0 flex items-center space-x-2 lg:static">
           {startTime && (
             <button
               type="button"

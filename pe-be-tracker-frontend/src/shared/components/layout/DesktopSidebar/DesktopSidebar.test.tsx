@@ -68,12 +68,13 @@ describe("DesktopSidebar", () => {
       );
     });
 
-    it("should render a top spacer row instead of desktop branding", () => {
+    it("should render the brand logo and title", () => {
       render(<DesktopSidebar />);
 
-      expect(screen.queryByTestId("home-logo")).not.toBeInTheDocument();
-      expect(screen.getByRole("navigation", { name: /sidebar navigation/i }))
-        .toBeInTheDocument();
+      expect(screen.getByTestId("home-logo")).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /go to workouts/i }),
+      ).toHaveAttribute("href", "/workouts");
     });
 
     it("should render all navigation items", () => {
@@ -168,6 +169,9 @@ describe("DesktopSidebar", () => {
       render(<DesktopSidebar />);
 
       await user.tab();
+      expect(screen.getByRole("link", { name: /go to workouts/i })).toHaveFocus();
+
+      await user.tab();
       expect(screen.getByRole("link", { name: /^workouts$/i })).toHaveFocus();
 
       await user.tab();
@@ -229,10 +233,10 @@ describe("DesktopSidebar", () => {
   });
 
   describe("Brand Display", () => {
-    it("should not render the brand in the desktop sidebar", () => {
+    it("should display the brand correctly", () => {
       render(<DesktopSidebar />);
 
-      expect(screen.queryByTestId("home-logo")).not.toBeInTheDocument();
+      expect(screen.getByTestId("home-logo")).toBeInTheDocument();
     });
   });
 });
