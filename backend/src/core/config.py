@@ -139,6 +139,21 @@ class Settings(BaseSettings):
         validation_alias="IMAGE_URL_PREFIX",
         description="URL prefix for exercise images",
     )
+    EXERCISE_IMAGE_STORAGE_DIR: str = Field(
+        str(Path(__file__).resolve().parents[2] / ".exercise_images"),
+        validation_alias="EXERCISE_IMAGE_STORAGE_DIR",
+        description="Filesystem path for exercise reference and generated images",
+    )
+    EXERCISE_IMAGE_REFERENCE_MODEL: str = Field(
+        "gemini-2.5-flash-image",
+        validation_alias="EXERCISE_IMAGE_REFERENCE_MODEL",
+        description="Gemini image model for regenerate-from-reference pipeline",
+    )
+    EXERCISE_IMAGE_REFERENCE_TIMEOUT_SECONDS: int = Field(
+        20,
+        validation_alias="EXERCISE_IMAGE_REFERENCE_TIMEOUT_SECONDS",
+        description="Timeout for downloading reference exercise images",
+    )
 
     @computed_field
     @property
