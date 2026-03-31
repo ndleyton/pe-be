@@ -1,4 +1,4 @@
-import { Link, matchPath, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Menu, Pause, Play } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
 import HomeLogo from "../HomeLogo";
@@ -6,52 +6,10 @@ import { useGoogleSignIn } from "@/features/auth/hooks";
 import { Button } from "@/shared/components/ui/button";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 
-const getDesktopPageTitle = (pathname: string) => {
-  if (matchPath("/workouts/:workoutId", pathname)) {
-    return "Workout";
-  }
-
-  if (matchPath("/exercise-types/:exerciseTypeId", pathname)) {
-    return "Exercise";
-  }
-
-  if (matchPath("/routines/:routineId", pathname)) {
-    return "Routine Editor";
-  }
-
-  if (matchPath(NAV_PATHS.WORKOUTS, pathname)) {
-    return "Workouts";
-  }
-
-  if (matchPath(NAV_PATHS.EXERCISES, pathname)) {
-    return "Exercises";
-  }
-
-  if (matchPath("/routines", pathname)) {
-    return "Routines";
-  }
-
-  if (matchPath(NAV_PATHS.CHAT, pathname)) {
-    return "AI Chat";
-  }
-
-  if (matchPath(NAV_PATHS.PROFILE, pathname)) {
-    return "Profile";
-  }
-
-  if (matchPath("/about", pathname)) {
-    return "About";
-  }
-
-  return "Page Not Found";
-};
-
 const AppBar = () => {
-  const location = useLocation();
   const toggleDrawer = useUIStore((state) => state.toggleDrawer);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialized = useAuthStore((state) => state.initialized);
-  const pageTitle = getDesktopPageTitle(location.pathname);
 
   const googleSignIn = useGoogleSignIn();
 
@@ -66,7 +24,7 @@ const AppBar = () => {
       role="banner"
       aria-label="Primary navigation"
     >
-      <div className="relative flex h-16 items-center justify-center lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-4">
+      <div className="relative flex h-16 items-center justify-center lg:justify-end">
         <div className="absolute left-0 flex items-center lg:hidden">
           <Button
             variant="ghost"
@@ -79,12 +37,6 @@ const AppBar = () => {
           </Button>
         </div>
 
-        <div className="hidden min-w-0 items-center lg:flex">
-          <h1 className="text-foreground truncate text-lg font-semibold">
-            {pageTitle}
-          </h1>
-        </div>
-
         <div className="flex items-center lg:hidden">
           <Button asChild variant="ghost" className="text-xl">
             <Link to={NAV_PATHS.WORKOUTS} aria-label="Go to workouts">
@@ -93,7 +45,7 @@ const AppBar = () => {
           </Button>
         </div>
 
-        <div className="absolute right-0 flex items-center space-x-2 lg:static lg:justify-self-end">
+        <div className="absolute right-0 flex items-center space-x-2 lg:static">
           {startTime && (
             <button
               type="button"
