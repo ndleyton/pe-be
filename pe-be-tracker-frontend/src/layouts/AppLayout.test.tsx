@@ -1,12 +1,36 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/test/testUtils";
+import { useUIStore } from "@/stores";
 import userEvent from "@testing-library/user-event";
 import AppLayout from "./AppLayout";
 
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+      clear: () => {
+        storage.clear();
+      },
+    },
+  });
+});
+
 const MockComponent = () => <div>Mock Content</div>;
 
-// Use shared test render that includes providers and API client mocks
-
 describe("AppLayout", () => {
+  afterEach(() => {
+    useUIStore.getState().stopWorkoutTimer();
+  });
+
   it("should have skip to content link as first focusable element", async () => {
     const user = userEvent.setup();
 
@@ -17,10 +41,8 @@ describe("AppLayout", () => {
       </>,
     );
 
-    // Tab to the first focusable element
     await user.tab();
 
-    // Should focus the skip link
     const skipLink = screen.getByRole("link", { name: /skip to content/i });
     expect(skipLink).toHaveFocus();
   });
@@ -35,21 +57,17 @@ describe("AppLayout", () => {
       </>,
     );
 
-    // Find and click the hamburger menu button
     const hamburgerButton = screen.getByRole("button", {
       name: /open navigation menu/i,
     });
     await user.click(hamburgerButton);
 
-    // Drawer should be visible (translated in)
     const drawer = screen.getByRole("dialog");
     expect(drawer).toBeInTheDocument();
     expect(drawer).toHaveAttribute("data-state", "open");
 
-    // Press Escape to close
     await user.keyboard("{Escape}");
 
-    // Drawer should be hidden (translated out)
     expect(drawer).toHaveAttribute("data-state", "closed");
   });
 
@@ -61,11 +79,9 @@ describe("AppLayout", () => {
       </>,
     );
 
-    // Check AppBar has proper role and aria-label
     const banner = screen.getByRole("banner");
     expect(banner).toHaveAttribute("aria-label", "Primary navigation");
 
-    // Check bottom navigation has proper role and aria-label
     const bottomNav = screen.getByRole("navigation", {
       name: /bottom navigation/i,
     });

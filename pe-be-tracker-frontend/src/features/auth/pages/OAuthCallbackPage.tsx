@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { consumePostLoginDestination } from "@/features/auth/lib/postLoginRedirect";
 import { HomeLogo } from "@/shared/components/layout";
 import { useGuestStore } from "@/stores";
 import { useShallow } from "zustand/react/shallow";
@@ -33,6 +34,8 @@ const OAuthCallbackPage = () => {
     const handleOAuthCallback = async () => {
       try {
         setSyncStatus("processing");
+        const postLoginDestination =
+          consumePostLoginDestination() ?? NAV_PATHS.WORKOUTS;
 
         // Extract authorization code from URL parameters
         const code = searchParams.get("code");
@@ -78,8 +81,8 @@ const OAuthCallbackPage = () => {
 
         // Wait a moment to show success state, then redirect
         setTimeout(() => {
-          navigate(NAV_PATHS.WORKOUTS, { replace: true });
-        }, 2000);
+          navigate(postLoginDestination, { replace: true });
+        }, 1000);
       } catch (error) {
         console.error("OAuth callback error:", error);
         const errorMsg =
@@ -90,7 +93,7 @@ const OAuthCallbackPage = () => {
 
         // Redirect back to login after error
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate(NAV_PATHS.LOGIN, { replace: true });
         }, 3000);
       }
     };
