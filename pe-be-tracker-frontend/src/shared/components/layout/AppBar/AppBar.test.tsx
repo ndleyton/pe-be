@@ -3,23 +3,11 @@ import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import AppBar from "./AppBar";
 
-let mockPathname = "/workouts";
 let mockAuthenticated = false;
 let mockTimerStartTime: string | null = null;
 let mockTimerPaused = false;
 let mockFormattedTime = "0:00";
 const mockToggleWorkoutTimer = vi.fn();
-
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
-
-  return {
-    ...actual,
-    useLocation: () => ({ pathname: mockPathname }),
-  };
-});
 
 const mockToggleDrawer = vi.fn();
 const mockGoogleSignIn = vi.fn();
@@ -66,7 +54,6 @@ vi.mock("../HomeLogo", () => ({
 describe("AppBar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPathname = "/workouts";
     mockAuthenticated = false;
     mockTimerStartTime = null;
     mockTimerPaused = false;
@@ -101,34 +88,12 @@ describe("AppBar", () => {
     expect(mockToggleDrawer).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a desktop page title for collection routes", () => {
-    mockPathname = "/exercise-types";
-
+  it("does not render a duplicate page heading in the top bar", () => {
     render(<AppBar />);
 
     expect(
-      screen.getByRole("heading", { name: /exercises/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("renders a desktop page title for detail routes", () => {
-    mockPathname = "/routines/42";
-
-    render(<AppBar />);
-
-    expect(
-      screen.getByRole("heading", { name: /routine editor/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("falls back to a not found title for unknown routes", () => {
-    mockPathname = "/missing";
-
-    render(<AppBar />);
-
-    expect(
-      screen.getByRole("heading", { name: /page not found/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: /workouts/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows sign in when the user is signed out", () => {

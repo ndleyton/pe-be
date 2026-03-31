@@ -168,7 +168,6 @@ describe("DesktopSidebar", () => {
 
       render(<DesktopSidebar />);
 
-      // Tab through navigation items
       await user.tab();
       expect(screen.getByRole("link", { name: /go to workouts/i })).toHaveFocus();
 
