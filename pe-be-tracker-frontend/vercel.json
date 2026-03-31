@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://app.personalbestie.com/api/:path*"
+      "destination": "https://origin-api.personalbestie.com/api/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
