@@ -644,6 +644,7 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         db_session, owner.id, workout_type.id, "Stats Workout"
     )
     unit = await _seed_intensity_unit(db_session, "Kilograms", "kg")
+    pounds_unit = await _seed_intensity_unit(db_session, "Pounds", "lbs")
     exercise_type = await _seed_exercise_type(
         db_session,
         "Stats Exercise",
@@ -719,8 +720,8 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
     await _seed_exercise_set(
         db_session,
         exercise_id=second.id,
-        intensity_unit_id=unit.id,
-        intensity=110,
+        intensity_unit_id=pounds_unit.id,
+        intensity=225,
         reps=2,
     )
     await _seed_exercise_set(
@@ -750,20 +751,25 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
 
     assert stats["progressiveOverload"] == [
         {"date": "2026-01-01", "maxWeight": 105, "totalVolume": 815, "reps": 8},
-        {"date": "2026-01-05", "maxWeight": 110, "totalVolume": 220, "reps": 2},
+        {
+            "date": "2026-01-05",
+            "maxWeight": 102.058,
+            "totalVolume": 204.116,
+            "reps": 2,
+        },
     ]
     assert stats["lastWorkout"] == {
         "date": "2026-01-05T12:00:00+00:00",
         "sets": 2,
         "totalReps": 2,
-        "maxWeight": 110,
-        "totalVolume": 220,
+        "maxWeight": 102.058,
+        "totalVolume": 204.116,
     }
     assert stats["personalBest"] == {
-        "date": "2026-01-05T12:00:00+00:00",
-        "weight": 110,
-        "reps": 2,
-        "volume": 220,
+        "date": "2026-01-01T12:00:00+00:00",
+        "weight": 105,
+        "reps": 3,
+        "volume": 315,
     }
     assert stats["totalSets"] == 4
     assert stats["intensityUnit"] == {

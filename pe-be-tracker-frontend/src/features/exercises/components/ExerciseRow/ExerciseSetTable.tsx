@@ -6,7 +6,7 @@ import {
   formatIntensityInputValue,
 } from "@/features/exercises/lib/exerciseRow";
 import { convertIntensityValue } from "@/features/exercises/lib/intensityUnits";
-import { formatDecimal, parseDecimalInput } from "@/utils/format";
+import { parseDecimalInput } from "@/utils/format";
 import {
   Button,
   Dialog,
