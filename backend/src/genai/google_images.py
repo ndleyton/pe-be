@@ -13,7 +13,10 @@ from google.genai import types
 from PIL import Image, ImageSequence
 
 from src.core.config import settings
-from src.exercises.image_assets import storage_path_for_relative_url
+from src.exercises.image_assets import (
+    resolve_exercise_image_url,
+    storage_path_for_relative_url,
+)
 
 
 MODEL_NAME = "gemini-2.5-flash-image"
@@ -204,10 +207,14 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
 
 
 def _open_reference_image(source_image_url: str) -> bytes:
-    parsed = urlparse(source_image_url)
+    # 1. Resolve the URL into an absolute path using your CDN prefix
+    resolved_url = resolve_exercise_image_url(source_image_url)
+    parsed = urlparse(resolved_url)
+
+    # 2. Check if the newly resolved URL is a remote HTTP address
     if parsed.scheme in {"http", "https"}:
         request = Request(
-            source_image_url,
+            resolved_url,
             headers={"User-Agent": "PersonalBestie/1.0 exercise-image-pipeline"},
         )
         with urlopen(
@@ -215,6 +222,7 @@ def _open_reference_image(source_image_url: str) -> bytes:
         ) as response:
             return response.read()
 
+    # 3. Fallback: read directly from the Docker volume disk if it's local
     return storage_path_for_relative_url(source_image_url).read_bytes()
 
 

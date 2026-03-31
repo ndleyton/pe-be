@@ -15,7 +15,11 @@ def resolve_exercise_image_url(image_url: str) -> str:
     if image_url.startswith(("http://", "https://")):
         return image_url
 
-    prefix = settings.IMAGE_URL_PREFIX or f"{settings.API_PREFIX}/exercises/assets"
+    if image_url.startswith(("generated/", "published/")):
+        prefix = f"{settings.API_PREFIX}/exercises/assets"
+    else:
+        prefix = settings.IMAGE_URL_PREFIX or f"{settings.API_PREFIX}/exercises/assets"
+
     if prefix:
         return f"{prefix.rstrip('/')}/{image_url.lstrip('/')}"
 
