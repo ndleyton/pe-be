@@ -21,6 +21,8 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - exercise_images_data:/app/.exercise_images
     networks:
       - pe-be-network
 
@@ -62,6 +64,7 @@ services:
 
 volumes:
   postgres_data:
+  exercise_images_data:
 
 networks:
   pe-be-network:

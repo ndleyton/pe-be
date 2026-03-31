@@ -27,6 +27,8 @@ services:
       - ./backend/.env.production
     expose:
       - "8000"
+    volumes:
+      - exercise_images_data:/app/.exercise_images
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +67,7 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  exercise_images_data:
 
 networks:
   edge:

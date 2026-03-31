@@ -1,4 +1,6 @@
 from fastapi.testclient import TestClient
+import asyncio
+import json
 import pytest
 import uuid
 from httpx import AsyncClient
@@ -6,8 +8,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from src.core.config import settings
-from src.exercises.models import ExerciseType
+from src.admin.exercise_image_service import (
+    apply_reference_or_option,
+    generate_reference_image_options,
+)
+from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.exercises.schemas import ExerciseTypeRead
+from src.genai.google_images import ExerciseImageResult
 from src.main import app
 from src.users.router import current_active_user
 
@@ -256,6 +263,153 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
     assert result.id == 275
     assert result.muscles[0].name == "Pectorals"
     assert result.muscles[0].muscle_group.name == "Chest"
+
+
+@pytest.mark.asyncio
+async def test_generated_assets_require_auth_but_published_assets_remain_public(
+    async_client: AsyncClient, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        generated_path = tmp_path / "generated" / "exercise-type-1" / "candidate.png"
+        published_path = tmp_path / "published" / "exercise-type-1" / "live.png"
+        generated_path.parent.mkdir(parents=True, exist_ok=True)
+        published_path.parent.mkdir(parents=True, exist_ok=True)
+        generated_path.write_bytes(b"generated")
+        published_path.write_bytes(b"published")
+
+        generated_resp = await async_client.get(
+            f"{settings.API_PREFIX}/exercises/assets/generated/exercise-type-1/candidate.png"
+        )
+        assert generated_resp.status_code == 401
+
+        public_resp = await async_client.get(
+            f"{settings.API_PREFIX}/exercises/assets/published/exercise-type-1/live.png"
+        )
+        assert public_resp.status_code == 200
+        assert public_resp.content == b"published"
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_apply_reference_option_publishes_generated_assets(
+    db_session, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(
+            name="Publishable Exercise",
+            description="desc",
+            reference_images_url=json.dumps(["references/source.png"]),
+        )
+        db_session.add(exercise_type)
+        await db_session.flush()
+
+        generated_relative_path = (
+            f"generated/exercise-type-{exercise_type.id}/clean-outline/0-sample.png"
+        )
+        generated_file = tmp_path / generated_relative_path
+        generated_file.parent.mkdir(parents=True, exist_ok=True)
+        generated_file.write_bytes(b"candidate-bytes")
+
+        db_session.add(
+            ExerciseImageCandidate(
+                exercise_type_id=exercise_type.id,
+                generation_key="sample",
+                pipeline_key="reference_redraw_v1",
+                option_key="clean-outline",
+                option_label="Clean Outline",
+                option_description="desc",
+                source_image_index=0,
+                source_image_url="references/source.png",
+                model_name="test-model",
+                prompt_version="v1",
+                prompt_summary="summary",
+                mime_type="image/png",
+                storage_path=generated_relative_path,
+            )
+        )
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        response = await apply_reference_or_option(
+            db_session,
+            exercise_type,
+            option_key="clean-outline",
+            use_reference=False,
+        )
+
+        stored_paths = json.loads(exercise_type.images_url)
+        assert stored_paths[0].startswith("published/")
+        published_file = tmp_path / stored_paths[0]
+        assert published_file.read_bytes() == b"candidate-bytes"
+        assert response.current_images[0].endswith(stored_paths[0])
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_generate_reference_image_options_runs_jobs_concurrently(
+    db_session, monkeypatch, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(
+            name="Concurrent Exercise",
+            description="desc",
+            reference_images_url=json.dumps(
+                ["references/source-a.png", "references/source-b.png"]
+            ),
+        )
+        db_session.add(exercise_type)
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        active = 0
+        max_active = 0
+
+        async def fake_generate_reference_image_variant(*, context, option, source_image_url):
+            nonlocal active, max_active
+            active += 1
+            max_active = max(max_active, active)
+            await asyncio.sleep(0.01)
+            active -= 1
+            return ExerciseImageResult(
+                model="test-model",
+                mime_type="image/png",
+                base64_data="dGVzdA==",
+                prompt_summary=f"{option.key}:{source_image_url}",
+            )
+
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service.generate_reference_image_variant",
+            fake_generate_reference_image_variant,
+        )
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service._exercise_context",
+            lambda _exercise_type: {
+                "name": "Concurrent Exercise",
+                "description": "desc",
+                "instructions": "",
+                "equipment": "",
+                "category": "",
+                "primary_muscles": [],
+                "secondary_muscles": [],
+            },
+        )
+
+        response = await generate_reference_image_options(db_session, exercise_type)
+
+        assert max_active > 1
+        assert len(response.options) == 3
+        for option in response.options:
+            assert len(option.images) == 2
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
 
 
 @pytest.mark.asyncio

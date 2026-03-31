@@ -24,7 +24,7 @@ from src.exercises.service import (
     MuscleGroupService,
 )
 from src.core.database import get_async_session
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
 router = APIRouter(tags=["exercises"])
@@ -34,7 +34,16 @@ assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
 
 # Exercise endpoints
 @assets_router.get("/{image_path:path}")
-async def get_exercise_image_asset(image_path: str):
+async def get_exercise_image_asset(
+    image_path: str,
+    user: User | None = Depends(current_optional_user),
+):
+    if image_path.startswith("generated/") and user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required for generated exercise images",
+        )
+
     try:
         file_path = storage_path_for_relative_url(image_path)
     except ValueError as exc:

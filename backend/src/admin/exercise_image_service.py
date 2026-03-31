@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 
@@ -65,6 +66,18 @@ def _storage_path_for_candidate(
     )
 
 
+def _published_storage_path_for_candidate(
+    exercise_type_id: int,
+    option_key: str,
+    source_image_index: int,
+    generation_key: str,
+) -> str:
+    return (
+        f"published/exercise-type-{exercise_type_id}/{option_key}/"
+        f"{source_image_index}-{generation_key}.png"
+    )
+
+
 def _write_candidate_bytes(relative_path: str, image_bytes: bytes) -> None:
     output_path = storage_path_for_relative_url(relative_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -76,6 +89,13 @@ def _candidate_file_exists(relative_path: str) -> bool:
         return storage_path_for_relative_url(relative_path).is_file()
     except ValueError:
         return False
+
+
+def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -> None:
+    source_path = storage_path_for_relative_url(source_relative_path)
+    target_path = storage_path_for_relative_url(target_relative_path)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(source_path.read_bytes())
 
 
 def _exercise_context(exercise_type: ExerciseType) -> dict:
@@ -206,6 +226,7 @@ async def generate_reference_image_options(
         for candidate in await _load_candidates(session, exercise_type.id)
     }
 
+    pending_jobs: list[tuple[int, str, object, str, str, ExerciseImageCandidate | None]] = []
     for source_image_index, source_image_url in enumerate(reference_images):
         for option in REFERENCE_OPTION_SPECS:
             generation_key = _build_generation_key(
@@ -225,11 +246,46 @@ async def generate_reference_image_options(
             if existing and _candidate_file_exists(existing.storage_path):
                 continue
 
-            result = await generate_reference_image_variant(
+            pending_jobs.append(
+                (
+                    source_image_index,
+                    source_image_url,
+                    option,
+                    generation_key,
+                    storage_path,
+                    existing,
+                )
+            )
+
+    semaphore = asyncio.Semaphore(3)
+
+    async def _generate_job(
+        source_image_url: str,
+        option,
+    ):
+        async with semaphore:
+            return await generate_reference_image_variant(
                 context=context,
                 option=option,
                 source_image_url=source_image_url,
             )
+
+    if pending_jobs:
+        results = await asyncio.gather(
+            *[
+                _generate_job(source_image_url, option)
+                for _, source_image_url, option, _, _, _ in pending_jobs
+            ]
+        )
+
+        for (
+            source_image_index,
+            source_image_url,
+            option,
+            generation_key,
+            storage_path,
+            existing,
+        ), result in zip(pending_jobs, results, strict=True):
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
 
@@ -298,8 +354,18 @@ async def apply_reference_or_option(
                 detail="Requested image option is incomplete or missing",
             )
         option_candidates.sort(key=lambda candidate: candidate.source_image_index)
+        published_paths: list[str] = []
+        for candidate in option_candidates:
+            published_path = _published_storage_path_for_candidate(
+                exercise_type.id,
+                candidate.option_key,
+                candidate.source_image_index,
+                candidate.generation_key,
+            )
+            _copy_relative_asset(candidate.storage_path, published_path)
+            published_paths.append(published_path)
         exercise_type.images_url = _image_json(
-            [candidate.storage_path for candidate in option_candidates]
+            published_paths
         )
 
     await session.commit()
