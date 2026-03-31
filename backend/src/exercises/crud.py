@@ -133,6 +133,20 @@ def _map_exercise_integrity_error(
     return None
 
 
+def _exercise_set_sort_key(exercise_set: ExerciseSet) -> tuple[datetime, int]:
+    created_at = exercise_set.created_at or datetime.min.replace(tzinfo=timezone.utc)
+    return (created_at, exercise_set.id)
+
+
+def _sort_loaded_exercise_sets(exercises: List[Exercise]) -> List[Exercise]:
+    for exercise in exercises:
+        exercise.exercise_sets = sorted(
+            exercise.exercise_sets,
+            key=_exercise_set_sort_key,
+        )
+    return exercises
+
+
 async def get_exercise_by_id(
     session: AsyncSession, exercise_id: int
 ) -> Optional[Exercise]:
@@ -148,7 +162,11 @@ async def get_exercise_by_id(
         )
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
-    return result.scalar_one_or_none()
+    exercise = result.scalar_one_or_none()
+    if exercise is None:
+        return None
+
+    return _sort_loaded_exercise_sets([exercise])[0]
 
 
 async def get_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
@@ -175,7 +193,7 @@ async def get_exercises_for_workout(
         .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
     )
-    return result.scalars().all()
+    return _sort_loaded_exercise_sets(result.scalars().all())
 
 
 async def create_exercise(

@@ -32,12 +32,21 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         created_at=datetime(2026, 3, 1, tzinfo=timezone.utc),
     )
     deleted_at = datetime(2026, 3, 2, tzinfo=timezone.utc)
-    active_set = await _seed_exercise_set(
+    newer_active_set = await _seed_exercise_set(
         db_session,
         exercise_id=exercise.id,
         intensity_unit_id=unit.id,
         intensity=80,
         reps=8,
+        created_at=datetime(2026, 3, 2, 12, 0, tzinfo=timezone.utc),
+    )
+    older_active_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=75,
+        reps=10,
+        created_at=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
     )
     deleted_set = await _seed_exercise_set(
         db_session,
@@ -45,18 +54,19 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         intensity_unit_id=unit.id,
         intensity=85,
         reps=6,
+        created_at=datetime(2026, 3, 2, 16, 0, tzinfo=timezone.utc),
         deleted_at=deleted_at,
     )
     await db_session.commit()
 
-    found = await crud.get_exercise_set_by_id(db_session, active_set.id)
+    found = await crud.get_exercise_set_by_id(db_session, newer_active_set.id)
     assert found is not None
-    assert found.id == active_set.id
+    assert found.id == newer_active_set.id
     assert found.exercise.workout.owner_id == owner.id
     assert await crud.get_exercise_set_by_id(db_session, deleted_set.id) is None
 
     active_owner = await crud.get_exercise_set_owner_and_deleted(
-        db_session, active_set.id
+        db_session, newer_active_set.id
     )
     assert active_owner == (owner.id, None)
 
@@ -67,7 +77,10 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
     assert await crud.get_exercise_set_owner_and_deleted(db_session, 999999) is None
 
     sets = await crud.get_exercise_sets_for_exercise(db_session, exercise.id)
-    assert [exercise_set.id for exercise_set in sets] == [active_set.id]
+    assert [exercise_set.id for exercise_set in sets] == [
+        older_active_set.id,
+        newer_active_set.id,
+    ]
 
 
 async def test_create_exercise_set_success_and_invalid_reference_mapping(db_session):
