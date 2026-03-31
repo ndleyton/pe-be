@@ -37,6 +37,7 @@ COPY main.py ./
 
 # Create non-root user and fix permissions
 RUN adduser --disabled-password --gecos '' appuser && \
+    mkdir -p /app/.exercise_images && \
     chown -R appuser:appuser /app
 USER appuser
 

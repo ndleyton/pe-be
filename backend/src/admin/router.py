@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 import logging
 
 from src.core.config import settings
+from google.genai import errors
 from src.admin.exercise_image_service import (
     apply_reference_or_option,
     build_image_options_response,
@@ -171,9 +172,23 @@ async def generate_exercise_type_images(
                 context=context, phase_label="end / concentric"
             ),
         )
-    except Exception as e:
-        logger.exception("Failed to generate images: %s", e)
-        raise HTTPException(status_code=502, detail=f"Image generation failed: {e}")
+    except errors.ClientError as exc:
+        if exc.code == 429:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
+        logger.exception("Gemini API error during image generation: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Gemini API error: {exc}",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error during image generation: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected generation failure: {exc}",
+        ) from exc
 
     return {
         "exercise_type_id": exercise_type_id,
@@ -256,11 +271,22 @@ async def generate_reference_options(
         return await generate_reference_image_options(session, exercise_type)
     except HTTPException:
         raise
-    except Exception as exc:
-        logger.exception("Failed to generate reference image options: %s", exc)
+    except errors.ClientError as exc:
+        if exc.code == 429:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
+        logger.exception("Gemini API error during image generation: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Reference image generation failed: {exc}",
+            detail=f"Gemini API error: {exc}",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error during image generation: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected generation failure: {exc}",
         ) from exc
 
 

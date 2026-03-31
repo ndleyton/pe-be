@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -250,4 +251,54 @@ async def test_admin_reference_image_option_endpoints(
         assert apply_resp.json()["options"][0]["is_current"] is True
     finally:
         settings.GOOGLE_AI_KEY = original_key
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_admin_router_image_generation_429(
+    async_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
+    from google.genai import errors
+
+    admin = User(
+        email="429-admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    db_session.add(admin)
+    await db_session.flush()
+
+    exercise_type = ExerciseType(name="429 ET", description="d")
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    async def override_admin():
+        return admin
+
+    async def fake_generate_raise(*args, **kwargs):
+        mock_error = errors.ClientError("Resource Exhausted", MagicMock())
+        mock_error.code = 429
+        # print(f"DEBUG: Raising mock error with code: {mock_error.code}")
+        raise mock_error
+
+    app.dependency_overrides[current_active_user] = override_admin
+    monkeypatch.setattr(
+        "src.admin.router.generate_reference_image_options",
+        fake_generate_raise,
+    )
+
+    from src.core.config import settings
+
+    settings.GOOGLE_AI_KEY = "test-key"
+
+    try:
+        resp = await async_client.post(
+            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/generate"
+        )
+        assert resp.status_code == 429, f"Got {resp.status_code}: {resp.text}"
+        assert "Gemini API quota exceeded" in resp.json()["detail"]
+    finally:
         app.dependency_overrides.pop(current_active_user, None)
