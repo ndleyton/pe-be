@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
+import time
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Dict, List
@@ -9,7 +11,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from PIL import Image, ImageSequence
 
 from src.core.config import settings
@@ -23,6 +25,8 @@ MODEL_NAME = "gemini-2.5-flash-image"
 DEFAULT_MIME = "image/png"
 REFERENCE_PIPELINE_KEY = "reference_redraw_v1"
 REFERENCE_PROMPT_VERSION = "v1"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -195,6 +199,30 @@ def _extract_inline_result(response, prompt: str, model_name: str) -> ExerciseIm
 
 
 def _generate_image_sync(prompt: str) -> ExerciseImageResult:
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = _client().models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                ),
+            )
+            return _extract_inline_result(response, prompt, MODEL_NAME)
+        except errors.ClientError as exc:
+            if exc.status_code == 429 and attempt < max_retries - 1:
+                wait_time = 15 * (attempt + 1)
+                logger.warning(
+                    "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
+                    wait_time,
+                    attempt + 1,
+                    max_retries,
+                )
+                time.sleep(wait_time)
+                continue
+            raise
+    # Fallback to one last attempt if the loop somehow finish without return/raise
     response = _client().models.generate_content(
         model=MODEL_NAME,
         contents=prompt,
@@ -251,6 +279,41 @@ def _generate_reference_image_sync(
     prepared = _normalize_reference_image(source_image_url)
     prompt = _build_reference_prompt(context, option)
 
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = _client().models.generate_content(
+                model=settings.EXERCISE_IMAGE_REFERENCE_MODEL,
+                contents=[
+                    types.Part.from_text(text=prompt),
+                    types.Part.from_bytes(
+                        data=prepared.image_bytes,
+                        mime_type=prepared.mime_type,
+                    ),
+                ],
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                ),
+            )
+            return _extract_inline_result(
+                response,
+                prompt,
+                settings.EXERCISE_IMAGE_REFERENCE_MODEL,
+            )
+        except errors.ClientError as exc:
+            if exc.status_code == 429 and attempt < max_retries - 1:
+                wait_time = 15 * (attempt + 1)
+                logger.warning(
+                    "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
+                    wait_time,
+                    attempt + 1,
+                    max_retries,
+                )
+                time.sleep(wait_time)
+                continue
+            raise
+
+    # Fallback
     response = _client().models.generate_content(
         model=settings.EXERCISE_IMAGE_REFERENCE_MODEL,
         contents=[
