@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const USER_ME_ROUTE = "**/api/v1/users/me";
+const USER_ME_ROUTE = "**/api/v1/auth/session";
 const GOOGLE_AUTHORIZE_ROUTE = "**/api/v1/auth/google/authorize";
 const WORKOUTS_MINE_ROUTE = "**/api/v1/workouts/mine**";
 const POST_LOGIN_STORAGE_KEY = "auth:post-login-destination";

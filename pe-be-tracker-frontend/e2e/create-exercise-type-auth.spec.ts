@@ -21,7 +21,7 @@ test.describe("Create Exercise Type (authenticated)", () => {
     });
 
     // Mock authenticated user
-    await page.route("**/api/v1/users/me", (route) => {
+    await page.route("**/api/v1/auth/session", (route) => {
       route.fulfill({
         status: 200,
         contentType: "application/json",

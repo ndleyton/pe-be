@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const mockGuestUser = async (page: Page) => {
-  await page.route("**/users/me", async (route) => {
+  await page.route("**/auth/session", async (route) => {
     await route.fulfill({
       status: 401,
       contentType: "application/json",
@@ -56,7 +56,7 @@ test.describe("Header behavior", () => {
 
     await expect(sidebar.getByRole("link", { name: /go to workouts/i })).toBeVisible();
     await expect(
-      banner.getByRole("heading", { name: /^exercises$/i }),
+      page.getByRole("heading", { name: /^exercises$/i }),
     ).toBeVisible();
     await expect(
       banner.getByRole("button", { name: /open navigation menu/i }),
