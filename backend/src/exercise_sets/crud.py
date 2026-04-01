@@ -110,7 +110,9 @@ async def create_exercise_set(
     canonical_intensity_unit_id = payload["intensity_unit_id"]
     if canonical_unit_key is not None:
         canonical_unit = await session.execute(
-            select(IntensityUnit).where(IntensityUnit.abbreviation.ilike(canonical_unit_key))
+            select(IntensityUnit).where(
+                IntensityUnit.abbreviation.ilike(canonical_unit_key)
+            )
         )
         canonical_intensity_unit_id = (
             canonical_unit.scalar_one_or_none() or source_unit

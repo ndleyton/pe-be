@@ -133,12 +133,16 @@ async def _seed_exercise_set(
     canonical_intensity_unit_id = intensity_unit_id
     if canonical_unit_key is not None:
         canonical_intensity_unit_id = (
-            await db_session.execute(
-                select(IntensityUnit).where(
-                    func.lower(IntensityUnit.abbreviation) == canonical_unit_key
+            (
+                await db_session.execute(
+                    select(IntensityUnit).where(
+                        func.lower(IntensityUnit.abbreviation) == canonical_unit_key
+                    )
                 )
             )
-        ).scalar_one().id
+            .scalar_one()
+            .id
+        )
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,

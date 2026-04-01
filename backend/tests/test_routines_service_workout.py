@@ -99,9 +99,9 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
         Decimal("30.00000"),
         Decimal("35.00000"),
     }
-    assert {exercise_set.canonical_intensity_unit_id for exercise_set in created_sets} == {
-        iu.id
-    }
+    assert {
+        exercise_set.canonical_intensity_unit_id for exercise_set in created_sets
+    } == {iu.id}
 
 
 @pytest.mark.integration

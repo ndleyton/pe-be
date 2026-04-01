@@ -585,15 +585,18 @@ async def get_exercise_type_stats(
     intensity_units = intensity_units_result.scalars().all()
     intensity_units_by_id = {unit.id: unit for unit in intensity_units}
 
-    stats_intensity_unit = intensity_units_by_id.get(exercise_type.default_intensity_unit)
+    stats_intensity_unit = intensity_units_by_id.get(
+        exercise_type.default_intensity_unit
+    )
 
     # For now, use a hybrid approach - fetch exercises but use some optimized queries
     exercises_result = await session.execute(
         select(Exercise)
         .join(Workout, Exercise.workout_id == Workout.id)
         .options(
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
-            .selectinload(ExerciseSet.intensity_unit)
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).selectinload(ExerciseSet.intensity_unit)
         )
         .where(
             Exercise.exercise_type_id == exercise_type_id,
