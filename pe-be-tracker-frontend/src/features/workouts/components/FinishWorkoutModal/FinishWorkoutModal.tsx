@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
 import DownloadImageButton from "./DownloadImageButton/DownloadImageButton";
 import { toPng } from "html-to-image";
+import { RefreshCw } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -34,6 +35,7 @@ interface FinishWorkoutModalProps {
   workoutName?: string;
   recap?: string | null;
   isRecapLoading?: boolean;
+  onRegenerateRecap?: () => void;
 }
 
 const FinishWorkoutModal = ({
@@ -46,6 +48,7 @@ const FinishWorkoutModal = ({
   workoutName,
   recap,
   isRecapLoading = false,
+  onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const formattedDuration = useUIStore((state) =>
@@ -227,11 +230,26 @@ const FinishWorkoutModal = ({
           {/* AI Recap Section */}
           {totalSets > 0 && (
             <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">✨</span>
-                <h4 className="text-sm font-bold uppercase tracking-wider">
-                  AI Recap
-                </h4>
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">✨</span>
+                  <h4 className="text-sm font-bold uppercase tracking-wider">
+                    AI Recap
+                  </h4>
+                </div>
+                {onRegenerateRecap && !isRecapLoading && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRegenerateRecap();
+                    }}
+                    className="text-muted-foreground hover:text-primary transition-colors focus:ring-primary/20 rounded-full p-1 transition-transform active:rotate-180"
+                    title="Regenerate recap"
+                    aria-label="Regenerate AI recap"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
               {isRecapLoading ? (
                 <div className="space-y-2 py-1">
