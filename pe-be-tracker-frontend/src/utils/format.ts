@@ -15,11 +15,15 @@ export const formatDecimal = (
     return "-";
   }
 
-  if (num % 1 === 0) {
-    return num.toString();
+  // Round to 2 decimal places for display
+  const rounded = Math.round(num * 100) / 100;
+
+  if (rounded % 1 === 0) {
+    return rounded.toString();
   }
 
-  return num.toString().replace(/\.?0+$/, "");
+  // Remove unnecessary trailing zeros
+  return rounded.toString().replace(/\.?0+$/, "");
 };
 
 /**

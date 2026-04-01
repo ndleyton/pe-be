@@ -4,6 +4,7 @@ import type {
   PersonalBestData as PersonalBestInfoType,
   IntensityUnit,
 } from "@/features/exercises/api";
+import { formatDecimal } from "@/utils/format";
 
 interface PersonalBestInfoProps {
   personalBest: PersonalBestInfoType;
@@ -29,7 +30,7 @@ export const PersonalBestInfo = ({
         <div className="flex justify-between">
           <span className="text-muted-foreground text-sm">Weight:</span>
           <span className="text-warning font-medium">
-            {personalBest.weight}
+            {formatDecimal(personalBest.weight)}
             {intensityUnit.abbreviation}
           </span>
         </div>
@@ -42,7 +43,7 @@ export const PersonalBestInfo = ({
         <div className="flex justify-between">
           <span className="text-muted-foreground text-sm">Volume:</span>
           <span className="font-medium">
-            {personalBest.volume}
+            {formatDecimal(personalBest.volume)}
             {intensityUnit.abbreviation}
           </span>
         </div>
@@ -52,7 +53,7 @@ export const PersonalBestInfo = ({
         <p className="text-muted-foreground text-sm">
           Your personal best is{" "}
           <span className="text-warning font-semibold">
-            {personalBest.weight}
+            {formatDecimal(personalBest.weight)}
             {intensityUnit.abbreviation}
           </span>{" "}
           for <span className="font-semibold">{personalBest.reps} reps</span>

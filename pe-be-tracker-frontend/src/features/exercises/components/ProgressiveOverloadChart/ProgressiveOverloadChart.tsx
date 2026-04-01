@@ -11,6 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/shared/components/ui/chart";
+import { formatDecimal } from "@/utils/format";
 
 interface ProgressiveOverloadChartProps {
   data: ProgressiveOverloadDataPoint[];
@@ -49,8 +50,8 @@ export const ProgressiveOverloadChart = ({
       month: "short",
       day: "numeric",
     }),
-    maxWeight: point.maxWeight,
-    totalVolume: point.totalVolume,
+    maxWeight: Math.round(point.maxWeight * 100) / 100,
+    totalVolume: Math.round(point.totalVolume * 100) / 100,
   }));
 
   // Calculate trend for the latest period
@@ -169,12 +170,12 @@ export const ProgressiveOverloadChart = ({
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
             {activeMetric === "maxWeight" ? (
               <>
-                Latest: {latestWeight}
+                Latest: {formatDecimal(latestWeight)}
                 {intensityUnit.abbreviation} max weight
               </>
             ) : (
               <>
-                Latest: {latestVolume}
+                Latest: {formatDecimal(latestVolume)}
                 {intensityUnit.abbreviation} total volume
               </>
             )}
