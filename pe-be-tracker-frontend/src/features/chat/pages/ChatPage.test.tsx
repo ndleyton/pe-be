@@ -107,45 +107,6 @@ describe("ChatPage", () => {
     );
   });
 
-  it("does not render the widget when the workout event payload is incomplete", async () => {
-    mockPost.mockResolvedValueOnce({
-      data: {
-        message: "I tried to create a workout.",
-        conversation_id: 12,
-        events: [
-          {
-            type: "workout_created",
-            workout: {
-              name: "Leg Day",
-            },
-          },
-        ],
-      },
-    });
-
-    const user = userEvent.setup();
-    const { container } = renderChatPage();
-    const form = container.querySelector("form");
-
-    if (!form) {
-      throw new Error("Expected chat form to be rendered");
-    }
-    await user.type(
-      screen.getByPlaceholderText("Message..."),
-      "Build me a leg workout",
-    );
-    fireEvent.submit(form);
-
-    await waitFor(() => {
-      expect(screen.getByText("I tried to create a workout.")).toBeInTheDocument();
-    });
-
-    expect(
-      screen.queryByRole("link", { name: /open workout|view workout/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Leg Day")).not.toBeInTheDocument();
-  });
-
   it("surfaces backend chat error details instead of a generic fallback", async () => {
     mockPost.mockRejectedValueOnce({
       response: {

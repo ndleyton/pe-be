@@ -77,10 +77,23 @@ interface ChatApiMessage {
   parts?: ChatApiPart[];
 }
 
+interface ChatApiWorkoutCreatedEvent {
+  type: "workout_created";
+  title?: string | null;
+  cta_label?: string | null;
+  workout: {
+    id: Workout["id"];
+    name: string | null;
+    notes: string | null;
+    start_time: string;
+    end_time: string | null;
+  };
+}
+
 interface ChatResponse {
   message: string;
   conversation_id: number;
-  events?: unknown;
+  events?: ChatApiWorkoutCreatedEvent[];
 }
 
 const MAX_ATTACHMENTS = 4;
@@ -94,68 +107,25 @@ const ALLOWED_ATTACHMENT_TYPES = [
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const getOptionalString = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim().length > 0 ? value : undefined;
-
-const getOptionalWorkoutId = (value: unknown): Workout["id"] | undefined =>
-  typeof value === "number" || typeof value === "string" ? value : undefined;
-
 const parseWorkoutCreatedEvent = (
-  rawEvent: unknown,
-): WorkoutCreatedEvent | null => {
-  if (!isRecord(rawEvent) || rawEvent.type !== "workout_created") {
-    return null;
-  }
-
-  const rawWorkout = rawEvent.workout;
-  if (!isRecord(rawWorkout)) {
-    return null;
-  }
-
-  const workoutId = getOptionalWorkoutId(rawWorkout.id);
-  if (workoutId === undefined) {
-    return null;
-  }
-
+  event: ChatApiWorkoutCreatedEvent,
+): WorkoutCreatedEvent => {
   return {
     type: "workout_created",
-    title: getOptionalString(rawEvent.title),
-    ctaLabel:
-      getOptionalString(rawEvent.cta_label) ??
-      getOptionalString(rawEvent.ctaLabel),
+    title: event.title ?? undefined,
+    ctaLabel: event.cta_label ?? undefined,
     workout: {
-      id: workoutId,
-      name:
-        typeof rawWorkout.name === "string" || rawWorkout.name === null
-          ? rawWorkout.name
-          : null,
-      notes:
-        typeof rawWorkout.notes === "string" || rawWorkout.notes === null
-          ? rawWorkout.notes
-          : null,
-      start_time:
-        typeof rawWorkout.start_time === "string" ? rawWorkout.start_time : "",
-      end_time:
-        typeof rawWorkout.end_time === "string" || rawWorkout.end_time === null
-          ? rawWorkout.end_time
-          : null,
+      id: event.workout.id,
+      name: event.workout.name,
+      notes: event.workout.notes,
+      start_time: event.workout.start_time,
+      end_time: event.workout.end_time,
     },
   };
 };
 
-const extractChatEvents = (rawEvents: unknown): ChatEvent[] => {
-  if (!Array.isArray(rawEvents)) {
-    return [];
-  }
-
-  return rawEvents.flatMap((event) => {
-    const parsedEvent = parseWorkoutCreatedEvent(event);
-    return parsedEvent ? [parsedEvent] : [];
-  });
-};
+const extractChatEvents = (events?: ChatApiWorkoutCreatedEvent[]): ChatEvent[] =>
+  (events ?? []).map(parseWorkoutCreatedEvent);
 
 const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
   const workoutPath = `${NAV_PATHS.WORKOUTS}/${event.workout.id}`;
