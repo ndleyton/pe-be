@@ -125,7 +125,9 @@ async def test_visibility_filtering_lists_public_only_for_signed_out_viewer(
     )
     await db_session.flush()
 
-    results = await crud.get_visible_routines(db_session, user_id=None, offset=0, limit=50)
+    results = await crud.get_visible_routines(
+        db_session, user_id=None, offset=0, limit=50
+    )
     names = {r.name for r in results}
 
     assert names == {"Owner Public"}

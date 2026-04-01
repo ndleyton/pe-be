@@ -181,9 +181,7 @@ class Settings(BaseSettings):
     OTEL_SERVICE_NAME: str = Field(
         "pe-be-backend", validation_alias="OTEL_SERVICE_NAME"
     )
-    OTEL_SERVICE_VERSION: str = Field(
-        "", validation_alias="OTEL_SERVICE_VERSION"
-    )
+    OTEL_SERVICE_VERSION: str = Field("", validation_alias="OTEL_SERVICE_VERSION")
     OTEL_EXPORTER_OTLP_ENDPOINT: str = Field(
         "", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT"
     )

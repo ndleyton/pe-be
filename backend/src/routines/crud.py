@@ -146,12 +146,15 @@ async def get_visible_routines(
     limit: int = 100,
 ) -> List[Routine]:
     """Get routines visible to the current viewer with pagination."""
-    query = _routine_detail_query().order_by(Routine.created_at.desc()).offset(offset).limit(limit)
+    query = (
+        _routine_detail_query()
+        .order_by(Routine.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
 
     if user_id is None:
-        query = query.where(
-            Routine.visibility == Routine.RoutineVisibility.public
-        )
+        query = query.where(Routine.visibility == Routine.RoutineVisibility.public)
     else:
         query = query.where(
             or_(

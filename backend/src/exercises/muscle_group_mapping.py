@@ -67,9 +67,7 @@ MUSCLE_NAME_TO_GROUP: dict[str, str] = {
 }
 
 DEFAULT_MUSCLE_GROUP = "Imported"
-KNOWN_MUSCLE_GROUPS = frozenset(
-    {*MUSCLE_NAME_TO_GROUP.values(), DEFAULT_MUSCLE_GROUP}
-)
+KNOWN_MUSCLE_GROUPS = frozenset({*MUSCLE_NAME_TO_GROUP.values(), DEFAULT_MUSCLE_GROUP})
 
 
 def get_muscle_group_for_muscle(muscle_name: str) -> str:

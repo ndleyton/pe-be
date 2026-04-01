@@ -162,7 +162,9 @@ def _inline_data_to_bytes(data: bytes | str) -> bytes:
     return base64.b64decode(data)
 
 
-def _extract_inline_result(response, prompt: str, model_name: str) -> ExerciseImageResult:
+def _extract_inline_result(
+    response, prompt: str, model_name: str
+) -> ExerciseImageResult:
     try:
         candidate = response.candidates[0]
         if not getattr(candidate, "content", None):

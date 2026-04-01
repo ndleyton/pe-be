@@ -135,7 +135,9 @@ def test_ensure_model_registry_loaded_imports_modules_once(monkeypatch):
         imported.append(name)
         return SimpleNamespace(__name__=name)
 
-    monkeypatch.setattr(shared, "importlib", SimpleNamespace(import_module=_fake_import_module))
+    monkeypatch.setattr(
+        shared, "importlib", SimpleNamespace(import_module=_fake_import_module)
+    )
     monkeypatch.setattr(shared, "_MODEL_REGISTRY_LOADED", False)
 
     shared.ensure_model_registry_loaded()
