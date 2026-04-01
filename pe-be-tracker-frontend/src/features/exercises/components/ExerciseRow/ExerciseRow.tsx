@@ -58,7 +58,7 @@ const ExerciseRow = ({
   });
 
   return (
-    <Card key={exercise.id} className="border-input">
+    <Card key={exercise.id} className="bg-card/80 border-border overflow-hidden rounded-2xl border shadow-xl backdrop-blur-sm">
       <CardHeader className="pb-2">
         <ExerciseRowHeader
           currentIntensityUnit={currentIntensityUnit}

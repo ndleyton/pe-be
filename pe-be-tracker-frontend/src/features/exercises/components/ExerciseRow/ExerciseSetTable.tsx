@@ -99,9 +99,9 @@ export const ExerciseSetTable = ({
         return (
           <div
             key={set.id}
-            className={`grid items-center gap-2 rounded p-2 sm:gap-4 ${
-              set.done ? "bg-done" : "bg-secondary"
-            }`}
+            className={`grid items-center gap-2 rounded-lg p-2.5 sm:gap-4 transition-all duration-200 ${
+              set.done ? "bg-primary/20 border-primary/20" : "bg-muted/50 border-transparent"
+            } border`}
             style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
           >
             <div className="text-muted-foreground font-medium">
@@ -211,14 +211,14 @@ export const ExerciseSetTable = ({
               <Button
                 variant={set.done ? "default" : "outline"}
                 size="sm"
-                className={`h-8 w-8 p-0 ${
+                className={`h-9 w-9 rounded-full transition-all duration-300 ${
                   set.done
-                    ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800"
-                    : "border-input border dark:border-gray-600"
+                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
+                    : "border-border/50 text-muted-foreground/50 border bg-transparent"
                 }`}
                 onClick={() => onToggleSetCompletion(set.id)}
               >
-                <Check className="h-4 w-4" />
+                <Check className={`h-5 w-5 transition-transform duration-300 ${set.done ? "scale-110" : "scale-100"}`} />
               </Button>
             </div>
 
@@ -283,13 +283,13 @@ export const ExerciseSetTable = ({
 
     <Button
       variant="outline"
-      className="border-input mt-4 w-full bg-transparent"
+      className="bg-card/50 border-border/50 hover:bg-accent mt-6 w-full rounded-xl border-2 border-dashed py-6 shadow-sm transition-all hover:shadow-md"
       data-testid="add-set-button"
       disabled={isUnsavedExercise}
       onClick={onAddSet}
     >
-      <Plus className="mr-2 h-4 w-4" />
-      Add Set
+      <Plus className="mr-2 h-5 w-5 opacity-50" />
+      <span className="font-bold tracking-tight">Add Set</span>
     </Button>
   </>
 );
