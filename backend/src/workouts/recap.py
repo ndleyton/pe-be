@@ -11,9 +11,12 @@ from src.exercises.crud import get_exercise_type_stats, get_exercises_for_workou
 
 logger = logging.getLogger(__name__)
 
+
 class WorkoutRecapService:
     @staticmethod
-    async def generate_recap(session: AsyncSession, workout_id: int, user_id: int) -> Optional[str]:
+    async def generate_recap(
+        session: AsyncSession, workout_id: int, user_id: int
+    ) -> Optional[str]:
         """Generate an AI recap for a workout and store it."""
         workout = await get_workout_by_id(session, workout_id, user_id)
         if not workout:
@@ -26,27 +29,39 @@ class WorkoutRecapService:
         # 1. Gather deterministic metrics
         metrics = []
         for exercise in exercises:
-            stats = await get_exercise_type_stats(session, exercise.exercise_type_id, user_id)
+            stats = await get_exercise_type_stats(
+                session, exercise.exercise_type_id, user_id
+            )
 
             # Current session stats
             current_sets = [s for s in exercise.exercise_sets if s.deleted_at is None]
 
             # Find the "top set" (highest weight, then highest reps)
-            top_set = max(current_sets, key=lambda s: (s.intensity or 0, s.reps or 0), default=None)
+            top_set = max(
+                current_sets,
+                key=lambda s: (s.intensity or 0, s.reps or 0),
+                default=None,
+            )
 
             current_max_weight = top_set.intensity or 0 if top_set else 0
             current_top_set_reps = top_set.reps or 0 if top_set else 0
             current_total_sets = len(current_sets)
             current_total_reps = sum(s.reps or 0 for s in current_sets)
-            current_total_volume = sum((s.intensity or 0) * (s.reps or 0) for s in current_sets)
+            current_total_volume = sum(
+                (s.intensity or 0) * (s.reps or 0) for s in current_sets
+            )
 
             # Historical stats (progressiveOverload list contains historical points)
             history = stats.get("progressiveOverload", [])
             # Filter out current session from history if it's already there
             workout_date_str = workout.start_time.date().isoformat()
-            history_excluding_today = [h for h in history if h["date"] < workout_date_str]
+            history_excluding_today = [
+                h for h in history if h["date"] < workout_date_str
+            ]
 
-            prev_session = history_excluding_today[-1] if history_excluding_today else None
+            prev_session = (
+                history_excluding_today[-1] if history_excluding_today else None
+            )
 
             metric = {
                 "exercise_name": exercise.exercise_type.name,
@@ -55,9 +70,9 @@ class WorkoutRecapService:
                     "total_reps": current_total_reps,
                     "top_set_weight_achieved": float(current_max_weight),
                     "top_set_reps": current_top_set_reps,
-                    "total_volume": float(current_total_volume)
+                    "total_volume": float(current_total_volume),
                 },
-                "is_pr": False
+                "is_pr": False,
             }
 
             # Include exercise-level notes
@@ -72,7 +87,7 @@ class WorkoutRecapService:
             if prev_session:
                 metric["previous"] = {
                     "max_weight": float(prev_session["maxWeight"]),
-                    "volume": float(prev_session["totalVolume"])
+                    "volume": float(prev_session["totalVolume"]),
                 }
                 # PR detection: higher weight or higher volume
                 if current_max_weight > prev_session["maxWeight"]:
@@ -121,7 +136,9 @@ Recap:"""
                     max_output_tokens=300,
                 ),
             )
-            recap_text = response.text.strip() if response.text else "Could not generate recap."
+            recap_text = (
+                response.text.strip() if response.text else "Could not generate recap."
+            )
 
             # 4. Save to workout
             workout.recap = recap_text
