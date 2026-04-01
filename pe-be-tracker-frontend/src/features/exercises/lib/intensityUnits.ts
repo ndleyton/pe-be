@@ -22,8 +22,8 @@ const KNOWN_INTENSITY_UNIT_DEFINITIONS: Record<number, IntensityUnitDefinition> 
   5: { family: "bodyweight", toBaseFactor: 1 },
 };
 
-const roundToThreeDecimals = (value: number): number =>
-  Math.round(value * 1000) / 1000;
+const roundToTwoDecimals = (value: number): number =>
+  Math.round(value * 100) / 100;
 
 export const getIntensityUnitDefinition = (
   unitId: number | null | undefined,
@@ -74,7 +74,7 @@ export const convertIntensityValue = (
   }
 
   const baseValue = value * sourceDefinition.toBaseFactor;
-  return roundToThreeDecimals(baseValue / targetDefinition.toBaseFactor);
+  return roundToTwoDecimals(baseValue / targetDefinition.toBaseFactor);
 };
 
 export const getCompatibleIntensityUnits = <T extends IntensityUnitLike>(
@@ -89,18 +89,34 @@ export const getCompatibleIntensityUnits = <T extends IntensityUnitLike>(
   return units.filter((unit) => getIntensityUnitFamily(unit) === currentFamily);
 };
 
+interface IntensityUnitProvider {
+  intensity_unit_id: number;
+}
+
+export const resolveDisplayIntensityUnit = (
+  items: IntensityUnitProvider[],
+  defaultUnitId: number | null | undefined,
+  availableUnits: IntensityUnitLike[],
+  fallbackUnit: IntensityUnitLike,
+): IntensityUnitLike => {
+  const firstUnitId = items[0]?.intensity_unit_id;
+  const preferredUnitId = firstUnitId ?? defaultUnitId;
+
+  return (
+    availableUnits.find((unit) => unit.id === preferredUnitId) ??
+    availableUnits.find((unit) => unit.id === firstUnitId) ??
+    fallbackUnit
+  );
+};
+
 export const resolveExerciseDisplayIntensityUnit = (
   exercise: Exercise,
   availableUnits: IntensityUnitLike[],
   fallbackUnit: IntensityUnitLike,
-): IntensityUnitLike => {
-  const firstSetUnitId = exercise.exercise_sets[0]?.intensity_unit_id;
-  const preferredUnitId =
-    exercise.exercise_type.default_intensity_unit ?? firstSetUnitId;
-
-  return (
-    availableUnits.find((unit) => unit.id === preferredUnitId) ??
-    availableUnits.find((unit) => unit.id === firstSetUnitId) ??
-    fallbackUnit
+): IntensityUnitLike =>
+  resolveDisplayIntensityUnit(
+    exercise.exercise_sets,
+    exercise.exercise_type.default_intensity_unit,
+    availableUnits,
+    fallbackUnit,
   );
-};
