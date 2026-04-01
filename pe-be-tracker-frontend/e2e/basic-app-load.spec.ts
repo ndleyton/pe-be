@@ -8,6 +8,14 @@ test.describe("Basic App Loading", () => {
       console.log(`PAGE ERROR: ${error.message}`),
     );
 
+    // Mock the /auth/session API call to simulate a guest user and reduce noise
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     // Navigate to the root of the app
     await page.goto("/");
 

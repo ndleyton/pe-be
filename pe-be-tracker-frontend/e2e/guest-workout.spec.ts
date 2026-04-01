@@ -61,6 +61,13 @@ test.describe("Guest Mode Workout Creation", () => {
       }
     });
     // Go directly to workouts; '/' redirects there now
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     await page.goto("/workouts");
 
     // Wait for the page to be fully loaded

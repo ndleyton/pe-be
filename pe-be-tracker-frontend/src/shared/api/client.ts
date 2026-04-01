@@ -177,21 +177,29 @@ apiClient.interceptors.response.use(
     captureApiError(error);
 
     if (config.enableLogging) {
-      // eslint-disable-next-line no-console
-      console.error("[API ERROR]", error);
+      const isSessionProbe =
+        axios.isAxiosError(error) && error.config?.url?.includes("/auth/session");
+      const isUnauthorized =
+        axios.isAxiosError(error) && error.response?.status === 401;
 
-      // Log detailed error information to help with debugging
-      if (error.response) {
+      // Don't clutter logs with expected 401s from session probes (guest mode)
+      if (!(isSessionProbe && isUnauthorized)) {
         // eslint-disable-next-line no-console
-        console.error("[API ERROR] Response data:", error.response.data);
-        // eslint-disable-next-line no-console
-        console.error("[API ERROR] Response status:", error.response.status);
-      } else if (error.request) {
-        // eslint-disable-next-line no-console
-        console.error("[API ERROR] No response received:", error.request);
-      } else {
-        // eslint-disable-next-line no-console
-        console.error("[API ERROR] Request setup error:", error.message);
+        console.error("[API ERROR]", error);
+
+        // Log detailed error information to help with debugging
+        if (error.response) {
+          // eslint-disable-next-line no-console
+          console.error("[API ERROR] Response data:", error.response.data);
+          // eslint-disable-next-line no-console
+          console.error("[API ERROR] Response status:", error.response.status);
+        } else if (error.request) {
+          // eslint-disable-next-line no-console
+          console.error("[API ERROR] No response received:", error.request);
+        } else {
+          // eslint-disable-next-line no-console
+          console.error("[API ERROR] Request setup error:", error.message);
+        }
       }
     }
 

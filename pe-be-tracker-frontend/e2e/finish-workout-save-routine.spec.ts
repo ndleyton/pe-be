@@ -33,6 +33,13 @@ test.describe("Finish workout routine creation", () => {
   test("does not offer routine creation from FinishWorkoutModal in guest mode", async ({
     page,
   }) => {
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     await page.goto("/workouts");
     await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/workouts$/);

@@ -154,16 +154,38 @@ async def test_admin_generate_images_guards_and_import_status(
     finally:
         app.dependency_overrides.pop(current_active_user, None)
 
-    # Import status endpoint returns OK payload (even without ext schema)
     status_resp = await async_client.get("/api/v1/admin/import-exercises/status")
-    assert status_resp.status_code == 200
-    status_json = status_resp.json()
-    assert "imported_exercises" in status_json
-    assert "status" in status_json
+    assert status_resp.status_code == 401
 
-    # Import endpoint likely fails (no importer), but should not crash the app
     import_resp = await async_client.post("/api/v1/admin/import-exercises")
-    assert import_resp.status_code in (200, 500)
+    assert import_resp.status_code == 401
+
+    # Non-admin -> 403 for import endpoints
+    app.dependency_overrides[current_active_user] = override_non_admin
+    try:
+        status_resp = await async_client.get("/api/v1/admin/import-exercises/status")
+        assert status_resp.status_code == 403
+
+        import_resp = await async_client.post("/api/v1/admin/import-exercises")
+        assert import_resp.status_code == 403
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    # Admin can access the import endpoints
+    app.dependency_overrides[current_active_user] = override_admin
+    try:
+        # Import status endpoint returns OK payload (even without ext schema)
+        status_resp = await async_client.get("/api/v1/admin/import-exercises/status")
+        assert status_resp.status_code == 200
+        status_json = status_resp.json()
+        assert "imported_exercises" in status_json
+        assert "status" in status_json
+
+        # Import endpoint likely fails (no importer), but should not crash the app
+        import_resp = await async_client.post("/api/v1/admin/import-exercises")
+        assert import_resp.status_code in (200, 500)
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
 
 
 @pytest.mark.integration

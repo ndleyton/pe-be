@@ -3,6 +3,13 @@ import { test, expect } from "@playwright/test";
 test.describe("Navigation Persistence", () => {
   test("should persist workouts section paths correctly", async ({ page }) => {
     // Test: Navigate to workouts list
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     await page.goto("/workouts");
     await expect(page).toHaveURL("/workouts");
     await page.waitForTimeout(2000);

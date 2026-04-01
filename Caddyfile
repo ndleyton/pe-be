@@ -1,3 +1,11 @@
+{
+    servers {
+        trusted_proxies static private_ranges {$CADDY_TRUSTED_PROXIES}
+        trusted_proxies_strict
+        client_ip_headers X-Forwarded-For X-Real-IP
+    }
+}
+
 {$API_ORIGIN_DOMAIN} {
     encode zstd gzip
 
@@ -6,5 +14,51 @@
         Referrer-Policy strict-origin-when-cross-origin
     }
 
-    reverse_proxy backend:8000
+    route {
+        rate_limit {
+            zone auth_read {
+                match {
+                    method GET HEAD
+                    path /api/v1/auth/*
+                }
+                key {client_ip}
+                events {$EDGE_AUTH_READ_RATE_LIMIT_EVENTS}
+                window {$EDGE_AUTH_READ_RATE_LIMIT_WINDOW}
+            }
+
+            zone auth_write {
+                match {
+                    method POST PUT PATCH DELETE
+                    path /api/v1/auth/*
+                }
+                key {client_ip}
+                events {$EDGE_AUTH_WRITE_RATE_LIMIT_EVENTS}
+                window {$EDGE_AUTH_WRITE_RATE_LIMIT_WINDOW}
+            }
+
+            zone public_reads {
+                match {
+                    method GET HEAD
+                    path /api/v1/routines /api/v1/routines/ /api/v1/routines/* /api/v1/exercises/exercise-types /api/v1/exercises/exercise-types/ /api/v1/exercises/exercise-types/* /api/v1/exercises/muscle-groups /api/v1/exercises/muscle-groups/ /api/v1/exercises/intensity-units /api/v1/exercises/intensity-units/ /api/v1/workouts/workout-types /api/v1/workouts/workout-types/
+                }
+                key {client_ip}
+                events {$EDGE_PUBLIC_READ_RATE_LIMIT_EVENTS}
+                window {$EDGE_PUBLIC_READ_RATE_LIMIT_WINDOW}
+            }
+
+            zone health {
+                match {
+                    method GET HEAD
+                    path /health
+                }
+                key {client_ip}
+                events {$EDGE_HEALTH_RATE_LIMIT_EVENTS}
+                window {$EDGE_HEALTH_RATE_LIMIT_WINDOW}
+            }
+
+            log_key
+        }
+
+        reverse_proxy backend:8000
+    }
 }
