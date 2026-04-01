@@ -12,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.chat.crud import (
     add_message_to_conversation,
+    create_conversation,
     create_chat_attachment,
     get_stale_orphaned_chat_attachments,
     get_chat_attachment_by_id,
     get_conversation_by_id,
-    get_or_create_active_conversation,
     get_user_conversations,
     update_chat_attachment_provider_ref,
 )
@@ -27,7 +27,14 @@ from src.chat.llm_client import (
     LLMClient,
     ToolDefinition,
 )
-from src.chat.schemas import ChatMessage, ChatMessagePart, ConversationMessageCreate
+from src.chat.schemas import (
+    ChatMessage,
+    ChatMessagePart,
+    ChatWorkoutCreatedEvent,
+    ChatWorkoutEventWorkout,
+    ConversationCreate,
+    ConversationMessageCreate,
+)
 from src.core.config import settings
 from src.exercises.crud import get_exercise_type_stats, get_exercise_types
 from src.exercises.crud import get_exercises_for_workout
@@ -102,6 +109,7 @@ class ChatService:
         self.langfuse = self._get_langfuse_client()
         self._llm_client = llm_client
         self._workout_saved_this_request = False
+        self._pending_chat_events: list[ChatWorkoutCreatedEvent] = []
 
     async def _get_last_exercise_performance(self, exercise_name: str) -> str:
         if not self.session:
@@ -249,11 +257,25 @@ class ChatService:
             if not self.session:
                 return "Failed to save workout: no database session available."
 
-            await WorkoutService.create_workout_from_parsed(
+            workout = await WorkoutService.create_workout_from_parsed(
                 self.session, self.user_id, parsed_workout
             )
 
             self._workout_saved_this_request = True
+            self._pending_chat_events.append(
+                ChatWorkoutCreatedEvent(
+                    type="workout_created",
+                    title="Workout logged",
+                    cta_label="Open workout",
+                    workout=ChatWorkoutEventWorkout(
+                        id=workout.id,
+                        name=workout.name,
+                        notes=workout.notes,
+                        start_time=workout.start_time,
+                        end_time=workout.end_time,
+                    ),
+                )
+            )
             exercise_count = len(parsed_workout.exercises)
             return (
                 "WORKOUT SAVED SUCCESSFULLY. "
@@ -406,6 +428,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not settings.GOOGLE_AI_KEY:
             raise ValueError("Google AI API key not configured")
 
+        self._workout_saved_this_request = False
+        self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []
         if save_to_db and self.session:
@@ -425,15 +449,11 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     ChatMessage.model_validate(message) for message in messages or []
                 ]
                 title = self._title_from_messages(normalized_messages)
-                conversation = await get_or_create_active_conversation(
-                    self.session, self.user_id, title
+                conversation = await create_conversation(
+                    self.session,
+                    ConversationCreate(title=title or "New Chat"),
+                    self.user_id,
                 )
-                if getattr(conversation, "messages", None):
-                    persisted_history = [
-                        self._chat_message_from_orm(message)
-                        for message in conversation.messages
-                        if message.role in {"user", "assistant"}
-                    ]
 
         normalized_messages = [
             ChatMessage.model_validate(message) for message in messages or []
@@ -588,6 +608,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             return {
                 "message": final_message,
                 "conversation_id": conversation.id if conversation else None,
+                "events": [
+                    event.model_dump(mode="json") for event in self._pending_chat_events
+                ],
             }
         except Exception as exc:
             if trace:

@@ -3,13 +3,17 @@ import { useMutation } from "@tanstack/react-query";
 import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Link } from "react-router-dom";
 
 import { config } from "@/app/config/env";
+import { type Workout } from "@/features/workouts";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useAuthStore } from "@/stores";
+import { formatDisplayDate, parseWorkoutDuration } from "@/utils/date";
 
 interface TextMessagePart {
   type: "text";
@@ -26,11 +30,26 @@ interface ImageMessagePart {
 
 type UIMessagePart = TextMessagePart | ImageMessagePart;
 
+type WorkoutWidgetData = Pick<
+  Workout,
+  "id" | "name" | "notes" | "start_time" | "end_time"
+>;
+
+interface WorkoutCreatedEvent {
+  type: "workout_created";
+  title?: string;
+  ctaLabel?: string;
+  workout: WorkoutWidgetData;
+}
+
+type ChatEvent = WorkoutCreatedEvent;
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   parts?: UIMessagePart[];
+  events?: ChatEvent[];
   timestamp: Date;
 }
 
@@ -58,6 +77,25 @@ interface ChatApiMessage {
   parts?: ChatApiPart[];
 }
 
+interface ChatApiWorkoutCreatedEvent {
+  type: "workout_created";
+  title?: string | null;
+  cta_label?: string | null;
+  workout: {
+    id: Workout["id"];
+    name: string | null;
+    notes: string | null;
+    start_time: string;
+    end_time: string | null;
+  };
+}
+
+interface ChatResponse {
+  message: string;
+  conversation_id: number;
+  events?: ChatApiWorkoutCreatedEvent[];
+}
+
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = [
@@ -68,6 +106,70 @@ const ALLOWED_ATTACHMENT_TYPES = [
 
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
+
+const parseWorkoutCreatedEvent = (
+  event: ChatApiWorkoutCreatedEvent,
+): WorkoutCreatedEvent => {
+  return {
+    type: "workout_created",
+    title: event.title ?? undefined,
+    ctaLabel: event.cta_label ?? undefined,
+    workout: {
+      id: event.workout.id,
+      name: event.workout.name,
+      notes: event.workout.notes,
+      start_time: event.workout.start_time,
+      end_time: event.workout.end_time,
+    },
+  };
+};
+
+const extractChatEvents = (events?: ChatApiWorkoutCreatedEvent[]): ChatEvent[] =>
+  (events ?? []).map(parseWorkoutCreatedEvent);
+
+const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
+  const workoutPath = `${NAV_PATHS.WORKOUTS}/${event.workout.id}`;
+  const startedAt = formatDisplayDate(event.workout.start_time, {
+    includeTime: false,
+    includeTimezone: false,
+  });
+  const duration = parseWorkoutDuration(
+    event.workout.start_time,
+    event.workout.end_time,
+  ).durationText;
+
+  return (
+    <div className="bg-background/70 border-border/40 mt-3 rounded-2xl border p-3">
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <Dumbbell className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.16em]">
+            {event.title ?? "Workout created"}
+          </p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            {event.workout.name || "Traditional Strength Training"}
+          </p>
+          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            {startedAt && <span>{startedAt}</span>}
+            <span>{duration}</span>
+          </div>
+        </div>
+      </div>
+
+      {event.workout.notes && (
+        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+          {event.workout.notes}
+        </p>
+      )}
+
+      <Button asChild variant="secondary" size="sm" className="mt-3 w-full">
+        <Link to={workoutPath}>{event.ctaLabel ?? "Open workout"}</Link>
+      </Button>
+    </div>
+  );
+};
 
 const uploadChatAttachment = async (
   file: File,
@@ -124,7 +226,7 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
 const sendChatMessage = async (
   messages: ChatApiMessage[],
   conversationId?: number,
-): Promise<{ message: string; conversation_id: number }> => {
+): Promise<ChatResponse> => {
   const response = await api.post(endpoints.chat, {
     messages,
     conversation_id: conversationId,
@@ -175,6 +277,7 @@ const ChatPage = () => {
           role: "assistant",
           content: response.message,
           parts: [{ type: "text", text: response.message }],
+          events: extractChatEvents(response.events),
           timestamp: new Date(),
         },
       ]);
@@ -184,18 +287,22 @@ const ChatPage = () => {
         scrollToBottom();
       }, 50);
     },
-    onError: () => {
+    onError: (error) => {
+      const message = extractErrorMessage(
+        error,
+        "Sorry, I encountered an error processing your message. Please try again.",
+      );
+
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now()}-error`,
           role: "assistant",
-          content:
-            "Sorry, I encountered an error processing your message. Please try again.",
+          content: message,
           parts: [
             {
               type: "text",
-              text: "Sorry, I encountered an error processing your message. Please try again.",
+              text: message,
             },
           ],
           timestamp: new Date(),
@@ -531,6 +638,22 @@ const ChatPage = () => {
     );
   };
 
+  const renderMessageWidget = (message: ChatMessage) => {
+    if (message.role !== "assistant") {
+      return null;
+    }
+
+    const workoutEvent = message.events?.find(
+      (event): event is WorkoutCreatedEvent => event.type === "workout_created",
+    );
+
+    if (!workoutEvent) {
+      return null;
+    }
+
+    return <ChatWorkoutWidget event={workoutEvent} />;
+  };
+
   return (
     <div className="bg-background flex h-screen flex-col">
       <div className="bg-card border-border/20 flex shrink-0 items-center gap-3 border-b px-4 py-3 shadow-sm">
@@ -610,7 +733,7 @@ const ChatPage = () => {
                   }`}
                 >
                   {renderMessageParts(message)}
-                  {/* TODO: Render a dedicated workout widget here when chat responses can surface workout-creation events. */}
+                  {renderMessageWidget(message)}
                 </div>
               </div>
             </div>

@@ -101,9 +101,7 @@ async def handle_chat(
             conversation_id=request.conversation_id,
             save_to_db=True,
         )
-        return ChatResponse(
-            message=result["message"], conversation_id=result["conversation_id"]
-        )
+        return ChatResponse(**result)
     except RateLimitExceededError as exc:
         raise HTTPException(
             status_code=429,
