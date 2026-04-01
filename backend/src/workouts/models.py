@@ -61,6 +61,7 @@ class Workout(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    recap = Column(Text)
 
     # Relationships
     owner: Mapped["User"] = relationship(back_populates="workouts")

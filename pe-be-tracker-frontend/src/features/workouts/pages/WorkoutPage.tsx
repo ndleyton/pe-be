@@ -222,6 +222,38 @@ const WorkoutPage = () => {
     },
   });
 
+  const generateRecapMutation = useMutation({
+    mutationFn: (id: string) => api.post(endpoints.workoutRecap(id)),
+    onSuccess: (response, id) => {
+      // Update workout query data with the new recap
+      queryClient.setQueryData(["workout", id], response.data);
+    },
+  });
+
+  // Trigger AI recap generation when the finish modal opens,
+  // but only if we have exercises and are authenticated.
+  useEffect(() => {
+    if (
+      showFinishModal &&
+      workoutId &&
+      isAuthenticated &&
+      exercises.length > 0 &&
+      !serverWorkout?.recap &&
+      !generateRecapMutation.isPending &&
+      !generateRecapMutation.isSuccess
+    ) {
+      generateRecapMutation.mutate(workoutId);
+    }
+  }, [
+    showFinishModal,
+    workoutId,
+    isAuthenticated,
+    exercises.length,
+    serverWorkout?.recap,
+    generateRecapMutation.isPending,
+    generateRecapMutation.isSuccess,
+  ]);
+
   // Keep the timer aligned to the active workout lifecycle.
   useEffect(() => {
     if (isAuthenticated) {
@@ -589,6 +621,19 @@ const WorkoutPage = () => {
             )}
           </h2>
         </div>
+        {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
+          <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-4 text-left shadow-sm">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Workout Summary
+              </h4>
+            </div>
+            <p className="text-foreground text-sm leading-relaxed italic">
+              &ldquo;{serverWorkout.recap}&rdquo;
+            </p>
+          </div>
+        )}
         <div
           ref={exerciseListContainerRef}
           className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
@@ -631,6 +676,8 @@ const WorkoutPage = () => {
         exercises={exercises}
         onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
         workoutName={workoutName || undefined}
+        recap={serverWorkout?.recap}
+        isRecapLoading={generateRecapMutation.isPending}
       />
 
       <SaveRoutineModal

@@ -12,6 +12,7 @@ class WorkoutBase(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     workout_type_id: int
+    recap: Optional[str] = None
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
