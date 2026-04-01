@@ -425,7 +425,10 @@ const ExerciseTypeDetailsPage = () => {
               </>
             ) : stats?.progressiveOverload &&
               stats.progressiveOverload.length > 0 ? (
-              <ProgressiveOverloadChart data={stats.progressiveOverload} />
+              <ProgressiveOverloadChart
+                data={stats.progressiveOverload}
+                intensityUnit={stats.intensityUnit}
+              />
             ) : (
               <div className="text-muted-foreground py-8 text-center">
                 <p>No workout data available yet.</p>

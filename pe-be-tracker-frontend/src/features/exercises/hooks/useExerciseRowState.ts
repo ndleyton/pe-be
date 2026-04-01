@@ -14,7 +14,10 @@ import {
   resolveExerciseDisplayIntensityUnit,
   type GuestIntensityUnit,
 } from "@/features/exercises/lib/intensityUnits";
-import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
+import {
+  GUEST_INTENSITY_UNITS,
+  KNOWN_INTENSITY_UNITS,
+} from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
 
@@ -29,7 +32,7 @@ export const useExerciseRowState = ({
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const availableIntensityUnits = isAuthenticated
-    ? [DEFAULT_INTENSITY_UNIT, ...GUEST_INTENSITY_UNITS.slice(1)]
+    ? KNOWN_INTENSITY_UNITS
     : GUEST_INTENSITY_UNITS;
   const initialIntensityUnit = resolveExerciseDisplayIntensityUnit(
     exercise,

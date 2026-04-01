@@ -204,7 +204,7 @@ describe("useExerciseSetActions", () => {
 
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
       reps: 10,
-      intensity: 50,
+      intensity: 110.231,
       intensity_unit_id: 2,
       exercise_id: 123,
       rest_time_seconds: 0,

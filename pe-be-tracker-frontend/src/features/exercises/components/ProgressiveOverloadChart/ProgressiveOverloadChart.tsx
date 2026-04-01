@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import type { ProgressiveOverloadDataPoint } from "@/features/exercises/api";
+import type {
+  IntensityUnit,
+  ProgressiveOverloadDataPoint,
+} from "@/features/exercises/api";
 import {
   ChartConfig,
   ChartContainer,
@@ -11,20 +14,13 @@ import {
 
 interface ProgressiveOverloadChartProps {
   data: ProgressiveOverloadDataPoint[];
+  intensityUnit: IntensityUnit;
 }
 
-const chartConfig = {
-  maxWeight: {
-    label: "Max Weight (kg)",
-    color: "var(--chart-1)",
-  },
-  totalVolume: {
-    label: "Total Volume (kg)",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig;
-
-export const ProgressiveOverloadChart = ({ data }: ProgressiveOverloadChartProps) => {
+export const ProgressiveOverloadChart = ({
+  data,
+  intensityUnit,
+}: ProgressiveOverloadChartProps) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
@@ -36,6 +32,16 @@ export const ProgressiveOverloadChart = ({ data }: ProgressiveOverloadChartProps
   const [activeMetric, setActiveMetric] = useState<
     "maxWeight" | "totalVolume"
   >("maxWeight");
+  const chartConfig = {
+    maxWeight: {
+      label: `Max Weight (${intensityUnit.abbreviation})`,
+      color: "var(--chart-1)",
+    },
+    totalVolume: {
+      label: `Total Volume (${intensityUnit.abbreviation})`,
+      color: "var(--chart-2)",
+    },
+  } satisfies ChartConfig;
 
   // Transform data for the chart
   const chartData = data.map((point) => ({
@@ -162,9 +168,15 @@ export const ProgressiveOverloadChart = ({ data }: ProgressiveOverloadChartProps
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
             {activeMetric === "maxWeight" ? (
-              <>Latest: {latestWeight}kg max weight</>
+              <>
+                Latest: {latestWeight}
+                {intensityUnit.abbreviation} max weight
+              </>
             ) : (
-              <>Latest: {latestVolume}kg total volume</>
+              <>
+                Latest: {latestVolume}
+                {intensityUnit.abbreviation} total volume
+              </>
             )}
           </div>
         </div>

@@ -2,6 +2,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
+import {
+  getCompatibleIntensityUnits,
+  type GuestIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
 import { useAuthStore } from "@/stores";
 import {
   Button,
@@ -16,13 +20,6 @@ import {
   AlertDialogTrigger,
 } from "@/shared/components/ui";
 import { Trash2 } from "lucide-react";
-
-// Guest intensity unit type (simplified)
-interface GuestIntensityUnit {
-  id: number;
-  name: string;
-  abbreviation: string;
-}
 
 interface ExerciseTypeMoreProps {
   currentIntensityUnit?: IntensityUnit | GuestIntensityUnit;
@@ -53,6 +50,10 @@ const ExerciseTypeMore = ({
 
   const intensityUnits: Array<IntensityUnit | GuestIntensityUnit> =
     isAuthenticated ? serverIntensityUnits : GUEST_INTENSITY_UNITS;
+  const compatibleIntensityUnits = getCompatibleIntensityUnits(
+    intensityUnits,
+    currentIntensityUnit,
+  );
 
   return (
     <div className="space-y-4 p-4">
@@ -81,7 +82,7 @@ const ExerciseTypeMore = ({
 
         {(!isAuthenticated || (!isLoading && !error)) && (
           <div className="grid grid-cols-2 gap-2">
-            {intensityUnits.map((unit) => (
+            {compatibleIntensityUnits.map((unit) => (
               <button
                 key={unit.id}
                 onClick={() => onIntensityUnitChange(unit)}

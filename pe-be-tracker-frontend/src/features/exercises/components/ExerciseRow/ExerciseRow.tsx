@@ -84,6 +84,7 @@ const ExerciseRow = ({
         <ExerciseSetTable
           activeSetId={activeSetId}
           currentIntensityUnitAbbreviation={currentIntensityUnit.abbreviation}
+          currentIntensityUnitId={currentIntensityUnit.id}
           exerciseSets={exerciseSets}
           intensityInputs={intensityInputs}
           isUnsavedExercise={isUnsavedExercise}

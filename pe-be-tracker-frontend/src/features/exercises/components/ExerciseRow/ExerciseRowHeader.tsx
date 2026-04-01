@@ -2,7 +2,7 @@ import { ExternalLink, MoreVertical, StickyNote } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Exercise, IntensityUnit } from "@/features/exercises/api";
-import type { GuestIntensityUnit } from "@/features/exercises/lib/exerciseRow";
+import type { GuestIntensityUnit } from "@/features/exercises/lib/intensityUnits";
 import { ExerciseTypeMore } from "../ExerciseTypeMore";
 import {
   Button,
