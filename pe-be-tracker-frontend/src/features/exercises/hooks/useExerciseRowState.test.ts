@@ -129,24 +129,24 @@ describe("useExerciseRowState", () => {
       },
     );
 
-    expect(result.current.currentIntensityUnit.abbreviation).toBe("lbs");
-    expect(result.current.intensityInputs["1"]).toBe("110.231");
+    expect(result.current.currentIntensityUnit.abbreviation).toBe("kg");
+    expect(result.current.intensityInputs["1"]).toBe("50");
 
     act(() => {
       result.current.setExerciseSettingsOpen(true);
       result.current.handleIntensityUnitChange({
-        id: 1,
-        name: "Kilograms",
-        abbreviation: "kg",
+        id: 2,
+        name: "Pounds",
+        abbreviation: "lbs",
       });
     });
 
     expect(result.current.exerciseSettingsOpen).toBe(false);
-    expect(result.current.currentIntensityUnit.abbreviation).toBe("kg");
+    expect(result.current.currentIntensityUnit.abbreviation).toBe("lbs");
 
     rerender({ sets: nextSets });
 
-    expect(result.current.intensityInputs["1"]).toBe("55.5");
+    expect(result.current.intensityInputs["1"]).toBe("122.36");
     expect(result.current.repsInputs["1"]).toBe("12");
   });
 });
