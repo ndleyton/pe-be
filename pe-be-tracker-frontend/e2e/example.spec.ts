@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 test("has title", async ({ page }) => {
+  await page.route("**/auth/session", (route) => {
+    route.fulfill({
+      status: 401,
+      body: JSON.stringify({ detail: "Not authenticated" }),
+    });
+  });
+
   await page.goto("/");
 
   // Expect a title "to contain" a substring.
