@@ -5,7 +5,7 @@ export interface Workout {
   start_time: string;
   end_time: string | null;
   workout_type_id: number;
-  recap: string | null;
+  recap?: string | null;
   created_at: string;
   updated_at: string;
 }

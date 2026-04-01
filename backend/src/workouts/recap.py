@@ -1,7 +1,6 @@
 import logging
 import json
-from typing import Optional, List, Dict, Any
-from datetime import datetime
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from google import genai
 from google.genai import types
@@ -9,7 +8,6 @@ from google.genai import types
 from src.core.config import settings
 from src.workouts.crud import get_workout_by_id
 from src.exercises.crud import get_exercise_type_stats, get_exercises_for_workout
-from src.workouts.models import Workout
 
 logger = logging.getLogger(__name__)
 
