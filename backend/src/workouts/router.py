@@ -179,3 +179,19 @@ async def get_exercises_in_workout(
         attributes=span_attributes,
     )
     return JSONResponse(content=response_payload)
+
+
+@router.post("/{workout_id}/recap", response_model=WorkoutRead)
+async def generate_workout_recap(
+    workout_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Generate and store an AI recap for the requested workout"""
+    from src.workouts.recap import WorkoutRecapService
+
+    recap = await WorkoutRecapService.generate_recap(session, workout_id, user.id)
+    if recap is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    return await WorkoutService.get_workout(session, workout_id, user.id)

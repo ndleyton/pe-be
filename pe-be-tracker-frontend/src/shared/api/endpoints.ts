@@ -32,6 +32,7 @@ export const endpoints = {
   // Workout endpoints
   workouts: "/workouts/",
   workoutById: (id: string | number) => `/workouts/${id}`,
+  workoutRecap: (id: string | number) => `/workouts/${id}/recap`,
   myWorkouts: "/workouts/mine",
 
   // Workout Types (nested under workouts)
