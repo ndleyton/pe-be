@@ -7,7 +7,6 @@ import {
   persistPostLoginDestination,
 } from "@/features/auth/lib/postLoginRedirect";
 import { HomeLogo } from "@/shared/components/layout";
-import { NAV_PATHS } from "@/shared/navigation/constants";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const LoginPageStatus = ({
