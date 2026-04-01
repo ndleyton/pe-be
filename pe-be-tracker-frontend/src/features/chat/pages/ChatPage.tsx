@@ -317,18 +317,22 @@ const ChatPage = () => {
         scrollToBottom();
       }, 50);
     },
-    onError: () => {
+    onError: (error) => {
+      const message = extractErrorMessage(
+        error,
+        "Sorry, I encountered an error processing your message. Please try again.",
+      );
+
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now()}-error`,
           role: "assistant",
-          content:
-            "Sorry, I encountered an error processing your message. Please try again.",
+          content: message,
           parts: [
             {
               type: "text",
-              text: "Sorry, I encountered an error processing your message. Please try again.",
+              text: message,
             },
           ],
           timestamp: new Date(),

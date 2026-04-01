@@ -1,7 +1,9 @@
 import pytest
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.chat.service import ChatService
-from src.chat.llm_client import ConversationMessage
+from src.chat.llm_client import ConversationMessage, UploadedFileRef
 
 
 @pytest.fixture
@@ -139,10 +141,10 @@ async def test_generate_response_max_iterations_no_tools(
 
 @pytest.mark.asyncio
 @patch("src.chat.service.ChatService._get_llm_client")
-@patch("src.chat.service.get_or_create_active_conversation")
+@patch("src.chat.service.create_conversation")
 @patch("src.chat.service.add_message_to_conversation")
 async def test_generate_response_saves_to_db_with_multiple_messages(
-    mock_add_message, mock_get_or_create, mock_get_llm, chat_service_with_db
+    mock_add_message, mock_create_conversation, mock_get_llm, chat_service_with_db
 ):
     # Setup mock LLM completely answering instantly
     mock_llm = AsyncMock()
@@ -153,7 +155,7 @@ async def test_generate_response_saves_to_db_with_multiple_messages(
     mock_get_llm.return_value = mock_llm
 
     mock_conv = MagicMock(id=1)
-    mock_get_or_create.return_value = mock_conv
+    mock_create_conversation.return_value = mock_conv
 
     messages = [
         {"role": "system", "content": "ignore this one in db"},
@@ -174,6 +176,7 @@ async def test_generate_response_saves_to_db_with_multiple_messages(
     last_call_args = mock_add_message.call_args_list[-1]
     assert last_call_args[0][2].content == "llm output"
     assert last_call_args[0][2].role == "assistant"
+    assert result["events"] == []
 
 
 @pytest.mark.asyncio
@@ -293,6 +296,138 @@ async def test_generate_response_empty_final_message_no_tool_fallback(
             [{"role": "user", "content": "hi"}], save_to_db=False
         )
         assert result["message"] == "I completed the requested operation."
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.ChatService._get_llm_client")
+@patch("src.chat.service.update_chat_attachment_provider_ref")
+@patch("src.chat.service.ChatService.get_attachment")
+async def test_generate_response_reuploads_stale_gemini_file_refs(
+    mock_get_attachment,
+    mock_update_provider_ref,
+    mock_get_llm,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+    stale_error = Exception(
+        "403 PERMISSION_DENIED. {'error': {'message': 'You do not have permission to access the File stale-file or it may not exist.', 'status': 'PERMISSION_DENIED'}}"
+    )
+    success_response = MagicMock(
+        message=ConversationMessage(role="assistant", content="Recovered."),
+        tool_calls=[],
+        metadata={},
+    )
+    mock_llm.acomplete.side_effect = [stale_error, success_response]
+    mock_llm.aupload_file.return_value = UploadedFileRef(
+        name="files/fresh-file",
+        uri="gs://fresh-file",
+        mime_type="image/png",
+    )
+    mock_get_llm.return_value = mock_llm
+
+    attachment = SimpleNamespace(
+        id=123,
+        storage_key="chat/image.png",
+        mime_type="image/png",
+        original_filename="image.png",
+        provider_file_name="files/stale-file",
+        provider_file_uri="gs://stale-file",
+    )
+    refreshed_attachment = SimpleNamespace(
+        **{
+            **attachment.__dict__,
+            "provider_file_name": "files/fresh-file",
+            "provider_file_uri": "gs://fresh-file",
+        }
+    )
+    mock_get_attachment.return_value = attachment
+    mock_update_provider_ref.return_value = refreshed_attachment
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "type": "image",
+                            "attachment_id": 123,
+                        }
+                    ],
+                }
+            ],
+            save_to_db=False,
+        )
+
+    assert result["message"] == "Recovered."
+    mock_llm.aupload_file.assert_awaited_once()
+    second_call_messages = mock_llm.acomplete.call_args_list[1][0][0]
+    user_message = next(message for message in second_call_messages if message.role == "user")
+    assert user_message.parts[0].file_uri == "gs://fresh-file"
+
+
+@pytest.mark.asyncio
+@patch("src.workouts.service.WorkoutService.create_workout_from_parsed")
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_returns_workout_created_event(
+    mock_get_llm,
+    mock_create_workout,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+
+    mock_tool_call_response = MagicMock()
+    mock_tool_call = MagicMock()
+    mock_tool_call.name = "parse_workout"
+    mock_tool_call.call_id = "call_123"
+    mock_tool_call.args = {
+        "name": "Strength training",
+        "workout_type_id": 4,
+        "notes": "Heavy day",
+        "exercises": [],
+    }
+    mock_tool_call_response.tool_calls = [mock_tool_call]
+    mock_tool_call_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_text_response = MagicMock()
+    mock_text_response.tool_calls = []
+    mock_text_response.message = ConversationMessage(
+        role="assistant", content="Awesome! I've logged it."
+    )
+
+    mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_text_response]
+    mock_get_llm.return_value = mock_llm
+    mock_create_workout.return_value = SimpleNamespace(
+        id=42,
+        name="Strength training",
+        notes="Heavy day",
+        start_time=datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc),
+        end_time=None,
+    )
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [{"role": "user", "content": "log this workout"}],
+            save_to_db=False,
+        )
+
+    assert result["message"] == "Awesome! I've logged it."
+    assert result["events"] == [
+        {
+            "type": "workout_created",
+            "title": "Workout logged",
+            "cta_label": "Open workout",
+            "workout": {
+                "id": 42,
+                "name": "Strength training",
+                "notes": "Heavy day",
+                "start_time": "2026-04-01T12:00:00Z",
+                "end_time": None,
+            },
+        }
+    ]
 
 
 def test_get_system_prompt_handling(chat_service_no_db):

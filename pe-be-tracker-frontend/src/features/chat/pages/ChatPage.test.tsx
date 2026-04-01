@@ -145,4 +145,36 @@ describe("ChatPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Leg Day")).not.toBeInTheDocument();
   });
+
+  it("surfaces backend chat error details instead of a generic fallback", async () => {
+    mockPost.mockRejectedValueOnce({
+      response: {
+        data: {
+          detail: "Error generating response with Gemini: tool call failed.",
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "Build me a leg workout",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Error generating response with Gemini: tool call failed.",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
 });

@@ -39,9 +39,25 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[int] = None
 
 
+class ChatWorkoutEventWorkout(BaseModel):
+    id: int
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    start_time: datetime
+    end_time: Optional[datetime] = None
+
+
+class ChatWorkoutCreatedEvent(BaseModel):
+    type: Literal["workout_created"]
+    title: Optional[str] = None
+    cta_label: Optional[str] = None
+    workout: ChatWorkoutEventWorkout
+
+
 class ChatResponse(BaseModel):
     message: str
     conversation_id: int
+    events: List[ChatWorkoutCreatedEvent] = Field(default_factory=list)
 
 
 class ChatAttachmentUploadResponse(BaseModel):

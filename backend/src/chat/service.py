@@ -12,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.chat.crud import (
     add_message_to_conversation,
+    create_conversation,
     create_chat_attachment,
     get_stale_orphaned_chat_attachments,
     get_chat_attachment_by_id,
     get_conversation_by_id,
-    get_or_create_active_conversation,
     get_user_conversations,
     update_chat_attachment_provider_ref,
 )
@@ -27,7 +27,14 @@ from src.chat.llm_client import (
     LLMClient,
     ToolDefinition,
 )
-from src.chat.schemas import ChatMessage, ChatMessagePart, ConversationMessageCreate
+from src.chat.schemas import (
+    ChatMessage,
+    ChatMessagePart,
+    ChatWorkoutCreatedEvent,
+    ChatWorkoutEventWorkout,
+    ConversationCreate,
+    ConversationMessageCreate,
+)
 from src.core.config import settings
 from src.exercises.crud import get_exercise_type_stats, get_exercise_types
 from src.exercises.crud import get_exercises_for_workout
@@ -45,6 +52,14 @@ class WorkoutSummaryByDateArgs(BaseModel):
 
 
 class ChatService:
+    @staticmethod
+    def _is_provider_file_permission_error(exc: Exception) -> bool:
+        message = str(exc).lower()
+        return (
+            "permission_denied" in message
+            and "permission to access the file" in message
+        ) or ("permission_denied" in message and "may not exist" in message)
+
     @staticmethod
     def _format_optional_notes(label: str, notes: Optional[str]) -> str:
         if not notes:
@@ -102,6 +117,7 @@ class ChatService:
         self.langfuse = self._get_langfuse_client()
         self._llm_client = llm_client
         self._workout_saved_this_request = False
+        self._pending_chat_events: list[ChatWorkoutCreatedEvent] = []
 
     async def _get_last_exercise_performance(self, exercise_name: str) -> str:
         if not self.session:
@@ -249,11 +265,25 @@ class ChatService:
             if not self.session:
                 return "Failed to save workout: no database session available."
 
-            await WorkoutService.create_workout_from_parsed(
+            workout = await WorkoutService.create_workout_from_parsed(
                 self.session, self.user_id, parsed_workout
             )
 
             self._workout_saved_this_request = True
+            self._pending_chat_events.append(
+                ChatWorkoutCreatedEvent(
+                    type="workout_created",
+                    title="Workout logged",
+                    cta_label="Open workout",
+                    workout=ChatWorkoutEventWorkout(
+                        id=workout.id,
+                        name=workout.name,
+                        notes=workout.notes,
+                        start_time=workout.start_time,
+                        end_time=workout.end_time,
+                    ),
+                )
+            )
             exercise_count = len(parsed_workout.exercises)
             return (
                 "WORKOUT SAVED SUCCESSFULLY. "
@@ -406,6 +436,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not settings.GOOGLE_AI_KEY:
             raise ValueError("Google AI API key not configured")
 
+        self._workout_saved_this_request = False
+        self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []
         if save_to_db and self.session:
@@ -425,15 +457,11 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     ChatMessage.model_validate(message) for message in messages or []
                 ]
                 title = self._title_from_messages(normalized_messages)
-                conversation = await get_or_create_active_conversation(
-                    self.session, self.user_id, title
+                conversation = await create_conversation(
+                    self.session,
+                    ConversationCreate(title=title or "New Chat"),
+                    self.user_id,
                 )
-                if getattr(conversation, "messages", None):
-                    persisted_history = [
-                        self._chat_message_from_orm(message)
-                        for message in conversation.messages
-                        if message.role in {"user", "assistant"}
-                    ]
 
         normalized_messages = [
             ChatMessage.model_validate(message) for message in messages or []
@@ -474,6 +502,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             tool_registry = {tool.name: tool for tool in tools}
             max_tool_iterations = settings.CHAT_MAX_TOOL_ITERATIONS
             iteration_count = 0
+            refreshed_stale_provider_files = False
             last_tool_outputs_texts: List[str] = []
             response_text = ""
             llm_metadata: dict[str, Any] = {}
@@ -490,7 +519,27 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         response_text = "I completed the requested operation."
                     break
 
-                response = await llm_client.acomplete(llm_messages, tools)
+                try:
+                    response = await llm_client.acomplete(llm_messages, tools)
+                except Exception as exc:
+                    if (
+                        not refreshed_stale_provider_files
+                        and self.session
+                        and self._is_provider_file_permission_error(exc)
+                    ):
+                        logger.warning(
+                            "Refreshing stale Gemini file refs user_id=%s conversation_id=%s",
+                            self.user_id,
+                            conversation.id if conversation else None,
+                        )
+                        await self._refresh_message_attachment_uploads(
+                            llm_messages, llm_client
+                        )
+                        refreshed_stale_provider_files = True
+                        iteration_count -= 1
+                        continue
+                    raise
+
                 llm_metadata = response.metadata
                 llm_messages.append(response.message)
 
@@ -588,6 +637,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             return {
                 "message": final_message,
                 "conversation_id": conversation.id if conversation else None,
+                "events": [
+                    event.model_dump(mode="json")
+                    for event in self._pending_chat_events
+                ],
             }
         except Exception as exc:
             if trace:
@@ -738,6 +791,43 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
         await session.commit()
         return deleted_count
+
+    async def _refresh_message_attachment_uploads(
+        self,
+        messages: List[ConversationMessage],
+        llm_client: LLMClient,
+    ) -> None:
+        refreshed_parts_by_attachment_id: dict[int, ContentPart] = {}
+
+        for message in messages:
+            for part in message.parts:
+                if part.type != "image" or part.attachment_id is None:
+                    continue
+
+                refreshed_part = refreshed_parts_by_attachment_id.get(
+                    part.attachment_id
+                )
+                if refreshed_part is not None:
+                    part.file_uri = refreshed_part.file_uri
+                    part.mime_type = refreshed_part.mime_type
+                    continue
+
+                attachment = await self.get_attachment(part.attachment_id)
+                uploaded = await llm_client.aupload_file(
+                    path=self._attachment_file_path(attachment.storage_key),
+                    mime_type=attachment.mime_type,
+                    display_name=attachment.original_filename,
+                )
+                attachment = await update_chat_attachment_provider_ref(
+                    self.session,
+                    attachment,
+                    provider_file_name=uploaded.name,
+                    provider_file_uri=uploaded.uri,
+                )
+
+                part.file_uri = attachment.provider_file_uri
+                part.mime_type = attachment.mime_type
+                refreshed_parts_by_attachment_id[part.attachment_id] = part
 
     async def _build_conversation_messages(
         self,

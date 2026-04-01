@@ -102,7 +102,9 @@ async def handle_chat(
             save_to_db=True,
         )
         return ChatResponse(
-            message=result["message"], conversation_id=result["conversation_id"]
+            message=result["message"],
+            conversation_id=result["conversation_id"],
+            events=result.get("events") or [],
         )
     except RateLimitExceededError as exc:
         raise HTTPException(
