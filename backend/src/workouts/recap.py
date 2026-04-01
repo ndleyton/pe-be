@@ -56,6 +56,15 @@ class WorkoutRecapService:
                 "is_pr": False
             }
 
+            # Include exercise-level notes
+            if exercise.notes:
+                metric["exercise_notes"] = exercise.notes
+
+            # Include set-level notes if any exist
+            set_notes = [s.notes for s in current_sets if s.notes]
+            if set_notes:
+                metric["set_notes"] = set_notes
+
             if prev_session:
                 metric["previous"] = {
                     "max_weight": float(prev_session["maxWeight"]),
@@ -84,6 +93,7 @@ Metrics:
 Guidelines:
 - Keep it concise (2-4 sentences).
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
+- Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
 - Be encouraging but grounded in data.
 - Suggest one actionable small step for next time (e.g., "Try to add 2.5kg to your top set").
 - Do not use placeholders.
