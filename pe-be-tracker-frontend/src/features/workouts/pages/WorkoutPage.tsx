@@ -230,6 +230,12 @@ const WorkoutPage = () => {
     },
   });
 
+  const handleRegenerateRecap = useCallback(() => {
+    if (workoutId && isAuthenticated) {
+      generateRecapMutation.mutate(workoutId);
+    }
+  }, [workoutId, isAuthenticated, generateRecapMutation]);
+
   // Trigger AI recap generation when the finish modal opens,
   // but only if we have exercises and are authenticated.
   useEffect(() => {
@@ -678,6 +684,7 @@ const WorkoutPage = () => {
         workoutName={workoutName || undefined}
         recap={serverWorkout?.recap}
         isRecapLoading={generateRecapMutation.isPending}
+        onRegenerateRecap={handleRegenerateRecap}
       />
 
       <SaveRoutineModal
