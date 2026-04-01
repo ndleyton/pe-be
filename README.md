@@ -164,6 +164,7 @@ npm run test:e2e
 ### AI Layer
 
 - The chat assistant uses Gemini with backend-owned tool definitions rather than relying on prompt-only behavior.
+- **Post-Workout AI Recaps**: Automated coaching summaries generated upon workout completion, grounded in deterministic metrics (PRs, volume deltas) and qualitative notes.
 - Tool inputs are defined as typed schemas and validated before execution.
 - Tool execution stays server-side, which keeps access to user workout data and domain actions inside the application boundary.
 - Langfuse is used for prompt and trace visibility around AI interactions.

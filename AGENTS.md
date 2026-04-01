@@ -77,6 +77,10 @@ Notes:
 - The API mounts under `/api/v1` by default.
 - User-facing "routines" are still implemented with `Recipe`, `ExerciseTemplate`, and `SetTemplate` models and the `recipes` table.
 - AI-related backend code currently uses `langchain-google-genai` and `langfuse`; do not assume `openai` is the only active integration.
+- **Post-Workout AI Recap**: The backend features an automated, evidence-based coaching recap triggered asynchronously upon workout completion.
+  - **Service**: `src/workouts/recap.py` (WorkoutRecapService) handles metric gathering and Gemini generation.
+  - **Data Grounding**: The recap is grounded in deterministic metrics (sets, volume, PR detection) and incorporates qualitative feedback from workout/exercise/set notes.
+  - **Trigger**: Triggered via `POST /api/v1/workouts/{workout_id}/recap` from the `FinishWorkoutModal` in the frontend.
 - Standalone backend CLIs and scheduled jobs do not get FastAPI app startup imports for free. Before the first ORM query, ensure the SQLAlchemy model registry is loaded so string-based relationships like `"User"` and `"Workout"` resolve correctly.
 
 ### Frontend
