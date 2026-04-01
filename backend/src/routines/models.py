@@ -104,7 +104,7 @@ class ExerciseTemplate(Base):
         "Routine", back_populates="exercise_templates"
     )
     set_templates: Mapped[List["SetTemplate"]] = relationship(
-        "SetTemplate", back_populates="exercise_template", cascade="all, delete-orphan"
+        "SetTemplate", back_populates="exercise_template", cascade="all, delete-orphan", order_by="SetTemplate.id"
     )
 
 
