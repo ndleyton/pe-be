@@ -35,7 +35,7 @@ const GuestModeBanner = () => {
   return (
     <div className="pointer-events-none">
       <div className="fixed top-16 right-0 left-0 z-40 px-4 lg:left-64">
-        <div className="bg-accent border-primary pointer-events-auto rounded-md border-l-4 p-4 shadow">
+        <div className="bg-accent/80 border-primary pointer-events-auto rounded-md border-l-4 p-4 shadow-lg backdrop-blur-md">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg

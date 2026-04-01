@@ -169,7 +169,7 @@ const FinishWorkoutModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div
@@ -229,7 +229,7 @@ const FinishWorkoutModal = ({
 
           {/* AI Recap Section */}
           {totalSets > 0 && (
-            <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-4 shadow-sm">
+            <div className="bg-card/80 border-border mb-4 rounded-lg border p-4 shadow-sm backdrop-blur-sm">
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">✨</span>

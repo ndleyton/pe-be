@@ -628,7 +628,7 @@ const WorkoutPage = () => {
           </h2>
         </div>
         {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
-          <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-4 text-left shadow-sm">
+          <div className="bg-card/80 border-border mb-4 rounded-lg border p-4 text-left shadow-sm backdrop-blur-sm">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-lg">✨</span>
               <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
@@ -657,7 +657,7 @@ const WorkoutPage = () => {
           <Button
             type="button"
             onClick={() => setShowAddExerciseModal(true)}
-            className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
+            className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
             disabled={isAuthenticated && addExerciseMutation.isPending}
           >
             {isAuthenticated && addExerciseMutation.isPending

@@ -338,10 +338,10 @@ const ExerciseTypeModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="bg-background flex max-h-[36rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg p-6">
+      <div className="bg-background/95 border-border flex max-h-[36rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg border p-6 shadow-2xl backdrop-blur-md">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-foreground text-lg font-semibold">
             Select Exercise Type
