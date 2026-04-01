@@ -23,12 +23,12 @@ describe("intensityUnits", () => {
     ).toEqual(["kg", "lbs"]);
   });
 
-  it("prefers the exercise default intensity unit for display", () => {
+  it("prefers the unit from the recorded sets for display over the exercise type default", () => {
     const exercise = makeExercise({
-      exercise_type: makeExerciseType({ default_intensity_unit: 4 }),
+      exercise_type: makeExerciseType({ default_intensity_unit: 4 }), // mph
       exercise_sets: [
         makeExerciseSet({
-          intensity_unit_id: 3,
+          intensity_unit_id: 3, // km/h
         }),
       ],
     });
@@ -39,6 +39,6 @@ describe("intensityUnits", () => {
         KNOWN_INTENSITY_UNITS,
         KNOWN_INTENSITY_UNITS[0],
       ).abbreviation,
-    ).toBe("mph");
+    ).toBe("km/h");
   });
 });

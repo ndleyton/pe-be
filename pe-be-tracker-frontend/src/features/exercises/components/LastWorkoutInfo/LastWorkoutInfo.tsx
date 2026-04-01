@@ -3,6 +3,7 @@ import type {
   LastWorkoutData as LastWorkoutInfoType,
   IntensityUnit,
 } from "@/features/exercises/api";
+import { formatDecimal } from "@/utils/format";
 
 interface LastWorkoutInfoProps {
   lastWorkout: LastWorkoutInfoType;
@@ -33,7 +34,7 @@ export const LastWorkoutInfo: React.FC<LastWorkoutInfoProps> = ({
         <div className="flex justify-between">
           <span className="text-muted-foreground text-sm">Max Weight:</span>
           <span className="font-medium">
-            {lastWorkout.maxWeight}
+            {formatDecimal(lastWorkout.maxWeight)}
             {intensityUnit.abbreviation}
           </span>
         </div>
@@ -41,7 +42,7 @@ export const LastWorkoutInfo: React.FC<LastWorkoutInfoProps> = ({
         <div className="flex justify-between">
           <span className="text-muted-foreground text-sm">Total Volume:</span>
           <span className="font-medium">
-            {lastWorkout.totalVolume}
+            {formatDecimal(lastWorkout.totalVolume)}
             {intensityUnit.abbreviation}
           </span>
         </div>
@@ -52,7 +53,7 @@ export const LastWorkoutInfo: React.FC<LastWorkoutInfoProps> = ({
           Last time you did{" "}
           <span className="font-semibold">{lastWorkout.sets} sets</span> with{" "}
           <span className="font-semibold">
-            {lastWorkout.maxWeight}
+            {formatDecimal(lastWorkout.maxWeight)}
             {intensityUnit.abbreviation}
           </span>{" "}
           max weight

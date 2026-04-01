@@ -22,8 +22,8 @@ const KNOWN_INTENSITY_UNIT_DEFINITIONS: Record<number, IntensityUnitDefinition> 
   5: { family: "bodyweight", toBaseFactor: 1 },
 };
 
-const roundToTwoDecimals = (value: number): number =>
-  Math.round(value * 100) / 100;
+const roundToThreeDecimals = (value: number): number =>
+  Math.round(value * 1000) / 1000;
 
 export const getIntensityUnitDefinition = (
   unitId: number | null | undefined,
@@ -74,7 +74,7 @@ export const convertIntensityValue = (
   }
 
   const baseValue = value * sourceDefinition.toBaseFactor;
-  return roundToTwoDecimals(baseValue / targetDefinition.toBaseFactor);
+  return roundToThreeDecimals(baseValue / targetDefinition.toBaseFactor);
 };
 
 export const getCompatibleIntensityUnits = <T extends IntensityUnitLike>(
