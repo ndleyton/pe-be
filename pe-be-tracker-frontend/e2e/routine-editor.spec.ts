@@ -68,8 +68,8 @@ test.describe("Routine editor", () => {
       });
     };
 
-    await page.route("**/users/me", guestAuthHandler);
-    await page.route(`${apiBase}/users/me`, guestAuthHandler);
+    await page.route("**/auth/session", guestAuthHandler);
+    await page.route(`${apiBase}/auth/session`, guestAuthHandler);
     await page.route("**/api/v1/routines/123*", async (route) => {
       await route.fulfill({
         status: 404,
@@ -143,8 +143,8 @@ test.describe("Routine editor", () => {
       ],
     };
 
-    await page.route("**/users/me", guestAuthHandler);
-    await page.route(`${apiBase}/users/me`, guestAuthHandler);
+    await page.route("**/auth/session", guestAuthHandler);
+    await page.route(`${apiBase}/auth/session`, guestAuthHandler);
     await page.route("**/api/v1/routines/321*", async (route) => {
       await route.fulfill({
         status: 200,
@@ -219,7 +219,7 @@ test.describe("Routine editor", () => {
     };
     let capturedUpdatePayload: any = null;
 
-    await page.route(`${apiBase}/users/me`, async (route) => {
+    await page.route(`${apiBase}/auth/session`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -408,7 +408,7 @@ test.describe("Routine editor", () => {
       ],
     };
 
-    await page.route(`${apiBase}/users/me`, async (route) => {
+    await page.route(`${apiBase}/auth/session`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -462,8 +462,8 @@ test.describe("Routine editor", () => {
         body: JSON.stringify({ detail: "Not authenticated" }),
       });
     };
-    await page.route("**/users/me", guestAuthHandler);
-    await page.route(`${apiBase}/users/me`, guestAuthHandler);
+    await page.route("**/auth/session", guestAuthHandler);
+    await page.route(`${apiBase}/auth/session`, guestAuthHandler);
 
     await page.route("**/api/v1/routines/321*", async (route) => {
       await route.fulfill({

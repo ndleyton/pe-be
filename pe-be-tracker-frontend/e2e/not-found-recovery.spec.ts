@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const mockGuestUser = async (page: Page) => {
-  await page.route("**/users/me", async (route) => {
+  await page.route("**/auth/session", async (route) => {
     await route.fulfill({
       status: 401,
       contentType: "application/json",

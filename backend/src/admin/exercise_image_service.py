@@ -254,7 +254,9 @@ async def generate_reference_image_options(
         for candidate in await _load_candidates_by_keys(session, all_potential_keys)
     }
 
-    pending_jobs: list[tuple[int, str, object, str, str, ExerciseImageCandidate | None]] = []
+    pending_jobs: list[
+        tuple[int, str, object, str, str, ExerciseImageCandidate | None]
+    ] = []
     for source_image_index, source_image_url in enumerate(reference_images):
         for option in REFERENCE_OPTION_SPECS:
             generation_key = _build_generation_key(
@@ -392,9 +394,7 @@ async def apply_reference_or_option(
             )
             _copy_relative_asset(candidate.storage_path, published_path)
             published_paths.append(published_path)
-        exercise_type.images_url = _image_json(
-            published_paths
-        )
+        exercise_type.images_url = _image_json(published_paths)
 
     await session.commit()
     await session.refresh(exercise_type)

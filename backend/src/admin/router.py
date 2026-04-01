@@ -239,7 +239,9 @@ async def get_reference_image_options(
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
     _ensure_admin(user)
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
@@ -263,7 +265,9 @@ async def generate_reference_options(
             detail="Google AI API key not configured",
         )
 
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
@@ -302,7 +306,9 @@ async def apply_reference_option(
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
     _ensure_admin(user)
-    exercise_type = await ExerciseTypeService.get_exercise_type(session, exercise_type_id)
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id
+    )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 

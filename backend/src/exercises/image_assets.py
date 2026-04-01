@@ -27,7 +27,9 @@ def resolve_exercise_image_url(image_url: str) -> str:
 
 
 def resolve_exercise_image_urls(image_urls: Iterable[str]) -> list[str]:
-    return [resolve_exercise_image_url(image_url) for image_url in image_urls if image_url]
+    return [
+        resolve_exercise_image_url(image_url) for image_url in image_urls if image_url
+    ]
 
 
 def parse_image_url_list(raw_value: str | list[str] | None) -> list[str]:

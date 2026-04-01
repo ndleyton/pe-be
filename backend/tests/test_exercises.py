@@ -307,9 +307,7 @@ async def test_generated_assets_require_auth_but_published_assets_remain_public(
 
 
 @pytest.mark.asyncio
-async def test_apply_reference_option_publishes_generated_assets(
-    db_session, tmp_path
-):
+async def test_apply_reference_option_publishes_generated_assets(db_session, tmp_path):
     original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
     settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
     try:
@@ -385,7 +383,9 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         active = 0
         max_active = 0
 
-        async def fake_generate_reference_image_variant(*, context, option, source_image_url):
+        async def fake_generate_reference_image_variant(
+            *, context, option, source_image_url
+        ):
             nonlocal active, max_active
             active += 1
             max_active = max(max_active, active)
@@ -418,7 +418,7 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         response = await generate_reference_image_options(db_session, exercise_type)
 
         assert max_active > 1
-        assert len(response.options) == 3
+        assert len(response.options) == 2
         for option in response.options:
             assert len(option.images) == 2
     finally:

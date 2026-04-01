@@ -103,9 +103,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     if result.status == "already_superuser":
-        print(
-            f"User {result.email} (id={result.user_id}) is already a superuser."
-        )
+        print(f"User {result.email} (id={result.user_id}) is already a superuser.")
         return 0
 
     print(f"Promoted {result.email} (id={result.user_id}) to superuser.")

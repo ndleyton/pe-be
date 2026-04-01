@@ -103,7 +103,9 @@ async def test_run_loads_model_registry_before_query(monkeypatch):
     def _fake_load_model_registry() -> None:
         call_order.append("load_models")
 
-    async def _fake_promote_user_to_superuser(session, *, email: str) -> PromotionResult:
+    async def _fake_promote_user_to_superuser(
+        session, *, email: str
+    ) -> PromotionResult:
         assert session == "session"
         assert email == "admin@example.com"
         call_order.append("promote")

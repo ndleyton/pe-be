@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from src.users.models import User
-from src.workouts.crud import create_workout, create_workout_type, get_stale_open_workouts
+from src.workouts.crud import (
+    create_workout,
+    create_workout_type,
+    get_stale_open_workouts,
+)
 from src.workouts.schemas import WorkoutCreate, WorkoutTypeCreate
 from src.workouts.service import WorkoutService
 

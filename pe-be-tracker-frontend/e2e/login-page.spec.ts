@@ -8,8 +8,8 @@ test.describe("Guest Mode Landing", () => {
       console.log(`PAGE ERROR: ${error.message}`),
     );
 
-    // Mock the /users/me API call to simulate a guest user
-    await page.route("**/users/me", (route) => {
+    // Mock the /auth/session API call to simulate a guest user
+    await page.route("**/auth/session", (route) => {
       route.fulfill({
         status: 401,
         body: JSON.stringify({ detail: "Not authenticated" }),

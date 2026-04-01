@@ -10,8 +10,8 @@ test.describe("Routines quick-start navigation", () => {
         body: JSON.stringify({ detail: "Not authenticated" }),
       });
     };
-    await page.route("**/users/me", guestAuthHandler);
-    await page.route("**/api/v1/users/me", guestAuthHandler);
+    await page.route("**/auth/session", guestAuthHandler);
+    await page.route("**/api/v1/auth/session", guestAuthHandler);
 
     await page.route("**/api/v1/routines/**", async (route) => {
       await route.fulfill({

@@ -97,9 +97,7 @@ def test_close_stale_open_workouts_main_prints_skipped_message(monkeypatch, caps
     )
 
 
-def test_close_stale_open_workouts_main_prints_disabled_message(
-    monkeypatch, capsys
-):
+def test_close_stale_open_workouts_main_prints_disabled_message(monkeypatch, capsys):
     def _fake_configure_job_runtime():
         return None
 
@@ -146,8 +144,4 @@ def test_close_stale_open_workouts_main_prints_closed_count(monkeypatch, capsys)
     close_stale_open_workouts.main()
 
     captured = capsys.readouterr()
-    assert (
-        captured.out.strip()
-        == "Closed 2 stale open workouts older than 24 hours."
-    )
-
+    assert captured.out.strip() == "Closed 2 stale open workouts older than 24 hours."
