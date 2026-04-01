@@ -104,7 +104,10 @@ class ExerciseTemplate(Base):
         "Routine", back_populates="exercise_templates"
     )
     set_templates: Mapped[List["SetTemplate"]] = relationship(
-        "SetTemplate", back_populates="exercise_template", cascade="all, delete-orphan"
+        "SetTemplate",
+        back_populates="exercise_template",
+        cascade="all, delete-orphan",
+        order_by="SetTemplate.id",
     )
 
 
@@ -119,10 +122,16 @@ class SetTemplate(Base):
 
     reps = Column(Integer)
     intensity = Column(Numeric(precision=7, scale=3))
+    canonical_intensity = Column(Numeric(precision=10, scale=5), nullable=True)
     intensity_unit_id = Column(
         Integer,
         ForeignKey("intensity_units.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    canonical_intensity_unit_id = Column(
+        Integer,
+        ForeignKey("intensity_units.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     exercise_template_id = Column(
         Integer,
@@ -132,7 +141,12 @@ class SetTemplate(Base):
 
     # Relationships
     intensity_unit: Mapped["IntensityUnit"] = relationship(
-        "IntensityUnit", lazy="joined"
+        "IntensityUnit", lazy="joined", foreign_keys=[intensity_unit_id]
+    )
+    canonical_intensity_unit: Mapped["IntensityUnit"] = relationship(
+        "IntensityUnit",
+        lazy="joined",
+        foreign_keys=[canonical_intensity_unit_id],
     )
     exercise_template: Mapped["ExerciseTemplate"] = relationship(
         "ExerciseTemplate", back_populates="set_templates"

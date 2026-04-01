@@ -1,6 +1,17 @@
 import { act, renderHook } from "@/test/testUtils";
-import { makeExercise, makeExerciseSet } from "@/test/fixtures";
+import { makeExercise, makeExerciseSet, makeExerciseType } from "@/test/fixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockAuthState } = vi.hoisted(() => ({
+  mockAuthState: {
+    isAuthenticated: true,
+  },
+}));
+
+vi.mock("@/stores", () => ({
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
+    selector(mockAuthState),
+}));
 
 import { useExerciseRowState } from "./useExerciseRowState";
 
@@ -86,6 +97,7 @@ describe("useExerciseRowState", () => {
         exercise_id: 1,
         reps: 10,
         intensity: 50,
+        intensity_unit_id: 1,
       }),
     ];
     const nextSets = [
@@ -94,9 +106,11 @@ describe("useExerciseRowState", () => {
         exercise_id: 1,
         reps: 12,
         intensity: 55.5,
+        intensity_unit_id: 1,
       }),
     ];
     const exercise = makeExercise({
+      exercise_type: makeExerciseType({ default_intensity_unit: 2 }),
       exercise_sets: initialSets,
     });
     const updateSetNotes = vi.fn().mockResolvedValue(undefined);
@@ -115,17 +129,20 @@ describe("useExerciseRowState", () => {
       },
     );
 
+    expect(result.current.currentIntensityUnit.abbreviation).toBe("lbs");
+    expect(result.current.intensityInputs["1"]).toBe("110.231");
+
     act(() => {
       result.current.setExerciseSettingsOpen(true);
       result.current.handleIntensityUnitChange({
-        id: 2,
-        name: "Pounds",
-        abbreviation: "lb",
+        id: 1,
+        name: "Kilograms",
+        abbreviation: "kg",
       });
     });
 
     expect(result.current.exerciseSettingsOpen).toBe(false);
-    expect(result.current.currentIntensityUnit.abbreviation).toBe("lb");
+    expect(result.current.currentIntensityUnit.abbreviation).toBe("kg");
 
     rerender({ sets: nextSets });
 
