@@ -418,7 +418,7 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         response = await generate_reference_image_options(db_session, exercise_type)
 
         assert max_active > 1
-        assert len(response.options) == 3
+        assert len(response.options) == 2
         for option in response.options:
             assert len(option.images) == 2
     finally:
