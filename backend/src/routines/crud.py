@@ -5,6 +5,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from src.core.errors import DomainValidationError
+from src.exercises.intensity_units import normalize_intensity_for_storage
+from src.exercises.models import IntensityUnit
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate
 from src.routines.schemas import (
     AdminRoutineCreate,
@@ -192,10 +194,32 @@ async def create_routine(
 
             # Create set templates
             for set_template_data in exercise_template_data.set_templates:
+                source_unit = await session.get(
+                    IntensityUnit,
+                    set_template_data.intensity_unit_id,
+                )
+                canonical_intensity, canonical_unit_key = (
+                    normalize_intensity_for_storage(
+                        set_template_data.intensity,
+                        source_unit,
+                    )
+                )
+                canonical_intensity_unit_id = set_template_data.intensity_unit_id
+                if canonical_unit_key is not None:
+                    canonical_unit = await session.execute(
+                        select(IntensityUnit).where(
+                            IntensityUnit.abbreviation.ilike(canonical_unit_key)
+                        )
+                    )
+                    canonical_intensity_unit_id = (
+                        canonical_unit.scalar_one_or_none() or source_unit
+                    ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
                     intensity=set_template_data.intensity,
+                    canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
+                    canonical_intensity_unit_id=canonical_intensity_unit_id,
                     exercise_template_id=exercise_template.id,
                 )
                 session.add(set_template)
@@ -252,10 +276,32 @@ async def create_routine_admin(
 
             # Create set templates
             for set_template_data in exercise_template_data.set_templates:
+                source_unit = await session.get(
+                    IntensityUnit,
+                    set_template_data.intensity_unit_id,
+                )
+                canonical_intensity, canonical_unit_key = (
+                    normalize_intensity_for_storage(
+                        set_template_data.intensity,
+                        source_unit,
+                    )
+                )
+                canonical_intensity_unit_id = set_template_data.intensity_unit_id
+                if canonical_unit_key is not None:
+                    canonical_unit = await session.execute(
+                        select(IntensityUnit).where(
+                            IntensityUnit.abbreviation.ilike(canonical_unit_key)
+                        )
+                    )
+                    canonical_intensity_unit_id = (
+                        canonical_unit.scalar_one_or_none() or source_unit
+                    ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
                     intensity=set_template_data.intensity,
+                    canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
+                    canonical_intensity_unit_id=canonical_intensity_unit_id,
                     exercise_template_id=exercise_template.id,
                 )
                 session.add(set_template)
@@ -316,10 +362,32 @@ async def update_routine(
             await session.flush()
 
             for set_template_data in exercise_template_data.set_templates:
+                source_unit = await session.get(
+                    IntensityUnit,
+                    set_template_data.intensity_unit_id,
+                )
+                canonical_intensity, canonical_unit_key = (
+                    normalize_intensity_for_storage(
+                        set_template_data.intensity,
+                        source_unit,
+                    )
+                )
+                canonical_intensity_unit_id = set_template_data.intensity_unit_id
+                if canonical_unit_key is not None:
+                    canonical_unit = await session.execute(
+                        select(IntensityUnit).where(
+                            IntensityUnit.abbreviation.ilike(canonical_unit_key)
+                        )
+                    )
+                    canonical_intensity_unit_id = (
+                        canonical_unit.scalar_one_or_none() or source_unit
+                    ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
                     intensity=set_template_data.intensity,
+                    canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
+                    canonical_intensity_unit_id=canonical_intensity_unit_id,
                     exercise_template_id=exercise_template.id,
                 )
                 session.add(set_template)

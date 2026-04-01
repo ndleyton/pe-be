@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -115,6 +116,8 @@ async def test_create_exercise_set_success_and_invalid_reference_mapping(db_sess
     assert created.id is not None
     assert created.exercise_id == exercise_id
     assert created.intensity_unit_id == unit_id
+    assert created.canonical_intensity == 100
+    assert created.canonical_intensity_unit_id == unit_id
 
     with pytest.raises(DomainValidationError) as invalid_unit:
         await crud.create_exercise_set(
@@ -189,6 +192,8 @@ async def test_update_exercise_set_handles_missing_deleted_and_invalid_reference
     assert updated is not None
     assert updated.reps == 12
     assert updated.intensity_unit_id == alternate_unit.id
+    assert updated.canonical_intensity == Decimal("43.09128")
+    assert updated.canonical_intensity_unit_id == unit.id
     assert updated.done is True
     assert updated.notes == "updated"
     assert updated.type == "backoff"

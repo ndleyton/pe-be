@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from decimal import Decimal
 
 from src.routines import crud
 from src.routines.models import Routine
@@ -22,8 +23,9 @@ async def test_create_routine_admin_sets_visibility_and_readonly(
     """create_routine_admin should honor visibility and is_readonly and create nested templates."""
     # Seed reference data
     wt = WorkoutType(name="Strength", description="desc")
+    canonical_iu = IntensityUnit(name="Kilograms", abbreviation="kg")
     iu = IntensityUnit(name="Pounds", abbreviation="lb")
-    db_session.add_all([wt, iu])
+    db_session.add_all([wt, canonical_iu, iu])
     await db_session.flush()
 
     et = ExerciseType(
@@ -74,6 +76,8 @@ async def test_create_routine_admin_sets_visibility_and_readonly(
     st = tmpl.set_templates[0]
     assert st.reps == 5
     assert st.intensity_unit_id == iu.id
+    assert st.canonical_intensity == Decimal("20.41166")
+    assert st.canonical_intensity_unit_id == canonical_iu.id
 
 
 @pytest.mark.integration

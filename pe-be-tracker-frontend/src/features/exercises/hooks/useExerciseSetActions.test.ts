@@ -116,10 +116,10 @@ describe("useExerciseSetActions", () => {
     );
 
     act(() => {
-      result.current.updateSetField(1, "weight", 60);
+      result.current.updateSetField(1, "weight", 220.462, 2);
     });
 
-    expect(result.current.exerciseSets[0].intensity).toBe(60);
+    expect(result.current.exerciseSets[0].intensity).toBe(100);
     expect(onExerciseUpdate).toHaveBeenCalledTimes(1);
 
     act(() => {
@@ -135,7 +135,7 @@ describe("useExerciseSetActions", () => {
 
     expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
     expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
-      intensity: 60,
+      intensity: 100,
       reps: 12,
     });
   });
@@ -204,7 +204,7 @@ describe("useExerciseSetActions", () => {
 
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
       reps: 10,
-      intensity: 50,
+      intensity: 110.231,
       intensity_unit_id: 2,
       exercise_id: 123,
       rest_time_seconds: 0,

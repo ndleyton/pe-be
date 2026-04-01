@@ -15,6 +15,7 @@ import {
   toGuestExerciseSets,
   type ExerciseRowProps,
 } from "@/features/exercises/lib/exerciseRow";
+import { convertIntensityValue } from "@/features/exercises/lib/intensityUnits";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps";
@@ -152,13 +153,29 @@ export const useExerciseSetActions = ({
     setId: string | number,
     field: SetField,
     value: number | null,
+    displayUnitId?: number,
   ) => {
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => String(set.id) === String(setId),
+    );
+    if (!currentSet) {
+      return;
+    }
+
+    const nextValue =
+      field === "weight"
+        ? convertIntensityValue(
+            value,
+            displayUnitId ?? currentSet.intensity_unit_id,
+            currentSet.intensity_unit_id,
+          )
+        : value;
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
         String(set.id) === String(setId)
           ? {
               ...set,
-              [field === "weight" ? "intensity" : "reps"]: value,
+              [field === "weight" ? "intensity" : "reps"]: nextValue,
             }
           : set,
       ),
@@ -169,7 +186,7 @@ export const useExerciseSetActions = ({
     }
 
     const updateData: UpdateExerciseSetData =
-      field === "weight" ? { intensity: value } : { reps: value };
+      field === "weight" ? { intensity: nextValue } : { reps: value };
 
     queueSetUpdate(setId, updateData);
   };
@@ -271,10 +288,15 @@ export const useExerciseSetActions = ({
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
     const tempId = `temp-${Date.now()}`;
     const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
+    const nextIntensity = convertIntensityValue(
+      lastSet?.intensity ?? null,
+      lastSet?.intensity_unit_id,
+      intensityUnitId,
+    );
     const optimisticSet: ExerciseSet = {
       id: tempId,
       reps: lastSet?.reps,
-      intensity: lastSet?.intensity,
+      intensity: nextIntensity,
       intensity_unit_id: intensityUnitId,
       exercise_id: exercise.id,
       rest_time_seconds: null,
@@ -297,7 +319,7 @@ export const useExerciseSetActions = ({
     try {
       const payload: CreateExerciseSetData = {
         reps: lastSet?.reps || 0,
-        intensity: lastSet?.intensity || 0,
+        intensity: nextIntensity || 0,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,
         rest_time_seconds: 0,

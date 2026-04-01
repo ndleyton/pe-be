@@ -5,12 +5,10 @@ import type {
 } from "@/features/exercises/api";
 import type { GuestExerciseSet } from "@/stores";
 import { formatDecimal } from "@/utils/format";
-
-export interface GuestIntensityUnit {
-  id: number;
-  name: string;
-  abbreviation: string;
-}
+import {
+  convertIntensityValue,
+  type GuestIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
 
 export interface ExerciseRowProps {
   exercise: Exercise;
@@ -36,9 +34,13 @@ export const formatIntensityInputValue = (
 
 export const buildIntensityInputs = (
   sets: ExerciseSet[],
+  displayUnitId?: number,
 ): Record<string, string> =>
   sets.reduce<Record<string, string>>((acc, set) => {
-    acc[String(set.id)] = formatIntensityInputValue(set.intensity);
+    acc[String(set.id)] = formatIntensityInputValue(
+      convertIntensityValue(set.intensity, set.intensity_unit_id, displayUnitId) ??
+        set.intensity,
+    );
     return acc;
   }, {});
 

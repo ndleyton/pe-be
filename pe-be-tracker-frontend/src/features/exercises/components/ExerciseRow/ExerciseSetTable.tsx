@@ -5,7 +5,8 @@ import {
   EXERCISE_SETS_GRID_TEMPLATE,
   formatIntensityInputValue,
 } from "@/features/exercises/lib/exerciseRow";
-import { formatDecimal, parseDecimalInput } from "@/utils/format";
+import { convertIntensityValue } from "@/features/exercises/lib/intensityUnits";
+import { parseDecimalInput } from "@/utils/format";
 import {
   Button,
   Dialog,
@@ -21,6 +22,7 @@ import {
 type ExerciseSetTableProps = {
   activeSetId: string | number | null;
   currentIntensityUnitAbbreviation: string;
+  currentIntensityUnitId: number;
   exerciseSets: ExerciseSet[];
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
@@ -39,6 +41,7 @@ type ExerciseSetTableProps = {
     setId: string | number,
     field: "weight" | "reps",
     value: number | null,
+    displayUnitId?: number,
   ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
@@ -47,6 +50,7 @@ type ExerciseSetTableProps = {
 export const ExerciseSetTable = ({
   activeSetId,
   currentIntensityUnitAbbreviation,
+  currentIntensityUnitId,
   exerciseSets,
   intensityInputs,
   isUnsavedExercise,
@@ -80,10 +84,15 @@ export const ExerciseSetTable = ({
     <div className="space-y-2">
       {exerciseSets.map((set, index) => {
         const setKey = String(set.id);
-        const savedIntensityValue = formatDecimal(set.intensity);
+        const savedDisplayIntensity = convertIntensityValue(
+          set.intensity,
+          set.intensity_unit_id,
+          currentIntensityUnitId,
+        );
+        const savedIntensityValue = formatIntensityInputValue(savedDisplayIntensity);
         const intensityValue =
           intensityInputs[setKey] ??
-          (savedIntensityValue === "-" ? "" : savedIntensityValue);
+          savedIntensityValue;
         const savedRepsValue = set.reps === null ? "" : String(set.reps);
         const repsValue = repsInputs[setKey] ?? savedRepsValue;
 
@@ -111,26 +120,22 @@ export const ExerciseSetTable = ({
                   const parsedValue = parseDecimalInput(event.currentTarget.value);
 
                   if (parsedValue === null) {
-                    onSetWeightInputValue(
-                      set.id,
-                      savedIntensityValue === "-" ? "" : savedIntensityValue,
-                    );
+                    onSetWeightInputValue(set.id, savedIntensityValue);
                     return;
                   }
 
-                  if (parsedValue === set.intensity) {
-                    onSetWeightInputValue(
-                      set.id,
-                      formatIntensityInputValue(parsedValue),
-                    );
+                  if (parsedValue === savedDisplayIntensity) {
+                    onSetWeightInputValue(set.id, formatIntensityInputValue(parsedValue));
                     return;
                   }
 
-                  onSetWeightInputValue(
+                  onSetWeightInputValue(set.id, formatIntensityInputValue(parsedValue));
+                  onUpdateSetField(
                     set.id,
-                    formatIntensityInputValue(parsedValue),
+                    "weight",
+                    parsedValue,
+                    currentIntensityUnitId,
                   );
-                  onUpdateSetField(set.id, "weight", parsedValue);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
@@ -140,10 +145,7 @@ export const ExerciseSetTable = ({
 
                   if (event.key === "Escape") {
                     event.preventDefault();
-                    onSetWeightInputValue(
-                      set.id,
-                      savedIntensityValue === "-" ? "" : savedIntensityValue,
-                    );
+                    onSetWeightInputValue(set.id, savedIntensityValue);
                     (event.currentTarget as HTMLInputElement).blur();
                   }
                 }}
