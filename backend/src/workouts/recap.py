@@ -31,15 +31,20 @@ class WorkoutRecapService:
             stats = await get_exercise_type_stats(session, exercise.exercise_type_id, user_id)
 
             # Current session stats
-            current_sets = exercise.exercise_sets
-            current_max_weight = max((s.intensity or 0 for s in current_sets), default=0)
-            current_volume = sum((s.intensity or 0) * (s.reps or 0) for s in current_sets)
-            current_reps = sum(s.reps or 0 for s in current_sets)
+            current_sets = [s for s in exercise.exercise_sets if s.deleted_at is None]
+
+            # Find the "top set" (highest weight, then highest reps)
+            top_set = max(current_sets, key=lambda s: (s.intensity or 0, s.reps or 0), default=None)
+
+            current_max_weight = top_set.intensity or 0 if top_set else 0
+            current_top_set_reps = top_set.reps or 0 if top_set else 0
+            current_total_sets = len(current_sets)
+            current_total_reps = sum(s.reps or 0 for s in current_sets)
+            current_total_volume = sum((s.intensity or 0) * (s.reps or 0) for s in current_sets)
 
             # Historical stats (progressiveOverload list contains historical points)
             history = stats.get("progressiveOverload", [])
             # Filter out current session from history if it's already there
-            # (get_exercise_type_stats includes today's workout if it exists)
             workout_date_str = workout.start_time.date().isoformat()
             history_excluding_today = [h for h in history if h["date"] < workout_date_str]
 
@@ -48,10 +53,11 @@ class WorkoutRecapService:
             metric = {
                 "exercise_name": exercise.exercise_type.name,
                 "current": {
-                    "sets": len(current_sets),
-                    "reps": current_reps,
-                    "max_weight": float(current_max_weight),
-                    "volume": float(current_volume)
+                    "sets": current_total_sets,
+                    "total_reps": current_total_reps,
+                    "top_set_weight_achieved": float(current_max_weight),
+                    "top_set_reps": current_top_set_reps,
+                    "total_volume": float(current_total_volume)
                 },
                 "is_pr": False
             }
@@ -73,7 +79,7 @@ class WorkoutRecapService:
                 # PR detection: higher weight or higher volume
                 if current_max_weight > prev_session["maxWeight"]:
                     metric["is_pr"] = True
-                if current_volume > prev_session["totalVolume"]:
+                if current_total_volume > prev_session["totalVolume"]:
                     metric["volume_increased"] = True
             else:
                 metric["is_new_exercise"] = True
@@ -92,6 +98,8 @@ Metrics:
 
 Guidelines:
 - Keep it concise (2-4 sentences).
+- Use `top_set_weight_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
+- Use `sets` and `total_reps` for general volume highlights.
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
 - Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
 - Be encouraging but grounded in data.
@@ -108,7 +116,7 @@ Recap:"""
         try:
             client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
             response = await client.aio.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash-lite",
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     temperature=0.7,
