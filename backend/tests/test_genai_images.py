@@ -99,6 +99,8 @@ async def test_generate_exercise_phase_image_async(mock_sync):
 
     assert result == mock_result
     mock_sync.assert_called_once()
+
+
 @patch("src.genai.google_images.settings")
 @patch("src.genai.google_images.genai.Client")
 @patch("src.genai.google_images._normalize_reference_image")

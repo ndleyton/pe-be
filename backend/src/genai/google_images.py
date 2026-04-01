@@ -49,16 +49,6 @@ REFERENCE_OPTION_SPECS: tuple[ReferenceOptionSpec, ...] = (
         ),
     ),
     ReferenceOptionSpec(
-        key="coach-card",
-        label="Coach Card",
-        description="Friendly instructional diagram with slightly fuller anatomy and depth cues.",
-        style_directive=(
-            "Recreate the reference as a polished coaching-card illustration. "
-            "Preserve the exact exercise position and framing while simplifying clutter, "
-            "clarifying joint angles, and using gentle depth cues."
-        ),
-    ),
-    ReferenceOptionSpec(
         key="anatomy-focus",
         label="Anatomy Focus",
         description="Minimal illustration with subtle muscle emphasis and posture clarity.",
@@ -172,7 +162,9 @@ def _inline_data_to_bytes(data: bytes | str) -> bytes:
     return base64.b64decode(data)
 
 
-def _extract_inline_result(response, prompt: str, model_name: str) -> ExerciseImageResult:
+def _extract_inline_result(
+    response, prompt: str, model_name: str
+) -> ExerciseImageResult:
     try:
         candidate = response.candidates[0]
         if not getattr(candidate, "content", None):

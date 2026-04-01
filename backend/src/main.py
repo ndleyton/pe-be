@@ -95,9 +95,7 @@ def create_app() -> FastAPI:
     # hardcoding one ephemeral deployment URL into the application.
     origin_regexes = [r"http://(localhost|127\.0\.0\.1):\d+$"]
     if settings.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX:
-        origin_regexes.append(
-            f"(?:{settings.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX})"
-        )
+        origin_regexes.append(f"(?:{settings.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX})")
     allow_origin_regex = "|".join(origin_regexes)
 
     # Add CORS middleware
