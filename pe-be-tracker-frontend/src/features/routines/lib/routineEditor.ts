@@ -8,6 +8,7 @@ import type {
   GuestExerciseType,
   GuestIntensityUnit,
 } from "@/stores";
+import { formatDecimal } from "@/utils/format";
 
 export const DATE_LABEL_LOCALE = "en-US";
 export const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -106,10 +107,11 @@ export const formatSetSummary = (setTemplate: RoutineEditorSet) => {
   }
 
   if (setTemplate.intensity != null) {
+    const intensity = formatDecimal(setTemplate.intensity);
     const suffix = setTemplate.intensity_unit?.abbreviation
       ? ` ${setTemplate.intensity_unit.abbreviation}`
       : "";
-    parts.push(`${setTemplate.intensity}${suffix}`);
+    parts.push(`${intensity}${suffix}`);
   }
 
   return parts.length > 0 ? parts.join(" • ") : "No targets set";

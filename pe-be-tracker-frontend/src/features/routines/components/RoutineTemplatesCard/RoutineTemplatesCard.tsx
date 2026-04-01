@@ -5,7 +5,7 @@ import {
   type RoutineEditorSet,
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
-import { parseDecimalInput } from "@/utils/format";
+import { formatDecimal, parseDecimalInput } from "@/utils/format";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -181,7 +181,11 @@ export const RoutineTemplatesCard = ({
                         id={`${template.id}-${setTemplate.id}-intensity`}
                         data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
                         inputMode="decimal"
-                        value={setTemplate.intensity ?? ""}
+                        value={
+                          setTemplate.intensity != null
+                            ? formatDecimal(setTemplate.intensity)
+                            : ""
+                        }
                         readOnly={!canEdit}
                         onChange={(event) =>
                           onUpdateSet(template.id, setTemplate.id, {
