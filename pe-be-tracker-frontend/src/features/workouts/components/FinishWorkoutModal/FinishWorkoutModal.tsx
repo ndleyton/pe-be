@@ -32,6 +32,8 @@ interface FinishWorkoutModalProps {
   exercises?: Exercise[];
   onSaveRoutine?: () => void;
   workoutName?: string;
+  recap?: string | null;
+  isRecapLoading?: boolean;
 }
 
 const FinishWorkoutModal = ({
@@ -42,6 +44,8 @@ const FinishWorkoutModal = ({
   exercises = [],
   onSaveRoutine,
   workoutName,
+  recap,
+  isRecapLoading = false,
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const formattedDuration = useUIStore((state) =>
@@ -217,6 +221,33 @@ const FinishWorkoutModal = ({
                   <span className="text-primary text-lg">{totalSets}</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* AI Recap Section */}
+          {totalSets > 0 && (
+            <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-4 shadow-sm">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-lg">✨</span>
+                <h4 className="text-sm font-bold uppercase tracking-wider">
+                  AI Recap
+                </h4>
+              </div>
+              {isRecapLoading ? (
+                <div className="space-y-2 py-1">
+                  <div className="bg-muted h-3 w-full animate-pulse rounded" />
+                  <div className="bg-muted h-3 w-4/5 animate-pulse rounded" />
+                  <div className="bg-muted h-3 w-3/4 animate-pulse rounded" />
+                </div>
+              ) : recap ? (
+                <p className="text-foreground text-sm leading-relaxed italic">
+                  &ldquo;{recap}&rdquo;
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-xs italic">
+                  Recap generation skipped or failed.
+                </p>
+              )}
             </div>
           )}
 
