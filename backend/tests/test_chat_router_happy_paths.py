@@ -58,7 +58,24 @@ async def test_chat_endpoint_happy_path(
             captured["messages"] = messages
             captured["conversation_id"] = conversation_id
             captured["save_to_db"] = save_to_db
-            return {"message": "Plan updated.", "conversation_id": 321}
+            return {
+                "message": "Plan updated.",
+                "conversation_id": 321,
+                "events": [
+                    {
+                        "type": "workout_created",
+                        "title": "Workout logged",
+                        "cta_label": "Open workout",
+                        "workout": {
+                            "id": 99,
+                            "name": "Strength training",
+                            "notes": None,
+                            "start_time": "2026-04-01T12:00:00Z",
+                            "end_time": None,
+                        },
+                    }
+                ],
+            }
 
     monkeypatch.setattr("src.chat.router.ChatService", FakeChatService)
 
@@ -69,7 +86,24 @@ async def test_chat_endpoint_happy_path(
         },
     )
     assert response.status_code == 200, response.text
-    assert response.json() == {"message": "Plan updated.", "conversation_id": 321}
+    assert response.json() == {
+        "message": "Plan updated.",
+        "conversation_id": 321,
+        "events": [
+            {
+                "type": "workout_created",
+                "title": "Workout logged",
+                "cta_label": "Open workout",
+                "workout": {
+                    "id": 99,
+                    "name": "Strength training",
+                    "notes": None,
+                    "start_time": "2026-04-01T12:00:00Z",
+                    "end_time": None,
+                },
+            }
+        ],
+    }
     assert captured["user_id"] == authenticated_user.id
     assert captured["conversation_id"] is None
     assert captured["save_to_db"] is True

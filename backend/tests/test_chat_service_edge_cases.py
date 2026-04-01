@@ -1,7 +1,8 @@
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.chat.service import ChatService
-from datetime import date
+from datetime import date, datetime, timezone
 
 
 @pytest.fixture
@@ -279,9 +280,17 @@ async def test_parse_workout_and_save_tool_wrapper(chat_service_with_db):
                 }
             ],
         }
+        mock_create.return_value = SimpleNamespace(
+            id=123,
+            name="Test generated",
+            notes=None,
+            start_time=datetime(2026, 4, 1, tzinfo=timezone.utc),
+            end_time=None,
+        )
         res2 = await chat_service_with_db._parse_workout_and_save(**kwargs)
         assert "WORKOUT SAVED SUCCESSFULLY" in res2
         assert mock_create.called
+        assert len(chat_service_with_db._pending_chat_events) == 1
 
 
 @pytest.mark.asyncio

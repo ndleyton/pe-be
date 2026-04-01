@@ -164,10 +164,10 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
         "src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False
     )
 
-    async def _fake_get_or_create_active_conversation(session, user_id, title):
+    async def _fake_create_conversation(session, conversation_data, user_id):
         assert user_id == 77
-        assert title == "Log my pull day"
-        return SimpleNamespace(id=88, messages=[])
+        assert conversation_data.title == "Log my pull day"
+        return SimpleNamespace(id=88)
 
     async def _fake_add_message_to_conversation(
         session, conversation_id, message_data, user_id
@@ -192,8 +192,8 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
     saved_messages = []
 
     monkeypatch.setattr(
-        "src.chat.service.get_or_create_active_conversation",
-        _fake_get_or_create_active_conversation,
+        "src.chat.service.create_conversation",
+        _fake_create_conversation,
     )
     monkeypatch.setattr(
         "src.chat.service.add_message_to_conversation",
