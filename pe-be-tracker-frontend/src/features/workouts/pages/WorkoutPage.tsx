@@ -598,13 +598,14 @@ const WorkoutPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
-      <div className="bg-card text-card-foreground mx-auto mt-2 max-w-2xl rounded-lg p-2 shadow-lg md:mt-4 md:p-4 lg:mt-8 lg:p-6">
-        <div className="mb-3 flex items-center gap-4 text-left sm:mb-4 md:mb-6">
+    <div className="mx-auto max-w-5xl px-2 py-4 md:px-4 md:py-6 lg:px-8 lg:py-8 text-center">
+      <div className="bg-card text-card-foreground mx-auto max-w-2xl rounded-2xl p-4 shadow-2xl backdrop-blur-md shadow-black/5">
+        <div className="mb-4 flex items-center gap-4 text-left md:mb-6">
           <Button
             variant="ghost"
             size="icon"
             asChild
+            className="rounded-full hover:bg-muted/50"
             aria-label="Go back"
           >
             <Link to="/workouts">

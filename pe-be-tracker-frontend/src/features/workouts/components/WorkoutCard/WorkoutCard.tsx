@@ -21,7 +21,7 @@ const WorkoutCard = ({
       onClick={() => onClick(workout.id)}
       onMouseEnter={onMouseEnter}
       onTouchStart={onTouchStart}
-      className="bg-card/80 border-border hover:bg-accent relative cursor-pointer items-center justify-between overflow-hidden rounded-xl border p-5 transition-all duration-200 shadow-sm hover:shadow-md backdrop-blur-sm"
+      className="bg-card/80 hover:bg-accent relative cursor-pointer items-center justify-between overflow-hidden rounded-xl p-5 transition-all duration-300 shadow-sm hover:shadow-xl backdrop-blur-sm group"
     >
       <div className="flex items-center space-x-4">
         <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl transition-colors group-hover:bg-primary/20">

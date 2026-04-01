@@ -58,7 +58,7 @@ const ExerciseRow = ({
   });
 
   return (
-    <Card key={exercise.id} className="bg-card/80 border-border overflow-hidden rounded-2xl border shadow-xl backdrop-blur-sm">
+    <Card key={exercise.id} className="bg-card/80 overflow-hidden rounded-2xl border border-border/10 shadow-lg backdrop-blur-sm shadow-black/5 hover:shadow-xl transition-all duration-300">
       <CardHeader className="pb-2">
         <ExerciseRowHeader
           currentIntensityUnit={currentIntensityUnit}

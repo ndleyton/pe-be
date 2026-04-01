@@ -71,13 +71,13 @@ export const ExerciseSetTable = ({
 }: ExerciseSetTableProps) => (
   <>
     <div
-      className="mb-2 grid gap-2 text-xs font-medium text-gray-500 sm:gap-4 dark:text-gray-400"
+      className="bg-card/50 border-border/10 mb-3 grid items-center gap-2 rounded-lg border-b px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 sm:gap-4"
       style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
     >
-      <div>SET</div>
-      <div>{currentIntensityUnitAbbreviation.toUpperCase()}</div>
-      <div>REPS</div>
-      <div className="text-right">DONE</div>
+      <div className="text-center">SET</div>
+      <div className="text-center">{currentIntensityUnitAbbreviation.toUpperCase()}</div>
+      <div className="text-center">REPS</div>
+      <div className="text-right pr-2">DONE</div>
       <div></div>
     </div>
 
@@ -100,12 +100,12 @@ export const ExerciseSetTable = ({
           <div
             key={set.id}
             className={`grid items-center gap-2 rounded-lg p-2.5 sm:gap-4 transition-all duration-200 ${
-              set.done ? "bg-primary/20 border-primary/20" : "bg-muted/50 border-transparent"
+              set.done ? "bg-done/10 border-done/20 shadow-inner" : "bg-muted/50 border-transparent shadow-sm"
             } border`}
             style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
           >
-            <div className="text-muted-foreground font-medium">
-              <span>{index + 1}</span>
+            <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
+              <span className="text-muted-foreground text-xs font-black">{index + 1}</span>
             </div>
             <div>
               <Input
@@ -211,14 +211,14 @@ export const ExerciseSetTable = ({
               <Button
                 variant={set.done ? "default" : "outline"}
                 size="sm"
-                className={`h-9 w-9 rounded-full transition-all duration-300 ${
+                className={`group h-10 w-10 rounded-xl transition-all duration-300 ${
                   set.done
-                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                    : "border-border/50 text-muted-foreground/50 border bg-transparent"
+                    ? "bg-done text-done-foreground shadow-lg scale-110 ring-2 ring-done/20"
+                    : "border-border hover:border-done/50 text-muted-foreground border bg-muted/40 hover:bg-muted/60"
                 }`}
                 onClick={() => onToggleSetCompletion(set.id)}
               >
-                <Check className={`h-5 w-5 transition-transform duration-300 ${set.done ? "scale-110" : "scale-100"}`} />
+                <Check className={`h-6 w-6 transition-all duration-300 ${set.done ? "scale-110 opacity-100" : "scale-90 opacity-10 group-hover:opacity-100"}`} />
               </Button>
             </div>
 
