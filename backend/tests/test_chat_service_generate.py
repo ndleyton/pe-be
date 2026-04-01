@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.chat.service import ChatService
-from src.chat.llm_client import ConversationMessage, UploadedFileRef
+from src.chat.llm_client import ConversationMessage
 
 
 @pytest.fixture
@@ -296,75 +296,6 @@ async def test_generate_response_empty_final_message_no_tool_fallback(
             [{"role": "user", "content": "hi"}], save_to_db=False
         )
         assert result["message"] == "I completed the requested operation."
-
-
-@pytest.mark.asyncio
-@patch("src.chat.service.ChatService._get_llm_client")
-@patch("src.chat.service.update_chat_attachment_provider_ref")
-@patch("src.chat.service.ChatService.get_attachment")
-async def test_generate_response_reuploads_stale_gemini_file_refs(
-    mock_get_attachment,
-    mock_update_provider_ref,
-    mock_get_llm,
-    chat_service_with_db,
-):
-    mock_llm = AsyncMock()
-    mock_llm.model_name = "test-model"
-    stale_error = Exception(
-        "403 PERMISSION_DENIED. {'error': {'message': 'You do not have permission to access the File stale-file or it may not exist.', 'status': 'PERMISSION_DENIED'}}"
-    )
-    success_response = MagicMock(
-        message=ConversationMessage(role="assistant", content="Recovered."),
-        tool_calls=[],
-        metadata={},
-    )
-    mock_llm.acomplete.side_effect = [stale_error, success_response]
-    mock_llm.aupload_file.return_value = UploadedFileRef(
-        name="files/fresh-file",
-        uri="gs://fresh-file",
-        mime_type="image/png",
-    )
-    mock_get_llm.return_value = mock_llm
-
-    attachment = SimpleNamespace(
-        id=123,
-        storage_key="chat/image.png",
-        mime_type="image/png",
-        original_filename="image.png",
-        provider_file_name="files/stale-file",
-        provider_file_uri="gs://stale-file",
-    )
-    refreshed_attachment = SimpleNamespace(
-        **{
-            **attachment.__dict__,
-            "provider_file_name": "files/fresh-file",
-            "provider_file_uri": "gs://fresh-file",
-        }
-    )
-    mock_get_attachment.return_value = attachment
-    mock_update_provider_ref.return_value = refreshed_attachment
-
-    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
-        result = await chat_service_with_db.generate_response(
-            [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "type": "image",
-                            "attachment_id": 123,
-                        }
-                    ],
-                }
-            ],
-            save_to_db=False,
-        )
-
-    assert result["message"] == "Recovered."
-    mock_llm.aupload_file.assert_awaited_once()
-    second_call_messages = mock_llm.acomplete.call_args_list[1][0][0]
-    user_message = next(message for message in second_call_messages if message.role == "user")
-    assert user_message.parts[0].file_uri == "gs://fresh-file"
 
 
 @pytest.mark.asyncio

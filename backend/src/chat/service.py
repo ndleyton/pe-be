@@ -53,14 +53,6 @@ class WorkoutSummaryByDateArgs(BaseModel):
 
 class ChatService:
     @staticmethod
-    def _is_provider_file_permission_error(exc: Exception) -> bool:
-        message = str(exc).lower()
-        return (
-            "permission_denied" in message
-            and "permission to access the file" in message
-        ) or ("permission_denied" in message and "may not exist" in message)
-
-    @staticmethod
     def _format_optional_notes(label: str, notes: Optional[str]) -> str:
         if not notes:
             return ""
@@ -502,7 +494,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             tool_registry = {tool.name: tool for tool in tools}
             max_tool_iterations = settings.CHAT_MAX_TOOL_ITERATIONS
             iteration_count = 0
-            refreshed_stale_provider_files = False
             last_tool_outputs_texts: List[str] = []
             response_text = ""
             llm_metadata: dict[str, Any] = {}
@@ -519,27 +510,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         response_text = "I completed the requested operation."
                     break
 
-                try:
-                    response = await llm_client.acomplete(llm_messages, tools)
-                except Exception as exc:
-                    if (
-                        not refreshed_stale_provider_files
-                        and self.session
-                        and self._is_provider_file_permission_error(exc)
-                    ):
-                        logger.warning(
-                            "Refreshing stale Gemini file refs user_id=%s conversation_id=%s",
-                            self.user_id,
-                            conversation.id if conversation else None,
-                        )
-                        await self._refresh_message_attachment_uploads(
-                            llm_messages, llm_client
-                        )
-                        refreshed_stale_provider_files = True
-                        iteration_count -= 1
-                        continue
-                    raise
-
+                response = await llm_client.acomplete(llm_messages, tools)
                 llm_metadata = response.metadata
                 llm_messages.append(response.message)
 
@@ -638,8 +609,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 "message": final_message,
                 "conversation_id": conversation.id if conversation else None,
                 "events": [
-                    event.model_dump(mode="json")
-                    for event in self._pending_chat_events
+                    event.model_dump(mode="json") for event in self._pending_chat_events
                 ],
             }
         except Exception as exc:
@@ -791,43 +761,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
         await session.commit()
         return deleted_count
-
-    async def _refresh_message_attachment_uploads(
-        self,
-        messages: List[ConversationMessage],
-        llm_client: LLMClient,
-    ) -> None:
-        refreshed_parts_by_attachment_id: dict[int, ContentPart] = {}
-
-        for message in messages:
-            for part in message.parts:
-                if part.type != "image" or part.attachment_id is None:
-                    continue
-
-                refreshed_part = refreshed_parts_by_attachment_id.get(
-                    part.attachment_id
-                )
-                if refreshed_part is not None:
-                    part.file_uri = refreshed_part.file_uri
-                    part.mime_type = refreshed_part.mime_type
-                    continue
-
-                attachment = await self.get_attachment(part.attachment_id)
-                uploaded = await llm_client.aupload_file(
-                    path=self._attachment_file_path(attachment.storage_key),
-                    mime_type=attachment.mime_type,
-                    display_name=attachment.original_filename,
-                )
-                attachment = await update_chat_attachment_provider_ref(
-                    self.session,
-                    attachment,
-                    provider_file_name=uploaded.name,
-                    provider_file_uri=uploaded.uri,
-                )
-
-                part.file_uri = attachment.provider_file_uri
-                part.mime_type = attachment.mime_type
-                refreshed_parts_by_attachment_id[part.attachment_id] = part
 
     async def _build_conversation_messages(
         self,
