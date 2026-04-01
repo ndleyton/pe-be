@@ -53,6 +53,13 @@ test.describe("Exercise Type Carousel Aspect Ratio", () => {
     await page.setViewportSize({ width: 1200, height: 900 });
 
     // Navigate directly to the details page
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     await page.goto(`/exercise-types/${id}`);
 
     const container = page.getByTestId("exercise-carousel-container");

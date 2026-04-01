@@ -13,6 +13,13 @@ test.describe("Intensity Input", () => {
   test("allows entering decimal intensity values without losing formatting", async ({
     page,
   }) => {
+    await page.route("**/auth/session", (route) => {
+      route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: "Not authenticated" }),
+      });
+    });
+
     await page.goto("/workouts");
     await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL("/workouts");
