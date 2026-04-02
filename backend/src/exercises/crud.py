@@ -101,10 +101,18 @@ def _build_paginated_exercise_types_response(
     )
 
 
-def _serialize_numeric(value: Decimal) -> int | float:
-    if value == value.to_integral_value():
+def _serialize_numeric(value: Decimal | int | float) -> int | float:
+    if isinstance(value, Decimal):
+        if value == value.to_integral_value():
+            return int(value)
+        return float(value)
+
+    if isinstance(value, int):
+        return value
+
+    if value.is_integer():
         return int(value)
-    return float(value)
+    return value
 
 
 def _get_stats_intensity_value(
@@ -694,16 +702,19 @@ async def get_exercise_type_stats(
         total_volume = sum(
             (
                 (
-                    _get_stats_intensity_value(
-                        s,
-                        intensity_units_by_id=intensity_units_by_id,
-                        stats_intensity_unit=stats_intensity_unit,
+                    (
+                        _get_stats_intensity_value(
+                            s,
+                            intensity_units_by_id=intensity_units_by_id,
+                            stats_intensity_unit=stats_intensity_unit,
+                        )
+                        or Decimal("0")
                     )
-                    or Decimal("0")
+                    * (s.reps or 0)
                 )
-                * (s.reps or 0)
-            )
-            for s in last_exercise.exercise_sets
+                for s in last_exercise.exercise_sets
+            ),
+            Decimal("0"),
         )
 
         last_workout = {
