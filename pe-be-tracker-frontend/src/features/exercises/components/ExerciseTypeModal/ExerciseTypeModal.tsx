@@ -155,13 +155,17 @@ const ExerciseTypeModal = ({
       return;
     }
 
+    // Heuristic for default intensity unit
+    const cardioKeywords = ["walking", "running", "cycling", "swimming", "treadmill", "rowing", "elliptical", "jogging"];
+    const isCardio = cardioKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword));
+    const defaultUnitId = isCardio ? 3 : 1; // 3 = km/h, 1 = kg
+
     if (isAuthenticated) {
-      // Create via API for authenticated users
       createMutation.mutate(
         {
           name: trimmedName,
           description: "Custom exercise",
-          default_intensity_unit: 1,
+          default_intensity_unit: defaultUnitId,
         },
         {
           onSettled: () => {
@@ -170,11 +174,10 @@ const ExerciseTypeModal = ({
         },
       );
     } else {
-      // Create via guest context for unauthenticated users
       const newExerciseTypeId = guestActions.addExerciseType({
         name: trimmedName,
         description: "Custom exercise",
-        default_intensity_unit: 1,
+        default_intensity_unit: defaultUnitId,
       });
 
       const newExerciseType = guestData.exerciseTypes.find(
@@ -292,12 +295,13 @@ const ExerciseTypeModal = ({
                     <h4 className="text-foreground font-medium">
                       {exerciseType.name}
                     </h4>
-                    {exerciseType.times_used > 0 && (
+                    {!isAuthenticated && exerciseType.times_used > 0 && (
                       <span className="text-muted-foreground bg-muted rounded-full px-2 py-1 text-xs">
-                        {exerciseType.times_used} time
+                        Used by you {exerciseType.times_used} time
                         {exerciseType.times_used !== 1 ? "s" : ""}
                       </span>
                     )}
+                    {/* TODO: Restore an authenticated usage badge once the API exposes a user-specific count instead of the global times_used value. */}
                   </div>
                   <p className="text-muted-foreground mt-1 text-sm">
                     {truncateWords(exerciseType.description, 4)}
@@ -338,10 +342,10 @@ const ExerciseTypeModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="bg-background flex max-h-[36rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg p-6">
+      <div className="bg-background/95 border-border flex max-h-[36rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg border p-6 shadow-2xl backdrop-blur-md">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-foreground text-lg font-semibold">
             Select Exercise Type

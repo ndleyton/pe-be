@@ -20,7 +20,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
   onExerciseDelete,
 }) => {
   return (
-    <div className="mt-8">
+    <div className="">
       {status === "pending" && <ExerciseListSkeleton />}
 
       {status === "error" && (

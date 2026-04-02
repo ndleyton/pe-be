@@ -75,17 +75,16 @@ test.describe("Guest Mode Workout Creation", () => {
 
     // Verify we are on workouts page
     await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });
-    await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible();
 
-    // Dismiss any overlays that might interfere with the FAB
+    // Dismiss any overlays that might interfere with primary actions
     await dismissOverlays(page);
 
-    // 2. Click the floating action button to show the workout form
-    const fab = page.locator('[data-testid="fab-add-workout"]');
-    await fab.waitFor({ state: "visible", timeout: 10000 });
-
-    // Click FAB to show workout form
-    await fab.click();
+    // 2. Use the empty-state CTA to show the workout form
+    await page.getByRole("button", { name: /start your first workout/i }).click();
 
     // Wait for the workout form to appear
     await page

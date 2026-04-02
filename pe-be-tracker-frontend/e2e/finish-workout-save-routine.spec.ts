@@ -43,13 +43,14 @@ test.describe("Finish workout routine creation", () => {
     await page.goto("/workouts");
     await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/workouts$/);
-    await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible();
 
     await dismissOverlays(page);
 
-    const fab = page.locator('[data-testid="fab-add-workout"]');
-    await fab.waitFor({ state: "visible", timeout: 10000 });
-    await fab.click();
+    await page.getByRole("button", { name: /start your first workout/i }).click();
 
     await page
       .locator('[data-testid="workout-name-heading"]')
@@ -94,7 +95,10 @@ test.describe("Finish workout routine creation", () => {
 
     await page.getByRole("button", { name: "Finish Workout" }).click();
     await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });
-    await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible();
   });
 
   test.afterEach(async ({ page }) => {

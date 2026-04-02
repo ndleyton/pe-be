@@ -25,7 +25,7 @@ export const RoutineQuickStartCard = ({
   );
 
   return (
-    <Card className="hover:bg-accent cursor-pointer transition-colors">
+    <Card className="bg-card/80 border-border hover:bg-accent relative flex min-w-[280px] max-w-[320px] cursor-pointer flex-col overflow-hidden rounded-2xl border shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl backdrop-blur-sm">
       <CardHeader>
         <div className="flex items-center space-x-3">
           <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
@@ -57,18 +57,18 @@ export const RoutineQuickStartCard = ({
             </div>
           )}
         </div>
-        <div className="mt-3 flex gap-2">
+        <div className="mt-4 flex gap-2">
           <Button
             asChild
-            variant="outline"
-            className="flex-1"
+            variant="ghost"
+            className="flex-1 rounded-xl text-xs font-bold"
             size="sm"
           >
             <Link to={`/routines/${routine.id}`}>View Details</Link>
           </Button>
           <Button
             onClick={() => onStartWorkout(routine)}
-            className="flex-1"
+            className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95"
             size="sm"
           >
             Start Workout

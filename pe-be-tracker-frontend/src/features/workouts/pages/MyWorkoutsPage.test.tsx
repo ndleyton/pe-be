@@ -166,8 +166,9 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText(/no workouts yet/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/you haven't logged any workouts yet/i),
+        screen.getByRole("button", { name: /start your first workout/i }),
       ).toBeInTheDocument();
     });
   });
@@ -205,7 +206,7 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("In Progress")).toBeInTheDocument();
+      expect(screen.getAllByText("In Progress").length).toBeGreaterThan(0);
     });
   });
 

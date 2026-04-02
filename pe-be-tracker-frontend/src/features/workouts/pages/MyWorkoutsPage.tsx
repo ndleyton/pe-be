@@ -1,5 +1,6 @@
 import React from "react";
 import axios from "axios";
+import { Dumbbell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import type { Routine } from "@/features/routines/types";
@@ -11,7 +12,7 @@ import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
-import { Button } from "@/shared/components/ui/button";
+import { Button, Card } from "@/shared/components/ui";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 
@@ -129,7 +130,7 @@ const MyWorkoutsPage = () => {
     const errorMessage = getErrorMessage(error);
     return (
       <div className="flex flex-1 items-center justify-center">
-        <div className="text-center">
+        <Card className="bg-card/80 border-border overflow-hidden rounded-2xl border shadow-xl backdrop-blur-sm p-8 text-center">
           <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
             <span className="text-destructive text-2xl">⚠</span>
           </div>
@@ -138,7 +139,7 @@ const MyWorkoutsPage = () => {
           <p className="text-muted-foreground text-sm">
             Click the logo above to return to login
           </p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -153,19 +154,24 @@ const MyWorkoutsPage = () => {
     <>
       <div className="mx-auto max-w-5xl p-8 text-center">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold">Workouts</h1>
+          <div className="mb-10 text-center">
+            <h1 className="text-foreground text-4xl font-extrabold tracking-tight lg:text-5xl">
+              Workouts
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Track your progress and crush your goals.
+            </p>
           </div>
           <WeekTracking
             workouts={workouts}
             loading={listStatus === "pending"}
-            className="mb-6"
+            className="mb-10"
           />
 
           <RoutinesSection onStartWorkout={handleStartWorkoutFromRoutine} />
 
           {showWorkoutForm && (
-            <div className="mb-6">
+            <div className="bg-card/50 border-border mb-8 overflow-hidden rounded-2xl border p-6 shadow-xl backdrop-blur-sm">
               <WorkoutForm
                 routine={selectedRoutine}
                 onWorkoutCreated={(workoutId) => {
@@ -188,7 +194,7 @@ const MyWorkoutsPage = () => {
                 }}
                 variant="ghost"
                 size="sm"
-                className="mt-2"
+                className="mt-4 w-full"
               >
                 Cancel
               </Button>
@@ -198,14 +204,24 @@ const MyWorkoutsPage = () => {
           {listStatus === "pending" ? (
             <WorkoutListSkeleton />
           ) : showEmpty ? (
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">
-                You haven't logged any workouts yet.
+            <div className="bg-card/30 border-border py-16 text-center border-2 border-dashed rounded-3xl backdrop-blur-sm">
+              <div className="bg-primary/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full mb-6">
+                <Dumbbell className="text-primary h-10 w-10 opacity-40" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">No workouts yet</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto px-6">
+                You haven't logged any workouts. Ready to start your fitness journey?
               </p>
+              <Button
+                onClick={() => setShowWorkoutForm(true)}
+                className="mt-8 px-8 py-6 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+              >
+                Start Your First Workout
+              </Button>
             </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="space-y-4 pt-4">
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
                     key={workout.id}
