@@ -417,7 +417,10 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
         monkeypatch.setattr(
             "src.admin.exercise_image_service.generate_reference_image_variant",
             AsyncMock(
-                side_effect=lambda *, context, option, source_image_url: ExerciseImageResult(
+                side_effect=lambda *,
+                context,
+                option,
+                source_image_url: ExerciseImageResult(
                     model="test-model",
                     mime_type="image/png",
                     base64_data="dGVzdA==",
@@ -441,12 +444,16 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
         response = await generate_reference_image_options(db_session, exercise_type)
 
         candidates = (
-            await db_session.execute(
-                select(ExerciseImageCandidate)
-                .where(ExerciseImageCandidate.exercise_type_id == exercise_type.id)
-                .order_by(ExerciseImageCandidate.option_key.asc())
+            (
+                await db_session.execute(
+                    select(ExerciseImageCandidate)
+                    .where(ExerciseImageCandidate.exercise_type_id == exercise_type.id)
+                    .order_by(ExerciseImageCandidate.option_key.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(candidates) == len(REFERENCE_OPTION_SPECS)
         assert len([c for c in candidates if c.generation_key == generation_key]) == 1
