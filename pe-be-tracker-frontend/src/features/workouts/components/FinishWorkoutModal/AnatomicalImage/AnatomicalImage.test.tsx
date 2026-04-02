@@ -54,4 +54,25 @@ describe("AnatomicalImage", () => {
       expect(container).toBeInTheDocument();
     });
   });
+
+  it("ignores non-anatomical summary groups without warning", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(
+      <AnatomicalImage
+        muscleGroupSummary={[{ name: "General", setCount: 3 }]}
+      />,
+    );
+
+    await waitFor(() => {
+      const container = document.querySelector(".anatomical-image-container");
+      expect(container).toBeInTheDocument();
+    });
+
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      'No muscle mapping found for group: "General"',
+    );
+
+    warnSpy.mockRestore();
+  });
 });

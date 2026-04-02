@@ -60,22 +60,22 @@ const AnatomicalImage = ({ muscleGroupSummary }: AnatomicalImageProps) => {
 
     // Apply intensity-based color only to worked-out muscle groups
     muscleGroupSummary.forEach((group) => {
+      const svgMuscleIds = MUSCLE_GROUP_MAPPING[group.name];
+      if (!svgMuscleIds) {
+        return;
+      }
+
       const intensity = maxSets > 0 ? group.setCount / maxSets : 0;
       const color = getMuscleGroupColor(intensity);
 
-      const svgMuscleIds = MUSCLE_GROUP_MAPPING[group.name];
-      if (svgMuscleIds) {
-        svgMuscleIds.forEach((id) => {
-          const musclePath = svgElement.querySelector(`#${id}`) as SVGElement;
-          if (musclePath && musclePath.style) {
-            musclePath.style.fill = color;
-          } else {
-            console.warn(`  - SVG element #${id} not found in anatomy SVG`);
-          }
-        });
-      } else {
-        console.warn(`No muscle mapping found for group: "${group.name}"`);
-      }
+      svgMuscleIds.forEach((id) => {
+        const musclePath = svgElement.querySelector(`#${id}`) as SVGElement;
+        if (musclePath && musclePath.style) {
+          musclePath.style.fill = color;
+        } else {
+          console.warn(`  - SVG element #${id} not found in anatomy SVG`);
+        }
+      });
     });
 
     // Ensure the SVG has proper styling for responsive behavior
