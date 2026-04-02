@@ -196,9 +196,7 @@ def _option_specs() -> tuple[AdminImageOptionSpec, ...]:
     )
 
 
-def _expected_candidate_count(
-    *, pipeline_key: str, reference_images: list[str]
-) -> int:
+def _expected_candidate_count(*, pipeline_key: str, reference_images: list[str]) -> int:
     if pipeline_key == REFERENCE_PIPELINE_KEY:
         return len(reference_images)
     if pipeline_key == PHASE_FALLBACK_PIPELINE_KEY:
