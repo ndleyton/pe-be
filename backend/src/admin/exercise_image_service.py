@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.schemas import (
@@ -308,6 +310,7 @@ async def generate_reference_image_options(
             ]
         )
 
+        new_candidate_rows: list[dict[str, object]] = []
         for (
             source_image_index,
             source_image_url,
@@ -318,6 +321,7 @@ async def generate_reference_image_options(
         ), result in zip(pending_jobs, results, strict=True):
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
+            now = datetime.now(timezone.utc)
 
             if existing:
                 existing.option_label = option.label
@@ -329,24 +333,51 @@ async def generate_reference_image_options(
                 existing.prompt_summary = result.prompt_summary
                 existing.mime_type = result.mime_type
                 existing.storage_path = storage_path
+                existing.updated_at = now
             else:
-                session.add(
-                    ExerciseImageCandidate(
-                        exercise_type_id=exercise_type.id,
-                        generation_key=generation_key,
-                        pipeline_key=REFERENCE_PIPELINE_KEY,
-                        option_key=option.key,
-                        option_label=option.label,
-                        option_description=option.description,
-                        source_image_index=source_image_index,
-                        source_image_url=source_image_url,
-                        model_name=result.model,
-                        prompt_version=REFERENCE_PROMPT_VERSION,
-                        prompt_summary=result.prompt_summary,
-                        mime_type=result.mime_type,
-                        storage_path=storage_path,
-                    )
+                new_candidate_rows.append(
+                    {
+                        "exercise_type_id": exercise_type.id,
+                        "generation_key": generation_key,
+                        "pipeline_key": REFERENCE_PIPELINE_KEY,
+                        "option_key": option.key,
+                        "option_label": option.label,
+                        "option_description": option.description,
+                        "source_image_index": source_image_index,
+                        "source_image_url": source_image_url,
+                        "model_name": result.model,
+                        "prompt_version": REFERENCE_PROMPT_VERSION,
+                        "prompt_summary": result.prompt_summary,
+                        "mime_type": result.mime_type,
+                        "storage_path": storage_path,
+                        "created_at": now,
+                        "updated_at": now,
+                    }
                 )
+
+        if new_candidate_rows:
+            insert_stmt = insert(ExerciseImageCandidate).values(new_candidate_rows)
+            excluded = insert_stmt.excluded
+            await session.execute(
+                insert_stmt.on_conflict_do_update(
+                    index_elements=[ExerciseImageCandidate.generation_key],
+                    set_={
+                        "exercise_type_id": excluded.exercise_type_id,
+                        "pipeline_key": excluded.pipeline_key,
+                        "option_key": excluded.option_key,
+                        "option_label": excluded.option_label,
+                        "option_description": excluded.option_description,
+                        "source_image_index": excluded.source_image_index,
+                        "source_image_url": excluded.source_image_url,
+                        "model_name": excluded.model_name,
+                        "prompt_version": excluded.prompt_version,
+                        "prompt_summary": excluded.prompt_summary,
+                        "mime_type": excluded.mime_type,
+                        "storage_path": excluded.storage_path,
+                        "updated_at": excluded.updated_at,
+                    },
+                )
+            )
 
     await session.commit()
     await session.refresh(exercise_type)
