@@ -39,7 +39,10 @@ test.describe("404 recovery", () => {
     await mainContent.getByRole("link", { name: /go to workouts/i }).click();
     await expect(page).toHaveURL(/\/workouts$/);
     await expect(
-      page.locator("#main-content").getByRole("heading", { name: /workouts/i }),
+      page.locator("#main-content").getByRole("heading", {
+        name: "Workouts",
+        exact: true,
+      }),
     ).toBeVisible();
   });
 

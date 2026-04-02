@@ -63,6 +63,10 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
   const isPostHogConfigured =
     !config.isTest && config.posthogApiKey && config.posthogHost;
+  const isAutomatedBrowser =
+    typeof navigator !== "undefined" && navigator.webdriver;
+  const shouldShowReactQueryDevtools =
+    config.isDevelopment && !config.isTest && !isAutomatedBrowser;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -89,7 +93,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
           <StoreInitializer>{children}</StoreInitializer>
         </ErrorBoundary>
       )}
-      {config.isDevelopment && !config.isTest && (
+      {shouldShowReactQueryDevtools && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}
     </QueryClientProvider>

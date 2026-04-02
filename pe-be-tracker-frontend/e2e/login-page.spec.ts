@@ -23,7 +23,10 @@ test.describe("Guest Mode Landing", () => {
     await page.waitForLoadState("networkidle");
 
     // Wait for the workouts page heading
-    await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible({
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible({
       timeout: 10000,
     });
 

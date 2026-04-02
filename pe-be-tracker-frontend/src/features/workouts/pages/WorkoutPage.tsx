@@ -78,6 +78,10 @@ const getScrollContainer = (element: HTMLElement | null): HTMLElement | Window =
   return window;
 };
 
+const isElementScrollContainer = (
+  scrollContainer: HTMLElement | Window,
+): scrollContainer is HTMLElement => scrollContainer !== window;
+
 const scrollContainerTo = (
   scrollContainer: HTMLElement | Window,
   top: number,
@@ -144,7 +148,15 @@ const WorkoutPage = () => {
         return;
       }
 
-      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, behavior);
+      if (!isElementScrollContainer(scrollContainer)) {
+        return;
+      }
+
+      scrollContainerTo(
+        scrollContainer,
+        scrollContainer.scrollHeight,
+        behavior,
+      );
     });
   };
 

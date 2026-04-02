@@ -699,8 +699,8 @@ async def get_exercise_type_stats(
             ),
             default=Decimal("0"),
         )
-        total_volume = sum(
-            (
+        total_volume = (
+            sum(
                 (
                     (
                         _get_stats_intensity_value(
