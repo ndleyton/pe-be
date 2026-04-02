@@ -16,6 +16,7 @@ def test_build_prompt_full_context():
     context = {
         "name": "Squat",
         "description": "A lower body exercise",
+        "equipment": "Barbell",
         "primary_muscles": ["Quads"],
         "secondary_muscles": ["Glutes", "Hamstrings"],
     }
@@ -23,6 +24,7 @@ def test_build_prompt_full_context():
     assert "Exercise: Squat." in prompt
     assert "Phase: eccentric / bottom." in prompt
     assert "Primary: Quads; Secondary: Glutes, Hamstrings" in prompt
+    assert "Equipment: Barbell." in prompt
     assert "Description: A lower body exercise" in prompt
     assert "Render the Squat at the eccentric / bottom position." in prompt
 
@@ -31,6 +33,7 @@ def test_build_prompt_empty_context():
     prompt = _build_prompt({}, "start")
     assert "Exercise: Exercise." in prompt
     assert "Primary: (unspecified)" in prompt
+    assert "Equipment:" not in prompt
     assert "Description: No extra description provided." in prompt
 
 

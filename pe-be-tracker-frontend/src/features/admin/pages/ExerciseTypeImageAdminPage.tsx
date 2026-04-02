@@ -69,6 +69,11 @@ const OptionCard = ({
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             {option.label}
+            {option.option_source === "phase_generated" ? (
+              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                No reference source
+              </span>
+            ) : null}
             {option.is_current ? (
               <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
                 Live
@@ -180,6 +185,16 @@ const ExerciseTypeImageAdminPage = () => {
   }
 
   const data = optionsQuery.data;
+  const hasReferenceSource = data.supports_revert_to_reference;
+  const headerDescription = hasReferenceSource
+    ? "Generate reference-based replacements, compare option sets, and choose which set becomes the live exercise imagery."
+    : "This exercise has no preserved reference images. Generating options will create a fallback phase pair for the start/eccentric and end/concentric positions.";
+  const generationErrorDescription = hasReferenceSource
+    ? "The reference pipeline could not create image options for this exercise."
+    : "The phase fallback pipeline could not create images for this exercise.";
+  const emptyOptionsDescription = hasReferenceSource
+    ? "Run the reference pipeline to create candidate replacements from the preserved source images."
+    : "Generate a fallback phase pair to create the first image set for this exercise.";
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6 lg:p-8">
@@ -196,8 +211,7 @@ const ExerciseTypeImageAdminPage = () => {
               {data.exercise_name} image options
             </h1>
             <p className="text-muted-foreground max-w-2xl text-sm">
-              Generate reference-based replacements, compare option sets, and choose which
-              set becomes the live exercise imagery.
+              {headerDescription}
             </p>
           </div>
         </div>
@@ -223,9 +237,7 @@ const ExerciseTypeImageAdminPage = () => {
       {generateMutation.isError ? (
         <Alert variant="destructive">
           <AlertTitle>Generation failed</AlertTitle>
-          <AlertDescription>
-            The reference pipeline could not create image options for this exercise.
-          </AlertDescription>
+          <AlertDescription>{generationErrorDescription}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -250,27 +262,39 @@ const ExerciseTypeImageAdminPage = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reference source set</CardTitle>
-          <CardDescription>
-            This source set is preserved so regenerated options stay anchored to the original
-            library imagery even after you switch the live set.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ImageGrid title="Reference images" images={data.reference_images} />
-        </CardContent>
-        <CardFooter>
-          <Button
-            variant="outline"
-            onClick={() => applyMutation.mutate({ use_reference: true })}
-            disabled={applyMutation.isPending}
-          >
-            Revert live set to reference
-          </Button>
-        </CardFooter>
-      </Card>
+      {hasReferenceSource ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reference source set</CardTitle>
+            <CardDescription>
+              This source set is preserved so regenerated options stay anchored to the original
+              library imagery even after you switch the live set.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ImageGrid title="Reference images" images={data.reference_images} />
+          </CardContent>
+          <CardFooter>
+            <Button
+              variant="outline"
+              onClick={() => applyMutation.mutate({ use_reference: true })}
+              disabled={applyMutation.isPending}
+            >
+              Revert live set to reference
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>No reference source set</CardTitle>
+            <CardDescription>
+              This exercise does not have preserved source imagery yet. The fallback generator
+              creates a two-image phase pair instead of redrawing an existing set.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {data.options.length > 0 ? (
         <div className="space-y-4">
@@ -296,10 +320,7 @@ const ExerciseTypeImageAdminPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>No generated options yet</CardTitle>
-            <CardDescription>
-              Run the reference pipeline to create candidate replacements from the preserved
-              source images.
-            </CardDescription>
+            <CardDescription>{emptyOptionsDescription}</CardDescription>
           </CardHeader>
         </Card>
       )}

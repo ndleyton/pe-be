@@ -78,6 +78,7 @@ class ReferenceImagePrepared:
 def _build_prompt(context: Dict, phase_label: str) -> str:
     name = context.get("name", "Exercise")
     description = (context.get("description") or "").strip()
+    equipment = (context.get("equipment") or "").strip()
     primary: List[str] = context.get("primary_muscles") or []
     secondary: List[str] = context.get("secondary_muscles") or []
 
@@ -95,11 +96,13 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
     )
 
     phase_directive = f"Render the {name} at the {phase_label} position."
+    equipment_line = f"Equipment: {equipment}.\n" if equipment else ""
 
     return (
         f"Exercise: {name}.\n"
         f"Phase: {phase_label}.\n"
         f"Muscles: {muscles_line}.\n"
+        f"{equipment_line}"
         f"Description: {description or 'No extra description provided.'}\n\n"
         f"{style}\n"
         f"{phase_directive}\n"
