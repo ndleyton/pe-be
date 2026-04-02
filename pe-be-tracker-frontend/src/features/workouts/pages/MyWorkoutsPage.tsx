@@ -221,7 +221,7 @@ const MyWorkoutsPage = () => {
             </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="space-y-4 pt-4">
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
                     key={workout.id}

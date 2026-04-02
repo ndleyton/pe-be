@@ -155,13 +155,17 @@ const ExerciseTypeModal = ({
       return;
     }
 
+    // Heuristic for default intensity unit
+    const cardioKeywords = ["walking", "running", "cycling", "swimming", "treadmill", "rowing", "elliptical", "jogging"];
+    const isCardio = cardioKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword));
+    const defaultUnitId = isCardio ? 3 : 1; // 3 = km/h, 1 = kg
+
     if (isAuthenticated) {
-      // Create via API for authenticated users
       createMutation.mutate(
         {
           name: trimmedName,
           description: "Custom exercise",
-          default_intensity_unit: 1,
+          default_intensity_unit: defaultUnitId,
         },
         {
           onSettled: () => {
@@ -170,11 +174,10 @@ const ExerciseTypeModal = ({
         },
       );
     } else {
-      // Create via guest context for unauthenticated users
       const newExerciseTypeId = guestActions.addExerciseType({
         name: trimmedName,
         description: "Custom exercise",
-        default_intensity_unit: 1,
+        default_intensity_unit: defaultUnitId,
       });
 
       const newExerciseType = guestData.exerciseTypes.find(

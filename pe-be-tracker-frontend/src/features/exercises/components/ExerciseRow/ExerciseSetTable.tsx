@@ -99,9 +99,8 @@ export const ExerciseSetTable = ({
         return (
           <div
             key={set.id}
-            className={`grid items-center gap-2 rounded-lg p-2.5 sm:gap-4 transition-all duration-200 ${
-              set.done ? "bg-done/10 border-done/20 shadow-inner" : "bg-muted/50 border-transparent shadow-sm"
-            } border`}
+            className={`grid items-center gap-2 rounded-lg p-2.5 sm:gap-4 transition-all duration-200 ${set.done ? "bg-done/10 border-done/20 shadow-inner" : "bg-muted/50 border-transparent shadow-sm"
+              } border`}
             style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
           >
             <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
@@ -209,16 +208,15 @@ export const ExerciseSetTable = ({
 
             <div className="flex justify-end">
               <Button
-                variant={set.done ? "default" : "outline"}
+                variant={set.done ? "default" : "ghost"}
                 size="sm"
-                className={`group h-10 w-10 rounded-xl transition-all duration-300 ${
-                  set.done
-                    ? "bg-done text-done-foreground shadow-lg scale-110 ring-2 ring-done/20"
-                    : "border-border hover:border-done/50 text-muted-foreground border bg-muted/40 hover:bg-muted/60"
-                }`}
+                className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
+                  ? "bg-done text-done-foreground shadow-lg scale-110 ring-4 ring-done/20"
+                  : "border-foreground/50 hover:border-done text-done/60 border-2 bg-done/5 hover:bg-done/40"
+                  }`}
                 onClick={() => onToggleSetCompletion(set.id)}
               >
-                <Check className={`h-6 w-6 transition-all duration-300 ${set.done ? "scale-110 opacity-100" : "scale-90 opacity-10 group-hover:opacity-100"}`} />
+                <Check className={`h-6 w-6 transition-all duration-300 ${set.done ? "scale-110 opacity-100" : "scale-90 opacity-50 group-hover:opacity-100"}`} />
               </Button>
             </div>
 

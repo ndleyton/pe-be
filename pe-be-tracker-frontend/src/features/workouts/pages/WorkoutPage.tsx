@@ -628,23 +628,23 @@ const WorkoutPage = () => {
             )}
           </h2>
         </div>
-        {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
-          <div className="bg-card/80 border-border mb-4 rounded-lg border p-4 text-left shadow-sm backdrop-blur-sm">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-lg">✨</span>
-              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
-                Workout Summary
-              </h4>
-            </div>
-            <p className="text-foreground text-sm leading-relaxed italic">
-              &ldquo;{serverWorkout.recap}&rdquo;
-            </p>
-          </div>
-        )}
         <div
           ref={exerciseListContainerRef}
-          className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+          className="space-y-6 max-h-[75vh] overflow-y-auto pr-2"
         >
+          {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
+            <div className="bg-card/80 border-border rounded-xl border p-4 text-left shadow-sm backdrop-blur-sm">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-lg">✨</span>
+                <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                  Workout Summary
+                </h4>
+              </div>
+              <p className="text-foreground text-sm leading-relaxed italic">
+                &ldquo;{serverWorkout.recap}&rdquo;
+              </p>
+            </div>
+          )}
           <ExerciseList
             exercises={exercises}
             status={listStatus}
