@@ -22,8 +22,10 @@ const MyWorkoutsPage = () => {
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authLoading = useAuthStore((state) => state.loading);
+  const authInitialized = useAuthStore((state) => state.initialized);
   const setUser = useAuthStore((state) => state.setUser);
   const guestData = useGuestStore();
+  const guestHydrated = useGuestStore((state) => state.hydrated);
   const handleStartWorkoutFromRoutine = useStartWorkoutFromRoutine();
 
   const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
@@ -36,36 +38,42 @@ const MyWorkoutsPage = () => {
   } = useQuery({
     queryKey: ["workouts"],
     queryFn: () => getMyWorkouts(undefined, 100),
-    enabled: isAuthenticated,
+    enabled: authInitialized && !authLoading && isAuthenticated,
   });
+
+  const authResolved = authInitialized && !authLoading;
 
   // Use guest data if not authenticated, server data if authenticated
   const workouts: Workout[] = React.useMemo(() => {
-      if (isAuthenticated) {
+    if (!authResolved) {
+      return [];
+    }
+
+    if (isAuthenticated) {
       return Array.isArray(serverWorkoutsResponse?.data)
         ? serverWorkoutsResponse.data
         : [];
-    } else {
-      const guestWorkouts = Array.isArray(guestData?.workouts)
-        ? guestData.workouts
-        : [];
-      return guestWorkouts.map((gw) => ({
-        id: gw.id,
-        name: gw.name,
-        notes: gw.notes,
-        start_time: gw.start_time,
-        end_time: gw.end_time,
-        workout_type_id: Number(gw.workout_type_id),
-        created_at: gw.created_at || getCurrentUTCTimestamp(),
-        updated_at: gw.updated_at || getCurrentUTCTimestamp(),
-      }));
     }
-  }, [isAuthenticated, serverWorkoutsResponse, guestData?.workouts]);
 
-  const listPending = isAuthenticated && (authLoading || isPending);
+    const guestWorkouts = Array.isArray(guestData?.workouts)
+      ? guestData.workouts
+      : [];
+
+    return guestWorkouts.map((gw) => ({
+      id: gw.id,
+      name: gw.name,
+      notes: gw.notes,
+      start_time: gw.start_time,
+      end_time: gw.end_time,
+      workout_type_id: Number(gw.workout_type_id),
+      created_at: gw.created_at || getCurrentUTCTimestamp(),
+      updated_at: gw.updated_at || getCurrentUTCTimestamp(),
+    }));
+  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestData?.workouts]);
+
+  const listPending =
+    !authResolved || (isAuthenticated ? isPending : !guestHydrated);
   const listStatus: "pending" | "success" = listPending ? "pending" : "success";
-  // Gate empty-state for guests until guest store hydration completes
-  const guestHydrated = useGuestStore((state) => state.hydrated);
 
   const getErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -115,15 +123,11 @@ const MyWorkoutsPage = () => {
     (error?.response?.status === 401 || error?.response?.status === 403);
 
   const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
-  // Decide if empty-state should be shown in a readable way
-  const showEmpty = React.useMemo(() => {
-    // Only after list has finished initial loading
-    if (listStatus !== "success") return false;
-    // Only if there are truly no workouts to render
-    if (validWorkouts.length > 0) return false;
-    // Authenticated users are ready; guests must wait for guest store hydration
-    return isAuthenticated || guestHydrated;
-  }, [listStatus, validWorkouts.length, isAuthenticated, guestHydrated]);
+  const showGuestEmptyState =
+    listStatus === "success" &&
+    !isAuthenticated &&
+    guestHydrated &&
+    validWorkouts.length === 0;
 
   // Early return for auth errors (after all hooks are called)
   if (isAuthenticated && (sessionExpired || isAuthError)) {
@@ -152,9 +156,9 @@ const MyWorkoutsPage = () => {
 
   return (
     <>
-      <div className="mx-auto max-w-5xl p-8 text-center">
+      <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-10 text-center">
+          <div className="mb-8 text-center sm:mb-10">
             <h1 className="text-foreground text-4xl font-extrabold tracking-tight lg:text-5xl">
               Workouts
             </h1>
@@ -171,7 +175,7 @@ const MyWorkoutsPage = () => {
           <RoutinesSection onStartWorkout={handleStartWorkoutFromRoutine} />
 
           {showWorkoutForm && (
-            <div className="bg-card/50 border-border mb-8 overflow-hidden rounded-2xl border p-6 shadow-xl backdrop-blur-sm">
+            <div className="bg-card/50 border-border mb-8 overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm sm:p-6">
               <WorkoutForm
                 routine={selectedRoutine}
                 onWorkoutCreated={(workoutId) => {
@@ -203,7 +207,7 @@ const MyWorkoutsPage = () => {
 
           {listStatus === "pending" ? (
             <WorkoutListSkeleton />
-          ) : showEmpty ? (
+          ) : showGuestEmptyState ? (
             <div className="bg-card/30 border-border py-16 text-center border-2 border-dashed rounded-3xl backdrop-blur-sm">
               <div className="bg-primary/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full mb-6">
                 <Dumbbell className="text-primary h-10 w-10 opacity-40" />
@@ -221,7 +225,7 @@ const MyWorkoutsPage = () => {
             </div>
           ) : (
             <>
-              <div className="space-y-4 pt-4">
+              <div className="space-y-3 pt-4 sm:space-y-4">
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
                     key={workout.id}

@@ -12,12 +12,56 @@ import api from "@/shared/api/client";
 import MyWorkoutsPage from "./MyWorkoutsPage";
 import { getMyWorkouts } from "@/features/workouts";
 
+const mockAuthState = {
+  isAuthenticated: true,
+  user: { id: 1, email: "test@example.com" },
+  loading: false,
+  initialized: true,
+  setUser: vi.fn(),
+};
+
+const mockGuestState = {
+  hydrated: true,
+  workouts: [],
+  routines: [],
+  exerciseTypes: [],
+  workoutTypes: [],
+  hasAttemptedSync: false,
+  addWorkout: vi.fn(),
+  updateWorkout: vi.fn(),
+  deleteWorkout: vi.fn(),
+  addExercise: vi.fn(),
+  updateExercise: vi.fn(),
+  deleteExercise: vi.fn(),
+  addExerciseSet: vi.fn(),
+  updateExerciseSet: vi.fn(),
+  deleteExerciseSet: vi.fn(),
+  addExerciseType: vi.fn(),
+  updateExerciseType: vi.fn(),
+  addWorkoutType: vi.fn(),
+  updateWorkoutType: vi.fn(),
+  addRoutine: vi.fn(),
+  deleteRoutine: vi.fn(),
+  createRoutineFromWorkout: vi.fn(),
+  createExercisesFromRoutine: vi.fn(),
+  clear: vi.fn(),
+  getWorkout: vi.fn(),
+  getExercise: vi.fn(),
+  syncWithServer: vi.fn(),
+};
+
 vi.mock("@/features/workouts/components", () => ({
   WorkoutForm: () => <div data-testid="workout-form">Mock Workout Form</div>,
 }));
 
 vi.mock("@/features/workouts", () => ({
   getMyWorkouts: vi.fn(),
+}));
+
+vi.mock("@/shared/components/skeletons/WorkoutListSkeleton", () => ({
+  WorkoutListSkeleton: () => (
+    <div data-testid="workout-list-skeleton">Loading workouts</div>
+  ),
 }));
 
 // Mock API client
@@ -40,47 +84,12 @@ vi.mock("axios", async () => {
 });
 
 vi.mock("@/stores", () => ({
-  useAuthStore: vi.fn((selector) => {
-    const mockState = {
-      isAuthenticated: true,
-      user: { id: 1, email: "test@example.com" },
-      loading: false,
-      initialized: true,
-    };
-    return selector ? selector(mockState) : mockState;
-  }),
-  useGuestStore: vi.fn((selector) => {
-    const mockState = {
-      hydrated: true,
-      workouts: [],
-      routines: [],
-      exerciseTypes: [],
-      workoutTypes: [],
-      hasAttemptedSync: false,
-      addWorkout: vi.fn(),
-      updateWorkout: vi.fn(),
-      deleteWorkout: vi.fn(),
-      addExercise: vi.fn(),
-      updateExercise: vi.fn(),
-      deleteExercise: vi.fn(),
-      addExerciseSet: vi.fn(),
-      updateExerciseSet: vi.fn(),
-      deleteExerciseSet: vi.fn(),
-      addExerciseType: vi.fn(),
-      updateExerciseType: vi.fn(),
-      addWorkoutType: vi.fn(),
-      updateWorkoutType: vi.fn(),
-      addRoutine: vi.fn(),
-      deleteRoutine: vi.fn(),
-      createRoutineFromWorkout: vi.fn(),
-      createExercisesFromRoutine: vi.fn(),
-      clear: vi.fn(),
-      getWorkout: vi.fn(),
-      getExercise: vi.fn(),
-      syncWithServer: vi.fn(),
-    };
-    return selector ? selector(mockState) : mockState;
-  }),
+  useAuthStore: vi.fn((selector) =>
+    selector ? selector(mockAuthState) : mockAuthState,
+  ),
+  useGuestStore: vi.fn((selector) =>
+    selector ? selector(mockGuestState) : mockGuestState,
+  ),
 }));
 
 vi.mock("@/shared/components/FloatingActionButton", () => ({
@@ -148,6 +157,42 @@ const mockWorkouts = [
 describe("MyWorkoutsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(mockAuthState, {
+      isAuthenticated: true,
+      user: { id: 1, email: "test@example.com" },
+      loading: false,
+      initialized: true,
+      setUser: vi.fn(),
+    });
+    Object.assign(mockGuestState, {
+      hydrated: true,
+      workouts: [],
+      routines: [],
+      exerciseTypes: [],
+      workoutTypes: [],
+      hasAttemptedSync: false,
+      addWorkout: vi.fn(),
+      updateWorkout: vi.fn(),
+      deleteWorkout: vi.fn(),
+      addExercise: vi.fn(),
+      updateExercise: vi.fn(),
+      deleteExercise: vi.fn(),
+      addExerciseSet: vi.fn(),
+      updateExerciseSet: vi.fn(),
+      deleteExerciseSet: vi.fn(),
+      addExerciseType: vi.fn(),
+      updateExerciseType: vi.fn(),
+      addWorkoutType: vi.fn(),
+      updateWorkoutType: vi.fn(),
+      addRoutine: vi.fn(),
+      deleteRoutine: vi.fn(),
+      createRoutineFromWorkout: vi.fn(),
+      createExercisesFromRoutine: vi.fn(),
+      clear: vi.fn(),
+      getWorkout: vi.fn(),
+      getExercise: vi.fn(),
+      syncWithServer: vi.fn(),
+    });
     mockGetMyWorkouts.mockResolvedValue(makePaginatedWorkouts(mockWorkouts) as any);
   });
 
@@ -161,8 +206,14 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
-  it("shows message when no workouts exist", async () => {
-    mockGetMyWorkouts.mockResolvedValue(makePaginatedWorkouts([]) as any);
+  it("shows the guest empty state after auth resolves", async () => {
+    Object.assign(mockAuthState, {
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+      initialized: true,
+    });
+
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
@@ -170,6 +221,24 @@ describe("MyWorkoutsPage", () => {
       expect(
         screen.getByRole("button", { name: /start your first workout/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the loading shell while auth is still resolving", async () => {
+    Object.assign(mockAuthState, {
+      isAuthenticated: false,
+      user: null,
+      loading: true,
+      initialized: false,
+    });
+
+    render(<MyWorkoutsPage />);
+
+    expect(screen.getByTestId("workout-list-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText(/no workouts yet/i)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).not.toHaveBeenCalled();
     });
   });
 

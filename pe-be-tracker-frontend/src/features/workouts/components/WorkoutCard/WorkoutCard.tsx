@@ -21,15 +21,15 @@ const WorkoutCard = ({
       onClick={() => onClick(workout.id)}
       onMouseEnter={onMouseEnter}
       onTouchStart={onTouchStart}
-      className="bg-card/80 hover:bg-accent relative cursor-pointer items-center justify-between overflow-hidden rounded-xl p-5 transition-all duration-300 shadow-sm hover:shadow-xl backdrop-blur-sm group"
+      className="bg-card/80 hover:bg-accent group relative cursor-pointer overflow-hidden rounded-xl p-4 pr-10 text-left shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-xl sm:p-5 sm:pr-12"
     >
-      <div className="flex items-center space-x-4">
-        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl transition-colors group-hover:bg-primary/20">
-          <Dumbbell className="text-primary h-6 w-6" />
+      <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+        <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors group-hover:bg-primary/20 sm:h-12 sm:w-12 sm:rounded-xl">
+          <Dumbbell className="text-primary h-5 w-5 sm:h-6 sm:w-6" />
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-foreground text-lg font-bold">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-foreground min-w-0 truncate text-base font-bold sm:text-lg">
               {workout.name || "Traditional Strength Training"}
             </h3>
             {!workout.end_time && (
@@ -38,7 +38,7 @@ const WorkoutCard = ({
               </span>
             )}
           </div>
-          <div className="mt-1.5 flex items-center gap-3">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <div className="flex items-center gap-1.5">
               <span className="text-primary font-mono text-sm font-bold">
                 {
@@ -57,7 +57,7 @@ const WorkoutCard = ({
           </div>
         </div>
       </div>
-      <div className="text-muted-foreground/50 absolute right-4 top-1/2 -translate-y-1/2">
+      <div className="text-muted-foreground/50 absolute right-3 top-1/2 -translate-y-1/2 sm:right-4">
         <svg
           className="h-5 w-5"
           fill="none"
