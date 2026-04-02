@@ -16,6 +16,9 @@ const WorkoutCard = ({
   onMouseEnter,
   onTouchStart,
 }: WorkoutCardProps) => {
+  const isInProgress = !workout.end_time;
+  const duration = parseWorkoutDuration(workout.start_time, workout.end_time);
+
   return (
     <div
       onClick={() => onClick(workout.id)}
@@ -32,21 +35,19 @@ const WorkoutCard = ({
             <h3 className="text-foreground min-w-0 truncate text-base font-bold sm:text-lg">
               {workout.name || "Traditional Strength Training"}
             </h3>
-            {!workout.end_time && (
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {isInProgress ? (
               <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider animate-pulse">
                 In Progress
               </span>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-primary font-mono text-sm font-bold">
+                  {duration.durationText}
+                </span>
+              </div>
             )}
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-primary font-mono text-sm font-bold">
-                {
-                  parseWorkoutDuration(workout.start_time, workout.end_time)
-                    .durationText
-                }
-              </span>
-            </div>
             <div className="bg-muted-foreground/20 h-1 w-1 rounded-full" />
             <span className="text-muted-foreground text-xs font-medium">
               {formatDisplayDate(workout.start_time, {
