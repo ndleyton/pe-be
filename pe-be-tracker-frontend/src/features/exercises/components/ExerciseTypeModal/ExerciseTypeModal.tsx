@@ -295,12 +295,13 @@ const ExerciseTypeModal = ({
                     <h4 className="text-foreground font-medium">
                       {exerciseType.name}
                     </h4>
-                    {exerciseType.times_used > 0 && (
+                    {!isAuthenticated && exerciseType.times_used > 0 && (
                       <span className="text-muted-foreground bg-muted rounded-full px-2 py-1 text-xs">
-                        {exerciseType.times_used} time
+                        Used by you {exerciseType.times_used} time
                         {exerciseType.times_used !== 1 ? "s" : ""}
                       </span>
                     )}
+                    {/* TODO: Restore an authenticated usage badge once the API exposes a user-specific count instead of the global times_used value. */}
                   </div>
                   <p className="text-muted-foreground mt-1 text-sm">
                     {truncateWords(exerciseType.description, 4)}
