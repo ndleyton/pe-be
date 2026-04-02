@@ -821,6 +821,68 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
     assert other_owner_stats["totalSets"] == 1
 
 
+async def test_get_exercise_type_stats_last_workout_handles_no_active_sets(db_session):
+    owner = await _seed_user(db_session, "stats-no-active-sets@example.com")
+    workout_type = await _seed_workout_type(db_session, "Stats No Active Sets Type")
+    workout = await _seed_workout(
+        db_session, owner.id, workout_type.id, "Stats Workout"
+    )
+    unit = await _seed_intensity_unit(db_session, "Kilograms", "kg")
+    exercise_type = await _seed_exercise_type(
+        db_session,
+        "Stats No Active Sets Exercise",
+        default_intensity_unit=unit.id,
+    )
+
+    populated_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        notes="populated",
+    )
+    latest_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+        notes="latest",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=populated_exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=100,
+        reps=5,
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=latest_exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=110,
+        reps=3,
+        deleted_at=datetime(2026, 1, 2, 12, 30, tzinfo=timezone.utc),
+    )
+    await db_session.commit()
+
+    stats = await crud.get_exercise_type_stats(db_session, exercise_type.id, owner.id)
+
+    assert stats["lastWorkout"] == {
+        "date": "2026-01-02T12:00:00+00:00",
+        "sets": 0,
+        "totalReps": 0,
+        "maxWeight": 0,
+        "totalVolume": 0,
+    }
+    assert stats["personalBest"] == {
+        "date": "2026-01-01T12:00:00+00:00",
+        "weight": 100,
+        "reps": 5,
+        "volume": 500,
+    }
+    assert stats["totalSets"] == 1
+
+
 async def test_soft_delete_exercise_marks_active_sets_and_handles_missing(db_session):
     owner = await _seed_user(db_session, "soft-delete@example.com")
     workout_type = await _seed_workout_type(db_session, "Delete Type")
