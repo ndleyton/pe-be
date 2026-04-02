@@ -61,6 +61,36 @@ const fetchWorkout = async (workoutId: string): Promise<Workout> => {
   return response.data as Workout;
 };
 
+const getScrollContainer = (element: HTMLElement | null): HTMLElement | Window => {
+  let current = element?.parentElement ?? null;
+
+  while (current) {
+    const { overflowY } = window.getComputedStyle(current);
+    const isScrollable = /(auto|scroll|overlay)/.test(overflowY);
+
+    if (isScrollable && current.scrollHeight > current.clientHeight) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return window;
+};
+
+const scrollContainerTo = (
+  scrollContainer: HTMLElement | Window,
+  top: number,
+  behavior: ScrollBehavior,
+) => {
+  if (scrollContainer === window) {
+    window.scrollTo({ top, behavior });
+    return;
+  }
+
+  scrollContainer.scrollTo({ top, behavior });
+};
+
 const WorkoutPage = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
@@ -88,7 +118,7 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const exerciseListContainerRef = useRef<HTMLDivElement | null>(null);
+  const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
 
@@ -97,14 +127,32 @@ const WorkoutPage = () => {
     location.state?.scrollToBottomOnLoad,
   );
 
-  const scrollExerciseListToBottom = () => {
+  const scrollWorkoutPageToBottom = (behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
-      const container = exerciseListContainerRef.current;
-      if (!container) return;
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth",
-      });
+      const anchor = bottomScrollAnchorRef.current;
+      const scrollContainer = getScrollContainer(anchor);
+
+      if (scrollContainer === window) {
+        const scrollRoot = document.scrollingElement ?? document.documentElement;
+        const top = Math.max(
+          scrollRoot.scrollHeight,
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+        );
+
+        scrollContainerTo(scrollContainer, top, behavior);
+        return;
+      }
+
+      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, behavior);
+    });
+  };
+
+  const scrollWorkoutPageToTop = () => {
+    requestAnimationFrame(() => {
+      const anchor = bottomScrollAnchorRef.current;
+      const scrollContainer = getScrollContainer(anchor);
+      scrollContainerTo(scrollContainer, 0, "auto");
     });
   };
 
@@ -306,19 +354,7 @@ const WorkoutPage = () => {
     guestCreateExercisesFromRoutine,
   ]);
 
-  useEffect(() => {
-    if (!shouldScrollToBottomOnLoad || didHandleRouteScrollRef.current) return;
-    didHandleRouteScrollRef.current = true;
-    scrollExerciseListToBottom();
-  }, [shouldScrollToBottomOnLoad]);
 
-  useEffect(() => {
-    const prevCount = previousExerciseCountRef.current;
-    if (prevCount !== null && exercises.length > prevCount) {
-      scrollExerciseListToBottom();
-    }
-    previousExerciseCountRef.current = exercises.length;
-  }, [exercises.length]);
 
   type AddExercisePayload = {
     data: CreateExerciseData;
@@ -564,6 +600,35 @@ const WorkoutPage = () => {
       : "success";
   const showLoadingTitle = pagePending && !workoutName;
 
+  useEffect(() => {
+    if (listStatus !== "success" || didHandleRouteScrollRef.current) return;
+
+    const end_time = isAuthenticated ? serverWorkout?.end_time : guestWorkout?.end_time;
+    const isInProgress = !end_time;
+
+    if (shouldScrollToBottomOnLoad || isInProgress) {
+      didHandleRouteScrollRef.current = true;
+      scrollWorkoutPageToTop();
+
+      const followUpScrollTimers = [
+        window.setTimeout(() => scrollWorkoutPageToBottom("smooth"), 50),
+        window.setTimeout(() => scrollWorkoutPageToBottom("auto"), 400),
+      ];
+
+      return () => {
+        followUpScrollTimers.forEach((timerId) => window.clearTimeout(timerId));
+      };
+    }
+  }, [listStatus, shouldScrollToBottomOnLoad, isAuthenticated, serverWorkout?.end_time, guestWorkout?.end_time]);
+
+  useEffect(() => {
+    const prevCount = previousExerciseCountRef.current;
+    if (prevCount !== null && exercises.length > prevCount) {
+      scrollWorkoutPageToBottom();
+    }
+    previousExerciseCountRef.current = exercises.length;
+  }, [exercises.length]);
+
   if (showNotFound) {
     return <NotFoundPage />;
   }
@@ -628,10 +693,7 @@ const WorkoutPage = () => {
             )}
           </h2>
         </div>
-        <div
-          ref={exerciseListContainerRef}
-          className="space-y-6 max-h-[75vh] overflow-y-auto pr-2"
-        >
+        <div className="space-y-6">
           {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
             <div className="bg-card/80 border-border rounded-xl border p-4 text-left shadow-sm backdrop-blur-sm">
               <div className="mb-2 flex items-center gap-2">
@@ -652,19 +714,20 @@ const WorkoutPage = () => {
             onExerciseUpdate={handleExerciseUpdate}
             onExerciseDelete={handleExerciseDelete}
           />
-        </div>
-        <div className="bg-primary mt-4 mb-4 h-px w-full" role="separator" />
-        <div className="flex items-center justify-center">
-          <Button
-            type="button"
-            onClick={() => setShowAddExerciseModal(true)}
-            className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
-            disabled={isAuthenticated && addExerciseMutation.isPending}
-          >
-            {isAuthenticated && addExerciseMutation.isPending
-              ? "Adding..."
-              : "Add Exercise"}
-          </Button>
+          <div className="bg-primary/20 mt-4 mb-4 h-px w-full" role="separator" />
+          <div className="flex items-center justify-center pb-2">
+            <Button
+              type="button"
+              onClick={() => setShowAddExerciseModal(true)}
+              className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
+              disabled={isAuthenticated && addExerciseMutation.isPending}
+            >
+              {isAuthenticated && addExerciseMutation.isPending
+                ? "Adding..."
+                : "Add Exercise"}
+            </Button>
+          </div>
+          <div ref={bottomScrollAnchorRef} aria-hidden="true" />
         </div>
       </div>
 

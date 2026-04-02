@@ -7,6 +7,7 @@ import WorkoutPage from "./WorkoutPage";
 // Mock react-router-dom
 const mockNavigate = vi.fn();
 const mockWorkoutId = "123";
+let mockLocationState: unknown;
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -14,6 +15,7 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useParams: () => ({ workoutId: mockWorkoutId }),
     useNavigate: () => mockNavigate,
+    useLocation: () => ({ state: mockLocationState }),
   };
 });
 
@@ -146,7 +148,7 @@ vi.mock("@/stores", () => ({
 }));
 
 describe("WorkoutPage", () => {
-  let scrollToMock: ReturnType<typeof vi.fn>;
+  let windowScrollToMock: ReturnType<typeof vi.fn>;
   const buildApiGetImplementation = (
     workoutHandler?: () => Promise<{ data: unknown }>,
   ) =>
@@ -167,12 +169,27 @@ describe("WorkoutPage", () => {
     mockAuthState.initialized = true;
     mockGuestState.workouts = [];
     mockGuestState.hydrated = true;
+    mockLocationState = undefined;
     vi.mocked(api.get).mockImplementation(buildApiGetImplementation());
-    scrollToMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    windowScrollToMock = vi.fn();
+    Object.defineProperty(window, "scrollTo", {
       configurable: true,
       writable: true,
-      value: scrollToMock,
+      value: windowScrollToMock,
+    });
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    });
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      configurable: true,
+      writable: true,
+      value: 1600,
+    });
+    Object.defineProperty(document.body, "scrollHeight", {
+      configurable: true,
+      writable: true,
+      value: 1600,
     });
     exerciseComponentsMocks.ExerciseListMock.mockClear();
     exerciseApiMocks.mockGetExercisesInWorkout.mockReset();
@@ -267,6 +284,7 @@ describe("WorkoutPage", () => {
     await waitFor(() => {
       expect(exerciseComponentsMocks.ExerciseListMock).toHaveBeenCalled();
     });
+    windowScrollToMock.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
     fireEvent.click(
@@ -277,7 +295,7 @@ describe("WorkoutPage", () => {
       expect(screen.getByText(/optimistic-/i)).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(scrollToMock).toHaveBeenCalled();
+      expect(windowScrollToMock).toHaveBeenCalled();
     });
 
     const createdExercise = {
@@ -428,5 +446,43 @@ describe("WorkoutPage", () => {
     expect(
       screen.getByRole("link", { name: /back to workouts/i }),
     ).toHaveAttribute("href", "/workouts");
+  });
+
+  it("smoothly scrolls to the bottom when entering an in-progress workout", async () => {
+    render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(windowScrollToMock).toHaveBeenCalledWith({
+        top: 0,
+        behavior: "auto",
+      });
+    });
+
+    await waitFor(() => {
+      expect(windowScrollToMock).toHaveBeenCalledWith({
+        top: 1600,
+        behavior: "smooth",
+      });
+    });
+  });
+
+  it("smoothly scrolls from the top when navigation requests bottom-on-load", async () => {
+    mockLocationState = { scrollToBottomOnLoad: true };
+
+    render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(windowScrollToMock).toHaveBeenCalledWith({
+        top: 0,
+        behavior: "auto",
+      });
+    });
+
+    await waitFor(() => {
+      expect(windowScrollToMock).toHaveBeenCalledWith({
+        top: 1600,
+        behavior: "smooth",
+      });
+    });
   });
 });
