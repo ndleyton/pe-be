@@ -121,20 +121,19 @@ const MyWorkoutsPage = () => {
   const isAuthError =
     axios.isAxiosError(error) &&
     (error?.response?.status === 401 || error?.response?.status === 403);
-
   const validWorkouts = Array.isArray(workouts) ? workouts.filter(Boolean) : [];
-  const showGuestEmptyState =
+  const showNoWorkoutsMessage =
     listStatus === "success" &&
-    !isAuthenticated &&
-    guestHydrated &&
     validWorkouts.length === 0;
+  const shouldAutoOpenQuickStart =
+    showNoWorkoutsMessage;
 
   // Early return for auth errors (after all hooks are called)
   if (isAuthenticated && (sessionExpired || isAuthError)) {
     const errorMessage = getErrorMessage(error);
     return (
       <div className="flex flex-1 items-center justify-center">
-        <Card className="bg-card/80 border-border overflow-hidden rounded-2xl border shadow-xl backdrop-blur-sm p-8 text-center">
+        <Card className="bg-card/80 border-border overflow-hidden rounded-2xl border p-8 text-center shadow-xl backdrop-blur-sm">
           <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
             <span className="text-destructive text-2xl">⚠</span>
           </div>
@@ -162,9 +161,6 @@ const MyWorkoutsPage = () => {
             <h1 className="text-foreground text-4xl font-extrabold tracking-tight lg:text-5xl">
               Workouts
             </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Track your progress and crush your goals.
-            </p>
           </div>
           <WeekTracking
             workouts={workouts}
@@ -172,7 +168,10 @@ const MyWorkoutsPage = () => {
             className="mb-10"
           />
 
-          <RoutinesSection onStartWorkout={handleStartWorkoutFromRoutine} />
+          <RoutinesSection
+            onStartWorkout={handleStartWorkoutFromRoutine}
+            autoOpen={shouldAutoOpenQuickStart}
+          />
 
           {showWorkoutForm && (
             <div className="bg-card/50 border-border mb-8 overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm sm:p-6">
@@ -207,25 +206,26 @@ const MyWorkoutsPage = () => {
 
           {listStatus === "pending" ? (
             <WorkoutListSkeleton />
-          ) : showGuestEmptyState ? (
-            <div className="bg-card/30 border-border py-16 text-center border-2 border-dashed rounded-3xl backdrop-blur-sm">
-              <div className="bg-primary/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full mb-6">
-                <Dumbbell className="text-primary h-10 w-10 opacity-40" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">No workouts yet</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto px-6">
-                You haven't logged any workouts. Ready to start your fitness journey?
-              </p>
-              <Button
-                onClick={() => setShowWorkoutForm(true)}
-                className="mt-8 px-8 py-6 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
-              >
-                Start Your First Workout
-              </Button>
-            </div>
           ) : (
             <>
               <div className="space-y-3 pt-4 sm:space-y-4">
+                {showNoWorkoutsMessage ? (
+                  <div className="bg-muted/30 border-border/60 rounded-xl border px-4 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                        <Dumbbell className="text-primary h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-foreground text-sm font-medium">
+                          You haven&apos;t logged any workouts yet.
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Pick a routine above or tap + to begin.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
                     key={workout.id}

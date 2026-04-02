@@ -111,8 +111,11 @@ vi.mock("@/shared/components/WeekTracking", () => ({
 vi.mock(
   "@/features/routines/components/RoutinesSection/RoutinesSection",
   () => ({
-    RoutinesSection: ({ onStartWorkout }: any) => (
-      <div data-testid="routines-section">
+    RoutinesSection: ({ onStartWorkout, autoOpen }: any) => (
+      <div
+        data-testid="routines-section"
+        data-auto-open={autoOpen ? "true" : "false"}
+      >
         <button
           onClick={() => onStartWorkout({ id: "123", name: "Routine A" })}
         >
@@ -206,7 +209,7 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
-  it("shows the guest empty state after auth resolves", async () => {
+  it("auto-opens quick start routines when there are no workouts", async () => {
     Object.assign(mockAuthState, {
       isAuthenticated: false,
       user: null,
@@ -217,9 +220,12 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no workouts yet/i)).toBeInTheDocument();
+      expect(screen.getByTestId("routines-section")).toHaveAttribute(
+        "data-auto-open",
+        "true",
+      );
       expect(
-        screen.getByRole("button", { name: /start your first workout/i }),
+        screen.getByText(/you haven't logged any workouts yet/i),
       ).toBeInTheDocument();
     });
   });
@@ -235,7 +241,13 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     expect(screen.getByTestId("workout-list-skeleton")).toBeInTheDocument();
-    expect(screen.queryByText(/no workouts yet/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("routines-section")).toHaveAttribute(
+      "data-auto-open",
+      "false",
+    );
+    expect(
+      screen.queryByText(/you haven't logged any workouts yet/i),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockGetMyWorkouts).not.toHaveBeenCalled();
