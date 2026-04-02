@@ -185,10 +185,35 @@ describe("ExerciseRow", () => {
     render(<ExerciseRow {...defaultProps} />);
 
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /view details for bench press/i }),
+    ).toHaveAttribute("href", "/exercise-types/1");
     // expect(screen.getByText(/Rest Timer: 2min 30s/)).toBeInTheDocument(); // TODO: Add rest timer back in
     // Exercise notes are now accessible via the sticky note icon next to the exercise name
     const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");
     expect(stickyNoteIcons.length).toBeGreaterThan(0); // Should have at least the exercise notes sticky note
+  });
+
+  it("hides the exercise details link for guest exercise types", () => {
+    const guestExercise: Exercise = {
+      ...mockExercise,
+      exercise_type_id: "guest-type-1",
+      exercise_type: {
+        ...mockExercise.exercise_type,
+        id: "guest-type-1" as never,
+      },
+    };
+
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={guestExercise}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: /view details for bench press/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("displays exercise notes in sticky note and dialog", async () => {
