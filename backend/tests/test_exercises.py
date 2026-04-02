@@ -4,17 +4,19 @@ import json
 import pytest
 import uuid
 from httpx import AsyncClient
+from sqlalchemy import select
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from src.core.config import settings
+import src.admin.exercise_image_service as exercise_image_service
 from src.admin.exercise_image_service import (
     apply_reference_or_option,
     generate_reference_image_options,
 )
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.exercises.schemas import ExerciseTypeRead
-from src.genai.google_images import ExerciseImageResult
+from src.genai.google_images import ExerciseImageResult, REFERENCE_OPTION_SPECS
 from src.main import app
 from src.users.router import current_active_user
 
@@ -358,6 +360,110 @@ async def test_apply_reference_option_publishes_generated_assets(db_session, tmp
         published_file = tmp_path / stored_paths[0]
         assert published_file.read_bytes() == b"candidate-bytes"
         assert response.current_images[0].endswith(stored_paths[0])
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_generate_reference_image_options_upserts_stale_generation_keys(
+    db_session, monkeypatch, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(
+            name="Idempotent Exercise",
+            description="desc",
+            reference_images_url=json.dumps(["references/source-a.png"]),
+        )
+        db_session.add(exercise_type)
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        model_name = exercise_image_service.exercise_type_reference_model()
+        generation_key = exercise_image_service._build_generation_key(
+            exercise_type_id=exercise_type.id,
+            source_image_url="references/source-a.png",
+            source_image_index=0,
+            option_key="clean-outline",
+            model_name=model_name,
+        )
+        stale_storage_path = (
+            f"generated/exercise-type-{exercise_type.id}/clean-outline/0-stale.png"
+        )
+        db_session.add(
+            ExerciseImageCandidate(
+                exercise_type_id=exercise_type.id,
+                generation_key=generation_key,
+                pipeline_key="reference_redraw_v1",
+                option_key="clean-outline",
+                option_label="Clean Outline",
+                option_description="stale",
+                source_image_index=0,
+                source_image_url="references/source-a.png",
+                model_name="stale-model",
+                prompt_version="v1",
+                prompt_summary="stale-summary",
+                mime_type="image/png",
+                storage_path=stale_storage_path,
+            )
+        )
+        await db_session.commit()
+
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service._load_candidates_by_keys",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service.generate_reference_image_variant",
+            AsyncMock(
+                side_effect=lambda *,
+                context,
+                option,
+                source_image_url: ExerciseImageResult(
+                    model="test-model",
+                    mime_type="image/png",
+                    base64_data="dGVzdA==",
+                    prompt_summary=f"{option.key}:{source_image_url}",
+                )
+            ),
+        )
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service._exercise_context",
+            lambda _exercise_type: {
+                "name": "Idempotent Exercise",
+                "description": "desc",
+                "instructions": "",
+                "equipment": "",
+                "category": "",
+                "primary_muscles": [],
+                "secondary_muscles": [],
+            },
+        )
+
+        response = await generate_reference_image_options(db_session, exercise_type)
+
+        candidates = (
+            (
+                await db_session.execute(
+                    select(ExerciseImageCandidate)
+                    .where(ExerciseImageCandidate.exercise_type_id == exercise_type.id)
+                    .order_by(ExerciseImageCandidate.option_key.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(candidates) == len(REFERENCE_OPTION_SPECS)
+        assert len([c for c in candidates if c.generation_key == generation_key]) == 1
+
+        clean_outline = next(c for c in candidates if c.option_key == "clean-outline")
+        assert clean_outline.storage_path != stale_storage_path
+        assert clean_outline.prompt_summary == "clean-outline:references/source-a.png"
+        assert (tmp_path / clean_outline.storage_path).read_bytes() == b"test"
+
+        assert len(response.options) == len(REFERENCE_OPTION_SPECS)
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
 
