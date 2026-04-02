@@ -71,13 +71,13 @@ export const ExerciseSetTable = ({
 }: ExerciseSetTableProps) => (
   <>
     <div
-      className="mb-2 grid gap-2 text-xs font-medium text-gray-500 sm:gap-4 dark:text-gray-400"
+      className="bg-card/50 border-border/10 mb-3 grid items-center gap-2 rounded-lg border-b px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 sm:gap-4"
       style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
     >
-      <div>SET</div>
-      <div>{currentIntensityUnitAbbreviation.toUpperCase()}</div>
-      <div>REPS</div>
-      <div className="text-right">DONE</div>
+      <div className="text-center">SET</div>
+      <div className="text-center">{currentIntensityUnitAbbreviation.toUpperCase()}</div>
+      <div className="text-center">REPS</div>
+      <div className="text-right pr-2">DONE</div>
       <div></div>
     </div>
 
@@ -99,13 +99,12 @@ export const ExerciseSetTable = ({
         return (
           <div
             key={set.id}
-            className={`grid items-center gap-2 rounded p-2 sm:gap-4 ${
-              set.done ? "bg-done" : "bg-secondary"
-            }`}
+            className={`grid items-center gap-2 rounded-lg p-2.5 sm:gap-4 transition-all duration-200 ${set.done ? "bg-done/10 border-done/20 shadow-inner" : "bg-muted/50 border-transparent shadow-sm"
+              } border`}
             style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
           >
-            <div className="text-muted-foreground font-medium">
-              <span>{index + 1}</span>
+            <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
+              <span className="text-muted-foreground text-xs font-black">{index + 1}</span>
             </div>
             <div>
               <Input
@@ -209,16 +208,15 @@ export const ExerciseSetTable = ({
 
             <div className="flex justify-end">
               <Button
-                variant={set.done ? "default" : "outline"}
+                variant={set.done ? "default" : "ghost"}
                 size="sm"
-                className={`h-8 w-8 p-0 ${
-                  set.done
-                    ? "bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800"
-                    : "border-input border dark:border-gray-600"
-                }`}
+                className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
+                  ? "bg-done text-done-foreground shadow-lg scale-110 ring-4 ring-done/20"
+                  : "border-foreground/50 hover:border-done text-done/60 border-2 bg-done/5 hover:bg-done/40"
+                  }`}
                 onClick={() => onToggleSetCompletion(set.id)}
               >
-                <Check className="h-4 w-4" />
+                <Check className={`h-6 w-6 transition-all duration-300 ${set.done ? "scale-110 opacity-100" : "scale-90 opacity-50 group-hover:opacity-100"}`} />
               </Button>
             </div>
 
@@ -283,13 +281,13 @@ export const ExerciseSetTable = ({
 
     <Button
       variant="outline"
-      className="border-input mt-4 w-full bg-transparent"
+      className="bg-card/50 border-border/50 hover:bg-accent mt-6 w-full rounded-xl border-2 border-dashed py-6 shadow-sm transition-all hover:shadow-md"
       data-testid="add-set-button"
       disabled={isUnsavedExercise}
       onClick={onAddSet}
     >
-      <Plus className="mr-2 h-4 w-4" />
-      Add Set
+      <Plus className="mr-2 h-5 w-5 opacity-50" />
+      <span className="font-bold tracking-tight">Add Set</span>
     </Button>
   </>
 );

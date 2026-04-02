@@ -20,7 +20,7 @@ const AppBar = () => {
 
   return (
     <header
-      className="bg-background border-b px-4"
+      className="bg-background/80 border-b sticky top-0 z-50 px-4 backdrop-blur-md"
       role="banner"
       aria-label="Primary navigation"
     >

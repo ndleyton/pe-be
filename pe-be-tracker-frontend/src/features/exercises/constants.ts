@@ -36,9 +36,4 @@ export const KNOWN_INTENSITY_UNITS = [
   },
 ] satisfies IntensityUnit[];
 
-export const GUEST_INTENSITY_UNITS = KNOWN_INTENSITY_UNITS.filter(
-  (unit) =>
-    unit.id === GUEST_INTENSITY_UNIT_IDS.kilograms ||
-    unit.id === GUEST_INTENSITY_UNIT_IDS.pounds ||
-    unit.id === GUEST_INTENSITY_UNIT_IDS.bodyweight,
-);
+export const GUEST_INTENSITY_UNITS = KNOWN_INTENSITY_UNITS;

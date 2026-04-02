@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import {
-  getCompatibleIntensityUnits,
   type GuestIntensityUnit,
 } from "@/features/exercises/lib/intensityUnits";
 import { useAuthStore } from "@/stores";
@@ -50,10 +49,7 @@ const ExerciseTypeMore = ({
 
   const intensityUnits: Array<IntensityUnit | GuestIntensityUnit> =
     isAuthenticated ? serverIntensityUnits : GUEST_INTENSITY_UNITS;
-  const compatibleIntensityUnits = getCompatibleIntensityUnits(
-    intensityUnits,
-    currentIntensityUnit,
-  );
+
 
   return (
     <div className="space-y-4 p-4">
@@ -82,7 +78,7 @@ const ExerciseTypeMore = ({
 
         {(!isAuthenticated || (!isLoading && !error)) && (
           <div className="grid grid-cols-2 gap-2">
-            {compatibleIntensityUnits.map((unit) => (
+            {intensityUnits.map((unit) => (
               <button
                 key={unit.id}
                 onClick={() => onIntensityUnitChange(unit)}

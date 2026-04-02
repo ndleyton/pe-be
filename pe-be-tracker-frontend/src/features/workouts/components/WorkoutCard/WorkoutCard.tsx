@@ -21,24 +21,34 @@ const WorkoutCard = ({
       onClick={() => onClick(workout.id)}
       onMouseEnter={onMouseEnter}
       onTouchStart={onTouchStart}
-      className="bg-card hover:bg-accent flex cursor-pointer items-center justify-between rounded-lg p-4 transition-colors"
+      className="bg-card/80 hover:bg-accent relative cursor-pointer items-center justify-between overflow-hidden rounded-xl p-5 transition-all duration-300 shadow-sm hover:shadow-xl backdrop-blur-sm group"
     >
       <div className="flex items-center space-x-4">
-        <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-          <Dumbbell className="text-primary-foreground h-5 w-5" />
+        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl transition-colors group-hover:bg-primary/20">
+          <Dumbbell className="text-primary h-6 w-6" />
         </div>
-        <div>
-          <h3 className="text-foreground font-medium">
-            {workout.name || "Traditional Strength Training"}
-          </h3>
-          <div className="mt-1 flex items-center space-x-4">
-            <span className="text-primary font-mono text-lg">
-              {
-                parseWorkoutDuration(workout.start_time, workout.end_time)
-                  .durationText
-              }
-            </span>
-            <span className="text-muted-foreground text-sm">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-foreground text-lg font-bold">
+              {workout.name || "Traditional Strength Training"}
+            </h3>
+            {!workout.end_time && (
+              <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                In Progress
+              </span>
+            )}
+          </div>
+          <div className="mt-1.5 flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-primary font-mono text-sm font-bold">
+                {
+                  parseWorkoutDuration(workout.start_time, workout.end_time)
+                    .durationText
+                }
+              </span>
+            </div>
+            <div className="bg-muted-foreground/20 h-1 w-1 rounded-full" />
+            <span className="text-muted-foreground text-xs font-medium">
               {formatDisplayDate(workout.start_time, {
                 includeTime: false,
                 includeTimezone: false,
@@ -47,7 +57,7 @@ const WorkoutCard = ({
           </div>
         </div>
       </div>
-      <div className="text-muted-foreground">
+      <div className="text-muted-foreground/50 absolute right-4 top-1/2 -translate-y-1/2">
         <svg
           className="h-5 w-5"
           fill="none"
