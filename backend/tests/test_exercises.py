@@ -388,6 +388,8 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
             source_image_url="references/source-a.png",
             source_image_index=0,
             option_key="clean-outline",
+            pipeline_key="reference_redraw_v1",
+            prompt_version="v1",
             model_name=model_name,
         )
         stale_storage_path = (
