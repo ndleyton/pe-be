@@ -154,6 +154,8 @@ def _exercise_context(exercise_type: ExerciseType) -> dict:
 
 
 def _should_promote_current_images_to_reference(current_images: list[str]) -> bool:
+    # Only seed reference_images_url from pre-existing library assets, not from
+    # images we previously generated or published through this pipeline.
     if not current_images:
         return False
     generated_prefixes = ("generated/", "published/")
