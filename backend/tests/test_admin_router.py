@@ -215,11 +215,13 @@ async def test_admin_reference_image_option_endpoints(
         "exercise_name": exercise_type.name,
         "current_images": ["https://example.com/current.png"],
         "reference_images": ["https://example.com/reference.png"],
+        "supports_revert_to_reference": True,
         "options": [
             {
                 "key": "clean-outline",
                 "label": "Clean Outline",
                 "description": "desc",
+                "option_source": "reference_redraw",
                 "images": ["https://example.com/generated.png"],
                 "candidate_ids": [1],
                 "source_images": ["https://example.com/reference.png"],

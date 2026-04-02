@@ -7,6 +7,7 @@ class AdminExerciseImageOption(BaseModel):
     key: str
     label: str
     description: str
+    option_source: str
     images: list[str]
     candidate_ids: list[int]
     source_images: list[str]
@@ -19,6 +20,7 @@ class AdminExerciseImageOptionsResponse(BaseModel):
     exercise_name: str
     current_images: list[str]
     reference_images: list[str]
+    supports_revert_to_reference: bool
     options: list[AdminExerciseImageOption]
 
 

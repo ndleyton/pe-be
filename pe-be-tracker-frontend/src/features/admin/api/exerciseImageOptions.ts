@@ -5,6 +5,7 @@ export interface ExerciseImageOption {
   key: string;
   label: string;
   description: string;
+  option_source: "reference_redraw" | "phase_generated";
   images: string[];
   candidate_ids: number[];
   source_images: string[];
@@ -16,6 +17,7 @@ export interface ExerciseImageOptionsResponse {
   exercise_name: string;
   current_images: string[];
   reference_images: string[];
+  supports_revert_to_reference: boolean;
   options: ExerciseImageOption[];
 }
 
