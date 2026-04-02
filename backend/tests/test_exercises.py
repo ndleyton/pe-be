@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock
 from src.core.config import settings
 import src.admin.exercise_image_service as exercise_image_service
 from src.admin.exercise_image_service import (
+    PHASE_FALLBACK_OPTION_KEY,
+    PHASE_FALLBACK_PIPELINE_KEY,
     apply_reference_or_option,
     generate_reference_image_options,
 )
@@ -527,6 +529,138 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         assert len(response.options) == 2
         for option in response.options:
             assert len(option.images) == 2
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_generate_reference_image_options_falls_back_to_phase_generation(
+    db_session, monkeypatch, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(name="Phase Fallback Exercise", description="desc")
+        db_session.add(exercise_type)
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        phase_calls: list[str] = []
+
+        async def fake_generate_exercise_phase_image(*, context, phase_label):
+            phase_calls.append(phase_label)
+            return ExerciseImageResult(
+                model="test-phase-model",
+                mime_type="image/png",
+                base64_data="dGVzdA==",
+                prompt_summary=phase_label,
+            )
+
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service.generate_exercise_phase_image",
+            fake_generate_exercise_phase_image,
+        )
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service._exercise_context",
+            lambda _exercise_type: {
+                "name": "Phase Fallback Exercise",
+                "description": "desc",
+                "instructions": "",
+                "equipment": "",
+                "category": "",
+                "primary_muscles": [],
+                "secondary_muscles": [],
+            },
+        )
+
+        response = await generate_reference_image_options(db_session, exercise_type)
+
+        assert phase_calls == ["start / eccentric", "end / concentric"]
+        assert response.supports_revert_to_reference is False
+        assert response.reference_images == []
+        assert len(response.options) == 1
+        option = response.options[0]
+        assert option.option_source == "phase_generated"
+        assert option.source_images == []
+        assert len(option.images) == 2
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_apply_phase_fallback_option_publishes_generated_assets_without_reference(
+    db_session, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(name="Phase Publishable Exercise", description="d")
+        db_session.add(exercise_type)
+        await db_session.flush()
+
+        generated_paths = [
+            (
+                0,
+                "generated/exercise-type-"
+                f"{exercise_type.id}/{PHASE_FALLBACK_OPTION_KEY}/0-phase-a.png",
+                b"phase-a",
+                "__phase__:start-eccentric",
+                "phase-a",
+            ),
+            (
+                1,
+                "generated/exercise-type-"
+                f"{exercise_type.id}/{PHASE_FALLBACK_OPTION_KEY}/1-phase-b.png",
+                b"phase-b",
+                "__phase__:end-concentric",
+                "phase-b",
+            ),
+        ]
+
+        for (
+            source_index,
+            relative_path,
+            file_bytes,
+            source_url,
+            generation_key,
+        ) in generated_paths:
+            generated_file = tmp_path / relative_path
+            generated_file.parent.mkdir(parents=True, exist_ok=True)
+            generated_file.write_bytes(file_bytes)
+            db_session.add(
+                ExerciseImageCandidate(
+                    exercise_type_id=exercise_type.id,
+                    generation_key=generation_key,
+                    pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+                    option_key=PHASE_FALLBACK_OPTION_KEY,
+                    option_label="Generated Phase Pair",
+                    option_description="desc",
+                    source_image_index=source_index,
+                    source_image_url=source_url,
+                    model_name="test-model",
+                    prompt_version="v1",
+                    prompt_summary="summary",
+                    mime_type="image/png",
+                    storage_path=relative_path,
+                )
+            )
+
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        response = await apply_reference_or_option(
+            db_session,
+            exercise_type,
+            option_key=PHASE_FALLBACK_OPTION_KEY,
+            use_reference=False,
+        )
+
+        stored_paths = json.loads(exercise_type.images_url)
+        assert all(path.startswith("published/") for path in stored_paths)
+        assert response.supports_revert_to_reference is False
+        assert response.reference_images == []
+        assert response.options[0].is_current is True
+        assert response.options[0].source_images == []
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
 

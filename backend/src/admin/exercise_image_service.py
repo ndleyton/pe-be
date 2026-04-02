@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 from datetime import datetime, timezone
+from dataclasses import dataclass
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -22,12 +23,38 @@ from src.exercises.image_assets import (
 )
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.genai.google_images import (
+    MODEL_NAME,
     REFERENCE_OPTION_SPECS,
     REFERENCE_PIPELINE_KEY,
     REFERENCE_PROMPT_VERSION,
     decode_generated_image,
+    generate_exercise_phase_image,
     generate_reference_image_variant,
 )
+
+REFERENCE_OPTION_SOURCE = "reference_redraw"
+PHASE_FALLBACK_OPTION_SOURCE = "phase_generated"
+PHASE_FALLBACK_PIPELINE_KEY = "phase_fallback_v1"
+PHASE_FALLBACK_PROMPT_VERSION = "v1"
+PHASE_FALLBACK_OPTION_KEY = "phase-generated"
+PHASE_FALLBACK_OPTION_LABEL = "Generated Phase Pair"
+PHASE_FALLBACK_OPTION_DESCRIPTION = (
+    "Two AI-generated instructional images covering the start/eccentric and "
+    "end/concentric positions."
+)
+PHASE_FALLBACK_IMAGES = (
+    (0, "__phase__:start-eccentric", "start / eccentric"),
+    (1, "__phase__:end-concentric", "end / concentric"),
+)
+
+
+@dataclass(frozen=True)
+class AdminImageOptionSpec:
+    key: str
+    label: str
+    description: str
+    pipeline_key: str
+    option_source: str
 
 
 def _image_json(image_urls: list[str]) -> str:
@@ -40,15 +67,17 @@ def _build_generation_key(
     source_image_url: str,
     source_image_index: int,
     option_key: str,
+    pipeline_key: str,
+    prompt_version: str,
     model_name: str,
 ) -> str:
     payload = {
         "exercise_type_id": exercise_type_id,
         "source_image_url": source_image_url,
         "source_image_index": source_image_index,
-        "pipeline_key": REFERENCE_PIPELINE_KEY,
+        "pipeline_key": pipeline_key,
         "option_key": option_key,
-        "prompt_version": REFERENCE_PROMPT_VERSION,
+        "prompt_version": prompt_version,
         "model_name": model_name,
     }
     return hashlib.sha256(
@@ -124,15 +153,71 @@ def _exercise_context(exercise_type: ExerciseType) -> dict:
     }
 
 
+def _should_promote_current_images_to_reference(current_images: list[str]) -> bool:
+    if not current_images:
+        return False
+    generated_prefixes = ("generated/", "published/")
+    return not all(image.startswith(generated_prefixes) for image in current_images)
+
+
 def _ensure_reference_images(exercise_type: ExerciseType) -> list[str]:
     reference_images = parse_image_url_list(exercise_type.reference_images_url)
     if reference_images:
         return reference_images
 
     current_images = parse_image_url_list(exercise_type.images_url)
-    if current_images:
+    if _should_promote_current_images_to_reference(current_images):
         exercise_type.reference_images_url = exercise_type.images_url
-    return current_images
+        return current_images
+    return []
+
+
+def _option_specs() -> tuple[AdminImageOptionSpec, ...]:
+    reference_specs = tuple(
+        AdminImageOptionSpec(
+            key=option.key,
+            label=option.label,
+            description=option.description,
+            pipeline_key=REFERENCE_PIPELINE_KEY,
+            option_source=REFERENCE_OPTION_SOURCE,
+        )
+        for option in REFERENCE_OPTION_SPECS
+    )
+    return reference_specs + (
+        AdminImageOptionSpec(
+            key=PHASE_FALLBACK_OPTION_KEY,
+            label=PHASE_FALLBACK_OPTION_LABEL,
+            description=PHASE_FALLBACK_OPTION_DESCRIPTION,
+            pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+            option_source=PHASE_FALLBACK_OPTION_SOURCE,
+        ),
+    )
+
+
+def _expected_candidate_count(
+    *, pipeline_key: str, reference_images: list[str]
+) -> int:
+    if pipeline_key == REFERENCE_PIPELINE_KEY:
+        return len(reference_images)
+    if pipeline_key == PHASE_FALLBACK_PIPELINE_KEY:
+        return len(PHASE_FALLBACK_IMAGES)
+    return 0
+
+
+def _published_option_images(
+    exercise_type_id: int, candidates: list[ExerciseImageCandidate]
+) -> list[str]:
+    return [
+        resolve_exercise_image_url(
+            _published_storage_path_for_candidate(
+                exercise_type_id,
+                candidate.option_key,
+                candidate.source_image_index,
+                candidate.generation_key,
+            )
+        )
+        for candidate in candidates
+    ]
 
 
 async def _load_candidates(
@@ -165,6 +250,7 @@ async def _load_candidates_by_keys(
 
 def _candidate_groups(
     *,
+    exercise_type_id: int,
     candidates: list[ExerciseImageCandidate],
     current_images: list[str],
     reference_images: list[str],
@@ -172,27 +258,43 @@ def _candidate_groups(
     current_resolved = resolve_exercise_image_urls(current_images)
     options: list[AdminExerciseImageOption] = []
 
-    for option in REFERENCE_OPTION_SPECS:
-        option_candidates = [c for c in candidates if c.option_key == option.key]
-        if len(option_candidates) != len(reference_images):
+    for option in _option_specs():
+        option_candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.option_key == option.key
+            and candidate.pipeline_key == option.pipeline_key
+        ]
+        expected_count = _expected_candidate_count(
+            pipeline_key=option.pipeline_key,
+            reference_images=reference_images,
+        )
+        if expected_count == 0 or len(option_candidates) != expected_count:
             continue
 
+        option_candidates.sort(key=lambda candidate: candidate.source_image_index)
         option_images = [
             resolve_exercise_image_url(candidate.storage_path)
             for candidate in option_candidates
         ]
+        live_images = _published_option_images(exercise_type_id, option_candidates)
         options.append(
             AdminExerciseImageOption(
                 key=option.key,
                 label=option.label,
                 description=option.description,
+                option_source=option.option_source,
                 images=option_images,
                 candidate_ids=[candidate.id for candidate in option_candidates],
-                source_images=[
-                    resolve_exercise_image_url(candidate.source_image_url)
-                    for candidate in option_candidates
-                ],
-                is_current=option_images == current_resolved,
+                source_images=(
+                    [
+                        resolve_exercise_image_url(candidate.source_image_url)
+                        for candidate in option_candidates
+                    ]
+                    if option.option_source == REFERENCE_OPTION_SOURCE
+                    else []
+                ),
+                is_current=live_images == current_resolved,
             )
         )
 
@@ -216,7 +318,9 @@ async def build_image_options_response(
             parse_image_url_list(exercise_type.images_url)
         ),
         reference_images=resolve_exercise_image_urls(reference_images),
+        supports_revert_to_reference=bool(reference_images),
         options=_candidate_groups(
+            exercise_type_id=exercise_type.id,
             candidates=candidates,
             current_images=parse_image_url_list(exercise_type.images_url),
             reference_images=reference_images,
@@ -230,15 +334,11 @@ async def generate_reference_image_options(
 ) -> AdminExerciseImageOptionsResponse:
     reference_images = _ensure_reference_images(exercise_type)
     if not reference_images:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Exercise type does not have any reference images",
-        )
+        return await _generate_phase_fallback_image_options(session, exercise_type)
 
     context = _exercise_context(exercise_type)
     model_name = exercise_type_reference_model()
 
-    # Pre-calculate keys to check for existing records globally
     all_potential_keys = []
     for source_image_index, source_image_url in enumerate(reference_images):
         for option in REFERENCE_OPTION_SPECS:
@@ -247,6 +347,8 @@ async def generate_reference_image_options(
                 source_image_url=source_image_url,
                 source_image_index=source_image_index,
                 option_key=option.key,
+                pipeline_key=REFERENCE_PIPELINE_KEY,
+                prompt_version=REFERENCE_PROMPT_VERSION,
                 model_name=model_name,
             )
             all_potential_keys.append(key)
@@ -257,7 +359,14 @@ async def generate_reference_image_options(
     }
 
     pending_jobs: list[
-        tuple[int, str, object, str, str, ExerciseImageCandidate | None]
+        tuple[
+            int,
+            str,
+            object,
+            str,
+            str,
+            ExerciseImageCandidate | None,
+        ]
     ] = []
     for source_image_index, source_image_url in enumerate(reference_images):
         for option in REFERENCE_OPTION_SPECS:
@@ -266,6 +375,8 @@ async def generate_reference_image_options(
                 source_image_url=source_image_url,
                 source_image_index=source_image_index,
                 option_key=option.key,
+                pipeline_key=REFERENCE_PIPELINE_KEY,
+                prompt_version=REFERENCE_PROMPT_VERSION,
                 model_name=model_name,
             )
             storage_path = _storage_path_for_candidate(
@@ -291,10 +402,7 @@ async def generate_reference_image_options(
 
     semaphore = asyncio.Semaphore(3)
 
-    async def _generate_job(
-        source_image_url: str,
-        option,
-    ):
+    async def _generate_job(source_image_url: str, option: object):
         async with semaphore:
             return await generate_reference_image_variant(
                 context=context,
@@ -384,10 +492,124 @@ async def generate_reference_image_options(
     return await build_image_options_response(session, exercise_type)
 
 
+async def _generate_phase_fallback_image_options(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+) -> AdminExerciseImageOptionsResponse:
+    context = _exercise_context(exercise_type)
+    model_name = exercise_type_phase_model()
+
+    all_potential_keys = [
+        _build_generation_key(
+            exercise_type_id=exercise_type.id,
+            source_image_url=source_image_url,
+            source_image_index=source_image_index,
+            option_key=PHASE_FALLBACK_OPTION_KEY,
+            pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+            prompt_version=PHASE_FALLBACK_PROMPT_VERSION,
+            model_name=model_name,
+        )
+        for source_image_index, source_image_url, _ in PHASE_FALLBACK_IMAGES
+    ]
+    existing_candidates = {
+        candidate.generation_key: candidate
+        for candidate in await _load_candidates_by_keys(session, all_potential_keys)
+    }
+
+    pending_jobs: list[
+        tuple[int, str, str, str, str, ExerciseImageCandidate | None]
+    ] = []
+    for source_image_index, source_image_url, phase_label in PHASE_FALLBACK_IMAGES:
+        generation_key = _build_generation_key(
+            exercise_type_id=exercise_type.id,
+            source_image_url=source_image_url,
+            source_image_index=source_image_index,
+            option_key=PHASE_FALLBACK_OPTION_KEY,
+            pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+            prompt_version=PHASE_FALLBACK_PROMPT_VERSION,
+            model_name=model_name,
+        )
+        storage_path = _storage_path_for_candidate(
+            exercise_type.id,
+            PHASE_FALLBACK_OPTION_KEY,
+            source_image_index,
+            generation_key,
+        )
+        existing = existing_candidates.get(generation_key)
+        if existing and _candidate_file_exists(existing.storage_path):
+            continue
+        pending_jobs.append(
+            (
+                source_image_index,
+                source_image_url,
+                phase_label,
+                generation_key,
+                storage_path,
+                existing,
+            )
+        )
+
+    if pending_jobs:
+        results = await asyncio.gather(
+            *[
+                generate_exercise_phase_image(context=context, phase_label=phase_label)
+                for _, _, phase_label, _, _, _ in pending_jobs
+            ]
+        )
+
+        for (
+            source_image_index,
+            source_image_url,
+            _phase_label,
+            generation_key,
+            storage_path,
+            existing,
+        ), result in zip(pending_jobs, results, strict=True):
+            output_bytes = decode_generated_image(result)
+            _write_candidate_bytes(storage_path, output_bytes)
+
+            if existing:
+                existing.option_label = PHASE_FALLBACK_OPTION_LABEL
+                existing.option_description = PHASE_FALLBACK_OPTION_DESCRIPTION
+                existing.source_image_url = source_image_url
+                existing.source_image_index = source_image_index
+                existing.model_name = result.model
+                existing.prompt_version = PHASE_FALLBACK_PROMPT_VERSION
+                existing.prompt_summary = result.prompt_summary
+                existing.mime_type = result.mime_type
+                existing.storage_path = storage_path
+            else:
+                session.add(
+                    ExerciseImageCandidate(
+                        exercise_type_id=exercise_type.id,
+                        generation_key=generation_key,
+                        pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+                        option_key=PHASE_FALLBACK_OPTION_KEY,
+                        option_label=PHASE_FALLBACK_OPTION_LABEL,
+                        option_description=PHASE_FALLBACK_OPTION_DESCRIPTION,
+                        source_image_index=source_image_index,
+                        source_image_url=source_image_url,
+                        model_name=result.model,
+                        prompt_version=PHASE_FALLBACK_PROMPT_VERSION,
+                        prompt_summary=result.prompt_summary,
+                        mime_type=result.mime_type,
+                        storage_path=storage_path,
+                    )
+                )
+
+    await session.commit()
+    await session.refresh(exercise_type)
+    return await build_image_options_response(session, exercise_type)
+
+
 def exercise_type_reference_model() -> str:
     from src.core.config import settings
 
     return settings.EXERCISE_IMAGE_REFERENCE_MODEL
+
+
+def exercise_type_phase_model() -> str:
+    return MODEL_NAME
 
 
 async def apply_reference_or_option(
@@ -398,7 +620,7 @@ async def apply_reference_or_option(
     use_reference: bool,
 ) -> AdminExerciseImageOptionsResponse:
     reference_images = _ensure_reference_images(exercise_type)
-    if not reference_images:
+    if use_reference and not reference_images:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exercise type does not have any reference images",
@@ -409,12 +631,21 @@ async def apply_reference_or_option(
     else:
         candidates = await _load_candidates(session, exercise_type.id)
         option_candidates = [c for c in candidates if c.option_key == option_key]
-        if len(option_candidates) != len(reference_images):
+        if not option_candidates:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Requested image option is incomplete or missing",
             )
         option_candidates.sort(key=lambda candidate: candidate.source_image_index)
+        expected_count = _expected_candidate_count(
+            pipeline_key=option_candidates[0].pipeline_key,
+            reference_images=reference_images,
+        )
+        if expected_count == 0 or len(option_candidates) != expected_count:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Requested image option is incomplete or missing",
+            )
         published_paths: list[str] = []
         for candidate in option_candidates:
             published_path = _published_storage_path_for_candidate(
