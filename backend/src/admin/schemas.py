@@ -15,13 +15,26 @@ class AdminExerciseImageOption(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class AdminExerciseImageOptionSpec(BaseModel):
+    key: str
+    label: str
+    description: str
+    option_source: str
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class AdminExerciseImageOptionsResponse(BaseModel):
     exercise_type_id: int
     exercise_name: str
     current_images: list[str]
     reference_images: list[str]
     supports_revert_to_reference: bool
+    available_options: list[AdminExerciseImageOptionSpec]
     options: list[AdminExerciseImageOption]
+
+
+class AdminGenerateExerciseImageOptionsRequest(BaseModel):
+    option_key: str | None = None
 
 
 class AdminApplyExerciseImageOptionRequest(BaseModel):

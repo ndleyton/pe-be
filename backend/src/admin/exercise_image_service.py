@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.schemas import (
     AdminExerciseImageOption,
+    AdminExerciseImageOptionSpec,
     AdminExerciseImageOptionsResponse,
 )
 from src.exercises.image_assets import (
@@ -196,6 +197,24 @@ def _option_specs() -> tuple[AdminImageOptionSpec, ...]:
     )
 
 
+def _available_option_specs(
+    reference_images: list[str],
+) -> list[AdminExerciseImageOptionSpec]:
+    expected_source = (
+        REFERENCE_OPTION_SOURCE if reference_images else PHASE_FALLBACK_OPTION_SOURCE
+    )
+    return [
+        AdminExerciseImageOptionSpec(
+            key=option.key,
+            label=option.label,
+            description=option.description,
+            option_source=option.option_source,
+        )
+        for option in _option_specs()
+        if option.option_source == expected_source
+    ]
+
+
 def _expected_candidate_count(*, pipeline_key: str, reference_images: list[str]) -> int:
     if pipeline_key == REFERENCE_PIPELINE_KEY:
         return len(reference_images)
@@ -319,6 +338,7 @@ async def build_image_options_response(
         ),
         reference_images=resolve_exercise_image_urls(reference_images),
         supports_revert_to_reference=bool(reference_images),
+        available_options=_available_option_specs(reference_images),
         options=_candidate_groups(
             exercise_type_id=exercise_type.id,
             candidates=candidates,
@@ -331,17 +351,36 @@ async def build_image_options_response(
 async def generate_reference_image_options(
     session: AsyncSession,
     exercise_type: ExerciseType,
+    *,
+    option_key: str | None = None,
 ) -> AdminExerciseImageOptionsResponse:
     reference_images = _ensure_reference_images(exercise_type)
     if not reference_images:
+        if option_key and option_key != PHASE_FALLBACK_OPTION_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specific option selection requires preserved reference images",
+            )
         return await _generate_phase_fallback_image_options(session, exercise_type)
 
+    reference_option_specs = REFERENCE_OPTION_SPECS
+    if option_key:
+        matching_option = next(
+            (option for option in REFERENCE_OPTION_SPECS if option.key == option_key),
+            None,
+        )
+        if not matching_option:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unknown reference image option",
+            )
+        reference_option_specs = (matching_option,)
     context = _exercise_context(exercise_type)
     model_name = exercise_type_reference_model()
 
     all_potential_keys = []
     for source_image_index, source_image_url in enumerate(reference_images):
-        for option in REFERENCE_OPTION_SPECS:
+        for option in reference_option_specs:
             key = _build_generation_key(
                 exercise_type_id=exercise_type.id,
                 source_image_url=source_image_url,
@@ -369,7 +408,7 @@ async def generate_reference_image_options(
         ]
     ] = []
     for source_image_index, source_image_url in enumerate(reference_images):
-        for option in REFERENCE_OPTION_SPECS:
+        for option in reference_option_specs:
             generation_key = _build_generation_key(
                 exercise_type_id=exercise_type.id,
                 source_image_url=source_image_url,

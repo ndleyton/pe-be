@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -216,6 +216,20 @@ async def test_admin_reference_image_option_endpoints(
         "current_images": ["https://example.com/current.png"],
         "reference_images": ["https://example.com/reference.png"],
         "supports_revert_to_reference": True,
+        "available_options": [
+            {
+                "key": "clean-outline",
+                "label": "Clean Outline",
+                "description": "desc",
+                "option_source": "reference_redraw",
+            },
+            {
+                "key": "minimal-outline",
+                "label": "Minimal Outline",
+                "description": "desc",
+                "option_source": "reference_redraw",
+            },
+        ],
         "options": [
             {
                 "key": "clean-outline",
@@ -233,8 +247,7 @@ async def test_admin_reference_image_option_endpoints(
     async def fake_build(*_args, **_kwargs):
         return response_payload
 
-    async def fake_generate(*_args, **_kwargs):
-        return response_payload
+    fake_generate = AsyncMock(return_value=response_payload)
 
     async def fake_apply(*_args, **_kwargs):
         return {
@@ -245,8 +258,7 @@ async def test_admin_reference_image_option_endpoints(
     app.dependency_overrides[current_active_user] = override_admin
     monkeypatch.setattr("src.admin.router.build_image_options_response", fake_build)
     monkeypatch.setattr(
-        "src.admin.router.generate_reference_image_options",
-        fake_generate,
+        "src.admin.router.generate_reference_image_options", fake_generate
     )
     monkeypatch.setattr("src.admin.router.apply_reference_or_option", fake_apply)
 
@@ -262,10 +274,12 @@ async def test_admin_reference_image_option_endpoints(
         assert get_resp.json()["exercise_name"] == exercise_type.name
 
         generate_resp = await async_client.post(
-            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/generate"
+            f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/generate",
+            json={"option_key": "minimal-outline"},
         )
         assert generate_resp.status_code == 200, generate_resp.text
         assert generate_resp.json()["options"][0]["key"] == "clean-outline"
+        assert fake_generate.await_args.kwargs["option_key"] == "minimal-outline"
 
         apply_resp = await async_client.post(
             f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/apply",

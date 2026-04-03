@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ImagePlus, RefreshCcw } from "lucide-react";
 
 import {
   applyExerciseImageOption,
+  type ExerciseImageAvailableOption,
   generateExerciseImageOptions,
   getExerciseImageOptions,
   type ExerciseImageOption,
@@ -103,6 +106,61 @@ const OptionCard = ({
   </Card>
 );
 
+const OptionSelector = ({
+  options,
+  selectedKey,
+  onSelect,
+}: {
+  options: Array<
+    ExerciseImageAvailableOption & {
+      is_current?: boolean;
+    }
+  >;
+  selectedKey: string;
+  onSelect: (optionKey: string) => void;
+}) => (
+  <div className="space-y-3">
+    <div>
+      <h3 className="text-sm font-medium tracking-wide uppercase">
+        Choose a generated style
+      </h3>
+      <p className="text-muted-foreground text-sm">
+        Switch between the generated reference styles and apply the one you want live.
+      </p>
+    </div>
+    <div className="flex flex-wrap gap-3">
+      {options.map((option) => {
+        const isSelected = option.key === selectedKey;
+
+        return (
+          <Button
+            key={option.key}
+            type="button"
+            variant={isSelected ? "default" : "outline"}
+            aria-pressed={isSelected}
+            onClick={() => onSelect(option.key)}
+            className="h-auto max-w-full justify-start px-4 py-3 text-left"
+          >
+            <span className="flex flex-wrap items-center gap-2">
+              <span>{option.label}</span>
+              {option.is_current ? (
+                <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  Live
+                </span>
+              ) : null}
+              {option.option_source === "phase_generated" ? (
+                <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  Fallback
+                </span>
+              ) : null}
+            </span>
+          </Button>
+        );
+      })}
+    </div>
+  </div>
+);
+
 const LoadingState = () => (
   <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6 lg:p-8">
     <Skeleton className="h-8 w-72" />
@@ -121,6 +179,10 @@ const ExerciseTypeImageAdminPage = () => {
   const initialized = useAuthStore((state) => state.initialized);
   const isAdmin = Boolean(user?.is_superuser);
   const queryClient = useQueryClient();
+  const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
+  const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(
+    null,
+  );
 
   const optionsQuery = useQuery({
     queryKey: ["adminExerciseImageOptions", exerciseTypeId],
@@ -130,12 +192,40 @@ const ExerciseTypeImageAdminPage = () => {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateExerciseImageOptions(exerciseTypeId!),
-    onSuccess: (data) => {
+    mutationFn: (selection?: { option_key?: string }) =>
+      generateExerciseImageOptions(exerciseTypeId!, selection),
+    onMutate: () => {
+      setGenerationErrorMessage(null);
+    },
+    onSuccess: (data, variables) => {
       queryClient.setQueryData(["adminExerciseImageOptions", exerciseTypeId], data);
       queryClient.invalidateQueries({
         queryKey: ["exerciseType", exerciseTypeId],
       });
+      if (
+        data.supports_revert_to_reference &&
+        variables?.option_key &&
+        !data.options.some((option) => option.key === variables.option_key)
+      ) {
+        const matchingOption = data.available_options.find(
+          (option) => option.key === variables.option_key,
+        );
+        setGenerationErrorMessage(
+          `Generation completed, but no preview images were returned for ${
+            matchingOption?.label ?? variables.option_key
+          }.`,
+        );
+      }
+    },
+    onError: (error) => {
+      if (
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+      ) {
+        setGenerationErrorMessage(error.response.data.detail);
+        return;
+      }
+      setGenerationErrorMessage("The selected image option could not be generated.");
     },
   });
 
@@ -149,6 +239,37 @@ const ExerciseTypeImageAdminPage = () => {
       });
     },
   });
+
+  const data = optionsQuery.data;
+  const selectedGenerationOption =
+    data?.available_options.find((option) => option.key === selectedOptionKey) ??
+    data?.available_options[0] ??
+    null;
+  const selectedOption =
+    data?.options.find((option) => option.key === selectedGenerationOption?.key) ?? null;
+  const selectorOptions =
+    data?.available_options.map((option) => ({
+      ...option,
+      is_current: data.options.find((generated) => generated.key === option.key)?.is_current,
+    })) ?? [];
+
+  useEffect(() => {
+    if (!data?.available_options.length) {
+      if (selectedOptionKey !== null) {
+        setSelectedOptionKey(null);
+      }
+      return;
+    }
+
+    if (!selectedGenerationOption) {
+      setSelectedOptionKey(data.available_options[0].key);
+    }
+  }, [data, selectedGenerationOption, selectedOptionKey]);
+
+  const selectedOptionDescription =
+    selectedGenerationOption?.description ?? "Choose a generation style.";
+  const selectedGenerationLabel =
+    selectedGenerationOption?.label ?? "the selected style";
 
   if (!initialized) {
     return <LoadingState />;
@@ -171,7 +292,7 @@ const ExerciseTypeImageAdminPage = () => {
     return <LoadingState />;
   }
 
-  if (optionsQuery.isError || !optionsQuery.data) {
+  if (optionsQuery.isError || !data) {
     return (
       <div className="mx-auto max-w-4xl p-4 md:p-6 lg:p-8">
         <Alert variant="destructive">
@@ -184,14 +305,10 @@ const ExerciseTypeImageAdminPage = () => {
     );
   }
 
-  const data = optionsQuery.data;
   const hasReferenceSource = data.supports_revert_to_reference;
   const headerDescription = hasReferenceSource
     ? "Generate reference-based replacements, compare option sets, and choose which set becomes the live exercise imagery."
     : "This exercise has no preserved reference images. Generating options will create a fallback phase pair for the start/eccentric and end/concentric positions.";
-  const generationErrorDescription = hasReferenceSource
-    ? "The reference pipeline could not create image options for this exercise."
-    : "The phase fallback pipeline could not create images for this exercise.";
   const emptyOptionsDescription = hasReferenceSource
     ? "Run the reference pipeline to create candidate replacements from the preserved source images."
     : "Generate a fallback phase pair to create the first image set for this exercise.";
@@ -216,7 +333,13 @@ const ExerciseTypeImageAdminPage = () => {
           </div>
         </div>
         <Button
-          onClick={() => generateMutation.mutate()}
+          onClick={() =>
+            generateMutation.mutate(
+              hasReferenceSource && selectedGenerationOption
+                ? { option_key: selectedGenerationOption.key }
+                : undefined,
+            )
+          }
           disabled={generateMutation.isPending}
           className="min-w-44"
         >
@@ -228,16 +351,18 @@ const ExerciseTypeImageAdminPage = () => {
           ) : (
             <>
               <ImagePlus className="mr-2 h-4 w-4" />
-              Generate options
+              {hasReferenceSource && selectedGenerationOption
+                ? `Generate ${selectedGenerationOption.label}`
+                : "Generate options"}
             </>
           )}
         </Button>
       </div>
 
-      {generateMutation.isError ? (
+      {generationErrorMessage ? (
         <Alert variant="destructive">
           <AlertTitle>Generation failed</AlertTitle>
-          <AlertDescription>{generationErrorDescription}</AlertDescription>
+          <AlertDescription>{generationErrorMessage}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -248,6 +373,29 @@ const ExerciseTypeImageAdminPage = () => {
             The selected option could not be applied to the exercise type.
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {hasReferenceSource && selectorOptions.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Generation style</CardTitle>
+            <CardDescription>
+              Choose which reference option spec to generate next.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedGenerationOption ? (
+              <OptionSelector
+                options={selectorOptions}
+                selectedKey={selectedGenerationOption.key}
+                onSelect={setSelectedOptionKey}
+              />
+            ) : null}
+            <p className="text-muted-foreground text-sm">
+              {selectedOptionDescription}
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
       <Card>
@@ -305,22 +453,33 @@ const ExerciseTypeImageAdminPage = () => {
               the same reference inputs and prompt version.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-6">
-            {data.options.map((option) => (
-              <OptionCard
-                key={option.key}
-                option={option}
-                onApply={(optionKey) => applyMutation.mutate({ option_key: optionKey })}
-                isApplying={applyMutation.isPending}
-              />
-            ))}
-          </div>
+          {selectedOption ? (
+            <OptionCard
+              key={selectedOption.key}
+              option={selectedOption}
+              onApply={(optionKey) => applyMutation.mutate({ option_key: optionKey })}
+              isApplying={applyMutation.isPending}
+            />
+          ) : selectedGenerationOption ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{selectedGenerationOption.label} has not been generated yet</CardTitle>
+                <CardDescription>
+                  Generate {selectedGenerationLabel} to preview it and make it available to apply.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          ) : null}
         </div>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle>No generated options yet</CardTitle>
-            <CardDescription>{emptyOptionsDescription}</CardDescription>
+            <CardDescription>
+              {selectedGenerationOption
+                ? `${emptyOptionsDescription} The selected style is ${selectedGenerationOption.label}.`
+                : emptyOptionsDescription}
+            </CardDescription>
           </CardHeader>
         </Card>
       )}
