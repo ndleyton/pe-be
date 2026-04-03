@@ -15,6 +15,67 @@ logger = logging.getLogger(__name__)
 
 class WorkoutRecapService:
     @staticmethod
+    def _prompt_to_string(prompt: object) -> str:
+        if hasattr(prompt, "to_string") and callable(prompt.to_string):
+            return prompt.to_string()
+
+        raw_prompt = getattr(prompt, "prompt", prompt)
+        if isinstance(raw_prompt, str):
+            return raw_prompt
+        if isinstance(raw_prompt, list):
+            parts: list[str] = []
+            for part in raw_prompt:
+                if isinstance(part, dict):
+                    content = part.get("content")
+                    if isinstance(content, str):
+                        parts.append(content)
+                    elif isinstance(content, list):
+                        for item in content:
+                            if (
+                                isinstance(item, dict)
+                                and item.get("type") == "text"
+                                and "text" in item
+                            ):
+                                parts.append(item["text"])
+                            elif isinstance(item, str):
+                                parts.append(item)
+                elif isinstance(part, str):
+                    parts.append(part)
+            return "\n".join(parts)
+        return str(raw_prompt)
+
+    @staticmethod
+    def _get_fallback_prompt_template() -> str:
+        return """You are a supportive and expert fitness coach. Your task is to provide a short, evidence-linked recap of a user's workout.
+Use the following structured metrics to highlight PRs, volume deltas, and progress.
+
+Workout Name: {workout_name}
+Workout Notes: {workout_notes}
+
+Metrics:
+{metrics_json}
+
+Guidelines:
+- Keep it concise (2-4 sentences).
+- Use `top_set_weight_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
+- Use `sets` and `total_reps` for general volume highlights.
+- Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
+- Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
+- Be encouraging but grounded in data.
+- Suggest one actionable small step for next time (e.g., "Try to add 2.5kg to your top set").
+- Do not use placeholders.
+
+Recap:"""
+
+    @staticmethod
+    def _render_prompt(template: str, *, workout_name: str, workout_notes: str, metrics_json: str) -> str:
+        return template.format(
+            workout_name=workout_name,
+            workout_notes=workout_notes,
+            metrics_json=metrics_json,
+        )
+
+    @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
         if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
             return Langfuse(
@@ -110,28 +171,6 @@ class WorkoutRecapService:
 
             metrics.append(metric)
 
-        # 2. Build prompt
-        prompt = f"""You are a supportive and expert fitness coach. Your task is to provide a short, evidence-linked recap of a user's workout.
-Use the following structured metrics to highlight PRs, volume deltas, and progress.
-
-Workout Name: {workout.name}
-Workout Notes: {workout.notes or "None"}
-
-Metrics:
-{json.dumps(metrics, indent=2)}
-
-Guidelines:
-- Keep it concise (2-4 sentences).
-- Use `top_set_weight_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
-- Use `sets` and `total_reps` for general volume highlights.
-- Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
-- Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
-- Be encouraging but grounded in data.
-- Suggest one actionable small step for next time (e.g., "Try to add 2.5kg to your top set").
-- Do not use placeholders.
-
-Recap:"""
-
         # 3. Call Gemini
         if not settings.GOOGLE_AI_KEY:
             logger.warning("GOOGLE_AI_KEY not configured, cannot generate recap")
@@ -139,6 +178,12 @@ Recap:"""
 
         langfuse = WorkoutRecapService._get_langfuse_client()
         trace = None
+        prompt = None
+        prompt_context = {
+            "workout_name": workout.name,
+            "workout_notes": workout.notes or "None",
+            "metrics_json": json.dumps(metrics, indent=2),
+        }
         try:
             if langfuse:
                 trace = langfuse.trace(
@@ -151,6 +196,45 @@ Recap:"""
                         "exercise_count": len(exercises),
                         "workout_name": workout.name,
                     },
+                )
+
+            prompt_template = WorkoutRecapService._get_fallback_prompt_template()
+            if langfuse:
+                try:
+                    langfuse_prompt = langfuse.get_prompt(
+                        "workout-recap", label="production"
+                    )
+                    prompt_template = WorkoutRecapService._prompt_to_string(
+                        langfuse_prompt
+                    )
+
+                    if trace:
+                        trace.generation(
+                            name="prompt-fetch",
+                            prompt=langfuse_prompt,
+                            metadata={
+                                "prompt_name": "workout-recap",
+                                "label": "production",
+                            },
+                        )
+                except Exception:
+                    logger.warning(
+                        "Could not fetch workout recap prompt from Langfuse; using fallback prompt",
+                        exc_info=True,
+                    )
+
+            try:
+                prompt = WorkoutRecapService._render_prompt(
+                    prompt_template, **prompt_context
+                )
+            except Exception:
+                logger.warning(
+                    "Could not render workout recap prompt template; using fallback prompt",
+                    exc_info=True,
+                )
+                prompt = WorkoutRecapService._render_prompt(
+                    WorkoutRecapService._get_fallback_prompt_template(),
+                    **prompt_context,
                 )
 
             client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
