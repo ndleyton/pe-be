@@ -369,7 +369,7 @@ const ExerciseTypeDetailsPage = () => {
       ? "Candidate"
       : exerciseType.status === "in_review"
         ? "In Review"
-        : "Released";
+        : null;
   const isOwner = currentUserId != null && exerciseType.owner_id === currentUserId;
   const isEditable =
     isAuthenticated &&
@@ -399,9 +399,11 @@ const ExerciseTypeDetailsPage = () => {
           <h1 className="min-w-0 text-2xl leading-tight font-bold break-words sm:text-3xl">
             {exerciseType.name}
           </h1>
-          <Badge variant="secondary" className="mt-1 shrink-0">
-            {statusLabel}
-          </Badge>
+          {statusLabel ? (
+            <Badge variant="secondary" className="mt-1 shrink-0">
+              {statusLabel}
+            </Badge>
+          ) : null}
         </div>
 
         {/* Muscles and Button Row */}
