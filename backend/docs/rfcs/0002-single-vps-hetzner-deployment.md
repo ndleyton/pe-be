@@ -1,4 +1,4 @@
-# RFC 0002: North America Deployment with Render Frontend and Hetzner Backend
+# RFC 0002: Single-VPS Deployment with Hosted Frontend
 
 - Status: Proposed
 - Date: 2026-03-26
@@ -6,16 +6,16 @@
 
 ## Summary
 
-Deploy the backend and PostgreSQL database on a single Hetzner Cloud `CPX11` instance in Ashburn, Virginia, while keeping the frontend on Render.
+Deploy the backend and PostgreSQL database on a single small VPS instance while keeping the frontend on an existing static hosting platform.
 
 Public routing remains anchored on the existing frontend hostname:
 
-- `https://app.personalbestie.com` serves the frontend from Render
-- `https://app.personalbestie.com/api/...` remains the browser-visible API path
-- Render rewrites `/api/:path*` to `https://origin-api.personalbestie.com/api/:path*`
-- `https://origin-api.personalbestie.com` terminates TLS on the Hetzner VPS and proxies to the backend container
+- `https://app.example.com` serves the frontend from the static host
+- `https://app.example.com/api/...` remains the browser-visible API path
+- the frontend host rewrites `/api/:path*` to `https://origin-api.example.com/api/:path*`
+- `https://origin-api.example.com` terminates TLS on the VPS and proxies to the backend container
 
-This preserves the current auth model and browser contract while moving the stateful workload off Render.
+This preserves the current auth model and browser contract while moving the stateful workload off the static host.
 
 ## Context
 
@@ -28,20 +28,20 @@ This repo already has most of the application packaging needed for a VPS deploym
 The current app auth flow is designed around a same-host public callback:
 
 - the backend sets a session cookie on login in [`backend/src/core/security.py`](../../src/core/security.py)
-- the configured Google callback is currently `https://app.personalbestie.com/api/v1/auth/google/callback`
+- the configured Google callback is currently `https://app.example.com/api/v1/auth/google/callback`
 - the frontend uses cookie-based authenticated requests with `withCredentials: true` in [`pe-be-tracker-frontend/src/shared/api/client.ts`](../../../pe-be-tracker-frontend/src/shared/api/client.ts)
 
-That means the safest migration path is not "move the browser to `api.personalbestie.com`". The safest path is:
+That means the safest migration path is not "move the browser to `api.example.com`". The safest path is:
 
-- keep the browser-visible API under `app.personalbestie.com/api/...`
-- move only the backend origin behind the Render rewrite
+- keep the browser-visible API under `app.example.com/api/...`
+- move only the backend origin behind the frontend-host rewrite
 
 ## Goals
 
-- Prefer North America hosting over Europe.
-- Keep latency materially lower than an EU-only deployment.
+- Prefer a VPS region close to the primary user base.
+- Keep latency materially lower than a distant-region deployment.
 - Preserve the current browser-visible auth and API contract.
-- Move the stateful services off Render.
+- Move the stateful services off the frontend host.
 - Keep infrastructure simple enough for one-person operation.
 
 ## Non-Goals
@@ -56,10 +56,10 @@ That means the safest migration path is not "move the browser to `api.personalbe
 
 Use this topology:
 
-- Render static frontend at `https://app.personalbestie.com`
-- Render rewrite:
-  - `/api/:path* -> https://origin-api.personalbestie.com/api/:path*`
-- Hetzner `CPX11` in Ashburn, Virginia
+- Static frontend host at `https://app.example.com`
+- Frontend-host rewrite:
+  - `/api/:path* -> https://origin-api.example.com/api/:path*`
+- Small VPS in a low-latency region
 - Ubuntu 24.04 LTS on the VPS
 - Caddy on the VPS for TLS and proxying
 - FastAPI backend container on the VPS
@@ -73,15 +73,15 @@ The VPS runs only:
 
 It does not run the frontend container in the recommended production shape.
 
-## Why `CPX11` in Ashburn
+## Why a Small VPS
 
-This decision changed from the earlier `CX23` idea for three reasons:
+This decision changed from the earlier larger-instance idea for three reasons:
 
-1. `CX23` is not the right North America choice. In practice, the Hetzner console exposes `CX23` only in Helsinki and Nuremberg, while the North America path uses the `CPX` line instead.
-2. North America locality is preferred for this deployment.
-3. For this repo, backend plus PostgreSQL is a better use of the VPS than full-stack hosting on a tighter budget.
+1. Region locality matters more than a specific SKU label.
+2. For this repo, backend plus PostgreSQL is a better use of the VPS than full-stack hosting on the same box.
+3. A small VPS keeps the deployment simple while leaving room for the current workload.
 
-`CPX11` is the right fit here because it gives more credible RAM headroom for:
+A small VPS is the right fit here because it gives credible RAM headroom for:
 
 - FastAPI
 - PostgreSQL
@@ -90,14 +90,14 @@ This decision changed from the earlier `CX23` idea for three reasons:
 
 while still staying small enough to be a low-cost single-node deployment.
 
-## Why the Frontend Stays on Render
+## Why the Frontend Stays on the Static Host
 
-The earlier RFC assumed the frontend should move to the VPS. That is no longer the recommendation.
+The earlier draft assumed the frontend should move to the VPS. That is no longer the recommendation.
 
 Reasons:
 
-- the frontend is a static site and already works on Render
-- Render static hosting reduces VPS memory and operational pressure
+- the frontend is a static site and already works on the current host
+- Static hosting reduces VPS memory and operational pressure
 - putting the static frontend on the VPS does not create a meaningful browser-latency advantage by itself
 - the important latency improvement comes from moving the API and database closer to the target region
 
@@ -109,20 +109,20 @@ The main thing learned during deployment planning is that auth correctness is dr
 
 ### Recommended public URLs
 
-- frontend: `https://app.personalbestie.com`
-- browser-visible API: `https://app.personalbestie.com/api/v1/...`
-- backend origin: `https://origin-api.personalbestie.com`
-- Google callback: `https://app.personalbestie.com/api/v1/auth/google/callback`
+- frontend: `https://app.example.com`
+- browser-visible API: `https://app.example.com/api/v1/...`
+- backend origin: `https://origin-api.example.com`
+- Google callback: `https://app.example.com/api/v1/auth/google/callback`
 
-### Why not switch the browser to `api.personalbestie.com`
+### Why not switch the browser to `api.example.com`
 
-If the browser directly calls `https://api.personalbestie.com`, then:
+If the browser directly calls `https://api.example.com`, then:
 
-- requests become cross-origin from `app.personalbestie.com`
+- requests become cross-origin from `app.example.com`
 - cookie and redirect behavior become riskier
-- the migration departs from the current Render-based contract
+- the migration departs from the current frontend-host contract
 
-Keeping `/api/...` on `app.personalbestie.com` is the safer option because it preserves the existing public behavior.
+Keeping `/api/...` on `app.example.com` is the safer option because it preserves the existing public behavior.
 
 ### Cookie guidance
 
@@ -140,14 +140,14 @@ Leaving `COOKIE_DOMAIN` unset keeps cookie scope narrow and matches the current 
 Browser
   |
   v
-Render (app.personalbestie.com)
+Static host (app.example.com)
   |-- /*       -> frontend static site
-  `-- /api/*   -> rewrite/proxy to origin-api.personalbestie.com
+  `-- /api/*   -> rewrite/proxy to origin-api.example.com
 
-origin-api.personalbestie.com
+origin-api.example.com
   |
   v
-Caddy on Hetzner
+Caddy on VPS
   |
   v
 backend container
@@ -189,7 +189,7 @@ That makes:
 - `1 GB` a fragile floor
 - `2 GB` the recommended minimum
 
-This is another reason to prefer `CPX11` over ultra-cheap `1 GB` alternatives.
+This is another reason to prefer a modest VPS over ultra-cheap `1 GB` alternatives.
 
 ## Host Baseline
 
@@ -205,10 +205,10 @@ The production template should be copied to `backend/.env.production` and popula
 
 The critical values are:
 
-- `FRONTEND_URL=https://app.personalbestie.com`
+- `FRONTEND_URL=https://app.example.com`
 - `FRONTEND_POST_LOGIN_PATH=/workouts`
-- `API_ORIGIN_DOMAIN=origin-api.personalbestie.com`
-- `GOOGLE_REDIRECT_URI=https://app.personalbestie.com/api/v1/auth/google/callback`
+- `API_ORIGIN_DOMAIN=origin-api.example.com`
+- `GOOGLE_REDIRECT_URI=https://app.example.com/api/v1/auth/google/callback`
 - `ENVIRONMENT=production`
 - `COOKIE_SECURE=true`
 - `DATABASE_URL=postgresql+asyncpg://...@db:5432/...`
@@ -217,21 +217,21 @@ The critical values are:
 
 Create or maintain:
 
-- `app.personalbestie.com` -> Render
-- `origin-api.personalbestie.com` -> Hetzner VPS public IPv4
+- `app.example.com` -> frontend host
+- `origin-api.example.com` -> VPS public IPv4
 
-There is no need to expose a public `api.personalbestie.com` hostname for the first rollout.
+There is no need to expose a public `api.example.com` hostname for the first rollout.
 
 ## Deploy Flow
 
 1. Copy [`backend/.env.production.template`](../../.env.production.template) to `backend/.env.production` and populate secrets.
-2. Point `origin-api.personalbestie.com` at the Hetzner VPS.
+2. Point `origin-api.example.com` at the VPS.
 3. Run:
    - `docker compose -f docker-compose.prod.yml up -d --build`
-4. Update the Render rewrite:
-   - `/api/:path* -> https://origin-api.personalbestie.com/api/:path*`
+4. Update the frontend-host rewrite:
+   - `/api/:path* -> https://origin-api.example.com/api/:path*`
 5. Verify:
-   - `https://app.personalbestie.com/api/v1/health`
+   - `https://app.example.com/api/v1/health`
    - Google login initiation
    - Google callback
    - post-login redirect
@@ -239,9 +239,9 @@ There is no need to expose a public `api.personalbestie.com` hostname for the fi
 
 ## Risks
 
-### Render rewrite assumptions
+### Frontend-host rewrite assumptions
 
-This design assumes the Render rewrite preserves the current browser-visible `/api/...` behavior. That should be verified in production after cutover.
+This design assumes the frontend-host rewrite preserves the current browser-visible `/api/...` behavior. That should be verified in production after cutover.
 
 ### Single-node risk
 
@@ -249,22 +249,16 @@ The backend and database remain single-host services. Host failure still causes 
 
 ### Memory ceiling
 
-`CPX11` is a small server. It is the right small baseline, not a large safety margin.
+This is a small server class. It is the right baseline, not a large safety margin.
 
 ### OAuth drift
 
-If `FRONTEND_URL`, `GOOGLE_REDIRECT_URI`, or the Render rewrite drift apart, sign-in will fail.
+If `FRONTEND_URL`, `GOOGLE_REDIRECT_URI`, or the frontend-host rewrite drift apart, sign-in will fail.
 
 ## Rollout Plan
 
 1. Deploy the VPS-side stack from [`docker-compose.prod.yml`](../../../docker-compose.prod.yml).
-2. Validate `origin-api.personalbestie.com` directly.
-3. Switch the Render `/api` rewrite to the new Hetzner origin.
-4. Validate end-to-end login and session behavior on `app.personalbestie.com`.
+2. Validate `origin-api.example.com` directly.
+3. Switch the frontend host `/api` rewrite to the new VPS origin.
+4. Validate end-to-end login and session behavior on `app.example.com`.
 5. Monitor memory, restart behavior, and database health during the first week.
-
-## Sources
-
-- Hetzner Cloud pricing: [hetzner.com/cloud/pricing](https://www.hetzner.com/cloud/pricing/)
-- Hetzner locations: [docs.hetzner.com/cloud/general/locations](https://docs.hetzner.com/cloud/general/locations/)
-- Hetzner price adjustment: [docs.hetzner.com/general/infrastructure-and-availability/price-adjustment](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/)

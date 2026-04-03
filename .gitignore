@@ -84,6 +84,7 @@ coverage.xml
 *.env
 *.env.*
 /backend/.env
+!backend/.env.example
 !backend/.env.production.template
 # Frontend environment files
 pe-be-tracker-frontend/.env*
