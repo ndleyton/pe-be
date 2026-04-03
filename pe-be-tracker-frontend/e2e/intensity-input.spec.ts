@@ -39,7 +39,7 @@ test.describe("Intensity Input", () => {
       .fill("E2E intensity input test");
 
     await page.getByTestId("open-workout-type-modal").click();
-    await page.getByText("Strength Training", { exact: false }).click();
+    await page.getByTestId("workout-type-strength-training").click();
 
     await page.getByTestId("start-workout-button").click();
 

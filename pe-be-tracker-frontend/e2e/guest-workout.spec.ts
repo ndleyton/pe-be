@@ -105,7 +105,7 @@ test.describe("Guest Mode Workout Creation", () => {
         .locator('div[role="dialog"], .fixed')
         .filter({ hasText: "Select Workout Type" }),
     ).toBeVisible();
-    await page.click("text=Strength Training");
+    await page.getByTestId("workout-type-strength-training").click();
 
     // 6. Submit the form
     await page.click('[data-testid="start-workout-button"]');

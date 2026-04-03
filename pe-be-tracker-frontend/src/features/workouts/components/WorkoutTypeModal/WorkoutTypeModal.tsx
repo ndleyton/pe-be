@@ -117,6 +117,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
           <button
             key={workoutType.id}
             onClick={() => handleSelect(workoutType)}
+            data-testid={`workout-type-${workoutType.name.toLowerCase().replace(/\s+/g, "-")}`}
             className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/50 bg-card/60 p-4 text-left transition-all hover:scale-[1.02] hover:bg-accent/60 hover:border-primary/40 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {/* Subtle decoration */}
@@ -127,7 +128,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
               <span className="relative z-10">{workoutType.name.charAt(0)}</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
+              <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors" data-testid="workout-type-name">
                 {workoutType.name}
               </h4>
               <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">

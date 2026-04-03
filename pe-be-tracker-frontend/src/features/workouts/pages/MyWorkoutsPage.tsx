@@ -12,7 +12,7 @@ import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
-import { Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
+import { Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -183,7 +183,7 @@ const MyWorkoutsPage = () => {
               <div className="mt-2">
                 <WorkoutForm
                   routine={selectedRoutine}
-                  onWorkoutCreated={(workoutId) => {
+                  onWorkoutCreated={(_workoutId) => {
                     if (isAuthenticated) {
                       refetch();
                     }

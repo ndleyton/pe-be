@@ -67,7 +67,7 @@ test.describe("Finish workout routine creation", () => {
         .locator('div[role="dialog"], .fixed')
         .filter({ hasText: "Select Workout Type" }),
     ).toBeVisible();
-    await page.click("text=Strength Training");
+    await page.getByTestId("workout-type-strength-training").click();
 
     await page.click('[data-testid="start-workout-button"]');
     await expect(page).toHaveURL(new RegExp("/workouts/.+"), {

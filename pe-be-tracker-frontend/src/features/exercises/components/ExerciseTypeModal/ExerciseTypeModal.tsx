@@ -344,7 +344,7 @@ const ExerciseTypeModal = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold tracking-tight">Select Exercise</DialogTitle>
+          <DialogTitle className="text-xl font-bold tracking-tight">Select Exercise Type</DialogTitle>
         </DialogHeader>
 
         <div className="px-6 pb-4">
@@ -357,7 +357,7 @@ const ExerciseTypeModal = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search by name or description..."
+              placeholder="Search exercise types..."
               disabled={isAuthenticated && createMutation.isPending}
               className="border-border/50 bg-accent/30 text-foreground placeholder-muted-foreground/60 focus:ring-primary/20 block w-full rounded-2xl border py-3 pr-12 pl-12 focus:border-primary/30 focus:ring-4 focus:outline-none disabled:opacity-50 transition-all font-medium"
             />
