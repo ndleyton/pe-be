@@ -1,0 +1,52 @@
+# PersonalBestie Frontend
+
+PersonalBestie is a React + TypeScript fitness app built around a personalized AI coach. It helps users surpass their personal bests with workout tracking, routine sharing, and data-driven guidance after each session.
+
+## App Surface
+
+- `workouts`: workout creation, editing, and completion flows
+- `routines`: browse quick-start routines and manage routine templates
+- `exercise-types`: exercise library and exercise-type administration
+- `profile`: user profile and account settings
+- `chat`: in-app coaching/chat experience
+
+## AI Coach
+
+- Personalized workout guidance grounded in the user&apos;s training history
+- Post-workout AI recaps that summarize the session with data-backed coaching insights
+- Routine and workout review flows that help users understand progress and next steps
+- Chat experience for asking training questions and getting coaching support
+
+## Routine Pages
+
+- `src/features/routines/pages/RoutinesPage.tsx`: routine list, search, and quick-start actions
+- `src/features/routines/pages/RoutineDetailsPage.tsx`: routine detail, editor, save, delete, and start-workout actions
+- `src/features/routines/components/`: routine cards, editors, and modal helpers
+- `src/features/routines/api/index.ts`: routine API calls and payload types
+
+## Data Model
+
+- A routine contains a name, description, visibility, creator, and ordered exercise templates
+- Each exercise template contains an exercise type and ordered set templates
+- Set templates store repetitions, intensity, and intensity-unit selection
+
+## API Notes
+
+- Frontend API routes are defined in `src/shared/api/endpoints.ts`
+- Routine endpoints are mounted under `/api/v1/routines/`
+- Collection endpoints keep trailing slashes so POST requests avoid redirects
+
+## Development
+
+- Install dependencies: `npm install`
+- Start the app: `npm run dev`
+- Run lint: `npm run lint`
+- Run tests: `npm test`
+- Run type checking: `npm run typecheck`
+
+## Architecture Notes
+
+- Guest state is stored locally with IndexedDB and a localStorage fallback
+- Authenticated state syncs through the backend API
+- App-wide routing lives in `src/routes.tsx`
+- Post-workout recap generation is part of the backend workout flow and powers the app&apos;s AI coaching experience
