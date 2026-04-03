@@ -755,6 +755,7 @@ const WorkoutPage = () => {
         onConfirm={handleFinishWorkout}
         onCancel={handleCancelFinish}
         isLoading={isAuthenticated && finishWorkoutMutation.isPending}
+        isAuthenticated={isAuthenticated}
         exercises={exercises}
         onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
         workoutName={workoutName || undefined}

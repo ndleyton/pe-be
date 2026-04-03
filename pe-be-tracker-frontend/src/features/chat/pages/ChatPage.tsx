@@ -107,6 +107,11 @@ const ALLOWED_ATTACHMENT_TYPES = [
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
 
+const normalizeChatCopy = (message: string) =>
+  message
+    .replace(/with Gemini/gi, "with the AI coach")
+    .replace(/\bGemini\b/gi, "AI coach");
+
 const parseWorkoutCreatedEvent = (
   event: ChatApiWorkoutCreatedEvent,
 ): WorkoutCreatedEvent => {
@@ -288,9 +293,11 @@ const ChatPage = () => {
       }, 50);
     },
     onError: (error) => {
-      const message = extractErrorMessage(
-        error,
-        "Sorry, I encountered an error processing your message. Please try again.",
+      const message = normalizeChatCopy(
+        extractErrorMessage(
+          error,
+          "Sorry, I encountered an error processing your message. Please try again.",
+        ),
       );
 
       setMessages((prev) => [
@@ -399,11 +406,11 @@ const ChatPage = () => {
           {
             id: `${Date.now()}-response`,
             role: "assistant",
-            content: "Please sign in to use the AI fitness coach features.",
+            content: "Chat is available for logged-in users. Please sign in to continue.",
             parts: [
               {
                 type: "text",
-                text: "Please sign in to use the AI fitness coach features.",
+                text: "Chat is available for logged-in users. Please sign in to continue.",
               },
             ],
             timestamp: new Date(),
@@ -679,8 +686,8 @@ const ChatPage = () => {
                 Welcome to your AI Personal Trainer
               </h3>
               <p className="text-muted-foreground mb-6 text-sm">
-                Ask questions, log workouts, or attach photos for Gemini to
-                analyze.
+                Ask questions, log workouts, or attach photos for coaching and
+                analysis.
               </p>
               <div className="mx-auto max-w-md space-y-2">
                 <p className="text-muted-foreground mb-3 text-xs font-medium">
@@ -699,7 +706,8 @@ const ChatPage = () => {
               {!isAuthenticated && (
                 <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
                   <p className="text-destructive text-sm">
-                    Sign in to chat with Gemini and upload images.
+                    Sign in to use chat and image uploads. This feature is for
+                    logged-in users.
                   </p>
                 </div>
               )}
