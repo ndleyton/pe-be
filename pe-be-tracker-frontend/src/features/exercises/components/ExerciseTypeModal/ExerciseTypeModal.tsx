@@ -6,6 +6,7 @@ import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
+import { Search, X, Plus, Info, Dumbbell, History } from "lucide-react";
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -292,6 +293,12 @@ const ExerciseTypeModal = ({
                   <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
                     {exerciseType.name}
                   </h4>
+                  {!isAuthenticated && exerciseType.times_used > 0 && (
+                    <div className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary tracking-tight">
+                      <History className="h-2.5 w-2.5" />
+                      {exerciseType.times_used}
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
@@ -351,7 +358,7 @@ const ExerciseTypeModal = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search exercise types..."
+              placeholder="Search by name or description..."
               disabled={isAuthenticated && createMutation.isPending}
               className="border-border/50 bg-accent/30 text-foreground placeholder-muted-foreground/60 focus:ring-primary/20 block w-full rounded-2xl border py-3 pr-12 pl-12 focus:border-primary/30 focus:ring-4 focus:outline-none disabled:opacity-50 transition-all font-medium"
             />
