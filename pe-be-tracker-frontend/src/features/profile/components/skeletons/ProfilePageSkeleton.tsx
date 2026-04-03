@@ -3,45 +3,49 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { WeekTrackingSkeleton } from "@/shared/components/skeletons/WeekTrackingSkeleton";
 
 const ProfilePageSkeleton = () => (
-  <div className="mx-auto max-w-5xl p-8 text-center">
+  <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8" aria-busy="true" aria-live="polite">
     <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="text-muted-foreground mt-1">Track your fitness journey</p>
+      <div className="mb-8 text-center sm:mb-10">
+        <h1 className="text-4xl font-black tracking-tight text-foreground/20 sm:text-5xl">Profile</h1>
       </div>
 
-      <WeekTrackingSkeleton className="mb-6" />
+      <WeekTrackingSkeleton className="mb-8" />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-lg p-4">
+          <div key={i} className="bg-card/40 border-border/20 rounded-2xl border p-6 shadow-sm backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="mb-2 h-4 w-24" />
-                <Skeleton className="h-8 w-12" />
+              <div className="text-left flex-1 min-w-0 pr-4">
+                <Skeleton className="mb-2 h-3 w-20" />
+                <Skeleton className="h-9 w-14" />
               </div>
-              <Skeleton className="h-12 w-12 rounded-full" />
+              <Skeleton className="h-14 w-14 rounded-2xl" />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-card rounded-lg p-6 text-center">
-        <h2 className="mb-4 text-lg font-semibold">Account Information</h2>
-        <div className="flex flex-col items-center space-y-4">
-          <div>
-            <Skeleton className="mb-1 h-4 w-12" />
-            <Skeleton className="h-5 w-20" />
+      <div className="rounded-3xl border border-border/20 bg-card/40 p-8 shadow-sm backdrop-blur-md">
+        <div className="flex justify-center mb-8">
+          <Skeleton className="h-6 w-48" />
+        </div>
+
+        <div className="mx-auto max-w-sm space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <Skeleton className="mb-2 h-3 w-16" />
+              <Skeleton className="h-6 w-32" />
+            </div>
+            <Skeleton className="h-3 w-3 rounded-full" />
           </div>
-          <div>
-            <Skeleton className="mb-1 h-4 w-16" />
-            <Skeleton className="h-10 w-32" />
+
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <Skeleton className="mb-3 h-3 w-20" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex justify-center py-4">
-        <span className="loading loading-spinner loading-lg"></span>
       </div>
     </div>
   </div>
