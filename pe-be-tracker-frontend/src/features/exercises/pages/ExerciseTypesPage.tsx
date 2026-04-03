@@ -195,6 +195,7 @@ const ExerciseTypesPage = () => {
             {showCreateButton && (
               <button
                 type="button"
+                title={`Create "${searchTerm.trim()}"`}
                 onClick={handleCreateExerciseType}
                 disabled={createMutation.isPending}
                 className="absolute inset-y-0 right-2 flex items-center pr-2"
@@ -309,7 +310,7 @@ const ExerciseTypesPage = () => {
         {/* Loading more indicator */}
         {!isPending && isFetchingNextPage && (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent loading-spinner" />
           </div>
         )}
 
@@ -317,7 +318,7 @@ const ExerciseTypesPage = () => {
         {!isPending && !hasMore && filteredExerciseTypes.length > 0 && (
           <div className="py-12 text-center">
             <p className="text-muted-foreground text-sm font-medium opacity-50">
-              You&apos;ve reached the end of the library
+              No more exercise types to load
             </p>
           </div>
         )}
@@ -331,8 +332,8 @@ const ExerciseTypesPage = () => {
             <h3 className="text-xl font-bold text-foreground mb-2">No exercises found</h3>
             <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
               {hasActiveFilters
-                ? "We couldn't find anything matching your current filters."
-                : "Your exercise collection is currently empty."}
+                ? "No exercise types match your current filters"
+                : "No exercise types available"}
             </p>
             {hasActiveFilters && (
               <Button
@@ -343,7 +344,7 @@ const ExerciseTypesPage = () => {
                 variant="outline"
                 className="rounded-xl border-border/40 font-bold"
               >
-                Clear all filters
+                Clear filters
               </Button>
             )}
           </div>

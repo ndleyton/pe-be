@@ -16,7 +16,10 @@ export async function openWorkoutForm(page: Page) {
 
 export async function renameWorkout(page: Page, workoutName: string) {
   const workoutNameHeading = page.getByTestId("workout-name-heading");
-  await workoutNameHeading.click({ force: true });
+  const workoutNameEditor = workoutNameHeading.locator("xpath=..");
+  await expect(workoutNameEditor).toBeVisible();
+  await workoutNameEditor.scrollIntoViewIfNeeded();
+  await workoutNameEditor.click({ force: true });
 
   const workoutNameInput = page.getByTestId("workout-name-input");
   await expect(workoutNameInput).toBeVisible();

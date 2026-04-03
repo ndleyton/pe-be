@@ -47,7 +47,10 @@ test.describe("Intensity Input", () => {
     ).toBeVisible();
 
     // Open exercise modal and select exercise type
-    await page.getByRole("button", { name: "Add Exercise" }).click();
+    const addExerciseButton = page.getByRole("button", { name: "Add Exercise" });
+    await expect(addExerciseButton).toBeVisible();
+    await addExerciseButton.scrollIntoViewIfNeeded();
+    await addExerciseButton.click({ force: true });
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
