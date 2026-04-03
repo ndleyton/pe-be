@@ -41,8 +41,7 @@ test.describe("Finish workout routine creation", () => {
       });
     });
 
-    await page.goto("/workouts");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/workouts$/);
     await expect(page.getByRole("heading", {
       name: "Workouts",
@@ -74,7 +73,7 @@ test.describe("Finish workout routine creation", () => {
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
-    await page.getByText("Push-ups", { exact: true }).click();
+    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).not.toBeVisible();

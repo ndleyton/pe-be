@@ -69,10 +69,7 @@ test.describe("Guest Mode Workout Creation", () => {
       });
     });
 
-    await page.goto("/workouts");
-
-    // Wait for the page to be fully loaded
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
 
     // Verify we are on workouts page
     await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });

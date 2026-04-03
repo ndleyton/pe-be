@@ -7,6 +7,7 @@ import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
+import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -94,6 +95,11 @@ const ProfilePageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<ProfilePageSkeleton />}>{children}</Suspense>
 );
 
+// Wrapper component for WorkoutPage with custom fallback
+const WorkoutPageWrapper = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<WorkoutPageSkeleton />}>{children}</Suspense>
+);
+
 const routes: RouteObject[] = [
   {
     path: "/login",
@@ -121,9 +127,9 @@ const routes: RouteObject[] = [
       {
         path: "workouts/:workoutId",
         element: (
-          <PageWrapper>
+          <WorkoutPageWrapper>
             <WorkoutPage />
-          </PageWrapper>
+          </WorkoutPageWrapper>
         ),
       },
       {

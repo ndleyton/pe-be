@@ -21,4 +21,11 @@ export async function renameWorkout(page: Page, workoutName: string) {
   const workoutNameInput = page.getByTestId("workout-name-input");
   await expect(workoutNameInput).toBeVisible();
   await workoutNameInput.fill(workoutName);
+
+  const saveWorkoutNameButton = page.getByRole("button", {
+    name: "save workout name",
+  });
+  await expect(saveWorkoutNameButton).toBeVisible();
+  await saveWorkoutNameButton.click();
+  await expect(workoutNameHeading).toHaveText(workoutName);
 }

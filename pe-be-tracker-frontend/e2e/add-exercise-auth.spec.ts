@@ -142,8 +142,8 @@ test.describe("Add Exercise (authenticated)", () => {
     });
 
     // Navigate directly to a workout page (authenticated path)
-    await page.goto(`/workouts/${workoutId}`);
-    await page.waitForLoadState("networkidle");
+    await page.goto(`/workouts/${workoutId}`, { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(`/workouts/${workoutId}`);
 
     // Ensure page is ready and shows the Add Exercise button
     await expect(page.getByRole("button", { name: "Add Exercise" })).toBeVisible();
@@ -154,8 +154,10 @@ test.describe("Add Exercise (authenticated)", () => {
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
     await page.getByPlaceholder("Search exercise types...").fill("Push");
-    await expect(page.getByText("Push-ups", { exact: true })).toBeVisible();
-    await page.getByText("Push-ups", { exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /^P Push-ups\b/ }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
 
     // Wait for the POST to be made
     await expect.poll(() => trailingCalled).toBe(true);

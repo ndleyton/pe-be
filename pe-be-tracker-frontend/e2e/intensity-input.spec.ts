@@ -21,9 +21,12 @@ test.describe("Intensity Input", () => {
       });
     });
 
-    await page.goto("/workouts");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL("/workouts");
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible();
 
     await openWorkoutForm(page);
 
@@ -49,7 +52,7 @@ test.describe("Intensity Input", () => {
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
     await page.getByPlaceholder("Search exercise types...").fill("Push");
-    await page.getByText("Push-ups", { exact: true }).click();
+    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
 
     const exerciseHeading = page.getByRole("heading", { name: "Push-ups" });
     await exerciseHeading.waitFor({ state: "visible" });
