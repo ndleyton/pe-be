@@ -26,6 +26,7 @@ import {
 } from "@/shared/components/ui/alert";
 import { useInfiniteScroll } from "@/shared/hooks";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,49 +172,26 @@ const ExerciseTypesPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <div className="mx-auto">
-        <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Exercises</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">
-              Manage and explore your exercise movements
-            </p>
-          </div>
-          <div className="flex items-center gap-2 rounded-2xl bg-accent/50 p-1 border border-border/40">
-            <Button
-              variant={orderBy === "usage" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setOrderBy("usage")}
-              className="rounded-xl font-bold text-xs"
-            >
-              Popular
-            </Button>
-            <Button
-              variant={orderBy === "name" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setOrderBy("name")}
-              className="rounded-xl font-bold text-xs"
-            >
-              A-Z
-            </Button>
-          </div>
+        <div className="mb-8 text-center sm:mb-10">
+          <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">Exercises</h1>
         </div>
 
         {/* Search and Filter Controls */}
         <div className="mb-10 flex flex-col gap-4 lg:flex-row">
           <div className="relative flex-1 group">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
-            </div>
             <Input
               type="text"
-              placeholder="Search by name or description..."
+              placeholder="Search exercises..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={createMutation.isPending}
-              className="border-border/40 bg-card/60 h-14 w-full rounded-2xl pr-14 pl-12 shadow-sm transition-all focus:border-primary/30 focus:ring-4 focus:ring-primary/10 backdrop-blur-sm font-medium"
+              className="border-primary/30 bg-card/90 h-16 w-full rounded-2xl pr-14 pl-14 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-2xl backdrop-blur-md font-black text-xl placeholder:font-bold placeholder:text-muted-foreground/30"
             />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5 z-10">
+              <Search className="text-primary group-focus-within:text-primary h-6 w-6 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
+            </div>
             {showCreateButton && (
               <button
                 type="button"
@@ -235,7 +213,7 @@ const ExerciseTypesPage = () => {
             )}
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-row gap-2 sm:gap-4">
             <Select
               value={selectedMuscleGroupId}
               onValueChange={setSelectedMuscleGroupId}
@@ -243,13 +221,13 @@ const ExerciseTypesPage = () => {
             >
               <SelectTrigger
                 aria-label="Filter by muscle group"
-                className="border-border/40 bg-card/60 h-14 w-full rounded-2xl shadow-sm sm:w-[220px] backdrop-blur-sm font-medium focus:ring-primary/10"
+                className="border-border/40 bg-card/60 h-16 w-[150px] sm:w-[200px] rounded-2xl shadow-sm backdrop-blur-sm font-bold focus:ring-primary/10 transition-all"
               >
                 <SelectValue
                   placeholder={
                     isMuscleGroupSelectorDisabled
-                      ? "Loading..."
-                      : "Filter Muscles"
+                      ? "..."
+                      : "Muscles"
                   }
                 />
               </SelectTrigger>
@@ -265,6 +243,31 @@ const ExerciseTypesPage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
+              <Button
+                variant={orderBy === "usage" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOrderBy("usage")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
+                  orderBy === "usage" ? "shadow-md scale-[1.02]" : "opacity-60"
+                )}
+              >
+                Popular
+              </Button>
+              <Button
+                variant={orderBy === "name" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOrderBy("name")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
+                  orderBy === "name" ? "shadow-md scale-[1.02]" : "opacity-60"
+                )}
+              >
+                A-Z
+              </Button>
+            </div>
           </div>
         </div>
 

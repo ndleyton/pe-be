@@ -153,7 +153,7 @@ const MyWorkoutsPage = () => {
       <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center sm:mb-10">
-            <h1 className="text-foreground text-4xl font-extrabold tracking-tight lg:text-5xl">
+            <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
               Workouts
             </h1>
           </div>
