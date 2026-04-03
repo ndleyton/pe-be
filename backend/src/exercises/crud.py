@@ -30,6 +30,10 @@ from src.exercises.intensity_units import (
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
+from src.exercises.thumbnail_keys import (
+    determine_thumbnail_key,
+    determine_thumbnail_key_for_exercise_type,
+)
 
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
@@ -107,7 +111,11 @@ async def _load_muscles_by_ids(
     session: AsyncSession,
     muscle_ids: list[int],
 ) -> list[Muscle]:
-    result = await session.execute(select(Muscle).where(Muscle.id.in_(muscle_ids)))
+    result = await session.execute(
+        select(Muscle)
+        .options(joinedload(Muscle.muscle_group))
+        .where(Muscle.id.in_(muscle_ids))
+    )
     muscles = result.scalars().all()
     found_ids = {muscle.id for muscle in muscles}
     missing_ids = set(muscle_ids) - found_ids
@@ -122,9 +130,9 @@ async def _replace_exercise_type_muscles(
     session: AsyncSession,
     exercise_type: ExerciseType,
     muscle_ids: Optional[list[int]],
-) -> None:
+) -> Optional[list[str]]:
     if muscle_ids is None:
-        return
+        return None
 
     await session.execute(
         delete(ExerciseMuscle).where(
@@ -133,7 +141,7 @@ async def _replace_exercise_type_muscles(
     )
 
     if not muscle_ids:
-        return
+        return []
 
     muscles = await _load_muscles_by_ids(session, muscle_ids)
     for muscle in muscles:
@@ -144,6 +152,8 @@ async def _replace_exercise_type_muscles(
                 is_primary=False,
             )
         )
+
+    return [muscle.muscle_group.name for muscle in muscles if muscle.muscle_group]
 
 
 async def _hydrate_exercise_types_by_ids(
@@ -714,10 +724,15 @@ async def create_exercise_type(
         await session.flush()
 
         # If muscle IDs were provided, fetch and associate them
-        await _replace_exercise_type_muscles(
+        muscle_group_names = await _replace_exercise_type_muscles(
             session,
             exercise_type,
             exercise_type_create.muscle_ids,
+        )
+        exercise_type.thumbnail_key = determine_thumbnail_key(
+            exercise_name=exercise_type.name,
+            category=exercise_type.category,
+            muscle_group_names=muscle_group_names or [],
         )
         await session.commit()
         await session.refresh(exercise_type)
@@ -776,7 +791,21 @@ async def update_exercise_type(
     for field, value in update_data.items():
         setattr(exercise_type, field, value)
 
-    await _replace_exercise_type_muscles(session, exercise_type, muscle_ids)
+    muscle_group_names = await _replace_exercise_type_muscles(
+        session,
+        exercise_type,
+        muscle_ids,
+    )
+    if muscle_group_names is None:
+        exercise_type.thumbnail_key = determine_thumbnail_key_for_exercise_type(
+            exercise_type
+        )
+    else:
+        exercise_type.thumbnail_key = determine_thumbnail_key(
+            exercise_name=exercise_type.name,
+            category=exercise_type.category,
+            muscle_group_names=muscle_group_names,
+        )
 
     try:
         await session.commit()

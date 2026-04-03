@@ -18,7 +18,7 @@ from src.exercises.models import (
     Muscle,
     MuscleGroup,
 )
-from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate, ExerciseTypeUpdate
 from src.users.models import User
 from src.workouts.models import Workout, WorkoutType
 
@@ -570,9 +570,10 @@ async def test_get_exercise_types_exact_match_prefers_released_before_owned_draf
 
 async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session):
     unit = await _seed_intensity_unit(db_session, "Pounds", "lb")
-    group = await _seed_muscle_group(db_session, "Upper Body")
-    biceps = await _seed_muscle(db_session, "Biceps", group.id)
-    back = await _seed_muscle(db_session, "Back", group.id)
+    arms_group = await _seed_muscle_group(db_session, "Arms")
+    back_group = await _seed_muscle_group(db_session, "Back")
+    biceps = await _seed_muscle(db_session, "Biceps", arms_group.id)
+    back = await _seed_muscle(db_session, "Back", back_group.id)
     await db_session.commit()
 
     created = await crud.create_exercise_type(
@@ -591,6 +592,7 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
         back.id,
     }
     assert all(item.is_primary is False for item in created.exercise_muscles)
+    assert created.thumbnail_key == "full_body"
 
     duplicate = await crud.create_exercise_type(
         db_session,
@@ -608,6 +610,33 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
 
     assert duplicate.id == created.id
     assert count == 1
+
+
+async def test_update_exercise_type_recomputes_thumbnail_key(db_session):
+    back_group = await _seed_muscle_group(db_session, "Back")
+    chest_group = await _seed_muscle_group(db_session, "Chest")
+    lats = await _seed_muscle(db_session, "Lats", back_group.id)
+    chest = await _seed_muscle(db_session, "Chest", chest_group.id)
+    exercise_type = await crud.create_exercise_type(
+        db_session,
+        ExerciseTypeCreate(
+            name="Thumbnail Refresh",
+            description="Start on back",
+            muscle_ids=[lats.id],
+        ),
+    )
+
+    assert exercise_type.thumbnail_key == "back"
+
+    updated = await crud.update_exercise_type(
+        db_session,
+        exercise_type,
+        ExerciseTypeUpdate(
+            muscle_ids=[chest.id],
+        ),
+    )
+
+    assert updated.thumbnail_key == "chest"
 
 
 async def test_exercise_type_visibility_filters_by_user_and_status(db_session):
