@@ -55,6 +55,7 @@ const ExerciseTypeDetailsPage = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [isAdminEditingReleased, setIsAdminEditingReleased] = useState(false);
   const [editValues, setEditValues] = useState({
     name: "",
     description: "",
@@ -94,9 +95,8 @@ const ExerciseTypeDetailsPage = () => {
   });
 
   useEffect(() => {
-    if (!exerciseType) {
-      return;
-    }
+    if (!exerciseType) return;
+
     setEditValues({
       name: exerciseType.name ?? "",
       description: exerciseType.description ?? "",
@@ -105,6 +105,11 @@ const ExerciseTypeDetailsPage = () => {
       instructions: exerciseType.instructions ?? "",
     });
   }, [exerciseType]);
+
+  useEffect(() => {
+    setIsAdminEditingReleased(false);
+    setEditError(null);
+  }, [exerciseTypeId]);
 
   const addMutation = useMutation({
     mutationFn: () =>
@@ -387,10 +392,13 @@ const ExerciseTypeDetailsPage = () => {
         ? "In Review"
         : null;
   const isOwner = currentUserId != null && exerciseType.owner_id === currentUserId;
-  const isEditable =
+  const canEditNonReleased =
     isAuthenticated &&
     exerciseType.status !== "released" &&
     (isOwner || isSuperuser);
+  const canEditReleasedAsAdmin =
+    isAuthenticated && isSuperuser && exerciseType.status === "released";
+  const isEditable = canEditNonReleased || (canEditReleasedAsAdmin && isAdminEditingReleased);
   const canRequestEvaluation =
     isAuthenticated &&
     isOwner &&
@@ -400,6 +408,10 @@ const ExerciseTypeDetailsPage = () => {
     isSuperuser &&
     exerciseType.status !== "released" &&
     !releaseMutation.isPending;
+  const editIntro =
+    exerciseType.status === "released"
+      ? "Admin edits apply directly to this released exercise type."
+      : "Non-released exercise types can be reviewed and updated before release.";
 
   return (
     <div className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8">
@@ -443,6 +455,18 @@ const ExerciseTypeDetailsPage = () => {
                   <ImagePlus className="mr-1 h-4 w-4" />
                   Manage Images
                 </Link>
+              </Button>
+            ) : null}
+            {canEditReleasedAsAdmin && !isAdminEditingReleased ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditError(null);
+                  setIsAdminEditingReleased(true);
+                }}
+              >
+                Edit
               </Button>
             ) : null}
             {isAuthenticated ? (
@@ -495,10 +519,29 @@ const ExerciseTypeDetailsPage = () => {
             <div>
               <h2 className="text-lg font-semibold">Edit Exercise Type</h2>
               <p className="text-muted-foreground text-sm">
-                Non-released exercises stay private to you until an admin approves them.
+                {editIntro}
               </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+              {canEditReleasedAsAdmin && isAdminEditingReleased ? (
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setEditValues({
+                      name: exerciseType.name ?? "",
+                      description: exerciseType.description ?? "",
+                      equipment: exerciseType.equipment ?? "",
+                      category: exerciseType.category ?? "",
+                      instructions: exerciseType.instructions ?? "",
+                    });
+                    setEditError(null);
+                    setIsAdminEditingReleased(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              ) : null}
               {canRequestEvaluation ? (
                 <Button
                   variant="outline"
