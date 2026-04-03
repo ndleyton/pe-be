@@ -216,6 +216,23 @@ describe("ExerciseRow", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides the exercise details link for non-released exercise types", () => {
+    const candidateExercise: Exercise = {
+      ...mockExercise,
+      exercise_type: {
+        ...mockExercise.exercise_type,
+        status: "candidate",
+      },
+    };
+
+    render(<ExerciseRow {...defaultProps} exercise={candidateExercise} />);
+
+    expect(
+      screen.queryByRole("link", { name: /view details for bench press/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Bench Press")).toBeInTheDocument();
+  });
+
   it("displays exercise notes in sticky note and dialog", async () => {
     render(<ExerciseRow {...defaultProps} />);
 

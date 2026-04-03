@@ -1,5 +1,7 @@
 import type { Muscle } from "@/shared/types";
 
+export type ExerciseTypeStatus = "candidate" | "in_review" | "released";
+
 export interface ExerciseType {
   id: number;
   name: string;
@@ -13,6 +15,12 @@ export interface ExerciseType {
   usage_count: number;
   default_intensity_unit: any;
   times_used: number;
+  owner_id?: number | null;
+  status?: ExerciseTypeStatus;
+  review_requested_at?: string | null;
+  released_at?: string | null;
+  reviewed_by?: number | null;
+  review_notes?: string | null;
   images?: string[];
   muscles?: Muscle[];
 }

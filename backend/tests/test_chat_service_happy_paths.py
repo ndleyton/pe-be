@@ -20,9 +20,10 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 async def test_get_last_exercise_performance_happy_path(monkeypatch):
     svc = ChatService(user_id=123, session=object())
 
-    async def _fake_get_exercise_types(session, name, limit):
+    async def _fake_get_exercise_types(session, name, limit, user_id):
         assert name == "Deadlift"
         assert limit == 1
+        assert user_id == 123
         return SimpleNamespace(data=[SimpleNamespace(id=9)])
 
     async def _fake_get_exercise_type_stats(session, exercise_type_id, user_id):

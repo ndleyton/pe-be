@@ -79,12 +79,18 @@ async def _seed_exercise_type(
     description: str = "Exercise",
     default_intensity_unit: int | None = None,
     times_used: int = 0,
+    owner_id: int | None = None,
+    status: ExerciseType.ExerciseTypeStatus = ExerciseType.ExerciseTypeStatus.released,
+    released_at: datetime | None = None,
 ) -> ExerciseType:
     exercise_type = ExerciseType(
         name=name,
         description=description,
         default_intensity_unit=default_intensity_unit,
         times_used=times_used,
+        owner_id=owner_id,
+        status=status,
+        released_at=released_at,
     )
     db_session.add(exercise_type)
     await db_session.flush()
@@ -526,6 +532,42 @@ async def test_get_exercise_types_preserves_fuzzy_order_after_hydration(
     assert result.next_cursor is None
 
 
+async def test_get_exercise_types_exact_match_prefers_released_before_owned_draft(
+    db_session,
+):
+    owner = await _seed_user(db_session, "exact-precedence@example.com")
+    released = await _seed_exercise_type(
+        db_session,
+        "Bench Press",
+        released_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    owner_candidate = await _seed_exercise_type(
+        db_session,
+        "Bench Press",
+        owner_id=owner.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    await db_session.commit()
+
+    first_page = await crud.get_exercise_types(
+        db_session,
+        name="Bench Press",
+        user_id=owner.id,
+        offset=0,
+        limit=1,
+    )
+    second_page = await crud.get_exercise_types(
+        db_session,
+        name="Bench Press",
+        user_id=owner.id,
+        offset=1,
+        limit=1,
+    )
+
+    assert [item.id for item in first_page.data] == [released.id]
+    assert [item.id for item in second_page.data] == [owner_candidate.id]
+
+
 async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session):
     unit = await _seed_intensity_unit(db_session, "Pounds", "lb")
     group = await _seed_muscle_group(db_session, "Upper Body")
@@ -566,6 +608,135 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
 
     assert duplicate.id == created.id
     assert count == 1
+
+
+async def test_exercise_type_visibility_filters_by_user_and_status(db_session):
+    owner = await _seed_user(db_session, "visibility-owner@example.com")
+    other_user = await _seed_user(db_session, "visibility-other@example.com")
+
+    released = await _seed_exercise_type(
+        db_session,
+        "Visibility Released",
+        released_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    owner_candidate = await _seed_exercise_type(
+        db_session,
+        "Visibility Owner Candidate",
+        owner_id=owner.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    owner_in_review = await _seed_exercise_type(
+        db_session,
+        "Visibility Owner Review",
+        owner_id=owner.id,
+        status=ExerciseType.ExerciseTypeStatus.in_review,
+    )
+    other_candidate = await _seed_exercise_type(
+        db_session,
+        "Visibility Other Candidate",
+        owner_id=other_user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    await db_session.commit()
+
+    anonymous = await crud.get_exercise_types(db_session)
+    assert [item.id for item in anonymous.data] == [released.id]
+
+    owner_visible = await crud.get_exercise_types(db_session, user_id=owner.id)
+    assert {item.id for item in owner_visible.data} == {
+        released.id,
+        owner_candidate.id,
+        owner_in_review.id,
+    }
+
+    other_visible = await crud.get_exercise_types(db_session, user_id=other_user.id)
+    assert {item.id for item in other_visible.data} == {
+        released.id,
+        other_candidate.id,
+    }
+
+    admin_visible = await crud.get_exercise_types(db_session, is_admin=True)
+    assert {item.id for item in admin_visible.data} == {
+        released.id,
+        owner_candidate.id,
+        owner_in_review.id,
+        other_candidate.id,
+    }
+
+    owner_detail = await crud.get_exercise_type_by_id(
+        db_session,
+        owner_candidate.id,
+        user_id=owner.id,
+    )
+    assert owner_detail is not None
+
+    hidden_detail = await crud.get_exercise_type_by_id(
+        db_session,
+        owner_candidate.id,
+        user_id=other_user.id,
+    )
+    assert hidden_detail is None
+
+    admin_detail = await crud.get_exercise_type_by_id(
+        db_session,
+        owner_candidate.id,
+        is_admin=True,
+    )
+    assert admin_detail is not None
+
+    anonymous_search = await crud.get_exercise_types(
+        db_session,
+        name="Visibility Owner Candidate",
+    )
+    assert owner_candidate.id not in {item.id for item in anonymous_search.data}
+
+    owner_search = await crud.get_exercise_types(
+        db_session,
+        name="Visibility Owner Candidate",
+        user_id=owner.id,
+    )
+    assert [item.id for item in owner_search.data] == [owner_candidate.id]
+
+
+async def test_exercise_type_review_lifecycle_updates_status_and_release_metadata(
+    db_session,
+):
+    owner = await _seed_user(db_session, "review-owner@example.com")
+    reviewer = await _seed_user(db_session, "review-admin@example.com")
+    await db_session.commit()
+
+    created = await crud.create_exercise_type(
+        db_session,
+        ExerciseTypeCreate(
+            name="Lifecycle Exercise",
+            description="Review me",
+        ),
+        owner_id=owner.id,
+    )
+
+    assert created.owner_id == owner.id
+    assert created.status == ExerciseType.ExerciseTypeStatus.candidate
+    assert created.released_at is None
+
+    in_review = await crud.request_exercise_type_evaluation(db_session, created)
+    assert in_review is not None
+    assert in_review.status == ExerciseType.ExerciseTypeStatus.in_review
+    assert in_review.review_requested_at is not None
+
+    released = await crud.release_exercise_type(
+        db_session,
+        in_review,
+        reviewer_id=reviewer.id,
+        review_notes="Looks good",
+    )
+    assert released is not None
+    assert released.status == ExerciseType.ExerciseTypeStatus.released
+    assert released.released_at is not None
+    assert released.reviewed_by == reviewer.id
+    assert released.review_notes == "Looks good"
+
+    public_detail = await crud.get_exercise_type_by_id(db_session, released.id)
+    assert public_detail is not None
 
 
 async def test_create_exercise_type_rejects_missing_muscles_and_invalid_unit(

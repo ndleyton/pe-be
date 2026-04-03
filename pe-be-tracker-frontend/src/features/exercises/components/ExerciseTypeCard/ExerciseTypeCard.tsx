@@ -14,7 +14,9 @@ export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
   return (
     <Link to={`/exercise-types/${id}`} className="group block">
       <div className="bg-card border-border/20 hover:border-border/40 cursor-pointer rounded-2xl border p-6 shadow-md transition-all duration-200 hover:shadow-lg">
-        <h3 className="mb-2 text-lg leading-tight font-semibold">{name}</h3>
+        <div className="mb-2 flex items-center gap-2">
+          <h3 className="text-lg leading-tight font-semibold">{name}</h3>
+        </div>
 
         {description && (
           <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">

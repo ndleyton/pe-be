@@ -56,7 +56,10 @@ async def create_routine(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new routine"""
-    return await routine_service.create_routine(session, routine_in, user.id)
+    try:
+        return await routine_service.create_routine(session, routine_in, user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.put("/{routine_id}", response_model=RoutineRead)
@@ -67,9 +70,12 @@ async def update_routine(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Update an existing routine"""
-    routine = await routine_service.update_routine(
-        session, routine_id, routine_in, user.id, is_superuser=user.is_superuser
-    )
+    try:
+        routine = await routine_service.update_routine(
+            session, routine_id, routine_in, user.id, is_superuser=user.is_superuser
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
     return routine

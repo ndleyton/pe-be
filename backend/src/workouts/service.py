@@ -236,7 +236,11 @@ class WorkoutService:
                 exercise_type_id=payload.exercise_type_id,
                 workout_id=workout.id,
             )
-            exercise = await create_exercise(session, exercise_create)
+            exercise = await create_exercise(
+                session,
+                exercise_create,
+                user_id=user_id,
+            )
 
         # 4. Add initial set if provided
         if payload.initial_set:
@@ -352,7 +356,10 @@ class WorkoutService:
         for parsed_ex in parsed.exercises:
             # Attempt to find an existing exercise type (fuzzy search already supported)
             exercise_types = await get_exercise_types(
-                session, name=parsed_ex.exercise_type_name, limit=1
+                session,
+                name=parsed_ex.exercise_type_name,
+                limit=1,
+                user_id=user_id,
             )
             exercise_type = None
             if exercise_types.data:
@@ -389,6 +396,7 @@ class WorkoutService:
                         description="Created from chat parsed workout",
                         default_intensity_unit=first_unit_id,
                     ),
+                    owner_id=user_id,
                 )
 
             # Create the exercise row
@@ -398,7 +406,11 @@ class WorkoutService:
                 exercise_type_id=exercise_type.id,
                 workout_id=workout.id,
             )
-            exercise = await create_exercise(session, exercise_create)
+            exercise = await create_exercise(
+                session,
+                exercise_create,
+                user_id=user_id,
+            )
 
             # Create sets
             for parsed_set in parsed_ex.sets:

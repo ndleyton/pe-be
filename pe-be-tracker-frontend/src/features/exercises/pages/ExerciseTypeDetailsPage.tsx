@@ -10,6 +10,9 @@ import Fade from "embla-carousel-fade";
 import {
   getExerciseTypeById,
   getExerciseTypeStats,
+  releaseExerciseType,
+  requestExerciseTypeEvaluation,
+  updateExerciseType,
   type Exercise,
 } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores";
@@ -26,6 +29,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   Carousel,
   CarouselContent,
@@ -33,18 +37,31 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/shared/components/ui/carousel";
+import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 
 const ExerciseTypeDetailsPage = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [addExerciseError, setAddExerciseError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState({
+    name: "",
+    description: "",
+    equipment: "",
+    category: "",
+    instructions: "",
+  });
   const [containerRatio, setContainerRatio] = useState<string>("16 / 9");
   const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isSuperuser = Boolean(useAuthStore((state) => state.user?.is_superuser));
+  const currentUserId = currentUser?.id ?? null;
 
   const {
     data: exerciseType,
@@ -63,9 +80,22 @@ const ExerciseTypeDetailsPage = () => {
   } = useQuery({
     queryKey: ["exerciseTypeStats", exerciseTypeId],
     queryFn: () => getExerciseTypeStats(exerciseTypeId!),
-    enabled: !!exerciseTypeId && !!exerciseType,
+    enabled: !!exerciseTypeId && !!exerciseType && isAuthenticated,
     retry: 1,
   });
+
+  useEffect(() => {
+    if (!exerciseType) {
+      return;
+    }
+    setEditValues({
+      name: exerciseType.name ?? "",
+      description: exerciseType.description ?? "",
+      equipment: exerciseType.equipment ?? "",
+      category: exerciseType.category ?? "",
+      instructions: exerciseType.instructions ?? "",
+    });
+  }, [exerciseType]);
 
   const addMutation = useMutation({
     mutationFn: () =>
@@ -160,6 +190,73 @@ const ExerciseTypeDetailsPage = () => {
         error instanceof Error
           ? error.message
           : "Failed to add exercise to workout. Please try again.",
+      );
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      updateExerciseType(Number(exerciseTypeId), {
+        name: editValues.name.trim(),
+        description: editValues.description.trim() || null,
+        equipment: editValues.equipment.trim() || null,
+        category: editValues.category.trim() || null,
+        instructions: editValues.instructions.trim() || null,
+      }),
+    onMutate: () => {
+      setEditError(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["exerciseType", exerciseTypeId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
+    },
+    onError: (error) => {
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save exercise type changes.",
+      );
+    },
+  });
+
+  const requestEvaluationMutation = useMutation({
+    mutationFn: () => requestExerciseTypeEvaluation(Number(exerciseTypeId)),
+    onMutate: () => {
+      setEditError(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["exerciseType", exerciseTypeId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
+    },
+    onError: (error) => {
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Failed to request evaluation.",
+      );
+    },
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: () => releaseExerciseType(Number(exerciseTypeId)),
+    onMutate: () => {
+      setEditError(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["exerciseType", exerciseTypeId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
+    },
+    onError: (error) => {
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Failed to release exercise type.",
       );
     },
   });
@@ -267,6 +364,27 @@ const ExerciseTypeDetailsPage = () => {
     );
   }
 
+  const statusLabel =
+    exerciseType.status === "candidate"
+      ? "Candidate"
+      : exerciseType.status === "in_review"
+        ? "In Review"
+        : null;
+  const isOwner = currentUserId != null && exerciseType.owner_id === currentUserId;
+  const isEditable =
+    isAuthenticated &&
+    exerciseType.status !== "released" &&
+    (isOwner || isSuperuser);
+  const canRequestEvaluation =
+    isAuthenticated &&
+    isOwner &&
+    exerciseType.status === "candidate" &&
+    !requestEvaluationMutation.isPending;
+  const canRelease =
+    isSuperuser &&
+    exerciseType.status !== "released" &&
+    !releaseMutation.isPending;
+
   return (
     <div className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8">
       {/* Header */}
@@ -281,6 +399,11 @@ const ExerciseTypeDetailsPage = () => {
           <h1 className="min-w-0 text-2xl leading-tight font-bold break-words sm:text-3xl">
             {exerciseType.name}
           </h1>
+          {statusLabel ? (
+            <Badge variant="secondary" className="mt-1 shrink-0">
+              {statusLabel}
+            </Badge>
+          ) : null}
         </div>
 
         {/* Muscles and Button Row */}
@@ -288,13 +411,13 @@ const ExerciseTypeDetailsPage = () => {
           <div className="flex min-w-0 flex-1 flex-wrap gap-2">
             {exerciseType.muscles && exerciseType.muscles.length > 0
               ? exerciseType.muscles.map((muscle) => (
-                  <span
-                    key={muscle.id}
-                    className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                  >
-                    {muscle.name}
-                  </span>
-                ))
+                <span
+                  key={muscle.id}
+                  className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                >
+                  {muscle.name}
+                </span>
+              ))
               : null}
           </div>
           <div className="flex shrink-0 gap-2">
@@ -306,21 +429,23 @@ const ExerciseTypeDetailsPage = () => {
                 </Link>
               </Button>
             ) : null}
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={() => addMutation.mutate()}
-              disabled={addMutation.isPending}
-            >
-              {addMutation.isPending ? (
-                "Adding..."
-              ) : (
-                <>
-                  <Plus className="mr-1 h-4 w-4" />
-                  Add to Workout
-                </>
-              )}
-            </Button>
+            {isAuthenticated ? (
+              <Button
+                size="sm"
+                className="shrink-0"
+                onClick={() => addMutation.mutate()}
+                disabled={addMutation.isPending}
+              >
+                {addMutation.isPending ? (
+                  "Adding..."
+                ) : (
+                  <>
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add to Workout
+                  </>
+                )}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -340,6 +465,115 @@ const ExerciseTypeDetailsPage = () => {
           <AlertDescription>{addExerciseError}</AlertDescription>
         </Alert>
       )}
+
+      {editError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{editError}</AlertDescription>
+        </Alert>
+      )}
+
+      {isEditable ? (
+        <div className="bg-card border-border/20 mb-6 rounded-2xl border p-6 text-left shadow-md">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Edit Exercise Type</h2>
+              <p className="text-muted-foreground text-sm">
+                Non-released exercises stay private to you until an admin approves them.
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+              {canRequestEvaluation ? (
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => requestEvaluationMutation.mutate()}
+                >
+                  {requestEvaluationMutation.isPending
+                    ? "Requesting..."
+                    : "Request Evaluation"}
+                </Button>
+              ) : null}
+              {canRelease ? (
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => releaseMutation.mutate()}
+                >
+                  {releaseMutation.isPending ? "Releasing..." : "Release"}
+                </Button>
+              ) : null}
+              <Button className="w-full sm:w-auto" onClick={() => updateMutation.mutate()}>
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium">Name</span>
+              <Input
+                value={editValues.name}
+                onChange={(event) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium">Equipment</span>
+              <Input
+                value={editValues.equipment}
+                onChange={(event) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    equipment: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium">Category</span>
+              <Input
+                value={editValues.category}
+                onChange={(event) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    category: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <div />
+            <label className="grid gap-2 md:col-span-2">
+              <span className="text-sm font-medium">Description</span>
+              <Textarea
+                value={editValues.description}
+                onChange={(event) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="grid gap-2 md:col-span-2">
+              <span className="text-sm font-medium">Instructions</span>
+              <Textarea
+                value={editValues.instructions}
+                onChange={(event) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    instructions: event.target.value,
+                  }))
+                }
+                rows={5}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2 lg:gap-8">
         <div className="space-y-6">

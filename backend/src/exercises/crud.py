@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update
+from sqlalchemy import and_, delete, desc, or_, select, true, update
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
@@ -38,6 +38,41 @@ FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
 MAX_FUZZY_SEARCH_RESULTS = 1000
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+NON_RELEASED_EXERCISE_TYPE_STATUSES = (
+    ExerciseType.ExerciseTypeStatus.candidate,
+    ExerciseType.ExerciseTypeStatus.in_review,
+)
+EXACT_MATCH_STATUS_PRIORITY = {
+    ExerciseType.ExerciseTypeStatus.released: 0,
+    ExerciseType.ExerciseTypeStatus.in_review: 1,
+    ExerciseType.ExerciseTypeStatus.candidate: 2,
+}
+
+
+def _exercise_type_visibility_clause(
+    *,
+    user_id: Optional[int],
+    is_admin: bool,
+    released_only: bool = False,
+):
+    released_clause = ExerciseType.status == ExerciseType.ExerciseTypeStatus.released
+    if released_only:
+        return released_clause
+    if is_admin:
+        return true()
+    if user_id is None:
+        return released_clause
+    return or_(
+        released_clause,
+        and_(
+            ExerciseType.owner_id == user_id,
+            ExerciseType.status.in_(NON_RELEASED_EXERCISE_TYPE_STATUSES),
+        ),
+    )
+
+
+def _normalized_exercise_type_name(name: str) -> str:
+    return name.strip().lower()
 
 
 def _exercise_type_relationship_option():
@@ -48,12 +83,76 @@ def _exercise_type_relationship_option():
     )
 
 
+def _exact_match_sort_key(
+    *,
+    status: ExerciseType.ExerciseTypeStatus,
+    owner_id: Optional[int],
+    updated_at: Optional[datetime],
+    exercise_type_id: int,
+    user_id: Optional[int],
+) -> tuple[int, int, float, int]:
+    return (
+        EXACT_MATCH_STATUS_PRIORITY.get(status, 99),
+        0 if user_id is not None and owner_id == user_id else 1,
+        -(updated_at.timestamp() if updated_at is not None else 0.0),
+        -exercise_type_id,
+    )
+
+
 def _next_cursor_for_page(offset: int, limit: int, total_results: int) -> Optional[int]:
     return offset + limit if offset + limit < total_results else None
 
 
+async def _load_muscles_by_ids(
+    session: AsyncSession,
+    muscle_ids: list[int],
+) -> list[Muscle]:
+    result = await session.execute(select(Muscle).where(Muscle.id.in_(muscle_ids)))
+    muscles = result.scalars().all()
+    found_ids = {muscle.id for muscle in muscles}
+    missing_ids = set(muscle_ids) - found_ids
+    if missing_ids:
+        raise ValueError(
+            f"Muscle IDs not found: {', '.join(map(str, sorted(missing_ids)))}"
+        )
+    return muscles
+
+
+async def _replace_exercise_type_muscles(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+    muscle_ids: Optional[list[int]],
+) -> None:
+    if muscle_ids is None:
+        return
+
+    await session.execute(
+        delete(ExerciseMuscle).where(
+            ExerciseMuscle.exercise_type_id == exercise_type.id
+        )
+    )
+
+    if not muscle_ids:
+        return
+
+    muscles = await _load_muscles_by_ids(session, muscle_ids)
+    for muscle in muscles:
+        session.add(
+            ExerciseMuscle(
+                exercise_type=exercise_type,
+                muscle=muscle,
+                is_primary=False,
+            )
+        )
+
+
 async def _hydrate_exercise_types_by_ids(
-    session: AsyncSession, exercise_type_ids: List[int]
+    session: AsyncSession,
+    exercise_type_ids: List[int],
+    *,
+    user_id: Optional[int] = None,
+    is_admin: bool = False,
+    released_only: bool = False,
 ) -> List[ExerciseType]:
     if not exercise_type_ids:
         return []
@@ -63,9 +162,16 @@ async def _hydrate_exercise_types_by_ids(
         result = await session.execute(
             select(ExerciseType)
             .options(_exercise_type_relationship_option())
-            .where(ExerciseType.id.in_(exercise_type_ids))
+            .where(
+                ExerciseType.id.in_(exercise_type_ids),
+                _exercise_type_visibility_clause(
+                    user_id=user_id,
+                    is_admin=is_admin,
+                    released_only=released_only,
+                ),
+            )
         )
-        hydrated_types = result.scalars().all()
+        hydrated_types = result.unique().scalars().all()
         hydrated_by_id = {
             exercise_type.id: exercise_type for exercise_type in hydrated_types
         }
@@ -246,9 +352,23 @@ async def get_exercises_for_workout(
 
 
 async def create_exercise(
-    session: AsyncSession, exercise_create: ExerciseCreate
+    session: AsyncSession,
+    exercise_create: ExerciseCreate,
+    *,
+    user_id: Optional[int] = None,
+    is_admin: bool = False,
 ) -> Exercise:
     """Create a new exercise"""
+    if user_id is not None:
+        visible_exercise_type = await get_exercise_type_by_id(
+            session,
+            exercise_create.exercise_type_id,
+            user_id=user_id,
+            is_admin=is_admin,
+        )
+        if visible_exercise_type is None:
+            raise DomainValidationError.invalid_reference(field="exercise_type_id")
+
     exercise = Exercise(**exercise_create.dict())
     session.add(exercise)
 
@@ -291,9 +411,21 @@ async def get_exercise_types(
     order_by: str = "usage",
     offset: int = 0,
     limit: int = 100,
+    user_id: Optional[int] = None,
+    is_admin: bool = False,
+    released_only: bool = False,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
-    query = select(ExerciseType).options(_exercise_type_relationship_option())
+    visibility_clause = _exercise_type_visibility_clause(
+        user_id=user_id,
+        is_admin=is_admin,
+        released_only=released_only,
+    )
+    query = (
+        select(ExerciseType)
+        .options(_exercise_type_relationship_option())
+        .where(visibility_clause)
+    )
     if muscle_group_id is not None:
         query = query.where(
             ExerciseType.exercise_muscles.any(
@@ -308,7 +440,13 @@ async def get_exercise_types(
             span.set_attribute(
                 "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
             )
-            candidate_query = select(ExerciseType.id, ExerciseType.name)
+            candidate_query = select(
+                ExerciseType.id,
+                ExerciseType.name,
+                ExerciseType.status,
+                ExerciseType.owner_id,
+                ExerciseType.updated_at,
+            ).where(visibility_clause)
             if muscle_group_id is not None:
                 candidate_query = candidate_query.where(
                     ExerciseType.exercise_muscles.any(
@@ -328,14 +466,36 @@ async def get_exercise_types(
         # Quick path: exact (case-insensitive) name match for determinism
         exact_match_ids = [
             exercise_type_id
-            for exercise_type_id, candidate_name in candidate_rows
-            if candidate_name and candidate_name.lower() == name.lower()
+            for (
+                exercise_type_id,
+                candidate_name,
+                candidate_status,
+                candidate_owner_id,
+                candidate_updated_at,
+            ) in sorted(
+                (
+                    row
+                    for row in candidate_rows
+                    if row[1] and row[1].lower() == name.lower()
+                ),
+                key=lambda row: _exact_match_sort_key(
+                    status=row[2],
+                    owner_id=row[3],
+                    updated_at=row[4],
+                    exercise_type_id=row[0],
+                    user_id=user_id,
+                ),
+            )
         ]
         if exact_match_ids:
             total_results = len(exact_match_ids)
             paged_exact_match_ids = exact_match_ids[offset : offset + limit]
             exercise_types = await _hydrate_exercise_types_by_ids(
-                session, paged_exact_match_ids
+                session,
+                paged_exact_match_ids,
+                user_id=user_id,
+                is_admin=is_admin,
+                released_only=released_only,
             )
             next_cursor = _next_cursor_for_page(offset, limit, total_results)
             return _build_paginated_exercise_types_response(
@@ -351,7 +511,13 @@ async def get_exercise_types(
         # Filter out None/empty names to avoid TypeError from thefuzz
         valid_candidates = [
             (exercise_type_id, candidate_name)
-            for exercise_type_id, candidate_name in candidate_rows
+            for (
+                exercise_type_id,
+                candidate_name,
+                _candidate_status,
+                _candidate_owner_id,
+                _candidate_updated_at,
+            ) in candidate_rows
             if isinstance(candidate_name, str) and candidate_name.strip()
         ]
 
@@ -417,7 +583,11 @@ async def get_exercise_types(
             total_results = len(matched_ids)
             paged_matched_ids = matched_ids[offset : offset + limit]
             exercise_types = await _hydrate_exercise_types_by_ids(
-                session, paged_matched_ids
+                session,
+                paged_matched_ids,
+                user_id=user_id,
+                is_admin=is_admin,
+                released_only=released_only,
             )
             next_cursor = _next_cursor_for_page(offset, limit, total_results)
         else:
@@ -441,7 +611,11 @@ async def get_exercise_types(
                     total_results = 1
                     paged_matched_ids = [matched_id][offset : offset + limit]
                     exercise_types = await _hydrate_exercise_types_by_ids(
-                        session, paged_matched_ids
+                        session,
+                        paged_matched_ids,
+                        user_id=user_id,
+                        is_admin=is_admin,
+                        released_only=released_only,
                     )
                     next_cursor = _next_cursor_for_page(offset, limit, total_results)
                 else:
@@ -461,7 +635,7 @@ async def get_exercise_types(
             query = query.order_by(desc(ExerciseType.times_used), ExerciseType.name)
 
         result = await session.execute(query.offset(offset).limit(limit))
-        exercise_types = result.scalars().all()
+        exercise_types = result.unique().scalars().all()
         next_cursor = offset + limit if len(exercise_types) == limit else None
 
     return _build_paginated_exercise_types_response(
@@ -476,7 +650,12 @@ async def get_exercise_types(
 
 
 async def get_exercise_type_by_id(
-    session: AsyncSession, exercise_type_id: int
+    session: AsyncSession,
+    exercise_type_id: int,
+    *,
+    user_id: Optional[int] = None,
+    is_admin: bool = False,
+    released_only: bool = False,
 ) -> Optional[ExerciseType]:
     """Get an exercise type by ID with relationships loaded"""
     result = await session.execute(
@@ -486,68 +665,62 @@ async def get_exercise_type_by_id(
             .joinedload(ExerciseMuscle.muscle)
             .joinedload(Muscle.muscle_group)
         )
-        .where(ExerciseType.id == exercise_type_id)
+        .where(
+            ExerciseType.id == exercise_type_id,
+            _exercise_type_visibility_clause(
+                user_id=user_id,
+                is_admin=is_admin,
+                released_only=released_only,
+            ),
+        )
     )
     return result.unique().scalar_one_or_none()
 
 
 async def create_exercise_type(
-    session: AsyncSession, exercise_type_create: ExerciseTypeCreate
+    session: AsyncSession,
+    exercise_type_create: ExerciseTypeCreate,
+    *,
+    owner_id: Optional[int] = None,
+    status: Optional[ExerciseType.ExerciseTypeStatus] = None,
 ) -> ExerciseType:
     """Create a new exercise type"""
+    resolved_status = status or (
+        ExerciseType.ExerciseTypeStatus.candidate
+        if owner_id is not None
+        else ExerciseType.ExerciseTypeStatus.released
+    )
+    now = datetime.now(timezone.utc)
+    exercise_type: Optional[ExerciseType] = None
+
     try:
         # Create base ExerciseType instance
         exercise_type = ExerciseType(
             name=exercise_type_create.name,
             description=exercise_type_create.description,
             default_intensity_unit=exercise_type_create.default_intensity_unit,
+            owner_id=owner_id,
+            status=resolved_status,
+            instructions=exercise_type_create.instructions,
+            equipment=exercise_type_create.equipment,
+            category=exercise_type_create.category,
+            released_at=(
+                now
+                if resolved_status == ExerciseType.ExerciseTypeStatus.released
+                else None
+            ),
         )
+        session.add(exercise_type)
+        await session.flush()
 
         # If muscle IDs were provided, fetch and associate them
-        if exercise_type_create.muscle_ids:
-            result = await session.execute(
-                select(Muscle).where(Muscle.id.in_(exercise_type_create.muscle_ids))
-            )
-            muscles = result.scalars().all()
-
-            # Validate all requested muscles exist
-            found_ids = {m.id for m in muscles}
-            missing_ids = set(exercise_type_create.muscle_ids) - found_ids
-            if missing_ids:
-                raise ValueError(
-                    f"Muscle IDs not found: {', '.join(map(str, missing_ids))}"
-                )
-
-            # Create ExerciseMuscle relationships
-            for muscle in muscles:
-                exercise_muscle = ExerciseMuscle(
-                    exercise_type=exercise_type,
-                    muscle=muscle,
-                    is_primary=False,  # You may want to make this configurable
-                )
-                session.add(exercise_muscle)
-
-        session.add(exercise_type)
-        try:
-            await session.commit()
-            await session.refresh(exercise_type)
-        except IntegrityError:
-            # A row with the same *name* already exists – fetch and return it
-            # instead of bubbling the error.  This makes the operation
-            # idempotent and plays nicely with the sync-guest-data flow where
-            # we may attempt to re-insert the same exercise type.
-            await session.rollback()
-
-            dup = await session.execute(
-                select(ExerciseType).where(
-                    ExerciseType.name == exercise_type_create.name
-                )
-            )
-            existing = dup.scalar_one_or_none()
-            if existing is None:
-                # The error was not because of name – re-raise
-                raise
-            exercise_type = existing
+        await _replace_exercise_type_muscles(
+            session,
+            exercise_type,
+            exercise_type_create.muscle_ids,
+        )
+        await session.commit()
+        await session.refresh(exercise_type)
 
         # Eagerly load muscles and muscle_group relationships for response serialization
         result = await session.execute(
@@ -559,18 +732,147 @@ async def create_exercise_type(
             )
             .where(ExerciseType.id == exercise_type.id)
         )
-        return result.scalar_one()
+        return result.unique().scalar_one()
     except IntegrityError:
-        # Catch any *other* integrity errors (e.g., FK issues) and propagate.
+        await session.rollback()
+        duplicate_query = select(ExerciseType).where(
+            ExerciseType.name.ilike(exercise_type_create.name)
+        )
+        if (
+            owner_id is not None
+            and resolved_status in NON_RELEASED_EXERCISE_TYPE_STATUSES
+        ):
+            duplicate_query = duplicate_query.where(
+                ExerciseType.owner_id == owner_id,
+                ExerciseType.status.in_(NON_RELEASED_EXERCISE_TYPE_STATUSES),
+            )
+        elif resolved_status == ExerciseType.ExerciseTypeStatus.released:
+            duplicate_query = duplicate_query.where(
+                ExerciseType.status == ExerciseType.ExerciseTypeStatus.released
+            )
+
+        dup = await session.execute(duplicate_query)
+        existing = dup.unique().scalar_one_or_none()
+        if existing is None:
+            raise
+
+        result = await session.execute(
+            select(ExerciseType)
+            .options(_exercise_type_relationship_option())
+            .where(ExerciseType.id == existing.id)
+        )
+        return result.unique().scalar_one()
+
+
+async def update_exercise_type(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+    exercise_type_update,
+) -> ExerciseType:
+    """Update an existing exercise type and reload relationships."""
+    update_data = exercise_type_update.model_dump(exclude_unset=True)
+    muscle_ids = update_data.pop("muscle_ids", None)
+
+    for field, value in update_data.items():
+        setattr(exercise_type, field, value)
+
+    await _replace_exercise_type_muscles(session, exercise_type, muscle_ids)
+
+    try:
+        await session.commit()
+    except IntegrityError:
         await session.rollback()
         raise
+
+    result = await session.execute(
+        select(ExerciseType)
+        .options(_exercise_type_relationship_option())
+        .where(ExerciseType.id == exercise_type.id)
+    )
+    return result.unique().scalar_one()
+
+
+async def request_exercise_type_evaluation(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+) -> ExerciseType:
+    exercise_type.status = ExerciseType.ExerciseTypeStatus.in_review
+    exercise_type.review_requested_at = datetime.now(timezone.utc)
+
+    await session.commit()
+    await session.refresh(exercise_type)
+    return await get_exercise_type_by_id(
+        session,
+        exercise_type.id,
+        user_id=exercise_type.owner_id,
+    )
+
+
+async def get_exercise_type_review_queue(session: AsyncSession) -> list[ExerciseType]:
+    result = await session.execute(
+        select(ExerciseType)
+        .options(_exercise_type_relationship_option())
+        .where(ExerciseType.status == ExerciseType.ExerciseTypeStatus.in_review)
+        .order_by(desc(ExerciseType.review_requested_at), ExerciseType.id.desc())
+    )
+    return result.unique().scalars().all()
+
+
+async def release_exercise_type(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+    *,
+    reviewer_id: int,
+    review_notes: Optional[str] = None,
+) -> ExerciseType:
+    now = datetime.now(timezone.utc)
+    exercise_type.status = ExerciseType.ExerciseTypeStatus.released
+    exercise_type.released_at = exercise_type.released_at or now
+    exercise_type.reviewed_by = reviewer_id
+    exercise_type.review_notes = review_notes
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise
+
+    return await get_exercise_type_by_id(
+        session,
+        exercise_type.id,
+        is_admin=True,
+    )
 
 
 # Intensity Unit CRUD operations
 async def get_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
     """Get all intensity units"""
     result = await session.execute(select(IntensityUnit))
-    return result.scalars().all()
+    return result.unique().scalars().all()
+
+
+async def get_visible_exercise_type_ids(
+    session: AsyncSession,
+    exercise_type_ids: list[int],
+    *,
+    user_id: Optional[int],
+    is_admin: bool = False,
+    released_only: bool = False,
+) -> set[int]:
+    if not exercise_type_ids:
+        return set()
+
+    result = await session.execute(
+        select(ExerciseType.id).where(
+            ExerciseType.id.in_(exercise_type_ids),
+            _exercise_type_visibility_clause(
+                user_id=user_id,
+                is_admin=is_admin,
+                released_only=released_only,
+            ),
+        )
+    )
+    return set(result.scalars().all())
 
 
 async def get_exercise_type_stats(
@@ -579,7 +881,11 @@ async def get_exercise_type_stats(
     """Get exercise type statistics with optimized database queries"""
 
     # Get the exercise type first to get the default intensity unit
-    exercise_type = await get_exercise_type_by_id(session, exercise_type_id)
+    exercise_type = await get_exercise_type_by_id(
+        session,
+        exercise_type_id,
+        user_id=user_id,
+    )
     if not exercise_type:
         return {
             "progressiveOverload": [],
@@ -613,7 +919,7 @@ async def get_exercise_type_stats(
         )
         .order_by(Exercise.created_at.desc())
     )
-    exercises = exercises_result.scalars().all()
+    exercises = exercises_result.unique().scalars().all()
 
     if not exercises:
         return {
@@ -830,7 +1136,7 @@ async def verify_exercise_ownership(
         .options(selectinload(Exercise.workout))
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
-    exercise = result.scalar_one_or_none()
+    exercise = result.unique().scalar_one_or_none()
 
     if not exercise or exercise.workout.owner_id != user_id:
         return None

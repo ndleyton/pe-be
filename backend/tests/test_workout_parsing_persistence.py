@@ -54,17 +54,17 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
         return [SimpleNamespace(id=99, name="time-based", abbreviation="time")]
 
     async def fake_get_exercise_types(
-        session, name=None, order_by="usage", offset=0, limit=100
+        session, name=None, order_by="usage", offset=0, limit=100, **kwargs
     ):
         calls["get_exercise_types"] = name
         # Simulate not found so we create one
         return SimpleNamespace(data=[], next_cursor=None)
 
-    async def fake_create_exercise_type(session, exercise_type_create):
+    async def fake_create_exercise_type(session, exercise_type_create, **kwargs):
         calls["create_exercise_type"] = exercise_type_create
         return SimpleNamespace(id=77, name=exercise_type_create.name)
 
-    async def fake_create_exercise(session, exercise_create):
+    async def fake_create_exercise(session, exercise_create, **kwargs):
         calls["create_exercise"] = exercise_create
         return SimpleNamespace(id=555)
 
@@ -156,14 +156,14 @@ async def test_create_workout_from_parsed_raises_when_no_intensity_units(monkeyp
         return []
 
     async def fake_get_exercise_types(
-        session, name=None, order_by="usage", offset=0, limit=100
+        session, name=None, order_by="usage", offset=0, limit=100, **kwargs
     ):
         return SimpleNamespace(data=[], next_cursor=None)
 
-    async def fake_create_exercise_type(session, exercise_type_create):
+    async def fake_create_exercise_type(session, exercise_type_create, **kwargs):
         return SimpleNamespace(id=2, name=exercise_type_create.name)
 
-    async def fake_create_exercise(session, exercise_create):
+    async def fake_create_exercise(session, exercise_create, **kwargs):
         return SimpleNamespace(id=3)
 
     monkeypatch.setattr("src.workouts.service.create_workout", fake_create_workout)

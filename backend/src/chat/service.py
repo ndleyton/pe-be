@@ -116,7 +116,10 @@ class ChatService:
             return "Database session not available."
 
         exercise_types_response = await get_exercise_types(
-            self.session, name=exercise_name, limit=1
+            self.session,
+            name=exercise_name,
+            limit=1,
+            user_id=self.user_id,
         )
         if not exercise_types_response.data:
             return f"No exercise named '{exercise_name}' found."

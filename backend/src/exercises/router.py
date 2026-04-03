@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional
 from fastapi import Depends, APIRouter, status, Query, HTTPException
 from fastapi.responses import JSONResponse
@@ -12,6 +13,7 @@ from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeRead,
     ExerciseTypeCreate,
+    ExerciseTypeUpdate,
     IntensityUnitRead,
     MuscleGroupRead,
     ExerciseTypeStats,
@@ -37,12 +39,23 @@ assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
 async def get_exercise_image_asset(
     image_path: str,
     user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
 ):
     if image_path.startswith("generated/") and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required for generated exercise images",
         )
+
+    generated_match = re.match(r"^generated/exercise-type-(\d+)/", image_path)
+    if generated_match and user is not None:
+        exercise_type = await ExerciseTypeService.get_exercise_type(
+            session,
+            int(generated_match.group(1)),
+            user=user,
+        )
+        if exercise_type is None:
+            raise HTTPException(status_code=404, detail="Exercise image not found")
 
     try:
         file_path = storage_path_for_relative_url(image_path)
@@ -62,7 +75,12 @@ async def create_exercise(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise"""
-    return await ExerciseService.create_new_exercise(session, exercise_in)
+    return await ExerciseService.create_new_exercise(
+        session,
+        exercise_in,
+        user_id=user.id,
+        is_admin=bool(user.is_superuser),
+    )
 
 
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -98,11 +116,23 @@ async def get_exercise_types(
     ),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=1000),
+    released_only: bool = Query(
+        default=False,
+        description="Restrict results to released exercise types only",
+    ),
+    user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
     response_model = await ExerciseTypeService.get_all_exercise_types(
-        session, name, muscle_group_id, order_by, offset, limit
+        session,
+        name,
+        muscle_group_id,
+        order_by,
+        offset,
+        limit,
+        user=user,
+        released_only=released_only,
     )
     response_payload = traced_model_dump(
         response_model,
@@ -121,12 +151,16 @@ async def get_exercise_types(
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
 async def get_exercise_type(
-    exercise_type_id: int, session: AsyncSession = Depends(get_async_session)
+    exercise_type_id: int,
+    user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Get an exercise type by ID."""
     with tracer.start_as_current_span("exercise_types.fetch"):
         exercise_type = await ExerciseTypeService.get_exercise_type(
-            session, exercise_type_id
+            session,
+            exercise_type_id,
+            user=user,
         )
     if not exercise_type:
         raise HTTPException(
@@ -149,7 +183,9 @@ async def get_exercise_type_stats(
     """Get exercise type statistics including progressive overload data."""
     # First check if exercise type exists
     exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
+        session,
+        exercise_type_id,
+        user=user,
     )
     if not exercise_type:
         raise HTTPException(
@@ -171,7 +207,44 @@ async def create_exercise_type(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise type."""
-    return await ExerciseTypeService.create_new_exercise_type(session, exercise_type)
+    return await ExerciseTypeService.create_new_exercise_type(
+        session,
+        exercise_type,
+        user_id=user.id,
+    )
+
+
+@exercise_types_router.patch("/{exercise_type_id}", response_model=ExerciseTypeRead)
+async def update_exercise_type(
+    exercise_type_id: int,
+    exercise_type: ExerciseTypeUpdate,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Update an exercise type."""
+    return await ExerciseTypeService.update_existing_exercise_type(
+        session,
+        exercise_type_id,
+        exercise_type,
+        user=user,
+    )
+
+
+@exercise_types_router.post(
+    "/{exercise_type_id}/request-evaluation",
+    response_model=ExerciseTypeRead,
+)
+async def request_exercise_type_evaluation(
+    exercise_type_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Move an owned exercise type into the admin review queue."""
+    return await ExerciseTypeService.request_evaluation(
+        session,
+        exercise_type_id,
+        user=user,
+    )
 
 
 @muscle_groups_router.get("/", response_model=List[MuscleGroupRead])

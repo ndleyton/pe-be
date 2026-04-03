@@ -44,7 +44,7 @@ const findOrCreateExerciseType = async (
   try {
     // First try to find existing exercise type by name
     const { data: response } = await api.get(
-      `${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}`,
+      `${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}&released_only=true`,
     );
     const existingTypes = response.data;
     const existing = existingTypes.find(
@@ -68,7 +68,7 @@ const findOrCreateExerciseType = async (
       // If duplicate (400) occurred between GET and POST, fetch again
       if (err?.response?.status === 400) {
         const { data: response } = await api.get(
-          `${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}`,
+          `${endpoints.exerciseTypes}?name=${encodeURIComponent(guestExerciseType.name)}&released_only=true`,
         );
         const existingTypesAfter = response.data;
         const existingAfter = existingTypesAfter.find(
