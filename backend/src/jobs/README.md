@@ -2,7 +2,7 @@
 
 This package contains backend-owned CLI jobs that are intended to run outside the FastAPI request lifecycle.
 
-The design follows [RFC 0003](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/docs/rfcs/0003-backend-cron-jobs-on-vps.md):
+The design follows [RFC 0003](../../docs/rfcs/0003-backend-cron-jobs-on-vps.md):
 
 - job logic lives in the backend codebase
 - scheduling is external to the API process
@@ -11,8 +11,8 @@ The design follows [RFC 0003](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backen
 
 ## Current Jobs
 
-- [chat_attachment_cleanup.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/chat_attachment_cleanup.py)
-- [close_stale_open_workouts.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/close_stale_open_workouts.py)
+- [chat_attachment_cleanup.py](./chat_attachment_cleanup.py)
+- [close_stale_open_workouts.py](./close_stale_open_workouts.py)
 
 Manual run:
 
@@ -56,9 +56,9 @@ That caps the stored workout duration instead of letting a stale open workout ap
 
 ## Package Structure
 
-- [shared.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/shared.py): common runtime helper for jobs
-- [chat_attachment_cleanup.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/chat_attachment_cleanup.py): first standardized recurring job
-- [close_stale_open_workouts.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/close_stale_open_workouts.py): auto-close for stale open workouts
+- [shared.py](./shared.py): common runtime helper for jobs
+- [chat_attachment_cleanup.py](./chat_attachment_cleanup.py): first standardized recurring job
+- [close_stale_open_workouts.py](./close_stale_open_workouts.py): auto-close for stale open workouts
 
 ## Job Contract
 
@@ -72,7 +72,7 @@ Each job in this package should follow the same pattern:
 
 ## Shared Helper
 
-`run_managed_job(...)` in [shared.py](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/jobs/shared.py) provides the standard runtime behavior:
+`run_managed_job(...)` in [shared.py](./shared.py) provides the standard runtime behavior:
 
 - configures stable job lock keys from job names
 - opens a dedicated DB session with `async_session_maker`
