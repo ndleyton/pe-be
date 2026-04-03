@@ -213,7 +213,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="border-border bg-card text-card-foreground mx-auto mb-6 w-full max-w-md rounded-lg border p-4 shadow-lg sm:p-6"
+      className="w-full space-y-5 py-2"
     >
       {routine && (
         <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-3">
@@ -298,38 +298,41 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
           </div>
         )}
       </div>
-      <div className="mb-4">
+      <div>
         <label className="text-foreground mb-1 block font-medium">
-          Notes:
+          Notes
           <input
             placeholder="How am I feeling today?"
             type="text"
             {...register("notes")}
             data-testid="workout-notes-input"
-            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
           />
         </label>
       </div>
-      <div className="mb-4">
+      <div>
         <label className="text-foreground mb-1 block font-medium">
-          Start Time:
+          Start Time
           <input
             type="datetime-local"
             {...register("start_time", { required: "Start time is required" })}
-            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
           />
         </label>
         {formState.errors.start_time && (
-          <div className="text-destructive text-sm">
+          <div className="text-destructive mt-1 text-xs">
             {formState.errors.start_time.message}
           </div>
         )}
       </div>
-      <div className="mb-4">
+      <div>
+        <label className="text-foreground mb-1.5 block font-medium">
+          Workout Type
+        </label>
         {selectedWorkoutType ? (
           <div
             onClick={() => setShowModal(true)}
-            className="bg-background border-border hover:bg-accent cursor-pointer rounded-lg border p-4 transition-colors"
+            className="bg-accent/50 border-border hover:bg-accent cursor-pointer rounded-xl border p-4 transition-all"
             data-testid="open-workout-type-modal"
           >
             <div className="flex items-center space-x-3">
@@ -390,7 +393,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       <Button
         type="submit"
         disabled={isAuthenticated && mutation.isPending}
-        className="bg-primary hover:bg-primary/90 mt-2 px-6 py-2"
+        className="bg-primary hover:bg-primary/90 w-full rounded-xl py-6 font-semibold shadow-lg"
         data-testid="start-workout-button"
       >
         {isAuthenticated && mutation.isPending
@@ -398,7 +401,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
           : "Start Workout"}
       </Button>
       {isAuthenticated && mutation.error && (
-        <div className="text-destructive mt-3">Failed to create workout.</div>
+        <div className="text-destructive text-center text-sm font-medium">
+          Failed to create workout.
+        </div>
       )}
 
       <WorkoutTypeModal

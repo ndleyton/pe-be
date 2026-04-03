@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 import { useGuestStore, useAuthStore, GuestWorkoutType } from "@/stores";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import React from "react";
 
 interface WorkoutType {
   id: number;
@@ -50,12 +52,6 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
   const handleSelect = (workoutType: WorkoutType | GuestWorkoutType) => {
     onSelect(workoutType);
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
   };
 
   const SkeletonCard = () => (
@@ -121,19 +117,17 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
           <div
             key={workoutType.id}
             onClick={() => handleSelect(workoutType)}
-            className="bg-card hover:bg-accent border-border cursor-pointer rounded-lg border p-4 transition-colors"
+            className="bg-card/40 hover:bg-accent border-border cursor-pointer rounded-xl border p-4 transition-all hover:scale-[1.01] active:scale-[0.99] backdrop-blur-sm"
           >
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-                <span className="text-primary-foreground font-bold">
-                  {workoutType.name.charAt(0)}
-                </span>
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary/15 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-xl">
+                {workoutType.name.charAt(0)}
               </div>
-              <div className="flex-1">
-                <h4 className="text-foreground font-medium">
+              <div className="flex-1 text-left">
+                <h4 className="text-foreground font-semibold text-base">
                   {workoutType.name}
                 </h4>
-                <p className="text-muted-foreground mt-1 text-sm">
+                <p className="text-muted-foreground mt-1 text-sm leading-snug">
                   {workoutType.description}
                 </p>
               </div>
@@ -144,40 +138,17 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-background max-h-[36rem] w-full max-w-2xl overflow-y-auto rounded-lg p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-foreground text-lg font-semibold">
-            Select Workout Type
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Select Workout Type</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          {renderContent()}
         </div>
-        {renderContent()}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
