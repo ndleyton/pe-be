@@ -4,8 +4,21 @@ on:
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'backend/**'
-      - 'pe-be-tracker-frontend/**'
+      # Limit this heavy workflow to files that can affect the app runtime or E2E harness.
+      - 'backend/src/**'
+      - 'backend/alembic/**'
+      - 'backend/main.py'
+      - 'backend/alembic.ini'
+      - 'backend/pyproject.toml'
+      - 'backend/uv.lock'
+      - 'pe-be-tracker-frontend/src/**'
+      - 'pe-be-tracker-frontend/e2e/**'
+      - 'pe-be-tracker-frontend/public/**'
+      - 'pe-be-tracker-frontend/index.html'
+      - 'pe-be-tracker-frontend/package.json'
+      - 'pe-be-tracker-frontend/package-lock.json'
+      - 'pe-be-tracker-frontend/playwright.config.ts'
+      - 'pe-be-tracker-frontend/vite.config.js'
       - '.github/workflows/e2e.yml'
   workflow_dispatch:
 
