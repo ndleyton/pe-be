@@ -12,12 +12,20 @@ export interface ExerciseImageOption {
   is_current: boolean;
 }
 
+export interface ExerciseImageAvailableOption {
+  key: string;
+  label: string;
+  description: string;
+  option_source: "reference_redraw" | "phase_generated";
+}
+
 export interface ExerciseImageOptionsResponse {
   exercise_type_id: number;
   exercise_name: string;
   current_images: string[];
   reference_images: string[];
   supports_revert_to_reference: boolean;
+  available_options: ExerciseImageAvailableOption[];
   options: ExerciseImageOption[];
 }
 
@@ -32,10 +40,15 @@ export const getExerciseImageOptions = async (
 
 export const generateExerciseImageOptions = async (
   exerciseTypeId: string | number,
+  selection?: { option_key?: string },
 ): Promise<ExerciseImageOptionsResponse> => {
-  const response = await api.post(
-    endpoints.admin.generateExerciseTypeReferenceImageOptions(exerciseTypeId),
+  const endpoint = endpoints.admin.generateExerciseTypeReferenceImageOptions(
+    exerciseTypeId,
   );
+  const response =
+    selection?.option_key !== undefined
+      ? await api.post(endpoint, selection)
+      : await api.post(endpoint);
   return response.data;
 };
 

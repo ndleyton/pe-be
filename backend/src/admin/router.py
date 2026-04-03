@@ -16,6 +16,7 @@ from src.admin.exercise_image_service import (
 )
 from src.admin.schemas import (
     AdminApplyExerciseImageOptionRequest,
+    AdminGenerateExerciseImageOptionsRequest,
     AdminExerciseImageOptionsResponse,
 )
 from src.core.database import get_async_session
@@ -288,6 +289,7 @@ async def get_reference_image_options(
 )
 async def generate_reference_options(
     exercise_type_id: int,
+    generation_request: AdminGenerateExerciseImageOptionsRequest | None = None,
     user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
@@ -306,7 +308,11 @@ async def generate_reference_options(
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
     try:
-        return await generate_reference_image_options(session, exercise_type)
+        return await generate_reference_image_options(
+            session,
+            exercise_type,
+            option_key=generation_request.option_key if generation_request else None,
+        )
     except HTTPException:
         raise
     except errors.ClientError as exc:

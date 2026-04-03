@@ -5,6 +5,7 @@ import { ArrowLeft, Check, ImagePlus, RefreshCcw } from "lucide-react";
 
 import {
   applyExerciseImageOption,
+  type ExerciseImageAvailableOption,
   generateExerciseImageOptions,
   getExerciseImageOptions,
   type ExerciseImageOption,
@@ -109,7 +110,11 @@ const OptionSelector = ({
   selectedKey,
   onSelect,
 }: {
-  options: ExerciseImageOption[];
+  options: Array<
+    ExerciseImageAvailableOption & {
+      is_current?: boolean;
+    }
+  >;
   selectedKey: string;
   onSelect: (optionKey: string) => void;
 }) => (
@@ -133,25 +138,20 @@ const OptionSelector = ({
             variant={isSelected ? "default" : "outline"}
             aria-pressed={isSelected}
             onClick={() => onSelect(option.key)}
-            className="h-auto min-h-16 max-w-full justify-start px-4 py-3 text-left"
+            className="h-auto max-w-full justify-start px-4 py-3 text-left"
           >
-            <span className="flex flex-col items-start gap-1">
-              <span className="flex flex-wrap items-center gap-2">
-                <span>{option.label}</span>
-                {option.is_current ? (
-                  <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
-                    Live
-                  </span>
-                ) : null}
-                {option.option_source === "phase_generated" ? (
-                  <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
-                    Fallback
-                  </span>
-                ) : null}
-              </span>
-              <span className="text-current/80 line-clamp-2 text-xs font-normal">
-                {option.description}
-              </span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span>{option.label}</span>
+              {option.is_current ? (
+                <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  Live
+                </span>
+              ) : null}
+              {option.option_source === "phase_generated" ? (
+                <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  Fallback
+                </span>
+              ) : null}
             </span>
           </Button>
         );
@@ -188,7 +188,8 @@ const ExerciseTypeImageAdminPage = () => {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateExerciseImageOptions(exerciseTypeId!),
+    mutationFn: (selection?: { option_key?: string }) =>
+      generateExerciseImageOptions(exerciseTypeId!, selection),
     onSuccess: (data) => {
       queryClient.setQueryData(["adminExerciseImageOptions", exerciseTypeId], data);
       queryClient.invalidateQueries({
@@ -209,23 +210,33 @@ const ExerciseTypeImageAdminPage = () => {
   });
 
   const data = optionsQuery.data;
-  const selectedOption =
-    data?.options.find((option) => option.key === selectedOptionKey) ??
-    data?.options[0] ??
+  const selectedGenerationOption =
+    data?.available_options.find((option) => option.key === selectedOptionKey) ??
+    data?.available_options[0] ??
     null;
+  const selectedOption =
+    data?.options.find((option) => option.key === selectedGenerationOption?.key) ?? null;
+  const selectorOptions =
+    data?.available_options.map((option) => ({
+      ...option,
+      is_current: data.options.find((generated) => generated.key === option.key)?.is_current,
+    })) ?? [];
 
   useEffect(() => {
-    if (!data?.options.length) {
+    if (!data?.available_options.length) {
       if (selectedOptionKey !== null) {
         setSelectedOptionKey(null);
       }
       return;
     }
 
-    if (!selectedOption) {
-      setSelectedOptionKey(data.options[0].key);
+    if (!selectedGenerationOption) {
+      setSelectedOptionKey(data.available_options[0].key);
     }
-  }, [data, selectedOption, selectedOptionKey]);
+  }, [data, selectedGenerationOption, selectedOptionKey]);
+
+  const selectedOptionDescription =
+    selectedGenerationOption?.description ?? "Choose a generation style.";
 
   if (!initialized) {
     return <LoadingState />;
@@ -292,7 +303,13 @@ const ExerciseTypeImageAdminPage = () => {
           </div>
         </div>
         <Button
-          onClick={() => generateMutation.mutate()}
+          onClick={() =>
+            generateMutation.mutate(
+              hasReferenceSource && selectedGenerationOption
+                ? { option_key: selectedGenerationOption.key }
+                : undefined,
+            )
+          }
           disabled={generateMutation.isPending}
           className="min-w-44"
         >
@@ -304,7 +321,9 @@ const ExerciseTypeImageAdminPage = () => {
           ) : (
             <>
               <ImagePlus className="mr-2 h-4 w-4" />
-              Generate options
+              {hasReferenceSource && selectedGenerationOption
+                ? `Generate ${selectedGenerationOption.label}`
+                : "Generate options"}
             </>
           )}
         </Button>
@@ -324,6 +343,29 @@ const ExerciseTypeImageAdminPage = () => {
             The selected option could not be applied to the exercise type.
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {hasReferenceSource && selectorOptions.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Generation style</CardTitle>
+            <CardDescription>
+              Choose which reference option spec to generate next.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedGenerationOption ? (
+              <OptionSelector
+                options={selectorOptions}
+                selectedKey={selectedGenerationOption.key}
+                onSelect={setSelectedOptionKey}
+              />
+            ) : null}
+            <p className="text-muted-foreground text-sm">
+              {selectedOptionDescription}
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
       <Card>
@@ -382,26 +424,32 @@ const ExerciseTypeImageAdminPage = () => {
             </p>
           </div>
           {selectedOption ? (
-            <>
-              <OptionSelector
-                options={data.options}
-                selectedKey={selectedOption.key}
-                onSelect={setSelectedOptionKey}
-              />
-              <OptionCard
-                key={selectedOption.key}
-                option={selectedOption}
-                onApply={(optionKey) => applyMutation.mutate({ option_key: optionKey })}
-                isApplying={applyMutation.isPending}
-              />
-            </>
+            <OptionCard
+              key={selectedOption.key}
+              option={selectedOption}
+              onApply={(optionKey) => applyMutation.mutate({ option_key: optionKey })}
+              isApplying={applyMutation.isPending}
+            />
+          ) : selectedGenerationOption ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{selectedGenerationOption.label} has not been generated yet</CardTitle>
+                <CardDescription>
+                  Generate the selected style to preview it and make it available to apply.
+                </CardDescription>
+              </CardHeader>
+            </Card>
           ) : null}
         </div>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle>No generated options yet</CardTitle>
-            <CardDescription>{emptyOptionsDescription}</CardDescription>
+            <CardDescription>
+              {selectedGenerationOption
+                ? `${emptyOptionsDescription} The selected style is ${selectedGenerationOption.label}.`
+                : emptyOptionsDescription}
+            </CardDescription>
           </CardHeader>
         </Card>
       )}

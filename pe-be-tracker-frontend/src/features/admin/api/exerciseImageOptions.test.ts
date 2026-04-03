@@ -40,10 +40,13 @@ describe("exerciseImageOptions API", () => {
     const payload = { exercise_type_id: 12, options: [] };
     mockApi.post.mockResolvedValueOnce({ data: payload });
 
-    const result = await generateExerciseImageOptions(12);
+    const result = await generateExerciseImageOptions(12, {
+      option_key: "minimal-outline",
+    });
 
     expect(mockApi.post).toHaveBeenCalledWith(
       "/admin/exercise-types/12/reference-image-options/generate",
+      { option_key: "minimal-outline" },
     );
     expect(result).toEqual(payload);
   });

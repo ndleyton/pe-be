@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 import asyncio
 import json
 import pytest
@@ -477,6 +478,7 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
         assert clean_outline.prompt_summary == "clean-outline:references/source-a.png"
         assert (tmp_path / clean_outline.storage_path).read_bytes() == b"test"
 
+        assert len(response.available_options) == len(REFERENCE_OPTION_SPECS)
         assert len(response.options) == len(REFERENCE_OPTION_SPECS)
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
@@ -538,6 +540,7 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         response = await generate_reference_image_options(db_session, exercise_type)
 
         assert max_active > 1
+        assert len(response.available_options) == len(REFERENCE_OPTION_SPECS)
         assert len(response.options) == len(REFERENCE_OPTION_SPECS)
         for option in response.options:
             assert len(option.images) == 2
@@ -590,6 +593,8 @@ async def test_generate_reference_image_options_falls_back_to_phase_generation(
         assert phase_calls == ["start / eccentric", "end / concentric"]
         assert response.supports_revert_to_reference is False
         assert response.reference_images == []
+        assert len(response.available_options) == 1
+        assert response.available_options[0].key == PHASE_FALLBACK_OPTION_KEY
         assert len(response.options) == 1
         option = response.options[0]
         assert option.option_source == "phase_generated"
@@ -597,6 +602,88 @@ async def test_generate_reference_image_options_falls_back_to_phase_generation(
         assert len(option.images) == 2
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_generate_reference_image_options_can_target_single_option(
+    db_session, monkeypatch, tmp_path
+):
+    original_dir = settings.EXERCISE_IMAGE_STORAGE_DIR
+    settings.EXERCISE_IMAGE_STORAGE_DIR = str(tmp_path)
+    try:
+        exercise_type = ExerciseType(
+            name="Selective Exercise",
+            description="desc",
+            reference_images_url=json.dumps(["references/source-a.png"]),
+        )
+        db_session.add(exercise_type)
+        await db_session.commit()
+        await db_session.refresh(exercise_type)
+
+        calls: list[str] = []
+
+        async def fake_generate_reference_image_variant(
+            *, context, option, source_image_url
+        ):
+            calls.append(option.key)
+            return ExerciseImageResult(
+                model="test-model",
+                mime_type="image/png",
+                base64_data="dGVzdA==",
+                prompt_summary=f"{option.key}:{source_image_url}",
+            )
+
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service.generate_reference_image_variant",
+            fake_generate_reference_image_variant,
+        )
+        monkeypatch.setattr(
+            "src.admin.exercise_image_service._exercise_context",
+            lambda _exercise_type: {
+                "name": "Selective Exercise",
+                "description": "desc",
+                "instructions": "",
+                "equipment": "",
+                "category": "",
+                "primary_muscles": [],
+                "secondary_muscles": [],
+            },
+        )
+
+        response = await generate_reference_image_options(
+            db_session,
+            exercise_type,
+            option_key="minimal-outline",
+        )
+
+        assert calls == ["minimal-outline"]
+        assert len(response.available_options) == len(REFERENCE_OPTION_SPECS)
+        assert [option.key for option in response.options] == ["minimal-outline"]
+    finally:
+        settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
+
+
+@pytest.mark.asyncio
+async def test_generate_reference_image_options_rejects_unknown_option(
+    db_session,
+):
+    exercise_type = ExerciseType(
+        name="Invalid Exercise",
+        description="desc",
+        reference_images_url=json.dumps(["references/source-a.png"]),
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await generate_reference_image_options(
+            db_session,
+            exercise_type,
+            option_key="not-a-real-option",
+        )
+
+    assert excinfo.value.status_code == 400
 
 
 @pytest.mark.asyncio
