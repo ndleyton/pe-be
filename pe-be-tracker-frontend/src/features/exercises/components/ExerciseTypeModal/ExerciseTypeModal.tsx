@@ -5,6 +5,7 @@ import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { truncateWords } from "@/utils/text";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { Badge } from "@/shared/components/ui/badge";
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -19,6 +20,17 @@ const hasMusclesProperty = (
   muscles: Array<{ id: number; name: string }>;
 } => {
   return "muscles" in exerciseType && Array.isArray(exerciseType.muscles);
+};
+
+const exerciseTypeStatusLabel = (exerciseType: ExerciseType) => {
+  switch (exerciseType.status) {
+    case "candidate":
+      return "Candidate";
+    case "in_review":
+      return "In Review";
+    default:
+      return "Released";
+  }
 };
 
 const ExerciseTypeModal = ({
@@ -292,9 +304,16 @@ const ExerciseTypeModal = ({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-foreground font-medium">
-                      {exerciseType.name}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-foreground font-medium">
+                        {exerciseType.name}
+                      </h4>
+                      {isAuthenticated && "status" in exerciseType ? (
+                        <Badge variant="secondary">
+                          {exerciseTypeStatusLabel(exerciseType)}
+                        </Badge>
+                      ) : null}
+                    </div>
                     {!isAuthenticated && exerciseType.times_used > 0 && (
                       <span className="text-muted-foreground bg-muted rounded-full px-2 py-1 text-xs">
                         Used by you {exerciseType.times_used} time

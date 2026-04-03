@@ -3,18 +3,30 @@ import { Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import type { ExerciseType } from "@/features/exercises/api";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { Badge } from "@/shared/components/ui/badge";
 
 interface ExerciseTypeCardProps {
   exerciseType: ExerciseType;
 }
 
 export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
-  const { id, name, description, muscles } = exerciseType;
+  const { id, name, description, muscles, status } = exerciseType;
+  const statusLabel =
+    status === "candidate"
+      ? "Candidate"
+      : status === "in_review"
+        ? "In Review"
+        : status === "released"
+          ? "Released"
+          : null;
 
   return (
     <Link to={`/exercise-types/${id}`} className="group block">
       <div className="bg-card border-border/20 hover:border-border/40 cursor-pointer rounded-2xl border p-6 shadow-md transition-all duration-200 hover:shadow-lg">
-        <h3 className="mb-2 text-lg leading-tight font-semibold">{name}</h3>
+        <div className="mb-2 flex items-center gap-2">
+          <h3 className="text-lg leading-tight font-semibold">{name}</h3>
+          {statusLabel ? <Badge variant="secondary">{statusLabel}</Badge> : null}
+        </div>
 
         {description && (
           <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">

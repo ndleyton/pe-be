@@ -12,6 +12,7 @@ from src.exercises.image_assets import (
     parse_image_url_list,
     resolve_exercise_image_urls,
 )
+from src.exercises.models import ExerciseType as ExerciseTypeModel
 
 
 class ExerciseBase(BaseModel):
@@ -60,6 +61,9 @@ class ExerciseTypeCreate(BaseModel):
     )
     description: str = "Custom exercise"
     default_intensity_unit: Optional[int] = None
+    instructions: Optional[str] = None
+    equipment: Optional[str] = None
+    category: Optional[str] = None
     muscle_ids: Optional[List[int]] = Field(
         default=None,
         description="List of muscle IDs to associate with this exercise type (optional)",
@@ -74,6 +78,41 @@ class ExerciseTypeCreate(BaseModel):
         if not v:
             raise ValueError("Name cannot be empty")
         return v
+
+
+class ExerciseTypeUpdate(BaseModel):
+    """Schema for updating an exercise type."""
+
+    name: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        description="Human-readable exercise type name",
+    )
+    description: Optional[str] = None
+    default_intensity_unit: Optional[int] = None
+    instructions: Optional[str] = None
+    equipment: Optional[str] = None
+    category: Optional[str] = None
+    muscle_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Full replacement list of muscle IDs for this exercise type",
+    )
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_optional_name(cls, v):
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Name cannot be empty")
+        return v
+
+
+class ExerciseTypeReleaseRequest(BaseModel):
+    """Optional admin review notes for release."""
+
+    review_notes: Optional[str] = None
 
 
 class MuscleGroupRead(BaseModel):
@@ -103,10 +142,16 @@ class ExerciseTypeRead(BaseModel):
 
     id: int
     name: str
-    description: str
+    description: Optional[str]
     default_intensity_unit: Optional[int]
     times_used: int
     muscles: List[MuscleRead] = []
+    owner_id: Optional[int] = None
+    status: ExerciseTypeModel.ExerciseTypeStatus
+    review_requested_at: Optional[datetime] = None
+    released_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
+    review_notes: Optional[str] = None
     images_url: Optional[str] = None
     reference_images_url: Optional[str] = None
     instructions: Optional[str] = None

@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, TYPE_CHECKING
 
 from sqlalchemy import (
@@ -13,6 +14,7 @@ from sqlalchemy import (
     desc,
     text,
 )
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -20,6 +22,7 @@ from src.core.database import Base
 if TYPE_CHECKING:
     from src.workouts.models import Workout
     from src.exercise_sets.models import ExerciseSet
+    from src.users.models import User
 
 
 class ExerciseType(Base):
@@ -27,11 +30,47 @@ class ExerciseType(Base):
 
     __tablename__ = "exercise_types"
 
+    class ExerciseTypeStatus(str, Enum):
+        candidate = "candidate"
+        in_review = "in_review"
+        released = "released"
+
     __table_args__ = (
-        Index("ix_exercise_types_times_used_name", desc("times_used"), "name"),
+        Index(
+            "ix_exercise_types_released_times_used_name",
+            desc("times_used"),
+            "name",
+            postgresql_where=text("status = 'released'"),
+        ),
+        Index(
+            "ix_exercise_types_owner_status_updated_at_desc",
+            "owner_id",
+            "status",
+            desc("updated_at"),
+        ),
+        Index(
+            "ix_exercise_types_in_review_requested_at_desc",
+            desc("review_requested_at"),
+            postgresql_where=text("status = 'in_review'"),
+        ),
+        Index(
+            "uq_exercise_types_released_lower_name",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("status = 'released'"),
+        ),
+        Index(
+            "uq_exercise_types_owner_lower_name_nonreleased",
+            "owner_id",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text(
+                "owner_id IS NOT NULL AND status IN ('candidate', 'in_review')"
+            ),
+        ),
     )
 
-    name = Column(String, unique=True)
+    name = Column(String, nullable=False)
     description = Column(String)
     default_intensity_unit = Column(
         Integer,
@@ -39,6 +78,24 @@ class ExerciseType(Base):
         nullable=True,
     )
     times_used = Column(Integer, default=0, nullable=False)
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status = Column(
+        SAEnum(ExerciseTypeStatus, name="exercise_type_status"),
+        nullable=False,
+        default=ExerciseTypeStatus.released,
+    )
+    review_requested_at = Column(DateTime(timezone=True), nullable=True)
+    released_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    review_notes = Column(Text, nullable=True)
     external_id = Column(String, unique=True, nullable=True)
     images_url = Column(Text, nullable=True)
     reference_images_url = Column(Text, nullable=True)
@@ -57,6 +114,16 @@ class ExerciseType(Base):
         "ExerciseImageCandidate",
         back_populates="exercise_type",
         cascade="all, delete-orphan",
+    )
+    owner: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[owner_id],
+        lazy="joined",
+    )
+    reviewer: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[reviewed_by],
+        lazy="joined",
     )
 
 

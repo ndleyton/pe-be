@@ -22,6 +22,7 @@ from src.core.database import get_async_session
 from src.users.router import current_active_user
 from src.users.models import User
 from src.exercises.service import ExerciseTypeService
+from src.exercises.schemas import ExerciseTypeRead, ExerciseTypeReleaseRequest
 from src.genai.google_images import (
     generate_exercise_phase_image,
 )
@@ -137,7 +138,9 @@ async def generate_exercise_type_images(
 
     # Load exercise type with muscles
     exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
+        session,
+        exercise_type_id,
+        user=user,
     )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
@@ -222,7 +225,39 @@ async def admin_create_routine(
     - The backing database model/table is still named "recipes".
     - This endpoint is restricted to superusers.
     """
-    return await routine_service.create_routine_admin(session, routine_in, user.id)
+    try:
+        return await routine_service.create_routine_admin(session, routine_in, user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get(
+    "/exercise-types/review-queue",
+    response_model=List[ExerciseTypeRead],
+)
+async def get_exercise_type_review_queue(
+    user: User = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_async_session),
+) -> List[ExerciseTypeRead]:
+    return await ExerciseTypeService.get_review_queue(session)
+
+
+@router.post(
+    "/exercise-types/{exercise_type_id}/release",
+    response_model=ExerciseTypeRead,
+)
+async def release_exercise_type(
+    exercise_type_id: int,
+    payload: ExerciseTypeReleaseRequest | None = None,
+    user: User = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_async_session),
+) -> ExerciseTypeRead:
+    return await ExerciseTypeService.release_existing_exercise_type(
+        session,
+        exercise_type_id,
+        reviewer_id=user.id,
+        payload=payload,
+    )
 
 
 @router.get(
@@ -236,7 +271,9 @@ async def get_reference_image_options(
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
     exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
+        session,
+        exercise_type_id,
+        user=user,
     )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
@@ -261,7 +298,9 @@ async def generate_reference_options(
         )
 
     exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
+        session,
+        exercise_type_id,
+        user=user,
     )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
@@ -301,7 +340,9 @@ async def apply_reference_option(
     session: AsyncSession = Depends(get_async_session),
 ) -> AdminExerciseImageOptionsResponse:
     exercise_type = await ExerciseTypeService.get_exercise_type(
-        session, exercise_type_id
+        session,
+        exercise_type_id,
+        user=user,
     )
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")

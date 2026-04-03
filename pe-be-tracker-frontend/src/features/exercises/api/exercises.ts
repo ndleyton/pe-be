@@ -168,6 +168,18 @@ export interface CreateExerciseTypeData {
   name: string;
   description?: string;
   default_intensity_unit?: number;
+  instructions?: string | null;
+  equipment?: string | null;
+  category?: string | null;
+}
+
+export interface UpdateExerciseTypeData {
+  name?: string;
+  description?: string | null;
+  default_intensity_unit?: number | null;
+  instructions?: string | null;
+  equipment?: string | null;
+  category?: string | null;
 }
 
 // Get all exercise types with cursor-based pagination
@@ -176,6 +188,8 @@ export const getExerciseTypes = async (
   cursor?: number | null,
   limit: number = 1000,
   muscleGroupId?: number,
+  name?: string,
+  releasedOnly: boolean = false,
 ): Promise<{ data: ExerciseType[]; next_cursor?: number | null }> => {
   const offset = cursor || 0;
   const params = new URLSearchParams({
@@ -185,6 +199,12 @@ export const getExerciseTypes = async (
   });
   if (muscleGroupId !== undefined) {
     params.set("muscle_group_id", String(muscleGroupId));
+  }
+  if (name) {
+    params.set("name", name);
+  }
+  if (releasedOnly) {
+    params.set("released_only", "true");
   }
   const response = await api.get(
     `${endpoints.exerciseTypes}?${params.toString()}`,
@@ -204,6 +224,36 @@ export const createExerciseType = async (
   exerciseTypeData: CreateExerciseTypeData,
 ): Promise<ExerciseType> => {
   const response = await api.post(endpoints.exerciseTypes, exerciseTypeData);
+  return response.data;
+};
+
+export const updateExerciseType = async (
+  exerciseTypeId: number | string,
+  exerciseTypeData: UpdateExerciseTypeData,
+): Promise<ExerciseType> => {
+  const response = await api.patch(
+    endpoints.exerciseTypeById(exerciseTypeId),
+    exerciseTypeData,
+  );
+  return response.data;
+};
+
+export const requestExerciseTypeEvaluation = async (
+  exerciseTypeId: number | string,
+): Promise<ExerciseType> => {
+  const response = await api.post(
+    endpoints.requestExerciseTypeEvaluation(exerciseTypeId),
+  );
+  return response.data;
+};
+
+export const releaseExerciseType = async (
+  exerciseTypeId: number | string,
+  reviewNotes?: string | null,
+): Promise<ExerciseType> => {
+  const response = await api.post(endpoints.admin.releaseExerciseType(exerciseTypeId), {
+    review_notes: reviewNotes ?? null,
+  });
   return response.data;
 };
 

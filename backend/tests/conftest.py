@@ -108,9 +108,15 @@ async def setup_database():
     drop the tables again so that subsequent tests always start from a
     blank slate.
     """
+    # PostgreSQL named enums cannot be dropped and recreated under the same
+    # transaction without tripping duplicate-type catalog errors.
     async with test_engine.begin() as conn:
         # Drop in case a previous interrupted session left stale tables
         await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP TYPE IF EXISTS recipe_visibility CASCADE"))
+        await conn.execute(text("DROP TYPE IF EXISTS exercise_type_status CASCADE"))
+
+    async with test_engine.begin() as conn:
         # Re-create the schema based on the *current* models
         await conn.run_sync(Base.metadata.create_all)
 

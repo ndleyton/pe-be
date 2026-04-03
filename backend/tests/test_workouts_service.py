@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -177,9 +177,7 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(db_sessi
         DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
         name="Today",
     )
-    workout.start_time = datetime.combine(
-        date.today(), time(12, 0), tzinfo=timezone.utc
-    )
+    workout.start_time = datetime.now(timezone.utc) - timedelta(hours=1)
     existing_exercise = await _seed_exercise(
         db_session,
         workout_id=workout.id,
@@ -288,7 +286,7 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
         return units
 
     async def fake_get_exercise_types(
-        session, name=None, order_by="usage", offset=0, limit=100
+        session, name=None, order_by="usage", offset=0, limit=100, **kwargs
     ):
         if name == "Bench Press":
             return SimpleNamespace(
@@ -297,11 +295,11 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
             )
         return SimpleNamespace(data=[], next_cursor=None)
 
-    async def fake_create_exercise_type(session, exercise_type_create):
+    async def fake_create_exercise_type(session, exercise_type_create, **kwargs):
         created_types.append(exercise_type_create)
         return SimpleNamespace(id=77, name=exercise_type_create.name)
 
-    async def fake_create_exercise(session, exercise_create):
+    async def fake_create_exercise(session, exercise_create, **kwargs):
         created_exercises.append(exercise_create)
         return SimpleNamespace(id=600 + len(created_exercises))
 
@@ -370,11 +368,11 @@ async def test_create_workout_from_parsed_uses_empty_units_list_and_errors_on_se
         return None
 
     async def fake_get_exercise_types(
-        session, name=None, order_by="usage", offset=0, limit=100
+        session, name=None, order_by="usage", offset=0, limit=100, **kwargs
     ):
         return SimpleNamespace(data=[SimpleNamespace(id=10, name="Bench Press")])
 
-    async def fake_create_exercise(session, exercise_create):
+    async def fake_create_exercise(session, exercise_create, **kwargs):
         return SimpleNamespace(id=902)
 
     monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)

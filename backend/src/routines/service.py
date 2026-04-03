@@ -16,12 +16,40 @@ from src.routines.models import Routine
 from src.workouts.crud import create_workout, get_workout_by_id
 from src.exercises.schemas import ExerciseCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
-from src.exercises.crud import create_exercise
+from src.exercises.crud import create_exercise, get_visible_exercise_type_ids
 from src.exercise_sets.crud import create_exercise_set
 
 
 class RoutineService:
     """Service layer for routine operations."""
+
+    @staticmethod
+    async def _ensure_exercise_types_visible(
+        session: AsyncSession,
+        routine_data: RoutineCreate | AdminRoutineCreate | RoutineUpdate,
+        *,
+        user_id: int,
+        is_superuser: bool = False,
+    ) -> None:
+        exercise_templates = getattr(routine_data, "exercise_templates", None)
+        if exercise_templates is None:
+            return
+
+        exercise_type_ids = [
+            exercise_template.exercise_type_id
+            for exercise_template in exercise_templates
+        ]
+        visible_ids = await get_visible_exercise_type_ids(
+            session,
+            exercise_type_ids,
+            user_id=user_id,
+            is_admin=is_superuser,
+        )
+        missing_ids = sorted(set(exercise_type_ids) - visible_ids)
+        if missing_ids:
+            raise ValueError(
+                "Routine references exercise types that are not accessible"
+            )
 
     async def get_visible_routines(
         self,
@@ -51,6 +79,11 @@ class RoutineService:
         self, session: AsyncSession, routine_data: RoutineCreate, user_id: int
     ) -> RoutineRead:
         """Create a new routine."""
+        await self._ensure_exercise_types_visible(
+            session,
+            routine_data,
+            user_id=user_id,
+        )
         routine = await crud.create_routine(session, routine_data, user_id)
         return RoutineRead.model_validate(routine)
 
@@ -58,6 +91,12 @@ class RoutineService:
         self, session: AsyncSession, routine_data: AdminRoutineCreate, user_id: int
     ) -> RoutineRead:
         """Create a new routine with admin-only fields."""
+        await self._ensure_exercise_types_visible(
+            session,
+            routine_data,
+            user_id=user_id,
+            is_superuser=True,
+        )
         routine = await crud.create_routine_admin(session, routine_data, user_id)
         return RoutineRead.model_validate(routine)
 
@@ -70,6 +109,12 @@ class RoutineService:
         is_superuser: bool = False,
     ) -> Optional[RoutineRead]:
         """Update an existing routine."""
+        await self._ensure_exercise_types_visible(
+            session,
+            routine_data,
+            user_id=user_id,
+            is_superuser=is_superuser,
+        )
         routine = await crud.update_routine(
             session, routine_id, routine_data, user_id, is_superuser=is_superuser
         )
@@ -133,6 +178,7 @@ class RoutineService:
                     exercise_type_id=exercise_template.exercise_type_id,
                     workout_id=workout.id,
                 ),
+                user_id=user_id,
             )
 
             for set_template in exercise_template.set_templates:

@@ -16,6 +16,8 @@ export const endpoints = {
   // Exercise Types (nested under exercises)
   exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
+  requestExerciseTypeEvaluation: (id: string | number) =>
+    `/exercises/exercise-types/${id}/request-evaluation`,
   muscleGroups: "/exercises/muscle-groups/",
 
   // Intensity Units (nested under exercises)
@@ -50,6 +52,9 @@ export const endpoints = {
   },
 
   admin: {
+    exerciseTypeReviewQueue: "/admin/exercise-types/review-queue",
+    releaseExerciseType: (id: string | number) =>
+      `/admin/exercise-types/${id}/release`,
     exerciseTypeReferenceImageOptions: (id: string | number) =>
       `/admin/exercise-types/${id}/reference-image-options`,
     generateExerciseTypeReferenceImageOptions: (id: string | number) =>
