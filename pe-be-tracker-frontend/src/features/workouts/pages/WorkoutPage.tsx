@@ -705,75 +705,74 @@ const WorkoutPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-2 py-4 md:px-4 md:py-6 lg:px-8 lg:py-8 text-center">
-      <div className="bg-card text-card-foreground mx-auto max-w-2xl rounded-2xl p-4 shadow-2xl backdrop-blur-md shadow-black/5">
-        <div className="mb-4 flex items-center gap-4 text-left md:mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="rounded-full hover:bg-muted/50"
-            aria-label="Go back"
-          >
-            <Link to="/workouts">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <h2 className="text-2xl font-bold">
-            {showLoadingTitle ? (
-              <>
-                <span className="sr-only">Loading workout</span>
-                <Skeleton
-                  aria-hidden="true"
-                  className="h-8 w-40 rounded md:w-52"
-                />
-              </>
-            ) : workoutName ? (
-              `${workoutName}`
-            ) : (
-              `Workout`
-            )}
-          </h2>
-        </div>
-        <div className="space-y-6">
-          {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
-            <div className="bg-card/80 border-border rounded-xl border p-4 text-left shadow-sm backdrop-blur-sm">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">✨</span>
-                <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
-                  Workout Summary
-                </h4>
-              </div>
-              <p className="text-foreground text-sm leading-relaxed italic">
-                &ldquo;{serverWorkout.recap}&rdquo;
-              </p>
-            </div>
+    <div className="mx-auto max-w-4xl px-4 py-6 md:py-8 text-center min-h-screen">
+      <div className="mb-8 flex items-center gap-4 text-left">
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          aria-label="Go back"
+        >
+          <Link to="/workouts">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        <h2 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+          {showLoadingTitle ? (
+            <>
+              <span className="sr-only">Loading workout</span>
+              <Skeleton
+                aria-hidden="true"
+                className="h-10 w-48 rounded-xl md:w-60"
+              />
+            </>
+          ) : workoutName ? (
+            `${workoutName}`
+          ) : (
+            `Workout`
           )}
-          <ExerciseList
-            exercises={exercises}
-            status={listStatus}
-            workoutId={workoutId}
-            onExerciseUpdate={handleExerciseUpdate}
-            onExerciseDelete={handleExerciseDelete}
-          />
-          <div className="bg-primary/20 mt-4 mb-4 h-px w-full" role="separator" />
-          <div className="flex items-center justify-center pb-2">
-            <Button
-              type="button"
-              onClick={() => setShowAddExerciseModal(true)}
-              onMouseEnter={preloadExerciseTypeModal}
-              onTouchStart={preloadExerciseTypeModal}
-              onFocus={preloadExerciseTypeModal}
-              className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
-              disabled={isAuthenticated && addExerciseMutation.isPending}
-            >
-              {isAuthenticated && addExerciseMutation.isPending
-                ? "Adding..."
-                : "Add Exercise"}
-            </Button>
+        </h2>
+      </div>
+
+      <div className="space-y-6">
+        {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
+          <div className="bg-card/80 border-border/40 rounded-2xl border p-5 text-left shadow-xl backdrop-blur-md">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Workout Summary
+              </h4>
+            </div>
+            <p className="text-foreground text-sm leading-relaxed italic">
+              &ldquo;{serverWorkout.recap}&rdquo;
+            </p>
           </div>
-          <div ref={bottomScrollAnchorRef} aria-hidden="true" />
+        )}
+        <ExerciseList
+          exercises={exercises}
+          status={listStatus}
+          workoutId={workoutId}
+          onExerciseUpdate={handleExerciseUpdate}
+          onExerciseDelete={handleExerciseDelete}
+        />
+        <div className="bg-primary/20 mt-8 mb-4 h-px w-full" role="separator" />
+        <div className="flex items-center justify-center pb-24">
+          <Button
+            type="button"
+            onClick={() => setShowAddExerciseModal(true)}
+            onMouseEnter={preloadExerciseTypeModal}
+            onTouchStart={preloadExerciseTypeModal}
+            onFocus={preloadExerciseTypeModal}
+            className="h-14 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground px-8 py-2 backdrop-blur-md transition-all duration-300 font-bold"
+            disabled={isAuthenticated && addExerciseMutation.isPending}
+          >
+            {isAuthenticated && addExerciseMutation.isPending
+              ? "Adding..."
+              : "Add Exercise"}
+          </Button>
         </div>
+        <div ref={bottomScrollAnchorRef} aria-hidden="true" />
       </div>
 
       <FloatingActionButton

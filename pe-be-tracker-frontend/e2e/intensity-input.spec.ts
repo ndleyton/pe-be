@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { clearGuestData } from "./utils/storage";
+import { openWorkoutForm, renameWorkout } from "./utils/workouts";
 
 test.describe("Intensity Input", () => {
   test.beforeEach(async ({ page }) => {
@@ -20,26 +21,23 @@ test.describe("Intensity Input", () => {
       });
     });
 
-    await page.goto("/workouts");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL("/workouts");
+    await expect(page.getByRole("heading", {
+      name: "Workouts",
+      exact: true,
+    })).toBeVisible();
 
-    const createWorkoutFab = page.getByTestId("fab-add-workout");
-    await createWorkoutFab.waitFor({ state: "visible" });
-    await createWorkoutFab.click();
-
-    const workoutHeading = page.getByTestId("workout-name-heading");
-    await workoutHeading.waitFor({ state: "visible" });
-    await workoutHeading.click();
+    await openWorkoutForm(page);
 
     const workoutName = `Intensity E2E ${Date.now()}`;
-    await page.getByTestId("workout-name-input").fill(workoutName);
+    await renameWorkout(page, workoutName);
     await page
       .getByTestId("workout-notes-input")
       .fill("E2E intensity input test");
 
     await page.getByTestId("open-workout-type-modal").click();
-    await page.getByText("Strength Training", { exact: false }).click();
+    await page.getByTestId("workout-type-strength-training").click();
 
     await page.getByTestId("start-workout-button").click();
 
@@ -49,12 +47,15 @@ test.describe("Intensity Input", () => {
     ).toBeVisible();
 
     // Open exercise modal and select exercise type
-    await page.getByRole("button", { name: "Add Exercise" }).click();
+    const addExerciseButton = page.getByRole("button", { name: "Add Exercise" });
+    await expect(addExerciseButton).toBeVisible();
+    await addExerciseButton.scrollIntoViewIfNeeded();
+    await addExerciseButton.click({ force: true });
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
     await page.getByPlaceholder("Search exercise types...").fill("Push");
-    await page.getByText("Push-ups", { exact: true }).click();
+    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
 
     const exerciseHeading = page.getByRole("heading", { name: "Push-ups" });
     await exerciseHeading.waitFor({ state: "visible" });

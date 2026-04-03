@@ -135,7 +135,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       screen.getByRole("combobox", { name: /filter by muscle group/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("combobox", { name: /order exercise types/i }),
+      screen.getByRole("button", { name: /popular/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /a-z/i }),
     ).toBeInTheDocument();
   });
 

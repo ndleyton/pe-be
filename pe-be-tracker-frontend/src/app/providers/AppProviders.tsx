@@ -94,7 +94,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
         </ErrorBoundary>
       )}
       {shouldShowReactQueryDevtools && (
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}
     </QueryClientProvider>
   );

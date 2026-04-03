@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { clearGuestData } from "./utils/storage";
+import { openWorkoutForm, renameWorkout } from "./utils/workouts";
 
 async function dismissOverlays(page: any) {
   try {
@@ -40,8 +41,7 @@ test.describe("Finish workout routine creation", () => {
       });
     });
 
-    await page.goto("/workouts");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/workouts$/);
     await expect(page.getByRole("heading", {
       name: "Workouts",
@@ -50,26 +50,21 @@ test.describe("Finish workout routine creation", () => {
 
     await dismissOverlays(page);
 
-    await page.getByTestId("fab-add-workout").click();
-
-    await page
-      .locator('[data-testid="workout-name-heading"]')
-      .waitFor({ state: "visible", timeout: 10000 });
-    await page.locator('[data-testid="workout-name-heading"]').click();
+    await openWorkoutForm(page);
 
     const workoutName = `Routine Source Workout ${Date.now()}`;
-    await page.fill('[data-testid="workout-name-input"]', workoutName);
-    await page.fill('[data-testid="workout-notes-input"]', "E2E routine notes");
+    await renameWorkout(page, workoutName);
+    await page.getByTestId("workout-notes-input").fill("E2E routine notes");
 
-    await page.click('[data-testid="open-workout-type-modal"]');
+    await page.getByTestId("open-workout-type-modal").click();
     await expect(
       page
         .locator('div[role="dialog"], .fixed')
         .filter({ hasText: "Select Workout Type" }),
     ).toBeVisible();
-    await page.click("text=Strength Training");
+    await page.getByTestId("workout-type-strength-training").click();
 
-    await page.click('[data-testid="start-workout-button"]');
+    await page.getByTestId("start-workout-button").click();
     await expect(page).toHaveURL(new RegExp("/workouts/.+"), {
       timeout: 10000,
     });
@@ -78,7 +73,7 @@ test.describe("Finish workout routine creation", () => {
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
-    await page.getByText("Push-ups", { exact: true }).click();
+    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).not.toBeVisible();

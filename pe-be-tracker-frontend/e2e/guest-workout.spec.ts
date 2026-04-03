@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { clearGuestData } from "./utils/storage";
+import { openWorkoutForm, renameWorkout } from "./utils/workouts";
 
 // Helper function to dismiss common overlays that might interfere with clicks
 async function dismissOverlays(page: any) {
@@ -33,6 +34,10 @@ async function dismissOverlays(page: any) {
 }
 
 test.describe("Guest Mode Workout Creation", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearGuestData(page);
+  });
+
   test("should allow a guest user to create a workout", async ({ page }) => {
     // Enhanced error logging to catch React loading issues
     const jsErrors: string[] = [];
@@ -68,10 +73,7 @@ test.describe("Guest Mode Workout Creation", () => {
       });
     });
 
-    await page.goto("/workouts");
-
-    // Wait for the page to be fully loaded
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workouts", { waitUntil: "domcontentloaded" });
 
     // Verify we are on workouts page
     await expect(page).toHaveURL(/\/workouts$/, { timeout: 10000 });
@@ -84,31 +86,25 @@ test.describe("Guest Mode Workout Creation", () => {
     await dismissOverlays(page);
 
     // 2. Use the floating action button to show the workout form
-    await page.getByTestId("fab-add-workout").click();
-
-    // Wait for the workout form to appear
-    await page
-      .locator('[data-testid="workout-name-heading"]')
-      .waitFor({ state: "visible", timeout: 10000 });
-    await page.locator('[data-testid="workout-name-heading"]').click();
+    await openWorkoutForm(page);
 
     // 4. Fill out the workout form
     const workoutName = `Test Workout ${Date.now()}`;
-    await page.fill('[data-testid="workout-name-input"]', workoutName);
+    await renameWorkout(page, workoutName);
 
-    await page.fill('[data-testid="workout-notes-input"]', "E2E test notes");
+    await page.getByTestId("workout-notes-input").fill("E2E test notes");
 
     // 5. Open workout type modal and select a type
-    await page.click('[data-testid="open-workout-type-modal"]');
+    await page.getByTestId("open-workout-type-modal").click();
     await expect(
       page
         .locator('div[role="dialog"], .fixed')
         .filter({ hasText: "Select Workout Type" }),
     ).toBeVisible();
-    await page.click("text=Strength Training");
+    await page.getByTestId("workout-type-strength-training").click();
 
     // 6. Submit the form
-    await page.click('[data-testid="start-workout-button"]');
+    await page.getByTestId("start-workout-button").click();
 
     // 7. Verify the app navigates to the new workout's page
     await expect(page).toHaveURL(new RegExp("/workouts/.+"), {

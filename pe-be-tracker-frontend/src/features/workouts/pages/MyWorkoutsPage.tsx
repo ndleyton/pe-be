@@ -12,7 +12,7 @@ import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
-import { Button, Card } from "@/shared/components/ui";
+import { Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -153,7 +153,7 @@ const MyWorkoutsPage = () => {
       <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center sm:mb-10">
-            <h1 className="text-foreground text-4xl font-extrabold tracking-tight lg:text-5xl">
+            <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
               Workouts
             </h1>
           </div>
@@ -168,36 +168,32 @@ const MyWorkoutsPage = () => {
             autoOpen={shouldAutoOpenQuickStart}
           />
 
-          {showWorkoutForm && (
-            <div className="bg-card/50 border-border mb-8 overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm sm:p-6">
-              <WorkoutForm
-                routine={selectedRoutine}
-                onWorkoutCreated={(workoutId) => {
-                  if (isAuthenticated) {
-                    refetch();
-                  }
-                  setShowWorkoutForm(false);
-                  setSelectedRoutine(null);
-                  if (selectedRoutine) {
-                    navigate(`/workouts/${workoutId}`, {
-                      state: { routine: selectedRoutine },
-                    });
-                  }
-                }}
-              />
-              <Button
-                onClick={() => {
-                  setShowWorkoutForm(false);
-                  setSelectedRoutine(null);
-                }}
-                variant="ghost"
-                size="sm"
-                className="mt-4 w-full"
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
+          <Dialog open={showWorkoutForm} onOpenChange={(open) => {
+            if (!open) {
+              setShowWorkoutForm(false);
+              setSelectedRoutine(null);
+            }
+          }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedRoutine ? "Start from Routine" : "Start Workout"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="mt-2">
+                <WorkoutForm
+                  routine={selectedRoutine}
+                  onWorkoutCreated={(_workoutId) => {
+                    if (isAuthenticated) {
+                      refetch();
+                    }
+                    setShowWorkoutForm(false);
+                    setSelectedRoutine(null);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {listStatus === "pending" ? (
             <WorkoutListSkeleton />

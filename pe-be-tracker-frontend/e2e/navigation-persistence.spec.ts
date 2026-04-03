@@ -1,176 +1,156 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { openWorkoutForm } from "./utils/workouts";
+
+const gotoHome = async (page: Page) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/workouts$/);
+  await expect(page.locator("main")).toBeVisible();
+};
+
+const desktopNav = (page: Page) =>
+  page.getByRole("navigation", { name: "Sidebar navigation" });
+
+const desktopNavLink = (page: Page, name: string) =>
+  desktopNav(page).getByRole("link", { name, exact: true });
+
+const clickDesktopNavLink = async (page: Page, name: string) => {
+  const link = desktopNavLink(page, name);
+  await expect(link).toBeVisible();
+  await link.click({ force: true });
+};
+
+const openMobileMenu = async (page: Page) => {
+  const menuButton = page.getByRole("button", { name: "Open navigation menu" });
+  await expect(menuButton).toBeVisible();
+  await menuButton.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+};
+
+const mobileNavLink = (page: Page, name: string) =>
+  page
+    .getByRole("navigation", { name: "Secondary navigation" })
+    .getByRole("link", { name, exact: true });
+
+const createGuestWorkout = async (page: Page) => {
+  await page.goto("/workouts", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL("/workouts");
+  await openWorkoutForm(page);
+  await page.getByTestId("open-workout-type-modal").click();
+  await page.getByTestId("workout-type-strength-training").click();
+  await page.getByTestId("start-workout-button").click();
+  await expect(page).toHaveURL(/\/workouts\/.+/, { timeout: 10000 });
+  return new URL(page.url()).pathname;
+};
 
 test.describe("Navigation Persistence", () => {
-  test("should persist workouts section paths correctly", async ({ page }) => {
-    // Test: Navigate to workouts list
-    await page.route("**/auth/session", (route) => {
+  test.beforeEach(async ({ context, page }) => {
+    await context.route("**/auth/session", (route) => {
       route.fulfill({
         status: 401,
         body: JSON.stringify({ detail: "Not authenticated" }),
       });
     });
 
-    await page.goto("/workouts");
-    await expect(page).toHaveURL("/workouts");
-    await page.waitForTimeout(2000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+  });
 
-    // Test: Navigate to individual workout page
-    await page.goto("/workouts/123");
-    await expect(page).toHaveURL("/workouts/123");
-    await page.waitForTimeout(2000);
+  test("should persist workouts section paths correctly", async ({ page }) => {
+    const workoutPath = await createGuestWorkout(page);
 
-    // Test: Navigation persistence by going home and back
-    await page.goto("/");
-    await page.waitForTimeout(2000);
+    await clickDesktopNavLink(page, "Profile");
+    await expect(page).toHaveURL("/profile");
+    await expect(
+      page.getByRole("heading", { name: "Profile", exact: true }),
+    ).toBeVisible();
 
-    // Look for workouts navigation link
-    const workoutsLink = page
-      .locator('a[href="/workouts"], a[href*="workouts"]')
-      .first();
-    if (await workoutsLink.isVisible()) {
-      await workoutsLink.click();
-      // Should return to last visited workout path (if persistence works)
-      // For now, just verify we can navigate to workouts
-      await expect(page.url()).toMatch(/\/workouts/);
-    } else {
-      // Fallback: direct navigation
-      await page.goto("/workouts");
-      await expect(page).toHaveURL("/workouts");
-    }
+    const workoutsLink = desktopNavLink(page, "Workouts");
+    await expect(workoutsLink).toHaveAttribute("href", workoutPath);
+    await workoutsLink.click({ force: true });
+
+    await expect(page).toHaveURL(workoutPath);
   });
 
   test("should persist last visited path within navigation sections", async ({
     page,
   }) => {
-    // Start at the homepage
-    await page.goto("/");
-    await page.waitForTimeout(2000);
+    const workoutPath = await createGuestWorkout(page);
 
-    // Navigate to workouts directly
-    await page.goto("/workouts");
-    await expect(page).toHaveURL("/workouts");
-    await page.waitForTimeout(1000);
-
-    // Navigate to exercises directly
-    await page.goto("/exercise-types");
+    await clickDesktopNavLink(page, "Exercises");
     await expect(page).toHaveURL("/exercise-types");
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByRole("heading", { name: "Exercises", exact: true }),
+    ).toBeVisible();
 
-    // Navigate to profile directly
-    await page.goto("/profile");
+    await clickDesktopNavLink(page, "Profile");
     await expect(page).toHaveURL("/profile");
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByRole("heading", { name: "Profile", exact: true }),
+    ).toBeVisible();
 
-    // Test navigation using links if available
-    await page.goto("/");
-    await page.waitForTimeout(1000);
-
-    const workoutsLink = page
-      .locator('a[href="/workouts"], a[href*="workouts"]')
-      .first();
-    if (await workoutsLink.isVisible()) {
-      await workoutsLink.click();
-      await expect(page.url()).toMatch(/\/workouts/);
-    } else {
-      await page.goto("/workouts");
-      await expect(page).toHaveURL("/workouts");
-    }
+    await clickDesktopNavLink(page, "Workouts");
+    await expect(page).toHaveURL(workoutPath);
   });
 
   test("should persist navigation state across browser sessions", async ({
     page,
     context,
   }) => {
-    // Navigate to different sections to build navigation history
-    await page.goto("/");
-    await page.waitForTimeout(1000);
+    const workoutPath = await createGuestWorkout(page);
 
-    // Navigate to exercises
-    await page.goto("/exercise-types");
-    await expect(page).toHaveURL("/exercise-types");
-    await page.waitForTimeout(1000);
-
-    // Navigate to profile
-    await page.goto("/profile");
-    await expect(page).toHaveURL("/profile");
-    await page.waitForTimeout(1000);
-
-    // Close the current page and create a new one (simulates new browser session)
     await page.close();
     const newPage = await context.newPage();
+    await newPage.setViewportSize({ width: 1280, height: 720 });
+    await newPage.goto(workoutPath, { waitUntil: "domcontentloaded" });
+    await expect(newPage).toHaveURL(workoutPath);
 
-    // Go to homepage in new "session"
-    await newPage.goto("/");
-    await newPage.waitForTimeout(1000);
-
-    // Test that basic navigation still works
-    await newPage.goto("/profile");
+    await clickDesktopNavLink(newPage, "Profile");
     await expect(newPage).toHaveURL("/profile");
+    await expect(
+      newPage.getByRole("heading", { name: "Profile", exact: true }),
+    ).toBeVisible();
 
-    await newPage.close();
+    const workoutsLink = desktopNavLink(newPage, "Workouts");
+    await expect(workoutsLink).toHaveAttribute("href", workoutPath);
+    await workoutsLink.click({ force: true });
+
+    await expect(newPage).toHaveURL(workoutPath);
   });
 
   test("should handle navigation on both mobile and desktop layouts", async ({
     page,
   }) => {
-    // Test desktop navigation
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto("/");
-    await page.waitForTimeout(1000);
+    await gotoHome(page);
 
-    // Navigate using direct URLs (more reliable than link clicking)
-    await page.goto("/workouts");
-    await expect(page).toHaveURL("/workouts");
-    await page.waitForTimeout(1000);
-
-    await page.goto("/exercise-types");
+    await clickDesktopNavLink(page, "Exercises");
     await expect(page).toHaveURL("/exercise-types");
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByRole("heading", { name: "Exercises", exact: true }),
+    ).toBeVisible();
 
-    // Switch to mobile layout
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForTimeout(1000);
+    await openMobileMenu(page);
+    await mobileNavLink(page, "Profile").click();
 
-    // Should still be on exercises page
-    await expect(page).toHaveURL("/exercise-types");
-
-    // Navigate to profile
-    await page.goto("/profile");
     await expect(page).toHaveURL("/profile");
+    await expect(
+      page.getByRole("heading", { name: "Profile", exact: true }),
+    ).toBeVisible();
   });
 
   test("should handle basic navigation without errors", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForTimeout(3000);
-
-    // Check if page loaded properly
+    await gotoHome(page);
     await expect(page).toHaveTitle(/PersonalBestie/);
 
-    // Try to navigate directly to workouts first
-    await page.goto("/workouts");
-    await expect(page).toHaveURL("/workouts");
-    await page.waitForTimeout(2000);
-
-    // Try to navigate to exercises
-    await page.goto("/exercise-types");
+    await clickDesktopNavLink(page, "Exercises");
     await expect(page).toHaveURL("/exercise-types");
-    await page.waitForTimeout(2000);
 
-    // Test navigation back to home and then to workouts
-    await page.goto("/");
-    await page.waitForTimeout(2000);
+    await clickDesktopNavLink(page, "Profile");
+    await expect(page).toHaveURL("/profile");
 
-    // Look for any workouts link (more flexible)
-    const workoutsLink = page
-      .locator('a[href="/workouts"], [href*="workouts"]')
-      .first();
-    if (await workoutsLink.isVisible()) {
-      await workoutsLink.click();
-      await expect(page).toHaveURL("/workouts");
-    } else {
-      // If no navigation link found, just verify direct navigation works
-      await page.goto("/workouts");
-      await expect(page).toHaveURL("/workouts");
-    }
+    await clickDesktopNavLink(page, "Workouts");
+    await expect(page).toHaveURL("/workouts");
+    await expect(
+      page.getByRole("heading", { name: "Workouts", exact: true }),
+    ).toBeVisible();
   });
 });

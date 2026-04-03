@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 import { useGuestStore, useAuthStore, GuestWorkoutType } from "@/stores";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import React from "react";
 
 interface WorkoutType {
   id: number;
@@ -16,7 +18,7 @@ interface WorkoutTypeModalProps {
   onSelect: (workoutType: WorkoutType | GuestWorkoutType) => void;
 }
 
-const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
+export const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
   const response = await api.get(endpoints.workoutTypes);
   return response.data;
 };
@@ -52,12 +54,6 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
     onSelect(workoutType);
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const SkeletonCard = () => (
     <div className="bg-card border-border animate-pulse rounded-lg border p-4">
       <div className="flex items-center space-x-3">
@@ -83,11 +79,11 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
     if (isAuthenticated && error) {
       return (
-        <div className="py-8 text-center">
+        <div className="py-10 text-center">
           <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-destructive text-2xl">⚠</span>
+            <span className="text-destructive text-2xl text-center">⚠</span>
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
+          <h4 className="text-foreground mb-2 font-semibold">
             Failed to load workout types
           </h4>
           <p className="text-muted-foreground text-sm">
@@ -99,11 +95,11 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
     if (workoutTypes.length === 0) {
       return (
-        <div className="py-8 text-center">
+        <div className="py-10 text-center">
           <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-muted-foreground text-2xl">📋</span>
+            <span className="text-muted-foreground text-2xl text-center">📋</span>
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
+          <h4 className="text-foreground mb-2 font-semibold">
             No workout types available
           </h4>
           <p className="text-muted-foreground text-sm">
@@ -116,68 +112,65 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
     }
 
     return (
-      <div className="grid gap-3">
+      <div className="grid gap-3 p-1">
         {workoutTypes.map((workoutType) => (
-          <div
+          <button
             key={workoutType.id}
             onClick={() => handleSelect(workoutType)}
-            className="bg-card hover:bg-accent border-border cursor-pointer rounded-lg border p-4 transition-colors"
+            data-testid={`workout-type-${workoutType.name.toLowerCase().replace(/\s+/g, "-")}`}
+            className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/50 bg-card/60 p-4 text-left transition-all hover:scale-[1.02] hover:bg-accent/60 hover:border-primary/40 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-                <span className="text-primary-foreground font-bold">
-                  {workoutType.name.charAt(0)}
-                </span>
-              </div>
-              <div className="flex-1">
-                <h4 className="text-foreground font-medium">
-                  {workoutType.name}
-                </h4>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {workoutType.description}
-                </p>
-              </div>
+            {/* Subtle decoration */}
+            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-primary/10 opacity-0 transition-opacity group-hover:opacity-100" />
+
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-primary font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+              <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/30 to-transparent group-hover:opacity-0 transition-opacity" />
+              <span className="relative z-10">{workoutType.name.charAt(0)}</span>
             </div>
-          </div>
+            <div className="flex-1 overflow-hidden">
+              <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors" data-testid="workout-type-name">
+                {workoutType.name}
+              </h4>
+              <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
+                {workoutType.description}
+              </p>
+            </div>
+            <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </button>
         ))}
       </div>
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-background max-h-[36rem] w-full max-w-2xl overflow-y-auto rounded-lg p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-foreground text-lg font-semibold">
-            Select Workout Type
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-md border-border/40"
+        hideOverlay={true}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl font-bold tracking-tight">Select Workout Type</DialogTitle>
+        </DialogHeader>
+        <div className="mt-2 space-y-3">
+          {renderContent()}
         </div>
-        {renderContent()}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,6 +1,5 @@
 
 import { Link } from "react-router-dom";
-import { Eye } from "lucide-react";
 import type { ExerciseType } from "@/features/exercises/api";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -19,45 +18,50 @@ export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
   return (
     <Link
       to={`/exercise-types/${id}`}
-      className="group block"
+      className="group relative block transition-all"
       onMouseEnter={preloadExerciseTypeDetailsPage}
       onTouchStart={preloadExerciseTypeDetailsPage}
       onFocus={preloadExerciseTypeDetailsPage}
     >
-      <div className="bg-card border-border/20 hover:border-border/40 cursor-pointer rounded-2xl border p-6 shadow-md transition-all duration-200 hover:shadow-lg">
-        <div className="mb-2 flex items-center gap-2">
-          <h3 className="text-lg leading-tight font-semibold">{name}</h3>
+      <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.98]">
+        {/* Decorative background glow */}
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+        <div className="relative mb-4 flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xl shadow-inner transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            {name.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-bold leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
+              {name}
+            </h3>
+          </div>
         </div>
 
         {description && (
-          <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">
+          <p className="text-muted-foreground relative mb-6 line-clamp-2 text-sm font-medium leading-relaxed opacity-70 transition-opacity group-hover:opacity-100">
             {description}
           </p>
         )}
 
-        {muscles && muscles.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-1">
-            {muscles.slice(0, MUSCLE_DISPLAY_LIMIT).map((muscle) => (
-              <span
-                key={muscle.id}
-                className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-              >
-                {muscle.name}
-              </span>
-            ))}
-            {muscles.length > MUSCLE_DISPLAY_LIMIT && (
-              <span className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none">
-                +{muscles.length - MUSCLE_DISPLAY_LIMIT} more
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="text-muted-foreground flex justify-end text-sm">
-          <div className="text-primary/70 group-hover:text-primary flex items-center gap-1 transition-colors">
-            <Eye className="h-4 w-4" />
-            <span>View Details</span>
-          </div>
+        <div className="mt-auto relative">
+          {muscles && muscles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 grayscale-[0.3] transition-all group-hover:grayscale-0">
+              {muscles.slice(0, MUSCLE_DISPLAY_LIMIT).map((muscle) => (
+                <span
+                  key={muscle.id}
+                  className="inline-flex items-center rounded-lg bg-secondary/80 px-2.5 py-1 text-[10px] font-bold text-secondary-foreground border border-border/20"
+                >
+                  {muscle.name}
+                </span>
+              ))}
+              {muscles.length > MUSCLE_DISPLAY_LIMIT && (
+                <span className="inline-flex items-center rounded-lg bg-secondary/40 px-2.5 py-1 text-[10px] font-bold text-muted-foreground border border-border/10">
+                  +{muscles.length - MUSCLE_DISPLAY_LIMIT}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Link>
