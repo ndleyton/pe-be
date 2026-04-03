@@ -24,7 +24,7 @@ from src.exercises.image_assets import (
 MODEL_NAME = "gemini-2.5-flash-image"
 DEFAULT_MIME = "image/png"
 REFERENCE_PIPELINE_KEY = "reference_redraw_v1"
-REFERENCE_PROMPT_VERSION = "v2"
+REFERENCE_PROMPT_VERSION = "v3"
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,6 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
 
 def _build_reference_prompt(context: Dict, option: ReferenceOptionSpec) -> str:
     name = context.get("name", "Exercise")
-    description = (context.get("description") or "").strip()
     instructions = (context.get("instructions") or "").strip()
     equipment = (context.get("equipment") or "").strip()
     category = (context.get("category") or "").strip()
@@ -165,14 +164,12 @@ def _build_reference_prompt(context: Dict, option: ReferenceOptionSpec) -> str:
     equipment_line = equipment or "Unspecified"
     category_line = category or "Unspecified"
     instructions_line = instructions or "No detailed instructions provided."
-    description_line = description or "No extra description provided."
 
     return (
         f"Exercise: {name}.\n"
         f"Category: {category_line}.\n"
         f"Equipment: {equipment_line}.\n"
         f"Muscles: {muscles_line}.\n"
-        f"Description: {description_line}\n"
         f"Instructions: {instructions_line}\n\n"
         f"{option.reference_directive}\n"
         f"{option.style_directive}\n"
