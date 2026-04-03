@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   createExerciseType,
@@ -171,118 +171,101 @@ const ExerciseTypesPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-8 text-center">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Exercises</h1>
+    <div className="mx-auto max-w-6xl p-8">
+      <div className="mx-auto">
+        <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Exercises</h1>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">
+              Manage and explore your exercise movements
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-2xl bg-accent/50 p-1 border border-border/40">
+            <Button
+              variant={orderBy === "usage" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setOrderBy("usage")}
+              className="rounded-xl font-bold text-xs"
+            >
+              Popular
+            </Button>
+            <Button
+              variant={orderBy === "name" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setOrderBy("name")}
+              className="rounded-xl font-bold text-xs"
+            >
+              A-Z
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-8 flex flex-col gap-3 lg:flex-row">
-          <div className="relative flex-1">
+        <div className="mb-10 flex flex-col gap-4 lg:flex-row">
+          <div className="relative flex-1 group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="text-muted-foreground h-5 w-5" />
+              <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
             </div>
             <Input
               type="text"
-              placeholder="Search exercises..."
+              placeholder="Search by name or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={createMutation.isPending}
-              className="border-border/30 bg-card h-12 w-full rounded-xl pr-12 pl-11 shadow-sm transition-all focus:shadow-md"
+              className="border-border/40 bg-card/60 h-14 w-full rounded-2xl pr-14 pl-12 shadow-sm transition-all focus:border-primary/30 focus:ring-4 focus:ring-primary/10 backdrop-blur-sm font-medium"
             />
-            {showCreateButton ? (
+            {showCreateButton && (
               <button
                 type="button"
                 onClick={handleCreateExerciseType}
                 disabled={createMutation.isPending}
-                className="text-secondary hover:text-secondary/80 absolute inset-y-0 right-0 flex items-center pr-4 disabled:cursor-not-allowed disabled:opacity-50"
-                title={`Create "${searchTerm.trim()}"`}
+                className="absolute inset-y-0 right-2 flex items-center pr-2"
               >
-                {createMutation.isPending ? (
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
-                )}
+                <div className="flex items-center gap-1.5 bg-primary px-3 py-2 rounded-xl text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-lg active:scale-95">
+                  {createMutation.isPending ? (
+                    <Plus className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Create
+                    </>
+                  )}
+                </div>
               </button>
-            ) : null}
+            )}
           </div>
 
-          <Select
-            value={selectedMuscleGroupId}
-            onValueChange={setSelectedMuscleGroupId}
-            disabled={isMuscleGroupSelectorDisabled}
-          >
-            <SelectTrigger
-              aria-label="Filter by muscle group"
-              className="border-border/30 bg-card h-12 w-full rounded-xl shadow-sm sm:w-[220px]"
+          <div className="flex gap-4">
+            <Select
+              value={selectedMuscleGroupId}
+              onValueChange={setSelectedMuscleGroupId}
+              disabled={isMuscleGroupSelectorDisabled}
             >
-              <SelectValue
-                placeholder={
-                  isMuscleGroupSelectorDisabled
-                    ? "Loading muscle groups..."
-                    : "All muscle groups"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All muscle groups</SelectItem>
-              {fallbackMuscleGroups.map((muscleGroup) => (
-                <SelectItem
-                  key={muscleGroup.id}
-                  value={String(muscleGroup.id)}
-                >
-                  {muscleGroup.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={orderBy}
-            onValueChange={(value) => setOrderBy(value as "usage" | "name")}
-          >
-            <SelectTrigger
-              aria-label="Order exercise types"
-              className="border-border/30 bg-card h-12 w-full rounded-xl shadow-sm sm:w-[180px]"
-            >
-              <SelectValue placeholder="Order By" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="usage">Most Used</SelectItem>
-              <SelectItem value="name">Alphabetical</SelectItem>
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                aria-label="Filter by muscle group"
+                className="border-border/40 bg-card/60 h-14 w-full rounded-2xl shadow-sm sm:w-[220px] backdrop-blur-sm font-medium focus:ring-primary/10"
+              >
+                <SelectValue
+                  placeholder={
+                    isMuscleGroupSelectorDisabled
+                      ? "Loading..."
+                      : "Filter Muscles"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl">
+                <SelectItem value="all">All Muscle Groups</SelectItem>
+                {fallbackMuscleGroups.map((muscleGroup) => (
+                  <SelectItem
+                    key={muscleGroup.id}
+                    value={String(muscleGroup.id)}
+                  >
+                    {muscleGroup.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Exercise Types Grid - Always show structure */}
@@ -292,18 +275,17 @@ const ExerciseTypesPage = () => {
               {Array.from({ length: 9 }).map((_, i) => (
                 <div
                   key={i}
-                  className="bg-card border-border/20 rounded-2xl border p-6 shadow-md"
+                  className="bg-card/40 border-border/30 rounded-2xl border p-6 animate-pulse"
                 >
-                  <Skeleton className="mb-3 h-6 w-3/4" />
-                  <Skeleton className="mb-2 h-4 w-full" />
-                  <Skeleton className="mb-4 h-4 w-5/6" />
-                  <div className="mb-4 flex gap-2">
-                    <Skeleton className="h-7 w-20 rounded-full" />
-                    <Skeleton className="h-7 w-28 rounded-full" />
+                  <div className="flex items-center gap-3 mb-4">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <Skeleton className="h-6 flex-1 rounded-lg" />
                   </div>
-                  <div className="flex justify-between">
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-5 w-24" />
+                  <Skeleton className="mb-2 h-4 w-full rounded-md" />
+                  <Skeleton className="mb-6 h-4 w-2/3 rounded-md" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-16 rounded-lg" />
+                    <Skeleton className="h-6 w-16 rounded-lg" />
                   </div>
                 </div>
               ))}
@@ -320,28 +302,32 @@ const ExerciseTypesPage = () => {
 
         {/* Loading more indicator */}
         {!isPending && isFetchingNextPage && (
-          <div className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-lg"></span>
+          <div className="flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         )}
 
         {/* End of results indicator */}
         {!isPending && !hasMore && filteredExerciseTypes.length > 0 && (
-          <div className="py-8 text-center">
-            <span className="text-muted-foreground text-sm">
-              No more exercise types to load
-            </span>
+          <div className="py-12 text-center">
+            <p className="text-muted-foreground text-sm font-medium opacity-50">
+              You&apos;ve reached the end of the library
+            </p>
           </div>
         )}
 
         {/* Empty State */}
         {!isPending && filteredExerciseTypes.length === 0 && (
-          <div className="py-12 text-center">
-            <div className="text-muted-foreground mb-4">
-              {hasActiveFilters
-                ? "No exercise types match your current filters."
-                : "No exercise types available."}
+          <div className="py-20 text-center">
+            <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
+              <Search className="text-muted-foreground h-10 w-10 opacity-20" />
             </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">No exercises found</h3>
+            <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+              {hasActiveFilters
+                ? "We couldn't find anything matching your current filters."
+                : "Your exercise collection is currently empty."}
+            </p>
             {hasActiveFilters && (
               <Button
                 onClick={() => {
@@ -349,9 +335,9 @@ const ExerciseTypesPage = () => {
                   setSelectedMuscleGroupId("all");
                 }}
                 variant="outline"
-                size="sm"
+                className="rounded-xl border-border/40 font-bold"
               >
-                Clear Filters
+                Clear all filters
               </Button>
             )}
           </div>
