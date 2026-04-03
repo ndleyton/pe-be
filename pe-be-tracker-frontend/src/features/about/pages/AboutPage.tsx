@@ -32,22 +32,6 @@ const AboutPage = () => {
             When I'm not coding, you can find me working out, bouldering or
             taking pictures (never at the same time).
           </p>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-            Reach me at{" "}
-            <a className="text-foreground underline underline-offset-4" href="mailto:ndleyton@uc.cl">
-              ndleyton@uc.cl
-            </a>{" "}
-            or on{" "}
-            <a
-              className="text-foreground underline underline-offset-4"
-              href="https://www.linkedin.com/in/nicolas-d-leyton/"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              LinkedIn
-            </a>
-            .
-          </p>
         </CardContent>
       </Card>
 
