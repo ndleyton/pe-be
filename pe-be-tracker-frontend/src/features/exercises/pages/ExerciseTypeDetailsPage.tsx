@@ -16,11 +16,20 @@ import {
   type Exercise,
 } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores";
-import { ProgressiveOverloadChart } from "@/features/exercises/components";
-import {
-  LastWorkoutInfo,
-  PersonalBestInfo,
-} from "@/features/exercises/components";
+import { lazy, Suspense } from "react";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+
+const ProgressiveOverloadChart = lazy(() =>
+  import("@/features/exercises/components/ProgressiveOverloadChart/ProgressiveOverloadChart").then(
+    (m) => ({ default: m.ProgressiveOverloadChart }),
+  ),
+);
+
+const preloadProgressiveOverloadChart = createIntentPreload(() =>
+  import("@/features/exercises/components/ProgressiveOverloadChart/ProgressiveOverloadChart"),
+);
+import { LastWorkoutInfo } from "@/features/exercises/components/LastWorkoutInfo/LastWorkoutInfo";
+import { PersonalBestInfo } from "@/features/exercises/components/PersonalBestInfo/PersonalBestInfo";
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
@@ -265,7 +274,6 @@ const ExerciseTypeDetailsPage = () => {
   const validImages =
     exerciseType?.images?.filter((img) => !failedImages.has(img)) || [];
   const firstImageUrl = validImages[0];
-
   // Preload the first valid image to set a single container aspect-ratio.
   useEffect(() => {
     setFirstImageLoaded(false);
@@ -284,6 +292,14 @@ const ExerciseTypeDetailsPage = () => {
     };
     img.src = url;
   }, [firstImageUrl]);
+
+  // Preload heavy chart after a small delay
+  useEffect(() => {
+    const preloadTimeout = setTimeout(() => {
+      preloadProgressiveOverloadChart();
+    }, 2000);
+    return () => clearTimeout(preloadTimeout);
+  }, []);
 
   if (exerciseTypeError) {
     return (
@@ -659,10 +675,12 @@ const ExerciseTypeDetailsPage = () => {
               </>
             ) : stats?.progressiveOverload &&
               stats.progressiveOverload.length > 0 ? (
-              <ProgressiveOverloadChart
-                data={stats.progressiveOverload}
-                intensityUnit={stats.intensityUnit}
-              />
+              <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                <ProgressiveOverloadChart
+                  data={stats.progressiveOverload}
+                  intensityUnit={stats.intensityUnit}
+                />
+              </Suspense>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
                 <p>No workout data available yet.</p>

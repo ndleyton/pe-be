@@ -3,13 +3,11 @@ import { Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore, useGuestStore, useUIStore } from "@/stores";
 import { getMyWorkouts } from "@/features/workouts";
-import {
-  AppBar,
-  SideDrawer,
-  DesktopSidebar,
-  BottomNav,
-} from "../shared/components/layout";
-import { GuestModeBanner } from "../shared/components/feedback";
+import AppBar from "../shared/components/layout/AppBar";
+import SideDrawer from "../shared/components/layout/SideDrawer";
+import DesktopSidebar from "../shared/components/layout/DesktopSidebar";
+import BottomNav from "../shared/components/layout/BottomNav";
+import GuestModeBanner from "../shared/components/feedback/GuestModeBanner";
 
 const getActiveWorkout = <T extends {
   id: string | number;

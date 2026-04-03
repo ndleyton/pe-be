@@ -57,7 +57,10 @@ const exerciseComponentsMocks = vi.hoisted(() => ({
 // Mock exercise-related components used by WorkoutPage
 vi.mock("@/features/exercises/components", () => ({
   ExerciseList: exerciseComponentsMocks.ExerciseListMock,
-  ExerciseTypeModal: ({
+}));
+
+vi.mock("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal", () => ({
+  default: ({
     isOpen,
     onSelect,
   }: {
@@ -288,7 +291,7 @@ describe("WorkoutPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
     fireEvent.click(
-      screen.getByRole("button", { name: /select exercise type/i }),
+      await screen.findByRole("button", { name: /select exercise type/i }),
     );
 
     await waitFor(() => {
@@ -334,7 +337,7 @@ describe("WorkoutPage", () => {
       await screen.findByRole("button", { name: /add exercise/i }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /select exercise type/i }),
+      await screen.findByRole("button", { name: /select exercise type/i }),
     );
 
     await waitFor(() => {

@@ -28,3 +28,4 @@ test-results/
 playwright-report/
 
 .env
+stats.html

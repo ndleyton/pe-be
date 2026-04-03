@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, lazy } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -9,15 +9,13 @@ import {
   createExercise,
   type CreateExerciseData,
 } from "@/features/exercises/api";
-import { ExerciseList, ExerciseTypeModal } from "@/features/exercises/components";
-import { FinishWorkoutModal } from "@/features/workouts/components";
+import { ExerciseList } from "@/features/exercises/components";
 import { type Workout } from "@/features/workouts/types";
 import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { endpoints } from "@/shared/api/endpoints";
 import { ArrowLeft } from "lucide-react";
-import { SaveRoutineModal } from "@/features/routines/components/SaveRoutineModal/SaveRoutineModal";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import {
   useGuestStore,
@@ -27,6 +25,31 @@ import {
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import NotFoundPage from "@/pages/NotFoundPage";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+
+// Lazy load heavy components
+const FinishWorkoutModal = lazy(() =>
+  import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
+);
+const preloadFinishWorkoutModal = createIntentPreload(() =>
+  import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
+);
+
+const SaveRoutineModal = lazy(() =>
+  import("@/features/routines/components/SaveRoutineModal/SaveRoutineModal").then(
+    (m) => ({ default: m.SaveRoutineModal }),
+  ),
+);
+const preloadSaveRoutineModal = createIntentPreload(() =>
+  import("@/features/routines/components/SaveRoutineModal/SaveRoutineModal"),
+);
+
+const ExerciseTypeModal = lazy(() =>
+  import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
+);
+const preloadExerciseTypeModal = createIntentPreload(() =>
+  import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
+);
 
 const getErrorStatus = (error: unknown): number | null => {
   if (typeof error !== "object" || error === null || !("response" in error)) {
@@ -589,9 +612,16 @@ const WorkoutPage = () => {
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("popstate", handlePopState);
 
+    // Preload heavy components after a small delay to improve perceived performance
+    const preloadTimeout = setTimeout(() => {
+      preloadFinishWorkoutModal();
+      preloadSaveRoutineModal();
+    }, 2000);
+
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
+      clearTimeout(preloadTimeout);
     };
   }, [hasValidWorkout]);
 
@@ -731,6 +761,9 @@ const WorkoutPage = () => {
             <Button
               type="button"
               onClick={() => setShowAddExerciseModal(true)}
+              onMouseEnter={preloadExerciseTypeModal}
+              onTouchStart={preloadExerciseTypeModal}
+              onFocus={preloadExerciseTypeModal}
               className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
               disabled={isAuthenticated && addExerciseMutation.isPending}
             >
@@ -745,6 +778,9 @@ const WorkoutPage = () => {
 
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
+        onMouseEnter={preloadFinishWorkoutModal}
+        onTouchStart={preloadFinishWorkoutModal}
+        onFocus={preloadFinishWorkoutModal}
         disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>

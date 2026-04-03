@@ -3,7 +3,7 @@ import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
-import { LoginPage } from "@/features/auth/pages";
+import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
@@ -12,22 +12,16 @@ import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
 
 // These pages are not lazy loaded as they are core pages
-import { MyWorkoutsPage } from "./features/workouts/pages";
-import { ChatPage } from "./features/chat/pages";
+import MyWorkoutsPage from "./features/workouts/pages/MyWorkoutsPage";
+import ChatPage from "./features/chat/pages/ChatPage";
 
 // Lazy load other components with error boundaries
-const WorkoutPage = lazy(() =>
-  import("./features/workouts/pages").then((m) => ({ default: m.WorkoutPage })),
+const WorkoutPage = lazy(() => import("./features/workouts/pages/WorkoutPage"));
+const ExerciseTypesPage = lazy(
+  () => import("./features/exercises/pages/ExerciseTypesPage"),
 );
-const ExerciseTypesPage = lazy(() =>
-  import("./features/exercises/pages").then((m) => ({
-    default: m.ExerciseTypesPage,
-  })),
-);
-const ExerciseTypeDetailsPage = lazy(() =>
-  import("./features/exercises/pages").then((m) => ({
-    default: m.ExerciseTypeDetailsPage,
-  })),
+const ExerciseTypeDetailsPage = lazy(
+  () => import("./features/exercises/pages/ExerciseTypeDetailsPage"),
 );
 const ExerciseTypeImageAdminPage = lazy(
   () => import("./features/admin/pages/ExerciseTypeImageAdminPage"),
@@ -38,16 +32,10 @@ const RoutinesPage = lazy(
 const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
 );
-const ProfilePage = lazy(() =>
-  import("./features/profile/pages").then((m) => ({ default: m.ProfilePage })),
-);
-const AboutPage = lazy(() =>
-  import("./features/about/pages").then((m) => ({ default: m.AboutPage })),
-);
-const OAuthCallbackPage = lazy(() =>
-  import("./features/auth/pages").then((m) => ({
-    default: m.OAuthCallbackPage,
-  })),
+const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
+const AboutPage = lazy(() => import("./features/about/pages/AboutPage"));
+const OAuthCallbackPage = lazy(
+  () => import("./features/auth/pages/OAuthCallbackPage"),
 );
 
 // Enhanced loading component with reduced CLS and accessibility
@@ -132,7 +120,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "workouts/:workoutId",
-        element: <WorkoutPage />,
+        element: (
+          <PageWrapper>
+            <WorkoutPage />
+          </PageWrapper>
+        ),
       },
       {
         path: "exercise-types",
