@@ -30,6 +30,9 @@ export interface ExerciseImageOptionsResponse {
   options: ExerciseImageOption[];
 }
 
+const baseApiTimeout = Number.isFinite(config.apiTimeout) ? config.apiTimeout : 10000;
+const IMAGE_GENERATION_TIMEOUT_MS = Math.max(baseApiTimeout, 90000);
+
 const resolveAssetUrl = (url: string): string => {
   if (!url) {
     return url;
@@ -77,8 +80,12 @@ export const generateExerciseImageOptions = async (
   );
   const response =
     selection?.option_key !== undefined
-      ? await api.post(endpoint, selection)
-      : await api.post(endpoint);
+      ? await api.post(endpoint, selection, {
+          timeout: IMAGE_GENERATION_TIMEOUT_MS,
+        })
+      : await api.post(endpoint, undefined, {
+          timeout: IMAGE_GENERATION_TIMEOUT_MS,
+        });
   return normalizeImageOptionsResponse(response.data);
 };
 

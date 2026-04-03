@@ -85,6 +85,7 @@ describe("exerciseImageOptions API", () => {
     expect(mockApi.post).toHaveBeenCalledWith(
       "/admin/exercise-types/12/reference-image-options/generate",
       { option_key: "minimal-outline" },
+      { timeout: 90000 },
     );
     expect(result.options[0].images[0]).toBe(
       "http://localhost:3000/api/v1/exercises/assets/generated/example.png",
