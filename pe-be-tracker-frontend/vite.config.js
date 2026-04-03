@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { fileURLToPath, URL } from "node:url";
 
+import { visualizer } from "rollup-plugin-visualizer";
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, fileURLToPath(new URL(".", import.meta.url)), "");
@@ -12,7 +14,15 @@ export default defineConfig(({ mode }) => {
     env.SENTRY_AUTH_TOKEN && env.SENTRY_ORG && env.SENTRY_PROJECT,
   );
 
-  const plugins = [react(), tailwindcss()];
+  const plugins = [
+    react(),
+    tailwindcss(),
+    visualizer({
+      filename: "stats.html",
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ];
   if (hasSentrySourceMaps) {
     plugins.push(
       sentryVitePlugin({
@@ -37,6 +47,37 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       sourcemap: hasSentrySourceMaps,
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes("node_modules")) {
+              if (
+                id.includes("react") ||
+                id.includes("react-dom") ||
+                id.includes("react-router") ||
+                id.includes("zustand")
+              ) {
+                return "vendor-react";
+              }
+              if (
+                id.includes("recharts") ||
+                id.includes("d3") ||
+                id.includes("html-to-image")
+              ) {
+                return "vendor-viz";
+              }
+              if (
+                id.includes("@sentry") ||
+                id.includes("posthog") ||
+                id.includes("lucide")
+              ) {
+                return "vendor-heavy-deps";
+              }
+              return "vendor";
+            }
+          },
+        },
+      },
     },
     plugins,
     resolve: {

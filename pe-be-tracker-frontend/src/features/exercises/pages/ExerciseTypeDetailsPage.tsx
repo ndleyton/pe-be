@@ -16,11 +16,14 @@ import {
   type Exercise,
 } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores";
-import { ProgressiveOverloadChart } from "@/features/exercises/components";
-import {
-  LastWorkoutInfo,
-  PersonalBestInfo,
-} from "@/features/exercises/components";
+import { lazy } from "react";
+const ProgressiveOverloadChart = lazy(() =>
+  import("@/features/exercises/components/ProgressiveOverloadChart/ProgressiveOverloadChart").then(
+    (m) => ({ default: m.ProgressiveOverloadChart }),
+  ),
+);
+import { LastWorkoutInfo } from "@/features/exercises/components/LastWorkoutInfo/LastWorkoutInfo";
+import { PersonalBestInfo } from "@/features/exercises/components/PersonalBestInfo/PersonalBestInfo";
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
