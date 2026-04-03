@@ -183,7 +183,7 @@ const ExerciseTypesPage = () => {
           <div className="relative flex-1 group">
             <Input
               type="text"
-              placeholder="Search exercises..."
+              placeholder="Search by name or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={createMutation.isPending}
