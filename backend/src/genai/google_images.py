@@ -20,8 +20,6 @@ from src.exercises.image_assets import (
     storage_path_for_relative_url,
 )
 
-
-MODEL_NAME = "gemini-2.5-flash-image"
 DEFAULT_MIME = "image/png"
 REFERENCE_PIPELINE_KEY = "reference_redraw_v1"
 REFERENCE_PROMPT_VERSION = "v2"
@@ -233,17 +231,18 @@ def _extract_inline_result(
 
 
 def _generate_image_sync(prompt: str) -> ExerciseImageResult:
+    model_name = settings.EXERCISE_IMAGE_PHASE_MODEL
     max_retries = 3
     for attempt in range(max_retries):
         try:
             response = _client().models.generate_content(
-                model=MODEL_NAME,
+                model=model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
                 ),
             )
-            return _extract_inline_result(response, prompt, MODEL_NAME)
+            return _extract_inline_result(response, prompt, model_name)
         except errors.ClientError as exc:
             if exc.code == 429 and attempt < max_retries - 1:
                 wait_time = 15 * (attempt + 1)
@@ -258,13 +257,13 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
             raise
     # Fallback to one last attempt if the loop somehow finish without return/raise
     response = _client().models.generate_content(
-        model=MODEL_NAME,
+        model=model_name,
         contents=prompt,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
         ),
     )
-    return _extract_inline_result(response, prompt, MODEL_NAME)
+    return _extract_inline_result(response, prompt, model_name)
 
 
 def _open_reference_image(source_image_url: str) -> bytes:

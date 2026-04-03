@@ -535,7 +535,7 @@ class WorkoutParsingService:
                 trace = langfuse.trace(
                     name="workout-parsing",
                     metadata={
-                        "model": "gemini-2.5-flash-lite",
+                        "model": settings.WORKOUT_PARSER_MODEL,
                         "service": "parser-to-json",
                     },
                 )
@@ -568,7 +568,7 @@ class WorkoutParsingService:
 
             llm = ChatGoogleGenerativeAI(
                 google_api_key=settings.GOOGLE_AI_KEY,
-                model="gemini-2.5-flash-lite",
+                model=settings.WORKOUT_PARSER_MODEL,
                 temperature=0.1,
                 max_output_tokens=1000,
             )
@@ -588,7 +588,7 @@ class WorkoutParsingService:
             if trace:
                 trace.generation(
                     name="workout-parsing-generation",
-                    model="gemini-2.5-flash-lite",
+                    model=settings.WORKOUT_PARSER_MODEL,
                     input=[
                         {"role": "system", "content": system_prompt},
                         {

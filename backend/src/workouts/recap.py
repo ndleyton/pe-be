@@ -145,7 +145,7 @@ Recap:"""
                     name="workout-recap",
                     user_id=str(user_id),
                     metadata={
-                        "model": "gemini-2.5-flash-lite",
+                        "model": settings.WORKOUT_RECAP_MODEL,
                         "service": "workout-recap",
                         "workout_id": workout_id,
                         "exercise_count": len(exercises),
@@ -155,7 +155,7 @@ Recap:"""
 
             client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
             response = await client.aio.models.generate_content(
-                model="gemini-2.5-flash-lite",
+                model=settings.WORKOUT_RECAP_MODEL,
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     temperature=0.7,
@@ -169,7 +169,7 @@ Recap:"""
             if trace:
                 trace.generation(
                     name="workout-recap-generation",
-                    model="gemini-2.5-flash-lite",
+                    model=settings.WORKOUT_RECAP_MODEL,
                     input=[{"role": "user", "content": prompt}],
                     output=recap_text,
                     metadata={
