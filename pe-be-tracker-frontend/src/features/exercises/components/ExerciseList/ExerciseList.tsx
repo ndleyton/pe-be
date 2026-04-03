@@ -1,8 +1,9 @@
 
 import { memo } from "react";
 import { Exercise } from "@/features/exercises/api";
+import { Dumbbell } from "lucide-react";
 import ExerciseRow from "../ExerciseRow";
-import { ExerciseListSkeleton } from "@/shared/components/skeletons/ExerciseListSkeleton";
+import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 
 interface ExerciseListProps {
   exercises: Exercise[];
@@ -21,7 +22,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
 }) => {
   return (
     <div className="">
-      {status === "pending" && <ExerciseListSkeleton />}
+      {status === "pending" && <LoadingThrobber />}
 
       {status === "error" && (
         <div className="text-destructive py-4 text-center">
@@ -30,8 +31,18 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
       )}
 
       {status === "success" && exercises.length === 0 && (
-        <div className="text-muted-foreground border-border bg-card rounded-lg border p-4 text-center">
-          No exercises added yet. Click below to add your first exercise.
+        <div className="flex flex-col items-center justify-center space-y-6 py-12">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-border/20 bg-card/40 shadow-2xl backdrop-blur-md">
+            <Dumbbell className="text-muted-foreground/30 h-10 w-10" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-foreground/40 text-sm font-black uppercase tracking-[0.2em]">
+              No Exercises Yet
+            </p>
+            <p className="text-muted-foreground text-xs font-medium opacity-60">
+              Click below to add your first exercise
+            </p>
+          </div>
         </div>
       )}
 
