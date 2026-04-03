@@ -335,15 +335,15 @@ describe("MyWorkoutsPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workout-form")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /cancel/i }),
+        screen.getByRole("button", { name: /close modal/i }),
       ).toBeInTheDocument();
     });
 
     // FAB should be hidden when form is shown
     expect(screen.queryByTestId("fab-add-workout")).not.toBeInTheDocument();
 
-    // Click cancel to hide form
-    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    // Click close to hide form
+    await userEvent.click(screen.getByRole("button", { name: /close modal/i }));
 
     await waitFor(() => {
       expect(screen.queryByTestId("workout-form")).not.toBeInTheDocument();
