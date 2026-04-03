@@ -83,8 +83,8 @@ test.describe("Guest Mode Workout Creation", () => {
     // Dismiss any overlays that might interfere with primary actions
     await dismissOverlays(page);
 
-    // 2. Use the empty-state CTA to show the workout form
-    await page.getByRole("button", { name: /start your first workout/i }).click();
+    // 2. Use the floating action button to show the workout form
+    await page.getByTestId("fab-add-workout").click();
 
     // Wait for the workout form to appear
     await page

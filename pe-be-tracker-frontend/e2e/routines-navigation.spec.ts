@@ -36,16 +36,9 @@ test.describe("Routines quick-start navigation", () => {
 
     await page.goto("/workouts");
     await page.waitForURL(/\/workouts$/);
-    await page.waitForURL(/\/workouts$/);
     await page.getByTestId("fab-add-workout").waitFor({ state: "visible" });
 
-    const accordionTrigger = page.getByRole("button", {
-      name: "Quick Start Routines",
-    });
-    await expect(accordionTrigger).toBeVisible({ timeout: 15000 });
-    await accordionTrigger.click();
-
-    const moreLink = page.locator('a[href="/routines"]').first();
+    const moreLink = page.getByRole("link", { name: "Browse all routines" });
     await expect(moreLink).toBeVisible({ timeout: 10000 });
     await moreLink.click();
 
