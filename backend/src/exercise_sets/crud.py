@@ -61,7 +61,7 @@ async def get_exercise_set_by_id(
         .options(selectinload(ExerciseSet.exercise).selectinload(Exercise.workout))
         .where(ExerciseSet.id == exercise_set_id, ExerciseSet.deleted_at.is_(None))
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_exercise_set_owner_and_deleted(
@@ -223,7 +223,7 @@ async def verify_exercise_ownership(
         .options(selectinload(Exercise.workout))
         .where(Exercise.id == exercise_id)
     )
-    exercise = result.scalar_one_or_none()
+    exercise = result.unique().scalar_one_or_none()
 
     if not exercise or exercise.workout.owner_id != user_id:
         return None
