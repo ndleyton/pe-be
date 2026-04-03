@@ -34,6 +34,10 @@ async function dismissOverlays(page: any) {
 }
 
 test.describe("Guest Mode Workout Creation", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearGuestData(page);
+  });
+
   test("should allow a guest user to create a workout", async ({ page }) => {
     // Enhanced error logging to catch React loading issues
     const jsErrors: string[] = [];

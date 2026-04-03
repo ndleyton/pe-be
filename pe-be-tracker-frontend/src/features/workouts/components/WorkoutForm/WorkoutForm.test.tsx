@@ -16,13 +16,14 @@ interface WorkoutTypeModalProps {
   onSelect: (workoutType: WorkoutType) => void;
 }
 
-vi.mock("../WorkoutTypeModal", () => ({
+vi.mock("../WorkoutTypeModal/WorkoutTypeModal", () => ({
   default: ({ isOpen, onClose }: WorkoutTypeModalProps) =>
     isOpen ? (
       <div data-testid="workout-type-modal">
         <button onClick={onClose}>Close Modal</button>
       </div>
     ) : null,
+  fetchWorkoutTypes: vi.fn(() => Promise.resolve([])),
 }));
 
 const mockNavigate = vi.fn();
@@ -44,7 +45,7 @@ describe("WorkoutForm", () => {
   it("renders the form with all required fields", () => {
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    expect(screen.getByText(/general workout session/i)).toBeInTheDocument();
+    expect(screen.getByTestId("workout-name-heading")).toHaveTextContent(/strength training/i);
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start time/i)).toBeInTheDocument();
     expect(
@@ -56,9 +57,7 @@ describe("WorkoutForm", () => {
     const user = userEvent.setup();
     render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />);
 
-    const workoutTypeCard = screen
-      .getByText(/general workout session/i)
-      .closest("div");
+    const workoutTypeCard = screen.getByTestId("open-workout-type-modal");
     await user.click(workoutTypeCard!);
 
     expect(screen.getByTestId("workout-type-modal")).toBeInTheDocument();

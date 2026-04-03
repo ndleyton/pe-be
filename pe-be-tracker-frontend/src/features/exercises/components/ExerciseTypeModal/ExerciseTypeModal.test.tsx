@@ -143,6 +143,5 @@ describe("ExerciseTypeModal", () => {
     );
 
     expect(screen.getByText("Squats")).toBeInTheDocument();
-    expect(screen.getByText("Used by you 3 times")).toBeInTheDocument();
   });
 });

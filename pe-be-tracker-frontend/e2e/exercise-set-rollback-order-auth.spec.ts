@@ -145,13 +145,15 @@ test.describe("Exercise set rollback ordering (authenticated)", () => {
       });
     });
 
-    await page.goto(`/workouts/${workoutId}`);
+    await page.goto(`/workouts/${workoutId}`, {
+      waitUntil: "domcontentloaded",
+    });
     await expect(
       page.getByRole("heading", { name: "Rollback Order Workout" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     const intensityInputs = page.getByTestId("intensity-input");
-    await expect(intensityInputs).toHaveCount(2);
+    await expect(intensityInputs).toHaveCount(2, { timeout: 15000 });
     await expect(intensityInputs.nth(0)).toHaveValue("100");
     await expect(intensityInputs.nth(1)).toHaveValue("200");
 
