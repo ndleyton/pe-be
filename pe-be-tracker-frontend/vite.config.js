@@ -55,7 +55,12 @@ export default defineConfig(({ mode }) => {
                 id.includes("react") ||
                 id.includes("react-dom") ||
                 id.includes("react-router") ||
-                id.includes("zustand")
+                id.includes("zustand") ||
+                id.includes("tanstack") ||
+                id.includes("@radix-ui") ||
+                id.includes("lucide") ||
+                id.includes("@sentry") ||
+                id.includes("posthog")
               ) {
                 return "vendor-react";
               }
@@ -65,13 +70,6 @@ export default defineConfig(({ mode }) => {
                 id.includes("html-to-image")
               ) {
                 return "vendor-viz";
-              }
-              if (
-                id.includes("@sentry") ||
-                id.includes("posthog") ||
-                id.includes("lucide")
-              ) {
-                return "vendor-heavy-deps";
               }
               return "vendor";
             }
