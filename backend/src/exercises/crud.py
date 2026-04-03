@@ -42,6 +42,11 @@ NON_RELEASED_EXERCISE_TYPE_STATUSES = (
     ExerciseType.ExerciseTypeStatus.candidate,
     ExerciseType.ExerciseTypeStatus.in_review,
 )
+EXACT_MATCH_STATUS_PRIORITY = {
+    ExerciseType.ExerciseTypeStatus.released: 0,
+    ExerciseType.ExerciseTypeStatus.in_review: 1,
+    ExerciseType.ExerciseTypeStatus.candidate: 2,
+}
 
 
 def _exercise_type_visibility_clause(
@@ -77,6 +82,22 @@ def _exercise_type_relationship_option():
         selectinload(ExerciseType.exercise_muscles)
         .selectinload(ExerciseMuscle.muscle)
         .selectinload(Muscle.muscle_group)
+    )
+
+
+def _exact_match_sort_key(
+    *,
+    status: ExerciseType.ExerciseTypeStatus,
+    owner_id: Optional[int],
+    updated_at: Optional[datetime],
+    exercise_type_id: int,
+    user_id: Optional[int],
+) -> tuple[int, int, float, int]:
+    return (
+        EXACT_MATCH_STATUS_PRIORITY.get(status, 99),
+        0 if user_id is not None and owner_id == user_id else 1,
+        -(updated_at.timestamp() if updated_at is not None else 0.0),
+        -exercise_type_id,
     )
 
 
@@ -418,7 +439,13 @@ async def get_exercise_types(
                 "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
             )
             candidate_query = (
-                select(ExerciseType.id, ExerciseType.name).where(visibility_clause)
+                select(
+                    ExerciseType.id,
+                    ExerciseType.name,
+                    ExerciseType.status,
+                    ExerciseType.owner_id,
+                    ExerciseType.updated_at,
+                ).where(visibility_clause)
             )
             if muscle_group_id is not None:
                 candidate_query = candidate_query.where(
@@ -439,8 +466,26 @@ async def get_exercise_types(
         # Quick path: exact (case-insensitive) name match for determinism
         exact_match_ids = [
             exercise_type_id
-            for exercise_type_id, candidate_name in candidate_rows
-            if candidate_name and candidate_name.lower() == name.lower()
+            for (
+                exercise_type_id,
+                candidate_name,
+                candidate_status,
+                candidate_owner_id,
+                candidate_updated_at,
+            ) in sorted(
+                (
+                    row
+                    for row in candidate_rows
+                    if row[1] and row[1].lower() == name.lower()
+                ),
+                key=lambda row: _exact_match_sort_key(
+                    status=row[2],
+                    owner_id=row[3],
+                    updated_at=row[4],
+                    exercise_type_id=row[0],
+                    user_id=user_id,
+                ),
+            )
         ]
         if exact_match_ids:
             total_results = len(exact_match_ids)
@@ -466,7 +511,13 @@ async def get_exercise_types(
         # Filter out None/empty names to avoid TypeError from thefuzz
         valid_candidates = [
             (exercise_type_id, candidate_name)
-            for exercise_type_id, candidate_name in candidate_rows
+            for (
+                exercise_type_id,
+                candidate_name,
+                _candidate_status,
+                _candidate_owner_id,
+                _candidate_updated_at,
+            ) in candidate_rows
             if isinstance(candidate_name, str) and candidate_name.strip()
         ]
 

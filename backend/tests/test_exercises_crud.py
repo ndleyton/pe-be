@@ -532,6 +532,42 @@ async def test_get_exercise_types_preserves_fuzzy_order_after_hydration(
     assert result.next_cursor is None
 
 
+async def test_get_exercise_types_exact_match_prefers_released_before_owned_draft(
+    db_session,
+):
+    owner = await _seed_user(db_session, "exact-precedence@example.com")
+    released = await _seed_exercise_type(
+        db_session,
+        "Bench Press",
+        released_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    owner_candidate = await _seed_exercise_type(
+        db_session,
+        "Bench Press",
+        owner_id=owner.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    await db_session.commit()
+
+    first_page = await crud.get_exercise_types(
+        db_session,
+        name="Bench Press",
+        user_id=owner.id,
+        offset=0,
+        limit=1,
+    )
+    second_page = await crud.get_exercise_types(
+        db_session,
+        name="Bench Press",
+        user_id=owner.id,
+        offset=1,
+        limit=1,
+    )
+
+    assert [item.id for item in first_page.data] == [released.id]
+    assert [item.id for item in second_page.data] == [owner_candidate.id]
+
+
 async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session):
     unit = await _seed_intensity_unit(db_session, "Pounds", "lb")
     group = await _seed_muscle_group(db_session, "Upper Body")
