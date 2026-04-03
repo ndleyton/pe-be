@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from google import genai
 from google.genai import types
+from langfuse import Langfuse
 
 from src.core.config import settings
 from src.workouts.crud import get_workout_by_id
@@ -13,6 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class WorkoutRecapService:
+    @staticmethod
+    def _get_langfuse_client() -> Optional[Langfuse]:
+        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+            return Langfuse(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY,
+                host=settings.LANGFUSE_HOST,
+            )
+        return None
+
     @staticmethod
     async def generate_recap(
         session: AsyncSession, workout_id: int, user_id: int
@@ -126,10 +137,25 @@ Recap:"""
             logger.warning("GOOGLE_AI_KEY not configured, cannot generate recap")
             return "AI recap unavailable (API key missing)."
 
+        langfuse = WorkoutRecapService._get_langfuse_client()
+        trace = None
         try:
+            if langfuse:
+                trace = langfuse.trace(
+                    name="workout-recap",
+                    user_id=str(user_id),
+                    metadata={
+                        "model": settings.WORKOUT_RECAP_MODEL,
+                        "service": "workout-recap",
+                        "workout_id": workout_id,
+                        "exercise_count": len(exercises),
+                        "workout_name": workout.name,
+                    },
+                )
+
             client = genai.Client(api_key=settings.GOOGLE_AI_KEY)
             response = await client.aio.models.generate_content(
-                model="gemini-2.5-flash-lite",
+                model=settings.WORKOUT_RECAP_MODEL,
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     temperature=0.7,
@@ -140,11 +166,34 @@ Recap:"""
                 response.text.strip() if response.text else "Could not generate recap."
             )
 
+            if trace:
+                trace.generation(
+                    name="workout-recap-generation",
+                    model=settings.WORKOUT_RECAP_MODEL,
+                    input=[{"role": "user", "content": prompt}],
+                    output=recap_text,
+                    metadata={
+                        "temperature": 0.7,
+                        "max_tokens": 300,
+                    },
+                )
+                trace.update(
+                    output={"recap": recap_text},
+                    metadata={"status": "success"},
+                )
+
             # 4. Save to workout
             workout.recap = recap_text
             await session.commit()
 
             return recap_text
         except Exception as e:
+            if trace:
+                trace.update(
+                    metadata={
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
             logger.exception("Error generating workout recap")
             return f"Error generating recap: {str(e)}"

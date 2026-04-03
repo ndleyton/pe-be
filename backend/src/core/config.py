@@ -43,6 +43,21 @@ class Settings(BaseSettings):
     API_VERSION: str = Field("v1", validation_alias="API_VERSION")
     OPENAI_API_KEY: str = Field("", validation_alias="OPENAI_API_KEY")
     GOOGLE_AI_KEY: str = Field("", validation_alias="GOOGLE_AI_KEY")
+    CHAT_MODEL: str = Field(
+        "gemini-2.5-flash",
+        validation_alias="CHAT_MODEL",
+        description="Gemini model for chat interactions",
+    )
+    WORKOUT_PARSER_MODEL: str = Field(
+        "gemini-2.5-flash-lite",
+        validation_alias="WORKOUT_PARSER_MODEL",
+        description="Gemini model for workout text parsing",
+    )
+    WORKOUT_RECAP_MODEL: str = Field(
+        "gemini-2.5-flash-lite",
+        validation_alias="WORKOUT_RECAP_MODEL",
+        description="Gemini model for workout recap generation",
+    )
 
     # Chat/tool calling safety
     CHAT_MAX_TOOL_ITERATIONS: int = Field(
@@ -143,6 +158,11 @@ class Settings(BaseSettings):
         str(Path(__file__).resolve().parents[2] / ".exercise_images"),
         validation_alias="EXERCISE_IMAGE_STORAGE_DIR",
         description="Filesystem path for exercise reference and generated images",
+    )
+    EXERCISE_IMAGE_PHASE_MODEL: str = Field(
+        "gemini-2.5-flash-image",
+        validation_alias="EXERCISE_IMAGE_PHASE_MODEL",
+        description="Gemini image model for phase image generation",
     )
     EXERCISE_IMAGE_REFERENCE_MODEL: str = Field(
         "gemini-2.5-flash-image",

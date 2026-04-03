@@ -24,7 +24,6 @@ from src.exercises.image_assets import (
 )
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.genai.google_images import (
-    MODEL_NAME,
     REFERENCE_OPTION_SPECS,
     REFERENCE_PIPELINE_KEY,
     REFERENCE_PROMPT_VERSION,
@@ -648,7 +647,9 @@ def exercise_type_reference_model() -> str:
 
 
 def exercise_type_phase_model() -> str:
-    return MODEL_NAME
+    from src.core.config import settings
+
+    return settings.EXERCISE_IMAGE_PHASE_MODEL
 
 
 async def apply_reference_or_option(

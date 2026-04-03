@@ -9,6 +9,8 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
+from src.core.config import settings
+
 
 ChatRole = Literal["system", "user", "assistant", "tool"]
 MessagePartType = Literal["text", "image"]
@@ -182,7 +184,7 @@ class GeminiGenAIClient:
         *,
         api_key: str,
         rate_limiter: Any = None,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = settings.CHAT_MODEL,
         temperature: float = 0.7,
         max_tokens: int = 2000,
         max_retries: int = 2,
