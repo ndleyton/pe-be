@@ -1,4 +1,5 @@
 import api from "@/shared/api/client";
+import { config } from "@/app/config/env";
 import { endpoints } from "@/shared/api/endpoints";
 
 export interface ExerciseImageOption {
@@ -29,13 +30,42 @@ export interface ExerciseImageOptionsResponse {
   options: ExerciseImageOption[];
 }
 
+const resolveAssetUrl = (url: string): string => {
+  if (!url) {
+    return url;
+  }
+
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const base = /^https?:\/\//i.test(config.apiBaseUrl)
+    ? config.apiBaseUrl
+    : window.location.origin;
+
+  return new URL(url, base).toString();
+};
+
+const normalizeImageOptionsResponse = (
+  response: ExerciseImageOptionsResponse,
+): ExerciseImageOptionsResponse => ({
+  ...response,
+  current_images: response.current_images.map(resolveAssetUrl),
+  reference_images: response.reference_images.map(resolveAssetUrl),
+  options: response.options.map((option) => ({
+    ...option,
+    images: option.images.map(resolveAssetUrl),
+    source_images: option.source_images.map(resolveAssetUrl),
+  })),
+});
+
 export const getExerciseImageOptions = async (
   exerciseTypeId: string | number,
 ): Promise<ExerciseImageOptionsResponse> => {
   const response = await api.get(
     endpoints.admin.exerciseTypeReferenceImageOptions(exerciseTypeId),
   );
-  return response.data;
+  return normalizeImageOptionsResponse(response.data);
 };
 
 export const generateExerciseImageOptions = async (
@@ -49,7 +79,7 @@ export const generateExerciseImageOptions = async (
     selection?.option_key !== undefined
       ? await api.post(endpoint, selection)
       : await api.post(endpoint);
-  return response.data;
+  return normalizeImageOptionsResponse(response.data);
 };
 
 export const applyExerciseImageOption = async (
@@ -60,5 +90,5 @@ export const applyExerciseImageOption = async (
     endpoints.admin.applyExerciseTypeReferenceImageOption(exerciseTypeId),
     selection,
   );
-  return response.data;
+  return normalizeImageOptionsResponse(response.data);
 };

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ImagePlus, RefreshCcw } from "lucide-react";
@@ -179,6 +180,9 @@ const ExerciseTypeImageAdminPage = () => {
   const isAdmin = Boolean(user?.is_superuser);
   const queryClient = useQueryClient();
   const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
+  const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(
+    null,
+  );
 
   const optionsQuery = useQuery({
     queryKey: ["adminExerciseImageOptions", exerciseTypeId],
@@ -190,11 +194,38 @@ const ExerciseTypeImageAdminPage = () => {
   const generateMutation = useMutation({
     mutationFn: (selection?: { option_key?: string }) =>
       generateExerciseImageOptions(exerciseTypeId!, selection),
-    onSuccess: (data) => {
+    onMutate: () => {
+      setGenerationErrorMessage(null);
+    },
+    onSuccess: (data, variables) => {
       queryClient.setQueryData(["adminExerciseImageOptions", exerciseTypeId], data);
       queryClient.invalidateQueries({
         queryKey: ["exerciseType", exerciseTypeId],
       });
+      if (
+        data.supports_revert_to_reference &&
+        variables?.option_key &&
+        !data.options.some((option) => option.key === variables.option_key)
+      ) {
+        const matchingOption = data.available_options.find(
+          (option) => option.key === variables.option_key,
+        );
+        setGenerationErrorMessage(
+          `Generation completed, but no preview images were returned for ${
+            matchingOption?.label ?? variables.option_key
+          }.`,
+        );
+      }
+    },
+    onError: (error) => {
+      if (
+        axios.isAxiosError(error) &&
+        typeof error.response?.data?.detail === "string"
+      ) {
+        setGenerationErrorMessage(error.response.data.detail);
+        return;
+      }
+      setGenerationErrorMessage("The selected image option could not be generated.");
     },
   });
 
@@ -237,6 +268,8 @@ const ExerciseTypeImageAdminPage = () => {
 
   const selectedOptionDescription =
     selectedGenerationOption?.description ?? "Choose a generation style.";
+  const selectedGenerationLabel =
+    selectedGenerationOption?.label ?? "the selected style";
 
   if (!initialized) {
     return <LoadingState />;
@@ -276,9 +309,6 @@ const ExerciseTypeImageAdminPage = () => {
   const headerDescription = hasReferenceSource
     ? "Generate reference-based replacements, compare option sets, and choose which set becomes the live exercise imagery."
     : "This exercise has no preserved reference images. Generating options will create a fallback phase pair for the start/eccentric and end/concentric positions.";
-  const generationErrorDescription = hasReferenceSource
-    ? "The reference pipeline could not create image options for this exercise."
-    : "The phase fallback pipeline could not create images for this exercise.";
   const emptyOptionsDescription = hasReferenceSource
     ? "Run the reference pipeline to create candidate replacements from the preserved source images."
     : "Generate a fallback phase pair to create the first image set for this exercise.";
@@ -329,10 +359,10 @@ const ExerciseTypeImageAdminPage = () => {
         </Button>
       </div>
 
-      {generateMutation.isError ? (
+      {generationErrorMessage ? (
         <Alert variant="destructive">
           <AlertTitle>Generation failed</AlertTitle>
-          <AlertDescription>{generationErrorDescription}</AlertDescription>
+          <AlertDescription>{generationErrorMessage}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -435,7 +465,7 @@ const ExerciseTypeImageAdminPage = () => {
               <CardHeader>
                 <CardTitle>{selectedGenerationOption.label} has not been generated yet</CardTitle>
                 <CardDescription>
-                  Generate the selected style to preview it and make it available to apply.
+                  Generate {selectedGenerationLabel} to preview it and make it available to apply.
                 </CardDescription>
               </CardHeader>
             </Card>
