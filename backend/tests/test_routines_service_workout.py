@@ -143,3 +143,80 @@ async def test_create_workout_from_routine_not_accessible_raises(
     # Non-existent id also raises
     with pytest.raises(ValueError):
         await routine_service.create_workout_from_routine(db_session, u1.id, 999999)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_workout_from_public_routine_allows_nonreleased_exercise_types(
+    db_session: AsyncSession,
+):
+    wt = WorkoutType(name="Strength Hidden Exercise", description="desc")
+    iu = IntensityUnit(name="Kilograms", abbreviation="kg")
+    db_session.add_all([wt, iu])
+    await db_session.flush()
+
+    routine_owner = User(
+        email="routine-owner@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    viewer = User(
+        email="routine-viewer@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add_all([routine_owner, viewer])
+    await db_session.flush()
+
+    hidden_exercise_type = ExerciseType(
+        name="Hidden Draft Exercise",
+        description="x",
+        default_intensity_unit=iu.id,
+        owner_id=routine_owner.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(hidden_exercise_type)
+    await db_session.flush()
+
+    public_routine = Routine(
+        name="Public Routine With Hidden Exercise",
+        workout_type_id=wt.id,
+        creator_id=routine_owner.id,
+        visibility=Routine.RoutineVisibility.public,
+    )
+    db_session.add(public_routine)
+    await db_session.flush()
+
+    exercise_template = ExerciseTemplate(
+        exercise_type_id=hidden_exercise_type.id,
+        routine_id=public_routine.id,
+    )
+    db_session.add(exercise_template)
+    await db_session.flush()
+
+    db_session.add(
+        SetTemplate(
+            reps=8,
+            intensity=40.0,
+            intensity_unit_id=iu.id,
+            exercise_template_id=exercise_template.id,
+        )
+    )
+    await db_session.commit()
+
+    workout = await routine_service.create_workout_from_routine(
+        db_session, viewer.id, public_routine.id
+    )
+
+    assert workout is not None
+
+    res = await db_session.execute(
+        select(func.count())
+        .select_from(Exercise)
+        .where(Exercise.workout_id == workout.id)
+    )
+    assert res.scalar() == 1

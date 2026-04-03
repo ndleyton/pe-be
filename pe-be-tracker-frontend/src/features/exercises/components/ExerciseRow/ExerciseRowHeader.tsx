@@ -47,7 +47,8 @@ export const ExerciseRowHeader = ({
   onIntensityUnitChange,
 }: ExerciseRowHeaderProps) => {
   const showExerciseTypeDetailsLink =
-    typeof exercise.exercise_type.id === "number";
+    typeof exercise.exercise_type.id === "number" &&
+    (exercise.exercise_type.status ?? "released") === "released";
 
   return (
     <div className="flex items-center justify-between">
