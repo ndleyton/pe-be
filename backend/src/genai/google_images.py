@@ -24,7 +24,7 @@ from src.exercises.image_assets import (
 MODEL_NAME = "gemini-2.5-flash-image"
 DEFAULT_MIME = "image/png"
 REFERENCE_PIPELINE_KEY = "reference_redraw_v1"
-REFERENCE_PROMPT_VERSION = "v1"
+REFERENCE_PROMPT_VERSION = "v2"
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class ReferenceOptionSpec:
     key: str
     label: str
     description: str
+    reference_directive: str
     style_directive: str
 
 
@@ -42,6 +43,11 @@ REFERENCE_OPTION_SPECS: tuple[ReferenceOptionSpec, ...] = (
         key="clean-outline",
         label="Clean Outline",
         description="High-contrast line art with clearer limb and equipment definition.",
+        reference_directive=(
+            "Use the uploaded reference image as the source of truth for body position "
+            "and framing. Preserve the exact exercise pose, silhouette orientation, and "
+            "equipment relationship."
+        ),
         style_directive=(
             "Redraw the reference as a crisp instructional fitness illustration. "
             "Keep the same pose, camera angle, cropping, and equipment placement. "
@@ -50,12 +56,40 @@ REFERENCE_OPTION_SPECS: tuple[ReferenceOptionSpec, ...] = (
     ),
     ReferenceOptionSpec(
         key="anatomy-focus",
-        label="Anatomy Focus",
-        description="Minimal illustration with subtle muscle emphasis and posture clarity.",
+        label="Muscle Highlight",
+        description="Everkinetic-style muscle highlight on charcoal with simplified equipment.",
+        reference_directive=(
+            "Use the uploaded reference image as the source of truth for body position "
+            "and framing. Preserve the exact exercise pose, silhouette orientation, and "
+            "equipment relationship."
+        ),
         style_directive=(
-            "Recreate the reference as a clean anatomy-aware exercise diagram. "
-            "Preserve the exact pose and framing, keep equipment minimal, and add subtle "
-            "muscle emphasis without labels or background clutter."
+            "Recreate the reference as a clean functional exercise diagram with the visual "
+            "clarity of Everkinetic. Use a flat deep charcoal background and strip away "
+            "unnecessary equipment or scene detail. Render the body in a uniform light "
+            "achromatic shade. Highlight the targeted active muscles named in the prompt in "
+            "the exact color rgb(255, 51, 102). Reduce equipment to essential outlines or "
+            "simple filled shapes in an achromatic tone that clearly contrasts with both the "
+            "body and the background. Do not add labels or text."
+        ),
+    ),
+    ReferenceOptionSpec(
+        key="minimal-outline",
+        label="Minimal Outline",
+        description="Centered charcoal composition with minimal outlines and preserved equipment.",
+        reference_directive=(
+            "Use the uploaded reference image as the source of truth for the exercise phase, "
+            "body mechanics, and equipment relationship. You may refine the crop and viewing "
+            "angle slightly to better center the exercise and improve clarity, but keep the "
+            "movement meaningfully identical to the reference."
+        ),
+        style_directive=(
+            "Redraw the exercise as a minimal outline illustration on a flat deep charcoal "
+            "background. Center the athlete and choose the clearest readable angle for the "
+            "movement while keeping the same equipment and exercise setup. Render the body in "
+            "a light achromatic tone with clean simple outlines and minimal detail. Reduce "
+            "equipment to essential outline shapes that remain easy to distinguish from the "
+            "body and background. Do not add labels or text."
         ),
     ),
 )
@@ -140,8 +174,7 @@ def _build_reference_prompt(context: Dict, option: ReferenceOptionSpec) -> str:
         f"Muscles: {muscles_line}.\n"
         f"Description: {description_line}\n"
         f"Instructions: {instructions_line}\n\n"
-        "Use the uploaded reference image as the source of truth for body position and framing. "
-        "Preserve the exact exercise pose, silhouette orientation, and equipment relationship. "
+        f"{option.reference_directive}\n"
         f"{option.style_directive}\n"
         "Make the result clearer than the reference for a workout library thumbnail and detail view. "
         "No captions, no watermarks beyond SynthID, no logos, no extra people, and no decorative background. "

@@ -18,7 +18,11 @@ from src.admin.exercise_image_service import (
 )
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.exercises.schemas import ExerciseTypeRead
-from src.genai.google_images import ExerciseImageResult, REFERENCE_OPTION_SPECS
+from src.genai.google_images import (
+    ExerciseImageResult,
+    REFERENCE_OPTION_SPECS,
+    REFERENCE_PROMPT_VERSION,
+)
 from src.main import app
 from src.users.router import current_active_user
 
@@ -347,7 +351,7 @@ async def test_apply_reference_option_publishes_generated_assets(db_session, tmp
                 source_image_index=0,
                 source_image_url="references/source.png",
                 model_name="test-model",
-                prompt_version="v1",
+                prompt_version=REFERENCE_PROMPT_VERSION,
                 prompt_summary="summary",
                 mime_type="image/png",
                 storage_path=generated_relative_path,
@@ -395,7 +399,7 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
             source_image_index=0,
             option_key="clean-outline",
             pipeline_key="reference_redraw_v1",
-            prompt_version="v1",
+            prompt_version=REFERENCE_PROMPT_VERSION,
             model_name=model_name,
         )
         stale_storage_path = (
@@ -412,7 +416,7 @@ async def test_generate_reference_image_options_upserts_stale_generation_keys(
                 source_image_index=0,
                 source_image_url="references/source-a.png",
                 model_name="stale-model",
-                prompt_version="v1",
+                prompt_version=REFERENCE_PROMPT_VERSION,
                 prompt_summary="stale-summary",
                 mime_type="image/png",
                 storage_path=stale_storage_path,
@@ -534,7 +538,7 @@ async def test_generate_reference_image_options_runs_jobs_concurrently(
         response = await generate_reference_image_options(db_session, exercise_type)
 
         assert max_active > 1
-        assert len(response.options) == 2
+        assert len(response.options) == len(REFERENCE_OPTION_SPECS)
         for option in response.options:
             assert len(option.images) == 2
     finally:

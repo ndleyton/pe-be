@@ -3,7 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.genai.google_images import (
+    REFERENCE_OPTION_SPECS,
     ReferenceOptionSpec,
+    _build_reference_prompt,
     _build_prompt,
     _generate_image_sync,
     _generate_reference_image_sync,
@@ -35,6 +37,56 @@ def test_build_prompt_empty_context():
     assert "Primary: (unspecified)" in prompt
     assert "Equipment:" not in prompt
     assert "Description: No extra description provided." in prompt
+
+
+def test_build_reference_prompt_for_muscle_highlight_option():
+    option = next(
+        spec for spec in REFERENCE_OPTION_SPECS if spec.key == "anatomy-focus"
+    )
+    prompt = _build_reference_prompt(
+        {
+            "name": "Lat Pulldown",
+            "description": "Upper body pull",
+            "instructions": "Drive elbows down.",
+            "equipment": "Cable machine",
+            "category": "Back",
+            "primary_muscles": ["Lats"],
+            "secondary_muscles": ["Biceps"],
+        },
+        option,
+    )
+
+    assert "Exercise: Lat Pulldown." in prompt
+    assert "Use the uploaded reference image as the source of truth" in prompt
+    assert "deep charcoal background" in prompt
+    assert "rgb(255, 51, 102)" in prompt
+    assert "Everkinetic" in prompt
+    assert "Do not add labels or text." in prompt
+
+
+def test_build_reference_prompt_for_minimal_outline_option():
+    option = next(
+        spec for spec in REFERENCE_OPTION_SPECS if spec.key == "minimal-outline"
+    )
+    prompt = _build_reference_prompt(
+        {
+            "name": "Chest Supported Row",
+            "description": "Upper body pull",
+            "instructions": "Drive elbows back.",
+            "equipment": "Bench and dumbbells",
+            "category": "Back",
+            "primary_muscles": ["Upper Back"],
+            "secondary_muscles": ["Biceps"],
+        },
+        option,
+    )
+
+    assert "Exercise: Chest Supported Row." in prompt
+    assert "flat deep charcoal background" in prompt
+    assert "better center the exercise" in prompt
+    assert "viewing angle slightly" in prompt
+    assert "same equipment and exercise setup" in prompt
+    assert "Do not add labels or text." in prompt
 
 
 @patch("src.genai.google_images.settings")
@@ -139,6 +191,7 @@ def test_generate_reference_image_sync_success(
         key="test",
         label="Test",
         description="Desc",
+        reference_directive="Reference",
         style_directive="Direct",
     )
 

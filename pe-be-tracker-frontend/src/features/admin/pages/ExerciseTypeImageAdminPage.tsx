@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ImagePlus, RefreshCcw } from "lucide-react";
@@ -103,6 +104,62 @@ const OptionCard = ({
   </Card>
 );
 
+const OptionSelector = ({
+  options,
+  selectedKey,
+  onSelect,
+}: {
+  options: ExerciseImageOption[];
+  selectedKey: string;
+  onSelect: (optionKey: string) => void;
+}) => (
+  <div className="space-y-3">
+    <div>
+      <h3 className="text-sm font-medium tracking-wide uppercase">
+        Choose a generated style
+      </h3>
+      <p className="text-muted-foreground text-sm">
+        Switch between the generated reference styles and apply the one you want live.
+      </p>
+    </div>
+    <div className="flex flex-wrap gap-3">
+      {options.map((option) => {
+        const isSelected = option.key === selectedKey;
+
+        return (
+          <Button
+            key={option.key}
+            type="button"
+            variant={isSelected ? "default" : "outline"}
+            aria-pressed={isSelected}
+            onClick={() => onSelect(option.key)}
+            className="h-auto min-h-16 max-w-full justify-start px-4 py-3 text-left"
+          >
+            <span className="flex flex-col items-start gap-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span>{option.label}</span>
+                {option.is_current ? (
+                  <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                    Live
+                  </span>
+                ) : null}
+                {option.option_source === "phase_generated" ? (
+                  <span className="bg-background/70 text-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                    Fallback
+                  </span>
+                ) : null}
+              </span>
+              <span className="text-current/80 line-clamp-2 text-xs font-normal">
+                {option.description}
+              </span>
+            </span>
+          </Button>
+        );
+      })}
+    </div>
+  </div>
+);
+
 const LoadingState = () => (
   <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6 lg:p-8">
     <Skeleton className="h-8 w-72" />
@@ -121,6 +178,7 @@ const ExerciseTypeImageAdminPage = () => {
   const initialized = useAuthStore((state) => state.initialized);
   const isAdmin = Boolean(user?.is_superuser);
   const queryClient = useQueryClient();
+  const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
 
   const optionsQuery = useQuery({
     queryKey: ["adminExerciseImageOptions", exerciseTypeId],
@@ -150,6 +208,25 @@ const ExerciseTypeImageAdminPage = () => {
     },
   });
 
+  const data = optionsQuery.data;
+  const selectedOption =
+    data?.options.find((option) => option.key === selectedOptionKey) ??
+    data?.options[0] ??
+    null;
+
+  useEffect(() => {
+    if (!data?.options.length) {
+      if (selectedOptionKey !== null) {
+        setSelectedOptionKey(null);
+      }
+      return;
+    }
+
+    if (!selectedOption) {
+      setSelectedOptionKey(data.options[0].key);
+    }
+  }, [data, selectedOption, selectedOptionKey]);
+
   if (!initialized) {
     return <LoadingState />;
   }
@@ -171,7 +248,7 @@ const ExerciseTypeImageAdminPage = () => {
     return <LoadingState />;
   }
 
-  if (optionsQuery.isError || !optionsQuery.data) {
+  if (optionsQuery.isError || !data) {
     return (
       <div className="mx-auto max-w-4xl p-4 md:p-6 lg:p-8">
         <Alert variant="destructive">
@@ -184,7 +261,6 @@ const ExerciseTypeImageAdminPage = () => {
     );
   }
 
-  const data = optionsQuery.data;
   const hasReferenceSource = data.supports_revert_to_reference;
   const headerDescription = hasReferenceSource
     ? "Generate reference-based replacements, compare option sets, and choose which set becomes the live exercise imagery."
@@ -305,16 +381,21 @@ const ExerciseTypeImageAdminPage = () => {
               the same reference inputs and prompt version.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-6">
-            {data.options.map((option) => (
+          {selectedOption ? (
+            <>
+              <OptionSelector
+                options={data.options}
+                selectedKey={selectedOption.key}
+                onSelect={setSelectedOptionKey}
+              />
               <OptionCard
-                key={option.key}
-                option={option}
+                key={selectedOption.key}
+                option={selectedOption}
                 onApply={(optionKey) => applyMutation.mutate({ option_key: optionKey })}
                 isApplying={applyMutation.isPending}
               />
-            ))}
-          </div>
+            </>
+          ) : null}
         </div>
       ) : (
         <Card>
