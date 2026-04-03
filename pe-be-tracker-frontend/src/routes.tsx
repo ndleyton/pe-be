@@ -3,7 +3,7 @@ import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
-import { LoginPage } from "@/features/auth/pages";
+import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
@@ -120,7 +120,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "workouts/:workoutId",
-        element: <WorkoutPage />,
+        element: (
+          <PageWrapper>
+            <WorkoutPage />
+          </PageWrapper>
+        ),
       },
       {
         path: "exercise-types",
