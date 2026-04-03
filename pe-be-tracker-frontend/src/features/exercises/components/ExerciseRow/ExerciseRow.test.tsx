@@ -11,6 +11,10 @@ import {
   deleteExercise,
 } from "@/features/exercises/api";
 
+const { preloadSpy } = vi.hoisted(() => ({
+  preloadSpy: vi.fn(),
+}));
+
 // Mock API functions
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual("@/features/exercises/api");
@@ -21,6 +25,10 @@ vi.mock("@/features/exercises/api", async () => {
     deleteExercise: vi.fn(),
   };
 });
+
+vi.mock("@/shared/lib/createIntentPreload", () => ({
+  createIntentPreload: vi.fn(() => preloadSpy),
+}));
 
 // Mock the ExerciseTypeMore component
 vi.mock("../ExerciseTypeMore", () => ({
@@ -188,6 +196,13 @@ describe("ExerciseRow", () => {
     expect(
       screen.getByRole("link", { name: /view details for bench press/i }),
     ).toHaveAttribute("href", "/exercise-types/1");
+    const detailsLink = screen.getByRole("link", {
+      name: /view details for bench press/i,
+    });
+    fireEvent.mouseEnter(detailsLink);
+    fireEvent.touchStart(detailsLink);
+    fireEvent.focus(detailsLink);
+    expect(preloadSpy).toHaveBeenCalledTimes(3);
     // expect(screen.getByText(/Rest Timer: 2min 30s/)).toBeInTheDocument(); // TODO: Add rest timer back in
     // Exercise notes are now accessible via the sticky note icon next to the exercise name
     const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");

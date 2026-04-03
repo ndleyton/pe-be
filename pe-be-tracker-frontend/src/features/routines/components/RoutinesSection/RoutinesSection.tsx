@@ -13,6 +13,11 @@ import {
 } from "@/shared/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+
+const preloadRoutinesPage = createIntentPreload(() =>
+  import("@/features/routines/pages/RoutinesPage"),
+);
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: Routine) => void;
@@ -106,6 +111,9 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
                   size="icon"
                   variant="ghost"
                   aria-label="Browse all routines"
+                  onMouseEnter={preloadRoutinesPage}
+                  onTouchStart={preloadRoutinesPage}
+                  onFocus={preloadRoutinesPage}
                 >
                   <Link to="/routines">
                     <ChevronRight className="text-muted-foreground h-5 w-5" />

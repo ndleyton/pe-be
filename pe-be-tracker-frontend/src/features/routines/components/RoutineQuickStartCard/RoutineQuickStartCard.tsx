@@ -8,6 +8,11 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Link } from "react-router-dom";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+
+const preloadRoutineDetailsPage = createIntentPreload(() =>
+  import("@/features/routines/pages/RoutineDetailsPage"),
+);
 
 interface RoutineQuickStartCardProps {
   routine: Routine;
@@ -63,6 +68,9 @@ export const RoutineQuickStartCard = ({
             variant="ghost"
             className="flex-1 rounded-xl text-xs font-bold"
             size="sm"
+            onMouseEnter={preloadRoutineDetailsPage}
+            onTouchStart={preloadRoutineDetailsPage}
+            onFocus={preloadRoutineDetailsPage}
           >
             <Link to={`/routines/${routine.id}`}>View Details</Link>
           </Button>
