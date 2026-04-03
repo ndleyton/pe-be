@@ -55,9 +55,7 @@ def _exercise_type_visibility_clause(
     is_admin: bool,
     released_only: bool = False,
 ):
-    released_clause = (
-        ExerciseType.status == ExerciseType.ExerciseTypeStatus.released
-    )
+    released_clause = ExerciseType.status == ExerciseType.ExerciseTypeStatus.released
     if released_only:
         return released_clause
     if is_admin:
@@ -114,7 +112,9 @@ async def _load_muscles_by_ids(
     found_ids = {muscle.id for muscle in muscles}
     missing_ids = set(muscle_ids) - found_ids
     if missing_ids:
-        raise ValueError(f"Muscle IDs not found: {', '.join(map(str, sorted(missing_ids)))}")
+        raise ValueError(
+            f"Muscle IDs not found: {', '.join(map(str, sorted(missing_ids)))}"
+        )
     return muscles
 
 
@@ -127,7 +127,9 @@ async def _replace_exercise_type_muscles(
         return
 
     await session.execute(
-        delete(ExerciseMuscle).where(ExerciseMuscle.exercise_type_id == exercise_type.id)
+        delete(ExerciseMuscle).where(
+            ExerciseMuscle.exercise_type_id == exercise_type.id
+        )
     )
 
     if not muscle_ids:
@@ -438,15 +440,13 @@ async def get_exercise_types(
             span.set_attribute(
                 "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
             )
-            candidate_query = (
-                select(
-                    ExerciseType.id,
-                    ExerciseType.name,
-                    ExerciseType.status,
-                    ExerciseType.owner_id,
-                    ExerciseType.updated_at,
-                ).where(visibility_clause)
-            )
+            candidate_query = select(
+                ExerciseType.id,
+                ExerciseType.name,
+                ExerciseType.status,
+                ExerciseType.owner_id,
+                ExerciseType.updated_at,
+            ).where(visibility_clause)
             if muscle_group_id is not None:
                 candidate_query = candidate_query.where(
                     ExerciseType.exercise_muscles.any(

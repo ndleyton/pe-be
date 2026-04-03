@@ -231,7 +231,9 @@ class ExerciseTypeService:
             )
 
         try:
-            return await update_exercise_type(session, exercise_type, exercise_type_data)
+            return await update_exercise_type(
+                session, exercise_type, exercise_type_data
+            )
         except IntegrityError as e:
             if hasattr(e.orig, "pgcode") and e.orig.pgcode == "23505":
                 raise HTTPException(
@@ -264,7 +266,10 @@ class ExerciseTypeService:
                 detail=f"Exercise type with ID {exercise_type_id} not found",
             )
 
-        if exercise_type.owner_id != user.id or exercise_type.status == ExerciseType.ExerciseTypeStatus.released:
+        if (
+            exercise_type.owner_id != user.id
+            or exercise_type.status == ExerciseType.ExerciseTypeStatus.released
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not allowed to request evaluation for this exercise type",
