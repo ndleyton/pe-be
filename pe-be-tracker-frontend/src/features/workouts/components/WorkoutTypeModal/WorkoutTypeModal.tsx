@@ -18,7 +18,7 @@ interface WorkoutTypeModalProps {
   onSelect: (workoutType: WorkoutType | GuestWorkoutType) => void;
 }
 
-const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
+export const fetchWorkoutTypes = async (): Promise<WorkoutType[]> => {
   const response = await api.get(endpoints.workoutTypes);
   return response.data;
 };
@@ -79,11 +79,11 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
     if (isAuthenticated && error) {
       return (
-        <div className="py-8 text-center">
+        <div className="py-10 text-center">
           <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-destructive text-2xl">⚠</span>
+            <span className="text-destructive text-2xl text-center">⚠</span>
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
+          <h4 className="text-foreground mb-2 font-semibold">
             Failed to load workout types
           </h4>
           <p className="text-muted-foreground text-sm">
@@ -95,11 +95,11 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
     if (workoutTypes.length === 0) {
       return (
-        <div className="py-8 text-center">
+        <div className="py-10 text-center">
           <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-muted-foreground text-2xl">📋</span>
+            <span className="text-muted-foreground text-2xl text-center">📋</span>
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
+          <h4 className="text-foreground mb-2 font-semibold">
             No workout types available
           </h4>
           <p className="text-muted-foreground text-sm">
@@ -112,27 +112,44 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
     }
 
     return (
-      <div className="grid gap-3">
+      <div className="grid gap-3 p-1">
         {workoutTypes.map((workoutType) => (
-          <div
+          <button
             key={workoutType.id}
             onClick={() => handleSelect(workoutType)}
-            className="bg-card/40 hover:bg-accent border-border cursor-pointer rounded-xl border p-4 transition-all hover:scale-[1.01] active:scale-[0.99] backdrop-blur-sm"
+            className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/50 bg-card/60 p-4 text-left transition-all hover:scale-[1.02] hover:bg-accent/60 hover:border-primary/40 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/15 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-xl">
-                {workoutType.name.charAt(0)}
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="text-foreground font-semibold text-base">
-                  {workoutType.name}
-                </h4>
-                <p className="text-muted-foreground mt-1 text-sm leading-snug">
-                  {workoutType.description}
-                </p>
-              </div>
+            {/* Subtle decoration */}
+            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-primary/10 opacity-0 transition-opacity group-hover:opacity-100" />
+
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-primary font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+              <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/30 to-transparent group-hover:opacity-0 transition-opacity" />
+              <span className="relative z-10">{workoutType.name.charAt(0)}</span>
             </div>
-          </div>
+            <div className="flex-1 overflow-hidden">
+              <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
+                {workoutType.name}
+              </h4>
+              <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
+                {workoutType.description}
+              </p>
+            </div>
+            <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </button>
         ))}
       </div>
     );
@@ -140,11 +157,14 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Select Workout Type</DialogTitle>
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-md border-border/40"
+        hideOverlay={true}
+      >
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl font-bold tracking-tight">Select Workout Type</DialogTitle>
         </DialogHeader>
-        <div className="mt-4">
+        <div className="mt-2 space-y-3">
           {renderContent()}
         </div>
       </DialogContent>

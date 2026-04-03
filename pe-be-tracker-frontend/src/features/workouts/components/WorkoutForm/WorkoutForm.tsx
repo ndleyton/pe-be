@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import type { Routine } from "@/features/routines/types";
 import api from "@/shared/api/client";
@@ -10,7 +10,7 @@ import {
   toLocalDateTimeInputValue,
   getCurrentUTCTimestamp,
 } from "@/utils/date";
-import WorkoutTypeModal, { WorkoutType } from "../WorkoutTypeModal";
+import WorkoutTypeModal, { WorkoutType, fetchWorkoutTypes } from "../WorkoutTypeModal/WorkoutTypeModal";
 import {
   useGuestStore,
   useAuthStore,
@@ -60,6 +60,12 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
   >(null);
   const [isEditingName, setIsEditingName] = useState(false);
 
+  const { data: serverWorkoutTypes = [] } = useQuery({
+    queryKey: ["workoutTypes"],
+    queryFn: fetchWorkoutTypes,
+    enabled: isAuthenticated,
+  });
+
   const { register, handleSubmit, reset, formState, setValue, watch } =
     useForm<WorkoutFormData>({
       defaultValues: {
@@ -86,21 +92,34 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
 
   // Set initial workout type based on default form value
   useEffect(() => {
-    if (
-      !selectedWorkoutType &&
-      !isAuthenticated &&
-      guestData.workoutTypes.length > 0
-    ) {
-      // For guest users, try to find "Other" type by name, or use the last one (which should be "Other")
-      const defaultWorkoutType =
-        guestData.workoutTypes.find((wt) => wt.name === "Other") ||
-        guestData.workoutTypes[guestData.workoutTypes.length - 1];
-      if (defaultWorkoutType) {
-        setSelectedWorkoutType(defaultWorkoutType);
-        setValue("workout_type_id", defaultWorkoutType.id);
+    if (selectedWorkoutType) return;
+
+    if (!isAuthenticated) {
+      if (guestData.workoutTypes.length > 0) {
+        // Try strength training, then other, then first
+        const defaultWorkoutType =
+          guestData.workoutTypes.find((wt) => wt.name === "Strength Training") ||
+          guestData.workoutTypes.find((wt) => wt.name === "Other") ||
+          guestData.workoutTypes[0];
+
+        if (defaultWorkoutType) {
+          setSelectedWorkoutType(defaultWorkoutType);
+          setValue("workout_type_id", defaultWorkoutType.id);
+        }
+      }
+    } else {
+      if (serverWorkoutTypes.length > 0) {
+        const defaultWorkoutType =
+          serverWorkoutTypes.find((wt) => wt.name === "Strength Training") ||
+          serverWorkoutTypes[0];
+
+        if (defaultWorkoutType) {
+          setSelectedWorkoutType(defaultWorkoutType);
+          setValue("workout_type_id", defaultWorkoutType.id);
+        }
       }
     }
-  }, [selectedWorkoutType, isAuthenticated, guestData.workoutTypes, setValue]);
+  }, [selectedWorkoutType, isAuthenticated, guestData.workoutTypes, serverWorkoutTypes, setValue]);
 
   useEffect(() => {
     if (
@@ -196,18 +215,31 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
     setIsEditingName(false);
     setValue("start_time", toLocalDateTimeInputValue());
 
-    // For guest users, immediately set a default workout type after reset
-    if (!isAuthenticated && guestData.workoutTypes.length > 0) {
-      setTimeout(() => {
-        const defaultWorkoutType =
-          guestData.workoutTypes.find((wt) => wt.name === "Other") ||
-          guestData.workoutTypes[guestData.workoutTypes.length - 1];
-        if (defaultWorkoutType) {
-          setSelectedWorkoutType(defaultWorkoutType);
-          setValue("workout_type_id", defaultWorkoutType.id);
+    // Immediately set a default workout type after reset
+    setTimeout(() => {
+      if (!isAuthenticated) {
+        if (guestData.workoutTypes.length > 0) {
+          const defaultWorkoutType =
+            guestData.workoutTypes.find((wt) => wt.name === "Strength Training") ||
+            guestData.workoutTypes.find((wt) => wt.name === "Other") ||
+            guestData.workoutTypes[0];
+          if (defaultWorkoutType) {
+            setSelectedWorkoutType(defaultWorkoutType);
+            setValue("workout_type_id", defaultWorkoutType.id);
+          }
         }
-      }, 0);
-    }
+      } else {
+        if (serverWorkoutTypes.length > 0) {
+          const defaultWorkoutType =
+            serverWorkoutTypes.find((wt) => wt.name === "Strength Training") ||
+            serverWorkoutTypes[0];
+          if (defaultWorkoutType) {
+            setSelectedWorkoutType(defaultWorkoutType);
+            setValue("workout_type_id", defaultWorkoutType.id);
+          }
+        }
+      }
+    }, 0);
   };
 
   return (
@@ -332,24 +364,23 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
         {selectedWorkoutType ? (
           <div
             onClick={() => setShowModal(true)}
-            className="bg-accent/50 border-border hover:bg-accent cursor-pointer rounded-xl border p-4 transition-all"
+            className="group bg-card/60 border-border/50 hover:bg-accent/60 hover:border-primary/30 cursor-pointer rounded-2xl border p-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
             data-testid="open-workout-type-modal"
           >
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-                <span className="text-primary-foreground font-bold">
-                  {selectedWorkoutType.name.charAt(0)}
-                </span>
+            <div className="flex items-center space-x-4">
+              <div className="relative bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-xl font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/20 to-transparent group-hover:opacity-0 transition-opacity" />
+                <span className="relative z-10">{selectedWorkoutType.name.charAt(0)}</span>
               </div>
               <div className="flex-1">
-                <h4 className="text-foreground font-medium">
+                <h4 className="text-foreground font-bold text-base leading-tight">
                   {selectedWorkoutType.name}
                 </h4>
-                <p className="text-muted-foreground mt-1 text-sm">
+                <p className="text-muted-foreground mt-0.5 text-xs font-medium opacity-80 group-hover:opacity-100">
                   {selectedWorkoutType.description}
                 </p>
               </div>
-              <div className="text-muted-foreground">
+              <div className="text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all">
                 <svg
                   className="h-5 w-5"
                   fill="none"
@@ -371,7 +402,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
             type="button"
             onClick={() => setShowModal(true)}
             variant="outline"
-            className="bg-background text-foreground border-border hover:bg-accent w-full justify-start"
+            className="bg-card/40 text-foreground border-border/50 hover:bg-accent/60 w-full justify-start rounded-2xl py-6"
             data-testid="open-workout-type-modal"
           >
             Select Workout Type
