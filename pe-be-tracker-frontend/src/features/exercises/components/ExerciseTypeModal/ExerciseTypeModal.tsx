@@ -6,7 +6,6 @@ import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
-import { Search, X, Plus, Info, Dumbbell, History } from "lucide-react";
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -293,12 +292,6 @@ const ExerciseTypeModal = ({
                   <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
                     {exerciseType.name}
                   </h4>
-                  {!isAuthenticated && exerciseType.times_used > 0 && (
-                    <div className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary tracking-tight">
-                      <History className="h-2.5 w-2.5" />
-                      {exerciseType.times_used}
-                    </div>
-                  )}
                 </div>
 
                 <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
