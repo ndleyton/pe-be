@@ -30,6 +30,7 @@ interface FinishWorkoutModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
+  isAuthenticated?: boolean;
   exercises?: Exercise[];
   onSaveRoutine?: () => void;
   workoutName?: string;
@@ -43,6 +44,7 @@ const FinishWorkoutModal = ({
   onConfirm,
   onCancel,
   isLoading = false,
+  isAuthenticated = false,
   exercises = [],
   onSaveRoutine,
   workoutName,
@@ -260,6 +262,10 @@ const FinishWorkoutModal = ({
               ) : recap ? (
                 <p className="text-foreground text-sm leading-relaxed italic">
                   &ldquo;{recap}&rdquo;
+                </p>
+              ) : !isAuthenticated ? (
+                <p className="text-muted-foreground text-xs italic">
+                  AI recaps are available for logged-in users.
                 </p>
               ) : (
                 <p className="text-muted-foreground text-xs italic">

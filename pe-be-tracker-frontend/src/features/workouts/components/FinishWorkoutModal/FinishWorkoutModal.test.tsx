@@ -478,5 +478,33 @@ describe("FinishWorkoutModal", () => {
       expect(setSingularTexts.length).toBeGreaterThan(0);
       expect(screen.queryByText("1 sets")).not.toBeInTheDocument();
     });
+
+    it("shows a logged-in-only message for recap generation in guest mode", () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={mockExercisesWithSets}
+          isAuthenticated={false}
+        />,
+      );
+
+      expect(
+        screen.getByText("AI recaps are available for logged-in users."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the generic recap fallback for authenticated users", () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={mockExercisesWithSets}
+          isAuthenticated={true}
+        />,
+      );
+
+      expect(
+        screen.getByText("Recap generation skipped or failed."),
+      ).toBeInTheDocument();
+    });
   });
 });

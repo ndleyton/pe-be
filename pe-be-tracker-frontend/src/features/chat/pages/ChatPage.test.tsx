@@ -6,8 +6,11 @@ import { MemoryRouter } from "react-router-dom";
 
 import ChatPage from "./ChatPage";
 
-const { mockPost } = vi.hoisted(() => ({
+const { mockPost, mockAuthState } = vi.hoisted(() => ({
   mockPost: vi.fn(),
+  mockAuthState: {
+    isAuthenticated: true,
+  },
 }));
 
 vi.mock("@/shared/api/client", () => ({
@@ -21,17 +24,14 @@ vi.mock("@/shared/api/client", () => ({
 
 vi.mock("@/stores", () => ({
   useAuthStore: vi.fn((selector) => {
-    const mockState = {
-      isAuthenticated: true,
-    };
-
-    return selector ? selector(mockState) : mockState;
+    return selector ? selector(mockAuthState) : mockAuthState;
   }),
 }));
 
 describe("ChatPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthState.isAuthenticated = true;
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -133,7 +133,39 @@ describe("ChatPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Error generating response with Gemini: tool call failed.",
+          "Error generating response with the AI coach: tool call failed.",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows logged-in-only copy when the user is signed out", async () => {
+    mockAuthState.isAuthenticated = false;
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    expect(
+      screen.getByText("Ask questions, log workouts, or attach photos for coaching and analysis."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Sign in to use chat and image uploads. This feature is for logged-in users.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText("Message..."), "Hello");
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Chat is available for logged-in users. Please sign in to continue.",
         ),
       ).toBeInTheDocument();
     });
