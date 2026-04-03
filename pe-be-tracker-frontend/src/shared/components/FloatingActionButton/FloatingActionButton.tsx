@@ -7,6 +7,8 @@ interface FloatingActionButtonProps {
   className?: string;
   disabled?: boolean;
   onMouseEnter?: () => void;
+  onTouchStart?: () => void;
+  onFocus?: () => void;
   /** Optional test id for E2E selectors */
   dataTestId?: string;
 }
@@ -14,6 +16,8 @@ interface FloatingActionButtonProps {
 const FloatingActionButton = ({
   onClick,
   onMouseEnter,
+  onTouchStart,
+  onFocus,
   children,
   className = "",
   disabled = false,
@@ -23,6 +27,8 @@ const FloatingActionButton = ({
     <Button
       onClick={onClick}
       onMouseEnter={onMouseEnter}
+      onTouchStart={onTouchStart}
+      onFocus={onFocus}
       disabled={disabled}
       size="icon"
       className={`bg-primary/90 hover:bg-primary fixed right-6 bottom-24 z-50 h-12 w-12 shadow-lg transition-all duration-200 backdrop-blur-sm hover:shadow-xl md:bottom-6 ${className} `}

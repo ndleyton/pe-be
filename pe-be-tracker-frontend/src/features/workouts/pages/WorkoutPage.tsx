@@ -25,17 +25,29 @@ import {
 } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import NotFoundPage from "@/pages/NotFoundPage";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 
 // Lazy load heavy components
 const FinishWorkoutModal = lazy(() =>
   import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
 );
+const preloadFinishWorkoutModal = createIntentPreload(() =>
+  import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
+);
+
 const SaveRoutineModal = lazy(() =>
   import("@/features/routines/components/SaveRoutineModal/SaveRoutineModal").then(
     (m) => ({ default: m.SaveRoutineModal }),
   ),
 );
+const preloadSaveRoutineModal = createIntentPreload(() =>
+  import("@/features/routines/components/SaveRoutineModal/SaveRoutineModal"),
+);
+
 const ExerciseTypeModal = lazy(() =>
+  import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
+);
+const preloadExerciseTypeModal = createIntentPreload(() =>
   import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
 );
 
@@ -602,8 +614,8 @@ const WorkoutPage = () => {
 
     // Preload heavy components after a small delay to improve perceived performance
     const preloadTimeout = setTimeout(() => {
-      import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal");
-      import("@/features/routines/components/SaveRoutineModal/SaveRoutineModal");
+      preloadFinishWorkoutModal();
+      preloadSaveRoutineModal();
     }, 2000);
 
     return () => {
@@ -612,10 +624,6 @@ const WorkoutPage = () => {
       clearTimeout(preloadTimeout);
     };
   }, [hasValidWorkout]);
-
-  const handlePreloadFinishModal = () => {
-    import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal");
-  };
 
   // Keep the route shell mounted and let the exercise section own its loading UI.
   const workoutErrorStatus = getErrorStatus(workoutError);
@@ -753,6 +761,9 @@ const WorkoutPage = () => {
             <Button
               type="button"
               onClick={() => setShowAddExerciseModal(true)}
+              onMouseEnter={preloadExerciseTypeModal}
+              onTouchStart={preloadExerciseTypeModal}
+              onFocus={preloadExerciseTypeModal}
               className="bg-primary/90 hover:bg-primary mt-2 px-6 py-2 backdrop-blur-sm"
               disabled={isAuthenticated && addExerciseMutation.isPending}
             >
@@ -767,7 +778,9 @@ const WorkoutPage = () => {
 
       <FloatingActionButton
         onClick={() => setShowFinishModal(true)}
-        onMouseEnter={handlePreloadFinishModal}
+        onMouseEnter={preloadFinishWorkoutModal}
+        onTouchStart={preloadFinishWorkoutModal}
+        onFocus={preloadFinishWorkoutModal}
         disabled={isAuthenticated && finishWorkoutMutation.isPending}
       >
         <span className="text-lg">✓</span>
