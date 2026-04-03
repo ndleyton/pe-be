@@ -160,6 +160,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
       <DialogContent
         className="max-h-[85vh] overflow-y-auto sm:max-w-md border-border/40"
         hideOverlay={true}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-bold tracking-tight">Select Workout Type</DialogTitle>
