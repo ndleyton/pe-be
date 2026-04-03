@@ -110,7 +110,9 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
         }
 
     def fake_client_factory(*, api_key):
-        client = _FakeClient(response_text="Great session. Add 2.5 lb next time.", api_key=api_key)
+        client = _FakeClient(
+            response_text="Great session. Add 2.5 lb next time.", api_key=api_key
+        )
         client_holder["client"] = client
         return client
 
