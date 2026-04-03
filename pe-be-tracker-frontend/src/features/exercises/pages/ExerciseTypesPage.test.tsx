@@ -9,11 +9,19 @@ import {
 } from "@/test/fixtures";
 import ExerciseTypesPage from "./ExerciseTypesPage";
 import {
+  createExerciseType,
   getExerciseTypes,
 } from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
 
 vi.mock("@/features/exercises/api");
+let mockIsAuthenticated = false;
+
+vi.mock("@/stores", () => ({
+  useAuthStore: (selector: (state: { isAuthenticated: boolean }) => unknown) =>
+    selector({ isAuthenticated: mockIsAuthenticated }),
+}));
+
 vi.mock("@/features/exercises/components", () => ({
   ExerciseTypeCard: ({ exerciseType }: { exerciseType: ExerciseType }) => (
     <div data-testid={`exercise-type-${exerciseType.id}`}>
@@ -23,6 +31,7 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 const mockGetExerciseTypes = vi.mocked(getExerciseTypes);
+const mockCreateExerciseType = vi.mocked(createExerciseType);
 
 const mockExerciseTypes: ExerciseType[] = [
   makeExerciseType({
@@ -103,12 +112,14 @@ const mockExerciseTypes: ExerciseType[] = [
 describe("ExerciseTypesPage - Infinite Scroll", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsAuthenticated = false;
     Element.prototype.hasPointerCapture ??= vi.fn(() => false);
     Element.prototype.releasePointerCapture ??= vi.fn();
     Element.prototype.scrollIntoView ??= vi.fn();
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes(mockExerciseTypes),
     );
+    mockCreateExerciseType.mockResolvedValue(makeExerciseType({ id: 999 }));
   });
 
   it("renders the page title and search controls", async () => {
@@ -251,6 +262,51 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     expect(
       screen.getByRole("button", { name: /clear filters/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows an inline create control for authenticated users with no matches", async () => {
+    mockIsAuthenticated = true;
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
+    await userEvent.type(searchInput, "Nordic Curl");
+
+    expect(screen.getByTitle('Create "Nordic Curl"')).toBeInTheDocument();
+  });
+
+  it("creates a new exercise type from search for authenticated users", async () => {
+    mockIsAuthenticated = true;
+    mockCreateExerciseType.mockResolvedValue(
+      makeExerciseType({
+        id: 44,
+        name: "Nordic Curl",
+        description: "Custom exercise",
+        default_intensity_unit: 1,
+      }),
+    );
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
+    await userEvent.type(searchInput, "Nordic Curl");
+    await userEvent.click(screen.getByTitle('Create "Nordic Curl"'));
+
+    await waitFor(() => {
+      expect(mockCreateExerciseType).toHaveBeenCalledWith({
+        name: "Nordic Curl",
+        description: "Custom exercise",
+        default_intensity_unit: 1,
+      });
+    });
   });
 
   it("clears search when clear button is clicked", async () => {

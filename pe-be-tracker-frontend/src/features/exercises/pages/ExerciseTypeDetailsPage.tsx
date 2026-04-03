@@ -411,13 +411,13 @@ const ExerciseTypeDetailsPage = () => {
           <div className="flex min-w-0 flex-1 flex-wrap gap-2">
             {exerciseType.muscles && exerciseType.muscles.length > 0
               ? exerciseType.muscles.map((muscle) => (
-                  <span
-                    key={muscle.id}
-                    className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                  >
-                    {muscle.name}
-                  </span>
-                ))
+                <span
+                  key={muscle.id}
+                  className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                >
+                  {muscle.name}
+                </span>
+              ))
               : null}
           </div>
           <div className="flex shrink-0 gap-2">
@@ -475,17 +475,18 @@ const ExerciseTypeDetailsPage = () => {
 
       {isEditable ? (
         <div className="bg-card border-border/20 mb-6 rounded-2xl border p-6 text-left shadow-md">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Edit Exercise Type</h2>
               <p className="text-muted-foreground text-sm">
-                Non-released exercise types stay private to you until an admin releases them.
+                Non-released exercises stay private to you until an admin approves them.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
               {canRequestEvaluation ? (
                 <Button
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => requestEvaluationMutation.mutate()}
                 >
                   {requestEvaluationMutation.isPending
@@ -494,11 +495,15 @@ const ExerciseTypeDetailsPage = () => {
                 </Button>
               ) : null}
               {canRelease ? (
-                <Button variant="outline" onClick={() => releaseMutation.mutate()}>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => releaseMutation.mutate()}
+                >
                   {releaseMutation.isPending ? "Releasing..." : "Release"}
                 </Button>
               ) : null}
-              <Button onClick={() => updateMutation.mutate()}>
+              <Button className="w-full sm:w-auto" onClick={() => updateMutation.mutate()}>
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
