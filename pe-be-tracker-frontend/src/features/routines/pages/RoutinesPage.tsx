@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Search, ArrowLeft } from "lucide-react";
 import { getRoutines } from "@/features/routines/api";
+import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
+import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
 import type { Routine } from "@/features/routines/types";
 import { RoutineQuickStartCard } from "@/features/routines/components";
 import { useAuthStore } from "@/stores";
@@ -50,6 +52,7 @@ const RoutinesPage = () => {
           routine.description.toLowerCase().includes(searchTerm.toLowerCase())),
     );
   }, [routines, searchTerm]);
+  const routineListJsonLd = buildRoutineCollectionJsonLd(filteredRoutines);
 
   if (error) {
     return (
@@ -66,6 +69,7 @@ const RoutinesPage = () => {
 
   return (
     <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
+      <RoutineStructuredData data={routineListJsonLd} />
       <div className="mb-6">
         <div className="mb-4 flex items-center gap-4 text-left">
           <Button

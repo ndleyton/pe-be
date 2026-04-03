@@ -9,11 +9,13 @@ import {
   RoutineInfoCard,
   RoutineTemplatesCard,
 } from "@/features/routines/components";
+import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import {
   useRoutineDetailsActions,
   useRoutineDetailsData,
   useRoutineEditor,
 } from "@/features/routines/hooks";
+import { buildRoutineExercisePlanJsonLd } from "@/features/routines/lib/routineStructuredData";
 import {
   Alert,
   AlertDescription,
@@ -100,9 +102,11 @@ const RoutineDetailsPage = () => {
 
   const actionError =
     saveMutation.error ?? startMutation.error ?? deleteMutation.error;
+  const routineJsonLd = buildRoutineExercisePlanJsonLd(routine);
 
   return (
     <>
+      <RoutineStructuredData data={routineJsonLd} />
       <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
         <div className="bg-card text-card-foreground mx-auto mt-2 max-w-4xl rounded-lg p-2 shadow-lg md:mt-4 md:p-4 lg:mt-8 lg:p-6">
           <div className="mb-4 flex items-center gap-4 text-left">
