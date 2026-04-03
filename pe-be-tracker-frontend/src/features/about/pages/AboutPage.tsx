@@ -20,10 +20,10 @@ const AboutPage = () => {
 
       <Card className="border-border/50 overflow-hidden shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Nicolás Leyton</CardTitle>
+          <CardTitle className="text-xl">Nicolas Leyton</CardTitle>
           <CardDescription className="text-base">
-            Full-Stack Software Engineer eager to help clients achieve their
-            goals through technology.
+            Nicolas Leyton is a Full-Stack Software Engineer eager to help
+            clients achieve their goals through technology.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -31,6 +31,22 @@ const AboutPage = () => {
           <p className="text-muted-foreground text-sm leading-relaxed">
             When I'm not coding, you can find me working out, bouldering or
             taking pictures (never at the same time).
+          </p>
+          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+            Reach me at{" "}
+            <a className="text-foreground underline underline-offset-4" href="mailto:ndleyton@uc.cl">
+              ndleyton@uc.cl
+            </a>{" "}
+            or on{" "}
+            <a
+              className="text-foreground underline underline-offset-4"
+              href="https://www.linkedin.com/in/nicolas-d-leyton/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              LinkedIn
+            </a>
+            .
           </p>
         </CardContent>
       </Card>
@@ -90,7 +106,7 @@ const AboutPage = () => {
               <div className="flex-1 text-left">
                 <h3 className="font-medium">LinkedIn</h3>
                 <p className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
-                  Nicolás Leyton
+                  Nicolas Leyton
                 </p>
               </div>
               <ExternalLink className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -113,7 +129,8 @@ const AboutPage = () => {
                 This fitness tracking application is designed to help users
                 monitor their exercise routines, track progress, and seamlessly
                 consult with the latest AI models to help them achieve their
-                goals. You can reach out for implementation questions.
+                goals. Built by Nicolas Leyton. You can reach out for
+                implementation questions at ndleyton@uc.cl or on LinkedIn.
               </p>
             </div>
           </div>

@@ -15,7 +15,7 @@ This RFC recommends a two-part approach:
 
 This RFC does **not** recommend running recurring jobs inside the FastAPI web process, and it does **not** recommend introducing Celery, Redis, or another queue system yet.
 
-The first concrete job to standardize behind this pattern is the existing chat attachment cleanup flow in [`backend/src/chat/cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/cleanup.py).
+The first concrete job to standardize behind this pattern is the existing chat attachment cleanup flow in [`backend/src/chat/cleanup.py`](../../src/chat/cleanup.py).
 
 ## Context
 
@@ -25,20 +25,20 @@ The existing repo documentation and codebase establish a few clear constraints:
 
 - The backend is a FastAPI application in `backend/`.
 - Dependency management is done with `uv`.
-- Production currently appears oriented around Docker and Docker Compose, with a single backend container in [`backend/Dockerfile`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/Dockerfile) and [`docker-compose.yml`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/docker-compose.yml).
-- The backend already includes one operational cleanup entrypoint in [`backend/src/chat/cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/cleanup.py).
-- There is no existing scheduler framework in the app lifecycle. [`backend/src/main.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/main.py) does not define lifespan-managed background loops, startup schedulers, or worker processes.
-- The repo already emphasizes UTC-first time handling in [`README.md`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/README.md), and that should carry through to job scheduling, logging, and execution semantics.
-- The backend already exposes production-oriented configuration and observability patterns in [`backend/src/core/config.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/core/config.py) and [`backend/src/core/observability.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/core/observability.py).
+- Production currently appears oriented around Docker and Docker Compose, with a single backend container in [`backend/Dockerfile`](../../Dockerfile) and [`docker-compose.yml`](../../../docker-compose.yml).
+- The backend already includes one operational cleanup entrypoint in [`backend/src/chat/cleanup.py`](../../src/chat/cleanup.py).
+- There is no existing scheduler framework in the app lifecycle. [`backend/src/main.py`](../../src/main.py) does not define lifespan-managed background loops, startup schedulers, or worker processes.
+- The repo already emphasizes UTC-first time handling in [`README.md`](../../../README.md), and that should carry through to job scheduling, logging, and execution semantics.
+- The backend already exposes production-oriented configuration and observability patterns in [`backend/src/core/config.py`](../../src/core/config.py) and [`backend/src/core/observability.py`](../../src/core/observability.py).
 
 ### Existing recurring-job candidate
 
 The strongest immediate candidate is stale chat attachment cleanup:
 
-- [`backend/src/chat/service.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/service.py) already implements `cleanup_orphaned_attachments(...)`.
-- [`backend/src/chat/router.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/router.py) currently invokes cleanup opportunistically during attachment uploads.
-- [`backend/src/chat/cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/cleanup.py) already exposes a small CLI-friendly wrapper.
-- There are tests for this cleanup path in [`backend/tests/test_chat_cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/tests/test_chat_cleanup.py).
+- [`backend/src/chat/service.py`](../../src/chat/service.py) already implements `cleanup_orphaned_attachments(...)`.
+- [`backend/src/chat/router.py`](../../src/chat/router.py) currently invokes cleanup opportunistically during attachment uploads.
+- [`backend/src/chat/cleanup.py`](../../src/chat/cleanup.py) already exposes a small CLI-friendly wrapper.
+- There are tests for this cleanup path in [`backend/tests/test_chat_cleanup.py`](../../tests/test_chat_cleanup.py).
 
 This is a good signal that the repo already wants some work to happen outside normal request handling.
 
@@ -326,7 +326,7 @@ Each job module should expose:
 - an async `run()` function containing the actual work
 - a synchronous `main()` that wraps `asyncio.run(...)`
 
-That matches the current pattern already used by [`backend/src/chat/cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/cleanup.py).
+That matches the current pattern already used by [`backend/src/chat/cleanup.py`](../../src/chat/cleanup.py).
 
 ### 2. Standard job contract
 
@@ -425,7 +425,7 @@ That fallback is acceptable if:
 
 ### 5. Configuration
 
-Add a small recurring-jobs configuration section to [`backend/.env.example`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/.env.example) and [`backend/src/core/config.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/core/config.py).
+Add a small recurring-jobs configuration section to [`backend/.env.example`](../../.env.example) and [`backend/src/core/config.py`](../../src/core/config.py).
 
 Recommended fields:
 
@@ -478,10 +478,10 @@ Standardize chat attachment cleanup first.
 
 Recommended changes:
 
-1. Move or mirror the current [`backend/src/chat/cleanup.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/cleanup.py) entrypoint under `src/jobs/chat_attachment_cleanup.py`.
+1. Move or mirror the current [`backend/src/chat/cleanup.py`](../../src/chat/cleanup.py) entrypoint under `src/jobs/chat_attachment_cleanup.py`.
 2. Add advisory-lock protection around the cleanup run.
 3. Add structured logging around deleted-count and duration.
-4. Keep the opportunistic cleanup call in [`backend/src/chat/router.py`](/Users/ndleyton/.codex/worktrees/6b15/pe-be/backend/src/chat/router.py) for now only if it remains cheap.
+4. Keep the opportunistic cleanup call in [`backend/src/chat/router.py`](../../src/chat/router.py) for now only if it remains cheap.
 5. After the scheduled job is proven in production, consider removing request-path cleanup so upload latency is not coupled to maintenance work.
 
 That gives us one real job implemented under the new pattern before we generalize further.

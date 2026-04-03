@@ -15,11 +15,11 @@ The change introduces:
 - a thin `LLMClient` interface
 - a Gemini-backed implementation that normalizes provider output into internal types
 
-This keeps the current Gemini integration working while reducing coupling in [`src/chat/service.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/src/chat/service.py) and making future provider swaps or orchestration changes cheaper.
+This keeps the current Gemini integration working while reducing coupling in [`src/chat/service.py`](../../src/chat/service.py) and making future provider swaps or orchestration changes cheaper.
 
 ## Context
 
-Before this change, the chat stack in [`src/chat/service.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/src/chat/service.py) directly depended on:
+Before this change, the chat stack in [`src/chat/service.py`](../../src/chat/service.py) directly depended on:
 
 - `ChatGoogleGenerativeAI`
 - LangChain message classes such as `HumanMessage`, `AIMessage`, `SystemMessage`, and `ToolMessage`
@@ -59,7 +59,7 @@ That is worse than having a single explicit boundary.
 
 ## Decision
 
-We introduced a small internal contract in [`src/chat/llm_client.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/src/chat/llm_client.py):
+We introduced a small internal contract in [`src/chat/llm_client.py`](../../src/chat/llm_client.py):
 
 - `ConversationMessage`
 - `ToolCall`
@@ -368,10 +368,10 @@ The refactor is internal to the backend and is intended to be behavior-preservin
 
 ## Verification
 
-The adapter boundary is covered directly in [`tests/test_chat_llm_client.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/tests/test_chat_llm_client.py).
+The adapter boundary is covered directly in [`tests/test_chat_llm_client.py`](../../tests/test_chat_llm_client.py).
 
 Chat service and router behavior continue to be covered in:
 
-- [`tests/test_chat_service_happy_paths.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/tests/test_chat_service_happy_paths.py)
-- [`tests/test_chat_tool_fallbacks.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/tests/test_chat_tool_fallbacks.py)
-- [`tests/test_chat_router_happy_paths.py`](/Users/ndleyton/.codex/worktrees/953a/pe-be/backend/tests/test_chat_router_happy_paths.py)
+- [`tests/test_chat_service_happy_paths.py`](../../tests/test_chat_service_happy_paths.py)
+- [`tests/test_chat_tool_fallbacks.py`](../../tests/test_chat_tool_fallbacks.py)
+- [`tests/test_chat_router_happy_paths.py`](../../tests/test_chat_router_happy_paths.py)

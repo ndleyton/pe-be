@@ -3,6 +3,7 @@ name = "fitness-tracker-backend"
 version = "0.2.0"
 description = "FastAPI backend for fitness tracker app"
 authors = [{ name = "Nicolas Leyton", email = "ndleyton@uc.cl" }]
+maintainers = [{ name = "Nicolas Leyton", email = "ndleyton@uc.cl" }]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
 dependencies = [
@@ -42,6 +43,9 @@ dev = [
     "pytest-env>=1.0.0,<2",
     "ruff>=0.12.3,<0.13",
 ]
+
+[project.urls]
+LinkedIn = "https://www.linkedin.com/in/nicolas-d-leyton/"
 
 [tool.uv]
 package = false
