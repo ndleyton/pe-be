@@ -257,7 +257,9 @@ async def test_admin_reference_image_option_endpoints(
 
     app.dependency_overrides[current_active_user] = override_admin
     monkeypatch.setattr("src.admin.router.build_image_options_response", fake_build)
-    monkeypatch.setattr("src.admin.router.generate_reference_image_options", fake_generate)
+    monkeypatch.setattr(
+        "src.admin.router.generate_reference_image_options", fake_generate
+    )
     monkeypatch.setattr("src.admin.router.apply_reference_or_option", fake_apply)
 
     from src.core.config import settings
