@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
-import { truncateWords } from "@/utils/text";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Search, X, Plus, Info, Dumbbell, History } from "lucide-react";
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -198,19 +199,13 @@ const ExerciseTypeModal = ({
     }
   };
 
-  const handleBackdropClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const SkeletonCard = () => (
-    <div className="bg-card border-border animate-pulse rounded-lg border p-4">
-      <div className="flex items-center space-x-3">
-        <div className="bg-muted h-10 w-10 rounded-lg"></div>
+    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
+      <div className="flex items-center space-x-4">
+        <div className="bg-muted h-12 w-12 rounded-xl"></div>
         <div className="flex-1">
-          <div className="bg-muted mb-2 h-4 w-3/4 rounded"></div>
-          <div className="bg-muted h-3 w-full rounded"></div>
+          <div className="bg-muted mb-2 h-4 w-1/2 rounded"></div>
+          <div className="bg-muted h-3 w-3/4 rounded"></div>
         </div>
       </div>
     </div>
@@ -220,7 +215,7 @@ const ExerciseTypeModal = ({
     if (isAuthenticated && isLoading) {
       return (
         <div className="grid gap-3">
-          {Array.from({ length: 5 }).map((_, index) => (
+          {Array.from({ length: 6 }).map((_, index) => (
             <SkeletonCard key={index} />
           ))}
         </div>
@@ -229,15 +224,15 @@ const ExerciseTypeModal = ({
 
     if (isAuthenticated && error) {
       return (
-        <div className="py-8 text-center">
+        <div className="py-12 text-center">
           <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-destructive text-2xl">⚠</span>
+            <span className="text-destructive text-2xl text-center">⚠</span>
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
-            Failed to load exercise types
+          <h4 className="text-foreground mb-2 font-bold text-lg">
+            Connection Error
           </h4>
-          <p className="text-muted-foreground text-sm">
-            Please try again later
+          <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">
+            Failed to load calculations. Please try again.
           </p>
         </div>
       );
@@ -245,17 +240,17 @@ const ExerciseTypeModal = ({
 
     if (exerciseTypes.length === 0) {
       return (
-        <div className="py-8 text-center">
-          <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-muted-foreground text-2xl">💪</span>
+        <div className="py-12 text-center">
+          <div className="bg-muted/50 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+            <Dumbbell className="text-muted-foreground h-8 w-8" />
           </div>
-          <h4 className="text-foreground mb-2 font-medium">
-            No exercise types available
+          <h4 className="text-foreground mb-2 font-bold text-lg">
+            No Exercises
           </h4>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">
             {isAuthenticated
-              ? "Contact support if this persists"
-              : "Default exercise types will be created automatically"}
+              ? "Your gym library is currently empty."
+              : "Default exercise types will be initialized soon."}
           </p>
         </div>
       );
@@ -263,216 +258,154 @@ const ExerciseTypeModal = ({
 
     if (searchTerm.trim() && filteredExerciseTypes.length === 0) {
       return (
-        <div className="py-8 text-center">
-          <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-muted-foreground text-2xl">🔍</span>
+        <div className="py-12 text-center">
+          <div className="bg-primary/5 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+            <Search className="text-primary/40 h-8 w-8" />
           </div>
-          <h4 className="text-foreground mb-2 font-medium">No results found</h4>
-          <p className="text-muted-foreground text-sm">
-            Try a different search term or create a new exercise type
+          <h4 className="text-foreground mb-1 font-bold text-lg">No matches</h4>
+          <p className="text-muted-foreground text-sm px-4">
+            Create &quot;{searchTerm.trim()}&quot; using the button above.
           </p>
         </div>
       );
     }
 
     return (
-      <div className="grid gap-3">
+      <div className="grid gap-3 p-1">
         {filteredExerciseTypes.map(
           (exerciseType: ExerciseType | GuestExerciseType) => (
-            <div
+            <button
               key={exerciseType.id}
               onClick={() => handleSelect(exerciseType)}
-              className="bg-card hover:bg-accent border-border cursor-pointer rounded-lg border p-4 transition-colors"
+              className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <div className="flex items-center space-x-3">
-                <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-                  <span className="text-primary-foreground font-bold">
-                    {exerciseType.name.charAt(0)}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-foreground font-medium">
-                      {exerciseType.name}
-                    </h4>
-                    {!isAuthenticated && exerciseType.times_used > 0 && (
-                      <span className="text-muted-foreground bg-muted rounded-full px-2 py-1 text-xs">
-                        Used by you {exerciseType.times_used} time
-                        {exerciseType.times_used !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {/* TODO: Restore an authenticated usage badge once the API exposes a user-specific count instead of the global times_used value. */}
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {truncateWords(exerciseType.description, 4)}
-                  </p>
+              {/* Subtle background glow on hover */}
+              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
 
-                  {hasMusclesProperty(exerciseType) &&
-                    exerciseType.muscles.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {exerciseType.muscles
-                          .slice(0, MUSCLE_DISPLAY_LIMIT)
-                          .map((muscle) => (
-                            <span
-                              key={muscle.id}
-                              className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                            >
-                              {muscle.name}
-                            </span>
-                          ))}
-                        {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
-                          <span className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none">
-                            +
-                            {exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT}{" "}
-                            more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                </div>
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/30 to-transparent group-hover:opacity-0 transition-opacity" />
+                <span className="relative z-10">{exerciseType.name.charAt(0)}</span>
               </div>
-            </div>
+
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
+                    {exerciseType.name}
+                  </h4>
+                  {!isAuthenticated && exerciseType.times_used > 0 && (
+                    <div className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary tracking-tight">
+                      <History className="h-2.5 w-2.5" />
+                      {exerciseType.times_used}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
+                  {exerciseType.description || "No description provided."}
+                </p>
+
+                {hasMusclesProperty(exerciseType) &&
+                  exerciseType.muscles.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5 grayscale-[0.5] group-hover:grayscale-0 transition-all">
+                      {exerciseType.muscles
+                        .slice(0, MUSCLE_DISPLAY_LIMIT)
+                        .map((muscle) => (
+                          <span
+                            key={muscle.id}
+                            className="inline-flex items-center rounded-lg bg-secondary/80 px-2 py-0.5 text-[10px] font-bold text-secondary-foreground border border-border/30"
+                          >
+                            {muscle.name}
+                          </span>
+                        ))}
+                      {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
+                        <span className="inline-flex items-center rounded-lg bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground border border-border/20">
+                          +{exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT}
+                        </span>
+                      )}
+                    </div>
+                  )}
+              </div>
+
+              <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
+                <Plus className="h-5 w-5" />
+              </div>
+            </button>
           ),
         )}
       </div>
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-background/95 border-border flex max-h-[36rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg border p-6 shadow-2xl backdrop-blur-md">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-foreground text-lg font-semibold">
-            Select Exercise Type
-          </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close modal"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-h-[85vh] sm:max-w-xl border-border/40 p-0 overflow-hidden flex flex-col"
+        hideOverlay={true}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl font-bold tracking-tight">Select Exercise</DialogTitle>
+        </DialogHeader>
 
-        <div className="mb-4">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg
-                className="text-muted-foreground h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+        <div className="px-6 pb-4">
+          <div className="relative group">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+              <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
             </div>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search exercise types..."
+              placeholder="Search by name or description..."
               disabled={isAuthenticated && createMutation.isPending}
-              className="border-border bg-background text-foreground placeholder-muted-foreground focus:ring-ring block w-full rounded-md border py-2 pr-12 pl-10 focus:border-transparent focus:ring-2 focus:outline-none disabled:opacity-50"
+              className="border-border/50 bg-accent/30 text-foreground placeholder-muted-foreground/60 focus:ring-primary/20 block w-full rounded-2xl border py-3 pr-12 pl-12 focus:border-primary/30 focus:ring-4 focus:outline-none disabled:opacity-50 transition-all font-medium"
             />
-            {showCreateButton && (
-              <button
-                onClick={handleCreateExerciseType}
-                disabled={isAuthenticated && createMutation.isPending}
-                className="text-secondary hover:text-secondary/80 absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed disabled:opacity-50"
-                title={`Create "${searchTerm.trim()}"`}
-              >
-                {isAuthenticated && createMutation.isPending ? (
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
-                )}
-              </button>
-            )}
-            {searchTerm && !showCreateButton && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex items-center pr-3"
-                title="Clear search"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+              {searchTerm && !showCreateButton && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-all"
+                  title="Clear search"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+
+              {showCreateButton && (
+                <button
+                  onClick={handleCreateExerciseType}
+                  disabled={isAuthenticated && createMutation.isPending}
+                  className="flex items-center gap-1.5 bg-primary px-3 py-1.5 rounded-xl text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                  title={`Create "${searchTerm.trim()}"`}
+                >
+                  {isAuthenticated && createMutation.isPending ? (
+                    <Plus className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Create New
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
+
           {isAuthenticated && createMutation.isError && (
-            <p className="text-destructive mt-2 text-sm">
+            <p className="text-destructive mt-3 text-xs font-semibold flex items-center gap-1 bg-destructive/5 p-2 rounded-lg">
+              <Info className="h-3 w-3" />
               Failed to create exercise type. Please try again.
             </p>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">{renderContent()}</div>
-      </div>
-    </div>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-border/20">
+          {renderContent()}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
