@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import type { ExerciseType } from "@/features/exercises/api";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+
+const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
+  import("@/features/exercises/pages"),
+);
 
 interface ExerciseTypeCardProps {
   exerciseType: ExerciseType;
@@ -12,7 +17,13 @@ export const ExerciseTypeCard = ({ exerciseType }: ExerciseTypeCardProps) => {
   const { id, name, description, muscles } = exerciseType;
 
   return (
-    <Link to={`/exercise-types/${id}`} className="group block">
+    <Link
+      to={`/exercise-types/${id}`}
+      className="group block"
+      onMouseEnter={preloadExerciseTypeDetailsPage}
+      onTouchStart={preloadExerciseTypeDetailsPage}
+      onFocus={preloadExerciseTypeDetailsPage}
+    >
       <div className="bg-card border-border/20 hover:border-border/40 cursor-pointer rounded-2xl border p-6 shadow-md transition-all duration-200 hover:shadow-lg">
         <div className="mb-2 flex items-center gap-2">
           <h3 className="text-lg leading-tight font-semibold">{name}</h3>

@@ -15,6 +15,7 @@ import { RoutinesSection } from "@/features/routines/components";
 import { Button, Card } from "@/shared/components/ui";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
@@ -92,16 +93,10 @@ const MyWorkoutsPage = () => {
   const [selectedRoutine, setSelectedRoutine] =
     React.useState<Routine | null>(null);
 
-  // preloading of the WorkoutPage lazy chunk to speed up navigation
-  const preloadedRef = React.useRef(false);
-  const preloadWorkoutPage = React.useCallback(() => {
-    if (preloadedRef.current) return;
-    preloadedRef.current = true;
-    void import("@/features/workouts/pages").catch(() => {
-      // If preloading fails, allow future attempts
-      preloadedRef.current = false;
-    });
-  }, []);
+  const preloadWorkoutPage = React.useMemo(
+    () => createIntentPreload(() => import("@/features/workouts/pages")),
+    [],
+  );
 
   // Track if we've detected an auth error to keep showing the message
   const [sessionExpired, setSessionExpired] = React.useState(false);

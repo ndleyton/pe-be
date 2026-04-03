@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import type { Exercise, IntensityUnit } from "@/features/exercises/api";
 import type { GuestIntensityUnit } from "@/features/exercises/lib/intensityUnits";
 import { ExerciseTypeMore } from "../ExerciseTypeMore";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import {
   Button,
   Dialog,
@@ -14,6 +15,10 @@ import {
   DialogTrigger,
   Textarea,
 } from "@/shared/components/ui";
+
+const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
+  import("@/features/exercises/pages"),
+);
 
 type ExerciseRowHeaderProps = {
   currentIntensityUnit: IntensityUnit | GuestIntensityUnit;
@@ -106,6 +111,9 @@ export const ExerciseRowHeader = ({
               size="sm"
               className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
               asChild
+              onMouseEnter={preloadExerciseTypeDetailsPage}
+              onTouchStart={preloadExerciseTypeDetailsPage}
+              onFocus={preloadExerciseTypeDetailsPage}
             >
               <Link
                 to={`/exercise-types/${exercise.exercise_type.id}`}
