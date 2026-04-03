@@ -1,4 +1,4 @@
- import { useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
@@ -54,15 +54,15 @@ const ProfilePage = () => {
       // For guest users, use guest data immediately
       return Array.isArray(guestWorkouts)
         ? guestWorkouts.map((gw) => ({
-            id: gw.id,
-            name: gw.name,
-            notes: gw.notes,
-            start_time: gw.start_time,
-            end_time: gw.end_time,
-            workout_type_id: Number(gw.workout_type_id),
-            created_at: gw.created_at || new Date().toISOString(),
-            updated_at: gw.updated_at || new Date().toISOString(),
-          }))
+          id: gw.id,
+          name: gw.name,
+          notes: gw.notes,
+          start_time: gw.start_time,
+          end_time: gw.end_time,
+          workout_type_id: Number(gw.workout_type_id),
+          created_at: gw.created_at || new Date().toISOString(),
+          updated_at: gw.updated_at || new Date().toISOString(),
+        }))
         : [];
     }
   }, [loading, isAuthenticated, serverWorkouts, guestWorkouts]);
@@ -74,16 +74,16 @@ const ProfilePage = () => {
   const averageWorkoutTime =
     completedWorkouts.length > 0
       ? completedWorkouts.reduce((sum, workout) => {
-          if (workout.end_time) {
-            const duration =
-              new Date(workout.end_time).getTime() -
-              new Date(workout.start_time).getTime();
-            return sum + duration;
-          }
-          return sum;
-        }, 0) /
-        completedWorkouts.length /
-        (1000 * 60) // Convert to minutes
+        if (workout.end_time) {
+          const duration =
+            new Date(workout.end_time).getTime() -
+            new Date(workout.start_time).getTime();
+          return sum + duration;
+        }
+        return sum;
+      }, 0) /
+      completedWorkouts.length /
+      (1000 * 60) // Convert to minutes
       : 0;
 
   if (isAuthenticated && error) {
@@ -100,13 +100,10 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-8 text-center">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Profile</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your fitness journey
-          </p>
+    <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
+      <div className="mx-auto">
+        <div className="mb-8 text-center sm:mb-10">
+          <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">Profile</h1>
         </div>
 
         <WeekTracking

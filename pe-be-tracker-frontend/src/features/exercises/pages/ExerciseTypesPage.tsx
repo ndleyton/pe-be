@@ -278,17 +278,20 @@ const ExerciseTypesPage = () => {
               {Array.from({ length: 9 }).map((_, i) => (
                 <div
                   key={i}
-                  className="bg-card/40 border-border/30 rounded-2xl border p-6 animate-pulse"
+                  className="bg-card/40 border-border/20 rounded-2xl border p-6 shadow-md backdrop-blur-sm"
                 >
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-4 mb-4">
                     <Skeleton className="h-12 w-12 rounded-xl" />
-                    <Skeleton className="h-6 flex-1 rounded-lg" />
+                    <div className="flex-1">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
                   </div>
-                  <Skeleton className="mb-2 h-4 w-full rounded-md" />
-                  <Skeleton className="mb-6 h-4 w-2/3 rounded-md" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16 rounded-lg" />
-                    <Skeleton className="h-6 w-16 rounded-lg" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-5/6 mb-6" />
+                  <div className="flex flex-wrap gap-2">
+                    <Skeleton className="h-7 w-20 rounded-full" />
+                    <Skeleton className="h-7 w-24 rounded-full" />
                   </div>
                 </div>
               ))}
