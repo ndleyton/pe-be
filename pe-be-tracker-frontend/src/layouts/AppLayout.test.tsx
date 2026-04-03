@@ -1,28 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { render, screen } from "@/test/testUtils";
 import { useUIStore } from "@/stores";
 import userEvent from "@testing-library/user-event";
 import AppLayout from "./AppLayout";
-
-vi.hoisted(() => {
-  const storage = new Map<string, string>();
-
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        storage.set(key, value);
-      },
-      removeItem: (key: string) => {
-        storage.delete(key);
-      },
-      clear: () => {
-        storage.clear();
-      },
-    },
-  });
-});
 
 const MockComponent = () => <div>Mock Content</div>;
 

@@ -16,12 +16,18 @@ import { ChevronRight } from "lucide-react";
 
 interface RoutinesSectionProps {
   onStartWorkout: (routine: Routine) => void;
+  autoOpen?: boolean;
 }
+
+const QUICK_START_ROUTINES_VALUE = "quick-start-routines";
 
 export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
   onStartWorkout,
+  autoOpen = false,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const [accordionValue, setAccordionValue] = React.useState("");
+  const [hasAutoOpened, setHasAutoOpened] = React.useState(false);
 
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ["routines", "quickstart", 2, isAuthenticated],
@@ -30,6 +36,24 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
       return result.data;
     },
   });
+
+  React.useEffect(() => {
+    if (!autoOpen) {
+      setHasAutoOpened(false);
+      return;
+    }
+
+    if (isLoading || routines.length === 0 || hasAutoOpened) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAccordionValue(QUICK_START_ROUTINES_VALUE);
+      setHasAutoOpened(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [autoOpen, hasAutoOpened, isLoading, routines.length]);
 
   if (isLoading) {
     return (
@@ -50,8 +74,13 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
 
   return (
     <div className="mb-6 w-full">
-      <Accordion type="single" collapsible>
-        <AccordionItem value="quick-start-routines">
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={setAccordionValue}
+      >
+        <AccordionItem value={QUICK_START_ROUTINES_VALUE}>
           <AccordionTrigger className="justify-start gap-2 py-0">
             <h3 className="text-muted-foreground text-lg font-semibold">
               Quick Start Routines

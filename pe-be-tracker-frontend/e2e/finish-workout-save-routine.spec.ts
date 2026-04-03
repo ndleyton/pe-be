@@ -50,7 +50,7 @@ test.describe("Finish workout routine creation", () => {
 
     await dismissOverlays(page);
 
-    await page.getByRole("button", { name: /start your first workout/i }).click();
+    await page.getByTestId("fab-add-workout").click();
 
     await page
       .locator('[data-testid="workout-name-heading"]')
