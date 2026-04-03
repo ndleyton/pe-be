@@ -106,15 +106,28 @@ jobs:
         working-directory: pe-be-tracker-frontend
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pe-be-tracker-frontend/package-lock.json') }}
+
       - name: Install Playwright browsers
         working-directory: pe-be-tracker-frontend
         env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
-          if [ "$RUNNER_ENVIRONMENT" = "self-hosted" ]; then
-            npx playwright install
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BROWSERS="chromium"
           else
-            npx playwright install --with-deps
+            BROWSERS="chromium firefox webkit"
+          fi
+
+          if [ "$RUNNER_ENVIRONMENT" = "self-hosted" ]; then
+            npx playwright install $BROWSERS
+          else
+            npx playwright install --with-deps $BROWSERS
           fi
 
       - name: Start frontend dev server
