@@ -268,7 +268,7 @@ export const ExerciseSetTable = ({
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Set
                       </Button>
-                      <Button onClick={onCloseSetOptions}>Close</Button>
+                      <Button variant="glass" onClick={onCloseSetOptions}>Close</Button>
                     </div>
                   </div>
                 </DialogContent>
@@ -280,13 +280,13 @@ export const ExerciseSetTable = ({
     </div>
 
     <Button
-      variant="outline"
-      className="bg-card/50 border-border/50 hover:bg-accent mt-6 w-full rounded-xl border-2 border-dashed py-6 shadow-sm transition-all hover:shadow-md"
+      variant="glass"
+      className="mt-6 w-full rounded-xl py-6 shadow-xl transition-all hover:scale-[1.01]"
       data-testid="add-set-button"
       disabled={isUnsavedExercise}
       onClick={onAddSet}
     >
-      <Plus className="mr-2 h-5 w-5 opacity-50" />
+      <Plus className="mr-2 h-5 w-5" />
       <span className="font-bold tracking-tight">Add Set</span>
     </Button>
   </>

@@ -37,7 +37,7 @@ const HomeLogo = ({ onClick, className = "" }: HomeLogoProps) => {
         width={32}
         height={32}
       />
-      <div className="flex flex-col items-start text-left text-base leading-none text-rose-400">
+      <div className="flex flex-col items-start drop-shadow-sm text-left text-base leading-[0.9] font-black tracking-tight text-rose-400">
         <span>Personal</span>
         <span>Bestie</span>
       </div>

@@ -10,7 +10,7 @@ export function ModeToggle() {
   };
 
   return (
-    <Button variant="outline" size="icon" onClick={toggleTheme}>
+    <Button variant="glass" size="icon" onClick={toggleTheme} className="rounded-xl">
       {theme === "light" ? (
         <Sun className="h-[1.2rem] w-[1.2rem]" />
       ) : (

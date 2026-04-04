@@ -31,7 +31,7 @@ const FloatingActionButton = ({
       onFocus={onFocus}
       disabled={disabled}
       size="icon"
-      className={`bg-primary/90 hover:bg-primary fixed right-6 bottom-24 z-50 h-12 w-12 shadow-lg transition-all duration-200 backdrop-blur-sm hover:shadow-xl md:bottom-6 ${className} `}
+      className={`fixed right-6 bottom-24 z-50 h-14 w-14 rounded-full bg-primary/80 text-primary-foreground border border-white/20 backdrop-blur-md shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 hover:bg-primary hover:shadow-primary/20 md:bottom-6 ${className}`}
       aria-label="Floating action button"
       data-testid={dataTestId}
     >

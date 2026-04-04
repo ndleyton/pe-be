@@ -174,8 +174,8 @@ const MyWorkoutsPage = () => {
               setSelectedRoutine(null);
             }
           }}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-lg" data-testid="workout-form-dialog">
+              <DialogHeader className="sr-only">
                 <DialogTitle>
                   {selectedRoutine ? "Start from Routine" : "Start Workout"}
                 </DialogTitle>

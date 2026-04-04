@@ -25,7 +25,7 @@ describe("RoutineQuickStartCard", () => {
       />,
     );
 
-    const detailsLink = screen.getByRole("link", { name: /view details/i });
+    const detailsLink = screen.getByRole("link", { name: /details/i });
 
     expect(detailsLink).toHaveAttribute("href", "/routines/7");
 
