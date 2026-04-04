@@ -424,7 +424,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       <Button
         type="submit"
         disabled={isAuthenticated && mutation.isPending}
-        className="bg-primary hover:bg-primary/90 w-full rounded-xl py-6 font-semibold shadow-lg"
+        className="bg-primary/90 hover:bg-primary w-full rounded-2xl py-7 text-lg font-black tracking-tight shadow-2xl shadow-primary/20 backdrop-blur-md transition-all hover:scale-[1.02] active:scale-95 border border-white/10"
         data-testid="start-workout-button"
       >
         {isAuthenticated && mutation.isPending

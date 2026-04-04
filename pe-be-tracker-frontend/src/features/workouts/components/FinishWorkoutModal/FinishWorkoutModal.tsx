@@ -302,19 +302,19 @@ const FinishWorkoutModal = ({
           )}
         </div>
         {/* Footer */}
-        <div className="flex shrink-0 justify-end gap-4 px-6 py-4">
+        <div className="flex shrink-0 justify-end gap-3 px-6 py-5">
           <Button
             onClick={onCancel}
             disabled={isLoading}
-            variant="outline"
-            className="bg-card/80 hover:bg-accent border-border backdrop-blur-sm"
+            variant="glass"
+            className="rounded-xl px-6"
           >
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"
           >
             {isLoading ? "Finishing..." : "Finish Workout"}
           </Button>

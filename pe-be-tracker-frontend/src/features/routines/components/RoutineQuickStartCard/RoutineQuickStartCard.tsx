@@ -30,53 +30,50 @@ export const RoutineQuickStartCard = ({
   );
 
   return (
-    <Card className="bg-card/80 border-border hover:bg-accent relative flex min-w-[280px] max-w-[320px] cursor-pointer flex-col overflow-hidden rounded-2xl border shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl backdrop-blur-sm">
-      <CardHeader>
+    <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex min-w-[280px] max-w-[320px] cursor-pointer flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
+      <CardHeader className="pb-3">
         <div className="flex items-center space-x-3">
-          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg">
-            <span className="text-primary-foreground text-lg font-bold">
-              📋
-            </span>
+          <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+            <span className="text-lg">📋</span>
           </div>
           <div>
-            <CardTitle className="text-base">{routine.name}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base font-black tracking-tight">{routine.name}</CardTitle>
+            <CardDescription className="text-xs font-medium opacity-70">
               {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} •{" "}
               {totalSets} set{totalSets !== 1 ? "s" : ""}
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div>
+      <CardContent className="pt-0 pb-6">
+        <div className="space-y-1 mb-5">
           {routine.exercise_templates.slice(0, 3).map((exercise) => (
-            <div key={exercise.id} className="text-muted-foreground text-sm">
-              {exercise.exercise_type?.name ?? "Unknown Exercise"} • {exercise.set_templates.length} set
-              {exercise.set_templates.length !== 1 ? "s" : ""}
+            <div key={exercise.id} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
+              <div className="h-1 w-1 rounded-full bg-primary/30" />
+              <span className="truncate">{exercise.exercise_type?.name ?? "Unknown Exercise"}</span>
             </div>
           ))}
           {routine.exercise_templates.length > 3 && (
-            <div className="text-muted-foreground text-sm">
-              +{routine.exercise_templates.length - 3} more exercise
-              {routine.exercise_templates.length - 3 !== 1 ? "s" : ""}
+            <div className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider pl-2.5 pt-1">
+              +{routine.exercise_templates.length - 3} more
             </div>
           )}
         </div>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-auto flex gap-3">
           <Button
             asChild
-            variant="ghost"
-            className="flex-1 rounded-xl text-xs font-bold"
+            variant="outline"
+            className="flex-1 rounded-xl text-xs font-bold transition-all hover:bg-accent/50"
             size="sm"
             onMouseEnter={preloadRoutineDetailsPage}
             onTouchStart={preloadRoutineDetailsPage}
             onFocus={preloadRoutineDetailsPage}
           >
-            <Link to={`/routines/${routine.id}`}>View Details</Link>
+            <Link to={`/routines/${routine.id}`}>Details</Link>
           </Button>
           <Button
             onClick={() => onStartWorkout(routine)}
-            className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95"
+            className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg shadow-primary/10 transition-all active:scale-95 backdrop-blur-sm border border-white/10"
             size="sm"
           >
             Start Workout

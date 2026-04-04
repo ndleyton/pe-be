@@ -450,7 +450,7 @@ const ExerciseTypeDetailsPage = () => {
           </div>
           <div className="flex shrink-0 gap-2">
             {isSuperuser ? (
-              <Button size="sm" variant="outline" asChild>
+              <Button size="sm" variant="glass" asChild className="rounded-xl">
                 <Link to={`/exercise-types/${exerciseTypeId}/admin-images`}>
                   <ImagePlus className="mr-1 h-4 w-4" />
                   Manage Images
@@ -460,7 +460,8 @@ const ExerciseTypeDetailsPage = () => {
             {canEditReleasedAsAdmin && !isAdminEditingReleased ? (
               <Button
                 size="sm"
-                variant="outline"
+                variant="glass"
+                className="rounded-xl"
                 onClick={() => {
                   setEditError(null);
                   setIsAdminEditingReleased(true);
@@ -472,7 +473,7 @@ const ExerciseTypeDetailsPage = () => {
             {isAuthenticated ? (
               <Button
                 size="sm"
-                className="shrink-0"
+                className="shrink-0 rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-md transition-all active:scale-95"
                 onClick={() => addMutation.mutate()}
                 disabled={addMutation.isPending}
               >
@@ -525,8 +526,8 @@ const ExerciseTypeDetailsPage = () => {
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
               {canEditReleasedAsAdmin && isAdminEditingReleased ? (
                 <Button
-                  variant="outline"
-                  className="w-full sm:w-auto"
+                  variant="glass"
+                  className="w-full rounded-xl sm:w-auto"
                   onClick={() => {
                     setEditValues({
                       name: exerciseType.name ?? "",
@@ -544,8 +545,8 @@ const ExerciseTypeDetailsPage = () => {
               ) : null}
               {canRequestEvaluation ? (
                 <Button
-                  variant="outline"
-                  className="w-full sm:w-auto"
+                  variant="glass"
+                  className="w-full rounded-xl sm:w-auto"
                   onClick={() => requestEvaluationMutation.mutate()}
                 >
                   {requestEvaluationMutation.isPending
@@ -555,14 +556,14 @@ const ExerciseTypeDetailsPage = () => {
               ) : null}
               {canRelease ? (
                 <Button
-                  variant="outline"
-                  className="w-full sm:w-auto"
+                  variant="glass"
+                  className="w-full rounded-xl sm:w-auto"
                   onClick={() => releaseMutation.mutate()}
                 >
                   {releaseMutation.isPending ? "Releasing..." : "Release"}
                 </Button>
               ) : null}
-              <Button className="w-full sm:w-auto" onClick={() => updateMutation.mutate()}>
+              <Button className="w-full rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-sm sm:w-auto" onClick={() => updateMutation.mutate()}>
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
