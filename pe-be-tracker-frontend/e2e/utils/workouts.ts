@@ -5,9 +5,7 @@ export async function openWorkoutForm(page: Page) {
   await expect(createWorkoutFab).toBeVisible();
   await createWorkoutFab.click();
 
-  const workoutDialog = page.getByRole("dialog", {
-    name: /Start Workout|Start from Routine/,
-  });
+  const workoutDialog = page.getByTestId("workout-form-dialog");
   await expect(workoutDialog).toBeVisible();
 
   const workoutNameHeading = page.getByTestId("workout-name-heading");

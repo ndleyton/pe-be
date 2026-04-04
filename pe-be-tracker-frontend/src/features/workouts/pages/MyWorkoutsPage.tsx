@@ -174,7 +174,7 @@ const MyWorkoutsPage = () => {
               setSelectedRoutine(null);
             }
           }}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg" data-testid="workout-form-dialog">
               <div className="mt-2">
                 <WorkoutForm
                   routine={selectedRoutine}
