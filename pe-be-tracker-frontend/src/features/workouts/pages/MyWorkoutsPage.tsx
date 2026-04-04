@@ -12,7 +12,7 @@ import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
-import { Card, Dialog, DialogContent } from "@/shared/components/ui";
+import { Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -175,6 +175,11 @@ const MyWorkoutsPage = () => {
             }
           }}>
             <DialogContent className="sm:max-w-lg" data-testid="workout-form-dialog">
+              <DialogHeader className="sr-only">
+                <DialogTitle>
+                  {selectedRoutine ? "Start from Routine" : "Start Workout"}
+                </DialogTitle>
+              </DialogHeader>
               <div className="mt-2">
                 <WorkoutForm
                   routine={selectedRoutine}
