@@ -4,6 +4,8 @@ PersonalBestie is a full-stack fitness tracker with a FastAPI backend, a React f
 
 What makes the project technically interesting is that the AI layer is not just free-form chat. The backend exposes application-owned tools to Gemini, validates tool inputs with typed schemas, executes those tools server-side, and uses the results to answer questions grounded in real workout data.
 
+Licensed under the MIT License. See [`LICENSE`](LICENSE).
+
 ## What Lives Here
 
 | Path | Purpose |
