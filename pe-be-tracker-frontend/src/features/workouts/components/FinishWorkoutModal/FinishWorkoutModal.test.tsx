@@ -225,10 +225,10 @@ describe("FinishWorkoutModal", () => {
 
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
       expect(cancelButton).toHaveClass(
-        "bg-card/80",
-        "hover:bg-accent",
-        "border-border",
-        "backdrop-blur-sm",
+        "bg-white/10",
+        "backdrop-blur-md",
+        "border-white/20",
+        "rounded-xl",
       );
     });
 
@@ -238,7 +238,12 @@ describe("FinishWorkoutModal", () => {
       const confirmButton = screen.getByRole("button", {
         name: "Finish Workout",
       });
-      expect(confirmButton).toHaveClass("bg-primary", "hover:bg-primary/90");
+      expect(confirmButton).toHaveClass(
+        "bg-primary/90",
+        "hover:bg-primary",
+        "rounded-xl",
+        "backdrop-blur-md",
+      );
     });
 
     it("should have disabled styling when buttons are disabled", () => {
@@ -263,9 +268,9 @@ describe("FinishWorkoutModal", () => {
         "flex",
         "shrink-0",
         "justify-end",
-        "gap-4",
+        "gap-3",
         "px-6",
-        "py-4",
+        "py-5",
       );
     });
   });

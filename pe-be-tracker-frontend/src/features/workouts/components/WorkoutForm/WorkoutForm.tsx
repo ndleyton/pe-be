@@ -315,7 +315,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
               {nameField || "Workout Name"}
             </h2>
             <svg
-              className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100"
+              className="text-muted-foreground h-4 w-4 opacity-20 transition-opacity group-hover:opacity-100"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

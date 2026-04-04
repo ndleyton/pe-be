@@ -175,11 +175,6 @@ const MyWorkoutsPage = () => {
             }
           }}>
             <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedRoutine ? "Start from Routine" : "Start Workout"}
-                </DialogTitle>
-              </DialogHeader>
               <div className="mt-2">
                 <WorkoutForm
                   routine={selectedRoutine}
