@@ -46,7 +46,9 @@ _MUSCLE_GROUP_TO_THUMBNAIL_KEY = {
 }
 
 
-def normalize_thumbnail_key_from_muscle_group(muscle_group_name: str | None) -> str | None:
+def normalize_thumbnail_key_from_muscle_group(
+    muscle_group_name: str | None,
+) -> str | None:
     if muscle_group_name is None:
         return None
 

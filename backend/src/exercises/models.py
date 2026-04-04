@@ -97,7 +97,9 @@ class ExerciseType(Base):
     )
     review_notes = Column(Text, nullable=True)
     external_id = Column(String, unique=True, nullable=True)
-    thumbnail_key = Column(String(32), nullable=False, default="other", server_default="other")
+    thumbnail_key = Column(
+        String(32), nullable=False, default="other", server_default="other"
+    )
     images_url = Column(Text, nullable=True)
     reference_images_url = Column(Text, nullable=True)
     instructions = Column(Text, nullable=True)

@@ -35,4 +35,6 @@ def test_determine_thumbnail_key_detects_cardio_from_name():
 
 
 def test_determine_thumbnail_key_defaults_to_other_without_data():
-    assert determine_thumbnail_key(exercise_name="Mystery Movement") == THUMBNAIL_KEY_OTHER
+    assert (
+        determine_thumbnail_key(exercise_name="Mystery Movement") == THUMBNAIL_KEY_OTHER
+    )
