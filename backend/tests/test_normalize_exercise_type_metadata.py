@@ -71,6 +71,39 @@ class FakeConnection:
         self.closed += 1
 
 
+class FakeLookupCursor:
+    def __init__(self, rows_by_query: dict[str, list[dict[str, object]]]) -> None:
+        self._rows_by_query = rows_by_query
+        self._current_rows: list[dict[str, object]] = []
+        self.executed: list[tuple[str, tuple[object, ...]]] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def execute(self, query: str, params: tuple[object, ...]) -> None:
+        self.executed.append((query, params))
+        if "WHERE id = ANY" in query:
+            self._current_rows = self._rows_by_query["id"]
+        elif "WHERE LOWER(name) = ANY" in query:
+            self._current_rows = self._rows_by_query["name"]
+        else:
+            self._current_rows = []
+
+    def fetchall(self) -> list[dict[str, object]]:
+        return self._current_rows
+
+
+class FakeLookupConnection:
+    def __init__(self, cursor: FakeLookupCursor) -> None:
+        self._cursor = cursor
+
+    def cursor(self, cursor_factory=None) -> FakeLookupCursor:
+        return self._cursor
+
+
 def test_parse_labeled_description_sections_extracts_summary_and_fields():
     parsed = script.parse_labeled_description_sections(
         """
@@ -101,6 +134,38 @@ def test_normalize_muscle_array_handles_various_formats():
     assert script.normalize_muscle_array([]) is None
     assert script.normalize_muscle_array([""]) is None
     assert script.normalize_muscle_array("Shoulders") == "shoulders"
+
+
+def test_load_source_lookup_uses_text_external_ids():
+    cursor = FakeLookupCursor(
+        rows_by_query={
+            "id": [
+                {
+                    "id": "3_4_Sit-Up",
+                    "name": "3/4 Sit-Up",
+                    "force": "pull",
+                    "level": "beginner",
+                    "mechanic": "compound",
+                    "instructions": ["Line 1"],
+                    "equipment": "body only",
+                    "category": "strength",
+                    "primary_muscles": ["abdominals"],
+                }
+            ],
+            "name": [],
+        }
+    )
+    connection = FakeLookupConnection(cursor)
+
+    id_lookup, name_lookup = script.load_source_lookup(
+        connection,
+        ["3_4_Sit-Up"],
+        [],
+    )
+
+    assert "3_4_Sit-Up" in id_lookup
+    assert name_lookup == {}
+    assert cursor.executed[0][1] == (["3_4_Sit-Up"],)
 
 
 def test_build_description_summary_prefers_readable_metadata():
@@ -194,6 +259,34 @@ def test_plan_row_update_preserves_human_description_without_rewrite_flag():
     }
 
 
+def test_plan_updates_finds_match_by_name_when_id_missing():
+    row = make_row(
+        external_id=None,
+        name="Push-ups",
+        description="Beginner\nCompound",
+    )
+    source = make_source(name="Push-ups", category="Strength")
+
+    report = script.plan_updates(
+        [row],
+        id_lookup={},
+        name_lookup={"push-ups": source},
+        overwrite_populated_fields=False,
+        rewrite_description_from_source=False,
+    )
+
+    assert len(report.updates) == 1
+    assert report.matched_source_rows == 1
+    assert report.matched_by_id_rows == 0
+    assert report.matched_by_name_rows == 1
+    update = report.updates[0]
+    assert update.match_method == "name"
+    assert update.matched_source is True
+    assert any(
+        c.field_name == "category" and c.new_value == "Strength" for c in update.changes
+    )
+
+
 def test_plan_row_update_parses_embedded_metadata_without_source():
     row = make_row(
         description=(
@@ -262,18 +355,52 @@ def test_plan_updates_marks_missing_source_rows_unresolved():
 
     report = script.plan_updates(
         [row],
-        source_lookup={},
+        id_lookup={},
+        name_lookup={},
         overwrite_populated_fields=False,
         rewrite_description_from_source=False,
     )
 
     assert report.scanned_rows == 1
+    assert report.matched_source_rows == 0
+    assert report.matched_by_id_rows == 0
+    assert report.matched_by_name_rows == 0
     assert len(report.updates) == 0
     assert len(report.unresolved) == 1
     assert report.unresolved[0].reason == (
         "missing source row for external_id; "
         "no safe source or labeled metadata for: instructions, equipment, category"
     )
+
+
+def test_print_report_includes_match_method_counts():
+    report = script.PlanningReport(
+        scanned_rows=2,
+        matched_source_rows=2,
+        matched_by_id_rows=1,
+        matched_by_name_rows=1,
+        skipped_rows=0,
+        updates=(
+            script.PlannedExerciseTypeUpdate(
+                exercise_type_id=1,
+                exercise_name="Bench Press",
+                external_id="Bench_Press",
+                matched_source=True,
+                match_method="id",
+                reasons=("backfill_category",),
+                changes=(),
+            ),
+        ),
+        unresolved=(),
+    )
+
+    stream = StringIO()
+    script.print_report(report, apply=False, stream=stream, sample_limit=1)
+
+    output = stream.getvalue()
+    assert "Matched source rows: 2" in output
+    assert "Matched by id: 1" in output
+    assert "Matched by name: 1" in output
 
 
 def test_run_normalization_rolls_back_in_dry_run(monkeypatch):
@@ -301,7 +428,7 @@ def test_run_normalization_rolls_back_in_dry_run(monkeypatch):
     monkeypatch.setattr(
         script,
         "load_source_lookup",
-        lambda connection, external_ids: {"101": source},
+        lambda connection, external_ids, names: ({"101": source}, {}),
     )
 
     apply_calls: list[tuple[script.PlannedExerciseTypeUpdate, ...]] = []
@@ -358,7 +485,7 @@ def test_run_normalization_commits_in_apply_mode(monkeypatch):
     monkeypatch.setattr(
         script,
         "load_source_lookup",
-        lambda connection, external_ids: {"101": source},
+        lambda connection, external_ids, names: ({"101": source}, {}),
     )
 
     apply_calls: list[tuple[script.PlannedExerciseTypeUpdate, ...]] = []
