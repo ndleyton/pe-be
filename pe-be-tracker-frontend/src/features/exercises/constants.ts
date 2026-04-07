@@ -37,3 +37,5 @@ export const KNOWN_INTENSITY_UNITS = [
 ] satisfies IntensityUnit[];
 
 export const GUEST_INTENSITY_UNITS = KNOWN_INTENSITY_UNITS;
+
+export const EXERCISE_TYPE_MODAL_INITIAL_LIMIT = 100;

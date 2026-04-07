@@ -15,6 +15,8 @@ export interface ExerciseRowProps {
   onExerciseUpdate?: (updatedExercise: Exercise) => void;
   onExerciseDelete?: (exerciseId: number | string) => void;
   workoutId?: string;
+  isExpanded?: boolean;
+  onToggleExpand?: (exerciseId: number | string) => void;
 }
 
 export const DEFAULT_INTENSITY_UNIT: IntensityUnit | GuestIntensityUnit = {

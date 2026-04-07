@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import { makeExerciseType, makePaginatedExerciseTypes } from "@/test/fixtures";
 import type { ExerciseType } from "@/features/exercises/types";
 import ExerciseTypeModal from "./ExerciseTypeModal";
@@ -58,7 +59,9 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.queryByText("Select Exercise Type")).not.toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText(/search exercise types/i),
+    ).not.toBeInTheDocument();
   });
 
   it("renders modal when open", () => {
@@ -70,7 +73,9 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.getByText("Select Exercise Type")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(/search exercise types/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /close modal/i }),
     ).toBeInTheDocument();
@@ -128,6 +133,29 @@ describe("ExerciseTypeModal", () => {
     expect(screen.queryByText(/12 times?/i)).not.toBeInTheDocument();
   });
 
+  it("requests a limited initial authenticated exercise type page", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([makeExerciseType()]),
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+      );
+    });
+  });
+
   it("shows guest-specific usage wording for guest exercise types", async () => {
     mockGuestStore = {
       ...mockGuestStore,
@@ -142,6 +170,38 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.getByText("Squats")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Squats")).toBeInTheDocument();
+    });
+  });
+
+  it("renders only the initial browse window and exposes load more", async () => {
+    mockGuestStore = {
+      ...mockGuestStore,
+      exerciseTypes: Array.from({ length: 35 }, (_, index) =>
+        makeExerciseType({
+          id: index + 1,
+          name: `Exercise ${index + 1}`,
+        }),
+      ),
+    };
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise 1")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Exercise 30")).toBeInTheDocument();
+    expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /load more/i }),
+    ).toBeInTheDocument();
   });
 });

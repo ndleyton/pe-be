@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, lazy } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, lazy } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/shared/api/client";
@@ -7,9 +7,11 @@ import {
   Exercise,
   type ExerciseType,
   createExercise,
+  getExerciseTypes,
   type CreateExerciseData,
 } from "@/features/exercises/api";
 import { ExerciseList } from "@/features/exercises/components";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import { type Workout } from "@/features/workouts/types";
 import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
@@ -583,6 +585,24 @@ const WorkoutPage = () => {
     setShowSaveRoutineModal(true);
   };
 
+  const warmExerciseTypeModal = useCallback(() => {
+    preloadExerciseTypeModal();
+
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void queryClient.prefetchQuery({
+      queryKey: ["exerciseTypes"],
+      queryFn: () =>
+        getExerciseTypes(
+          "usage",
+          undefined,
+          EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        ),
+    });
+  }, [isAuthenticated, queryClient]);
+
   // Determine workout name based on authentication state
   const workoutName = isAuthenticated
     ? (serverWorkout?.name ?? null)
@@ -761,9 +781,9 @@ const WorkoutPage = () => {
           <Button
             type="button"
             onClick={() => setShowAddExerciseModal(true)}
-            onMouseEnter={preloadExerciseTypeModal}
-            onTouchStart={preloadExerciseTypeModal}
-            onFocus={preloadExerciseTypeModal}
+            onMouseEnter={warmExerciseTypeModal}
+            onTouchStart={warmExerciseTypeModal}
+            onFocus={warmExerciseTypeModal}
             className="h-14 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground px-8 py-2 backdrop-blur-md transition-all duration-300 font-bold"
             disabled={isAuthenticated && addExerciseMutation.isPending}
           >
@@ -808,11 +828,15 @@ const WorkoutPage = () => {
         workoutTypeId={workoutTypeId}
       />
 
-      <ExerciseTypeModal
-        isOpen={showAddExerciseModal}
-        onClose={() => setShowAddExerciseModal(false)}
-        onSelect={handleSelectExerciseType}
-      />
+      {showAddExerciseModal ? (
+        <Suspense fallback={null}>
+          <ExerciseTypeModal
+            isOpen={showAddExerciseModal}
+            onClose={() => setShowAddExerciseModal(false)}
+            onSelect={handleSelectExerciseType}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 };

@@ -1,10 +1,19 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
 
 interface ExerciseTypeModalProps {
@@ -12,6 +21,9 @@ interface ExerciseTypeModalProps {
   onClose: () => void;
   onSelect: (exerciseType: ExerciseType | GuestExerciseType) => void;
 }
+
+const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
+const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
 
 // Type guard to check if an exercise type has muscles property
 const hasMusclesProperty = (
@@ -28,6 +40,10 @@ const ExerciseTypeModal = ({
   onSelect,
 }: ExerciseTypeModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [areResultsReady, setAreResultsReady] = useState(false);
+  const [visibleResultCount, setVisibleResultCount] = useState(
+    EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT,
+  );
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -40,7 +56,7 @@ const ExerciseTypeModal = ({
     error,
   } = useQuery({
     queryKey: ["exerciseTypes"],
-    queryFn: () => getExerciseTypes("usage"), // Use usage-based ordering by default
+    queryFn: () => getExerciseTypes("usage", undefined, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
@@ -80,18 +96,52 @@ const ExerciseTypeModal = ({
     },
   });
 
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAreResultsReady(false);
+      setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+      return;
+    }
+
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+
+    const frameId = window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setAreResultsReady(true);
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (deferredSearchTerm.trim()) {
+      return;
+    }
+
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+  }, [deferredSearchTerm]);
+
   const filteredExerciseTypes = useMemo(() => {
-    if (!searchTerm.trim()) return exerciseTypes;
-    const term = searchTerm.toLowerCase().trim();
+    if (!deferredSearchTerm.trim()) return exerciseTypes;
+    const term = deferredSearchTerm.toLowerCase().trim();
     return exerciseTypes.filter(
       (type: ExerciseType | GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [exerciseTypes, searchTerm]);
+  }, [deferredSearchTerm, exerciseTypes]);
 
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
+  const isSearchActive = deferredSearchTerm.trim().length > 0;
+  const visibleExerciseTypes = isSearchActive
+    ? filteredExerciseTypes
+    : filteredExerciseTypes.slice(0, visibleResultCount);
+  const canLoadMoreResults =
+    !isSearchActive && visibleExerciseTypes.length < filteredExerciseTypes.length;
 
   const createInFlight = useRef(false);
 
@@ -270,21 +320,28 @@ const ExerciseTypeModal = ({
       );
     }
 
+    if (!areResultsReady) {
+      return (
+        <div className="grid gap-3 p-1">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <SkeletonCard key={`deferred-skeleton-${index}`} />
+          ))}
+        </div>
+      );
+    }
+
     return (
-      <div className="grid gap-3 p-1">
-        {filteredExerciseTypes.map(
+      <div className="space-y-4 p-1">
+        <div className="grid gap-3">
+          {visibleExerciseTypes.map(
           (exerciseType: ExerciseType | GuestExerciseType) => (
             <button
               key={exerciseType.id}
               onClick={() => handleSelect(exerciseType)}
               className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              {/* Subtle background glow on hover */}
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
-
-              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/30 to-transparent group-hover:opacity-0 transition-opacity" />
-                <span className="relative z-10">{exerciseType.name.charAt(0)}</span>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xl transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                <span>{exerciseType.name.charAt(0)}</span>
               </div>
 
               <div className="flex-1 overflow-hidden">
@@ -326,6 +383,26 @@ const ExerciseTypeModal = ({
             </button>
           ),
         )}
+        </div>
+
+        {canLoadMoreResults && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleResultCount((current) =>
+                  Math.min(
+                    current + EXERCISE_TYPE_MODAL_RENDER_INCREMENT,
+                    filteredExerciseTypes.length,
+                  ),
+                )
+              }
+              className="rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-accent/60"
+            >
+              Load More
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -337,11 +414,12 @@ const ExerciseTypeModal = ({
         hideOverlay={true}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold tracking-tight">Select Exercise Type</DialogTitle>
-        </DialogHeader>
+        <DialogTitle className="sr-only">Select Exercise Type</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search existing exercise types or create a new one to add to the workout.
+        </DialogDescription>
 
-        <div className="px-6 pb-4">
+        <div className="px-6 pt-12 pb-2">
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
