@@ -13,7 +13,7 @@ import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
 
 interface ExerciseTypeModalProps {
@@ -414,11 +414,12 @@ const ExerciseTypeModal = ({
         hideOverlay={true}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold tracking-tight">Select Exercise Type</DialogTitle>
-        </DialogHeader>
+        <DialogTitle className="sr-only">Select Exercise Type</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search existing exercise types or create a new one to add to the workout.
+        </DialogDescription>
 
-        <div className="px-6 pb-4">
+        <div className="px-6 pt-12 pb-2">
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
