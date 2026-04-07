@@ -389,3 +389,33 @@ def test_rewrite_description_from_source_flag_controls_clean_descriptions(
         assert "description" not in changed_fields
     else:
         assert changed_fields["description"].new_value == expected_description
+
+
+def test_rewrite_description_from_source_skips_empty_summary(monkeypatch):
+    row = make_row(
+        external_id="101",
+        description="A stable rowing variation for upper-back focus.",
+    )
+    source = make_source(
+        force=None,
+        level=None,
+        mechanic=None,
+        category=None,
+    )
+
+    monkeypatch.setattr(
+        script,
+        "build_description_summary_from_source",
+        lambda source_row: None,
+    )
+
+    outcome = script.plan_row_update(
+        row,
+        source_row=source,
+        overwrite_populated_fields=False,
+        rewrite_description_from_source=True,
+    )
+
+    assert outcome.update is not None
+    changed_fields = {change.field_name: change for change in outcome.update.changes}
+    assert "description" not in changed_fields

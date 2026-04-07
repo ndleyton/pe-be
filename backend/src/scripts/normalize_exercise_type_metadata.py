@@ -291,7 +291,11 @@ def looks_like_legacy_importer_description(
         )
         return expected is not None and normalized_description == expected
 
-    lines = [line.strip().lower() for line in normalized_description.splitlines() if line.strip()]
+    lines = [
+        line.strip().lower()
+        for line in normalized_description.splitlines()
+        if line.strip()
+    ]
     if not 1 <= len(lines) <= 3:
         return False
     if any(":" in line for line in lines):
@@ -390,7 +394,9 @@ def parse_labeled_description_sections(
         current_label = None
         summary_lines.append(stripped_line)
 
-    summary = normalize_single_line_text(" ".join(line for line in summary_lines if line))
+    summary = normalize_single_line_text(
+        " ".join(line for line in summary_lines if line)
+    )
     return ParsedDescriptionMetadata(
         summary=summary,
         instructions=normalize_multiline_text(instructions_lines),
@@ -609,9 +615,16 @@ def plan_row_update(
     rewrite_reason: str | None = None
 
     if rewrite_description_from_source and source_row is not None:
-        desired_description = build_description_summary_from_source(source_row)
-        rewrite_reason = "rewrite_description_from_source"
-    elif description_is_blank or description_is_legacy or description_has_embedded_metadata:
+        candidate_description = build_description_summary_from_source(source_row)
+        if candidate_description is not None:
+            desired_description = candidate_description
+            rewrite_reason = "rewrite_description_from_source"
+
+    if rewrite_reason is None and (
+        description_is_blank
+        or description_is_legacy
+        or description_has_embedded_metadata
+    ):
         candidate_description = (
             parsed_description.summary if description_has_embedded_metadata else None
         )
@@ -624,7 +637,10 @@ def plan_row_update(
                 category=parsed_description.category,
                 force=parsed_description.force,
             )
-        if candidate_description is not None and candidate_description != current_description:
+        if (
+            candidate_description is not None
+            and candidate_description != current_description
+        ):
             desired_description = candidate_description
             if description_is_blank:
                 rewrite_reason = "fill_blank_description"
@@ -654,14 +670,17 @@ def plan_row_update(
         if value is None
     ]
     needs_description_cleanup = (
-        (description_is_blank or description_is_legacy or description_has_embedded_metadata)
-        and normalize_description_text(desired_description) is None
-    )
+        description_is_blank
+        or description_is_legacy
+        or description_has_embedded_metadata
+    ) and normalize_description_text(desired_description) is None
 
     unresolved_reasons: list[str] = []
     if row.external_id and source_row is None:
         unresolved_reasons.append("missing source row for external_id")
-    if still_missing_fields and (matched_source or parsed_description.has_labeled_sections):
+    if still_missing_fields and (
+        matched_source or parsed_description.has_labeled_sections
+    ):
         unresolved_reasons.append(
             "missing structured values after normalization: "
             + ", ".join(still_missing_fields)
@@ -808,7 +827,9 @@ def print_report(
         print("Dry run only. Re-run with --apply to persist changes.", file=stream)
 
 
-def apply_planned_updates(connection, updates: tuple[PlannedExerciseTypeUpdate, ...]) -> int:
+def apply_planned_updates(
+    connection, updates: tuple[PlannedExerciseTypeUpdate, ...]
+) -> int:
     if not updates:
         return 0
 
