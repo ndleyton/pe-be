@@ -3,7 +3,7 @@ import type {
   IntensityUnit,
 } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
-import type { Routine } from "@/features/routines/types";
+import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import type {
   GuestExerciseType,
   GuestIntensityUnit,
@@ -44,6 +44,7 @@ export type RoutineEditorTemplate = {
   exercise_type_id: number | null;
   exercise_type: RoutineExerciseTypeOption | null;
   set_templates: RoutineEditorSet[];
+  notes: string;
 };
 
 export type ExercisePickerTarget =
@@ -125,6 +126,7 @@ export const buildEditorTemplatesFromRoutine = (
     id: String(template.id),
     exercise_type_id: template.exercise_type_id,
     exercise_type: toRoutineExerciseTypeOption(template.exercise_type),
+    notes: template.notes ?? "",
     set_templates: template.set_templates.map((setTemplate) => ({
       id: String(setTemplate.id),
       reps: setTemplate.reps ?? null,
@@ -141,6 +143,7 @@ export const buildRoutinePayload = (
 ) =>
   templates.map((template) => ({
     exercise_type_id: Number(template.exercise_type_id),
+    notes: template.notes.trim() || null,
     set_templates: template.set_templates.map((setTemplate) => ({
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
@@ -151,13 +154,16 @@ export const buildRoutinePayload = (
 export const buildComparableSnapshot = (
   name: string,
   description: string,
+  visibility: RoutineVisibility,
   templates: RoutineEditorTemplate[],
 ) =>
   JSON.stringify({
     name,
     description,
+    visibility,
     exercise_templates: templates.map((template) => ({
       exercise_type_id: template.exercise_type_id,
+      notes: template.notes.trim() || null,
       set_templates: template.set_templates.map((setTemplate) => ({
         reps: setTemplate.reps,
         intensity: setTemplate.intensity,
@@ -187,20 +193,24 @@ export const createDefaultSet = (
 export const buildRoutineFromEditorState = ({
   description,
   name,
+  visibility,
   routine,
   templates,
 }: {
   description: string;
   name: string;
+  visibility: RoutineVisibility;
   routine: Routine;
   templates: RoutineEditorTemplate[];
 }): Routine => ({
   ...routine,
   name: name.trim() || routine.name,
   description: description.trim() || null,
+  visibility,
   exercise_templates: templates.map((template, templateIndex) => ({
     id: Number(template.id) || -(templateIndex + 1),
     exercise_type_id: Number(template.exercise_type_id),
+    notes: template.notes.trim() || null,
     created_at: routine.created_at,
     updated_at: routine.updated_at,
     exercise_type: template.exercise_type

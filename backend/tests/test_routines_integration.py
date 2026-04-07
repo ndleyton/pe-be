@@ -181,6 +181,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
             "name": "Updated Routine",
             "description": "After replace",
             "workout_type_id": workout_type.id,
+            "visibility": "link_only",
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type_b.id,
@@ -209,6 +210,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
 
         assert updated["name"] == "Updated Routine"
         assert updated["description"] == "After replace"
+        assert updated["visibility"] == "link_only"
         assert len(updated["exercise_templates"]) == 1
 
         updated_template = updated["exercise_templates"][0]
@@ -221,6 +223,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
         assert get_resp.status_code == 200, get_resp.text
         fetched = get_resp.json()
         assert fetched["name"] == "Updated Routine"
+        assert fetched["visibility"] == "link_only"
         assert len(fetched["exercise_templates"]) == 1
         assert (
             fetched["exercise_templates"][0]["exercise_type_id"] == exercise_type_b.id
@@ -320,10 +323,10 @@ async def test_superuser_can_update_and_delete_other_users_routine(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_unauthenticated_users_can_view_public_routine_only(
+async def test_unauthenticated_users_can_view_shareable_routine_only(
     db_session: AsyncSession, async_client: AsyncClient
 ):
-    """Unauthenticated users can fetch public routine detail but not private ones."""
+    """Unauthenticated users can fetch public/link-only detail but not private ones."""
 
     intensity_unit = IntensityUnit(name="Pounds", abbreviation="lb")
     workout_type = WorkoutType(name="Strength", description="Strength training")
@@ -364,16 +367,29 @@ async def test_unauthenticated_users_can_view_public_routine_only(
         visibility=Routine.RoutineVisibility.private,
         is_readonly=False,
     )
+    link_only_routine = Routine(
+        name="Link-Only Routine",
+        description="Visible only when opened via direct link",
+        workout_type_id=workout_type.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.link_only,
+        is_readonly=False,
+    )
 
-    db_session.add_all([public_routine, private_routine])
+    db_session.add_all([public_routine, private_routine, link_only_routine])
     await db_session.flush()
     public_routine_id = public_routine.id
     private_routine_id = private_routine.id
+    link_only_routine_id = link_only_routine.id
     await db_session.commit()
 
     public_resp = await async_client.get(f"/api/v1/routines/{public_routine_id}")
     assert public_resp.status_code == 200, public_resp.text
     assert public_resp.json()["name"] == "Public Routine"
+
+    link_only_resp = await async_client.get(f"/api/v1/routines/{link_only_routine_id}")
+    assert link_only_resp.status_code == 200, link_only_resp.text
+    assert link_only_resp.json()["name"] == "Link-Only Routine"
 
     private_resp = await async_client.get(f"/api/v1/routines/{private_routine_id}")
     assert private_resp.status_code == 404, private_resp.text

@@ -1,5 +1,6 @@
-import { ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Eye } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Link, useBlocker, useParams } from "react-router-dom";
 
 import {
   ExerciseTypeModal,
@@ -21,11 +22,23 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 
 const RoutineDetailsPage = () => {
   const { routineId } = useParams();
+  const [isEditing, setIsEditing] = useState(false);
 
   const {
     availableIntensityUnits,
@@ -45,6 +58,7 @@ const RoutineDetailsPage = () => {
     hasInvalidTemplates,
     hasUnsavedChanges,
     name,
+    visibility,
     unitPickerTarget,
     addSetToTemplate,
     closeExercisePicker,
@@ -56,8 +70,10 @@ const RoutineDetailsPage = () => {
     removeSetFromTemplate,
     removeTemplate,
     setDescription,
+    setVisibility,
     setName,
     updateSet,
+    updateTemplate,
   } = useRoutineEditor({
     availableIntensityUnits,
     routine,
@@ -70,11 +86,20 @@ const RoutineDetailsPage = () => {
       editorTemplates,
       isAuthenticated,
       name,
+      visibility,
       routine,
       routineId,
     });
 
-  if (routinePending || (isAuthenticated && unitsPending)) {
+  // Guard for unsaved changes
+  const blocker = useBlocker(
+    useCallback(
+      () => isEditing && hasUnsavedChanges,
+      [isEditing, hasUnsavedChanges]
+    )
+  );
+
+  if (routinePending) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Card>
@@ -86,7 +111,7 @@ const RoutineDetailsPage = () => {
     );
   }
 
-  if ((isAuthenticated && routineError) || !routine) {
+  if (routineError || !routine) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Alert variant="destructive">
@@ -104,66 +129,102 @@ const RoutineDetailsPage = () => {
     saveMutation.error ?? startMutation.error ?? deleteMutation.error;
   const routineJsonLd = buildRoutineExercisePlanJsonLd(routine);
 
+  const handleSave = async () => {
+    await saveMutation.mutateAsync();
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (confirm("You have unsaved changes. Are you sure you want to cancel?")) {
+        setIsEditing(false);
+      }
+    } else {
+      setIsEditing(false);
+    }
+  };
+
   return (
     <>
       <RoutineStructuredData data={routineJsonLd} />
-      <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
-        <div className="bg-card text-card-foreground mx-auto mt-2 max-w-4xl rounded-lg p-2 shadow-lg md:mt-4 md:p-4 lg:mt-8 lg:p-6">
-          <div className="mb-4 flex items-center gap-4 text-left">
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              aria-label="Go back"
-              className="lg:hidden"
-            >
-              <Link to="/routines">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl font-bold md:text-3xl">
-                {canEdit ? "Routine Editor" : "Routine Details"}
+      <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
+        {/* Header Section */}
+        <div className="mb-8 flex items-center gap-4 text-left">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            aria-label="Go back"
+            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          >
+            <Link to="/routines">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
+                {canEdit || isEditing ? "Routine Editor" : "Routine Details"}
               </h1>
-              <p className="text-muted-foreground text-sm">
-                {canEdit
-                  ? "Edit the template directly. Changes save the full `exercise_templates` and `set_templates` tree in one request."
-                  : "Review this routine template and start a workout from it."}
-              </p>
+              {editAccessMessage && !isEditing && (
+                <Badge
+                  variant="secondary"
+                  className="rounded-lg bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary px-2 py-0.5 text-[10px] font-black uppercase tracking-widest gap-1.5 flex h-fit"
+                >
+                  <Eye className="h-3 w-3" />
+                  View-only
+                </Badge>
+              )}
             </div>
-          </div>
+            <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-1">
+              {isEditing ? "Management Mode" : "Plan Overview"}
+            </p>
+        </div>
 
-          <div className="grid gap-4 text-left">
-            {editAccessMessage && (
-              <Alert>
-                <AlertTitle>View-only routine</AlertTitle>
-                <AlertDescription>{editAccessMessage}</AlertDescription>
-              </Alert>
-            )}
+        <div className="grid gap-8 text-left">
 
-            {actionError && (
-              <Alert variant="destructive">
-                <AlertTitle>Action failed</AlertTitle>
-                <AlertDescription>
-                  {actionError instanceof Error
-                    ? actionError.message
-                    : "Something went wrong while updating the routine."}
-                </AlertDescription>
-              </Alert>
-            )}
+          {editAccessMessage && !isEditing && (
+            <Alert className="bg-primary/5 border-primary/20 rounded-2xl backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider opacity-70">View-only routine</AlertTitle>
+              <AlertDescription className="text-sm italic">{editAccessMessage}</AlertDescription>
+            </Alert>
+          )}
 
+          {actionError && (
+            <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Action failed</AlertTitle>
+              <AlertDescription className="text-sm">
+                {actionError instanceof Error
+                  ? actionError.message
+                  : "Something went wrong while updating the routine."}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-8">
             <RoutineInfoCard
               canEdit={canEdit}
+              editDisabled={unitsPending}
+              editLabel={unitsPending ? "Preparing editor..." : "Edit Routine"}
+              isEditing={isEditing}
               deleteDisabled={deleteMutation.isPending}
               deleteLabel={deleteMutation.isPending ? "Deleting..." : "Delete Routine"}
               description={description}
               hasInvalidTemplates={hasInvalidTemplates}
               name={name}
+              visibility={visibility}
               onDelete={handleDelete}
               onDescriptionChange={setDescription}
               onNameChange={setName}
-              onSave={() => saveMutation.mutate()}
+              onVisibilityChange={setVisibility}
+              onSave={handleSave}
               onStartWorkout={() => startMutation.mutate()}
+              onEdit={() => {
+                if (unitsPending) {
+                  return;
+                }
+                setIsEditing(true);
+              }}
+              onCancel={handleCancel}
               saveDisabled={
                 hasInvalidTemplates || !hasUnsavedChanges || saveMutation.isPending
               }
@@ -172,8 +233,17 @@ const RoutineDetailsPage = () => {
               startLabel={startMutation.isPending ? "Starting..." : "Start Workout"}
             />
 
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-border/40"></div>
+              </div>
+              <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
+                <span className="bg-background px-4 text-muted-foreground/40">Exercise Sequence</span>
+              </div>
+            </div>
+
             <RoutineTemplatesCard
-              canEdit={canEdit}
+              canEdit={isEditing}
               editorTemplates={editorTemplates}
               onAddExercise={() => openExercisePicker({ mode: "add" })}
               onAddSet={addSetToTemplate}
@@ -189,10 +259,31 @@ const RoutineDetailsPage = () => {
                 openUnitPicker({ templateId, setId })
               }
               onUpdateSet={updateSet}
+              onUpdateTemplate={updateTemplate}
             />
           </div>
         </div>
       </div>
+
+      <AlertDialog open={blocker.state === "blocked"}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in the routine editor. Are you sure you
+              want to leave? Your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset?.()}>
+              Stay
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => blocker.proceed?.()}>
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ExerciseTypeModal
         isOpen={exercisePickerTarget !== null}

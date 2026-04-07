@@ -1,5 +1,5 @@
 import api from "@/shared/api/client";
-import { Routine } from "@/features/routines/types";
+import { Routine, type RoutineVisibility } from "@/features/routines/types";
 import { endpoints } from "@/shared/api/endpoints";
 
 // Create/Update payload types for routines
@@ -30,6 +30,7 @@ export interface UpdateRoutineData {
   name?: string;
   description?: string | null;
   workout_type_id?: number;
+  visibility?: RoutineVisibility;
   exercise_templates?: RoutineTemplatePayload[];
 }
 

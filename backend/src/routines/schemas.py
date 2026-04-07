@@ -53,6 +53,7 @@ class ExerciseTemplateBase(BaseModel):
     """Base schema for exercise template data"""
 
     exercise_type_id: int
+    notes: Optional[str] = None
 
 
 class ExerciseTemplateCreate(ExerciseTemplateBase):
@@ -105,6 +106,7 @@ class RoutineUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     workout_type_id: Optional[int] = None
+    visibility: Optional[RoutineModel.RoutineVisibility] = None
     exercise_templates: Optional[List[ExerciseTemplateCreate]] = None
 
 

@@ -29,7 +29,10 @@ export interface ExerciseTemplate {
   updated_at: string;
   exercise_type?: ExerciseType;
   set_templates: SetTemplate[];
+  notes?: string | null;
 }
+
+export type RoutineVisibility = "private" | "public" | "link_only";
 
 export interface Routine {
   id: number;
@@ -37,7 +40,7 @@ export interface Routine {
   description?: string | null;
   workout_type_id: number;
   creator_id: number;
-  visibility: "private" | "public" | "link_only";
+  visibility: RoutineVisibility;
   is_readonly: boolean;
   created_at: string;
   updated_at: string;

@@ -159,12 +159,11 @@ test.describe("Routine editor", () => {
       page.getByRole("heading", { name: "Routine Details" }),
     ).toBeVisible();
     await expect(
+      page.getByText("Public Routine"),
+    ).toBeVisible();
+    await expect(
       page.getByText("Sign in as the routine creator or a superuser to edit this routine."),
     ).toBeVisible();
-    await expect(page.getByTestId("routine-name-input")).toHaveValue(
-      "Public Routine",
-    );
-    await expect(page.getByTestId("routine-name-input")).not.toBeEditable();
     await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("delete-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("add-routine-exercise-button")).toHaveCount(0);
@@ -319,6 +318,8 @@ test.describe("Routine editor", () => {
       page.getByRole("heading", { name: "Routine Editor" }),
     ).toBeVisible();
 
+    await page.getByRole("button", { name: "Edit Routine" }).click();
+
     await page.getByTestId("routine-name-input").fill("Edited Server Routine");
     await page.getByTestId("remove-routine-template-0").click();
     await page.getByTestId("add-routine-exercise-button").click();
@@ -338,9 +339,11 @@ test.describe("Routine editor", () => {
       name: "Edited Server Routine",
       description: "Before edit",
       workout_type_id: 4,
+      visibility: "private",
       exercise_templates: [
         {
           exercise_type_id: 22,
+          notes: null,
           set_templates: [
             {
               reps: 12,
@@ -357,10 +360,8 @@ test.describe("Routine editor", () => {
       ],
     });
 
-    await expect(page.getByTestId("save-routine-button")).toBeDisabled();
-    await expect(page.getByTestId("routine-name-input")).toHaveValue(
-      "Edited Server Routine",
-    );
+    await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
+    await expect(page.getByText("Edited Server Routine")).toBeVisible();
   });
 
   test("authenticated non-owners can open an existing public routine but cannot edit it", async ({
@@ -439,12 +440,11 @@ test.describe("Routine editor", () => {
       page.getByRole("heading", { name: "Routine Details" }),
     ).toBeVisible();
     await expect(
+      page.getByText("Shared Routine"),
+    ).toBeVisible();
+    await expect(
       page.getByText("Only the routine creator or a superuser can edit this routine."),
     ).toBeVisible();
-    await expect(page.getByTestId("routine-name-input")).toHaveValue(
-      "Shared Routine",
-    );
-    await expect(page.getByTestId("routine-name-input")).not.toBeEditable();
     await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("delete-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("add-routine-exercise-button")).toHaveCount(0);

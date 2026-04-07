@@ -135,10 +135,10 @@ async def test_visibility_filtering_lists_public_only_for_signed_out_viewer(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_visibility_get_by_id_allows_public_blocks_private(
+async def test_visibility_get_by_id_allows_shareable_blocks_private(
     db_session: AsyncSession,
 ):
-    """CRUD: get by id returns public to others; None for others' private."""
+    """CRUD: get by id returns public/link_only to others; None for others' private."""
     wt = WorkoutType(name="Strength", description="Strength training")
     db_session.add(wt)
     await db_session.flush()
@@ -174,13 +174,27 @@ async def test_visibility_get_by_id_allows_public_blocks_private(
         visibility=Routine.RoutineVisibility.public,
         is_readonly=True,
     )
-    db_session.add_all([r_other_private, r_other_public])
+    r_other_link_only = Routine(
+        name="Other Link Only 2",
+        workout_type_id=wt.id,
+        creator_id=other.id,
+        visibility=Routine.RoutineVisibility.link_only,
+        is_readonly=True,
+    )
+    db_session.add_all([r_other_private, r_other_public, r_other_link_only])
     await db_session.flush()
 
     # Public accessible
     got = await crud.get_routine_by_id_for_user(db_session, r_other_public.id, me.id)
     assert got is not None
     assert got.name == "Other Public 2"
+
+    # Link-only accessible by direct id
+    got_link_only = await crud.get_routine_by_id_for_user(
+        db_session, r_other_link_only.id, me.id
+    )
+    assert got_link_only is not None
+    assert got_link_only.name == "Other Link Only 2"
 
     # Private not accessible
     got2 = await crud.get_routine_by_id_for_user(db_session, r_other_private.id, me.id)
