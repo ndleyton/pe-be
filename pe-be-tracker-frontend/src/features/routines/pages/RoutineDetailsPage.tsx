@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Link, useBlocker, useParams } from "react-router-dom";
 
 import {
   ExerciseTypeModal,
@@ -21,11 +22,22 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 
 const RoutineDetailsPage = () => {
   const { routineId } = useParams();
+  const [isEditing, setIsEditing] = useState(false);
 
   const {
     availableIntensityUnits,
@@ -74,6 +86,14 @@ const RoutineDetailsPage = () => {
       routineId,
     });
 
+  // Guard for unsaved changes
+  const blocker = useBlocker(
+    useCallback(
+      () => isEditing && hasUnsavedChanges,
+      [isEditing, hasUnsavedChanges]
+    )
+  );
+
   if (routinePending || (isAuthenticated && unitsPending)) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -104,6 +124,21 @@ const RoutineDetailsPage = () => {
     saveMutation.error ?? startMutation.error ?? deleteMutation.error;
   const routineJsonLd = buildRoutineExercisePlanJsonLd(routine);
 
+  const handleSave = async () => {
+    await saveMutation.mutateAsync();
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (confirm("You have unsaved changes. Are you sure you want to cancel?")) {
+        setIsEditing(false);
+      }
+    } else {
+      setIsEditing(false);
+    }
+  };
+
   return (
     <>
       <RoutineStructuredData data={routineJsonLd} />
@@ -123,18 +158,18 @@ const RoutineDetailsPage = () => {
             </Button>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-2xl font-bold md:text-3xl">
-                {canEdit ? "Routine Editor" : "Routine Details"}
+                {isEditing ? "Routine Editor" : "Routine Details"}
               </h1>
               <p className="text-muted-foreground text-sm">
-                {canEdit
-                  ? "Edit the template directly. Changes save the full `exercise_templates` and `set_templates` tree in one request."
+                {isEditing
+                  ? "Edit the template directly. Changes save the full template tree in one request."
                   : "Review this routine template and start a workout from it."}
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 text-left">
-            {editAccessMessage && (
+            {editAccessMessage && !isEditing && (
               <Alert>
                 <AlertTitle>View-only routine</AlertTitle>
                 <AlertDescription>{editAccessMessage}</AlertDescription>
@@ -154,6 +189,7 @@ const RoutineDetailsPage = () => {
 
             <RoutineInfoCard
               canEdit={canEdit}
+              isEditing={isEditing}
               deleteDisabled={deleteMutation.isPending}
               deleteLabel={deleteMutation.isPending ? "Deleting..." : "Delete Routine"}
               description={description}
@@ -162,8 +198,10 @@ const RoutineDetailsPage = () => {
               onDelete={handleDelete}
               onDescriptionChange={setDescription}
               onNameChange={setName}
-              onSave={() => saveMutation.mutate()}
+              onSave={handleSave}
               onStartWorkout={() => startMutation.mutate()}
+              onEdit={() => setIsEditing(true)}
+              onCancel={handleCancel}
               saveDisabled={
                 hasInvalidTemplates || !hasUnsavedChanges || saveMutation.isPending
               }
@@ -173,7 +211,7 @@ const RoutineDetailsPage = () => {
             />
 
             <RoutineTemplatesCard
-              canEdit={canEdit}
+              canEdit={isEditing}
               editorTemplates={editorTemplates}
               onAddExercise={() => openExercisePicker({ mode: "add" })}
               onAddSet={addSetToTemplate}
@@ -193,6 +231,26 @@ const RoutineDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={blocker.state === "blocked"}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in the routine editor. Are you sure you
+              want to leave? Your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset()}>
+              Stay
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => blocker.proceed()}>
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ExerciseTypeModal
         isOpen={exercisePickerTarget !== null}
