@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import { makeExerciseType, makePaginatedExerciseTypes } from "@/test/fixtures";
 import type { ExerciseType } from "@/features/exercises/types";
 import ExerciseTypeModal from "./ExerciseTypeModal";
@@ -126,6 +127,29 @@ describe("ExerciseTypeModal", () => {
 
     expect(screen.queryByText(/used by you/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/12 times?/i)).not.toBeInTheDocument();
+  });
+
+  it("requests a limited initial authenticated exercise type page", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([makeExerciseType()]),
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+      );
+    });
   });
 
   it("shows guest-specific usage wording for guest exercise types", async () => {

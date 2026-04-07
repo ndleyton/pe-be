@@ -11,6 +11,7 @@ import {
   type CreateExerciseData,
 } from "@/features/exercises/api";
 import { ExerciseList } from "@/features/exercises/components";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import { type Workout } from "@/features/workouts/types";
 import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
@@ -593,7 +594,12 @@ const WorkoutPage = () => {
 
     void queryClient.prefetchQuery({
       queryKey: ["exerciseTypes"],
-      queryFn: () => getExerciseTypes("usage"),
+      queryFn: () =>
+        getExerciseTypes(
+          "usage",
+          undefined,
+          EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        ),
     });
   }, [isAuthenticated, queryClient]);
 

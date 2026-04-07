@@ -4,6 +4,7 @@ import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/featu
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
 
@@ -40,7 +41,7 @@ const ExerciseTypeModal = ({
     error,
   } = useQuery({
     queryKey: ["exerciseTypes"],
-    queryFn: () => getExerciseTypes("usage"), // Use usage-based ordering by default
+    queryFn: () => getExerciseTypes("usage", undefined, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
