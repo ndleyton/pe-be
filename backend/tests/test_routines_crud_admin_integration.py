@@ -138,7 +138,9 @@ async def test_update_and_delete_routine_paths(db_session: AsyncSession):
     assert (
         updated is not None and updated.name == "Updated" and updated.description == "d"
     )
-    assert updated is not None and updated.visibility == Routine.RoutineVisibility.public
+    assert (
+        updated is not None and updated.visibility == Routine.RoutineVisibility.public
+    )
 
     # Update by superuser -> changed
     updated_by_admin = await crud.update_routine(

@@ -2,10 +2,15 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.routines.service import routine_service
-from src.routines.schemas import RoutineCreate, ExerciseTemplateCreate, SetTemplateCreate
+from src.routines.schemas import (
+    RoutineCreate,
+    ExerciseTemplateCreate,
+    SetTemplateCreate,
+)
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
 from src.users.models import User
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -44,12 +49,14 @@ async def test_exercise_template_notes_propagation(db_session: AsyncSession):
                 notes=routine_notes,
                 set_templates=[
                     SetTemplateCreate(reps=10, intensity=50.0, intensity_unit_id=iu.id)
-                ]
+                ],
             )
-        ]
+        ],
     )
-    
-    routine_read = await routine_service.create_routine(db_session, routine_data, user.id)
+
+    routine_read = await routine_service.create_routine(
+        db_session, routine_data, user.id
+    )
     assert routine_read.exercise_templates[0].notes == routine_notes
 
     # Act: Create workout from routine
@@ -59,6 +66,7 @@ async def test_exercise_template_notes_propagation(db_session: AsyncSession):
 
     # Assert: Exercise in workout should have the same notes
     from src.exercises.models import Exercise
+
     res = await db_session.execute(
         select(Exercise).where(Exercise.workout_id == workout.id)
     )
