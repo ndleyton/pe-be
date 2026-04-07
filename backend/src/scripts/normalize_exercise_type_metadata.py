@@ -250,6 +250,19 @@ def normalize_muscle_array(value: object) -> str | None:
     return normalized.lower() if normalized else None
 
 
+def normalize_summary_muscle_label(value: str | None) -> str | None:
+    normalized = normalize_single_line_text(value)
+    if normalized is None:
+        return None
+
+    normalized_lower = normalized.lower()
+    if normalized_lower == "abdominals":
+        return "core"
+    if normalized_lower == "quadriceps":
+        return "quads"
+    return normalized_lower
+
+
 def normalize_multiline_text(value: object) -> str | None:
     if value is None:
         return None
@@ -336,7 +349,7 @@ def build_description_summary(
     mechanic_text = normalize_single_line_text(mechanic)
     category_text = normalize_single_line_text(category)
     force_text = normalize_single_line_text(force)
-    muscle_text = normalize_single_line_text(primary_muscle)
+    muscle_text = normalize_summary_muscle_label(primary_muscle)
 
     parts: list[str] = []
     if level_text:
@@ -344,7 +357,7 @@ def build_description_summary(
     if mechanic_text:
         parts.append(mechanic_text.lower())
     if muscle_text:
-        parts.append(muscle_text.lower())
+        parts.append(muscle_text)
     if category_text:
         parts.append(category_text.lower())
     elif force_text and not parts:
