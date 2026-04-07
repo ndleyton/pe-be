@@ -21,6 +21,8 @@ import { Textarea } from "@/shared/components/ui/textarea";
 
 type RoutineInfoCardProps = {
   canEdit: boolean;
+  editDisabled?: boolean;
+  editLabel?: string;
   isEditing: boolean;
   deleteDisabled: boolean;
   deleteLabel: string;
@@ -44,6 +46,8 @@ type RoutineInfoCardProps = {
 
 export const RoutineInfoCard = ({
   canEdit,
+  editDisabled = false,
+  editLabel = "Edit Routine",
   isEditing,
   deleteDisabled,
   deleteLabel,
@@ -193,10 +197,11 @@ export const RoutineInfoCard = ({
                 <Button 
                   variant="outline" 
                   onClick={onEdit} 
+                  disabled={editDisabled}
                   className="h-14 flex-1 rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 font-bold transition-all text-xs uppercase tracking-widest"
                 >
                   <Edit2 className="mr-2 h-3 w-3" />
-                  Edit Routine
+                  {editLabel}
                 </Button>
               )}
               <Button

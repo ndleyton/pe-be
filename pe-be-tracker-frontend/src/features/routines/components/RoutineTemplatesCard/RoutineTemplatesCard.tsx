@@ -12,7 +12,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 
@@ -58,7 +57,6 @@ export const RoutineTemplatesCard = ({
               Exercise Sequence
             </h4>
           </div>
-          <CardTitle className="text-xl font-bold tracking-tight">Templates Structure</CardTitle>
         </div>
         {canEdit && (
           <Button
@@ -258,10 +256,10 @@ export const RoutineTemplatesCard = ({
                 ) : (
                   <div
                     key={setTemplate.id}
-                    className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border/10"
+                    className="flex items-center gap-2 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/20 shadow-lg shadow-primary/5 backdrop-blur-sm"
                   >
-                    <span className="text-[10px] font-black opacity-30">{setIndex + 1}</span>
-                    <span className="text-xs font-bold tracking-tight italic opacity-90">
+                    <span className="text-[10px] font-black text-primary opacity-40">{setIndex + 1}</span>
+                    <span className="text-xs font-bold tracking-tight italic text-foreground opacity-90">
                       {formatSetSummary(setTemplate)}
                     </span>
                   </div>

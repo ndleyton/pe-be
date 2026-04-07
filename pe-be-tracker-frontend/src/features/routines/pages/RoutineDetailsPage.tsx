@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Link, useBlocker, useParams } from "react-router-dom";
 
@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 
@@ -98,7 +99,7 @@ const RoutineDetailsPage = () => {
     )
   );
 
-  if (routinePending || (isAuthenticated && unitsPending)) {
+  if (routinePending) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Card>
@@ -110,7 +111,7 @@ const RoutineDetailsPage = () => {
     );
   }
 
-  if ((isAuthenticated && routineError) || !routine) {
+  if (routineError || !routine) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Alert variant="destructive">
@@ -160,25 +161,26 @@ const RoutineDetailsPage = () => {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
-              {isEditing ? "Routine Editor" : name || "Routine Details"}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
+                {isEditing ? "Routine Editor" : name || "Routine Details"}
+              </h1>
+              {editAccessMessage && !isEditing && (
+                <Badge
+                  variant="secondary"
+                  className="rounded-lg bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary px-2 py-0.5 text-[10px] font-black uppercase tracking-widest gap-1.5 flex h-fit"
+                >
+                  <Eye className="h-3 w-3" />
+                  View-only
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-1">
-              {isEditing
-                ? "Management Mode"
-                : "Plan Overview"}
+              {isEditing ? "Management Mode" : "Plan Overview"}
             </p>
-          </div>
         </div>
 
         <div className="grid gap-8 text-left">
-          {editAccessMessage && !isEditing && (
-            <Alert className="bg-primary/5 border-primary/20 rounded-2xl backdrop-blur-md">
-              <AlertTitle className="text-xs font-bold uppercase tracking-wider opacity-70">View-only routine</AlertTitle>
-              <AlertDescription className="text-sm italic">{editAccessMessage}</AlertDescription>
-            </Alert>
-          )}
 
           {actionError && (
             <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
@@ -194,6 +196,8 @@ const RoutineDetailsPage = () => {
           <div className="space-y-8">
             <RoutineInfoCard
               canEdit={canEdit}
+              editDisabled={unitsPending}
+              editLabel={unitsPending ? "Preparing editor..." : "Edit Routine"}
               isEditing={isEditing}
               deleteDisabled={deleteMutation.isPending}
               deleteLabel={deleteMutation.isPending ? "Deleting..." : "Delete Routine"}
@@ -207,7 +211,12 @@ const RoutineDetailsPage = () => {
               onVisibilityChange={setVisibility}
               onSave={handleSave}
               onStartWorkout={() => startMutation.mutate()}
-              onEdit={() => setIsEditing(true)}
+              onEdit={() => {
+                if (unitsPending) {
+                  return;
+                }
+                setIsEditing(true);
+              }}
               onCancel={handleCancel}
               saveDisabled={
                 hasInvalidTemplates || !hasUnsavedChanges || saveMutation.isPending
