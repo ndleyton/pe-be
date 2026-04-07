@@ -359,6 +359,40 @@ def test_run_normalization_commits_in_apply_mode(monkeypatch):
     assert "Applied rows: 1" in stream.getvalue()
 
 
+def test_run_normalization_closes_target_connection_when_source_connect_fails(
+    monkeypatch,
+):
+    target_connection = FakeConnection()
+
+    monkeypatch.setattr(
+        script,
+        "connect_target_database",
+        lambda args: target_connection,
+    )
+
+    def _fail_source_connect(args):
+        raise RuntimeError("source unavailable")
+
+    monkeypatch.setattr(script, "connect_source_database", _fail_source_connect)
+
+    with pytest.raises(RuntimeError, match="source unavailable"):
+        script.run_normalization(
+            SimpleNamespace(
+                exercise_type_id=None,
+                external_id=None,
+                limit=None,
+                overwrite_populated_fields=False,
+                rewrite_description_from_source=False,
+                apply=False,
+                dry_run=False,
+            ),
+            stream=StringIO(),
+        )
+
+    assert target_connection.rollbacks == 1
+    assert target_connection.closed == 1
+
+
 @pytest.mark.parametrize(
     ("rewrite_flag", "expected_description"),
     [

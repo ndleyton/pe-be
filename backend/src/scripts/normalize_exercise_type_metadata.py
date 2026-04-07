@@ -874,11 +874,13 @@ def select_candidate_rows(
 
 
 def run_normalization(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
-    target_connection = connect_target_database(args)
-    source_connection = connect_source_database(args)
-    target_connection.autocommit = False
+    target_connection = None
+    source_connection = None
 
     try:
+        target_connection = connect_target_database(args)
+        target_connection.autocommit = False
+        source_connection = connect_source_database(args)
         loaded_rows = load_target_rows(
             target_connection,
             exercise_type_id=args.exercise_type_id,
@@ -911,11 +913,14 @@ def run_normalization(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
         target_connection.rollback()
         return RunResult(report=report, applied_rows=0)
     except Exception:
-        target_connection.rollback()
+        if target_connection is not None:
+            target_connection.rollback()
         raise
     finally:
-        source_connection.close()
-        target_connection.close()
+        if source_connection is not None:
+            source_connection.close()
+        if target_connection is not None:
+            target_connection.close()
 
 
 def main(argv: list[str] | None = None) -> int:
