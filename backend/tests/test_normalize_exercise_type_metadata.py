@@ -136,6 +136,12 @@ def test_normalize_muscle_array_handles_various_formats():
     assert script.normalize_muscle_array("Shoulders") == "shoulders"
 
 
+def test_normalize_summary_muscle_label_remaps_selected_names():
+    assert script.normalize_summary_muscle_label("Abdominals") == "core"
+    assert script.normalize_summary_muscle_label("quadriceps") == "quads"
+    assert script.normalize_summary_muscle_label("Shoulders") == "shoulders"
+
+
 def test_load_source_lookup_uses_text_external_ids():
     cursor = FakeLookupCursor(
         rows_by_query={
@@ -187,6 +193,26 @@ def test_build_description_summary_prefers_readable_metadata():
             force="Push",
         )
         == "Beginner cardio exercise."
+    )
+    assert (
+        script.build_description_summary(
+            level="Beginner",
+            mechanic="Compound",
+            category="Strength",
+            force="Push",
+            primary_muscle="Abdominals",
+        )
+        == "Beginner compound core strength exercise."
+    )
+    assert (
+        script.build_description_summary(
+            level="Beginner",
+            mechanic="Compound",
+            category="Plyometrics",
+            force="Push",
+            primary_muscle="Quadriceps",
+        )
+        == "Beginner compound quads plyometrics exercise."
     )
 
 
