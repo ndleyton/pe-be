@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
@@ -36,6 +36,21 @@ vi.mock("@/stores", () => ({
 describe("ExerciseTypeModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSelect = vi.fn();
+  const setScrollMetrics = (element: HTMLElement) => {
+    Object.defineProperty(element, "clientHeight", {
+      configurable: true,
+      value: 400,
+    });
+    Object.defineProperty(element, "scrollHeight", {
+      configurable: true,
+      value: 1000,
+    });
+    Object.defineProperty(element, "scrollTop", {
+      configurable: true,
+      writable: true,
+      value: 580,
+    });
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -175,7 +190,7 @@ describe("ExerciseTypeModal", () => {
     });
   });
 
-  it("renders only the initial browse window and exposes load more", async () => {
+  it("reveals more guest exercise types when the modal list is scrolled", async () => {
     mockGuestStore = {
       ...mockGuestStore,
       exerciseTypes: Array.from({ length: 35 }, (_, index) =>
@@ -200,8 +215,121 @@ describe("ExerciseTypeModal", () => {
 
     expect(screen.getByText("Exercise 30")).toBeInTheDocument();
     expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
+
+    const scrollContainer = screen.getByTestId(
+      "exercise-type-modal-scroll-container",
+    );
+    setScrollMetrics(scrollContainer);
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise 31")).toBeInTheDocument();
+    });
+
     expect(
-      screen.getByRole("button", { name: /load more/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /load more/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("fetches and renders the next authenticated page when the modal list is scrolled", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      (_orderBy?: unknown, cursor?: number | null) => {
+        if (cursor === 30) {
+          return Promise.resolve(
+            makePaginatedExerciseTypes(
+              Array.from({ length: 2 }, (_, index) =>
+                makeExerciseType({
+                  id: 31 + index,
+                  name: `Exercise ${31 + index}`,
+                }),
+              ),
+              null,
+            ),
+          );
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes(
+            Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+              makeExerciseType({
+                id: index + 1,
+                name: `Exercise ${index + 1}`,
+              }),
+            ),
+            30,
+          ),
+        );
+      },
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise 30")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
+
+    const scrollContainer = screen.getByTestId(
+      "exercise-type-modal-scroll-container",
+    );
+    setScrollMetrics(scrollContainer);
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        30,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise 31")).toBeInTheDocument();
+      expect(screen.getByText("Exercise 32")).toBeInTheDocument();
+    });
+  });
+
+  it("searches only across exercise types that have already been loaded", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes(
+        Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+          makeExerciseType({
+            id: index + 1,
+            name: `Exercise ${index + 1}`,
+          }),
+        ),
+        30,
+      ),
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = await screen.findByPlaceholderText(
+      /search exercise types/i,
+    );
+    await user.type(searchInput, "Exercise 31");
+
+    await waitFor(() => {
+      expect(screen.getByText(/no matches/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
   });
 });
