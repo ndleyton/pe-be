@@ -11,9 +11,7 @@ vi.mock("@/shared/components/ui/carousel", () => ({
 
 // Mock the Accordion components to avoid Radix UI state issues in tests
 vi.mock("@/shared/components/ui/accordion", () => ({
-  Accordion: ({ children, onValueChange }: any) => (
-    <div data-testid="accordion" onClick={() => onValueChange?.("images")}>{children}</div>
-  ),
+  Accordion: ({ children }: any) => <div data-testid="accordion">{children}</div>,
   AccordionItem: ({ children }: any) => <div data-testid="accordion-item">{children}</div>,
   AccordionContent: ({ children }: any) => <div data-testid="accordion-content">{children}</div>,
   AccordionTrigger: ({ children }: any) => <div data-testid="accordion-trigger">{children}</div>,
@@ -83,8 +81,21 @@ describe("ExerciseRow Accordion", () => {
     
     const trigger = screen.getByRole("button", { name: /show exercise images/i });
     fireEvent.click(trigger);
-    
+
     expect(onToggleExpand).toHaveBeenCalled();
+  });
+
+  it("updates the accessible label when expanded", () => {
+    render(
+      <ExerciseRow
+        exercise={mockExercise}
+        isExpanded={true}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: /hide exercise images/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows image panel when expanded", () => {

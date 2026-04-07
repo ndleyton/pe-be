@@ -1,4 +1,4 @@
-import { ChevronDown, ExternalLink, MoreVertical, StickyNote } from "lucide-react";
+import { ChevronRight, ExternalLink, MoreVertical, StickyNote } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Exercise, IntensityUnit } from "@/features/exercises/api";
@@ -69,41 +69,22 @@ export const ExerciseRowHeader = ({
           <Button
             variant="ghost"
             size="sm"
-            className="group relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg p-0 transition-all duration-300 active:scale-90"
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300 active:scale-90",
+              isExpanded
+                ? "bg-rose-500 text-primary-foreground hover:bg-rose-500/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90",
+            )}
             aria-label={isExpanded ? "Hide exercise images" : "Show exercise images"}
-            onClick={() => onToggleExpand()}
+            onClick={onToggleExpand}
             aria-expanded={isExpanded}
           >
-            {/* Background layer */}
-            <div className={cn(
-              "absolute inset-0 transition-all duration-300 ease-in-out",
-              isExpanded 
-                ? "bg-rose-500 shadow-lg shadow-rose-500/30" 
-                : "bg-primary group-hover:bg-primary/90"
-            )} />
-
-            {/* Initial Letter - centered, fades out on hover/expand */}
-            <span className={cn(
-              "relative text-primary-foreground text-sm font-bold transition-all duration-300 ease-in-out",
-              isExpanded ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100 group-hover:-translate-y-4 group-hover:opacity-0"
-            )}>
-              {exercise.exercise_type.name.charAt(0).toUpperCase()}
-            </span>
-
-            {/* Chevron icon - centered, fades in and slides up on hover/expand */}
-            <div className={cn(
-              "absolute flex items-center justify-center transition-all duration-300 ease-in-out",
-              isExpanded 
-                ? "translate-y-0 opacity-100" 
-                : "translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
-            )}>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-primary-foreground transition-transform duration-500",
-                  isExpanded ? "rotate-180" : "rotate-0"
-                )}
-              />
-            </div>
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 transition-transform duration-300",
+                isExpanded ? "rotate-90" : "rotate-0",
+              )}
+            />
           </Button>
         )}
         {!hasImages && (
