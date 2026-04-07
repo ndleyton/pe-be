@@ -52,6 +52,7 @@ class SourceExerciseRow:
     instructions: str | None
     equipment: str | None
     category: str | None
+    primary_muscles: list[str] | None
 
 
 @dataclass(frozen=True)
@@ -233,6 +234,18 @@ def normalize_description_text(value: object) -> str | None:
     return text
 
 
+def normalize_muscle_array(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            normalized = normalize_single_line_text(item)
+            if normalized:
+                return normalized.lower()
+        return None
+    return normalize_single_line_text(value)
+
+
 def normalize_multiline_text(value: object) -> str | None:
     if value is None:
         return None
@@ -313,17 +326,21 @@ def build_description_summary(
     mechanic: str | None,
     category: str | None,
     force: str | None,
+    primary_muscle: str | None = None,
 ) -> str | None:
     level_text = normalize_single_line_text(level)
     mechanic_text = normalize_single_line_text(mechanic)
     category_text = normalize_single_line_text(category)
     force_text = normalize_single_line_text(force)
+    muscle_text = normalize_single_line_text(primary_muscle)
 
     parts: list[str] = []
     if level_text:
         parts.append(level_text.capitalize())
     if mechanic_text:
         parts.append(mechanic_text.lower())
+    if muscle_text:
+        parts.append(muscle_text.lower())
     if category_text:
         parts.append(category_text.lower())
     elif force_text and not parts:
@@ -342,6 +359,7 @@ def build_description_summary_from_source(
         mechanic=source_row.mechanic,
         category=source_row.category,
         force=source_row.force,
+        primary_muscle=normalize_muscle_array(source_row.primary_muscles),
     )
 
 
@@ -452,6 +470,7 @@ def build_source_row(record: dict[str, object]) -> SourceExerciseRow:
         instructions=normalize_multiline_text(record.get("instructions")),
         equipment=normalize_single_line_text(record.get("equipment")),
         category=normalize_single_line_text(record.get("category")),
+        primary_muscles=record.get("primary_muscles"),
     )
 
 
@@ -498,7 +517,7 @@ def load_source_lookup(
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         cursor.execute(
             """
-            SELECT id, name, force, level, mechanic, instructions, equipment, category
+            SELECT id, name, force, level, mechanic, instructions, equipment, category, primary_muscles
             FROM ext.exercises
             WHERE id = ANY(%s)
             """,

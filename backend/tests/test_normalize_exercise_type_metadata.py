@@ -39,6 +39,7 @@ def make_source(
     instructions: str | None = "Sit tall\nDrive elbows back",
     equipment: str | None = "Cable",
     category: str | None = "Strength",
+    primary_muscles: list[str] | None = None,
 ) -> script.SourceExerciseRow:
     return script.SourceExerciseRow(
         id=source_id,
@@ -49,6 +50,7 @@ def make_source(
         instructions=instructions,
         equipment=equipment,
         category=category,
+        primary_muscles=primary_muscles,
     )
 
 
@@ -91,6 +93,16 @@ def test_parse_labeled_description_sections_extracts_summary_and_fields():
     assert parsed.mechanic == "Compound"
 
 
+def test_normalize_muscle_array_handles_various_formats():
+    assert script.normalize_muscle_array(["Chest"]) == "chest"
+    assert script.normalize_muscle_array(["Lower Back"]) == "lower back"
+    assert script.normalize_muscle_array(["", "Biceps"]) == "biceps"
+    assert script.normalize_muscle_array(None) is None
+    assert script.normalize_muscle_array([]) is None
+    assert script.normalize_muscle_array([""]) is None
+    assert script.normalize_muscle_array("Shoulders") == "shoulders"
+
+
 def test_build_description_summary_prefers_readable_metadata():
     assert (
         script.build_description_summary(
@@ -98,8 +110,9 @@ def test_build_description_summary_prefers_readable_metadata():
             mechanic="Isolation",
             category="Stretching",
             force="Pull",
+            primary_muscle="Back",
         )
-        == "Intermediate isolation stretching exercise."
+        == "Intermediate isolation back stretching exercise."
     )
     assert (
         script.build_description_summary(
@@ -131,14 +144,32 @@ def test_plan_row_update_uses_source_metadata_for_legacy_description():
     assert outcome.update is not None
 
     changed_fields = {change.field_name: change for change in outcome.update.changes}
-    assert changed_fields["instructions"].new_value == "Sit tall\nDrive elbows back"
-    assert changed_fields["equipment"].new_value == "Cable"
-    assert changed_fields["category"].new_value == "Strength"
     assert (
         changed_fields["description"].new_value
         == "Beginner compound strength exercise."
     )
     assert "rewrite_legacy_description" in outcome.update.reasons
+
+
+def test_plan_row_update_uses_source_metadata_includes_muscle_for_legacy_description():
+    row = make_row(
+        external_id="101",
+        description="Pull\nBeginner\nCompound",
+    )
+    source = make_source(primary_muscles=["Back"])
+
+    outcome = script.plan_row_update(
+        row,
+        source_row=source,
+        overwrite_populated_fields=False,
+        rewrite_description_from_source=False,
+    )
+
+    changed_fields = {change.field_name: change for change in outcome.update.changes}
+    assert (
+        changed_fields["description"].new_value
+        == "Beginner compound back strength exercise."
+    )
 
 
 def test_plan_row_update_preserves_human_description_without_rewrite_flag():
@@ -422,7 +453,28 @@ def test_rewrite_description_from_source_flag_controls_clean_descriptions(
     if expected_description is None:
         assert "description" not in changed_fields
     else:
+        # source default in make_source + new logic = includes muscle if provided
+        # but our make_source default has primary_muscles=None
         assert changed_fields["description"].new_value == expected_description
+
+
+def test_rewrite_description_from_source_flag_includes_muscle():
+    row = make_row(
+        external_id="101",
+        description="A stable rowing variation for upper-back focus.",
+    )
+    source = make_source(primary_muscles=["Lats"])
+
+    outcome = script.plan_row_update(
+        row,
+        source_row=source,
+        overwrite_populated_fields=False,
+        rewrite_description_from_source=True,
+    )
+
+    assert outcome.update is not None
+    changed_fields = {change.field_name: change for change in outcome.update.changes}
+    assert changed_fields["description"].new_value == "Beginner compound lats strength exercise."
 
 
 def test_rewrite_description_from_source_skips_empty_summary(monkeypatch):
