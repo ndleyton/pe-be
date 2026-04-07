@@ -819,14 +819,18 @@ const WorkoutPage = () => {
         onRegenerateRecap={handleRegenerateRecap}
       />
 
-      <SaveRoutineModal
-        isOpen={showSaveRoutineModal}
-        onClose={() => setShowSaveRoutineModal(false)}
-        workoutName={workoutName || "My Routine"}
-        exercises={exercises}
-        workoutId={workoutId}
-        workoutTypeId={workoutTypeId}
-      />
+      {showSaveRoutineModal ? (
+        <Suspense fallback={null}>
+          <SaveRoutineModal
+            isOpen={showSaveRoutineModal}
+            onClose={() => setShowSaveRoutineModal(false)}
+            workoutName={workoutName || "My Routine"}
+            exercises={exercises}
+            workoutId={workoutId}
+            workoutTypeId={workoutTypeId}
+          />
+        </Suspense>
+      ) : null}
 
       {showAddExerciseModal ? (
         <Suspense fallback={null}>
