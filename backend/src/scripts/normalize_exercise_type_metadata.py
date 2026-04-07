@@ -243,7 +243,8 @@ def normalize_muscle_array(value: object) -> str | None:
             if normalized:
                 return normalized.lower()
         return None
-    return normalize_single_line_text(value)
+    normalized = normalize_single_line_text(value)
+    return normalized.lower() if normalized else None
 
 
 def normalize_multiline_text(value: object) -> str | None:
