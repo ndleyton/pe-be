@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { Exercise } from "@/features/exercises/api";
 import { Dumbbell } from "lucide-react";
 import ExerciseRow from "../ExerciseRow";
@@ -21,7 +21,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
 }) => {
   const [expandedIds, setExpandedIds] = useState<Set<string | number>>(new Set());
 
-  const handleToggleExpand = (exerciseId: string | number) => {
+  const handleToggleExpand = useCallback((exerciseId: string | number) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(exerciseId)) {
@@ -31,7 +31,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
       }
       return next;
     });
-  };
+  }, []);
 
   return (
     <div className="">
@@ -69,7 +69,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
               onExerciseUpdate={onExerciseUpdate}
               onExerciseDelete={onExerciseDelete}
               isExpanded={expandedIds.has(exercise.id)}
-              onToggleExpand={() => handleToggleExpand(exercise.id)}
+              onToggleExpand={handleToggleExpand}
             />
           ))}
         </div>

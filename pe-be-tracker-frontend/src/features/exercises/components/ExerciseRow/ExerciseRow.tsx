@@ -1,8 +1,9 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 
 import { useExerciseRowState, useExerciseSetActions } from "@/features/exercises/hooks";
 import type { ExerciseRowProps } from "@/features/exercises/lib/exerciseRow";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui";
+import { cn } from "@/lib/utils";
 import { ExerciseRowHeader } from "./ExerciseRowHeader";
 import { ExerciseSetTable } from "./ExerciseSetTable";
 import { ExerciseRowImagePanel } from "./ExerciseRowImagePanel";
@@ -21,9 +22,8 @@ const ExerciseRow = ({
   onToggleExpand,
 }: ExerciseRowProps) => {
   const [isExpandedInternal, setIsExpandedInternal] = useState(false);
-  
+
   const isExpanded = isExpandedProp ?? isExpandedInternal;
-  const setExpanded = onToggleExpand ?? setIsExpandedInternal;
 
   const {
     addSet,
@@ -74,21 +74,40 @@ const ExerciseRow = ({
     (exercise.exercise_type.status ?? "released") === "released" && 
     (exercise.exercise_type.images?.length ?? 0) > 0;
 
+  const handleExpandedChange = useCallback((nextExpanded: boolean) => {
+    if (onToggleExpand) {
+      if (nextExpanded !== isExpanded) {
+        onToggleExpand(exercise.id);
+      }
+      return;
+    }
+
+    setIsExpandedInternal(nextExpanded);
+  }, [exercise.id, isExpanded, onToggleExpand]);
+
+  const handleToggleExpand = useCallback(() => {
+    handleExpandedChange(!isExpanded);
+  }, [handleExpandedChange, isExpanded]);
+
   return (
     <Accordion 
       type="single" 
       collapsible 
       value={isExpanded ? "images" : ""}
       onValueChange={(value: string) => {
-        if (value === "images") {
-          if (!isExpanded) setExpanded(true);
-        } else {
-          if (isExpanded) setExpanded(false);
-        }
+        handleExpandedChange(value === "images");
       }}
     >
       <AccordionItem value="images" className="border-none">
-        <Card key={exercise.id} className="bg-card/80 overflow-hidden rounded-2xl border-border/5 border-t-4 border-t-rose-500/10 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 hover:shadow-xl transition-all duration-300">
+        <Card
+          key={exercise.id}
+          className={cn(
+            "overflow-hidden rounded-2xl border-border/5 border-t-4 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 transition-all duration-300 hover:shadow-xl",
+            isExpanded
+              ? "bg-rose-500/10 border-t-rose-500/30"
+              : "bg-card/80 border-t-rose-500/10",
+          )}
+        >
           <CardHeader className="pb-2">
             <ExerciseRowHeader
               currentIntensityUnit={currentIntensityUnit}
@@ -98,7 +117,7 @@ const ExerciseRow = ({
               exerciseSettingsOpen={exerciseSettingsOpen}
               isUnsavedExercise={isUnsavedExercise}
               isExpanded={isExpanded}
-              onToggleExpand={() => setExpanded(!isExpanded)}
+              onToggleExpand={handleToggleExpand}
               hasImages={hasImages}
               onExerciseDelete={handleExerciseDelete}
               onExerciseNotesOpen={openExerciseNotes}
