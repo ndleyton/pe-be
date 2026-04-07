@@ -316,9 +316,6 @@ const ExerciseTypeModal = ({
               onClick={() => handleSelect(exerciseType)}
               className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              {/* Subtle background glow on hover */}
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
-
               <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
                 <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-tr from-primary/30 to-transparent group-hover:opacity-0 transition-opacity" />
                 <span className="relative z-10">{exerciseType.name.charAt(0)}</span>
