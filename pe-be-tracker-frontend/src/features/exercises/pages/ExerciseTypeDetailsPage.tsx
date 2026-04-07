@@ -5,7 +5,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ArrowLeft, Image, ImagePlus, Plus } from "lucide-react";
+import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import {
   getExerciseTypeById,
@@ -326,21 +326,23 @@ const ExerciseTypeDetailsPage = () => {
         aria-busy="true"
         aria-live="polite"
       >
-        {/* Header skeleton matching details layout */}
-        <div className="mb-6">
+        <div className="mb-8">
           {/* Title Row */}
-          <div className="mb-4 flex items-center gap-3 sm:gap-4">
-            <Skeleton className="h-10 w-10 shrink-0 rounded" />
-            <Skeleton className="h-8 min-w-0 flex-1" />
-          </div>
-          {/* Muscles and Button Row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <Skeleton className="h-6 w-24 rounded-full" />
-              <Skeleton className="h-6 w-16 rounded-full" />
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
+            <div className="flex items-start gap-3 sm:gap-4 flex-1">
+              <Skeleton className="h-10 w-10 shrink-0 rounded" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-8 w-full sm:w-3/4" />
+                <div className="flex gap-4">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
             </div>
-            <Skeleton className="h-9 w-28 shrink-0 rounded" />
+            <div className="hidden sm:flex shrink-0 gap-2">
+              <Skeleton className="h-9 w-24 rounded-xl" />
+              <Skeleton className="h-9 w-32 rounded-xl" />
+            </div>
           </div>
         </div>
 
@@ -352,10 +354,22 @@ const ExerciseTypeDetailsPage = () => {
         <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2 lg:gap-8">
           <div className="space-y-6">
             <div className="bg-muted/50 border-border/20 h-64 rounded-2xl border shadow-md"></div>
+            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
             <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
+              <Skeleton className="mb-4 h-6 w-32" />
               <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-2 h-4 w-11/12" />
               <Skeleton className="mb-2 h-4 w-5/6" />
-              <Skeleton className="h-4 w-4/5" />
             </div>
           </div>
           <div className="space-y-6">
@@ -416,41 +430,46 @@ const ExerciseTypeDetailsPage = () => {
   return (
     <div className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         {/* Title Row */}
-        <div className="mb-4 flex items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" asChild className="mt-1 shrink-0">
-            <Link to="/exercise-types">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <h1 className="min-w-0 text-2xl leading-tight font-bold break-words sm:text-3xl">
-            {exerciseType.name}
-          </h1>
-          {statusLabel ? (
-            <Badge variant="secondary" className="mt-1 shrink-0">
-              {statusLabel}
-            </Badge>
-          ) : null}
-        </div>
-
-        {/* Muscles and Button Row */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-            {exerciseType.muscles && exerciseType.muscles.length > 0
-              ? exerciseType.muscles.map((muscle) => (
-                <span
-                  key={muscle.id}
-                  className="focus:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                >
-                  {muscle.name}
-                </span>
-              ))
-              : null}
+        <div className="flex items-start justify-between gap-3 sm:gap-4 text-left">
+          <div className="flex items-start gap-3 sm:gap-4 flex-1">
+            <Button variant="ghost" size="icon" asChild className="mt-1 shrink-0">
+              <Link to="/exercise-types">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="text-2xl leading-tight font-bold break-words sm:text-3xl">
+                  {exerciseType.name}
+                </h1>
+                {statusLabel ? (
+                  <Badge variant="secondary" className="shrink-0">
+                    {statusLabel}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                {exerciseType.category && (
+                  <span className="flex items-center gap-1.5 capitalize">
+                    <Tag className="h-3.5 w-3.5" />
+                    {exerciseType.category}
+                  </span>
+                )}
+                {exerciseType.equipment && (
+                  <span className="flex items-center gap-1.5 capitalize">
+                    <Dumbbell className="h-3.5 w-3.5" />
+                    {exerciseType.equipment}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+
           <div className="flex shrink-0 gap-2">
             {isSuperuser ? (
-              <Button size="sm" variant="glass" asChild className="rounded-xl">
+              <Button size="sm" variant="glass" asChild className="hidden rounded-xl sm:inline-flex">
                 <Link to={`/exercise-types/${exerciseTypeId}/admin-images`}>
                   <ImagePlus className="mr-1 h-4 w-4" />
                   Manage Images
@@ -482,7 +501,8 @@ const ExerciseTypeDetailsPage = () => {
                 ) : (
                   <>
                     <Plus className="mr-1 h-4 w-4" />
-                    Add to Workout
+                    <span className="hidden sm:inline">Add to Workout</span>
+                    <span className="sm:hidden">Add</span>
                   </>
                 )}
               </Button>
@@ -700,11 +720,32 @@ const ExerciseTypeDetailsPage = () => {
           </div>
 
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
-            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+            {exerciseType.muscles && exerciseType.muscles.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {exerciseType.muscles.map((muscle) => (
+                  <span
+                    key={muscle.id}
+                    className="bg-primary/10 text-primary/80 border-primary/20 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                  >
+                    {muscle.name}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-foreground leading-relaxed whitespace-pre-line text-sm">
               {exerciseType.description ||
                 "No description available for this exercise type."}
             </p>
           </div>
+
+          {exerciseType.instructions && (
+            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
+              <h2 className="mb-4 text-lg font-semibold">Instructions</h2>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                {exerciseType.instructions}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

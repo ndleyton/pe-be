@@ -177,4 +177,29 @@ describe("ExerciseTypeDetailsPage", () => {
       screen.getByText(/non-released exercise types can be reviewed and updated before release/i),
     ).toBeInTheDocument();
   });
+  it("displays equipment, category, and instructions", async () => {
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Barbell Bench Press",
+        equipment: "barbell",
+        category: "strength",
+        instructions: "Lie on the bench and press the bar up.",
+        status: "released",
+        images: [],
+      }),
+    );
+
+    render(<ExerciseTypeDetailsPage />);
+
+    await waitFor(() => {
+      // Use exact match for badges to avoid matching the title "Barbell Bench Press"
+      expect(screen.getByText("barbell")).toBeInTheDocument();
+    });
+    expect(screen.getByText("strength")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /instructions/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/lie on the bench and press the bar up/i),
+    ).toBeInTheDocument();
+  });
 });
