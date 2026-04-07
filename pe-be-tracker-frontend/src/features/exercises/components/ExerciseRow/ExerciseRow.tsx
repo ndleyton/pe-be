@@ -22,6 +22,7 @@ const ExerciseRow = ({
   onToggleExpand,
 }: ExerciseRowProps) => {
   const [isExpandedInternal, setIsExpandedInternal] = useState(false);
+  const isControlled = isExpandedProp !== undefined;
 
   const isExpanded = isExpandedProp ?? isExpandedInternal;
 
@@ -75,15 +76,18 @@ const ExerciseRow = ({
     (exercise.exercise_type.images?.length ?? 0) > 0;
 
   const handleExpandedChange = useCallback((nextExpanded: boolean) => {
-    if (onToggleExpand) {
+    if (isControlled) {
       if (nextExpanded !== isExpanded) {
-        onToggleExpand(exercise.id);
+        onToggleExpand?.(exercise.id);
       }
       return;
     }
 
     setIsExpandedInternal(nextExpanded);
-  }, [exercise.id, isExpanded, onToggleExpand]);
+    if (nextExpanded !== isExpanded) {
+      onToggleExpand?.(exercise.id);
+    }
+  }, [exercise.id, isControlled, isExpanded, onToggleExpand]);
 
   const handleToggleExpand = useCallback(() => {
     handleExpandedChange(!isExpanded);

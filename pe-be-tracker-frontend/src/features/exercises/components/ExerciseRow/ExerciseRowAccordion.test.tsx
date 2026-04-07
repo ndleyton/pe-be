@@ -85,6 +85,25 @@ describe("ExerciseRow Accordion", () => {
     expect(onToggleExpand).toHaveBeenCalled();
   });
 
+  it("still toggles internal state when only onToggleExpand is provided", () => {
+    const onToggleExpand = vi.fn();
+
+    render(
+      <ExerciseRow
+        exercise={mockExercise}
+        onToggleExpand={onToggleExpand}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /show exercise images/i });
+    fireEvent.click(trigger);
+
+    expect(onToggleExpand).toHaveBeenCalledWith(mockExercise.id);
+    expect(
+      screen.getByRole("button", { name: /hide exercise images/i }),
+    ).toBeInTheDocument();
+  });
+
   it("updates the accessible label when expanded", () => {
     render(
       <ExerciseRow
