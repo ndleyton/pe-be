@@ -474,7 +474,10 @@ def test_rewrite_description_from_source_flag_includes_muscle():
 
     assert outcome.update is not None
     changed_fields = {change.field_name: change for change in outcome.update.changes}
-    assert changed_fields["description"].new_value == "Beginner compound lats strength exercise."
+    assert (
+        changed_fields["description"].new_value
+        == "Beginner compound lats strength exercise."
+    )
 
 
 def test_rewrite_description_from_source_skips_empty_summary(monkeypatch):
