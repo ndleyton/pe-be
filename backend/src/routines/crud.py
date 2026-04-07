@@ -191,6 +191,7 @@ async def create_routine(
         for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
+                notes=exercise_template_data.notes,
                 routine_id=routine.id,
             )
             session.add(exercise_template)
@@ -273,6 +274,7 @@ async def create_routine_admin(
         for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
+                notes=exercise_template_data.notes,
                 routine_id=routine.id,
             )
             session.add(exercise_template)
@@ -362,6 +364,7 @@ async def update_routine(
         for exercise_template_data in routine_data.exercise_templates:
             exercise_template = ExerciseTemplate(
                 exercise_type_id=exercise_template_data.exercise_type_id,
+                notes=exercise_template_data.notes,
                 routine_id=routine.id,
             )
             session.add(exercise_template)
