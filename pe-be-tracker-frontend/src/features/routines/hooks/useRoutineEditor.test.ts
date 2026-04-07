@@ -119,4 +119,24 @@ describe("useRoutineEditor", () => {
     expect(result.current.description).toBe("Updated description");
     expect(result.current.hasUnsavedChanges).toBe(true);
   });
+
+  it("updates template notes and marks editor as dirty", async () => {
+    const { result } = renderHook(() =>
+      useRoutineEditor({
+        availableIntensityUnits,
+        routine,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.editorTemplates[0].notes).toBe("");
+    });
+
+    act(() => {
+      result.current.updateTemplate("101", { notes: "Keep core tight" });
+    });
+
+    expect(result.current.editorTemplates[0].notes).toBe("Keep core tight");
+    expect(result.current.hasUnsavedChanges).toBe(true);
+  });
 });
