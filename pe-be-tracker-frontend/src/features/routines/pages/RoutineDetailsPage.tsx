@@ -163,7 +163,7 @@ const RoutineDetailsPage = () => {
           </Button>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
-                {isEditing ? "Routine Editor" : name || "Routine Details"}
+                {canEdit || isEditing ? "Routine Editor" : "Routine Details"}
               </h1>
               {editAccessMessage && !isEditing && (
                 <Badge
@@ -181,6 +181,13 @@ const RoutineDetailsPage = () => {
         </div>
 
         <div className="grid gap-8 text-left">
+
+          {editAccessMessage && !isEditing && (
+            <Alert className="bg-primary/5 border-primary/20 rounded-2xl backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider opacity-70">View-only routine</AlertTitle>
+              <AlertDescription className="text-sm italic">{editAccessMessage}</AlertDescription>
+            </Alert>
+          )}
 
           {actionError && (
             <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
