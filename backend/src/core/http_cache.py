@@ -92,15 +92,20 @@ def build_cached_json_response(
     cache_control: str,
     vary: str | None = None,
     status_code: int = 200,
+    extra_headers: dict[str, str] | None = None,
 ) -> Response:
     headers = {"Cache-Control": cache_control}
     if etag is not None:
         headers["ETag"] = etag
     if vary is not None:
         headers["Vary"] = vary
+    if extra_headers:
+        headers.update(extra_headers)
 
-    if etag is not None and request is not None and _etag_matches(
-        request.headers.get("if-none-match"), etag
+    if (
+        etag is not None
+        and request is not None
+        and _etag_matches(request.headers.get("if-none-match"), etag)
     ):
         return Response(status_code=304, headers=headers)
 

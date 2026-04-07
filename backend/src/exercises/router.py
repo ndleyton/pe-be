@@ -12,6 +12,7 @@ from src.core.http_cache import (
     response_cache,
 )
 from src.core.observability import (
+    set_current_span_attributes,
     traced_model_dump,
     traced_model_dump_many,
     traced_model_validate_many,
@@ -89,6 +90,17 @@ def _exercise_types_cache_headers(
             "Cookie",
         )
     return ("private, no-store", "Cookie")
+
+
+def _annotate_cache(route_name: str, *, decision: str, key: str | None) -> None:
+    attributes = {
+        "cache.system": "in_memory_ttl",
+        "cache.route": route_name,
+        "cache.decision": decision,
+    }
+    if key is not None:
+        attributes["cache.key"] = key
+    set_current_span_attributes(attributes)
 
 
 # Exercise endpoints
@@ -201,13 +213,18 @@ async def get_exercise_types(
         )
         cached_response = await response_cache.get(cache_key)
         if cached_response is not None:
+            _annotate_cache("exercise_types", decision="hit", key=cache_key)
             return build_cached_json_response(
                 request,
                 body=cached_response.body,
                 etag=cached_response.etag,
                 cache_control=cache_control,
                 vary=vary,
+                extra_headers={"X-Cache-Status": "HIT"},
             )
+        _annotate_cache("exercise_types", decision="miss", key=cache_key)
+    else:
+        _annotate_cache("exercise_types", decision="bypass", key=None)
 
     response_model = await ExerciseTypeService.get_all_exercise_types(
         session,
@@ -246,6 +263,7 @@ async def get_exercise_types(
             etag=cached_response.etag,
             cache_control=cache_control,
             vary=vary,
+            extra_headers={"X-Cache-Status": "MISS"},
         )
 
     return build_cached_json_response(
@@ -254,6 +272,7 @@ async def get_exercise_types(
         etag=None,
         cache_control=cache_control,
         vary=vary,
+        extra_headers={"X-Cache-Status": "BYPASS"},
     )
 
 
@@ -371,12 +390,15 @@ async def get_muscle_groups(
     cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
     cached_response = await response_cache.get(cache_key)
     if cached_response is not None:
+        _annotate_cache("muscle_groups", decision="hit", key=cache_key)
         return build_cached_json_response(
             request,
             body=cached_response.body,
             etag=cached_response.etag,
             cache_control=cache_control,
+            extra_headers={"X-Cache-Status": "HIT"},
         )
+    _annotate_cache("muscle_groups", decision="miss", key=cache_key)
 
     muscle_groups = await MuscleGroupService.get_all_muscle_groups(session)
     response_models = traced_model_validate_many(
@@ -401,6 +423,7 @@ async def get_muscle_groups(
         body=cached_response.body,
         etag=cached_response.etag,
         cache_control=cache_control,
+        extra_headers={"X-Cache-Status": "MISS"},
     )
 
 
@@ -418,12 +441,15 @@ async def get_intensity_units(
     cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
     cached_response = await response_cache.get(cache_key)
     if cached_response is not None:
+        _annotate_cache("intensity_units", decision="hit", key=cache_key)
         return build_cached_json_response(
             request,
             body=cached_response.body,
             etag=cached_response.etag,
             cache_control=cache_control,
+            extra_headers={"X-Cache-Status": "HIT"},
         )
+    _annotate_cache("intensity_units", decision="miss", key=cache_key)
 
     intensity_units = await IntensityUnitService.get_all_intensity_units(session)
     response_models = traced_model_validate_many(
@@ -448,6 +474,7 @@ async def get_intensity_units(
         body=cached_response.body,
         etag=cached_response.etag,
         cache_control=cache_control,
+        extra_headers={"X-Cache-Status": "MISS"},
     )
 
 

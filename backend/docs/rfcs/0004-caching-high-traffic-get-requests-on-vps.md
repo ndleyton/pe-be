@@ -401,6 +401,28 @@ This RFC does not require Caddy response caching in the first rollout.
 5. Measure hit rate, latency, DB load, and memory impact on the VPS.
 6. Revisit Redis only if the measurements justify the extra service.
 
+## Phase 1 Verification
+
+After deploy, operators should be able to verify phase 1 behavior with repeated requests against the public origin.
+
+Examples:
+
+```bash
+curl -I "https://app.example.com/api/v1/exercises/exercise-types/?released_only=true&order_by=usage&offset=0&limit=100"
+curl -I "https://app.example.com/api/v1/exercises/muscle-groups/"
+curl -I "https://app.example.com/api/v1/exercises/intensity-units/"
+curl -I "https://app.example.com/api/v1/workouts/workout-types/"
+```
+
+Expected signals:
+
+- first request should normally return `X-Cache-Status: MISS`
+- repeated request inside the TTL should return `X-Cache-Status: HIT`
+- cacheable responses should include `Cache-Control`
+- cacheable responses should include `ETag`
+- repeating a request with `If-None-Match` should return `304 Not Modified`
+- authenticated default `/exercise-types/` should stay `X-Cache-Status: BYPASS` with `Cache-Control: private, no-store`
+
 ## Consequences
 
 ### Positive

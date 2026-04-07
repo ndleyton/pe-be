@@ -97,10 +97,12 @@ async def test_released_only_exercise_types_are_cached_and_return_not_modified(
     first_response = await async_client.get(url)
     assert first_response.status_code == 200
     assert first_response.headers["cache-control"].startswith("public, max-age=60")
+    assert first_response.headers["x-cache-status"] == "MISS"
     assert "etag" in first_response.headers
 
     second_response = await async_client.get(url)
     assert second_response.status_code == 200
+    assert second_response.headers["x-cache-status"] == "HIT"
     assert second_response.json() == first_response.json()
     fake_get_exercise_types.assert_awaited_once()
 
@@ -108,6 +110,7 @@ async def test_released_only_exercise_types_are_cached_and_return_not_modified(
         url, headers={"If-None-Match": first_response.headers["etag"]}
     )
     assert not_modified.status_code == 304
+    assert not_modified.headers["x-cache-status"] == "HIT"
     assert not_modified.content == b""
     fake_get_exercise_types.assert_awaited_once()
 
@@ -133,6 +136,8 @@ async def test_authenticated_exercise_types_bypass_shared_cache(
     assert first_response.status_code == 200
     assert second_response.status_code == 200
     assert first_response.headers["cache-control"] == "private, no-store"
+    assert first_response.headers["x-cache-status"] == "BYPASS"
+    assert second_response.headers["x-cache-status"] == "BYPASS"
     assert first_response.headers["vary"] == "Cookie"
     assert "etag" not in first_response.headers
     assert fake_get_exercise_types.await_count == 2
@@ -159,6 +164,8 @@ async def test_workout_types_cache_is_invalidated_after_create(
     assert first_response.status_code == 200
     assert second_response.status_code == 200
     assert first_response.headers["cache-control"] == "public, max-age=3600"
+    assert first_response.headers["x-cache-status"] == "MISS"
+    assert second_response.headers["x-cache-status"] == "HIT"
     assert fake_get_workout_types.await_count == 1
 
     create_response = await async_client.post(
@@ -169,4 +176,5 @@ async def test_workout_types_cache_is_invalidated_after_create(
 
     third_response = await async_client.get(url)
     assert third_response.status_code == 200
+    assert third_response.headers["x-cache-status"] == "MISS"
     assert fake_get_workout_types.await_count == 2
