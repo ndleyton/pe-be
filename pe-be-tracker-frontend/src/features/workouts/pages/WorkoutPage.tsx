@@ -592,14 +592,17 @@ const WorkoutPage = () => {
       return;
     }
 
-    void queryClient.prefetchQuery({
-      queryKey: ["exerciseTypes"],
-      queryFn: () =>
+    void queryClient.prefetchInfiniteQuery({
+      queryKey: ["exerciseTypes", "modal", "usage"],
+      queryFn: ({ pageParam }) =>
         getExerciseTypes(
           "usage",
-          undefined,
+          pageParam as number | undefined,
           EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
         ),
+      getNextPageParam: (lastPage: { next_cursor?: number | null }) =>
+        lastPage?.next_cursor ?? undefined,
+      initialPageParam: undefined as number | undefined,
     });
   }, [isAuthenticated, queryClient]);
 

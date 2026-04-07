@@ -1,19 +1,35 @@
 import {
   startTransition,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
+  type UIEvent,
 } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/features/exercises/api";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
+import {
+  getExerciseTypes,
+  createExerciseType,
+  type ExerciseType,
+} from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
 import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
 
 interface ExerciseTypeModalProps {
@@ -24,6 +40,17 @@ interface ExerciseTypeModalProps {
 
 const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
 const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
+const EXERCISE_TYPE_MODAL_SCROLL_THRESHOLD = 160;
+const EXERCISE_TYPE_MODAL_QUERY_KEY = [
+  "exerciseTypes",
+  "modal",
+  "usage",
+] as const;
+
+type ExerciseTypePage = {
+  data: ExerciseType[];
+  next_cursor?: number | null;
+};
 
 // Type guard to check if an exercise type has muscles property
 const hasMusclesProperty = (
@@ -44,6 +71,7 @@ const ExerciseTypeModal = ({
   const [visibleResultCount, setVisibleResultCount] = useState(
     EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT,
   );
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -52,19 +80,31 @@ const ExerciseTypeModal = ({
 
   const {
     data: serverExerciseTypesResponse,
-    isLoading,
+    isPending: isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
     error,
-  } = useQuery({
-    queryKey: ["exerciseTypes"],
-    queryFn: () => getExerciseTypes("usage", undefined, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
-    enabled: isAuthenticated, // Only fetch when authenticated
+  } = useInfiniteQuery({
+    queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY,
+    queryFn: ({ pageParam }) =>
+      getExerciseTypes("usage", pageParam, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    enabled: isAuthenticated && isOpen,
   });
+
+  const serverExerciseTypes = useMemo(
+    () =>
+      serverExerciseTypesResponse?.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : [],
+      ) ?? [],
+    [serverExerciseTypesResponse],
+  );
 
   // Use guest data if not authenticated, server data if authenticated
   const exerciseTypes = isAuthenticated
-    ? Array.isArray(serverExerciseTypesResponse?.data)
-      ? serverExerciseTypesResponse.data
-      : []
+    ? serverExerciseTypes
     : Array.isArray(guestData.exerciseTypes)
       ? guestData.exerciseTypes
       : [];
@@ -106,6 +146,9 @@ const ExerciseTypeModal = ({
     }
 
     setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
 
     const frameId = window.requestAnimationFrame(() => {
       startTransition(() => {
@@ -137,11 +180,10 @@ const ExerciseTypeModal = ({
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
   const isSearchActive = deferredSearchTerm.trim().length > 0;
-  const visibleExerciseTypes = isSearchActive
-    ? filteredExerciseTypes
-    : filteredExerciseTypes.slice(0, visibleResultCount);
-  const canLoadMoreResults =
-    !isSearchActive && visibleExerciseTypes.length < filteredExerciseTypes.length;
+  const visibleExerciseTypes =
+    isAuthenticated || isSearchActive
+      ? filteredExerciseTypes
+      : filteredExerciseTypes.slice(0, visibleResultCount);
 
   const createInFlight = useRef(false);
 
@@ -149,31 +191,42 @@ const ExerciseTypeModal = ({
     if (isAuthenticated) {
       // Optimistically update the times_used count in the cache for server data
       queryClient.setQueryData(
-        ["exerciseTypes"],
-        (
-          oldData:
-            | { data: ExerciseType[]; next_cursor?: number | null }
-            | undefined,
-        ) => {
-          if (!oldData || !oldData.data) return oldData;
+        EXERCISE_TYPE_MODAL_QUERY_KEY,
+        (oldData: InfiniteData<ExerciseTypePage> | undefined) => {
+          if (!oldData?.pages.length) return oldData;
 
-          const updatedTypes = oldData.data.map((type) =>
-            type.id === exerciseType.id
-              ? { ...type, times_used: type.times_used + 1 }
-              : type,
-          );
+          const pageSizes = oldData.pages.map((page) => page.data.length);
+          const updatedTypes = oldData.pages
+            .flatMap((page) => page.data)
+            .map((type) =>
+              type.id === exerciseType.id
+                ? { ...type, times_used: type.times_used + 1 }
+                : type,
+            );
 
           // Re-sort by times_used DESC, then by name ASC to maintain the expected order
-          const sortedTypes = updatedTypes.sort((a, b) => {
+          const sortedTypes = [...updatedTypes].sort((a, b) => {
             if (a.times_used !== b.times_used) {
               return b.times_used - a.times_used; // DESC
             }
             return a.name.localeCompare(b.name); // ASC
           });
 
+          let currentOffset = 0;
+          const pages = oldData.pages.map((page, index) => {
+            const pageSize = pageSizes[index];
+            const nextOffset = currentOffset + pageSize;
+            const nextPage = {
+              ...page,
+              data: sortedTypes.slice(currentOffset, nextOffset),
+            };
+            currentOffset = nextOffset;
+            return nextPage;
+          });
+
           return {
             ...oldData,
-            data: sortedTypes,
+            pages,
           };
         },
       );
@@ -248,6 +301,82 @@ const ExerciseTypeModal = ({
       setSearchTerm("");
     }
   };
+
+  const loadMoreBrowseResults = useCallback(
+    (container?: HTMLDivElement | null) => {
+      if (!isOpen || isSearchActive) {
+        return;
+      }
+
+      const activeContainer = container ?? scrollContainerRef.current;
+      if (!activeContainer) {
+        return;
+      }
+
+      const { scrollTop, clientHeight, scrollHeight } = activeContainer;
+      if (clientHeight === 0 || scrollHeight === 0) {
+        return;
+      }
+
+      const isNearBottom =
+        scrollTop + clientHeight >=
+        scrollHeight - EXERCISE_TYPE_MODAL_SCROLL_THRESHOLD;
+
+      if (!isNearBottom) {
+        return;
+      }
+
+      if (isAuthenticated) {
+        if (!hasNextPage || isFetchingNextPage) {
+          return;
+        }
+
+        void fetchNextPage();
+        return;
+      }
+
+      if (visibleResultCount >= filteredExerciseTypes.length) {
+        return;
+      }
+
+      setVisibleResultCount((current) =>
+        Math.min(
+          current + EXERCISE_TYPE_MODAL_RENDER_INCREMENT,
+          filteredExerciseTypes.length,
+        ),
+      );
+    },
+    [
+      fetchNextPage,
+      filteredExerciseTypes.length,
+      hasNextPage,
+      isAuthenticated,
+      isFetchingNextPage,
+      isOpen,
+      isSearchActive,
+      visibleResultCount,
+    ],
+  );
+
+  const handleResultsScroll = (event: UIEvent<HTMLDivElement>) => {
+    loadMoreBrowseResults(event.currentTarget);
+  };
+
+  useEffect(() => {
+    if (!isOpen || isSearchActive) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      loadMoreBrowseResults();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [
+    isOpen,
+    isSearchActive,
+    loadMoreBrowseResults,
+  ]);
 
   const SkeletonCard = () => (
     <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
@@ -385,22 +514,11 @@ const ExerciseTypeModal = ({
         )}
         </div>
 
-        {canLoadMoreResults && (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() =>
-                setVisibleResultCount((current) =>
-                  Math.min(
-                    current + EXERCISE_TYPE_MODAL_RENDER_INCREMENT,
-                    filteredExerciseTypes.length,
-                  ),
-                )
-              }
-              className="rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-accent/60"
-            >
-              Load More
-            </button>
+        {isAuthenticated && isFetchingNextPage && !isSearchActive && (
+          <div className="flex justify-center py-1">
+            <span className="text-muted-foreground text-xs font-medium">
+              Loading more exercises...
+            </span>
           </div>
         )}
       </div>
@@ -473,7 +591,12 @@ const ExerciseTypeModal = ({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-border/20">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleResultsScroll}
+          data-testid="exercise-type-modal-scroll-container"
+          className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-border/20"
+        >
           {renderContent()}
         </div>
       </DialogContent>
