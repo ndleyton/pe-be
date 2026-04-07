@@ -5,6 +5,10 @@ from fastapi.responses import FileResponse
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.cache_tags import (
+    EXERCISE_PUBLIC_CACHE_TAG,
+    EXERCISE_TAXONOMY_CACHE_TAG,
+)
 from src.core.config import settings
 from src.core.http_cache import (
     build_cached_json_response,
@@ -42,8 +46,6 @@ from src.users.models import User
 router = APIRouter(tags=["exercises"])
 tracer = trace.get_tracer(__name__)
 assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
-EXERCISE_PUBLIC_CACHE_TAG = "exercise-public-catalog"
-EXERCISE_TAXONOMY_CACHE_TAG = "exercise-taxonomy"
 
 
 def _exercise_types_cache_key(

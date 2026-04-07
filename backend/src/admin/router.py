@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 import logging
 
+from src.core.cache_tags import (
+    EXERCISE_PUBLIC_CACHE_TAG,
+    EXERCISE_TAXONOMY_CACHE_TAG,
+)
 from src.core.config import settings
 from google.genai import errors
 from src.admin.exercise_image_service import (
@@ -34,8 +38,6 @@ from src.routines.service import routine_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-EXERCISE_PUBLIC_CACHE_TAG = "exercise-public-catalog"
-EXERCISE_TAXONOMY_CACHE_TAG = "exercise-taxonomy"
 
 
 def _require_superuser(user: User = Depends(current_active_user)) -> User:
