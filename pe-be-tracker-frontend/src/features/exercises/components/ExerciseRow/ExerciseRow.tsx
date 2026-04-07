@@ -1,17 +1,30 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 
 import { useExerciseRowState, useExerciseSetActions } from "@/features/exercises/hooks";
 import type { ExerciseRowProps } from "@/features/exercises/lib/exerciseRow";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui";
 import { ExerciseRowHeader } from "./ExerciseRowHeader";
 import { ExerciseSetTable } from "./ExerciseSetTable";
+import { ExerciseRowImagePanel } from "./ExerciseRowImagePanel";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem 
+} from "@/shared/components/ui/accordion";
 
 const ExerciseRow = ({
   exercise,
   onExerciseDelete,
   onExerciseUpdate,
   workoutId,
+  isExpanded: isExpandedProp,
+  onToggleExpand,
 }: ExerciseRowProps) => {
+  const [isExpandedInternal, setIsExpandedInternal] = useState(false);
+  
+  const isExpanded = isExpandedProp ?? isExpandedInternal;
+  const setExpanded = onToggleExpand ?? setIsExpandedInternal;
+
   const {
     addSet,
     decrementReps,
@@ -57,54 +70,80 @@ const ExerciseRow = ({
     updateSetNotes,
   });
 
-  return (
-    <Card key={exercise.id} className="bg-card/80 overflow-hidden rounded-2xl border-border/5 border-t-4 border-t-rose-500/10 border-b-4  shadow-lg backdrop-blur-sm shadow-black/5 hover:shadow-xl transition-all duration-300">
-      <CardHeader className="pb-2">
-        <ExerciseRowHeader
-          currentIntensityUnit={currentIntensityUnit}
-          exercise={exercise}
-          exerciseNotesOpen={exerciseNotesOpen}
-          exerciseNotesValue={exerciseNotesValue}
-          exerciseSettingsOpen={exerciseSettingsOpen}
-          isUnsavedExercise={isUnsavedExercise}
-          onExerciseDelete={handleExerciseDelete}
-          onExerciseNotesOpen={openExerciseNotes}
-          onExerciseNotesOpenChange={handleExerciseNotesOpenChange}
-          onExerciseNotesSave={() => {
-            updateExerciseNotes(exerciseNotesValue);
-            handleExerciseNotesOpenChange(false);
-          }}
-          onExerciseNotesValueChange={setExerciseNotesValue}
-          onExerciseSettingsOpenChange={setExerciseSettingsOpen}
-          onIntensityUnitChange={handleIntensityUnitChange}
-        />
-      </CardHeader>
+  const hasImages = 
+    (exercise.exercise_type.status ?? "released") === "released" && 
+    (exercise.exercise_type.images?.length ?? 0) > 0;
 
-      <CardContent className="p-4 pt-0">
-        <ExerciseSetTable
-          activeSetId={activeSetId}
-          currentIntensityUnitAbbreviation={currentIntensityUnit.abbreviation}
-          currentIntensityUnitId={currentIntensityUnit.id}
-          exerciseSets={exerciseSets}
-          intensityInputs={intensityInputs}
-          isUnsavedExercise={isUnsavedExercise}
-          onAddSet={() => void addSet(currentIntensityUnit.id)}
-          onCloseSetOptions={closeSetOptions}
-          onDecrementReps={decrementReps}
-          onDeleteSet={deleteSet}
-          onIncrementReps={incrementReps}
-          onOpenSetOptions={openSetOptions}
-          onSetOptionsOpenChange={handleSetOptionsOpenChange}
-          onSetNotesValueChange={setSetNotesValue}
-          onSetRepsInputValue={setRepsInputValue}
-          onSetWeightInputValue={setIntensityInputValue}
-          onToggleSetCompletion={toggleSetCompletion}
-          onUpdateSetField={updateSetField}
-          repsInputs={repsInputs}
-          setNotesValue={setNotesValue}
-        />
-      </CardContent>
-    </Card>
+  return (
+    <Accordion 
+      type="single" 
+      collapsible 
+      value={isExpanded ? "images" : ""}
+      onValueChange={(value: string) => {
+        if (value === "images") {
+          if (!isExpanded) setExpanded(true);
+        } else {
+          if (isExpanded) setExpanded(false);
+        }
+      }}
+    >
+      <AccordionItem value="images" className="border-none">
+        <Card key={exercise.id} className="bg-card/80 overflow-hidden rounded-2xl border-border/5 border-t-4 border-t-rose-500/10 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 hover:shadow-xl transition-all duration-300">
+          <CardHeader className="pb-2">
+            <ExerciseRowHeader
+              currentIntensityUnit={currentIntensityUnit}
+              exercise={exercise}
+              exerciseNotesOpen={exerciseNotesOpen}
+              exerciseNotesValue={exerciseNotesValue}
+              exerciseSettingsOpen={exerciseSettingsOpen}
+              isUnsavedExercise={isUnsavedExercise}
+              isExpanded={isExpanded}
+              onToggleExpand={() => setExpanded(!isExpanded)}
+              hasImages={hasImages}
+              onExerciseDelete={handleExerciseDelete}
+              onExerciseNotesOpen={openExerciseNotes}
+              onExerciseNotesOpenChange={handleExerciseNotesOpenChange}
+              onExerciseNotesSave={() => {
+                updateExerciseNotes(exerciseNotesValue);
+                handleExerciseNotesOpenChange(false);
+              }}
+              onExerciseNotesValueChange={setExerciseNotesValue}
+              onExerciseSettingsOpenChange={setExerciseSettingsOpen}
+              onIntensityUnitChange={handleIntensityUnitChange}
+            />
+          </CardHeader>
+
+          <AccordionContent className="p-0">
+            <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
+          </AccordionContent>
+
+          <CardContent className="p-4 pt-0">
+            <ExerciseSetTable
+              activeSetId={activeSetId}
+              currentIntensityUnitAbbreviation={currentIntensityUnit.abbreviation}
+              currentIntensityUnitId={currentIntensityUnit.id}
+              exerciseSets={exerciseSets}
+              intensityInputs={intensityInputs}
+              isUnsavedExercise={isUnsavedExercise}
+              onAddSet={() => void addSet(currentIntensityUnit.id)}
+              onCloseSetOptions={closeSetOptions}
+              onDecrementReps={decrementReps}
+              onDeleteSet={deleteSet}
+              onIncrementReps={incrementReps}
+              onOpenSetOptions={openSetOptions}
+              onSetOptionsOpenChange={handleSetOptionsOpenChange}
+              onSetNotesValueChange={setSetNotesValue}
+              onSetRepsInputValue={setRepsInputValue}
+              onSetWeightInputValue={setIntensityInputValue}
+              onToggleSetCompletion={toggleSetCompletion}
+              onUpdateSetField={updateSetField}
+              repsInputs={repsInputs}
+              setNotesValue={setNotesValue}
+            />
+          </CardContent>
+        </Card>
+      </AccordionItem>
+    </Accordion>
   );
 };
 

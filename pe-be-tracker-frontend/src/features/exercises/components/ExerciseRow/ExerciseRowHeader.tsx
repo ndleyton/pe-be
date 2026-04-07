@@ -1,10 +1,11 @@
-import { ExternalLink, MoreVertical, StickyNote } from "lucide-react";
+import { ChevronDown, ExternalLink, MoreVertical, StickyNote } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Exercise, IntensityUnit } from "@/features/exercises/api";
 import type { GuestIntensityUnit } from "@/features/exercises/lib/intensityUnits";
 import { ExerciseTypeMore } from "../ExerciseTypeMore";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import { cn } from "@/lib/utils";
 import {
   Button,
   Dialog,
@@ -27,6 +28,9 @@ type ExerciseRowHeaderProps = {
   exerciseNotesValue: string;
   exerciseSettingsOpen: boolean;
   isUnsavedExercise: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  hasImages: boolean;
   onExerciseDelete: () => void | Promise<void>;
   onExerciseNotesOpen: () => void;
   onExerciseNotesOpenChange: (open: boolean) => void;
@@ -43,6 +47,9 @@ export const ExerciseRowHeader = ({
   exerciseNotesValue,
   exerciseSettingsOpen,
   isUnsavedExercise,
+  isExpanded,
+  onToggleExpand,
+  hasImages,
   onExerciseDelete,
   onExerciseNotesOpen,
   onExerciseNotesOpenChange,
@@ -58,11 +65,54 @@ export const ExerciseRowHeader = ({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
-          <span className="text-primary-foreground text-sm font-bold">
-            {exercise.exercise_type.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        {hasImages && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="group relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg p-0 transition-all duration-300 active:scale-90"
+            aria-label={isExpanded ? "Hide exercise images" : "Show exercise images"}
+            onClick={() => onToggleExpand()}
+            aria-expanded={isExpanded}
+          >
+            {/* Background layer */}
+            <div className={cn(
+              "absolute inset-0 transition-all duration-300 ease-in-out",
+              isExpanded 
+                ? "bg-rose-500 shadow-lg shadow-rose-500/30" 
+                : "bg-primary group-hover:bg-primary/90"
+            )} />
+
+            {/* Initial Letter - centered, fades out on hover/expand */}
+            <span className={cn(
+              "relative text-primary-foreground text-sm font-bold transition-all duration-300 ease-in-out",
+              isExpanded ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100 group-hover:-translate-y-4 group-hover:opacity-0"
+            )}>
+              {exercise.exercise_type.name.charAt(0).toUpperCase()}
+            </span>
+
+            {/* Chevron icon - centered, fades in and slides up on hover/expand */}
+            <div className={cn(
+              "absolute flex items-center justify-center transition-all duration-300 ease-in-out",
+              isExpanded 
+                ? "translate-y-0 opacity-100" 
+                : "translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+            )}>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-primary-foreground transition-transform duration-500",
+                  isExpanded ? "rotate-180" : "rotate-0"
+                )}
+              />
+            </div>
+          </Button>
+        )}
+        {!hasImages && (
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg transition-transform duration-300">
+            <span className="text-primary-foreground text-sm font-bold">
+              {exercise.exercise_type.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <h3 className="text-foreground font-semibold">
             {exercise.exercise_type.name}

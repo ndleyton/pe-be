@@ -1,5 +1,4 @@
-
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Exercise } from "@/features/exercises/api";
 import { Dumbbell } from "lucide-react";
 import ExerciseRow from "../ExerciseRow";
@@ -20,6 +19,20 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
   onExerciseUpdate,
   onExerciseDelete,
 }) => {
+  const [expandedIds, setExpandedIds] = useState<Set<string | number>>(new Set());
+
+  const handleToggleExpand = (exerciseId: string | number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) {
+        next.delete(exerciseId);
+      } else {
+        next.add(exerciseId);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="">
       {status === "pending" && <LoadingThrobber />}
@@ -55,6 +68,8 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
               workoutId={workoutId}
               onExerciseUpdate={onExerciseUpdate}
               onExerciseDelete={onExerciseDelete}
+              isExpanded={expandedIds.has(exercise.id)}
+              onToggleExpand={() => handleToggleExpand(exercise.id)}
             />
           ))}
         </div>
