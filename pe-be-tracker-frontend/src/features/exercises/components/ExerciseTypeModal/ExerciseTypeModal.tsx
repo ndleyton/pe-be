@@ -1,4 +1,12 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getExerciseTypes, createExerciseType, type ExerciseType } from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
@@ -29,6 +37,7 @@ const ExerciseTypeModal = ({
   onSelect,
 }: ExerciseTypeModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [areResultsReady, setAreResultsReady] = useState(false);
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -81,15 +90,32 @@ const ExerciseTypeModal = ({
     },
   });
 
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAreResultsReady(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setAreResultsReady(true);
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen]);
+
   const filteredExerciseTypes = useMemo(() => {
-    if (!searchTerm.trim()) return exerciseTypes;
-    const term = searchTerm.toLowerCase().trim();
+    if (!deferredSearchTerm.trim()) return exerciseTypes;
+    const term = deferredSearchTerm.toLowerCase().trim();
     return exerciseTypes.filter(
       (type: ExerciseType | GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [exerciseTypes, searchTerm]);
+  }, [deferredSearchTerm, exerciseTypes]);
 
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
@@ -267,6 +293,16 @@ const ExerciseTypeModal = ({
           <p className="text-muted-foreground text-sm px-4">
             Create &quot;{searchTerm.trim()}&quot; using the button above.
           </p>
+        </div>
+      );
+    }
+
+    if (!areResultsReady) {
+      return (
+        <div className="grid gap-3 p-1">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <SkeletonCard key={`deferred-skeleton-${index}`} />
+          ))}
         </div>
       );
     }

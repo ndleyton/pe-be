@@ -166,6 +166,8 @@ describe("ExerciseTypeModal", () => {
       />,
     );
 
-    expect(screen.getByText("Squats")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Squats")).toBeInTheDocument();
+    });
   });
 });
