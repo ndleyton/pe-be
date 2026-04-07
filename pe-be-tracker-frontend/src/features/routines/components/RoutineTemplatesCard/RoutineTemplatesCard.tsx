@@ -77,7 +77,7 @@ export const RoutineTemplatesCard = ({
           <div
             key={template.id}
             data-testid={`routine-template-${templateIndex}`}
-            className="rounded-2xl border border-border/40 bg-primary/5 p-5 shadow-sm transition-all hover:bg-primary/[0.07]"
+            className="rounded-2xl border border-border/40 bg-muted/20 p-5 shadow-sm transition-all hover:bg-muted/30"
           >
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-4">
@@ -121,23 +121,23 @@ export const RoutineTemplatesCard = ({
               )}
             </div>
 
-            <div className="space-y-3">
-              {template.set_templates.map((setTemplate, setIndex) => (
-                <div
-                  key={setTemplate.id}
-                  data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
-                  className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
-                >
-                  <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/10 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-black border border-primary/10">
-                        {setIndex + 1}
+            <div className={canEdit ? "space-y-3" : "flex flex-wrap gap-2 mt-2"}>
+              {template.set_templates.map((setTemplate, setIndex) =>
+                canEdit ? (
+                  <div
+                    key={setTemplate.id}
+                    data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
+                    className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
+                  >
+                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/10 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-black border border-primary/10">
+                          {setIndex + 1}
+                        </div>
+                        <div className="text-xs font-black uppercase tracking-widest opacity-80">
+                          {formatSetSummary(setTemplate)}
+                        </div>
                       </div>
-                      <div className="text-xs font-black uppercase tracking-widest opacity-80">
-                        {formatSetSummary(setTemplate)}
-                      </div>
-                    </div>
-                    {canEdit && (
                       <Button
                         data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
                         variant="ghost"
@@ -148,71 +148,67 @@ export const RoutineTemplatesCard = ({
                         <Trash2 className="mr-1.5 h-3 w-3" />
                         Remove
                       </Button>
-                    )}
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="grid gap-1.5">
-                      <label
-                        htmlFor={`${template.id}-${setTemplate.id}-reps`}
-                        className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                      >
-                        Reps
-                      </label>
-                      <Input
-                        id={`${template.id}-${setTemplate.id}-reps`}
-                        data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={setTemplate.reps ?? ""}
-                        readOnly={!canEdit}
-                        onChange={(event) => {
-                          const nextValue = event.target.value;
-                          onUpdateSet(template.id, setTemplate.id, {
-                            reps:
-                              nextValue.trim() === ""
-                                ? null
-                                : Number.parseInt(nextValue, 10),
-                          });
-                        }}
-                        placeholder="0"
-                        className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
-                      />
                     </div>
 
-                    <div className="grid gap-1.5">
-                      <label
-                        htmlFor={`${template.id}-${setTemplate.id}-intensity`}
-                        className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                      >
-                        Intensity
-                      </label>
-                      <Input
-                        id={`${template.id}-${setTemplate.id}-intensity`}
-                        data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
-                        inputMode="decimal"
-                        value={
-                          setTemplate.intensity != null
-                            ? formatDecimal(setTemplate.intensity)
-                            : ""
-                        }
-                        readOnly={!canEdit}
-                        onChange={(event) =>
-                          onUpdateSet(template.id, setTemplate.id, {
-                            intensity: parseDecimalInput(event.target.value),
-                          })
-                        }
-                        placeholder="0.0"
-                        className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
-                      />
-                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid gap-1.5">
+                        <label
+                          htmlFor={`${template.id}-${setTemplate.id}-reps`}
+                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                        >
+                          Reps
+                        </label>
+                        <Input
+                          id={`${template.id}-${setTemplate.id}-reps`}
+                          data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={setTemplate.reps ?? ""}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            onUpdateSet(template.id, setTemplate.id, {
+                              reps:
+                                nextValue.trim() === ""
+                                  ? null
+                                  : Number.parseInt(nextValue, 10),
+                            });
+                          }}
+                          placeholder="0"
+                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                        />
+                      </div>
 
-                    <div className="grid gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">
-                        Unit
-                      </span>
-                      {canEdit ? (
+                      <div className="grid gap-1.5">
+                        <label
+                          htmlFor={`${template.id}-${setTemplate.id}-intensity`}
+                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                        >
+                          Intensity
+                        </label>
+                        <Input
+                          id={`${template.id}-${setTemplate.id}-intensity`}
+                          data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
+                          inputMode="decimal"
+                          value={
+                            setTemplate.intensity != null
+                              ? formatDecimal(setTemplate.intensity)
+                              : ""
+                          }
+                          onChange={(event) =>
+                            onUpdateSet(template.id, setTemplate.id, {
+                              intensity: parseDecimalInput(event.target.value),
+                            })
+                          }
+                          placeholder="0.0"
+                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                        />
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">
+                          Unit
+                        </span>
                         <Button
                           data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
                           variant="outline"
@@ -226,17 +222,21 @@ export const RoutineTemplatesCard = ({
                           </span>
                           <span className="text-[8px] opacity-40 uppercase">Change</span>
                         </Button>
-                      ) : (
-                        <div className="h-10 flex items-center justify-center bg-primary/5 rounded-xl border border-transparent text-xs font-semibold">
-                          {setTemplate.intensity_unit
-                            ? setTemplate.intensity_unit.abbreviation
-                            : "---"}
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div
+                    key={setTemplate.id}
+                    className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border/10"
+                  >
+                    <span className="text-[10px] font-black opacity-30">{setIndex + 1}</span>
+                    <span className="text-xs font-bold tracking-tight italic opacity-90">
+                      {formatSetSummary(setTemplate)}
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
 
             {canEdit && (
