@@ -263,7 +263,9 @@ async def test_admin_reference_image_option_endpoints(
         "src.admin.router.generate_reference_image_options", fake_generate
     )
     monkeypatch.setattr("src.admin.router.apply_reference_or_option", fake_apply)
-    monkeypatch.setattr("src.admin.router.response_cache.invalidate_tags", fake_invalidate)
+    monkeypatch.setattr(
+        "src.admin.router.response_cache.invalidate_tags", fake_invalidate
+    )
 
     from src.core.config import settings
 
