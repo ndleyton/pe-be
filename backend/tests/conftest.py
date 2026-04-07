@@ -36,6 +36,7 @@ except Exception:
 
 from src.main import app
 from src.core.database import get_async_session, Base
+from src.core.http_cache import response_cache
 
 # Ensure domain models are imported so metadata includes all tables
 import src.exercises.models  # noqa: F401
@@ -183,6 +184,13 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def clear_response_cache() -> AsyncGenerator[None, None]:
+    await response_cache.clear()
+    yield
+    await response_cache.clear()
 
 
 @pytest.fixture

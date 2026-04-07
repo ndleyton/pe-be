@@ -20,6 +20,7 @@ from src.admin.schemas import (
     AdminExerciseImageOptionsResponse,
 )
 from src.core.database import get_async_session
+from src.core.http_cache import response_cache
 from src.users.router import current_active_user
 from src.users.models import User
 from src.exercises.service import ExerciseTypeService
@@ -33,6 +34,8 @@ from src.routines.service import routine_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+EXERCISE_PUBLIC_CACHE_TAG = "exercise-public-catalog"
+EXERCISE_TAXONOMY_CACHE_TAG = "exercise-taxonomy"
 
 
 def _require_superuser(user: User = Depends(current_active_user)) -> User:
@@ -58,6 +61,10 @@ async def import_exercises(user: User = Depends(_require_superuser)) -> Dict[str
 
         # Import to main tables
         await import_exercises_to_database(data)
+        await response_cache.invalidate_tags(
+            EXERCISE_PUBLIC_CACHE_TAG,
+            EXERCISE_TAXONOMY_CACHE_TAG,
+        )
 
         return {
             "status": "success",
@@ -253,12 +260,14 @@ async def release_exercise_type(
     user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> ExerciseTypeRead:
-    return await ExerciseTypeService.release_existing_exercise_type(
+    exercise_type = await ExerciseTypeService.release_existing_exercise_type(
         session,
         exercise_type_id,
         reviewer_id=user.id,
         payload=payload,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return exercise_type
 
 
 @router.get(

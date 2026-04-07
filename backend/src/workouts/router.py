@@ -1,8 +1,14 @@
 from typing import List, Optional
-from fastapi import Depends, APIRouter, status, HTTPException, Query
+from fastapi import Depends, APIRouter, status, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import settings
+from src.core.http_cache import (
+    build_cached_json_response,
+    render_json_bytes,
+    response_cache,
+)
 from src.core.observability import traced_model_dump_many, traced_model_validate_many
 from src.workouts.schemas import (
     WorkoutRead,
@@ -24,6 +30,7 @@ from src.exercises.service import ExerciseService
 from src.exercises.schemas import ExerciseRead
 
 router = APIRouter(tags=["workouts"])
+WORKOUT_TYPES_CACHE_TAG = "workout-types"
 
 
 # ----- Collection routes -----
@@ -63,9 +70,46 @@ workout_types_router = APIRouter(prefix="/workout-types", tags=["workout-types"]
 
 
 @workout_types_router.get("/", response_model=List[WorkoutTypeRead])
-async def get_workout_types(session: AsyncSession = Depends(get_async_session)):
+async def get_workout_types(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+):
     """Get all workout types"""
-    return await WorkoutTypeService.get_all_workout_types(session)
+    cache_key = "workout-types"
+    cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
+    cached_response = await response_cache.get(cache_key)
+    if cached_response is not None:
+        return build_cached_json_response(
+            request,
+            body=cached_response.body,
+            etag=cached_response.etag,
+            cache_control=cache_control,
+        )
+
+    workout_types = await WorkoutTypeService.get_all_workout_types(session)
+    response_models = traced_model_validate_many(
+        WorkoutTypeRead,
+        workout_types,
+        span_name="workouts.get_workout_types.response_model_validate",
+        attributes={"serialization.item_count": len(workout_types)},
+    )
+    response_payload = traced_model_dump_many(
+        response_models,
+        span_name="workouts.get_workout_types.response_model_dump",
+        attributes={"serialization.item_count": len(response_models)},
+    )
+    cached_response = await response_cache.set(
+        cache_key,
+        body=render_json_bytes(response_payload),
+        ttl_seconds=settings.TAXONOMY_CACHE_TTL_SECONDS,
+        tags=(WORKOUT_TYPES_CACHE_TAG,),
+    )
+    return build_cached_json_response(
+        request,
+        body=cached_response.body,
+        etag=cached_response.etag,
+        cache_control=cache_control,
+    )
 
 
 @workout_types_router.post(
@@ -77,7 +121,11 @@ async def create_workout_type(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new workout type"""
-    return await WorkoutTypeService.create_new_workout_type(session, workout_type_in)
+    workout_type = await WorkoutTypeService.create_new_workout_type(
+        session, workout_type_in
+    )
+    await response_cache.invalidate_tags(WORKOUT_TYPES_CACHE_TAG)
+    return workout_type
 
 
 # Include the sub-router early to avoid path conflicts with parameterized routes
