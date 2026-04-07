@@ -49,7 +49,6 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 
 const ExerciseTypeDetailsPage = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -82,6 +81,7 @@ const ExerciseTypeDetailsPage = () => {
     queryFn: () => getExerciseTypeById(exerciseTypeId!),
     enabled: !!exerciseTypeId,
   });
+  const exerciseTypeName = exerciseType?.name ?? "Exercise";
   const isPageDataPending = isLoadingExerciseType && !exerciseType;
 
   const {
@@ -648,7 +648,7 @@ const ExerciseTypeDetailsPage = () => {
                           <CarouselItem key={imageUrl}>
                             <img
                               src={imageUrl}
-                              alt={`${exerciseType.name} - Image ${index + 1}`}
+                              alt={`${exerciseTypeName} - Image ${index + 1}`}
                               className="h-full w-full object-contain"
                               onError={() => {
                                 setFailedImages((prev) =>
