@@ -30,7 +30,7 @@ export const RoutineQuickStartCard = ({
   );
 
   return (
-    <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex min-w-[280px] max-w-[320px] flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
+    <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
       <CardHeader className="pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
@@ -63,8 +63,7 @@ export const RoutineQuickStartCard = ({
           <Button
             asChild
             variant="outline"
-            className="flex-1 rounded-xl text-xs font-bold transition-all hover:bg-accent/50"
-            size="sm"
+            className="flex-1 rounded-xl text-xs font-bold transition-all hover:bg-accent/50 h-10 shadow-sm"
             onMouseEnter={preloadRoutineDetailsPage}
             onTouchStart={preloadRoutineDetailsPage}
             onFocus={preloadRoutineDetailsPage}
@@ -73,8 +72,7 @@ export const RoutineQuickStartCard = ({
           </Button>
           <Button
             onClick={() => onStartWorkout(routine)}
-            className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg shadow-primary/10 transition-all active:scale-95 backdrop-blur-sm border border-white/10"
-            size="sm"
+            className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg shadow-primary/10 transition-all active:scale-95 backdrop-blur-sm border border-white/10 h-10"
           >
             Start Workout
           </Button>

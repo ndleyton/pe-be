@@ -68,22 +68,29 @@ const RoutinesPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 lg:px-8">
       <RoutineStructuredData data={routineListJsonLd} />
       <div className="mb-6">
-        <div className="mb-4 flex items-center gap-4 text-left">
+        <div className="mb-6 flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             asChild
             aria-label="Go back"
-            className="lg:hidden"
+            className="md:hidden -ml-2"
           >
             <Link to="/workouts">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold">Routines</h1>
+          <div className="flex-1">
+            <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Routines
+            </h1>
+            <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-0.5">
+              Select or search for a plan
+            </p>
+          </div>
         </div>
         {/* Search and Filter Controls */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row">
@@ -125,7 +132,7 @@ const RoutinesPage = () => {
       {/* Routines Grid */}
       {!isPending && (
         <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
             {filteredRoutines.map((routine) => (
               <RoutineQuickStartCard
                 key={routine.id}
