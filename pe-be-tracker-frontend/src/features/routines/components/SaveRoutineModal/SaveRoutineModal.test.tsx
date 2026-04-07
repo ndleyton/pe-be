@@ -141,4 +141,22 @@ describe("SaveRoutineModal", () => {
       });
     });
   });
+
+  it("does not render modal content while closed", () => {
+    render(
+      <SaveRoutineModal
+        isOpen={false}
+        onClose={vi.fn()}
+        workoutName="Push Day"
+        workoutTypeId={42}
+        exercises={exercises}
+        workoutId="25"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: /save as routine/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/routine name/i)).not.toBeInTheDocument();
+  });
 });

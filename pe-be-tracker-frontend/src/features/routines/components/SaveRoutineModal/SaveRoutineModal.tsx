@@ -36,6 +36,10 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  if (!isOpen) {
+    return null;
+  }
+
   const updateExerciseSetsDoneStatus = async () => {
     if (!isAuthenticated) return;
     const setsToUpdate = exercises.flatMap((exercise) =>
