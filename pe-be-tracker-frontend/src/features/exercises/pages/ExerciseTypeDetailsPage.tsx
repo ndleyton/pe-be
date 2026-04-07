@@ -82,6 +82,7 @@ const ExerciseTypeDetailsPage = () => {
     queryFn: () => getExerciseTypeById(exerciseTypeId!),
     enabled: !!exerciseTypeId,
   });
+  const isPageDataPending = isLoadingExerciseType && !exerciseType;
 
   const {
     data: stats,
@@ -306,7 +307,7 @@ const ExerciseTypeDetailsPage = () => {
     return () => clearTimeout(preloadTimeout);
   }, []);
 
-  if (exerciseTypeError) {
+  if (exerciseTypeError && !exerciseType) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Alert variant="destructive">
@@ -319,76 +320,7 @@ const ExerciseTypeDetailsPage = () => {
     );
   }
 
-  if (isLoadingExerciseType) {
-    return (
-      <div
-        className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8"
-        aria-busy="true"
-        aria-live="polite"
-      >
-        <div className="mb-8">
-          {/* Title Row */}
-          <div className="flex items-start justify-between gap-3 sm:gap-4">
-            <div className="flex items-start gap-3 sm:gap-4 flex-1">
-              <Skeleton className="h-10 w-10 shrink-0 rounded" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-8 w-full sm:w-3/4" />
-                <div className="flex gap-4">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              </div>
-            </div>
-            <div className="hidden sm:flex shrink-0 gap-2">
-              <Skeleton className="h-9 w-24 rounded-xl" />
-              <Skeleton className="h-9 w-32 rounded-xl" />
-            </div>
-          </div>
-        </div>
-
-        {/* Keep spinner for tests while showing skeletons */}
-        <div className="flex justify-center py-4" role="status">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2 lg:gap-8">
-          <div className="space-y-6">
-            <div className="bg-muted/50 border-border/20 h-64 rounded-2xl border shadow-md"></div>
-            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            </div>
-            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
-              <Skeleton className="mb-4 h-6 w-32" />
-              <Skeleton className="mb-2 h-4 w-full" />
-              <Skeleton className="mb-2 h-4 w-11/12" />
-              <Skeleton className="mb-2 h-4 w-5/6" />
-            </div>
-          </div>
-          <div className="space-y-6">
-            {Array.from({ length: DEFAULT_SKELETON_COUNT }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-card border-border/20 rounded-2xl border p-6 shadow-md"
-              >
-                <Skeleton className="mb-4 h-6 w-56" />
-                <Skeleton className="h-40 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!exerciseType) {
+  if (!exerciseType && !isLoadingExerciseType) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Alert variant="warning">
@@ -400,30 +332,40 @@ const ExerciseTypeDetailsPage = () => {
   }
 
   const statusLabel =
-    exerciseType.status === "candidate"
+    exerciseType?.status === "candidate"
       ? "Candidate"
-      : exerciseType.status === "in_review"
+      : exerciseType?.status === "in_review"
         ? "In Review"
         : null;
-  const isOwner = currentUserId != null && exerciseType.owner_id === currentUserId;
+  const hasExerciseType = exerciseType != null;
+  const isOwner =
+    hasExerciseType &&
+    currentUserId != null &&
+    exerciseType.owner_id === currentUserId;
   const canEditNonReleased =
+    hasExerciseType &&
     isAuthenticated &&
     exerciseType.status !== "released" &&
     (isOwner || isSuperuser);
   const canEditReleasedAsAdmin =
-    isAuthenticated && isSuperuser && exerciseType.status === "released";
+    hasExerciseType &&
+    isAuthenticated &&
+    isSuperuser &&
+    exerciseType.status === "released";
   const isEditable = canEditNonReleased || (canEditReleasedAsAdmin && isAdminEditingReleased);
   const canRequestEvaluation =
+    hasExerciseType &&
     isAuthenticated &&
     isOwner &&
     exerciseType.status === "candidate" &&
     !requestEvaluationMutation.isPending;
   const canRelease =
+    hasExerciseType &&
     isSuperuser &&
     exerciseType.status !== "released" &&
     !releaseMutation.isPending;
   const editIntro =
-    exerciseType.status === "released"
+    hasExerciseType && exerciseType.status === "released"
       ? "Admin edits apply directly to this released exercise type."
       : "Non-released exercise types can be reviewed and updated before release.";
 
@@ -441,23 +383,33 @@ const ExerciseTypeDetailsPage = () => {
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h1 className="text-2xl leading-tight font-bold break-words sm:text-3xl">
-                  {exerciseType.name}
-                </h1>
-                {statusLabel ? (
+                {isPageDataPending ? (
+                  <Skeleton className="h-8 w-64 sm:h-9 sm:w-80" />
+                ) : (
+                  <h1 className="text-2xl leading-tight font-bold break-words sm:text-3xl">
+                    {exerciseType?.name}
+                  </h1>
+                )}
+                {!isPageDataPending && statusLabel ? (
                   <Badge variant="secondary" className="shrink-0">
                     {statusLabel}
                   </Badge>
                 ) : null}
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {exerciseType.category && (
+                {isPageDataPending ? (
+                  <>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-24" />
+                  </>
+                ) : null}
+                {exerciseType?.category && (
                   <span className="flex items-center gap-1.5 capitalize">
                     <Tag className="h-3.5 w-3.5" />
                     {exerciseType.category}
                   </span>
                 )}
-                {exerciseType.equipment && (
+                {exerciseType?.equipment && (
                   <span className="flex items-center gap-1.5 capitalize">
                     <Dumbbell className="h-3.5 w-3.5" />
                     {exerciseType.equipment}
@@ -468,7 +420,13 @@ const ExerciseTypeDetailsPage = () => {
           </div>
 
           <div className="flex shrink-0 gap-2">
-            {isSuperuser ? (
+            {isPageDataPending ? (
+              <>
+                <Skeleton className="hidden h-9 w-28 rounded-xl sm:block" />
+                <Skeleton className="h-9 w-16 rounded-xl" />
+              </>
+            ) : null}
+            {isSuperuser && !isPageDataPending ? (
               <Button size="sm" variant="glass" asChild className="hidden rounded-xl sm:inline-flex">
                 <Link to={`/exercise-types/${exerciseTypeId}/admin-images`}>
                   <ImagePlus className="mr-1 h-4 w-4" />
@@ -494,7 +452,7 @@ const ExerciseTypeDetailsPage = () => {
                 size="sm"
                 className="shrink-0 rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-md transition-all active:scale-95"
                 onClick={() => addMutation.mutate()}
-                disabled={addMutation.isPending}
+                disabled={addMutation.isPending || isPageDataPending}
               >
                 {addMutation.isPending ? (
                   "Adding..."
@@ -664,7 +622,9 @@ const ExerciseTypeDetailsPage = () => {
               style={{ aspectRatio: containerRatio }}
               data-testid="exercise-carousel-container"
             >
-              {(() => {
+              {isPageDataPending ? (
+                <Skeleton className="h-full w-full rounded-none" />
+              ) : (() => {
                 if (validImages.length > 0) {
                   if (!firstImageLoaded) {
                     return (
@@ -720,7 +680,14 @@ const ExerciseTypeDetailsPage = () => {
           </div>
 
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
-            {exerciseType.muscles && exerciseType.muscles.length > 0 && (
+            {isPageDataPending ? (
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-14 rounded-full" />
+              </div>
+            ) : null}
+            {exerciseType?.muscles && exerciseType.muscles.length > 0 && (
               <div className="mb-4 flex flex-wrap gap-2">
                 {exerciseType.muscles.map((muscle) => (
                   <span
@@ -732,26 +699,41 @@ const ExerciseTypeDetailsPage = () => {
                 ))}
               </div>
             )}
-            <p className="text-foreground leading-relaxed whitespace-pre-line text-sm">
-              {exerciseType.description ||
-                "No description available for this exercise type."}
-            </p>
+            {isPageDataPending ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
+            ) : (
+              <p className="text-foreground leading-relaxed whitespace-pre-line text-sm">
+                {exerciseType?.description ||
+                  "No description available for this exercise type."}
+              </p>
+            )}
           </div>
 
-          {exerciseType.instructions && (
+          {isPageDataPending ? (
+            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
+              <Skeleton className="mb-4 h-6 w-32" />
+              <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-2 h-4 w-11/12" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+          ) : exerciseType?.instructions ? (
             <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
               <h2 className="mb-4 text-lg font-semibold">Instructions</h2>
               <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                 {exerciseType.instructions}
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="space-y-6">
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Progressive Overload</h2>
-            {isLoadingStats ? (
+            {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-4">
                   <span className="loading loading-spinner loading-md"></span>
@@ -778,7 +760,7 @@ const ExerciseTypeDetailsPage = () => {
 
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Last Workout</h2>
-            {isLoadingStats ? (
+            {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-2">
                   <span className="loading loading-spinner loading-sm"></span>
@@ -799,7 +781,7 @@ const ExerciseTypeDetailsPage = () => {
 
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Personal Best</h2>
-            {isLoadingStats ? (
+            {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-2">
                   <span className="loading loading-spinner loading-sm"></span>
