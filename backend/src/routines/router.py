@@ -39,7 +39,7 @@ async def get_routine(
 ):
     """Get a specific routine by ID.
 
-    Public routines are viewable without authentication.
+    Public and link-only routines are viewable without authentication.
     """
     routine = await routine_service.get_routine(
         session, routine_id, user.id if user else None

@@ -85,7 +85,7 @@ async def get_routine_by_id_for_user(
 ) -> Optional[Routine]:
     """Get a routine by ID with relationships loaded.
 
-    Accessible when owned by the user OR marked public.
+    Accessible when owned by the user OR marked public/link_only.
     """
     result = await session.execute(
         _routine_detail_query().where(
@@ -94,6 +94,7 @@ async def get_routine_by_id_for_user(
                 or_(
                     Routine.creator_id == user_id,
                     Routine.visibility == Routine.RoutineVisibility.public,
+                    Routine.visibility == Routine.RoutineVisibility.link_only,
                 ),
             )
         )
@@ -131,11 +132,14 @@ async def get_any_routine_by_id(
 async def get_public_routine_by_id(
     session: AsyncSession, routine_id: int, populate_existing: bool = False
 ) -> Optional[Routine]:
-    """Get a public routine by ID with relationships loaded."""
+    """Get a shareable (public/link_only) routine by ID with relationships loaded."""
     result = await session.execute(
         _routine_detail_query(populate_existing=populate_existing).where(
             Routine.id == routine_id,
-            Routine.visibility == Routine.RoutineVisibility.public,
+            or_(
+                Routine.visibility == Routine.RoutineVisibility.public,
+                Routine.visibility == Routine.RoutineVisibility.link_only,
+            ),
         )
     )
     return result.scalar_one_or_none()

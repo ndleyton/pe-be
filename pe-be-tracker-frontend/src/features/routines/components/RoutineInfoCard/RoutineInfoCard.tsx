@@ -5,7 +5,6 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
@@ -66,56 +65,64 @@ export const RoutineInfoCard = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Routine Info</CardTitle>
-        <CardDescription>
-          {isEditing
-            ? "Update the routine metadata and save the full template when you're ready."
-            : canEdit
-              ? "You own this routine. Tap Edit to make changes."
-              : "This routine is view-only for your account."}
-        </CardDescription>
+    <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg">📋</span>
+          <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+            Routine Overview
+          </h4>
+        </div>
+        <CardTitle className="text-xl font-bold tracking-tight">
+          {isEditing ? "Modify Routine Details" : name || "Untitled Routine"}
+        </CardTitle>
+        {description && !isEditing && (
+          <p className="text-muted-foreground text-sm leading-relaxed italic mt-2">
+            &ldquo;{description}&rdquo;
+          </p>
+        )}
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <label htmlFor="routine-name" className="text-sm font-medium">
-            Routine Name
-          </label>
-          <Input
-            id="routine-name"
-            data-testid="routine-name-input"
-            value={name}
-            readOnly={!isEditing}
-            onChange={(event) => onNameChange(event.target.value)}
-            placeholder="Enter routine name"
-            className={!isEditing ? "bg-muted/30" : ""}
-          />
-        </div>
+      <CardContent className="grid gap-6">
+        {isEditing && (
+          <>
+            <div className="grid gap-2">
+              <label htmlFor="routine-name" className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                Routine Name
+              </label>
+              <Input
+                id="routine-name"
+                data-testid="routine-name-input"
+                value={name}
+                onChange={(event) => onNameChange(event.target.value)}
+                placeholder="Enter routine name"
+                className="h-12 rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all font-semibold"
+              />
+            </div>
 
-        <div className="grid gap-2">
-          <label htmlFor="routine-description" className="text-sm font-medium">
-            Description
-          </label>
-          <Textarea
-            id="routine-description"
-            data-testid="routine-description-input"
-            value={description}
-            readOnly={!isEditing}
-            onChange={(event) => onDescriptionChange(event.target.value)}
-            placeholder="Optional routine description"
-            className={!isEditing ? "bg-muted/30" : ""}
-          />
-        </div>
+            <div className="grid gap-2">
+              <label htmlFor="routine-description" className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                Description
+              </label>
+              <Textarea
+                id="routine-description"
+                data-testid="routine-description-input"
+                value={description}
+                onChange={(event) => onDescriptionChange(event.target.value)}
+                placeholder="Optional routine description"
+                className="min-h-[100px] rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all italic text-sm"
+              />
+            </div>
+          </>
+        )}
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pt-2">
           {isEditing ? (
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 data-testid="save-routine-button"
                 onClick={onSave}
                 disabled={saveDisabled}
-                className="flex-1"
+                className="h-12 flex-1 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all font-bold"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saveLabel}
@@ -123,7 +130,7 @@ export const RoutineInfoCard = ({
               <Button
                 variant="outline"
                 onClick={onCancel}
-                className="flex-1"
+                className="h-12 flex-1 rounded-xl border-border/60 hover:bg-muted font-bold transition-all"
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancel
@@ -132,47 +139,55 @@ export const RoutineInfoCard = ({
                 data-testid="delete-routine-button"
                 onClick={onDelete}
                 disabled={deleteDisabled}
-                variant="destructive"
-                className="flex-1"
+                variant="ghost"
+                className="h-12 flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-all"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {deleteLabel}
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 data-testid="start-routine-workout-button"
                 onClick={onStartWorkout}
                 disabled={startDisabled}
-                className="flex-1"
+                className="h-14 flex-1 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all text-sm font-black uppercase tracking-tight"
               >
-                <Play className="mr-2 h-4 w-4" />
+                <Play className="mr-2 h-4 w-4 fill-current" />
                 {startLabel}
               </Button>
               {canEdit && (
-                <Button variant="outline" onClick={onEdit} className="flex-1">
-                  <Edit2 className="mr-2 h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  onClick={onEdit} 
+                  className="h-14 flex-1 rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 font-bold transition-all text-xs uppercase tracking-widest"
+                >
+                  <Edit2 className="mr-2 h-3 w-3" />
                   Edit Routine
                 </Button>
               )}
               <Button
                 variant="ghost"
                 onClick={handleShare}
-                className="flex-1"
+                className="h-14 flex-1 rounded-xl hover:bg-muted font-bold transition-all text-xs uppercase tracking-widest opacity-70 hover:opacity-100"
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                {shareCopied ? "URL Copied!" : "Share Routine"}
+                <Share2 className="mr-2 h-3 w-3" />
+                {shareCopied ? "Copied!" : "Share Link"}
               </Button>
             </div>
           )}
         </div>
 
         {isEditing && hasInvalidTemplates && (
-          <p className="text-sm text-destructive font-medium">
-            Every exercise template needs a selected exercise type and every set
-            needs an intensity unit before you can save.
-          </p>
+          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 mt-2">
+            <p className="text-[11px] text-destructive font-black uppercase tracking-widest flex items-center gap-2">
+              <span className="text-sm">⚠️</span> Missing Requirements
+            </p>
+            <p className="text-xs text-destructive/80 mt-1">
+              Every exercise needs a type and every set needs an intensity unit before saving.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

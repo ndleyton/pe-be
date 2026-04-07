@@ -142,51 +142,52 @@ const RoutineDetailsPage = () => {
   return (
     <>
       <RoutineStructuredData data={routineJsonLd} />
-      <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
-        <div className="bg-card text-card-foreground mx-auto mt-2 max-w-4xl rounded-lg p-2 shadow-lg md:mt-4 md:p-4 lg:mt-8 lg:p-6">
-          <div className="mb-4 flex items-center gap-4 text-left">
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              aria-label="Go back"
-              className="lg:hidden"
-            >
-              <Link to="/routines">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl font-bold md:text-3xl">
-                {isEditing ? "Routine Editor" : "Routine Details"}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {isEditing
-                  ? "Edit the template directly. Changes save the full template tree in one request."
-                  : "Review this routine template and start a workout from it."}
-              </p>
-            </div>
+      <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
+        {/* Header Section */}
+        <div className="mb-8 flex items-center gap-4 text-left">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            aria-label="Go back"
+            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          >
+            <Link to="/routines">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
+              {isEditing ? "Routine Editor" : name || "Routine Details"}
+            </h1>
+            <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-1">
+              {isEditing
+                ? "Management Mode"
+                : "Plan Overview"}
+            </p>
           </div>
+        </div>
 
-          <div className="grid gap-4 text-left">
-            {editAccessMessage && !isEditing && (
-              <Alert>
-                <AlertTitle>View-only routine</AlertTitle>
-                <AlertDescription>{editAccessMessage}</AlertDescription>
-              </Alert>
-            )}
+        <div className="grid gap-8 text-left">
+          {editAccessMessage && !isEditing && (
+            <Alert className="bg-primary/5 border-primary/20 rounded-2xl backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider opacity-70">View-only routine</AlertTitle>
+              <AlertDescription className="text-sm italic">{editAccessMessage}</AlertDescription>
+            </Alert>
+          )}
 
-            {actionError && (
-              <Alert variant="destructive">
-                <AlertTitle>Action failed</AlertTitle>
-                <AlertDescription>
-                  {actionError instanceof Error
-                    ? actionError.message
-                    : "Something went wrong while updating the routine."}
-                </AlertDescription>
-              </Alert>
-            )}
+          {actionError && (
+            <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Action failed</AlertTitle>
+              <AlertDescription className="text-sm">
+                {actionError instanceof Error
+                  ? actionError.message
+                  : "Something went wrong while updating the routine."}
+              </AlertDescription>
+            </Alert>
+          )}
 
+          <div className="space-y-8">
             <RoutineInfoCard
               canEdit={canEdit}
               isEditing={isEditing}
@@ -209,6 +210,15 @@ const RoutineDetailsPage = () => {
               startDisabled={startMutation.isPending}
               startLabel={startMutation.isPending ? "Starting..." : "Start Workout"}
             />
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-border/40"></div>
+              </div>
+              <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
+                <span className="bg-background px-4 text-muted-foreground/40">Exercise Sequence</span>
+              </div>
+            </div>
 
             <RoutineTemplatesCard
               canEdit={isEditing}
