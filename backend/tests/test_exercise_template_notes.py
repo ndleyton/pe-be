@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.routines.service import routine_service
 from src.routines.schemas import RoutineCreate, ExerciseTemplateCreate, SetTemplateCreate
-from src.routines.models import Routine
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
 from src.users.models import User
