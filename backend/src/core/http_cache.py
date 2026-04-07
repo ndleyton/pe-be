@@ -17,17 +17,21 @@ class CachedJSONBody:
 
 
 class TTLResponseCache:
-    def __init__(self) -> None:
+    def __init__(self, *, sweep_interval_seconds: int = 60) -> None:
         self._entries: dict[str, CachedJSONBody] = {}
         self._tag_index: dict[str, set[str]] = {}
         self._lock = asyncio.Lock()
+        self._sweep_interval_seconds = sweep_interval_seconds
+        self._next_sweep_at = 0.0
 
     async def get(self, key: str) -> CachedJSONBody | None:
         async with self._lock:
+            now = monotonic()
+            self._maybe_sweep_unlocked(now)
             entry = self._entries.get(key)
             if entry is None:
                 return None
-            if entry.expires_at <= monotonic():
+            if entry.expires_at <= now:
                 self._remove_key_unlocked(key)
                 return None
             return entry
@@ -40,12 +44,14 @@ class TTLResponseCache:
         ttl_seconds: int,
         tags: Iterable[str] = (),
     ) -> CachedJSONBody:
+        now = monotonic()
         entry = CachedJSONBody(
             body=body,
             etag=_build_etag(body),
-            expires_at=monotonic() + ttl_seconds,
+            expires_at=now + ttl_seconds,
         )
         async with self._lock:
+            self._maybe_sweep_unlocked(now)
             self._remove_key_unlocked(key)
             self._entries[key] = entry
             for tag in tags:
@@ -54,6 +60,7 @@ class TTLResponseCache:
 
     async def invalidate_tags(self, *tags: str) -> None:
         async with self._lock:
+            self._maybe_sweep_unlocked(monotonic())
             keys_to_remove: set[str] = set()
             for tag in tags:
                 keys_to_remove.update(self._tag_index.get(tag, set()))
@@ -65,6 +72,7 @@ class TTLResponseCache:
         async with self._lock:
             self._entries.clear()
             self._tag_index.clear()
+            self._next_sweep_at = 0.0
 
     def _remove_key_unlocked(self, key: str) -> None:
         if key not in self._entries:
@@ -78,6 +86,18 @@ class TTLResponseCache:
                 empty_tags.append(tag)
         for tag in empty_tags:
             self._tag_index.pop(tag, None)
+
+    def _maybe_sweep_unlocked(self, now: float) -> None:
+        if now < self._next_sweep_at:
+            return
+
+        expired_keys = [
+            key for key, entry in self._entries.items() if entry.expires_at <= now
+        ]
+        for key in expired_keys:
+            self._remove_key_unlocked(key)
+
+        self._next_sweep_at = now + self._sweep_interval_seconds
 
 
 def render_json_bytes(payload: object) -> bytes:

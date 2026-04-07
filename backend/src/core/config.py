@@ -131,12 +131,12 @@ class Settings(BaseSettings):
         description="TTL for usage-sorted public exercise-type list responses",
     )
     EXERCISE_TYPES_NAME_CACHE_TTL_SECONDS: int = Field(
-        600,
+        3600,
         validation_alias="EXERCISE_TYPES_NAME_CACHE_TTL_SECONDS",
         description="TTL for name-sorted public exercise-type list responses",
     )
     TAXONOMY_CACHE_TTL_SECONDS: int = Field(
-        3600,
+        86400,
         validation_alias="TAXONOMY_CACHE_TTL_SECONDS",
         description="TTL for slow-changing taxonomy GET responses",
     )

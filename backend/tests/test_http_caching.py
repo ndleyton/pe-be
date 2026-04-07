@@ -6,6 +6,7 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.config import settings
+from src.core.http_cache import TTLResponseCache
 from src.exercises.schemas import PaginatedExerciseTypesResponse
 from src.main import app
 from src.users.router import current_active_user, current_optional_user
@@ -163,7 +164,7 @@ async def test_workout_types_cache_is_invalidated_after_create(
     second_response = await async_client.get(url)
     assert first_response.status_code == 200
     assert second_response.status_code == 200
-    assert first_response.headers["cache-control"] == "public, max-age=3600"
+    assert first_response.headers["cache-control"] == "public, max-age=86400"
     assert first_response.headers["x-cache-status"] == "MISS"
     assert second_response.headers["x-cache-status"] == "HIT"
     assert fake_get_workout_types.await_count == 1
@@ -178,3 +179,21 @@ async def test_workout_types_cache_is_invalidated_after_create(
     assert third_response.status_code == 200
     assert third_response.headers["x-cache-status"] == "MISS"
     assert fake_get_workout_types.await_count == 2
+
+
+async def test_cache_sweeps_expired_cold_keys_on_unrelated_access(monkeypatch):
+    fake_now = 100.0
+
+    def fake_monotonic() -> float:
+        return fake_now
+
+    monkeypatch.setattr("src.core.http_cache.monotonic", fake_monotonic)
+
+    cache = TTLResponseCache(sweep_interval_seconds=1)
+    await cache.set("stale-key", body=b"{}", ttl_seconds=1, tags=("catalog",))
+
+    fake_now = 102.0
+    await cache.set("fresh-key", body=b'{"ok":true}', ttl_seconds=10, tags=("catalog",))
+
+    assert "stale-key" not in cache._entries
+    assert "fresh-key" in cache._entries
