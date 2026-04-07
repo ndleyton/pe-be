@@ -170,4 +170,34 @@ describe("ExerciseTypeModal", () => {
       expect(screen.getByText("Squats")).toBeInTheDocument();
     });
   });
+
+  it("renders only the initial browse window and exposes load more", async () => {
+    mockGuestStore = {
+      ...mockGuestStore,
+      exerciseTypes: Array.from({ length: 35 }, (_, index) =>
+        makeExerciseType({
+          id: index + 1,
+          name: `Exercise ${index + 1}`,
+        }),
+      ),
+    };
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise 1")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Exercise 30")).toBeInTheDocument();
+    expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /load more/i }),
+    ).toBeInTheDocument();
+  });
 });

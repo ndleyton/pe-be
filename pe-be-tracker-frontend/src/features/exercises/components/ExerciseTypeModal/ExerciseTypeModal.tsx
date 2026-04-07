@@ -22,6 +22,9 @@ interface ExerciseTypeModalProps {
   onSelect: (exerciseType: ExerciseType | GuestExerciseType) => void;
 }
 
+const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
+const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
+
 // Type guard to check if an exercise type has muscles property
 const hasMusclesProperty = (
   exerciseType: ExerciseType | GuestExerciseType,
@@ -38,6 +41,9 @@ const ExerciseTypeModal = ({
 }: ExerciseTypeModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [areResultsReady, setAreResultsReady] = useState(false);
+  const [visibleResultCount, setVisibleResultCount] = useState(
+    EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT,
+  );
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -95,8 +101,11 @@ const ExerciseTypeModal = ({
   useEffect(() => {
     if (!isOpen) {
       setAreResultsReady(false);
+      setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
       return;
     }
+
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
 
     const frameId = window.requestAnimationFrame(() => {
       startTransition(() => {
@@ -106,6 +115,14 @@ const ExerciseTypeModal = ({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (deferredSearchTerm.trim()) {
+      return;
+    }
+
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+  }, [deferredSearchTerm]);
 
   const filteredExerciseTypes = useMemo(() => {
     if (!deferredSearchTerm.trim()) return exerciseTypes;
@@ -119,6 +136,12 @@ const ExerciseTypeModal = ({
 
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
+  const isSearchActive = deferredSearchTerm.trim().length > 0;
+  const visibleExerciseTypes = isSearchActive
+    ? filteredExerciseTypes
+    : filteredExerciseTypes.slice(0, visibleResultCount);
+  const canLoadMoreResults =
+    !isSearchActive && visibleExerciseTypes.length < filteredExerciseTypes.length;
 
   const createInFlight = useRef(false);
 
@@ -308,8 +331,9 @@ const ExerciseTypeModal = ({
     }
 
     return (
-      <div className="grid gap-3 p-1">
-        {filteredExerciseTypes.map(
+      <div className="space-y-4 p-1">
+        <div className="grid gap-3">
+          {visibleExerciseTypes.map(
           (exerciseType: ExerciseType | GuestExerciseType) => (
             <button
               key={exerciseType.id}
@@ -359,6 +383,26 @@ const ExerciseTypeModal = ({
               </div>
             </button>
           ),
+        )}
+        </div>
+
+        {canLoadMoreResults && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleResultCount((current) =>
+                  Math.min(
+                    current + EXERCISE_TYPE_MODAL_RENDER_INCREMENT,
+                    filteredExerciseTypes.length,
+                  ),
+                )
+              }
+              className="rounded-xl border border-border/40 bg-card/60 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-accent/60"
+            >
+              Load More
+            </button>
+          </div>
         )}
       </div>
     );
