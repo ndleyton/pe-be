@@ -80,6 +80,7 @@ class PlannedExerciseTypeUpdate:
     exercise_name: str
     external_id: str | None
     matched_source: bool
+    match_method: str | None  # "id" or "name"
     reasons: tuple[str, ...]
     changes: tuple[FieldChange, ...]
 
@@ -103,6 +104,8 @@ class RowPlanningOutcome:
 class PlanningReport:
     scanned_rows: int
     matched_source_rows: int
+    matched_by_id_rows: int
+    matched_by_name_rows: int
     skipped_rows: int
     updates: tuple[PlannedExerciseTypeUpdate, ...]
     unresolved: tuple[UnresolvedExerciseType, ...]
@@ -506,27 +509,44 @@ def load_target_rows(
 def load_source_lookup(
     connection,
     external_ids: list[str],
-) -> dict[str, SourceExerciseRow]:
-    numeric_external_ids = [
-        int(external_id)
-        for external_id in external_ids
-        if re.fullmatch(r"\d+", external_id)
-    ]
-    if not numeric_external_ids:
-        return {}
+    exercise_names: list[str],
+) -> tuple[dict[str, SourceExerciseRow], dict[str, SourceExerciseRow]]:
+    source_ids = list({eid.strip() for eid in external_ids if eid and eid.strip()})
+    unique_names = list({name.lower() for name in exercise_names if name})
+
+    id_lookup: dict[str, SourceExerciseRow] = {}
+    name_lookup: dict[str, SourceExerciseRow] = {}
 
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        cursor.execute(
-            """
-            SELECT id, name, force, level, mechanic, instructions, equipment, category, primary_muscles
-            FROM ext.exercises
-            WHERE id = ANY(%s)
-            """,
-            (numeric_external_ids,),
-        )
-        return {
-            str(record["id"]): build_source_row(record) for record in cursor.fetchall()
-        }
+        if source_ids:
+            cursor.execute(
+                """
+                SELECT id, name, force, level, mechanic, instructions, equipment, category, primary_muscles
+                FROM ext.exercises
+                WHERE id = ANY(%s)
+                """,
+                (source_ids,),
+            )
+            for record in cursor.fetchall():
+                row = build_source_row(record)
+                id_lookup[str(row.id)] = row
+
+        if unique_names:
+            cursor.execute(
+                """
+                SELECT id, name, force, level, mechanic, instructions, equipment, category, primary_muscles
+                FROM ext.exercises
+                WHERE LOWER(name) = ANY(%s)
+                ORDER BY id ASC
+                """,
+                (unique_names,),
+            )
+            for record in cursor.fetchall():
+                row = build_source_row(record)
+                if row.name.lower() not in name_lookup:
+                    name_lookup[row.name.lower()] = row
+
+    return id_lookup, name_lookup
 
 
 def choose_structured_value(
@@ -721,12 +741,17 @@ def plan_row_update(
             matched_source=matched_source,
         )
 
+    match_method = None
+    if matched_source:
+        match_method = "id" if row.external_id else "name"
+
     return RowPlanningOutcome(
         update=PlannedExerciseTypeUpdate(
             exercise_type_id=row.id,
             exercise_name=row.name,
             external_id=row.external_id,
             matched_source=matched_source,
+            match_method=match_method,
             reasons=tuple(dict.fromkeys(reasons)),
             changes=changes,
         ),
@@ -738,19 +763,30 @@ def plan_row_update(
 def plan_updates(
     rows: list[ExerciseTypeRow],
     *,
-    source_lookup: dict[str, SourceExerciseRow],
+    id_lookup: dict[str, SourceExerciseRow],
+    name_lookup: dict[str, SourceExerciseRow],
     overwrite_populated_fields: bool,
     rewrite_description_from_source: bool,
 ) -> PlanningReport:
     updates: list[PlannedExerciseTypeUpdate] = []
     unresolved: list[UnresolvedExerciseType] = []
     matched_source_rows = 0
+    matched_by_id_rows = 0
+    matched_by_name_rows = 0
     skipped_rows = 0
 
     for row in rows:
-        source_row = (
-            source_lookup.get(row.external_id) if row.external_id is not None else None
-        )
+        source_row = None
+        match_method = None
+        if row.external_id:
+            source_row = id_lookup.get(row.external_id)
+            if source_row is not None:
+                match_method = "id"
+        elif row.name:
+            source_row = name_lookup.get(row.name.lower())
+            if source_row is not None:
+                match_method = "name"
+
         outcome = plan_row_update(
             row,
             source_row=source_row,
@@ -759,8 +795,26 @@ def plan_updates(
         )
         if outcome.matched_source:
             matched_source_rows += 1
+            if match_method == "id":
+                matched_by_id_rows += 1
+            elif match_method == "name":
+                matched_by_name_rows += 1
 
         if outcome.update is not None:
+            if outcome.update.match_method is None and match_method is not None:
+                outcome = RowPlanningOutcome(
+                    update=PlannedExerciseTypeUpdate(
+                        exercise_type_id=outcome.update.exercise_type_id,
+                        exercise_name=outcome.update.exercise_name,
+                        external_id=outcome.update.external_id,
+                        matched_source=outcome.update.matched_source,
+                        match_method=match_method,
+                        reasons=outcome.update.reasons,
+                        changes=outcome.update.changes,
+                    ),
+                    unresolved_reason=outcome.unresolved_reason,
+                    matched_source=outcome.matched_source,
+                )
             updates.append(outcome.update)
         else:
             skipped_rows += 1
@@ -778,6 +832,8 @@ def plan_updates(
     return PlanningReport(
         scanned_rows=len(rows),
         matched_source_rows=matched_source_rows,
+        matched_by_id_rows=matched_by_id_rows,
+        matched_by_name_rows=matched_by_name_rows,
         skipped_rows=skipped_rows,
         updates=tuple(updates),
         unresolved=tuple(unresolved),
@@ -804,6 +860,9 @@ def print_report(
     print(f"{mode}: normalize exercise type metadata", file=stream)
     print(f"Scanned candidate rows: {report.scanned_rows}", file=stream)
     print(f"Matched source rows: {report.matched_source_rows}", file=stream)
+    if report.matched_source_rows:
+        print(f"Matched by id: {report.matched_by_id_rows}", file=stream)
+        print(f"Matched by name: {report.matched_by_name_rows}", file=stream)
     print(f"Rows to update: {len(report.updates)}", file=stream)
     print(f"Skipped rows: {report.skipped_rows}", file=stream)
     print(f"Unresolved rows: {len(report.unresolved)}", file=stream)
@@ -811,11 +870,10 @@ def print_report(
     if report.updates:
         print("Sample planned diffs:", file=stream)
         for update in report.updates[:sample_limit]:
-            source_note = "source-backed" if update.matched_source else "fallback-parse"
             print(
                 "  - "
                 f"{update.exercise_name} (id={update.exercise_type_id}, "
-                f"external_id={update.external_id or 'NULL'}, {source_note}) "
+                f"external_id={update.external_id or 'NULL'}, matched_by={update.match_method or 'parse'}) "
                 f"[{', '.join(update.reasons)}]",
                 file=stream,
             )
@@ -912,13 +970,15 @@ def run_normalization(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
             external_id=args.external_id,
             limit=args.limit,
         )
-        source_lookup = load_source_lookup(
+        id_lookup, name_lookup = load_source_lookup(
             source_connection,
-            [row.external_id for row in candidate_rows if row.external_id is not None],
+            [row.external_id for row in candidate_rows if row.external_id],
+            [row.name for row in candidate_rows if not row.external_id],
         )
         report = plan_updates(
             candidate_rows,
-            source_lookup=source_lookup,
+            id_lookup=id_lookup,
+            name_lookup=name_lookup,
             overwrite_populated_fields=args.overwrite_populated_fields,
             rewrite_description_from_source=args.rewrite_description_from_source,
         )
