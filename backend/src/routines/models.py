@@ -97,6 +97,7 @@ class ExerciseTemplate(Base):
         ForeignKey("recipes.id", ondelete="CASCADE"),
         nullable=False,
     )
+    notes = Column(Text)
 
     # Relationships
     exercise_type: Mapped["ExerciseType"] = relationship("ExerciseType", lazy="joined")

@@ -5,6 +5,7 @@ import {
   type RoutineEditorSet,
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { formatDecimal, parseDecimalInput } from "@/utils/format";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -29,6 +30,10 @@ type RoutineTemplatesCardProps = {
     setId: string,
     updates: Partial<RoutineEditorSet>,
   ) => void;
+  onUpdateTemplate: (
+    templateId: string,
+    updates: Partial<RoutineEditorTemplate>,
+  ) => void;
 };
 
 export const RoutineTemplatesCard = ({
@@ -41,6 +46,7 @@ export const RoutineTemplatesCard = ({
   onRemoveTemplate,
   onSelectUnit,
   onUpdateSet,
+  onUpdateTemplate,
 }: RoutineTemplatesCardProps) => (
   <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
     <CardHeader className="pb-4">
@@ -93,6 +99,30 @@ export const RoutineTemplatesCard = ({
                       {template.set_templates.length} set{template.set_templates.length !== 1 ? "s" : ""}
                     </span>
                   </div>
+                  {!canEdit && template.notes && (
+                    <p className="mt-2 text-xs text-muted-foreground italic leading-relaxed max-w-md">
+                      {template.notes}
+                    </p>
+                  )}
+                  {canEdit && (
+                    <div className="mt-3">
+                      <label
+                        htmlFor={`${template.id}-notes`}
+                        className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                      >
+                        Coaching Notes
+                      </label>
+                      <Textarea
+                        id={`${template.id}-notes`}
+                        placeholder="e.g. Focus on tempo, keep core tight..."
+                        value={template.notes}
+                        onChange={(e) =>
+                          onUpdateTemplate(template.id, { notes: e.target.value })
+                        }
+                        className="mt-1 min-h-[60px] cursor-text rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm resize-none"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               {canEdit && (

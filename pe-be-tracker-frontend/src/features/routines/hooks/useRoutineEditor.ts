@@ -79,6 +79,13 @@ type RoutineEditorAction =
         setId: string;
       };
     }
+  | {
+      type: "updateTemplate";
+      payload: {
+        templateId: string;
+        updates: Partial<RoutineEditorTemplate>;
+      };
+    }
   | { type: "removeTemplate"; payload: { templateId: string } };
 
 const initialState: RoutineEditorState = {
@@ -173,6 +180,7 @@ const routineEditorReducer = (
               id: `temp-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`,
               exercise_type_id: Number(nextExerciseType.id),
               exercise_type: nextExerciseType,
+              notes: "",
               set_templates: [
                 createDefaultSet(
                   action.payload.availableIntensityUnits,
@@ -289,6 +297,18 @@ const routineEditorReducer = (
                 set_templates: template.set_templates.filter(
                   (setTemplate) => setTemplate.id !== action.payload.setId,
                 ),
+              },
+        ),
+      };
+    case "updateTemplate":
+      return {
+        ...state,
+        editorTemplates: state.editorTemplates.map((template) =>
+          template.id !== action.payload.templateId
+            ? template
+            : {
+                ...template,
+                ...action.payload.updates,
               },
         ),
       };
@@ -410,6 +430,14 @@ export const useRoutineEditor = ({
       dispatch({
         type: "updateSet",
         payload: { setId, templateId, updates },
+      }),
+    updateTemplate: (
+      templateId: string,
+      updates: Partial<RoutineEditorTemplate>,
+    ) =>
+      dispatch({
+        type: "updateTemplate",
+        payload: { templateId, updates },
       }),
   };
 };

@@ -53,6 +53,7 @@ class ExerciseTemplateBase(BaseModel):
     """Base schema for exercise template data"""
 
     exercise_type_id: int
+    notes: Optional[str] = None
 
 
 class ExerciseTemplateCreate(ExerciseTemplateBase):

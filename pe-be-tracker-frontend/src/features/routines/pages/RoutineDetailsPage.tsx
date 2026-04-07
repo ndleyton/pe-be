@@ -72,6 +72,7 @@ const RoutineDetailsPage = () => {
     setVisibility,
     setName,
     updateSet,
+    updateTemplate,
   } = useRoutineEditor({
     availableIntensityUnits,
     routine,
@@ -242,6 +243,7 @@ const RoutineDetailsPage = () => {
                 openUnitPicker({ templateId, setId })
               }
               onUpdateSet={updateSet}
+              onUpdateTemplate={updateTemplate}
             />
           </div>
         </div>

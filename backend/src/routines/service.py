@@ -129,7 +129,7 @@ class RoutineService:
                 session,
                 ExerciseCreate(
                     timestamp=datetime.now(timezone.utc),
-                    notes=None,
+                    notes=exercise_template.notes,
                     exercise_type_id=exercise_template.exercise_type_id,
                     workout_id=workout.id,
                 ),

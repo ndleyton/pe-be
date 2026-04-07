@@ -29,6 +29,7 @@ export interface ExerciseTemplate {
   updated_at: string;
   exercise_type?: ExerciseType;
   set_templates: SetTemplate[];
+  notes?: string | null;
 }
 
 export type RoutineVisibility = "private" | "public" | "link_only";
