@@ -4,7 +4,7 @@ import type {
   ExerciseType,
   IntensityUnit,
 } from "@/features/exercises/api";
-import type { Routine } from "@/features/routines/types";
+import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import type { GuestExerciseType, GuestIntensityUnit } from "@/stores";
 import {
   buildComparableSnapshot,
@@ -22,6 +22,7 @@ import {
 type RoutineEditorState = {
   name: string;
   description: string;
+  visibility: RoutineVisibility;
   editorTemplates: RoutineEditorTemplate[];
   initialSnapshot: string;
   exercisePickerTarget: ExercisePickerTarget | null;
@@ -40,6 +41,7 @@ type RoutineEditorAction =
   | InitializeAction
   | { type: "setName"; payload: string }
   | { type: "setDescription"; payload: string }
+  | { type: "setVisibility"; payload: RoutineVisibility }
   | { type: "openExercisePicker"; payload: ExercisePickerTarget }
   | { type: "closeExercisePicker" }
   | { type: "openUnitPicker"; payload: UnitPickerTarget }
@@ -82,6 +84,7 @@ type RoutineEditorAction =
 const initialState: RoutineEditorState = {
   name: "",
   description: "",
+  visibility: "private",
   editorTemplates: [],
   initialSnapshot: "",
   exercisePickerTarget: null,
@@ -96,6 +99,7 @@ const routineEditorReducer = (
     case "initialize": {
       const nextName = action.payload.routine.name;
       const nextDescription = action.payload.routine.description ?? "";
+      const nextVisibility = action.payload.routine.visibility;
       const nextTemplates = buildEditorTemplatesFromRoutine(
         action.payload.routine,
         action.payload.availableIntensityUnits,
@@ -105,10 +109,12 @@ const routineEditorReducer = (
         ...state,
         name: nextName,
         description: nextDescription,
+        visibility: nextVisibility,
         editorTemplates: nextTemplates,
         initialSnapshot: buildComparableSnapshot(
           nextName,
           nextDescription,
+          nextVisibility,
           nextTemplates,
         ),
       };
@@ -122,6 +128,11 @@ const routineEditorReducer = (
       return {
         ...state,
         description: action.payload,
+      };
+    case "setVisibility":
+      return {
+        ...state,
+        visibility: action.payload,
       };
     case "openExercisePicker":
       return {
@@ -321,9 +332,10 @@ export const useRoutineEditor = ({
       buildComparableSnapshot(
         state.name,
         state.description,
+        state.visibility,
         state.editorTemplates,
       ),
-    [state.description, state.editorTemplates, state.name],
+    [state.description, state.editorTemplates, state.name, state.visibility],
   );
 
   const hasUnsavedChanges =
@@ -347,6 +359,7 @@ export const useRoutineEditor = ({
     hasInvalidTemplates,
     hasUnsavedChanges,
     name: state.name,
+    visibility: state.visibility,
     unitPickerTarget: state.unitPickerTarget,
     addSetToTemplate: (templateId: string) =>
       dispatch({
@@ -385,6 +398,8 @@ export const useRoutineEditor = ({
       }),
     setDescription: (value: string) =>
       dispatch({ type: "setDescription", payload: value }),
+    setVisibility: (value: RoutineVisibility) =>
+      dispatch({ type: "setVisibility", payload: value }),
     setName: (value: string) =>
       dispatch({ type: "setName", payload: value }),
     updateSet: (

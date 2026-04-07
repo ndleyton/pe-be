@@ -3,7 +3,7 @@ import type {
   IntensityUnit,
 } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
-import type { Routine } from "@/features/routines/types";
+import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import type {
   GuestExerciseType,
   GuestIntensityUnit,
@@ -151,11 +151,13 @@ export const buildRoutinePayload = (
 export const buildComparableSnapshot = (
   name: string,
   description: string,
+  visibility: RoutineVisibility,
   templates: RoutineEditorTemplate[],
 ) =>
   JSON.stringify({
     name,
     description,
+    visibility,
     exercise_templates: templates.map((template) => ({
       exercise_type_id: template.exercise_type_id,
       set_templates: template.set_templates.map((setTemplate) => ({
@@ -187,17 +189,20 @@ export const createDefaultSet = (
 export const buildRoutineFromEditorState = ({
   description,
   name,
+  visibility,
   routine,
   templates,
 }: {
   description: string;
   name: string;
+  visibility: RoutineVisibility;
   routine: Routine;
   templates: RoutineEditorTemplate[];
 }): Routine => ({
   ...routine,
   name: name.trim() || routine.name,
   description: description.trim() || null,
+  visibility,
   exercise_templates: templates.map((template, templateIndex) => ({
     id: Number(template.id) || -(templateIndex + 1),
     exercise_type_id: Number(template.exercise_type_id),

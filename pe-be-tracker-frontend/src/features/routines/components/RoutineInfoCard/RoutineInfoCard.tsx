@@ -1,5 +1,6 @@
 import { Edit2, Play, Save, Share2, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import type { RoutineVisibility } from "@/features/routines/types";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -9,6 +10,13 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 
 type RoutineInfoCardProps = {
@@ -19,9 +27,11 @@ type RoutineInfoCardProps = {
   description: string;
   hasInvalidTemplates: boolean;
   name: string;
+  visibility: RoutineVisibility;
   onDelete: () => void;
   onDescriptionChange: (value: string) => void;
   onNameChange: (value: string) => void;
+  onVisibilityChange: (value: RoutineVisibility) => void;
   onSave: () => void;
   onStartWorkout: () => void;
   onEdit: () => void;
@@ -40,9 +50,11 @@ export const RoutineInfoCard = ({
   description,
   hasInvalidTemplates,
   name,
+  visibility,
   onDelete,
   onDescriptionChange,
   onNameChange,
+  onVisibilityChange,
   onSave,
   onStartWorkout,
   onEdit,
@@ -111,6 +123,26 @@ export const RoutineInfoCard = ({
                 placeholder="Optional routine description"
                 className="min-h-[100px] rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all italic text-sm"
               />
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                Visibility
+              </label>
+              <Select
+                value={visibility}
+                onValueChange={(value) =>
+                  onVisibilityChange(value as RoutineVisibility)}
+              >
+                <SelectTrigger className="h-12 rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all font-semibold">
+                  <SelectValue placeholder="Select visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="link_only">Share by link</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </>
         )}

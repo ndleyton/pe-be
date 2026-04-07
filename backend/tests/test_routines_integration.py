@@ -181,6 +181,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
             "name": "Updated Routine",
             "description": "After replace",
             "workout_type_id": workout_type.id,
+            "visibility": "link_only",
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type_b.id,
@@ -209,6 +210,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
 
         assert updated["name"] == "Updated Routine"
         assert updated["description"] == "After replace"
+        assert updated["visibility"] == "link_only"
         assert len(updated["exercise_templates"]) == 1
 
         updated_template = updated["exercise_templates"][0]
@@ -221,6 +223,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
         assert get_resp.status_code == 200, get_resp.text
         fetched = get_resp.json()
         assert fetched["name"] == "Updated Routine"
+        assert fetched["visibility"] == "link_only"
         assert len(fetched["exercise_templates"]) == 1
         assert (
             fetched["exercise_templates"][0]["exercise_type_id"] == exercise_type_b.id

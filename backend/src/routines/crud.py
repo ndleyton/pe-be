@@ -350,6 +350,8 @@ async def update_routine(
         routine.description = routine_data.description
     if routine_data.workout_type_id is not None:
         routine.workout_type_id = routine_data.workout_type_id
+    if routine_data.visibility is not None:
+        routine.visibility = routine_data.visibility
 
     if routine_data.exercise_templates is not None:
         # Full-replace semantics for nested templates on update.

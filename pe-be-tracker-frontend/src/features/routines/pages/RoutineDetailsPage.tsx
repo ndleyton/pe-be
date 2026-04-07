@@ -57,6 +57,7 @@ const RoutineDetailsPage = () => {
     hasInvalidTemplates,
     hasUnsavedChanges,
     name,
+    visibility,
     unitPickerTarget,
     addSetToTemplate,
     closeExercisePicker,
@@ -68,6 +69,7 @@ const RoutineDetailsPage = () => {
     removeSetFromTemplate,
     removeTemplate,
     setDescription,
+    setVisibility,
     setName,
     updateSet,
   } = useRoutineEditor({
@@ -82,6 +84,7 @@ const RoutineDetailsPage = () => {
       editorTemplates,
       isAuthenticated,
       name,
+      visibility,
       routine,
       routineId,
     });
@@ -196,9 +199,11 @@ const RoutineDetailsPage = () => {
               description={description}
               hasInvalidTemplates={hasInvalidTemplates}
               name={name}
+              visibility={visibility}
               onDelete={handleDelete}
               onDescriptionChange={setDescription}
               onNameChange={setName}
+              onVisibilityChange={setVisibility}
               onSave={handleSave}
               onStartWorkout={() => startMutation.mutate()}
               onEdit={() => setIsEditing(true)}
@@ -252,10 +257,10 @@ const RoutineDetailsPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset()}>
+            <AlertDialogCancel onClick={() => blocker.reset?.()}>
               Stay
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed()}>
+            <AlertDialogAction onClick={() => blocker.proceed?.()}>
               Leave
             </AlertDialogAction>
           </AlertDialogFooter>

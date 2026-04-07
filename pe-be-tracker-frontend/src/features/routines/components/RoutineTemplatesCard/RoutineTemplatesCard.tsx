@@ -92,10 +92,6 @@ export const RoutineTemplatesCard = ({
                     <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                       {template.set_templates.length} set{template.set_templates.length !== 1 ? "s" : ""}
                     </span>
-                    <span className="w-1 h-1 rounded-full bg-border" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">
-                      Template {template.id.slice(0, 5)}
-                    </span>
                   </div>
                 </div>
               </div>

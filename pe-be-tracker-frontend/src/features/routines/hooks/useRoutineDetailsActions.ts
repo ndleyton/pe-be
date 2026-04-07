@@ -13,7 +13,7 @@ import {
   buildRoutinePayload,
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
-import type { Routine } from "@/features/routines/types";
+import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import { useGuestStore } from "@/stores";
 
 export const useRoutineDetailsActions = ({
@@ -22,6 +22,7 @@ export const useRoutineDetailsActions = ({
   editorTemplates,
   isAuthenticated,
   name,
+  visibility,
   routine,
   routineId,
 }: {
@@ -30,6 +31,7 @@ export const useRoutineDetailsActions = ({
   editorTemplates: RoutineEditorTemplate[];
   isAuthenticated: boolean;
   name: string;
+  visibility: RoutineVisibility;
   routine: Routine | null;
   routineId: string | undefined;
 }) => {
@@ -56,6 +58,7 @@ export const useRoutineDetailsActions = ({
         name: name.trim(),
         description: description.trim() || null,
         workout_type_id: routine.workout_type_id,
+        visibility,
         exercise_templates: buildRoutinePayload(editorTemplates),
       };
 
@@ -132,6 +135,7 @@ export const useRoutineDetailsActions = ({
       const routineForStart = buildRoutineFromEditorState({
         description,
         name,
+        visibility,
         routine,
         templates: editorTemplates,
       });
