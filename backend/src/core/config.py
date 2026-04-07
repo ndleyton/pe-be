@@ -125,6 +125,21 @@ class Settings(BaseSettings):
         validation_alias="CHAT_ATTACHMENT_RATE_LIMIT_MAX_REQUESTS",
         description="Max chat attachment uploads allowed per window",
     )
+    EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS: int = Field(
+        60,
+        validation_alias="EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS",
+        description="TTL for usage-sorted public exercise-type list responses",
+    )
+    EXERCISE_TYPES_NAME_CACHE_TTL_SECONDS: int = Field(
+        3600,
+        validation_alias="EXERCISE_TYPES_NAME_CACHE_TTL_SECONDS",
+        description="TTL for name-sorted public exercise-type list responses",
+    )
+    TAXONOMY_CACHE_TTL_SECONDS: int = Field(
+        86400,
+        validation_alias="TAXONOMY_CACHE_TTL_SECONDS",
+        description="TTL for slow-changing taxonomy GET responses",
+    )
 
     # Langfuse configuration
     LANGFUSE_PUBLIC_KEY: str = Field("", validation_alias="LANGFUSE_PUBLIC_KEY")

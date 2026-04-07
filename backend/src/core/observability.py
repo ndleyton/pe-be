@@ -38,6 +38,10 @@ def _set_span_attributes(span: Span, attributes: dict[str, Any] | None) -> None:
         span.set_attribute(key, value)
 
 
+def set_current_span_attributes(attributes: dict[str, Any] | None) -> None:
+    _set_span_attributes(trace.get_current_span(), attributes)
+
+
 def _build_resource() -> Resource:
     return Resource.create(
         {

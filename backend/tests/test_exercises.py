@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from starlette.requests import Request
 
 from src.core.config import settings
 import src.admin.exercise_image_service as exercise_image_service
@@ -26,6 +27,22 @@ from src.genai.google_images import (
 )
 from src.main import app
 from src.users.router import current_active_user
+
+
+def _request(method: str = "GET", headers: dict[str, str] | None = None) -> Request:
+    raw_headers = [
+        (key.lower().encode("latin-1"), value.encode("latin-1"))
+        for key, value in (headers or {}).items()
+    ]
+    return Request(
+        {
+            "type": "http",
+            "method": method,
+            "headers": raw_headers,
+            "path": "/",
+            "query_string": b"",
+        }
+    )
 
 
 def get_test_exercise_types(suffix=""):
@@ -780,11 +797,13 @@ async def test_get_exercise_types_route_forwards_muscle_group_filter(monkeypatch
     )
 
     response = await exercises_router.get_exercise_types(
+        request=_request(),
         name=None,
         muscle_group_id=9,
         order_by="usage",
         offset=2,
         limit=5,
+        user=None,
         session=object(),
     )
 
@@ -812,9 +831,13 @@ async def test_get_muscle_groups_route_returns_service_data(monkeypatch):
         fake_get_all,
     )
 
-    result = await exercises_router.get_muscle_groups(session=object())
+    result = await exercises_router.get_muscle_groups(
+        request=_request(),
+        session=object(),
+    )
 
-    assert result[0].name == "Chest"
+    assert result.status_code == 200
+    assert json.loads(result.body)[0]["name"] == "Chest"
     fake_get_all.assert_awaited_once()
 
 

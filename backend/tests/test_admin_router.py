@@ -9,6 +9,7 @@ from src.users.models import User
 from src.routines.models import Routine
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.workouts.models import WorkoutType
+from src.core.cache_tags import EXERCISE_PUBLIC_CACHE_TAG
 
 
 @pytest.mark.integration
@@ -248,6 +249,7 @@ async def test_admin_reference_image_option_endpoints(
         return response_payload
 
     fake_generate = AsyncMock(return_value=response_payload)
+    fake_invalidate = AsyncMock()
 
     async def fake_apply(*_args, **_kwargs):
         return {
@@ -261,6 +263,9 @@ async def test_admin_reference_image_option_endpoints(
         "src.admin.router.generate_reference_image_options", fake_generate
     )
     monkeypatch.setattr("src.admin.router.apply_reference_or_option", fake_apply)
+    monkeypatch.setattr(
+        "src.admin.router.response_cache.invalidate_tags", fake_invalidate
+    )
 
     from src.core.config import settings
 
@@ -280,6 +285,7 @@ async def test_admin_reference_image_option_endpoints(
         assert generate_resp.status_code == 200, generate_resp.text
         assert generate_resp.json()["options"][0]["key"] == "clean-outline"
         assert fake_generate.await_args.kwargs["option_key"] == "minimal-outline"
+        fake_invalidate.assert_awaited_with(EXERCISE_PUBLIC_CACHE_TAG)
 
         apply_resp = await async_client.post(
             f"/api/v1/admin/exercise-types/{exercise_type.id}/reference-image-options/apply",
@@ -287,6 +293,7 @@ async def test_admin_reference_image_option_endpoints(
         )
         assert apply_resp.status_code == 200, apply_resp.text
         assert apply_resp.json()["options"][0]["is_current"] is True
+        assert fake_invalidate.await_count == 2
     finally:
         settings.GOOGLE_AI_KEY = original_key
         app.dependency_overrides.pop(current_active_user, None)

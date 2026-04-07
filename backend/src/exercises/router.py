@@ -1,12 +1,26 @@
 import re
 from typing import List, Optional
-from fastapi import Depends, APIRouter, status, Query, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import Depends, APIRouter, status, Query, HTTPException, Request
 from fastapi.responses import FileResponse
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.observability import traced_model_dump
+from src.core.cache_tags import (
+    EXERCISE_PUBLIC_CACHE_TAG,
+    EXERCISE_TAXONOMY_CACHE_TAG,
+)
+from src.core.config import settings
+from src.core.http_cache import (
+    build_cached_json_response,
+    render_json_bytes,
+    response_cache,
+)
+from src.core.observability import (
+    set_current_span_attributes,
+    traced_model_dump,
+    traced_model_dump_many,
+    traced_model_validate_many,
+)
 from src.exercises.image_assets import storage_path_for_relative_url
 from src.exercises.schemas import (
     ExerciseRead,
@@ -32,6 +46,63 @@ from src.users.models import User
 router = APIRouter(tags=["exercises"])
 tracer = trace.get_tracer(__name__)
 assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
+
+
+def _exercise_types_cache_key(
+    *,
+    order_by: str,
+    offset: int,
+    limit: int,
+    muscle_group_id: int | None,
+    released_only: bool,
+    is_anonymous: bool,
+) -> str:
+    return (
+        "exercise-types:"
+        f"scope={'released' if released_only or is_anonymous else 'user'}:"
+        f"order_by={order_by}:offset={offset}:limit={limit}:"
+        f"muscle_group_id={muscle_group_id if muscle_group_id is not None else 'none'}"
+    )
+
+
+def _exercise_types_cache_ttl(order_by: str) -> int:
+    if order_by == "name":
+        return settings.EXERCISE_TYPES_NAME_CACHE_TTL_SECONDS
+    return settings.EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS
+
+
+def _exercise_types_cache_headers(
+    *,
+    released_only: bool,
+    is_anonymous: bool,
+    order_by: str,
+) -> tuple[str, str | None]:
+    max_age = _exercise_types_cache_ttl(order_by)
+    stale_while_revalidate = max_age * 2
+    if released_only:
+        return (
+            "public, "
+            f"max-age={max_age}, stale-while-revalidate={stale_while_revalidate}",
+            None,
+        )
+    if is_anonymous:
+        return (
+            "private, "
+            f"max-age={max_age}, stale-while-revalidate={stale_while_revalidate}",
+            "Cookie",
+        )
+    return ("private, no-store", "Cookie")
+
+
+def _annotate_cache(route_name: str, *, decision: str, key: str | None) -> None:
+    attributes = {
+        "cache.system": "in_memory_ttl",
+        "cache.route": route_name,
+        "cache.decision": decision,
+    }
+    if key is not None:
+        attributes["cache.key"] = key
+    set_current_span_attributes(attributes)
 
 
 # Exercise endpoints
@@ -101,6 +172,7 @@ muscle_groups_router = APIRouter(prefix="/muscle-groups", tags=["muscle-groups"]
 
 @exercise_types_router.get("/", response_model=PaginatedExerciseTypesResponse)
 async def get_exercise_types(
+    request: Request,
     name: Optional[str] = Query(
         default=None,
         description="Search for exercise types by name (case-insensitive)",
@@ -124,6 +196,38 @@ async def get_exercise_types(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
+    is_anonymous = user is None
+    cacheable = name is None and (released_only or is_anonymous)
+    cache_control, vary = _exercise_types_cache_headers(
+        released_only=released_only,
+        is_anonymous=is_anonymous,
+        order_by=order_by or "usage",
+    )
+
+    if cacheable:
+        cache_key = _exercise_types_cache_key(
+            order_by=order_by or "usage",
+            offset=offset,
+            limit=limit,
+            muscle_group_id=muscle_group_id,
+            released_only=released_only,
+            is_anonymous=is_anonymous,
+        )
+        cached_response = await response_cache.get(cache_key)
+        if cached_response is not None:
+            _annotate_cache("exercise_types", decision="hit", key=cache_key)
+            return build_cached_json_response(
+                request,
+                body=cached_response.body,
+                etag=cached_response.etag,
+                cache_control=cache_control,
+                vary=vary,
+                extra_headers={"X-Cache-Status": "HIT"},
+            )
+        _annotate_cache("exercise_types", decision="miss", key=cache_key)
+    else:
+        _annotate_cache("exercise_types", decision="bypass", key=None)
+
     response_model = await ExerciseTypeService.get_all_exercise_types(
         session,
         name,
@@ -146,7 +250,32 @@ async def get_exercise_types(
             "serialization.item_count": len(response_model.data),
         },
     )
-    return JSONResponse(content=response_payload)
+    response_body = render_json_bytes(response_payload)
+
+    if cacheable:
+        cached_response = await response_cache.set(
+            cache_key,
+            body=response_body,
+            ttl_seconds=_exercise_types_cache_ttl(order_by or "usage"),
+            tags=(EXERCISE_PUBLIC_CACHE_TAG,),
+        )
+        return build_cached_json_response(
+            request,
+            body=cached_response.body,
+            etag=cached_response.etag,
+            cache_control=cache_control,
+            vary=vary,
+            extra_headers={"X-Cache-Status": "MISS"},
+        )
+
+    return build_cached_json_response(
+        request,
+        body=response_body,
+        etag=None,
+        cache_control=cache_control,
+        vary=vary,
+        extra_headers={"X-Cache-Status": "BYPASS"},
+    )
 
 
 @exercise_types_router.get("/{exercise_type_id}", response_model=ExerciseTypeRead)
@@ -207,11 +336,13 @@ async def create_exercise_type(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Create a new exercise type."""
-    return await ExerciseTypeService.create_new_exercise_type(
+    created_exercise_type = await ExerciseTypeService.create_new_exercise_type(
         session,
         exercise_type,
         user_id=user.id,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return created_exercise_type
 
 
 @exercise_types_router.patch("/{exercise_type_id}", response_model=ExerciseTypeRead)
@@ -222,12 +353,14 @@ async def update_exercise_type(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Update an exercise type."""
-    return await ExerciseTypeService.update_existing_exercise_type(
+    updated_exercise_type = await ExerciseTypeService.update_existing_exercise_type(
         session,
         exercise_type_id,
         exercise_type,
         user=user,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return updated_exercise_type
 
 
 @exercise_types_router.post(
@@ -240,17 +373,60 @@ async def request_exercise_type_evaluation(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Move an owned exercise type into the admin review queue."""
-    return await ExerciseTypeService.request_evaluation(
+    updated_exercise_type = await ExerciseTypeService.request_evaluation(
         session,
         exercise_type_id,
         user=user,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return updated_exercise_type
 
 
 @muscle_groups_router.get("/", response_model=List[MuscleGroupRead])
-async def get_muscle_groups(session: AsyncSession = Depends(get_async_session)):
+async def get_muscle_groups(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+):
     """Get all muscle groups."""
-    return await MuscleGroupService.get_all_muscle_groups(session)
+    cache_key = "muscle-groups"
+    cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
+    cached_response = await response_cache.get(cache_key)
+    if cached_response is not None:
+        _annotate_cache("muscle_groups", decision="hit", key=cache_key)
+        return build_cached_json_response(
+            request,
+            body=cached_response.body,
+            etag=cached_response.etag,
+            cache_control=cache_control,
+            extra_headers={"X-Cache-Status": "HIT"},
+        )
+    _annotate_cache("muscle_groups", decision="miss", key=cache_key)
+
+    muscle_groups = await MuscleGroupService.get_all_muscle_groups(session)
+    response_models = traced_model_validate_many(
+        MuscleGroupRead,
+        muscle_groups,
+        span_name="exercises.get_muscle_groups.response_model_validate",
+        attributes={"serialization.item_count": len(muscle_groups)},
+    )
+    response_payload = traced_model_dump_many(
+        response_models,
+        span_name="exercises.get_muscle_groups.response_model_dump",
+        attributes={"serialization.item_count": len(response_models)},
+    )
+    cached_response = await response_cache.set(
+        cache_key,
+        body=render_json_bytes(response_payload),
+        ttl_seconds=settings.TAXONOMY_CACHE_TTL_SECONDS,
+        tags=(EXERCISE_TAXONOMY_CACHE_TAG,),
+    )
+    return build_cached_json_response(
+        request,
+        body=cached_response.body,
+        etag=cached_response.etag,
+        cache_control=cache_control,
+        extra_headers={"X-Cache-Status": "MISS"},
+    )
 
 
 # Intensity Units endpoints
@@ -258,9 +434,50 @@ intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-u
 
 
 @intensity_units_router.get("/", response_model=List[IntensityUnitRead])
-async def get_intensity_units(session: AsyncSession = Depends(get_async_session)):
+async def get_intensity_units(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+):
     """Get all intensity units"""
-    return await IntensityUnitService.get_all_intensity_units(session)
+    cache_key = "intensity-units"
+    cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
+    cached_response = await response_cache.get(cache_key)
+    if cached_response is not None:
+        _annotate_cache("intensity_units", decision="hit", key=cache_key)
+        return build_cached_json_response(
+            request,
+            body=cached_response.body,
+            etag=cached_response.etag,
+            cache_control=cache_control,
+            extra_headers={"X-Cache-Status": "HIT"},
+        )
+    _annotate_cache("intensity_units", decision="miss", key=cache_key)
+
+    intensity_units = await IntensityUnitService.get_all_intensity_units(session)
+    response_models = traced_model_validate_many(
+        IntensityUnitRead,
+        intensity_units,
+        span_name="exercises.get_intensity_units.response_model_validate",
+        attributes={"serialization.item_count": len(intensity_units)},
+    )
+    response_payload = traced_model_dump_many(
+        response_models,
+        span_name="exercises.get_intensity_units.response_model_dump",
+        attributes={"serialization.item_count": len(response_models)},
+    )
+    cached_response = await response_cache.set(
+        cache_key,
+        body=render_json_bytes(response_payload),
+        ttl_seconds=settings.TAXONOMY_CACHE_TTL_SECONDS,
+        tags=(EXERCISE_TAXONOMY_CACHE_TAG,),
+    )
+    return build_cached_json_response(
+        request,
+        body=cached_response.body,
+        etag=cached_response.etag,
+        cache_control=cache_control,
+        extra_headers={"X-Cache-Status": "MISS"},
+    )
 
 
 # Include sub-routers

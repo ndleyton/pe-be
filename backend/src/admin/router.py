@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 import logging
 
+from src.core.cache_tags import (
+    EXERCISE_PUBLIC_CACHE_TAG,
+    EXERCISE_TAXONOMY_CACHE_TAG,
+)
 from src.core.config import settings
 from google.genai import errors
 from src.admin.exercise_image_service import (
@@ -20,6 +24,7 @@ from src.admin.schemas import (
     AdminExerciseImageOptionsResponse,
 )
 from src.core.database import get_async_session
+from src.core.http_cache import response_cache
 from src.users.router import current_active_user
 from src.users.models import User
 from src.exercises.service import ExerciseTypeService
@@ -58,6 +63,10 @@ async def import_exercises(user: User = Depends(_require_superuser)) -> Dict[str
 
         # Import to main tables
         await import_exercises_to_database(data)
+        await response_cache.invalidate_tags(
+            EXERCISE_PUBLIC_CACHE_TAG,
+            EXERCISE_TAXONOMY_CACHE_TAG,
+        )
 
         return {
             "status": "success",
@@ -253,12 +262,14 @@ async def release_exercise_type(
     user: User = Depends(_require_superuser),
     session: AsyncSession = Depends(get_async_session),
 ) -> ExerciseTypeRead:
-    return await ExerciseTypeService.release_existing_exercise_type(
+    exercise_type = await ExerciseTypeService.release_existing_exercise_type(
         session,
         exercise_type_id,
         reviewer_id=user.id,
         payload=payload,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return exercise_type
 
 
 @router.get(
@@ -308,11 +319,13 @@ async def generate_reference_options(
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
     try:
-        return await generate_reference_image_options(
+        response = await generate_reference_image_options(
             session,
             exercise_type,
             option_key=generation_request.option_key if generation_request else None,
         )
+        await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+        return response
     except HTTPException:
         raise
     except errors.ClientError as exc:
@@ -353,9 +366,11 @@ async def apply_reference_option(
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
-    return await apply_reference_or_option(
+    response = await apply_reference_or_option(
         session,
         exercise_type,
         option_key=selection.option_key,
         use_reference=selection.use_reference,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return response
