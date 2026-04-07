@@ -317,11 +317,13 @@ async def generate_reference_options(
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
     try:
-        return await generate_reference_image_options(
+        response = await generate_reference_image_options(
             session,
             exercise_type,
             option_key=generation_request.option_key if generation_request else None,
         )
+        await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+        return response
     except HTTPException:
         raise
     except errors.ClientError as exc:
@@ -362,9 +364,11 @@ async def apply_reference_option(
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
-    return await apply_reference_or_option(
+    response = await apply_reference_or_option(
         session,
         exercise_type,
         option_key=selection.option_key,
         use_reference=selection.use_reference,
     )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return response
