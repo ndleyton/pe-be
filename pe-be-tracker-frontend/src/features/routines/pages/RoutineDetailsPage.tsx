@@ -192,10 +192,10 @@ const RoutineDetailsPage = () => {
           )}
 
           {!showUnavailableState ? (
-            <div className="space-y-8">
-              {isPageDataPending ? (
-                <RoutineInfoCardSkeleton />
-              ) : (
+            isPageDataPending ? (
+              <RoutineDetailsPageSkeleton />
+            ) : (
+              <div className="space-y-8">
                 <RoutineInfoCard
                   canEdit={canEdit}
                   editDisabled={unitsPending}
@@ -227,20 +227,16 @@ const RoutineDetailsPage = () => {
                   startDisabled={startMutation.isPending}
                   startLabel={startMutation.isPending ? "Starting..." : "Start Workout"}
                 />
-              )}
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-border/40"></div>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-border/40"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
+                    <span className="bg-background px-4 text-muted-foreground/40">Exercise Sequence</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
-                  <span className="bg-background px-4 text-muted-foreground/40">Exercise Sequence</span>
-                </div>
-              </div>
 
-              {isPageDataPending ? (
-                <RoutineTemplatesCardSkeleton />
-              ) : (
                 <RoutineTemplatesCard
                   canEdit={isEditing}
                   editorTemplates={editorTemplates}
@@ -260,8 +256,8 @@ const RoutineDetailsPage = () => {
                   onUpdateSet={updateSet}
                   onUpdateTemplate={updateTemplate}
                 />
-              )}
-            </div>
+              </div>
+            )
           ) : null}
         </div>
       </div>

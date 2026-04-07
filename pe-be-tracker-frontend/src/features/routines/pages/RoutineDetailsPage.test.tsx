@@ -30,6 +30,11 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 vi.mock("@/features/routines/components", () => ({
+  RoutineDetailsPageSkeleton: () => (
+    <div data-testid="routine-details-skeleton">
+      <div data-slot="skeleton" />
+    </div>
+  ),
   RoutineInfoCard: () => <div data-testid="routine-info-card" />,
   RoutineTemplatesCard: () => <div data-testid="routine-templates-card" />,
 }));
