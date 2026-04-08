@@ -45,6 +45,10 @@ from src.exercises.crud import (
     get_exercise_types,
     get_intensity_units,
 )
+from src.exercises.intensity_units import (
+    DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+    prefers_duration_for_intensity_unit,
+)
 from src.exercises.crud import get_exercises_for_workout
 from src.exercises.set_display import format_set_summary
 from src.routines.models import Routine
@@ -664,10 +668,18 @@ class ChatService:
                     intensity_unit = await self._resolve_intensity_unit(
                         set_draft.intensity_unit
                     )
+                    duration_seconds = set_draft.duration_seconds
+                    if (
+                        duration_seconds is None
+                        and set_draft.reps is None
+                        and prefers_duration_for_intensity_unit(intensity_unit)
+                    ):
+                        duration_seconds = DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+
                     set_templates.append(
                         SetTemplateCreate(
                             reps=set_draft.reps,
-                            duration_seconds=set_draft.duration_seconds,
+                            duration_seconds=duration_seconds,
                             intensity=set_draft.intensity,
                             intensity_unit_id=intensity_unit.id,
                         )

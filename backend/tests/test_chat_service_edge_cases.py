@@ -407,6 +407,55 @@ async def test_create_personalized_routine_persists_duration_seconds(
 
 
 @pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_defaults_duration_for_speed_units(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[SimpleNamespace(id=9, name="Treadmill Run")]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=8, name="Kilometers per Hour", abbreviation="km/h")
+    ]
+    mock_create_routine.return_value = SimpleNamespace(
+        id=102,
+        name="Conditioning Builder",
+        description="desc",
+        workout_type_id=4,
+        exercise_templates=[SimpleNamespace(set_templates=[SimpleNamespace()])],
+    )
+
+    await chat_service_with_db._create_personalized_routine(
+        name="Conditioning Builder",
+        workout_type_name="Strength",
+        goal_summary="Build conditioning",
+        equipment_notes="Treadmill access",
+        exercises=[
+            {
+                "exercise_type_name": "Treadmill Run",
+                "sets": [{"intensity": 12, "intensity_unit": "km/h"}],
+            }
+        ],
+    )
+
+    routine_payload = mock_create_routine.await_args.args[1]
+    assert routine_payload.exercise_templates[0].set_templates[0].reps is None
+    assert (
+        routine_payload.exercise_templates[0].set_templates[0].duration_seconds
+        == 600
+    )
+    assert routine_payload.exercise_templates[0].set_templates[0].intensity == 12
+
+
+@pytest.mark.asyncio
 @patch("src.chat.service.get_workout_types")
 async def test_create_personalized_routine_unknown_workout_type(
     mock_get_workout_types, chat_service_with_db
