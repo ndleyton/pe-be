@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal, Optional, Protocol, Sequence
@@ -10,6 +12,8 @@ from google.genai import types
 from pydantic import BaseModel
 
 from src.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 ChatRole = Literal["system", "user", "assistant", "tool"]
@@ -218,7 +222,7 @@ class GeminiGenAIClient:
         model_name: str = settings.CHAT_MODEL,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        max_retries: int = 2,
+        max_retries: int = 1,
     ):
         self.api_key = api_key
         self.rate_limiter = rate_limiter
@@ -297,13 +301,34 @@ class GeminiGenAIClient:
             ),
         )
 
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            config=config,
-        )
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = await self.client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
+                )
+                return self._normalize_response(response)
+            except Exception as exc:
+                if (
+                    not self._is_retryable_provider_error(exc)
+                    or attempt >= self.max_retries
+                ):
+                    raise
 
-        return self._normalize_response(response)
+                wait_seconds = 2**attempt
+                logger.warning(
+                    "Gemini generate_content retrying after transient provider error "
+                    "model=%s attempt=%d/%d wait=%ss error=%s",
+                    self.model_name,
+                    attempt + 1,
+                    self.max_retries + 1,
+                    wait_seconds,
+                    exc,
+                )
+                await asyncio.sleep(wait_seconds)
+
+        raise RuntimeError("Gemini generate_content retry loop exhausted unexpectedly")
 
     async def aupload_file(
         self,
@@ -421,3 +446,21 @@ class GeminiGenAIClient:
                 )
 
         return metadata
+
+    @staticmethod
+    def _is_retryable_provider_error(exc: Exception) -> bool:
+        error_text = str(exc).casefold()
+        error_code = getattr(exc, "code", None)
+
+        if error_code in {429, 503}:
+            return True
+
+        retryable_markers = (
+            "429",
+            "resourceexhausted",
+            "503",
+            "unavailable",
+            "high demand",
+            "try again later",
+        )
+        return any(marker in error_text for marker in retryable_markers)

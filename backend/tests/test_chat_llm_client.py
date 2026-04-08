@@ -80,6 +80,57 @@ async def test_gemini_client_normalizes_provider_response():
     assert normalized.tool_calls[0].args == {}
 
 
+async def test_gemini_client_retries_transient_provider_errors():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None, max_retries=2)
+    client.client = MagicMock()
+    client.client.aio = MagicMock()
+
+    response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                content=types.Content(parts=[types.Part.from_text(text="Recovered")])
+            )
+        ]
+    )
+    client.client.aio.models.generate_content = AsyncMock(
+        side_effect=[
+            RuntimeError(
+                "503 UNAVAILABLE. The model is currently experiencing high demand."
+            ),
+            response,
+        ]
+    )
+
+    with patch("src.chat.llm_client.asyncio.sleep", new=AsyncMock()) as sleep_mock:
+        normalized = await client.acomplete(
+            messages=[ConversationMessage(role="user", content="Hello")],
+            tools=[],
+        )
+
+    assert normalized.message.content == "Recovered"
+    assert client.client.aio.models.generate_content.await_count == 2
+    sleep_mock.assert_awaited_once_with(1)
+
+
+async def test_gemini_client_does_not_retry_non_retryable_errors():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None, max_retries=2)
+    client.client = MagicMock()
+    client.client.aio = MagicMock()
+    client.client.aio.models.generate_content = AsyncMock(
+        side_effect=RuntimeError("400 INVALID_ARGUMENT")
+    )
+
+    with patch("src.chat.llm_client.asyncio.sleep", new=AsyncMock()) as sleep_mock:
+        with pytest.raises(RuntimeError, match="400 INVALID_ARGUMENT"):
+            await client.acomplete(
+                messages=[ConversationMessage(role="user", content="Hello")],
+                tools=[],
+            )
+
+    assert client.client.aio.models.generate_content.await_count == 1
+    sleep_mock.assert_not_awaited()
+
+
 async def test_tool_definition_to_genai_tool_declaration():
     tool = ToolDefinition(
         name="test_tool",
