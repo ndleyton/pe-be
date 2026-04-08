@@ -133,7 +133,21 @@ class ToolDefinition:
             schema_type = cleaned.get("type")
             if isinstance(schema_type, str):
                 normalized = schema_type.upper()
-                cleaned["type"] = "STRING" if normalized == "NULL" else normalized
+                if normalized == "NULL":
+                    cleaned.pop("type", None)
+                    return cleaned
+                cleaned["type"] = normalized
+
+            any_of = cleaned.get("anyOf")
+            if isinstance(any_of, list):
+                simplified_any_of = cls._simplify_any_of(any_of)
+                if not simplified_any_of:
+                    cleaned.pop("anyOf", None)
+                elif len(simplified_any_of) == 1:
+                    cleaned.pop("anyOf", None)
+                    cleaned.update(simplified_any_of[0])
+                else:
+                    cleaned["anyOf"] = simplified_any_of
 
             return cleaned
 
@@ -141,6 +155,23 @@ class ToolDefinition:
             return [cls._clean_pydantic_schema_inner(item, defs) for item in schema]
 
         return schema
+
+    @classmethod
+    def _simplify_any_of(cls, variants: list[Any]) -> list[Any]:
+        simplified: list[Any] = []
+        seen: set[str] = set()
+
+        for variant in variants:
+            if not variant:
+                continue
+
+            serialized = json.dumps(variant, sort_keys=True)
+            if serialized in seen:
+                continue
+            seen.add(serialized)
+            simplified.append(variant)
+
+        return simplified
 
     @staticmethod
     def _parse_json_dict(value: Any) -> Optional[dict[str, Any]]:

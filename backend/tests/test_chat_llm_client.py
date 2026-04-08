@@ -10,6 +10,7 @@ from src.chat.llm_client import (
     ToolCall,
     ToolDefinition,
 )
+from src.chat.service import PersonalizedRoutineArgs
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -108,7 +109,7 @@ async def test_tool_clean_pydantic_schema_nested():
         }
     }
     cleaned = tool._clean_pydantic_schema(schema)
-    assert cleaned["properties"]["prop1"]["type"] == "STRING"
+    assert cleaned["properties"]["prop1"] == {"description": "some desc"}
     assert "description" in cleaned["properties"]["prop1"]
     assert "example" not in cleaned["properties"]["prop2"][0]
 
@@ -145,6 +146,57 @@ async def test_tool_clean_pydantic_schema_inlines_defs_refs():
         cleaned["properties"]["items"]["items"]["properties"]["value"]["type"]
         == "STRING"
     )
+
+
+async def test_tool_clean_pydantic_schema_removes_null_from_anyof():
+    tool = ToolDefinition(name="x", description="y", handler=_unused_handler)
+    schema = {"anyOf": [{"type": "string"}, {"type": "null"}]}
+
+    cleaned = tool._clean_pydantic_schema(schema)
+
+    assert cleaned == {"type": "STRING"}
+
+
+async def test_tool_clean_pydantic_schema_deduplicates_anyof_variants():
+    tool = ToolDefinition(name="x", description="y", handler=_unused_handler)
+    schema = {
+        "anyOf": [
+            {"type": "string"},
+            {"type": "null"},
+            {"type": "string"},
+        ]
+    }
+
+    cleaned = tool._clean_pydantic_schema(schema)
+
+    assert cleaned == {"type": "STRING"}
+
+
+async def test_personalized_routine_schema_cleaning_collapses_nullable_fields():
+    tool = ToolDefinition(
+        name="create_personalized_routine",
+        description="test",
+        handler=_unused_handler,
+        args_model=PersonalizedRoutineArgs,
+    )
+
+    cleaned = tool._clean_pydantic_schema(PersonalizedRoutineArgs.model_json_schema())
+
+    assert cleaned["properties"]["days_per_week"]["type"] == "INTEGER"
+    assert cleaned["properties"]["description"]["type"] == "STRING"
+    assert cleaned["properties"]["intended_use"]["type"] == "STRING"
+    assert cleaned["properties"]["restrictions"]["type"] == "STRING"
+    set_properties = (
+        cleaned["properties"]["exercises"]["items"]["properties"]["sets"]["items"][
+            "properties"
+        ]
+    )
+    assert set_properties["reps"]["type"] == "INTEGER"
+    assert set_properties["duration_seconds"]["type"] == "INTEGER"
+    assert set_properties["intensity"]["anyOf"] == [
+        {"type": "NUMBER"},
+        {"type": "STRING"},
+    ]
 
 
 async def test_coerce_raw_args_list_value():
