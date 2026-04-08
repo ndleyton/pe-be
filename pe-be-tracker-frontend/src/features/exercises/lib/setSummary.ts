@@ -37,8 +37,11 @@ export const formatSetSummary = ({
   }
 
   if (intensity != null) {
+    const formatted = formatDecimal(intensity);
     const suffix = intensityUnitAbbreviation ? ` ${intensityUnitAbbreviation}` : "";
-    parts.push(`@ ${formatDecimal(intensity)}${suffix}`);
+    if (formatted !== "-") {
+      parts.push(`@ ${formatted}${suffix}`);
+    }
   }
 
   return parts.length > 0 ? parts.join(" ") : "No targets set";

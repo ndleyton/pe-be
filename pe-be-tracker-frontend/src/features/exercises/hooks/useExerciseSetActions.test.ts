@@ -204,6 +204,7 @@ describe("useExerciseSetActions", () => {
 
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
       reps: 10,
+      duration_seconds: null,
       intensity: 110.231,
       intensity_unit_id: 2,
       exercise_id: 123,
@@ -213,6 +214,56 @@ describe("useExerciseSetActions", () => {
       type: "working",
     });
     expect(onExerciseUpdate).toHaveBeenCalled();
+  });
+
+  it("preserves duration_seconds when seeding a new set from a duration-based prior set", async () => {
+    mockCreateExerciseSet.mockResolvedValue(
+      makeExerciseSet({
+        id: 999,
+        reps: null,
+        duration_seconds: 1200,
+        intensity: 10,
+        intensity_unit_id: 3,
+        exercise_id: 123,
+      }),
+    );
+
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: null,
+          duration_seconds: 1200,
+          intensity: 10,
+          intensity_unit_id: 3,
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.addSet(3);
+    });
+
+    expect(result.current.exerciseSets[1].duration_seconds).toBe(1200);
+    expect(mockCreateExerciseSet).toHaveBeenCalledWith({
+      reps: 0,
+      duration_seconds: 1200,
+      intensity: 10,
+      intensity_unit_id: 3,
+      exercise_id: 123,
+      rest_time_seconds: 0,
+      done: false,
+      notes: undefined,
+      type: "working",
+    });
   });
 
   it("keeps exercise sets sorted when initial props arrive out of order", () => {

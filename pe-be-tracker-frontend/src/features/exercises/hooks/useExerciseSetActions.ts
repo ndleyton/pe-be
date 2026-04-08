@@ -286,6 +286,7 @@ export const useExerciseSetActions = ({
 
     const currentExerciseSets = exerciseSetsRef.current;
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
+    const nextDurationSeconds = lastSet ? (lastSet.duration_seconds ?? null) : null;
     const tempId = `temp-${Date.now()}`;
     const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
     const nextIntensity = convertIntensityValue(
@@ -296,6 +297,7 @@ export const useExerciseSetActions = ({
     const optimisticSet: ExerciseSet = {
       id: tempId,
       reps: lastSet?.reps,
+      duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
       intensity_unit_id: intensityUnitId,
       exercise_id: exercise.id,
@@ -319,6 +321,7 @@ export const useExerciseSetActions = ({
     try {
       const payload: CreateExerciseSetData = {
         reps: lastSet?.reps || 0,
+        duration_seconds: nextDurationSeconds,
         intensity: nextIntensity || 0,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,

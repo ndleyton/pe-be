@@ -30,4 +30,14 @@ describe("formatSetSummary", () => {
       }),
     ).toBe("45 sec");
   });
+
+  it("does not append placeholder intensity segments", () => {
+    expect(
+      formatSetSummary({
+        reps: 8,
+        intensity: 0,
+        intensityUnitAbbreviation: "kg",
+      }),
+    ).toBe("8 reps");
+  });
 });
