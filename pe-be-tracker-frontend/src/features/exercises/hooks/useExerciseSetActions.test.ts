@@ -204,7 +204,6 @@ describe("useExerciseSetActions", () => {
 
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
       reps: 10,
-      duration_seconds: null,
       intensity: 110.231,
       intensity_unit_id: 2,
       exercise_id: 123,
@@ -254,7 +253,6 @@ describe("useExerciseSetActions", () => {
 
     expect(result.current.exerciseSets[1].duration_seconds).toBe(1200);
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
-      reps: 0,
       duration_seconds: 1200,
       intensity: 10,
       intensity_unit_id: 3,
@@ -295,7 +293,6 @@ describe("useExerciseSetActions", () => {
 
     expect(result.current.exerciseSets[0].duration_seconds).toBe(600);
     expect(mockCreateExerciseSet).toHaveBeenCalledWith({
-      reps: 0,
       duration_seconds: 600,
       intensity: 0,
       intensity_unit_id: 3,

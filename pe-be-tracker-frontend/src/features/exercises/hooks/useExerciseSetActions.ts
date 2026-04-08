@@ -338,8 +338,6 @@ export const useExerciseSetActions = ({
 
     try {
       const payload: CreateExerciseSetData = {
-        reps: lastSet?.reps || 0,
-        duration_seconds: nextDurationSeconds,
         intensity: nextIntensity || 0,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,
@@ -347,6 +345,9 @@ export const useExerciseSetActions = ({
         done: false,
         notes: undefined,
         type: nextSetType,
+        ...(nextDurationSeconds != null
+          ? { duration_seconds: nextDurationSeconds }
+          : { reps: lastSet?.reps || 0 }),
       };
 
       const createdSet = await createExerciseSet(payload);
