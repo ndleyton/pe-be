@@ -277,7 +277,9 @@ class ChatService:
             == normalized_requested
             or (
                 compact_match
-                and cls._normalize_compact_lookup_value(candidate_name_getter(candidate))
+                and cls._normalize_compact_lookup_value(
+                    candidate_name_getter(candidate)
+                )
                 == normalized_compact_requested
             )
         ]
@@ -312,16 +314,18 @@ class ChatService:
             or self._normalize_lookup_value(workout_type.name)
             == self._normalize_lookup_value(requested)
         ]
-        unique_exact_matches = {workout_type.id: workout_type for workout_type in exact_matches}
+        unique_exact_matches = {
+            workout_type.id: workout_type for workout_type in exact_matches
+        }
         if len(unique_exact_matches) == 1:
             return next(iter(unique_exact_matches.values()))
         if len(unique_exact_matches) > 1:
             names = ", ".join(
-                sorted(workout_type.name for workout_type in unique_exact_matches.values())
+                sorted(
+                    workout_type.name for workout_type in unique_exact_matches.values()
+                )
             )
-            raise ValueError(
-                f"Ambiguous workout type '{requested}'. Matches: {names}."
-            )
+            raise ValueError(f"Ambiguous workout type '{requested}'. Matches: {names}.")
 
         contains_matches = [
             workout_type

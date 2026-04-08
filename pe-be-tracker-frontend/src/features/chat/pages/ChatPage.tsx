@@ -180,15 +180,17 @@ const parseRoutineCreatedEvent = (
 const extractChatEvents = (
   events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>,
 ): ChatEvent[] =>
-  (events ?? []).flatMap((event) => {
+  (events ?? []).reduce<ChatEvent[]>((acc, event) => {
     if (event.type === "workout_created") {
-      return [parseWorkoutCreatedEvent(event)];
+      acc.push(parseWorkoutCreatedEvent(event));
+      return acc;
     }
     if (event.type === "routine_created") {
-      return [parseRoutineCreatedEvent(event)];
+      acc.push(parseRoutineCreatedEvent(event));
+      return acc;
     }
-    return [];
-  });
+    return acc;
+  }, []);
 
 const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
   const workoutPath = `${NAV_PATHS.WORKOUTS}/${event.workout.id}`;
