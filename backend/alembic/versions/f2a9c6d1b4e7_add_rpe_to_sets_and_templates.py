@@ -1,7 +1,7 @@
 """add rpe to exercise and routine sets
 
 Revision ID: f2a9c6d1b4e7
-Revises: e3f5a7b8c9d1
+Revises: add002_duration_seconds_sets
 Create Date: 2026-04-08 12:00:00.000000
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "f2a9c6d1b4e7"
-down_revision = "e3f5a7b8c9d1"
+down_revision = "add002_duration_seconds_sets"
 branch_labels = None
 depends_on = None
 
