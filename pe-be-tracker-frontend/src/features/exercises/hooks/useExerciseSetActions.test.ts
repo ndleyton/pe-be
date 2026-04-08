@@ -266,6 +266,47 @@ describe("useExerciseSetActions", () => {
     });
   });
 
+  it("defaults blank speed-based sets to a duration target", async () => {
+    mockCreateExerciseSet.mockResolvedValue(
+      makeExerciseSet({
+        id: 999,
+        reps: null,
+        duration_seconds: 600,
+        intensity: null,
+        intensity_unit_id: 3,
+        exercise_id: 123,
+      }),
+    );
+
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.addSet(3);
+    });
+
+    expect(result.current.exerciseSets[0].duration_seconds).toBe(600);
+    expect(mockCreateExerciseSet).toHaveBeenCalledWith({
+      reps: 0,
+      duration_seconds: 600,
+      intensity: 0,
+      intensity_unit_id: 3,
+      exercise_id: 123,
+      rest_time_seconds: 0,
+      done: false,
+      notes: undefined,
+      type: "warmup",
+    });
+  });
+
   it("keeps exercise sets sorted when initial props arrive out of order", () => {
     const exercise = makeExercise({
       id: 123,

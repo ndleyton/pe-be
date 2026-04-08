@@ -20,6 +20,11 @@ const availableIntensityUnits: RoutineIntensityUnitOption[] = [
     name: "Pounds",
     abbreviation: "lb",
   },
+  {
+    id: 3,
+    name: "Kilometers per hour",
+    abbreviation: "km/h",
+  },
 ];
 
 const routine = makeRoutine({
@@ -138,5 +143,56 @@ describe("useRoutineEditor", () => {
 
     expect(result.current.editorTemplates[0].notes).toBe("Keep core tight");
     expect(result.current.hasUnsavedChanges).toBe(true);
+  });
+
+  it("defaults new sets to duration for speed-based exercise types", async () => {
+    const speedRoutine = makeRoutine({
+      exercise_templates: [
+        makeRoutineExerciseTemplate({
+          id: 101,
+          exercise_type_id: 401,
+          exercise_type: {
+            id: 401,
+            name: "Treadmill",
+            description: "Steady state cardio",
+            default_intensity_unit: 3,
+            times_used: 2,
+          },
+          set_templates: [
+            makeRoutineSetTemplate({
+              id: 201,
+              reps: null,
+              duration_seconds: 1200,
+              intensity: 10,
+              intensity_unit_id: 3,
+              intensity_unit: {
+                id: 3,
+                name: "Kilometers per hour",
+                abbreviation: "km/h",
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useRoutineEditor({
+        availableIntensityUnits,
+        routine: speedRoutine,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.editorTemplates).toHaveLength(1);
+    });
+
+    act(() => {
+      result.current.addSetToTemplate("101");
+    });
+
+    expect(result.current.editorTemplates[0].set_templates[1].duration_seconds).toBe(
+      600,
+    );
   });
 });

@@ -393,6 +393,73 @@ async def test_create_workout_from_parsed_uses_empty_units_list_and_errors_on_se
         )
 
 
+async def test_create_workout_from_parsed_defaults_duration_for_speed_units(
+    monkeypatch,
+):
+    parsed = WorkoutParseResponse(
+        name="Cardio Workout",
+        notes=None,
+        workout_type_id=1,
+        exercises=[
+            ParsedExercise(
+                exercise_type_name="Treadmill",
+                notes=None,
+                sets=[
+                    ParsedExerciseSet(
+                        reps=None,
+                        duration_seconds=None,
+                        intensity=10,
+                        intensity_unit="km/h",
+                        rest_time_seconds=None,
+                    )
+                ],
+            )
+        ],
+    )
+
+    units = [SimpleNamespace(id=3, name="Kilometers per hour", abbreviation="km/h")]
+    created_sets = []
+
+    async def fake_create_workout(session, workout_create, user_id):
+        return SimpleNamespace(id=501)
+
+    async def fake_get_intensity_units(session):
+        return units
+
+    async def fake_get_exercise_types(
+        session, name=None, order_by="usage", offset=0, limit=100, **kwargs
+    ):
+        return SimpleNamespace(data=[SimpleNamespace(id=2, name="Treadmill")])
+
+    async def fake_create_exercise(session, exercise_create, **kwargs):
+        return SimpleNamespace(id=600)
+
+    async def fake_create_exercise_set(session, exercise_set_create):
+        created_sets.append(exercise_set_create)
+        return SimpleNamespace(id=700)
+
+    async def fake_get_workout_by_id(session, workout_id, user_id):
+        return SimpleNamespace(id=workout_id, user_id=user_id, exercises=[])
+
+    monkeypatch.setattr(workouts_service, "create_workout", fake_create_workout)
+    monkeypatch.setattr(
+        workouts_service, "get_intensity_units", fake_get_intensity_units
+    )
+    monkeypatch.setattr(workouts_service, "get_exercise_types", fake_get_exercise_types)
+    monkeypatch.setattr(workouts_service, "create_exercise", fake_create_exercise)
+    monkeypatch.setattr(
+        workouts_service, "create_exercise_set", fake_create_exercise_set
+    )
+    monkeypatch.setattr(workouts_service, "get_workout_by_id", fake_get_workout_by_id)
+
+    result = await WorkoutService.create_workout_from_parsed(
+        session=object(), user_id=11, parsed=parsed
+    )
+
+    assert result.id == 501
+    assert created_sets[0].duration_seconds == 600
+
+
 async def test_prompt_to_string_handles_to_string_dict_and_exception_paths():
     class PromptWithToString:
         def to_string(self):
