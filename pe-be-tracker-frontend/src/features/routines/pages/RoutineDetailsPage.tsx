@@ -173,13 +173,6 @@ const RoutineDetailsPage = () => {
             </Alert>
           ) : null}
 
-          {editAccessMessage && !isEditing && !isPageDataPending && !showUnavailableState && (
-            <Alert className="bg-primary/5 border-primary/20 rounded-2xl backdrop-blur-md">
-              <AlertTitle className="text-xs font-bold uppercase tracking-wider opacity-70">View-only routine</AlertTitle>
-              <AlertDescription className="text-sm italic">{editAccessMessage}</AlertDescription>
-            </Alert>
-          )}
-
           {actionError && !showUnavailableState && (
             <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
               <AlertTitle className="text-xs font-bold uppercase tracking-wider">Action failed</AlertTitle>
