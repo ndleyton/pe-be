@@ -147,7 +147,6 @@ export const buildRoutinePayload = (
     set_templates: template.set_templates.map((setTemplate) => ({
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
-      rpe: setTemplate.rpe,
       intensity_unit_id: setTemplate.intensity_unit_id,
       ...(setTemplate.rpe != null ? { rpe: setTemplate.rpe } : {}),
       ...(setTemplate.duration_seconds != null
