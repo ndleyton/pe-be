@@ -547,6 +547,22 @@ async def test_generate_response_quota_exceeded(mock_get_llm, chat_service_no_db
 
 
 @pytest.mark.asyncio
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_provider_unavailable(mock_get_llm, chat_service_no_db):
+    mock_llm = AsyncMock()
+    mock_llm.acomplete.side_effect = Exception(
+        "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    )
+    mock_get_llm.return_value = mock_llm
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        with pytest.raises(ValueError, match="The AI service is currently busy"):
+            await chat_service_no_db.generate_response(
+                [{"role": "user", "content": "hi"}], save_to_db=False
+            )
+
+
+@pytest.mark.asyncio
 async def test_load_conversation_history_no_db(chat_service_no_db):
     with pytest.raises(ValueError, match="Database session required"):
         await chat_service_no_db.load_conversation_history(123)

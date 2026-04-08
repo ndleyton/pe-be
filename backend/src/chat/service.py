@@ -186,6 +186,19 @@ class ChatService:
     _LOOKUP_TOKEN_RE = re.compile(r"[^a-z0-9]+")
 
     @staticmethod
+    def _is_provider_busy_error(error_message: str) -> bool:
+        lowered = error_message.casefold()
+        busy_markers = (
+            "429",
+            "resourceexhausted",
+            "503",
+            "unavailable",
+            "high demand",
+            "try again later",
+        )
+        return any(marker in lowered for marker in busy_markers)
+
+    @staticmethod
     def _format_optional_notes(label: str, notes: Optional[str]) -> str:
         if not notes:
             return ""
@@ -1080,9 +1093,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 trace.update(metadata={"status": "error", "error": str(exc)})
 
             error_msg = str(exc)
-            if "429" in error_msg or "ResourceExhausted" in error_msg:
+            if self._is_provider_busy_error(error_msg):
                 raise ValueError(
-                    "The AI service is currently busy (quota exceeded). "
+                    "The AI service is currently busy. "
                     "Please try again in a minute."
                 )
 
