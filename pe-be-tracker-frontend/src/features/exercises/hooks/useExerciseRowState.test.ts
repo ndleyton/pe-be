@@ -30,13 +30,13 @@ describe("useExerciseRowState", () => {
       notes: "Focus on tempo",
       exercise_sets: [makeExerciseSet({ id: 1, exercise_id: 1 })],
     });
-    const updateSetNotes = vi.fn().mockResolvedValue(undefined);
+    const updateSetOptions = vi.fn().mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
       useExerciseRowState({
         exercise,
         exerciseSets: exercise.exercise_sets,
-        updateSetNotes,
+        updateSetOptions,
       }),
     );
 
@@ -66,28 +66,31 @@ describe("useExerciseRowState", () => {
     const exercise = makeExercise({
       exercise_sets: exerciseSets,
     });
-    const updateSetNotes = vi.fn().mockResolvedValue(undefined);
+    const updateSetOptions = vi.fn().mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
       useExerciseRowState({
         exercise,
         exerciseSets,
-        updateSetNotes,
+        updateSetOptions,
       }),
     );
 
     act(() => {
-      result.current.openSetOptions(1, "Original note");
+      result.current.openSetOptions(1, "Original note", null);
       result.current.setSetNotesValue("Updated note");
     });
 
-    expect(updateSetNotes).not.toHaveBeenCalled();
+    expect(updateSetOptions).not.toHaveBeenCalled();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
 
-    expect(updateSetNotes).toHaveBeenCalledWith(1, "Updated note");
+    expect(updateSetOptions).toHaveBeenCalledWith(1, {
+      notes: "Updated note",
+      rpe: null,
+    });
   });
 
   it("syncs input buffers from exercise sets and closes settings on unit change", () => {
@@ -113,14 +116,14 @@ describe("useExerciseRowState", () => {
       exercise_type: makeExerciseType({ default_intensity_unit: 2 }),
       exercise_sets: initialSets,
     });
-    const updateSetNotes = vi.fn().mockResolvedValue(undefined);
+    const updateSetOptions = vi.fn().mockResolvedValue(undefined);
 
     const { result, rerender } = renderHook(
       ({ sets }) =>
         useExerciseRowState({
           exercise,
           exerciseSets: sets,
-          updateSetNotes,
+          updateSetOptions,
         }),
       {
         initialProps: {

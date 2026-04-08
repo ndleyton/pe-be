@@ -250,6 +250,7 @@ export async function syncGuestDataToServer(
                   reps: guestSet.reps,
                   duration_seconds: guestSet.duration_seconds ?? null,
                   intensity: guestSet.intensity,
+                  rpe: guestSet.rpe ?? null,
                   intensity_unit_id: guestSet.intensity_unit_id,
                   exercise_id: createdExercise.id,
                   rest_time_seconds: guestSet.rest_time_seconds,

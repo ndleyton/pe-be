@@ -40,6 +40,7 @@ export type RoutineEditorSet = {
   reps: number | null;
   duration_seconds: number | null;
   intensity: number | null;
+  rpe: number | null;
   intensity_unit_id: number;
   intensity_unit: RoutineIntensityUnitOption | null;
 };
@@ -110,6 +111,7 @@ export const formatSetSummary = (setTemplate: RoutineEditorSet) => {
     reps: setTemplate.reps,
     duration_seconds: setTemplate.duration_seconds,
     intensity: setTemplate.intensity,
+    rpe: setTemplate.rpe,
     intensityUnitAbbreviation: setTemplate.intensity_unit?.abbreviation,
   });
 };
@@ -128,6 +130,7 @@ export const buildEditorTemplatesFromRoutine = (
       reps: setTemplate.reps ?? null,
       duration_seconds: setTemplate.duration_seconds ?? null,
       intensity: setTemplate.intensity ?? null,
+      rpe: setTemplate.rpe ?? null,
       intensity_unit_id: setTemplate.intensity_unit_id,
       intensity_unit:
         toRoutineIntensityUnitOption(setTemplate.intensity_unit) ??
@@ -144,6 +147,7 @@ export const buildRoutinePayload = (
     set_templates: template.set_templates.map((setTemplate) => ({
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
+      rpe: setTemplate.rpe,
       intensity_unit_id: setTemplate.intensity_unit_id,
       ...(setTemplate.duration_seconds != null
         ? { duration_seconds: setTemplate.duration_seconds }
@@ -168,6 +172,7 @@ export const buildComparableSnapshot = (
         reps: setTemplate.reps,
         duration_seconds: setTemplate.duration_seconds,
         intensity: setTemplate.intensity,
+        rpe: setTemplate.rpe,
         intensity_unit_id: setTemplate.intensity_unit_id,
       })),
     })),
@@ -189,6 +194,7 @@ export const createDefaultSet = (
       ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
       : null,
     intensity: null,
+    rpe: null,
     intensity_unit_id: fallbackUnit.id,
     intensity_unit: fallbackUnit,
   };
@@ -231,6 +237,7 @@ export const buildRoutineFromEditorState = ({
       reps: setTemplate.reps,
       duration_seconds: setTemplate.duration_seconds,
       intensity: setTemplate.intensity,
+      rpe: setTemplate.rpe,
       intensity_unit_id: setTemplate.intensity_unit_id,
       created_at: routine.created_at,
       updated_at: routine.updated_at,

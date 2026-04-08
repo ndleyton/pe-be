@@ -31,9 +31,14 @@ type ExerciseSetTableProps = {
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
   onIncrementReps: (setId: string | number) => void;
-  onOpenSetOptions: (setId: string | number, initialNotes: string) => void;
+  onOpenSetOptions: (
+    setId: string | number,
+    initialNotes: string,
+    initialRpe: number | null | undefined,
+  ) => void;
   onSetOptionsOpenChange: (open: boolean) => void;
   onSetNotesValueChange: (value: string) => void;
+  onSetRpeValueChange: (value: string) => void;
   onSetRepsInputValue: (setId: string | number, value: string) => void;
   onSetWeightInputValue: (setId: string | number, value: string) => void;
   onToggleSetCompletion: (setId: string | number) => void | Promise<void>;
@@ -45,6 +50,7 @@ type ExerciseSetTableProps = {
   ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
+  setRpeValue: string;
 };
 
 export const ExerciseSetTable = ({
@@ -62,12 +68,14 @@ export const ExerciseSetTable = ({
   onOpenSetOptions,
   onSetOptionsOpenChange,
   onSetNotesValueChange,
+  onSetRpeValueChange,
   onSetRepsInputValue,
   onSetWeightInputValue,
   onToggleSetCompletion,
   onUpdateSetField,
   repsInputs,
   setNotesValue,
+  setRpeValue,
 }: ExerciseSetTableProps) => (
   <>
     <div
@@ -230,7 +238,9 @@ export const ExerciseSetTable = ({
                     variant="ghost"
                     size="sm"
                     className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
-                    onClick={() => onOpenSetOptions(set.id, set.notes || "")}
+                    onClick={() =>
+                      onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null)
+                    }
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -243,6 +253,23 @@ export const ExerciseSetTable = ({
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        RPE
+                      </label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={10}
+                        step={0.5}
+                        placeholder="Optional"
+                        value={setRpeValue}
+                        onChange={(event) =>
+                          onSetRpeValueChange(event.target.value)
+                        }
+                      />
+                    </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Notes for Set {index + 1}

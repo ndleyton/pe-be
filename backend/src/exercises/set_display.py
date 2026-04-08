@@ -29,11 +29,19 @@ def _format_intensity(
     return str(intensity)
 
 
+def _format_rpe(rpe: Decimal | int | float | None) -> str | None:
+    if rpe is None:
+        return None
+
+    return f"RPE {rpe}"
+
+
 def format_set_summary(
     *,
     reps: int | None,
     duration_seconds: int | None,
     intensity: Decimal | int | float | None,
+    rpe: Decimal | int | float | None,
     intensity_unit_abbreviation: Optional[str],
 ) -> str:
     lead = None
@@ -44,11 +52,16 @@ def format_set_summary(
         lead = f"{reps} reps"
 
     intensity_display = _format_intensity(intensity, intensity_unit_abbreviation)
+    rpe_display = _format_rpe(rpe)
 
-    if lead and intensity_display:
-        return f"{lead} at {intensity_display}"
+    parts = []
     if lead:
-        return lead
+        parts.append(lead)
     if intensity_display:
-        return intensity_display
+        parts.append(f"at {intensity_display}" if lead else intensity_display)
+    if rpe_display:
+        parts.append(rpe_display)
+
+    if parts:
+        return " ".join(parts)
     return "No targets set"

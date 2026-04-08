@@ -66,6 +66,7 @@ class ChatService:
             reps=getattr(exercise_set, "reps", None),
             duration_seconds=getattr(exercise_set, "duration_seconds", None),
             intensity=getattr(exercise_set, "intensity", None),
+            rpe=getattr(exercise_set, "rpe", None),
             intensity_unit_abbreviation=getattr(intensity_unit, "abbreviation", None),
         )
         summary = f"  - Set {exercise_set.id}: {rendered_summary}\n"

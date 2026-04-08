@@ -9,6 +9,7 @@ import {
   DEFAULT_INTENSITY_UNIT,
   buildIntensityInputs,
   buildRepsInputs,
+  formatIntensityInputValue,
 } from "@/features/exercises/lib/exerciseRow";
 import {
   resolveExerciseDisplayIntensityUnit,
@@ -20,15 +21,28 @@ import {
 } from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
+import { parseDecimalInput } from "@/utils/format";
+
+const normalizeRpeValue = (value: string): number | null => {
+  const parsed = parseDecimalInput(value);
+  if (parsed === null || parsed < 0 || parsed > 10) {
+    return null;
+  }
+
+  return Math.round(parsed * 2) / 2;
+};
 
 export const useExerciseRowState = ({
   exercise,
   exerciseSets,
-  updateSetNotes,
+  updateSetOptions,
 }: {
   exercise: Exercise;
   exerciseSets: ExerciseSet[];
-  updateSetNotes: (setId: string | number, notes: string) => Promise<void>;
+  updateSetOptions: (
+    setId: string | number,
+    updates: { notes?: string; rpe?: number | null },
+  ) => Promise<void>;
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const availableIntensityUnits = isAuthenticated
@@ -52,10 +66,11 @@ export const useExerciseRowState = ({
   const [exerciseNotesValue, setExerciseNotesValue] = useState("");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
-  const [initialSetNotesValue, setInitialSetNotesValue] = useState("");
+  const [setRpeValue, setSetRpeValue] = useState("");
   const [exerciseSettingsOpen, setExerciseSettingsOpen] = useState(false);
 
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000);
+  const debouncedSetRpeValue = useDebounce(setRpeValue, 1000);
 
   useEffect(() => {
     setIntensityInputs(buildIntensityInputs(exerciseSets, currentIntensityUnit.id));
@@ -66,7 +81,7 @@ export const useExerciseRowState = ({
     if (
       activeSetId === null ||
       debouncedSetNotesValue !== setNotesValue ||
-      debouncedSetNotesValue === initialSetNotesValue
+      debouncedSetRpeValue !== setRpeValue
     ) {
       return;
     }
@@ -75,18 +90,31 @@ export const useExerciseRowState = ({
       (set) => String(set.id) === String(activeSetId),
     );
 
-    if (!currentSet || debouncedSetNotesValue === (currentSet.notes || "")) {
+    if (!currentSet) {
       return;
     }
 
-    void updateSetNotes(activeSetId, debouncedSetNotesValue);
+    const nextNotes = debouncedSetNotesValue;
+    const nextRpe = normalizeRpeValue(debouncedSetRpeValue);
+    const currentNotes = currentSet.notes || "";
+    const currentRpe = currentSet.rpe ?? null;
+
+    if (
+      nextNotes === currentNotes &&
+      nextRpe === currentRpe
+    ) {
+      return;
+    }
+
+    void updateSetOptions(activeSetId, { notes: nextNotes, rpe: nextRpe });
   }, [
     activeSetId,
     debouncedSetNotesValue,
+    debouncedSetRpeValue,
     exerciseSets,
-    initialSetNotesValue,
     setNotesValue,
-    updateSetNotes,
+    setRpeValue,
+    updateSetOptions,
   ]);
 
   const handleExerciseNotesOpenChange = (open: boolean) => {
@@ -104,13 +132,17 @@ export const useExerciseRowState = ({
   const closeSetOptions = () => {
     setActiveSetId(null);
     setSetNotesValue("");
-    setInitialSetNotesValue("");
+    setSetRpeValue("");
   };
 
-  const openSetOptions = (setId: string | number, initialNotes: string) => {
+  const openSetOptions = (
+    setId: string | number,
+    initialNotes: string,
+    initialRpe: number | null | undefined,
+  ) => {
     setActiveSetId(setId);
     setSetNotesValue(initialNotes);
-    setInitialSetNotesValue(initialNotes);
+    setSetRpeValue(formatIntensityInputValue(initialRpe ?? null));
   };
 
   const handleSetOptionsOpenChange = (open: boolean) => {
@@ -147,11 +179,13 @@ export const useExerciseRowState = ({
         [String(setId)]: value,
         })),
     setNotesValue,
+    setRpeValue,
     setRepsInputValue: (setId: string | number, value: string) =>
       setRepsInputs((current) => ({
         ...current,
         [String(setId)]: value,
       })),
+    setSetRpeValue,
     setSetNotesValue,
     closeSetOptions,
   };

@@ -242,13 +242,16 @@ export const useExerciseSetActions = ({
     }
   };
 
-  const updateSetNotes = async (setId: string | number, notes: string) => {
+  const updateSetOptions = async (
+    setId: string | number,
+    updates: Pick<UpdateExerciseSetData, "notes" | "rpe">,
+  ) => {
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
         String(set.id) === String(setId)
           ? {
               ...set,
-              notes,
+              ...updates,
             }
           : set,
       ),
@@ -259,9 +262,9 @@ export const useExerciseSetActions = ({
     }
 
     try {
-      await updateExerciseSet(setId, { notes });
+      await updateExerciseSet(setId, updates);
     } catch (error) {
-      console.error("Failed to update exercise set notes:", error);
+      console.error("Failed to update exercise set options:", error);
       invalidateExerciseQuery();
     }
   };
@@ -317,6 +320,7 @@ export const useExerciseSetActions = ({
       reps: lastSet?.reps,
       duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
+      rpe: lastSet?.rpe ?? null,
       intensity_unit_id: intensityUnitId,
       exercise_id: exercise.id,
       rest_time_seconds: null,
@@ -339,6 +343,7 @@ export const useExerciseSetActions = ({
     try {
       const payload: CreateExerciseSetData = {
         intensity: nextIntensity || 0,
+        rpe: lastSet?.rpe ?? null,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,
         rest_time_seconds: 0,
@@ -406,6 +411,6 @@ export const useExerciseSetActions = ({
     toggleSetCompletion,
     updateExerciseNotes,
     updateSetField,
-    updateSetNotes,
+    updateSetOptions,
   };
 };

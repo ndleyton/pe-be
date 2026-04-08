@@ -142,6 +142,7 @@ class RoutineService:
                         reps=set_template.reps,
                         duration_seconds=set_template.duration_seconds,
                         intensity=set_template.intensity,
+                        rpe=set_template.rpe,
                         intensity_unit_id=set_template.intensity_unit_id,
                         rest_time_seconds=None,
                         exercise_id=exercise.id,
