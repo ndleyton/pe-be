@@ -96,6 +96,13 @@ const ExerciseTypeDetailsPage = () => {
   });
   const exerciseTypeName = exerciseType?.name ?? "Exercise";
   const isPageDataPending = isLoadingExerciseType && !exerciseType;
+  const canLoadEditTaxonomy =
+    isAuthenticated &&
+    !!exerciseType &&
+    (isSuperuser ||
+      (currentUserId != null &&
+        exerciseType.owner_id === currentUserId &&
+        exerciseType.status !== "released"));
 
   const {
     data: stats,
@@ -111,13 +118,13 @@ const ExerciseTypeDetailsPage = () => {
   const { data: intensityUnits = [], error: intensityUnitsError } = useQuery({
     queryKey: ["intensityUnits"],
     queryFn: getIntensityUnits,
-    enabled: isAuthenticated,
+    enabled: canLoadEditTaxonomy,
   });
 
   const { data: muscles = [], error: musclesError } = useQuery({
     queryKey: ["muscles"],
     queryFn: getMuscles,
-    enabled: isAuthenticated,
+    enabled: canLoadEditTaxonomy,
   });
 
   useEffect(() => {
