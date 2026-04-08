@@ -22,7 +22,13 @@ from src.exercises.crud import (
     request_exercise_type_evaluation,
     update_exercise_type,
 )
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
+from src.exercises.models import (
+    Exercise,
+    ExerciseType,
+    IntensityUnit,
+    Muscle,
+    MuscleGroup,
+)
 from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import (
     ExerciseCreate,
