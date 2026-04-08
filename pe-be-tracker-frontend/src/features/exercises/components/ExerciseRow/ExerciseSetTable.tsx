@@ -93,6 +93,7 @@ export const ExerciseSetTable = ({
     <div className="space-y-2">
       {exerciseSets.map((set, index) => {
         const setKey = String(set.id);
+        const effortLabelId = `set-effort-label-${set.id}`;
         const savedDisplayIntensity = convertIntensityValue(
           set.intensity,
           set.intensity_unit_id,
@@ -255,7 +256,10 @@ export const ExerciseSetTable = ({
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label
+                        id={effortLabelId}
+                        className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
                         Effort
                       </label>
                       <div className="space-y-3">
@@ -277,6 +281,10 @@ export const ExerciseSetTable = ({
                           max={10}
                           step={0.5}
                           className="mx-auto w-full max-w-xs"
+                          aria-labelledby={effortLabelId}
+                          aria-valuetext={
+                            setRpeValue == null ? "Not set" : `Effort ${setRpeValue}`
+                          }
                           onValueChange={(values: number[]) =>
                             onSetRpeValueChange(values[0] ?? null)
                           }
