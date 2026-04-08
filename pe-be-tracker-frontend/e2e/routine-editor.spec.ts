@@ -162,8 +162,11 @@ test.describe("Routine editor", () => {
       page.getByText("Public Routine"),
     ).toBeVisible();
     await expect(
-      page.getByText("Sign in as the routine creator or a superuser to edit this routine."),
+      page.locator('[data-slot="badge"]', { hasText: "View-only" }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Edit Routine" }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("delete-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("add-routine-exercise-button")).toHaveCount(0);
@@ -443,8 +446,11 @@ test.describe("Routine editor", () => {
       page.getByText("Shared Routine"),
     ).toBeVisible();
     await expect(
-      page.getByText("Only the routine creator or a superuser can edit this routine."),
+      page.locator('[data-slot="badge"]', { hasText: "View-only" }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Edit Routine" }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("save-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("delete-routine-button")).toHaveCount(0);
     await expect(page.getByTestId("add-routine-exercise-button")).toHaveCount(0);
