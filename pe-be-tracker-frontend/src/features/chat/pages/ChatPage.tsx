@@ -35,6 +35,15 @@ type WorkoutWidgetData = Pick<
   "id" | "name" | "notes" | "start_time" | "end_time"
 >;
 
+interface RoutineWidgetData {
+  id: number;
+  name: string;
+  description?: string | null;
+  workout_type_id: number;
+  exercise_count: number;
+  set_count: number;
+}
+
 interface WorkoutCreatedEvent {
   type: "workout_created";
   title?: string;
@@ -42,7 +51,14 @@ interface WorkoutCreatedEvent {
   workout: WorkoutWidgetData;
 }
 
-type ChatEvent = WorkoutCreatedEvent;
+interface RoutineCreatedEvent {
+  type: "routine_created";
+  title?: string;
+  ctaLabel?: string;
+  routine: RoutineWidgetData;
+}
+
+type ChatEvent = WorkoutCreatedEvent | RoutineCreatedEvent;
 
 interface ChatMessage {
   id: string;
@@ -90,10 +106,24 @@ interface ChatApiWorkoutCreatedEvent {
   };
 }
 
+interface ChatApiRoutineCreatedEvent {
+  type: "routine_created";
+  title?: string | null;
+  cta_label?: string | null;
+  routine: {
+    id: number;
+    name: string;
+    description?: string | null;
+    workout_type_id: number;
+    exercise_count: number;
+    set_count: number;
+  };
+}
+
 interface ChatResponse {
   message: string;
   conversation_id: number;
-  events?: ChatApiWorkoutCreatedEvent[];
+  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>;
 }
 
 const MAX_ATTACHMENTS = 4;
@@ -129,8 +159,36 @@ const parseWorkoutCreatedEvent = (
   };
 };
 
-const extractChatEvents = (events?: ChatApiWorkoutCreatedEvent[]): ChatEvent[] =>
-  (events ?? []).map(parseWorkoutCreatedEvent);
+const parseRoutineCreatedEvent = (
+  event: ChatApiRoutineCreatedEvent,
+): RoutineCreatedEvent => {
+  return {
+    type: "routine_created",
+    title: event.title ?? undefined,
+    ctaLabel: event.cta_label ?? undefined,
+    routine: {
+      id: event.routine.id,
+      name: event.routine.name,
+      description: event.routine.description,
+      workout_type_id: event.routine.workout_type_id,
+      exercise_count: event.routine.exercise_count,
+      set_count: event.routine.set_count,
+    },
+  };
+};
+
+const extractChatEvents = (
+  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>,
+): ChatEvent[] =>
+  (events ?? []).flatMap((event) => {
+    if (event.type === "workout_created") {
+      return [parseWorkoutCreatedEvent(event)];
+    }
+    if (event.type === "routine_created") {
+      return [parseRoutineCreatedEvent(event)];
+    }
+    return [];
+  });
 
 const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
   const workoutPath = `${NAV_PATHS.WORKOUTS}/${event.workout.id}`;
@@ -171,6 +229,44 @@ const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
 
       <Button asChild variant="secondary" size="sm" className="mt-3 w-full">
         <Link to={workoutPath}>{event.ctaLabel ?? "Open workout"}</Link>
+      </Button>
+    </div>
+  );
+};
+
+const ChatRoutineWidget = ({ event }: { event: RoutineCreatedEvent }) => {
+  const routinePath = endpoints.routineById(event.routine.id);
+  const exerciseLabel = `${event.routine.exercise_count} exercise${event.routine.exercise_count === 1 ? "" : "s"}`;
+  const setLabel = `${event.routine.set_count} set${event.routine.set_count === 1 ? "" : "s"}`;
+
+  return (
+    <div className="bg-background/70 border-border/40 mt-3 rounded-2xl border p-3">
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <Dumbbell className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.16em]">
+            {event.title ?? "Routine created"}
+          </p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            {event.routine.name}
+          </p>
+          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <span>{exerciseLabel}</span>
+            <span>{setLabel}</span>
+          </div>
+        </div>
+      </div>
+
+      {event.routine.description && (
+        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+          {event.routine.description}
+        </p>
+      )}
+
+      <Button asChild variant="secondary" size="sm" className="mt-3 w-full">
+        <Link to={routinePath}>{event.ctaLabel ?? "View routine"}</Link>
       </Button>
     </div>
   );
@@ -650,15 +746,19 @@ const ChatPage = () => {
       return null;
     }
 
-    const workoutEvent = message.events?.find(
-      (event): event is WorkoutCreatedEvent => event.type === "workout_created",
-    );
-
-    if (!workoutEvent) {
+    if (!message.events?.length) {
       return null;
     }
 
-    return <ChatWorkoutWidget event={workoutEvent} />;
+    return message.events.map((event, index) => {
+      if (event.type === "workout_created") {
+        return <ChatWorkoutWidget key={`${message.id}-widget-${index}`} event={event} />;
+      }
+      if (event.type === "routine_created") {
+        return <ChatRoutineWidget key={`${message.id}-widget-${index}`} event={event} />;
+      }
+      return null;
+    });
   };
 
   return (

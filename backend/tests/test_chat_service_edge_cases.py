@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.chat.service import ChatService
+from src.chat.service import ChatService, PersonalizedRoutineSetArgs
 from datetime import date, datetime, timezone
 
 
@@ -291,6 +291,231 @@ async def test_parse_workout_and_save_tool_wrapper(chat_service_with_db):
         assert "WORKOUT SAVED SUCCESSFULLY" in res2
         assert mock_create.called
         assert len(chat_service_with_db._pending_chat_events) == 1
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_success(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [
+        SimpleNamespace(id=4, name="Strength Training")
+    ]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
+    ]
+    mock_create_routine.return_value = SimpleNamespace(
+        id=42,
+        name="Beginner Full Body",
+        description="Build muscle. Commercial gym access. 3 day(s) per week",
+        workout_type_id=4,
+        exercise_templates=[
+            SimpleNamespace(set_templates=[SimpleNamespace(), SimpleNamespace()]),
+        ],
+    )
+
+    result = await chat_service_with_db._create_personalized_routine(
+        name="Beginner Full Body",
+        workout_type_name="Strength",
+        goal_summary="Build muscle",
+        equipment_notes="Commercial gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Goblet Squat",
+                "sets": [
+                    {"reps": 10, "intensity_unit": "BW"},
+                    {"reps": 10, "intensity_unit": "BW"},
+                ],
+            }
+        ],
+    )
+
+    assert "ROUTINE CREATED SUCCESSFULLY" in result
+    assert len(chat_service_with_db._pending_chat_events) == 1
+    assert chat_service_with_db._pending_chat_events[0].model_dump(mode="json") == {
+        "type": "routine_created",
+        "title": "Routine created",
+        "cta_label": "View routine",
+        "routine": {
+            "id": 42,
+            "name": "Beginner Full Body",
+            "description": "Build muscle. Commercial gym access. 3 day(s) per week",
+            "workout_type_id": 4,
+            "exercise_count": 1,
+            "set_count": 2,
+        },
+    }
+    mock_create_routine.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_persists_duration_seconds(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[SimpleNamespace(id=9, name="Sled Push")]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=7, name="Time Based", abbreviation="time-based")
+    ]
+    mock_create_routine.return_value = SimpleNamespace(
+        id=101,
+        name="Conditioning Builder",
+        description="desc",
+        workout_type_id=4,
+        exercise_templates=[SimpleNamespace(set_templates=[SimpleNamespace()])],
+    )
+
+    await chat_service_with_db._create_personalized_routine(
+        name="Conditioning Builder",
+        workout_type_name="Strength",
+        goal_summary="Build conditioning",
+        equipment_notes="Track and sled access",
+        exercises=[
+            {
+                "exercise_type_name": "Sled Push",
+                "sets": [{"reps": "5-10 minutes", "intensity_unit": "time-based"}],
+            }
+        ],
+    )
+
+    routine_payload = mock_create_routine.await_args.args[1]
+    assert routine_payload.exercise_templates[0].set_templates[0].reps is None
+    assert (
+        routine_payload.exercise_templates[0].set_templates[0].duration_seconds
+        == 600
+    )
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_unknown_workout_type(
+    mock_get_workout_types, chat_service_with_db
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+
+    result = await chat_service_with_db._create_personalized_routine(
+        name="Beginner Full Body",
+        workout_type_name="Conditioning",
+        goal_summary="Build muscle",
+        days_per_week=3,
+        equipment_notes="Commercial gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Goblet Squat",
+                "sets": [{"reps": 10, "intensity_unit": "BW"}],
+            }
+        ],
+    )
+
+    assert (
+        result
+        == "Failed to create routine: Unknown workout type 'Conditioning'. Available workout types: Strength."
+    )
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_unknown_exercise_type(
+    mock_get_workout_types, mock_get_exercise_types, chat_service_with_db
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(data=[])
+
+    result = await chat_service_with_db._create_personalized_routine(
+        name="Beginner Full Body",
+        workout_type_name="Strength",
+        goal_summary="Build muscle",
+        days_per_week=3,
+        equipment_notes="Commercial gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Goblet Squat",
+                "sets": [{"reps": 10, "intensity_unit": "BW"}],
+            }
+        ],
+    )
+
+    assert (
+        result
+        == "Failed to create routine: Unknown exercise type 'Goblet Squat'. Please choose a canonical exercise name."
+    )
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_unknown_intensity_unit(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
+    ]
+
+    result = await chat_service_with_db._create_personalized_routine(
+        name="Beginner Full Body",
+        workout_type_name="Strength",
+        goal_summary="Build muscle",
+        days_per_week=3,
+        equipment_notes="Commercial gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Goblet Squat",
+                "sets": [{"reps": 10, "intensity_unit": "stone"}],
+            }
+        ],
+    )
+
+    assert (
+        result
+        == "Failed to create routine: Unknown intensity unit 'stone'. Available units: bw."
+    )
+
+
+def test_personalized_routine_set_args_normalizes_rep_range_text():
+    parsed = PersonalizedRoutineSetArgs.model_validate(
+        {"reps": "6-8 or AMRAP", "intensity_unit": "bw"}
+    )
+
+    assert parsed.reps == 8
+    assert parsed.duration_seconds is None
+
+
+def test_personalized_routine_set_args_converts_time_text_to_duration_seconds():
+    parsed = PersonalizedRoutineSetArgs.model_validate(
+        {"reps": "5-10 minutes", "intensity_unit": "time-based"}
+    )
+
+    assert parsed.reps is None
+    assert parsed.duration_seconds == 600
 
 
 @pytest.mark.asyncio

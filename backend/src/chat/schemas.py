@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -68,10 +68,32 @@ class ChatWorkoutCreatedEvent(BaseModel):
     workout: ChatWorkoutEventWorkout
 
 
+class ChatRoutineEventRoutine(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    workout_type_id: int
+    exercise_count: int
+    set_count: int
+
+
+class ChatRoutineCreatedEvent(BaseModel):
+    type: Literal["routine_created"]
+    title: Optional[str] = None
+    cta_label: Optional[str] = None
+    routine: ChatRoutineEventRoutine
+
+
+ChatEvent = Annotated[
+    ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent,
+    Field(discriminator="type"),
+]
+
+
 class ChatResponse(BaseModel):
     message: str
     conversation_id: int
-    events: List[ChatWorkoutCreatedEvent] = Field(default_factory=list)
+    events: List[ChatEvent] = Field(default_factory=list)
 
 
 class ChatAttachmentUploadResponse(BaseModel):

@@ -358,6 +358,95 @@ async def test_generate_response_returns_workout_created_event(
     ]
 
 
+@pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_returns_routine_created_event(
+    mock_get_llm,
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+
+    mock_tool_call_response = MagicMock()
+    mock_tool_call = MagicMock()
+    mock_tool_call.name = "create_personalized_routine"
+    mock_tool_call.call_id = "call_456"
+    mock_tool_call.args = {
+        "name": "Beginner Full Body",
+        "description": "Built for muscle gain.",
+        "workout_type_name": "Strength",
+        "goal_summary": "Build muscle",
+        "equipment_notes": "Commercial gym access",
+        "exercises": [
+            {
+                "exercise_type_name": "Goblet Squat",
+                "sets": [
+                    {"reps": 10, "intensity_unit": "BW"},
+                    {"reps": 10, "intensity_unit": "BW"},
+                ],
+            }
+        ],
+    }
+    mock_tool_call_response.tool_calls = [mock_tool_call]
+    mock_tool_call_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_text_response = MagicMock()
+    mock_text_response.tool_calls = []
+    mock_text_response.message = ConversationMessage(
+        role="assistant", content="I created a routine for you."
+    )
+
+    mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_text_response]
+    mock_get_llm.return_value = mock_llm
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
+    ]
+    mock_create_routine.return_value = SimpleNamespace(
+        id=88,
+        name="Beginner Full Body",
+        description="Built for muscle gain.",
+        workout_type_id=4,
+        exercise_templates=[
+            SimpleNamespace(set_templates=[SimpleNamespace(), SimpleNamespace()]),
+        ],
+    )
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [{"role": "user", "content": "Make me a beginner full body routine"}],
+            save_to_db=False,
+        )
+
+    assert result["message"] == "I created a routine for you."
+    assert result["events"] == [
+        {
+            "type": "routine_created",
+            "title": "Routine created",
+            "cta_label": "View routine",
+            "routine": {
+                "id": 88,
+                "name": "Beginner Full Body",
+                "description": "Built for muscle gain.",
+                "workout_type_id": 4,
+                "exercise_count": 1,
+                "set_count": 2,
+            },
+        }
+    ]
+
+
 def test_get_system_prompt_handling(chat_service_no_db):
     chat_service_no_db.langfuse = MagicMock()
 

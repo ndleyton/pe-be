@@ -1,13 +1,15 @@
 import hashlib
 import logging
+import re
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 from uuid import uuid4
 
 from langfuse import Langfuse
 from PIL import Image, UnidentifiedImageError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.chat.crud import (
@@ -28,6 +30,8 @@ from src.chat.llm_client import (
     ToolDefinition,
 )
 from src.chat.schemas import (
+    ChatRoutineCreatedEvent,
+    ChatRoutineEventRoutine,
     ChatMessage,
     ChatMessagePart,
     ChatWorkoutCreatedEvent,
@@ -36,10 +40,25 @@ from src.chat.schemas import (
     ConversationMessageCreate,
 )
 from src.core.config import settings
-from src.exercises.crud import get_exercise_type_stats, get_exercise_types
+from src.exercises.crud import (
+    get_exercise_type_stats,
+    get_exercise_types,
+    get_intensity_units,
+)
 from src.exercises.crud import get_exercises_for_workout
-from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
 from src.exercises.set_display import format_set_summary
+from src.routines.models import Routine
+from src.routines.schemas import (
+    AdminRoutineCreate,
+    ExerciseTemplateCreate,
+    SetTemplateCreate,
+)
+from src.routines.service import routine_service
+from src.workouts.crud import (
+    get_latest_workout_for_user,
+    get_workout_by_date,
+    get_workout_types,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +71,116 @@ class WorkoutSummaryByDateArgs(BaseModel):
     workout_date: str
 
 
+class PersonalizedRoutineSetArgs(BaseModel):
+    reps: int | None = Field(default=None, ge=1)
+    duration_seconds: int | None = Field(default=None, ge=1)
+    intensity: Decimal | None = None
+    intensity_unit: str = Field(..., min_length=1)
+
+    TIME_KEYWORDS: ClassVar[tuple[str, ...]] = (
+        "min",
+        "mins",
+        "minute",
+        "minutes",
+        "sec",
+        "secs",
+        "second",
+        "seconds",
+        "hr",
+        "hrs",
+        "hour",
+        "hours",
+    )
+
+    @staticmethod
+    def _extract_numbers(value: str) -> list[Decimal]:
+        return [Decimal(match) for match in re.findall(r"\d+(?:\.\d+)?", value)]
+
+    @classmethod
+    def _extract_duration_seconds(cls, value: str) -> int | None:
+        lowered = value.casefold()
+        numbers = cls._extract_numbers(lowered)
+        if not numbers:
+            return None
+
+        upper_bound = numbers[-1]
+        if any(keyword in lowered for keyword in ("hour", "hr")):
+            return int(upper_bound * Decimal("3600"))
+        if any(keyword in lowered for keyword in ("min", "minute")):
+            return int(upper_bound * Decimal("60"))
+        if any(keyword in lowered for keyword in ("sec", "second")):
+            return int(upper_bound)
+        return None
+
+    @classmethod
+    def _normalize_reps_text(cls, value: str) -> int | None:
+        lowered = value.strip().casefold()
+        if not lowered:
+            return None
+
+        if any(keyword in lowered for keyword in cls.TIME_KEYWORDS):
+            return None
+
+        numbers = cls._extract_numbers(lowered)
+        if not numbers:
+            return None
+
+        # The routine schema stores a single rep target, so preserve the upper
+        # bound when the model emits a range such as 6-8.
+        return int(numbers[-1])
+
+    @classmethod
+    def _normalize_optional_int(cls, value: Any) -> int | None:
+        if value is None or isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            if stripped.isdigit():
+                return int(stripped)
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_set_prescription(cls, obj: Any) -> Any:
+        if not isinstance(obj, dict):
+            return obj
+
+        normalized = dict(obj)
+        normalized["duration_seconds"] = cls._normalize_optional_int(
+            normalized.get("duration_seconds")
+        )
+        reps = normalized.get("reps")
+        if isinstance(reps, str):
+            normalized_reps = cls._normalize_reps_text(reps)
+            normalized["reps"] = normalized_reps
+            if normalized.get("duration_seconds") is None and normalized_reps is None:
+                normalized["duration_seconds"] = cls._extract_duration_seconds(reps)
+
+        return normalized
+
+
+class PersonalizedRoutineExerciseArgs(BaseModel):
+    exercise_type_name: str = Field(..., min_length=1)
+    sets: list[PersonalizedRoutineSetArgs] = Field(..., min_length=1)
+
+
+class PersonalizedRoutineArgs(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    workout_type_name: str = Field(..., min_length=1)
+    goal_summary: str = Field(..., min_length=1)
+    days_per_week: int | None = Field(default=None, ge=1, le=7)
+    intended_use: str | None = None
+    equipment_notes: str = Field(..., min_length=1)
+    restrictions: str | None = None
+    exercises: list[PersonalizedRoutineExerciseArgs] = Field(..., min_length=1)
+
+
 class ChatService:
+    _LOOKUP_TOKEN_RE = re.compile(r"[^a-z0-9]+")
+
     @staticmethod
     def _format_optional_notes(label: str, notes: Optional[str]) -> str:
         if not notes:
@@ -105,7 +233,232 @@ class ChatService:
         self.langfuse = self._get_langfuse_client()
         self._llm_client = llm_client
         self._workout_saved_this_request = False
-        self._pending_chat_events: list[ChatWorkoutCreatedEvent] = []
+        self._routine_created_this_request = False
+        self._pending_chat_events: list[
+            ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent
+        ] = []
+
+    @classmethod
+    def _normalize_lookup_value(cls, value: str) -> str:
+        return cls._LOOKUP_TOKEN_RE.sub(" ", value.strip().casefold()).strip()
+
+    @classmethod
+    def _normalize_compact_lookup_value(cls, value: str) -> str:
+        return cls._LOOKUP_TOKEN_RE.sub("", value.strip().casefold())
+
+    @classmethod
+    def _normalize_workout_type_value(cls, value: str) -> str:
+        tokens = [
+            token
+            for token in cls._normalize_lookup_value(value).split()
+            if token not in {"training", "workout", "session", "routine"}
+        ]
+        return " ".join(tokens)
+
+    @classmethod
+    def _resolve_single_name_match(
+        cls,
+        *,
+        requested_name: str,
+        candidates: list[Any],
+        candidate_name_getter,
+        entity_label: str,
+        compact_match: bool = False,
+    ) -> Any:
+        normalized_requested = cls._normalize_lookup_value(requested_name)
+        normalized_compact_requested = cls._normalize_compact_lookup_value(
+            requested_name
+        )
+
+        exact_matches = [
+            candidate
+            for candidate in candidates
+            if cls._normalize_lookup_value(candidate_name_getter(candidate))
+            == normalized_requested
+            or (
+                compact_match
+                and cls._normalize_compact_lookup_value(candidate_name_getter(candidate))
+                == normalized_compact_requested
+            )
+        ]
+        unique_exact_matches = {candidate.id: candidate for candidate in exact_matches}
+        if len(unique_exact_matches) == 1:
+            return next(iter(unique_exact_matches.values()))
+        if len(unique_exact_matches) > 1:
+            candidate_names = ", ".join(
+                sorted(candidate_name_getter(candidate) for candidate in exact_matches)
+            )
+            raise ValueError(
+                f"Ambiguous {entity_label} '{requested_name}'. Matches: {candidate_names}."
+            )
+
+        raise ValueError(f"Unknown {entity_label} '{requested_name}'.")
+
+    async def _resolve_workout_type(self, workout_type_name: str) -> Any:
+        if not self.session:
+            raise ValueError("Database session not available.")
+
+        requested = workout_type_name.strip()
+        workout_types = await get_workout_types(self.session)
+        if not workout_types:
+            raise ValueError("No workout types are configured.")
+
+        normalized_requested = self._normalize_workout_type_value(requested)
+        exact_matches = [
+            workout_type
+            for workout_type in workout_types
+            if self._normalize_workout_type_value(workout_type.name)
+            == normalized_requested
+            or self._normalize_lookup_value(workout_type.name)
+            == self._normalize_lookup_value(requested)
+        ]
+        unique_exact_matches = {workout_type.id: workout_type for workout_type in exact_matches}
+        if len(unique_exact_matches) == 1:
+            return next(iter(unique_exact_matches.values()))
+        if len(unique_exact_matches) > 1:
+            names = ", ".join(
+                sorted(workout_type.name for workout_type in unique_exact_matches.values())
+            )
+            raise ValueError(
+                f"Ambiguous workout type '{requested}'. Matches: {names}."
+            )
+
+        contains_matches = [
+            workout_type
+            for workout_type in workout_types
+            if normalized_requested
+            and normalized_requested
+            in self._normalize_workout_type_value(workout_type.name)
+        ]
+        unique_contains_matches = {
+            workout_type.id: workout_type for workout_type in contains_matches
+        }
+        if len(unique_contains_matches) == 1:
+            return next(iter(unique_contains_matches.values()))
+
+        available_types = ", ".join(
+            sorted(workout_type.name for workout_type in workout_types)
+        )
+        raise ValueError(
+            f"Unknown workout type '{requested}'. Available workout types: {available_types}."
+        )
+
+    async def _resolve_exercise_type(self, exercise_type_name: str) -> Any:
+        if not self.session:
+            raise ValueError("Database session not available.")
+
+        response = await get_exercise_types(
+            self.session,
+            name=exercise_type_name,
+            limit=10,
+            user_id=self.user_id,
+        )
+        if not response.data:
+            raise ValueError(
+                f"Unknown exercise type '{exercise_type_name}'. Please choose a canonical exercise name."
+            )
+
+        return self._resolve_single_name_match(
+            requested_name=exercise_type_name,
+            candidates=list(response.data),
+            candidate_name_getter=lambda candidate: candidate.name,
+            entity_label="exercise type",
+            compact_match=True,
+        )
+
+    async def _resolve_intensity_unit(self, intensity_unit_text: str) -> Any:
+        if not self.session:
+            raise ValueError("Database session not available.")
+
+        intensity_units = await get_intensity_units(self.session)
+        if not intensity_units:
+            raise ValueError("No intensity units are configured.")
+
+        normalized_requested = self._normalize_lookup_value(intensity_unit_text)
+        canonical_requested = {
+            "min": "time based",
+            "mins": "time based",
+            "minute": "time based",
+            "minutes": "time based",
+            "sec": "time based",
+            "secs": "time based",
+            "second": "time based",
+            "seconds": "time based",
+            "hr": "time based",
+            "hrs": "time based",
+            "hour": "time based",
+            "hours": "time based",
+            "time": "time based",
+            "time based": "time based",
+            "kg": "kg",
+            "kgs": "kg",
+            "kilogram": "kg",
+            "kilograms": "kg",
+            "lb": "lbs",
+            "lbs": "lbs",
+            "pound": "lbs",
+            "pounds": "lbs",
+            "bw": "bodyweight",
+            "body weight": "bodyweight",
+            "bodyweight": "bodyweight",
+        }.get(normalized_requested, normalized_requested)
+
+        matches = [
+            unit
+            for unit in intensity_units
+            if self._normalize_lookup_value(unit.name) == canonical_requested
+            or self._normalize_lookup_value(unit.abbreviation) == canonical_requested
+        ]
+        unique_matches = {unit.id: unit for unit in matches}
+        if len(unique_matches) == 1:
+            return next(iter(unique_matches.values()))
+        if len(unique_matches) > 1:
+            names = ", ".join(sorted(unit.name for unit in unique_matches.values()))
+            raise ValueError(
+                f"Ambiguous intensity unit '{intensity_unit_text}'. Matches: {names}."
+            )
+
+        available_units = ", ".join(
+            sorted(unit.abbreviation or unit.name for unit in intensity_units)
+        )
+        raise ValueError(
+            f"Unknown intensity unit '{intensity_unit_text}'. Available units: {available_units}."
+        )
+
+    @staticmethod
+    def _build_routine_description(draft: PersonalizedRoutineArgs) -> str:
+        if draft.description:
+            return draft.description
+
+        details = [draft.goal_summary.strip(), draft.equipment_notes.strip()]
+        if draft.days_per_week is not None:
+            details.append(f"{draft.days_per_week} day(s) per week")
+        elif draft.intended_use:
+            details.append(draft.intended_use.strip())
+        if draft.restrictions:
+            details.append(f"Restrictions: {draft.restrictions.strip()}")
+        return ". ".join(detail.rstrip(".") for detail in details if detail).strip()
+
+    @staticmethod
+    def _build_routine_created_event(routine: Any) -> ChatRoutineCreatedEvent:
+        exercise_templates = list(getattr(routine, "exercise_templates", []) or [])
+        set_count = sum(
+            len(getattr(exercise_template, "set_templates", []) or [])
+            for exercise_template in exercise_templates
+        )
+        return ChatRoutineCreatedEvent(
+            type="routine_created",
+            title="Routine created",
+            cta_label="View routine",
+            routine=ChatRoutineEventRoutine(
+                id=routine.id,
+                name=routine.name,
+                description=routine.description,
+                workout_type_id=routine.workout_type_id,
+                exercise_count=len(exercise_templates),
+                set_count=set_count,
+            ),
+        )
 
     async def _get_last_exercise_performance(self, exercise_name: str) -> str:
         if not self.session:
@@ -284,6 +637,68 @@ class ChatService:
         except Exception as exc:
             return f"Failed to save workout: {exc}"
 
+    async def _create_personalized_routine(self, **kwargs) -> str:
+        if self._routine_created_this_request:
+            return (
+                "ROUTINE ALREADY CREATED. A routine has already been created in this "
+                "conversation turn. No action taken."
+            )
+
+        try:
+            draft = PersonalizedRoutineArgs(**kwargs)
+            if not self.session:
+                return "Failed to create routine: no database session available."
+
+            workout_type = await self._resolve_workout_type(draft.workout_type_name)
+            exercise_templates: list[ExerciseTemplateCreate] = []
+            for exercise_draft in draft.exercises:
+                exercise_type = await self._resolve_exercise_type(
+                    exercise_draft.exercise_type_name
+                )
+                set_templates: list[SetTemplateCreate] = []
+                for set_draft in exercise_draft.sets:
+                    intensity_unit = await self._resolve_intensity_unit(
+                        set_draft.intensity_unit
+                    )
+                    set_templates.append(
+                        SetTemplateCreate(
+                            reps=set_draft.reps,
+                            duration_seconds=set_draft.duration_seconds,
+                            intensity=set_draft.intensity,
+                            intensity_unit_id=intensity_unit.id,
+                        )
+                    )
+
+                exercise_templates.append(
+                    ExerciseTemplateCreate(
+                        exercise_type_id=exercise_type.id,
+                        set_templates=set_templates,
+                    )
+                )
+
+            routine = await routine_service.create_routine_admin(
+                self.session,
+                AdminRoutineCreate(
+                    name=draft.name,
+                    description=self._build_routine_description(draft),
+                    workout_type_id=workout_type.id,
+                    exercise_templates=exercise_templates,
+                    visibility=Routine.RoutineVisibility.private,
+                    is_readonly=False,
+                ),
+                self.user_id,
+            )
+
+            self._routine_created_this_request = True
+            self._pending_chat_events.append(self._build_routine_created_event(routine))
+            return (
+                "ROUTINE CREATED SUCCESSFULLY. "
+                f"Name: '{routine.name}', Exercises: {len(routine.exercise_templates)}. "
+                "Do not call this tool again for this routine."
+            )
+        except Exception as exc:
+            return f"Failed to create routine: {exc}"
+
     def _get_tools(self) -> List[ToolDefinition]:
         from src.workouts.schemas import WorkoutParseResponse
 
@@ -316,6 +731,23 @@ class ChatService:
                 ),
             ),
             ToolDefinition(
+                name="create_personalized_routine",
+                handler=self._create_personalized_routine,
+                args_model=PersonalizedRoutineArgs,
+                description=(
+                    "Use this tool only when the user explicitly asks you to create "
+                    "or save a routine. Ask follow-up questions until you have the "
+                    "minimum planning context: a primary goal, intended use when "
+                    "helpful, and equipment context. This phase supports a "
+                    "single saved routine, not a full multi-day split. Use human-"
+                    "readable names only: workout_type_name, exercise_type_name, and "
+                    "intensity_unit. For sets, use reps for rep-based work and "
+                    "duration_seconds for time-based work. If you are thinking in "
+                    "rep ranges like 6-8, choose a single target rep count. Do not "
+                    "invent internal numeric IDs."
+                ),
+            ),
+            ToolDefinition(
                 name="get_last_workout_summary",
                 handler=self._get_last_workout_summary,
                 description=(
@@ -335,6 +767,20 @@ class ChatService:
                 ),
             ),
         ]
+
+    def _get_runtime_instructions(self) -> str:
+        return """
+Routine creation policy:
+- Only create or save a routine when the user explicitly asks for creation or saving.
+- If the user wants advice only, respond in prose and do not call create_personalized_routine.
+- Before calling create_personalized_routine, gather enough context to avoid a low-quality routine:
+  - goal or training focus
+  - equipment constraints or gym/home context
+  - intended use when it materially affects the single routine
+  - injuries or movement restrictions if the user mentions them
+- If the user asks for a multi-day split, explain that you can create one workout routine at a time in this phase.
+- Do not call create_personalized_routine more than once per request.
+""".strip()
 
     def _get_llm_client(self) -> LLMClient:
         if self._llm_client is None:
@@ -429,6 +875,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             raise ValueError("Google AI API key not configured")
 
         self._workout_saved_this_request = False
+        self._routine_created_this_request = False
         self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []
@@ -459,7 +906,12 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         new_messages = normalized_messages
 
         llm_messages = [
-            ConversationMessage(role="system", content=self._get_system_prompt())
+            ConversationMessage(
+                role="system",
+                content=(
+                    f"{self._get_system_prompt()}\n\n{self._get_runtime_instructions()}"
+                ),
+            )
         ]
         llm_messages.extend(
             await self._build_conversation_messages(
