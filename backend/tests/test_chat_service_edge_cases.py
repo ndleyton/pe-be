@@ -326,7 +326,6 @@ async def test_create_personalized_routine_success(
 
     result = await chat_service_with_db._create_personalized_routine(
         name="Beginner Full Body",
-        workout_type_name="Strength",
         goal_summary="Build muscle",
         equipment_notes="Commercial gym access",
         exercises=[
@@ -387,7 +386,6 @@ async def test_create_personalized_routine_persists_duration_seconds(
 
     await chat_service_with_db._create_personalized_routine(
         name="Conditioning Builder",
-        workout_type_name="Strength",
         goal_summary="Build conditioning",
         equipment_notes="Track and sled access",
         exercises=[
@@ -434,7 +432,6 @@ async def test_create_personalized_routine_defaults_duration_for_speed_units(
 
     await chat_service_with_db._create_personalized_routine(
         name="Conditioning Builder",
-        workout_type_name="Strength",
         goal_summary="Build conditioning",
         equipment_notes="Treadmill access",
         exercises=[
@@ -491,7 +488,6 @@ async def test_create_personalized_routine_unknown_exercise_type(
 
     result = await chat_service_with_db._create_personalized_routine(
         name="Beginner Full Body",
-        workout_type_name="Strength",
         goal_summary="Build muscle",
         days_per_week=3,
         equipment_notes="Commercial gym access",
@@ -529,7 +525,6 @@ async def test_create_personalized_routine_unknown_intensity_unit(
 
     result = await chat_service_with_db._create_personalized_routine(
         name="Beginner Full Body",
-        workout_type_name="Strength",
         goal_summary="Build muscle",
         days_per_week=3,
         equipment_notes="Commercial gym access",
@@ -582,7 +577,6 @@ async def test_create_personalized_routine_persists_rpe_and_default_intensity_un
 
     await chat_service_with_db._create_personalized_routine(
         name="Bench Builder",
-        workout_type_name="Strength",
         goal_summary="Build bench strength",
         equipment_notes="Full gym access",
         exercises=[
@@ -618,7 +612,6 @@ async def test_create_personalized_routine_requires_unit_when_exercise_has_no_de
 
     result = await chat_service_with_db._create_personalized_routine(
         name="Bench Builder",
-        workout_type_name="Strength",
         goal_summary="Build bench strength",
         equipment_notes="Full gym access",
         exercises=[
@@ -665,6 +658,37 @@ def test_personalized_routine_set_args_normalizes_rpe_range_text():
     parsed = PersonalizedRoutineSetArgs.model_validate({"rpe": "RPE 7-8", "reps": 6})
 
     assert parsed.rpe == 8
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_workout_types")
+async def test_resolve_workout_type_prefers_raw_exact_match_over_normalized_match(
+    mock_get_workout_types, chat_service_with_db
+):
+    mock_get_workout_types.return_value = [
+        SimpleNamespace(id=4, name="Strength"),
+        SimpleNamespace(id=5, name="Strength Training"),
+    ]
+
+    workout_type = await chat_service_with_db._resolve_workout_type("Strength")
+
+    assert workout_type.id == 4
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_workout_types")
+async def test_resolve_or_default_workout_type_prefers_strength_training_default(
+    mock_get_workout_types, chat_service_with_db
+):
+    mock_get_workout_types.return_value = [
+        SimpleNamespace(id=2, name="Mobility"),
+        SimpleNamespace(id=4, name="Strength Training"),
+        SimpleNamespace(id=5, name="Strength"),
+    ]
+
+    workout_type = await chat_service_with_db._resolve_or_default_workout_type(None)
+
+    assert workout_type.id == 4
 
 
 @pytest.mark.asyncio

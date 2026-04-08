@@ -233,6 +233,8 @@ async def test_personalized_routine_schema_cleaning_collapses_nullable_fields():
 
     cleaned = tool._clean_pydantic_schema(PersonalizedRoutineArgs.model_json_schema())
 
+    assert "workout_type_name" not in cleaned["required"]
+    assert cleaned["properties"]["workout_type_name"]["type"] == "STRING"
     assert cleaned["properties"]["days_per_week"]["type"] == "INTEGER"
     assert cleaned["properties"]["description"]["type"] == "STRING"
     assert cleaned["properties"]["intended_use"]["type"] == "STRING"

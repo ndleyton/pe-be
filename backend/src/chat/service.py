@@ -194,7 +194,7 @@ class PersonalizedRoutineExerciseArgs(BaseModel):
 class PersonalizedRoutineArgs(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
-    workout_type_name: str = Field(..., min_length=1)
+    workout_type_name: str | None = Field(default=None, min_length=1)
     goal_summary: str = Field(..., min_length=1)
     days_per_week: int | None = Field(default=None, ge=1, le=7)
     intended_use: str | None = None
@@ -343,14 +343,32 @@ class ChatService:
         if not workout_types:
             raise ValueError("No workout types are configured.")
 
+        raw_normalized_requested = self._normalize_lookup_value(requested)
+        raw_exact_matches = [
+            workout_type
+            for workout_type in workout_types
+            if self._normalize_lookup_value(workout_type.name) == raw_normalized_requested
+        ]
+        unique_raw_exact_matches = {
+            workout_type.id: workout_type for workout_type in raw_exact_matches
+        }
+        if len(unique_raw_exact_matches) == 1:
+            return next(iter(unique_raw_exact_matches.values()))
+        if len(unique_raw_exact_matches) > 1:
+            names = ", ".join(
+                sorted(
+                    workout_type.name
+                    for workout_type in unique_raw_exact_matches.values()
+                )
+            )
+            raise ValueError(f"Ambiguous workout type '{requested}'. Matches: {names}.")
+
         normalized_requested = self._normalize_workout_type_value(requested)
         exact_matches = [
             workout_type
             for workout_type in workout_types
             if self._normalize_workout_type_value(workout_type.name)
             == normalized_requested
-            or self._normalize_lookup_value(workout_type.name)
-            == self._normalize_lookup_value(requested)
         ]
         unique_exact_matches = {
             workout_type.id: workout_type for workout_type in exact_matches
@@ -384,6 +402,34 @@ class ChatService:
         raise ValueError(
             f"Unknown workout type '{requested}'. Available workout types: {available_types}."
         )
+
+    async def _resolve_or_default_workout_type(
+        self, workout_type_name: str | None
+    ) -> Any:
+        if workout_type_name:
+            return await self._resolve_workout_type(workout_type_name)
+
+        if not self.session:
+            raise ValueError("Database session not available.")
+
+        workout_types = await get_workout_types(self.session)
+        if not workout_types:
+            raise ValueError("No workout types are configured.")
+
+        def priority(workout_type: Any) -> tuple[int, str]:
+            raw = self._normalize_lookup_value(workout_type.name)
+            normalized = self._normalize_workout_type_value(workout_type.name)
+            if raw == "strength training":
+                return (0, raw)
+            if raw == "strength":
+                return (1, raw)
+            if normalized == "strength":
+                return (2, raw)
+            if "strength" in normalized.split():
+                return (3, raw)
+            return (4, raw)
+
+        return min(workout_types, key=priority)
 
     async def _resolve_exercise_type(self, exercise_type_name: str) -> Any:
         if not self.session:
@@ -720,7 +766,9 @@ class ChatService:
             if not self.session:
                 return "Failed to create routine: no database session available."
 
-            workout_type = await self._resolve_workout_type(draft.workout_type_name)
+            workout_type = await self._resolve_or_default_workout_type(
+                draft.workout_type_name
+            )
             exercise_templates: list[ExerciseTemplateCreate] = []
             for exercise_draft in draft.exercises:
                 exercise_type = await self._resolve_exercise_type(
@@ -822,8 +870,9 @@ class ChatService:
                     "minimum planning context: a primary goal, intended use when "
                     "helpful, and equipment context. This phase supports a "
                     "single saved routine, not a full multi-day split. Use human-"
-                    "readable names only: workout_type_name, exercise_type_name, and "
-                    "intensity_unit. For sets, use reps for rep-based work, "
+                    "readable names only: exercise_type_name and intensity_unit. "
+                    "workout_type_name is optional and the backend can default it "
+                    "for standard lifting routines. For sets, use reps for rep-based work, "
                     "duration_seconds for time-based work, and rpe for effort "
                     "targets such as RPE 7-8. intensity_unit is optional when the "
                     "exercise's default load unit should be used. If you are "
@@ -863,6 +912,8 @@ Routine creation policy:
   - equipment constraints or gym/home context
   - intended use when it materially affects the single routine
   - injuries or movement restrictions if the user mentions them
+- Do not ask the user to disambiguate internal workout type names for standard lifting routines.
+- workout_type_name is optional for create_personalized_routine.
 - For create_personalized_routine, use rpe for effort targets like RPE 7-8.
 - Do not put RPE or RIR into intensity_unit.
 - intensity_unit is the quantitative load or time domain, and can be omitted when the exercise's default unit should apply.
