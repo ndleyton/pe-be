@@ -84,7 +84,6 @@ export const RoutineInfoCard = ({
     <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-lg">📋</span>
           <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
             Routine Overview
           </h4>
