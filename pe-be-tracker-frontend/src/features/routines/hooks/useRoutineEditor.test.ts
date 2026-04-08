@@ -195,4 +195,40 @@ describe("useRoutineEditor", () => {
       600,
     );
   });
+
+  it("does not auto-fill duration when switching a blank set to a speed unit", async () => {
+    const { result } = renderHook(() =>
+      useRoutineEditor({
+        availableIntensityUnits,
+        routine,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.editorTemplates).toHaveLength(1);
+    });
+
+    act(() => {
+      result.current.updateSet("101", "201", {
+        reps: null,
+        duration_seconds: null,
+      });
+    });
+
+    act(() => {
+      result.current.openUnitPicker({ templateId: "101", setId: "201" });
+      result.current.handleIntensityUnitSelected({
+        id: 3,
+        name: "Kilometers per hour",
+        abbreviation: "km/h",
+      });
+    });
+
+    expect(result.current.editorTemplates[0].set_templates[0].duration_seconds).toBe(
+      null,
+    );
+    expect(result.current.editorTemplates[0].set_templates[0].intensity_unit_id).toBe(
+      3,
+    );
+  });
 });
