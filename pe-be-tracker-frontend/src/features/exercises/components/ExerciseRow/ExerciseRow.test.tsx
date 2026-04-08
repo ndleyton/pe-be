@@ -15,6 +15,12 @@ const { preloadSpy } = vi.hoisted(() => ({
   preloadSpy: vi.fn(),
 }));
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 // Mock API functions
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual("@/features/exercises/api");
@@ -174,6 +180,7 @@ describe("ExerciseRow", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
     (createExerciseSet as any).mockResolvedValue({
       id: 999,
       reps: 0,
@@ -546,6 +553,8 @@ describe("ExerciseRow", () => {
       await user.click(setNotesButton);
 
       expect(screen.getByText("Set Notes & Options")).toBeInTheDocument();
+      expect(screen.getByText("Effort")).toBeInTheDocument();
+      expect(screen.getByText("Not set")).toBeInTheDocument();
       expect(
         screen.getByPlaceholderText(/add notes for this set/i),
       ).toBeInTheDocument();

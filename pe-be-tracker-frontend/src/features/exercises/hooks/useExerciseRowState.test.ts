@@ -93,6 +93,79 @@ describe("useExerciseRowState", () => {
     });
   });
 
+  it("keeps effort null until the slider is moved", async () => {
+    const exerciseSets = [
+      makeExerciseSet({
+        id: 1,
+        exercise_id: 1,
+        notes: "Original note",
+        rpe: null,
+      }),
+    ];
+    const exercise = makeExercise({
+      exercise_sets: exerciseSets,
+    });
+    const updateSetOptions = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() =>
+      useExerciseRowState({
+        exercise,
+        exerciseSets,
+        updateSetOptions,
+      }),
+    );
+
+    act(() => {
+      result.current.openSetOptions(1, "Original note", null);
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(result.current.setRpeValue).toBeNull();
+    expect(updateSetOptions).not.toHaveBeenCalled();
+  });
+
+  it("debounces effort persistence when the slider value changes", async () => {
+    const exerciseSets = [
+      makeExerciseSet({
+        id: 1,
+        exercise_id: 1,
+        notes: "Original note",
+        rpe: null,
+      }),
+    ];
+    const exercise = makeExercise({
+      exercise_sets: exerciseSets,
+    });
+    const updateSetOptions = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() =>
+      useExerciseRowState({
+        exercise,
+        exerciseSets,
+        updateSetOptions,
+      }),
+    );
+
+    act(() => {
+      result.current.openSetOptions(1, "Original note", null);
+      result.current.setSetRpeValue(8.5);
+    });
+
+    expect(updateSetOptions).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(updateSetOptions).toHaveBeenCalledWith(1, {
+      notes: "Original note",
+      rpe: 8.5,
+    });
+  });
+
   it("syncs input buffers from exercise sets and closes settings on unit change", () => {
     const initialSets = [
       makeExerciseSet({

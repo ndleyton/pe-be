@@ -18,6 +18,7 @@ import {
   Input,
   Textarea,
 } from "@/shared/components/ui";
+import { Slider } from "@/shared/components/ui/slider";
 
 type ExerciseSetTableProps = {
   activeSetId: string | number | null;
@@ -38,7 +39,7 @@ type ExerciseSetTableProps = {
   ) => void;
   onSetOptionsOpenChange: (open: boolean) => void;
   onSetNotesValueChange: (value: string) => void;
-  onSetRpeValueChange: (value: string) => void;
+  onSetRpeValueChange: (value: number | null) => void;
   onSetRepsInputValue: (setId: string | number, value: string) => void;
   onSetWeightInputValue: (setId: string | number, value: string) => void;
   onToggleSetCompletion: (setId: string | number) => void | Promise<void>;
@@ -50,7 +51,7 @@ type ExerciseSetTableProps = {
   ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
-  setRpeValue: string;
+  setRpeValue: number | null;
 };
 
 export const ExerciseSetTable = ({
@@ -255,20 +256,32 @@ export const ExerciseSetTable = ({
                   <div className="space-y-4">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        RPE
+                        Effort
                       </label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        max={10}
-                        step={0.5}
-                        placeholder="Optional"
-                        value={setRpeValue}
-                        onChange={(event) =>
-                          onSetRpeValueChange(event.target.value)
-                        }
-                      />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{setRpeValue == null ? "Not set" : `RPE ${setRpeValue}`}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => onSetRpeValueChange(null)}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <Slider
+                          value={[setRpeValue ?? 0]}
+                          min={0}
+                          max={10}
+                          step={0.5}
+                          className="mx-auto w-full max-w-xs"
+                          onValueChange={(values: number[]) =>
+                            onSetRpeValueChange(values[0] ?? null)
+                          }
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">

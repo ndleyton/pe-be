@@ -9,7 +9,6 @@ import {
   DEFAULT_INTENSITY_UNIT,
   buildIntensityInputs,
   buildRepsInputs,
-  formatIntensityInputValue,
 } from "@/features/exercises/lib/exerciseRow";
 import {
   resolveExerciseDisplayIntensityUnit,
@@ -21,16 +20,6 @@ import {
 } from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
-import { parseDecimalInput } from "@/utils/format";
-
-const normalizeRpeValue = (value: string): number | null => {
-  const parsed = parseDecimalInput(value);
-  if (parsed === null || parsed < 0 || parsed > 10) {
-    return null;
-  }
-
-  return Math.round(parsed * 2) / 2;
-};
 
 export const useExerciseRowState = ({
   exercise,
@@ -66,7 +55,7 @@ export const useExerciseRowState = ({
   const [exerciseNotesValue, setExerciseNotesValue] = useState("");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
-  const [setRpeValue, setSetRpeValue] = useState("");
+  const [setRpeValue, setSetRpeValue] = useState<number | null>(null);
   const [exerciseSettingsOpen, setExerciseSettingsOpen] = useState(false);
 
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000);
@@ -95,7 +84,7 @@ export const useExerciseRowState = ({
     }
 
     const nextNotes = debouncedSetNotesValue;
-    const nextRpe = normalizeRpeValue(debouncedSetRpeValue);
+    const nextRpe = debouncedSetRpeValue;
     const currentNotes = currentSet.notes || "";
     const currentRpe = currentSet.rpe ?? null;
 
@@ -132,7 +121,7 @@ export const useExerciseRowState = ({
   const closeSetOptions = () => {
     setActiveSetId(null);
     setSetNotesValue("");
-    setSetRpeValue("");
+    setSetRpeValue(null);
   };
 
   const openSetOptions = (
@@ -142,7 +131,7 @@ export const useExerciseRowState = ({
   ) => {
     setActiveSetId(setId);
     setSetNotesValue(initialNotes);
-    setSetRpeValue(formatIntensityInputValue(initialRpe ?? null));
+    setSetRpeValue(initialRpe ?? null);
   };
 
   const handleSetOptionsOpenChange = (open: boolean) => {
