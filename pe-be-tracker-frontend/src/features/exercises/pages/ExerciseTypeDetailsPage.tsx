@@ -9,15 +9,19 @@ import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import {
   getExerciseTypeById,
+  getIntensityUnits,
+  getMuscles,
   getExerciseTypeStats,
   releaseExerciseType,
   requestExerciseTypeEvaluation,
   updateExerciseType,
   type Exercise,
+  type IntensityUnit,
 } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import type { Muscle } from "@/shared/types";
 
 const ProgressiveOverloadChart = lazy(() =>
   import("@/features/exercises/components/ProgressiveOverloadChart/ProgressiveOverloadChart").then(
@@ -47,6 +51,13 @@ import {
   CarouselPrevious,
 } from "@/shared/components/ui/carousel";
 import { Input } from "@/shared/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
 
@@ -61,6 +72,8 @@ const ExerciseTypeDetailsPage = () => {
     equipment: "",
     category: "",
     instructions: "",
+    defaultIntensityUnitId: null as number | null,
+    muscleIds: [] as number[],
   });
   const [containerRatio, setContainerRatio] = useState<string>("16 / 9");
   const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
@@ -83,6 +96,13 @@ const ExerciseTypeDetailsPage = () => {
   });
   const exerciseTypeName = exerciseType?.name ?? "Exercise";
   const isPageDataPending = isLoadingExerciseType && !exerciseType;
+  const canLoadEditTaxonomy =
+    isAuthenticated &&
+    !!exerciseType &&
+    (isSuperuser ||
+      (currentUserId != null &&
+        exerciseType.owner_id === currentUserId &&
+        exerciseType.status !== "released"));
 
   const {
     data: stats,
@@ -95,6 +115,18 @@ const ExerciseTypeDetailsPage = () => {
     retry: 1,
   });
 
+  const { data: intensityUnits = [], error: intensityUnitsError } = useQuery({
+    queryKey: ["intensityUnits"],
+    queryFn: getIntensityUnits,
+    enabled: canLoadEditTaxonomy,
+  });
+
+  const { data: muscles = [], error: musclesError } = useQuery({
+    queryKey: ["muscles"],
+    queryFn: getMuscles,
+    enabled: canLoadEditTaxonomy,
+  });
+
   useEffect(() => {
     if (!exerciseType) return;
 
@@ -104,6 +136,8 @@ const ExerciseTypeDetailsPage = () => {
       equipment: exerciseType.equipment ?? "",
       category: exerciseType.category ?? "",
       instructions: exerciseType.instructions ?? "",
+      defaultIntensityUnitId: exerciseType.default_intensity_unit ?? null,
+      muscleIds: exerciseType.muscles?.map((muscle) => muscle.id) ?? [],
     });
   }, [exerciseType]);
 
@@ -217,6 +251,8 @@ const ExerciseTypeDetailsPage = () => {
         equipment: editValues.equipment.trim() || null,
         category: editValues.category.trim() || null,
         instructions: editValues.instructions.trim() || null,
+        default_intensity_unit: editValues.defaultIntensityUnitId,
+        muscle_ids: editValues.muscleIds,
       }),
     onMutate: () => {
       setEditError(null);
@@ -368,6 +404,20 @@ const ExerciseTypeDetailsPage = () => {
     hasExerciseType && exerciseType.status === "released"
       ? "Admin edits apply directly to this released exercise type."
       : "Non-released exercise types can be reviewed and updated before release.";
+  const groupedMuscles = muscles.reduce<Record<string, Muscle[]>>(
+    (groups, muscle) => {
+      const groupName = muscle.muscle_group.name;
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(muscle);
+      return groups;
+    },
+    {},
+  );
+  const selectedIntensityUnit = intensityUnits.find(
+    (unit) => unit.id === editValues.defaultIntensityUnitId,
+  );
 
   return (
     <div className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8">
@@ -513,6 +563,8 @@ const ExerciseTypeDetailsPage = () => {
                       equipment: exerciseType.equipment ?? "",
                       category: exerciseType.category ?? "",
                       instructions: exerciseType.instructions ?? "",
+                      defaultIntensityUnitId: exerciseType.default_intensity_unit ?? null,
+                      muscleIds: exerciseType.muscles?.map((muscle) => muscle.id) ?? [],
                     });
                     setEditError(null);
                     setIsAdminEditingReleased(false);
@@ -522,10 +574,10 @@ const ExerciseTypeDetailsPage = () => {
                 </Button>
               ) : null}
               {canRequestEvaluation ? (
-                <Button
-                  variant="glass"
-                  className="w-full rounded-xl sm:w-auto"
-                  onClick={() => requestEvaluationMutation.mutate()}
+              <Button
+                variant="glass"
+                className="w-full rounded-xl sm:w-auto"
+                onClick={() => requestEvaluationMutation.mutate()}
                 >
                   {requestEvaluationMutation.isPending
                     ? "Requesting..."
@@ -541,7 +593,10 @@ const ExerciseTypeDetailsPage = () => {
                   {releaseMutation.isPending ? "Releasing..." : "Release"}
                 </Button>
               ) : null}
-              <Button className="w-full rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-sm sm:w-auto" onClick={() => updateMutation.mutate()}>
+              <Button
+                className="w-full rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-sm sm:w-auto"
+                onClick={() => updateMutation.mutate()}
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -583,7 +638,43 @@ const ExerciseTypeDetailsPage = () => {
                 }
               />
             </label>
-            <div />
+            <label className="grid gap-2">
+              <span className="text-sm font-medium">Default Intensity Unit</span>
+              <Select
+                value={String(editValues.defaultIntensityUnitId ?? "none")}
+                onValueChange={(value) =>
+                  setEditValues((current) => ({
+                    ...current,
+                    defaultIntensityUnitId:
+                      value === "none" ? null : Number(value),
+                  }))
+                }
+              >
+                <SelectTrigger aria-label="Default intensity unit">
+                  <SelectValue
+                    placeholder="Select a unit"
+                    aria-label={
+                      selectedIntensityUnit
+                        ? `${selectedIntensityUnit.abbreviation} - ${selectedIntensityUnit.name}`
+                        : "None"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {intensityUnits.map((unit: IntensityUnit) => (
+                    <SelectItem key={unit.id} value={String(unit.id)}>
+                      {unit.abbreviation} - {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {intensityUnitsError ? (
+                <p className="text-destructive text-sm">
+                  Failed to load intensity units.
+                </p>
+              ) : null}
+            </label>
             <label className="grid gap-2 md:col-span-2">
               <span className="text-sm font-medium">Description</span>
               <Textarea
@@ -609,6 +700,71 @@ const ExerciseTypeDetailsPage = () => {
                 rows={5}
               />
             </label>
+            <div className="grid gap-2 md:col-span-2">
+              <span className="text-sm font-medium">Muscles</span>
+              {musclesError ? (
+                <p className="text-destructive text-sm">Failed to load muscles.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {exerciseType?.muscles?.length && editValues.muscleIds.length === 0 ? (
+                      <span className="text-muted-foreground text-sm">
+                        No muscles selected.
+                      </span>
+                    ) : null}
+                    {muscles
+                      .filter((muscle) => editValues.muscleIds.includes(muscle.id))
+                      .map((muscle) => (
+                        <span
+                          key={muscle.id}
+                          className="bg-primary/10 text-primary/80 border-primary/20 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                        >
+                          {muscle.name}
+                        </span>
+                      ))}
+                    {!muscles.length && !musclesError ? (
+                      <span className="text-muted-foreground text-sm">
+                        No muscles available.
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-4 rounded-xl border border-border/40 p-4 sm:grid-cols-2">
+                    {Object.entries(groupedMuscles).map(([groupName, groupMuscles]) => (
+                      <div key={groupName} className="space-y-2">
+                        <h3 className="text-sm font-medium">{groupName}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {groupMuscles.map((muscle) => {
+                            const isSelected = editValues.muscleIds.includes(muscle.id);
+                            return (
+                              <button
+                                key={muscle.id}
+                                type="button"
+                                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5"
+                                }`}
+                                aria-pressed={isSelected}
+                                onClick={() =>
+                                  setEditValues((current) => ({
+                                    ...current,
+                                    muscleIds: current.muscleIds.includes(muscle.id)
+                                      ? current.muscleIds.filter((id) => id !== muscle.id)
+                                      : [...current.muscleIds, muscle.id],
+                                  }))
+                                }
+                              >
+                                {muscle.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       ) : null}

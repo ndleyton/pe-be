@@ -851,6 +851,17 @@ async def get_intensity_units(session: AsyncSession) -> List[IntensityUnit]:
     return result.unique().scalars().all()
 
 
+async def get_muscles(session: AsyncSession) -> List[Muscle]:
+    """Get all muscles ordered for taxonomy pickers."""
+    result = await session.execute(
+        select(Muscle)
+        .options(joinedload(Muscle.muscle_group))
+        .join(Muscle.muscle_group)
+        .order_by(MuscleGroup.name.asc(), Muscle.name.asc())
+    )
+    return result.unique().scalars().all()
+
+
 async def get_visible_exercise_type_ids(
     session: AsyncSession,
     exercise_type_ids: list[int],

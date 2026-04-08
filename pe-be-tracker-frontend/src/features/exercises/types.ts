@@ -13,7 +13,7 @@ export interface ExerciseType {
   created_at: string;
   updated_at: string;
   usage_count: number;
-  default_intensity_unit: any;
+  default_intensity_unit: number | null;
   times_used: number;
   owner_id?: number | null;
   status?: ExerciseTypeStatus;

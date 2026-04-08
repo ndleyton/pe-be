@@ -188,6 +188,7 @@ export interface UpdateExerciseTypeData {
   instructions?: string | null;
   equipment?: string | null;
   category?: string | null;
+  muscle_ids?: number[];
 }
 
 // Get all exercise types with cursor-based pagination
@@ -224,6 +225,11 @@ export const getExerciseTypes = async (
 
 export const getMuscleGroups = async (): Promise<MuscleGroup[]> => {
   const response = await api.get(endpoints.muscleGroups);
+  return response.data;
+};
+
+export const getMuscles = async (): Promise<Muscle[]> => {
+  const response = await api.get(endpoints.muscles);
   return response.data;
 };
 
