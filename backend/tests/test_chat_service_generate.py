@@ -483,9 +483,7 @@ async def test_generate_response_uses_clean_fallback_for_routine_event(
 
     mock_empty_text_response = MagicMock()
     mock_empty_text_response.tool_calls = []
-    mock_empty_text_response.message = ConversationMessage(
-        role="assistant", content=""
-    )
+    mock_empty_text_response.message = ConversationMessage(role="assistant", content="")
 
     mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_empty_text_response]
     mock_get_llm.return_value = mock_llm

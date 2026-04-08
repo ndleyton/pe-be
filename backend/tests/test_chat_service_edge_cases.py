@@ -646,7 +646,9 @@ def test_personalized_routine_set_args_normalizes_rpe_range_text():
 
 
 def test_personalized_routine_set_args_normalizes_empty_intensity_unit_to_none():
-    parsed = PersonalizedRoutineSetArgs.model_validate({"reps": 6, "intensity_unit": ""})
+    parsed = PersonalizedRoutineSetArgs.model_validate(
+        {"reps": 6, "intensity_unit": ""}
+    )
 
     assert parsed.intensity_unit is None
 

@@ -382,7 +382,8 @@ class ChatService:
         raw_exact_matches = [
             workout_type
             for workout_type in workout_types
-            if self._normalize_lookup_value(workout_type.name) == raw_normalized_requested
+            if self._normalize_lookup_value(workout_type.name)
+            == raw_normalized_requested
         ]
         unique_raw_exact_matches = {
             workout_type.id: workout_type for workout_type in raw_exact_matches
