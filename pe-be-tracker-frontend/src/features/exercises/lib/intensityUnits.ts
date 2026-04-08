@@ -25,6 +25,8 @@ const KNOWN_INTENSITY_UNIT_DEFINITIONS: Record<number, IntensityUnitDefinition> 
 const roundToThreeDecimals = (value: number): number =>
   Math.round(value * 1000) / 1000;
 
+export const DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS = 600;
+
 export const getIntensityUnitDefinition = (
   unitId: number | null | undefined,
 ): IntensityUnitDefinition | null =>
@@ -34,6 +36,10 @@ export const getIntensityUnitFamily = (
   unit: IntensityUnitLike | null | undefined,
 ): IntensityUnitFamily | null =>
   getIntensityUnitDefinition(unit?.id)?.family ?? null;
+
+export const prefersDurationForIntensityUnit = (
+  unit: IntensityUnitLike | null | undefined,
+): boolean => getIntensityUnitFamily(unit) === "speed";
 
 export const areIntensityUnitsCompatible = (
   sourceUnitId: number | null | undefined,

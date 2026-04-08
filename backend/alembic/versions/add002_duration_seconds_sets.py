@@ -1,6 +1,6 @@
 """add duration_seconds to set tables
 
-Revision ID: add002_add_duration_seconds_to_sets
+Revision ID: add002_duration_seconds_sets
 Revises: add001_exercise_template_notes
 Create Date: 2026-04-08 12:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "add002_add_duration_seconds_to_sets"
+revision: str = "add002_duration_seconds_sets"
 down_revision: Union[str, None] = "add001_exercise_template_notes"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

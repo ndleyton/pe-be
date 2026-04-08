@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 THREE_DECIMAL_PLACES = Decimal("0.001")
 FIVE_DECIMAL_PLACES = Decimal("0.00001")
+DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS = 600
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,11 @@ def are_intensity_units_compatible(source_unit: Any, target_unit: Any) -> bool:
         return False
 
     return source_definition.family == target_definition.family
+
+
+def prefers_duration_for_intensity_unit(unit: Any) -> bool:
+    unit_key = _normalize_unit_key(unit)
+    return unit_key in {"km/h", "mph"}
 
 
 def convert_intensity_value(

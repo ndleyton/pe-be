@@ -3,6 +3,10 @@ import type {
   IntensityUnit,
 } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
+import {
+  DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+  prefersDurationForIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
 import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import type {
   GuestExerciseType,
@@ -179,7 +183,9 @@ export const createDefaultSet = (
   return {
     id: createTempId(),
     reps: null,
-    duration_seconds: null,
+    duration_seconds: prefersDurationForIntensityUnit(fallbackUnit)
+      ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+      : null,
     intensity: null,
     intensity_unit_id: fallbackUnit.id,
     intensity_unit: fallbackUnit,

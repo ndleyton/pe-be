@@ -15,7 +15,11 @@ import {
   toGuestExerciseSets,
   type ExerciseRowProps,
 } from "@/features/exercises/lib/exerciseRow";
-import { convertIntensityValue } from "@/features/exercises/lib/intensityUnits";
+import {
+  convertIntensityValue,
+  DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+  prefersDurationForIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps";
@@ -286,7 +290,21 @@ export const useExerciseSetActions = ({
 
     const currentExerciseSets = exerciseSetsRef.current;
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
-    const nextDurationSeconds = lastSet ? (lastSet.duration_seconds ?? null) : null;
+    const durationPreferred = prefersDurationForIntensityUnit({
+      id: intensityUnitId,
+      name: "",
+      abbreviation: "",
+    });
+    const nextDurationSeconds = lastSet
+      ? (
+        lastSet.duration_seconds ??
+        (lastSet.reps == null && durationPreferred
+          ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+          : null)
+      )
+      : durationPreferred
+        ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+        : null;
     const tempId = `temp-${Date.now()}`;
     const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
     const nextIntensity = convertIntensityValue(

@@ -7,6 +7,10 @@ import type {
 import type { Routine, RoutineVisibility } from "@/features/routines/types";
 import type { GuestExerciseType, GuestIntensityUnit } from "@/stores";
 import {
+  DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+  prefersDurationForIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
+import {
   buildComparableSnapshot,
   buildEditorTemplatesFromRoutine,
   createDefaultSet,
@@ -240,6 +244,12 @@ const routineEditorReducer = (
                     ? setTemplate
                     : {
                         ...setTemplate,
+                        duration_seconds:
+                          setTemplate.duration_seconds == null &&
+                            setTemplate.reps == null &&
+                            prefersDurationForIntensityUnit(nextUnit)
+                            ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+                            : setTemplate.duration_seconds,
                         intensity_unit_id: nextUnit.id,
                         intensity_unit: nextUnit,
                       },
