@@ -193,8 +193,8 @@ async def test_get_muscles_orders_by_group_then_name(db_session):
     back = await _seed_muscle_group(db_session, "Back Crud")
     chest = await _seed_muscle_group(db_session, "Chest Crud")
     await _seed_muscle(db_session, "Row", back.id)
-    await _seed_muscle(db_session, "Bench", chest.id)
     await _seed_muscle(db_session, "Cable Fly", chest.id)
+    await _seed_muscle(db_session, "Bench", chest.id)
     await db_session.commit()
 
     result = await crud.get_muscles(db_session)
