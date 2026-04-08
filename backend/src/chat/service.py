@@ -249,6 +249,17 @@ class ChatService:
             return ""
         return f"{label}: {notes}\n"
 
+    def _default_success_message_from_events(self) -> str | None:
+        if not self._pending_chat_events:
+            return None
+
+        latest_event = self._pending_chat_events[-1]
+        if isinstance(latest_event, ChatRoutineCreatedEvent):
+            return "I created a routine for you. You can review it below."
+        if isinstance(latest_event, ChatWorkoutCreatedEvent):
+            return "I logged your workout. You can open it below."
+        return None
+
     @classmethod
     def _format_set_summary(cls, exercise_set: Any) -> str:
         intensity_unit = getattr(exercise_set, "intensity_unit", None)
@@ -1160,7 +1171,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
             final_message = response_text
             if not final_message:
-                if last_tool_outputs_texts:
+                event_message = self._default_success_message_from_events()
+                if event_message:
+                    final_message = event_message
+                elif last_tool_outputs_texts:
                     final_message = (
                         "Here is the result from the requested tool:\n"
                         + "\n\n".join(last_tool_outputs_texts)
