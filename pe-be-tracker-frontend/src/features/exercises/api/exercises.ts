@@ -17,6 +17,7 @@ export interface IntensityUnit {
 export interface ExerciseSet {
   id: number | string;
   reps: number | null;
+  duration_seconds?: number | null;
   intensity: number | null;
   intensity_unit_id: number;
   exercise_id: number | string;
@@ -61,6 +62,7 @@ export interface RecipeExercise {
 export interface RecipeSet {
   id: string;
   reps: number | null;
+  duration_seconds?: number | null;
   intensity: number | null;
   intensity_unit_id: number;
   rest_time_seconds: number | null;
@@ -101,6 +103,7 @@ export const createExercise = async (
 
 export interface CreateExerciseSetData {
   reps?: number;
+  duration_seconds?: number | null;
   intensity?: number;
   intensity_unit_id: number;
   exercise_id: string | number;
@@ -112,6 +115,7 @@ export interface CreateExerciseSetData {
 
 export interface UpdateExerciseSetData {
   reps?: number | null;
+  duration_seconds?: number | null;
   intensity?: number | null;
   intensity_unit_id?: number;
   rest_time_seconds?: number;

@@ -256,6 +256,7 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
                 sets=[
                     ParsedExerciseSet(
                         reps=5,
+                        duration_seconds=600,
                         intensity=100,
                         intensity_unit="",
                         rest_time_seconds=180,
@@ -333,6 +334,7 @@ async def test_create_workout_from_parsed_prefers_exact_match_and_fallback_unit(
     assert created_exercises[1].exercise_type_id == 77
     assert created_types[0].default_intensity_unit == 91
     assert created_types[0].description == "Created from chat parsed workout"
+    assert created_sets[0].duration_seconds == 600
     assert created_sets[0].intensity_unit_id == 91
     assert created_sets[0].notes == "Paused rep"
     assert created_sets[0].done is True

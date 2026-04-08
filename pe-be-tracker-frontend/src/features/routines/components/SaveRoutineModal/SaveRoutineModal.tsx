@@ -81,6 +81,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
           exercise_type_id: Number(exercise.exercise_type_id),
           set_templates: exercise.exercise_sets.map((set) => ({
             reps: set.reps,
+            duration_seconds: set.duration_seconds ?? null,
             intensity: set.intensity,
             intensity_unit_id: Number(set.intensity_unit_id),
           })),

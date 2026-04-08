@@ -29,6 +29,7 @@ class SetTemplateBase(BaseModel):
     """Base schema for set template data"""
 
     reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     intensity_unit_id: int
 

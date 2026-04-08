@@ -246,6 +246,7 @@ class WorkoutService:
         if payload.initial_set:
             initial_set_create = ExerciseSetCreate(
                 reps=payload.initial_set.reps,
+                duration_seconds=payload.initial_set.duration_seconds,
                 intensity=payload.initial_set.intensity,
                 intensity_unit_id=payload.initial_set.intensity_unit_id,
                 rest_time_seconds=payload.initial_set.rest_time_seconds,
@@ -424,6 +425,7 @@ class WorkoutService:
 
                 set_create = ExerciseSetCreate(
                     reps=parsed_set.reps,
+                    duration_seconds=parsed_set.duration_seconds,
                     intensity=parsed_set.intensity,
                     intensity_unit_id=unit_id,
                     rest_time_seconds=parsed_set.rest_time_seconds,

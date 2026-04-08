@@ -15,6 +15,7 @@ export interface ExerciseType {
 export interface SetTemplate {
   id: number;
   reps?: number | null;
+  duration_seconds?: number | null;
   intensity?: number | null;
   intensity_unit_id: number;
   created_at: string;

@@ -11,6 +11,7 @@ export interface CreateRoutineData {
     exercise_type_id: number;
     set_templates: Array<{
       reps?: number | null;
+      duration_seconds?: number | null;
       intensity?: number | null;
       intensity_unit_id: number;
     }>;
@@ -21,6 +22,7 @@ export interface RoutineTemplatePayload {
   exercise_type_id: number;
   set_templates: Array<{
     reps?: number | null;
+    duration_seconds?: number | null;
     intensity?: number | null;
     intensity_unit_id: number;
   }>;

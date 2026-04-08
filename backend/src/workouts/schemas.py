@@ -100,8 +100,9 @@ class ParsedExerciseSet(BaseModel):
     """Schema for a parsed exercise set"""
 
     reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
-    intensity_unit: str
+    intensity_unit: Optional[str] = None
     rest_time_seconds: Optional[int] = None
     notes: Optional[str] = None
 
@@ -128,6 +129,7 @@ class ExerciseSetInput(BaseModel):
     """Input schema for a single exercise set when adding an exercise to the current workout"""
 
     reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     intensity_unit_id: int
     rest_time_seconds: Optional[int] = None

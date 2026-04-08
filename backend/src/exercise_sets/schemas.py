@@ -8,6 +8,7 @@ class ExerciseSetBase(BaseModel):
     """Base schema for exercise set data"""
 
     reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     intensity_unit_id: int
     exercise_id: int
@@ -27,6 +28,7 @@ class ExerciseSetUpdate(BaseModel):
     """Schema for updating exercise sets"""
 
     reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     intensity_unit_id: Optional[int] = None
     rest_time_seconds: Optional[int] = None

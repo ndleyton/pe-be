@@ -23,6 +23,7 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
                 sets=[
                     ParsedExerciseSet(
                         reps=None,
+                        duration_seconds=1800,
                         intensity=30.0,
                         intensity_unit="minutes",
                         rest_time_seconds=None,
@@ -119,6 +120,7 @@ async def test_create_workout_from_parsed_calls_persistence_pipeline(monkeypatch
     assert len(calls["create_exercise_set"]) == 1
     set_payload = calls["create_exercise_set"][0]
     assert set_payload.done is True
+    assert set_payload.duration_seconds == 1800
     assert set_payload.intensity == 30.0
     assert set_payload.intensity_unit_id == 99
     assert set_payload.notes == "Easy pace"
@@ -139,6 +141,7 @@ async def test_create_workout_from_parsed_raises_when_no_intensity_units(monkeyp
                 sets=[
                     ParsedExerciseSet(
                         reps=None,
+                        duration_seconds=600,
                         intensity=10.0,
                         intensity_unit="minutes",
                         rest_time_seconds=None,

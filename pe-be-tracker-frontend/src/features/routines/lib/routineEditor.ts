@@ -8,7 +8,7 @@ import type {
   GuestExerciseType,
   GuestIntensityUnit,
 } from "@/stores";
-import { formatDecimal } from "@/utils/format";
+import { formatSetSummary as formatExerciseSetSummary } from "@/features/exercises/lib/setSummary";
 
 export const DATE_LABEL_LOCALE = "en-US";
 export const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -34,6 +34,7 @@ export type RoutineIntensityUnitOption = Pick<
 export type RoutineEditorSet = {
   id: string;
   reps: number | null;
+  duration_seconds: number | null;
   intensity: number | null;
   intensity_unit_id: number;
   intensity_unit: RoutineIntensityUnitOption | null;
@@ -101,21 +102,12 @@ export const findIntensityUnitById = (
 ) => units.find((unit) => unit.id === id) ?? null;
 
 export const formatSetSummary = (setTemplate: RoutineEditorSet) => {
-  const parts: string[] = [];
-
-  if (setTemplate.reps != null) {
-    parts.push(`${setTemplate.reps} reps`);
-  }
-
-  if (setTemplate.intensity != null) {
-    const intensity = formatDecimal(setTemplate.intensity);
-    const suffix = setTemplate.intensity_unit?.abbreviation
-      ? ` ${setTemplate.intensity_unit.abbreviation}`
-      : "";
-    parts.push(`${intensity}${suffix}`);
-  }
-
-  return parts.length > 0 ? parts.join(" • ") : "No targets set";
+  return formatExerciseSetSummary({
+    reps: setTemplate.reps,
+    duration_seconds: setTemplate.duration_seconds,
+    intensity: setTemplate.intensity,
+    intensityUnitAbbreviation: setTemplate.intensity_unit?.abbreviation,
+  });
 };
 
 export const buildEditorTemplatesFromRoutine = (
@@ -130,6 +122,7 @@ export const buildEditorTemplatesFromRoutine = (
     set_templates: template.set_templates.map((setTemplate) => ({
       id: String(setTemplate.id),
       reps: setTemplate.reps ?? null,
+      duration_seconds: setTemplate.duration_seconds ?? null,
       intensity: setTemplate.intensity ?? null,
       intensity_unit_id: setTemplate.intensity_unit_id,
       intensity_unit:
@@ -146,6 +139,7 @@ export const buildRoutinePayload = (
     notes: template.notes.trim() || null,
     set_templates: template.set_templates.map((setTemplate) => ({
       reps: setTemplate.reps,
+      duration_seconds: setTemplate.duration_seconds,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
     })),
@@ -166,6 +160,7 @@ export const buildComparableSnapshot = (
       notes: template.notes.trim() || null,
       set_templates: template.set_templates.map((setTemplate) => ({
         reps: setTemplate.reps,
+        duration_seconds: setTemplate.duration_seconds,
         intensity: setTemplate.intensity,
         intensity_unit_id: setTemplate.intensity_unit_id,
       })),
@@ -184,6 +179,7 @@ export const createDefaultSet = (
   return {
     id: createTempId(),
     reps: null,
+    duration_seconds: null,
     intensity: null,
     intensity_unit_id: fallbackUnit.id,
     intensity_unit: fallbackUnit,
@@ -225,6 +221,7 @@ export const buildRoutineFromEditorState = ({
     set_templates: template.set_templates.map((setTemplate, setIndex) => ({
       id: Number(setTemplate.id) || -(templateIndex * 100 + setIndex + 1),
       reps: setTemplate.reps,
+      duration_seconds: setTemplate.duration_seconds,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
       created_at: routine.created_at,

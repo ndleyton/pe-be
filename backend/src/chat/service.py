@@ -39,6 +39,7 @@ from src.core.config import settings
 from src.exercises.crud import get_exercise_type_stats, get_exercise_types
 from src.exercises.crud import get_exercises_for_workout
 from src.workouts.crud import get_latest_workout_for_user, get_workout_by_date
+from src.exercises.set_display import format_set_summary
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +61,18 @@ class ChatService:
 
     @classmethod
     def _format_set_summary(cls, exercise_set: Any) -> str:
-        intensity_display = ""
-        intensity = getattr(exercise_set, "intensity", None)
         intensity_unit = getattr(exercise_set, "intensity_unit", None)
-        unit_abbreviation = getattr(intensity_unit, "abbreviation", None)
-
-        if intensity is not None and unit_abbreviation:
-            intensity_display = f" at {intensity} {unit_abbreviation}"
-        elif intensity is not None:
-            intensity_display = f" at {intensity}"
-
+        rendered_summary = format_set_summary(
+            reps=getattr(exercise_set, "reps", None),
+            duration_seconds=getattr(exercise_set, "duration_seconds", None),
+            intensity=getattr(exercise_set, "intensity", None),
+            intensity_unit_abbreviation=getattr(
+                intensity_unit, "abbreviation", None
+            ),
+        )
         summary = (
             f"  - Set {exercise_set.id}: "
-            f"{getattr(exercise_set, 'reps', None) or '?'} reps{intensity_display}\n"
+            f"{rendered_summary}\n"
         )
         summary += cls._format_optional_notes(
             "    Set notes", getattr(exercise_set, "notes", None)
@@ -314,8 +314,9 @@ class ChatService:
                     "4(Strength), 5(Mobility), 6(Other)\n"
                     "- notes: Optional workout notes\n"
                     "- exercises: List of exercises, each with exercise_type_name, "
-                    "optional notes, and sets (reps, intensity, intensity_unit, "
-                    "rest_time_seconds, optional notes)\n"
+                    "optional notes, and sets (either reps or duration_seconds, "
+                    "plus optional intensity, intensity_unit, rest_time_seconds, "
+                    "and optional notes)\n"
                 ),
             ),
             ToolDefinition(

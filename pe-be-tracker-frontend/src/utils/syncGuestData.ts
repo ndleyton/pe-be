@@ -248,6 +248,7 @@ export async function syncGuestDataToServer(
               try {
                 const setPayload = {
                   reps: guestSet.reps,
+                  duration_seconds: guestSet.duration_seconds ?? null,
                   intensity: guestSet.intensity,
                   intensity_unit_id: guestSet.intensity_unit_id,
                   exercise_id: createdExercise.id,

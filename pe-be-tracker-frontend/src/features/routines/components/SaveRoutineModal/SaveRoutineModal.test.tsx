@@ -67,6 +67,7 @@ const exercises: Exercise[] = [
       {
         id: 101,
         reps: null,
+        duration_seconds: 600,
         intensity: null,
         intensity_unit_id: 2,
         exercise_id: 11,
@@ -78,6 +79,7 @@ const exercises: Exercise[] = [
       {
         id: 102,
         reps: 8,
+        duration_seconds: null,
         intensity: 135,
         intensity_unit_id: 2,
         exercise_id: 11,
@@ -127,11 +129,13 @@ describe("SaveRoutineModal", () => {
             set_templates: [
               {
                 reps: null,
+                duration_seconds: 600,
                 intensity: null,
                 intensity_unit_id: 2,
               },
               {
                 reps: 8,
+                duration_seconds: null,
                 intensity: 135,
                 intensity_unit_id: 2,
               },

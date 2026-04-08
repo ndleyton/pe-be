@@ -65,6 +65,7 @@ async def test_create_routine_endpoint_success(
                     "set_templates": [
                         {
                             "reps": 10,
+                            "duration_seconds": 600,
                             "intensity": 50.0,
                             "intensity_unit_id": intensity_unit.id,
                         },
@@ -95,6 +96,7 @@ async def test_create_routine_endpoint_success(
 
         first_set = tpl["set_templates"][0]
         assert first_set["reps"] == 10
+        assert first_set["duration_seconds"] == 600
         assert first_set["intensity_unit_id"] == intensity_unit.id
         # Ensure joined intensity unit is present in read model
         assert first_set.get("intensity_unit", {}).get("id") == intensity_unit.id
