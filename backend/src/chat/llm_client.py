@@ -308,7 +308,24 @@ class GeminiGenAIClient:
                     contents=contents,
                     config=config,
                 )
-                return self._normalize_response(response)
+                normalized_response = self._normalize_response(response)
+                if self._is_malformed_function_call_response(normalized_response):
+                    if attempt >= self.max_retries:
+                        raise RuntimeError("Gemini returned a malformed function call.")
+
+                    wait_seconds = 2**attempt
+                    logger.warning(
+                        "Gemini returned malformed function call, retrying "
+                        "model=%s attempt=%d/%d wait=%ss",
+                        self.model_name,
+                        attempt + 1,
+                        self.max_retries + 1,
+                        wait_seconds,
+                    )
+                    await asyncio.sleep(wait_seconds)
+                    continue
+
+                return normalized_response
             except Exception as exc:
                 if (
                     not self._is_retryable_provider_error(exc)
@@ -464,3 +481,12 @@ class GeminiGenAIClient:
             "try again later",
         )
         return any(marker in error_text for marker in retryable_markers)
+
+    @staticmethod
+    def _is_malformed_function_call_response(response: LLMResponse) -> bool:
+        finish_reason = str(response.metadata.get("finish_reason", "")).upper()
+        return (
+            finish_reason == "MALFORMED_FUNCTION_CALL"
+            and not response.message.content.strip()
+            and not response.tool_calls
+        )

@@ -131,6 +131,39 @@ async def test_gemini_client_does_not_retry_non_retryable_errors():
     sleep_mock.assert_not_awaited()
 
 
+async def test_gemini_client_retries_malformed_function_call_responses():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None, max_retries=1)
+    client.client = MagicMock()
+    client.client.aio = MagicMock()
+
+    malformed_response = MagicMock()
+    malformed_response.candidates = [
+        MagicMock(content=None, finish_reason="MALFORMED_FUNCTION_CALL")
+    ]
+
+    recovered_response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                content=types.Content(parts=[types.Part.from_text(text="Recovered")])
+            )
+        ]
+    )
+
+    client.client.aio.models.generate_content = AsyncMock(
+        side_effect=[malformed_response, recovered_response]
+    )
+
+    with patch("src.chat.llm_client.asyncio.sleep", new=AsyncMock()) as sleep_mock:
+        normalized = await client.acomplete(
+            messages=[ConversationMessage(role="user", content="Hello")],
+            tools=[],
+        )
+
+    assert normalized.message.content == "Recovered"
+    assert client.client.aio.models.generate_content.await_count == 2
+    sleep_mock.assert_awaited_once_with(1)
+
+
 async def test_tool_definition_to_genai_tool_declaration():
     tool = ToolDefinition(
         name="test_tool",

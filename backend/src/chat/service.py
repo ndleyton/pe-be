@@ -1207,6 +1207,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 raise ValueError(
                     "The AI service is currently busy. Please try again in a minute."
                 )
+            if "malformed function call" in error_msg.casefold():
+                raise ValueError(
+                    "The AI had trouble formatting its response. Please try again."
+                )
 
             raise ValueError(f"Error generating response with Gemini: {exc}")
 
