@@ -162,6 +162,15 @@ class PersonalizedRoutineSetArgs(BaseModel):
             return numbers[-1]
         return value
 
+    @staticmethod
+    def _normalize_optional_string(value: Any) -> str | None | Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
     @model_validator(mode="before")
     @classmethod
     def normalize_set_prescription(cls, obj: Any) -> Any:
@@ -176,6 +185,9 @@ class PersonalizedRoutineSetArgs(BaseModel):
             normalized.get("intensity")
         )
         normalized["rpe"] = cls._normalize_optional_decimal(normalized.get("rpe"))
+        normalized["intensity_unit"] = cls._normalize_optional_string(
+            normalized.get("intensity_unit")
+        )
         reps = normalized.get("reps")
         if isinstance(reps, str):
             normalized_reps = cls._normalize_reps_text(reps)
@@ -194,13 +206,25 @@ class PersonalizedRoutineExerciseArgs(BaseModel):
 class PersonalizedRoutineArgs(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
-    workout_type_name: str | None = Field(default=None, min_length=1)
     goal_summary: str = Field(..., min_length=1)
-    days_per_week: int | None = Field(default=None, ge=1, le=7)
     intended_use: str | None = None
     equipment_notes: str = Field(..., min_length=1)
     restrictions: str | None = None
     exercises: list[PersonalizedRoutineExerciseArgs] = Field(..., min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_optional_strings(cls, obj: Any) -> Any:
+        if not isinstance(obj, dict):
+            return obj
+
+        normalized = dict(obj)
+        for field_name in ("description", "intended_use", "restrictions"):
+            value = normalized.get(field_name)
+            if isinstance(value, str):
+                stripped = value.strip()
+                normalized[field_name] = stripped or None
+        return normalized
 
 
 class ChatService:
@@ -548,9 +572,7 @@ class ChatService:
             return draft.description
 
         details = [draft.goal_summary.strip(), draft.equipment_notes.strip()]
-        if draft.days_per_week is not None:
-            details.append(f"{draft.days_per_week} day(s) per week")
-        elif draft.intended_use:
+        if draft.intended_use:
             details.append(draft.intended_use.strip())
         if draft.restrictions:
             details.append(f"Restrictions: {draft.restrictions.strip()}")
@@ -766,9 +788,7 @@ class ChatService:
             if not self.session:
                 return "Failed to create routine: no database session available."
 
-            workout_type = await self._resolve_or_default_workout_type(
-                draft.workout_type_name
-            )
+            workout_type = await self._resolve_or_default_workout_type(None)
             exercise_templates: list[ExerciseTemplateCreate] = []
             for exercise_draft in draft.exercises:
                 exercise_type = await self._resolve_exercise_type(
@@ -871,11 +891,12 @@ class ChatService:
                     "helpful, and equipment context. This phase supports a "
                     "single saved routine, not a full multi-day split. Use human-"
                     "readable names only: exercise_type_name and intensity_unit. "
-                    "workout_type_name is optional and the backend can default it "
-                    "for standard lifting routines. For sets, use reps for rep-based work, "
+                    "The backend will choose the workout type for standard lifting "
+                    "routines. For sets, use reps for rep-based work, "
                     "duration_seconds for time-based work, and rpe for effort "
                     "targets such as RPE 7-8. intensity_unit is optional when the "
-                    "exercise's default load unit should be used. If you are "
+                    "exercise's default load unit should be used; omit it entirely "
+                    "instead of sending an empty string. If you are "
                     "thinking in rep ranges like 6-8 or effort ranges like RPE 7-8, "
                     "choose a single target value. Do not invent internal numeric "
                     "IDs."
@@ -913,10 +934,11 @@ Routine creation policy:
   - intended use when it materially affects the single routine
   - injuries or movement restrictions if the user mentions them
 - Do not ask the user to disambiguate internal workout type names for standard lifting routines.
-- workout_type_name is optional for create_personalized_routine.
+- The backend chooses the workout type for create_personalized_routine.
 - For create_personalized_routine, use rpe for effort targets like RPE 7-8.
 - Do not put RPE or RIR into intensity_unit.
 - intensity_unit is the quantitative load or time domain, and can be omitted when the exercise's default unit should apply.
+- If intensity_unit is omitted, omit the field entirely; do not send an empty string.
 - If the user asks for a multi-day split, explain that you can create one workout routine at a time in this phase.
 - Do not call create_personalized_routine more than once per request.
 """.strip()

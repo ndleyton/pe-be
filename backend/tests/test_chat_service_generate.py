@@ -382,7 +382,6 @@ async def test_generate_response_returns_routine_created_event(
     mock_tool_call.args = {
         "name": "Beginner Full Body",
         "description": "Built for muscle gain.",
-        "workout_type_name": "Strength",
         "goal_summary": "Build muscle",
         "equipment_notes": "Commercial gym access",
         "exercises": [
@@ -408,7 +407,7 @@ async def test_generate_response_returns_routine_created_event(
     mock_get_llm.return_value = mock_llm
     mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
     mock_get_exercise_types.return_value = MagicMock(
-        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+        data=[SimpleNamespace(id=9, name="Goblet Squat", default_intensity_unit=3)]
     )
     mock_get_intensity_units.return_value = [
         SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
