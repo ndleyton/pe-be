@@ -34,7 +34,6 @@ const RoutinesPage = () => {
     data: routines,
     isPending,
     isFetchingNextPage,
-    hasMore,
     error,
   } = useInfiniteScroll<Routine>({
     queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
@@ -149,14 +148,6 @@ const RoutinesPage = () => {
             </div>
           )}
 
-          {/* End of results indicator */}
-          {!hasMore && filteredRoutines.length > 0 && (
-            <div className="py-8 text-center">
-              <span className="text-muted-foreground text-sm">
-                No more routines to load
-              </span>
-            </div>
-          )}
         </>
       )}
 

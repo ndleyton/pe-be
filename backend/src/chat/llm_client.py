@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal, Optional, Protocol, Sequence
@@ -10,6 +12,8 @@ from google.genai import types
 from pydantic import BaseModel
 
 from src.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 ChatRole = Literal["system", "user", "assistant", "tool"]
@@ -133,7 +137,21 @@ class ToolDefinition:
             schema_type = cleaned.get("type")
             if isinstance(schema_type, str):
                 normalized = schema_type.upper()
-                cleaned["type"] = "STRING" if normalized == "NULL" else normalized
+                if normalized == "NULL":
+                    cleaned.pop("type", None)
+                    return cleaned
+                cleaned["type"] = normalized
+
+            any_of = cleaned.get("anyOf")
+            if isinstance(any_of, list):
+                simplified_any_of = cls._simplify_any_of(any_of)
+                if not simplified_any_of:
+                    cleaned.pop("anyOf", None)
+                elif len(simplified_any_of) == 1:
+                    cleaned.pop("anyOf", None)
+                    cleaned.update(simplified_any_of[0])
+                else:
+                    cleaned["anyOf"] = simplified_any_of
 
             return cleaned
 
@@ -141,6 +159,23 @@ class ToolDefinition:
             return [cls._clean_pydantic_schema_inner(item, defs) for item in schema]
 
         return schema
+
+    @classmethod
+    def _simplify_any_of(cls, variants: list[Any]) -> list[Any]:
+        simplified: list[Any] = []
+        seen: set[str] = set()
+
+        for variant in variants:
+            if not variant:
+                continue
+
+            serialized = json.dumps(variant, sort_keys=True)
+            if serialized in seen:
+                continue
+            seen.add(serialized)
+            simplified.append(variant)
+
+        return simplified
 
     @staticmethod
     def _parse_json_dict(value: Any) -> Optional[dict[str, Any]]:
@@ -187,7 +222,7 @@ class GeminiGenAIClient:
         model_name: str = settings.CHAT_MODEL,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        max_retries: int = 2,
+        max_retries: int = 1,
     ):
         self.api_key = api_key
         self.rate_limiter = rate_limiter
@@ -266,13 +301,51 @@ class GeminiGenAIClient:
             ),
         )
 
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            config=config,
-        )
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = await self.client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
+                )
+                normalized_response = self._normalize_response(response)
+                if self._is_malformed_function_call_response(normalized_response):
+                    if attempt >= self.max_retries:
+                        raise RuntimeError("Gemini returned a malformed function call.")
 
-        return self._normalize_response(response)
+                    wait_seconds = 2**attempt
+                    logger.warning(
+                        "Gemini returned malformed function call, retrying "
+                        "model=%s attempt=%d/%d wait=%ss",
+                        self.model_name,
+                        attempt + 1,
+                        self.max_retries + 1,
+                        wait_seconds,
+                    )
+                    await asyncio.sleep(wait_seconds)
+                    continue
+
+                return normalized_response
+            except Exception as exc:
+                if (
+                    not self._is_retryable_provider_error(exc)
+                    or attempt >= self.max_retries
+                ):
+                    raise
+
+                wait_seconds = 2**attempt
+                logger.warning(
+                    "Gemini generate_content retrying after transient provider error "
+                    "model=%s attempt=%d/%d wait=%ss error=%s",
+                    self.model_name,
+                    attempt + 1,
+                    self.max_retries + 1,
+                    wait_seconds,
+                    exc,
+                )
+                await asyncio.sleep(wait_seconds)
+
+        raise RuntimeError("Gemini generate_content retry loop exhausted unexpectedly")
 
     async def aupload_file(
         self,
@@ -390,3 +463,30 @@ class GeminiGenAIClient:
                 )
 
         return metadata
+
+    @staticmethod
+    def _is_retryable_provider_error(exc: Exception) -> bool:
+        error_text = str(exc).casefold()
+        error_code = getattr(exc, "code", None)
+
+        if error_code in {429, 503}:
+            return True
+
+        retryable_markers = (
+            "429",
+            "resourceexhausted",
+            "503",
+            "unavailable",
+            "high demand",
+            "try again later",
+        )
+        return any(marker in error_text for marker in retryable_markers)
+
+    @staticmethod
+    def _is_malformed_function_call_response(response: LLMResponse) -> bool:
+        finish_reason = str(response.metadata.get("finish_reason", "")).upper()
+        return (
+            finish_reason == "MALFORMED_FUNCTION_CALL"
+            and not response.message.content.strip()
+            and not response.tool_calls
+        )

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from PIL import Image
+from src.chat.llm_client import ConversationMessage
 from src.chat.router import (
     create_new_conversation,
     get_conversations,
@@ -13,9 +14,11 @@ from src.chat.router import (
 )
 from src.core.rate_limit import rate_limiter
 from src.chat.schemas import ConversationCreate, ConversationUpdate
+from src.exercises.models import ExerciseType, IntensityUnit
 from src.main import app
 from src.users.models import User
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
+from src.workouts.models import WorkoutType
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -190,6 +193,112 @@ async def test_chat_attachment_upload_and_download(
     assert download_response.status_code == 200, download_response.text
     assert download_response.headers["content-type"] == "image/png"
     assert download_response.content
+
+
+async def test_chat_endpoint_creates_routine_and_returns_event(
+    async_client: AsyncClient, authenticated_user, db_session, monkeypatch
+):
+    async def override_optional_user():
+        return authenticated_user
+
+    app.dependency_overrides[current_optional_user] = override_optional_user
+    try:
+        workout_type = WorkoutType(name="Strength", description="Strength training")
+        intensity_unit = IntensityUnit(name="Bodyweight", abbreviation="bw")
+        db_session.add_all([workout_type, intensity_unit])
+        await db_session.flush()
+
+        exercise_type = ExerciseType(
+            name="Goblet Squat",
+            description="Leg exercise",
+            default_intensity_unit=intensity_unit.id,
+        )
+        db_session.add(exercise_type)
+        await db_session.commit()
+
+        mock_llm = AsyncMock()
+        mock_llm.model_name = "test-model"
+
+        mock_tool_call_response = MagicMock()
+        mock_tool_call = MagicMock()
+        mock_tool_call.name = "create_personalized_routine"
+        mock_tool_call.call_id = "call_routine"
+        mock_tool_call.args = {
+            "name": "Beginner Full Body",
+            "description": "Built for a new lifter.",
+            "workout_type_name": "Strength",
+            "goal_summary": "Build muscle",
+            "days_per_week": 3,
+            "equipment_notes": "Commercial gym access",
+            "exercises": [
+                {
+                    "exercise_type_name": "Goblet Squat",
+                    "sets": [
+                        {"reps": 10, "intensity_unit": "BW"},
+                        {"reps": 10, "intensity_unit": "BW"},
+                    ],
+                }
+            ],
+        }
+        mock_tool_call_response.tool_calls = [mock_tool_call]
+        mock_tool_call_response.message = ConversationMessage(
+            role="assistant", content=""
+        )
+
+        mock_text_response = MagicMock()
+        mock_text_response.tool_calls = []
+        mock_text_response.message = ConversationMessage(
+            role="assistant", content="I created a routine for you."
+        )
+
+        mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_text_response]
+        monkeypatch.setattr(
+            "src.chat.service.ChatService._get_llm_client",
+            lambda self: mock_llm,
+        )
+        monkeypatch.setattr("src.chat.service.settings.GOOGLE_AI_KEY", "test_key")
+
+        response = await async_client.post(
+            "/api/v1/chat",
+            json={
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Make me a beginner full body routine",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        routine_id = payload["events"][0]["routine"]["id"]
+        assert payload["message"] == "I created a routine for you."
+        assert payload["events"] == [
+            {
+                "type": "routine_created",
+                "title": "Routine created",
+                "cta_label": "View routine",
+                "routine": {
+                    "id": routine_id,
+                    "name": "Beginner Full Body",
+                    "description": "Built for a new lifter.",
+                    "workout_type_id": workout_type.id,
+                    "exercise_count": 1,
+                    "set_count": 2,
+                },
+            }
+        ]
+
+        routine_response = await async_client.get(f"/api/v1/routines/{routine_id}")
+        assert routine_response.status_code == 200, routine_response.text
+        routine_payload = routine_response.json()
+        assert routine_payload["name"] == "Beginner Full Body"
+        assert routine_payload["visibility"] == "private"
+        assert routine_payload["is_readonly"] is False
+        assert len(routine_payload["exercise_templates"]) == 1
+    finally:
+        app.dependency_overrides.pop(current_optional_user, None)
 
 
 async def test_chat_attachment_upload_does_not_run_cleanup(

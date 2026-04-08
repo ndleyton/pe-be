@@ -52,7 +52,6 @@ export const RoutineTemplatesCard = ({
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">🏋️</span>
             <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
               Exercise Sequence
             </h4>

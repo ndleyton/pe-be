@@ -20,6 +20,7 @@ export type NavKey = (typeof NAV_KEYS)[keyof typeof NAV_KEYS];
 export const NAV_PATHS = {
   LOGIN: "/login",
   WORKOUTS: "/workouts",
+  ROUTINES: "/routines",
   EXERCISES: "/exercise-types",
   PROFILE: "/profile",
   CHAT: "/chat",

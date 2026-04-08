@@ -107,6 +107,58 @@ describe("ChatPage", () => {
     );
   });
 
+  it("renders a routine widget when the assistant returns a routine-created event", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "I created a routine for you.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "routine_created",
+            title: "Routine created",
+            cta_label: "View routine",
+            routine: {
+              id: 77,
+              name: "Beginner Full Body",
+              description: "Built for three gym days per week.",
+              workout_type_id: 4,
+              exercise_count: 6,
+              set_count: 18,
+            },
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "Make me a beginner full body routine",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.getByText("I created a routine for you.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Beginner Full Body")).toBeInTheDocument();
+    expect(
+      screen.getByText("Built for three gym days per week."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("6 exercises")).toBeInTheDocument();
+    expect(screen.getByText("18 sets")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View routine" })).toHaveAttribute(
+      "href",
+      "/routines/77",
+    );
+  });
+
   it("surfaces backend chat error details instead of a generic fallback", async () => {
     mockPost.mockRejectedValueOnce({
       response: {
