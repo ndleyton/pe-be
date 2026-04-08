@@ -34,6 +34,10 @@ from src.exercises.crud import (
     create_exercise_type,
     get_intensity_units,
 )
+from src.exercises.intensity_units import (
+    DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+    prefers_duration_for_intensity_unit,
+)
 from src.exercise_sets.crud import create_exercise_set
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
@@ -246,6 +250,7 @@ class WorkoutService:
         if payload.initial_set:
             initial_set_create = ExerciseSetCreate(
                 reps=payload.initial_set.reps,
+                duration_seconds=payload.initial_set.duration_seconds,
                 intensity=payload.initial_set.intensity,
                 intensity_unit_id=payload.initial_set.intensity_unit_id,
                 rest_time_seconds=payload.initial_set.rest_time_seconds,
@@ -422,8 +427,17 @@ class WorkoutService:
                         )
                     unit_id = intensity_units[0].id
 
+                duration_seconds = parsed_set.duration_seconds
+                if (
+                    duration_seconds is None
+                    and parsed_set.reps is None
+                    and prefers_duration_for_intensity_unit(parsed_set.intensity_unit)
+                ):
+                    duration_seconds = DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+
                 set_create = ExerciseSetCreate(
                     reps=parsed_set.reps,
+                    duration_seconds=duration_seconds,
                     intensity=parsed_set.intensity,
                     intensity_unit_id=unit_id,
                     rest_time_seconds=parsed_set.rest_time_seconds,
@@ -655,9 +669,10 @@ Given a workout description, extract:
 4. List of exercises with:
    - Exercise name (standardized, e.g., "Bench Press", "Squat", "Deadlift")
    - Exercise notes (optional)
-   - Sets with reps, weight/intensity, intensity unit, and optional set notes
+   - Sets with reps or duration_seconds, weight/intensity, intensity unit, and optional set notes
 
 Intensity units should be one of: "kg", "lbs", "km/h", "mph", "BW" (bodyweight)
+For "km/h" and "mph", prefer duration_seconds over reps when the set is time-based.
 
 Return ONLY valid JSON in this exact format:
 {
@@ -671,6 +686,7 @@ Return ONLY valid JSON in this exact format:
       "sets": [
         {
           "reps": number or null,
+          "duration_seconds": number or null,
           "intensity": number or null,
           "intensity_unit": "string",
           "rest_time_seconds": number or null,

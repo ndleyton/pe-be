@@ -40,6 +40,7 @@ export interface AddExerciseToWorkoutPayload {
   exercise_type_id: number;
   initial_set?: {
     reps?: number | null;
+    duration_seconds?: number | null;
     intensity?: number | null;
     intensity_unit_id: number;
     rest_time_seconds?: number | null;

@@ -6,6 +6,7 @@ import { makeExercise, makeExerciseSet, makeExerciseType } from "@/test/fixtures
 import {
   convertIntensityValue,
   getCompatibleIntensityUnits,
+  prefersDurationForIntensityUnit,
   resolveExerciseDisplayIntensityUnit,
 } from "./intensityUnits";
 
@@ -40,5 +41,11 @@ describe("intensityUnits", () => {
         KNOWN_INTENSITY_UNITS[0],
       ).abbreviation,
     ).toBe("km/h");
+  });
+
+  it("prefers duration defaults for speed units", () => {
+    expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[2])).toBe(true);
+    expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[3])).toBe(true);
+    expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[0])).toBe(false);
   });
 });

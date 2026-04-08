@@ -57,6 +57,7 @@ export const makeExerciseSet = (
 ): ExerciseSet => ({
   id: nextExerciseSetId(),
   reps: 10,
+  duration_seconds: null,
   intensity: 50,
   intensity_unit_id: 1,
   exercise_id: 1,

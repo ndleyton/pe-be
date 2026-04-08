@@ -50,6 +50,7 @@ export interface GuestIntensityUnit {
 export interface GuestExerciseSet {
   id: string;
   reps: number | null;
+  duration_seconds?: number | null;
   intensity: number | null;
   intensity_unit_id: number;
   exercise_id: string;
@@ -401,6 +402,7 @@ export const useGuestStore = create<GuestStore>()(
             addExerciseSet({
               exercise_id: exerciseId,
               reps: routineSet.reps ?? null,
+              duration_seconds: routineSet.duration_seconds ?? null,
               intensity: routineSet.intensity ?? null,
               intensity_unit_id: routineSet.intensity_unit_id,
               rest_time_seconds: null,

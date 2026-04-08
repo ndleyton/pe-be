@@ -36,6 +36,7 @@ class ExerciseSet(Base):
     )
 
     reps = Column(Integer)
+    duration_seconds = Column(Integer, nullable=True)
     intensity = Column(Numeric(precision=7, scale=3))
     canonical_intensity = Column(Numeric(precision=10, scale=5), nullable=True)
     intensity_unit_id = Column(

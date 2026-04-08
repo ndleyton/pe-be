@@ -178,7 +178,7 @@ export const RoutineTemplatesCard = ({
                       </Button>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-4">
                       <div className="grid gap-1.5">
                         <label
                           htmlFor={`${template.id}-${setTemplate.id}-reps`}
@@ -197,6 +197,34 @@ export const RoutineTemplatesCard = ({
                             const nextValue = event.target.value;
                             onUpdateSet(template.id, setTemplate.id, {
                               reps:
+                                nextValue.trim() === ""
+                                  ? null
+                                  : Number.parseInt(nextValue, 10),
+                            });
+                          }}
+                          placeholder="0"
+                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                        />
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <label
+                          htmlFor={`${template.id}-${setTemplate.id}-duration`}
+                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                        >
+                          Duration (sec)
+                        </label>
+                        <Input
+                          id={`${template.id}-${setTemplate.id}-duration`}
+                          data-testid={`routine-set-duration-${templateIndex}-${setIndex}`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={setTemplate.duration_seconds ?? ""}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            onUpdateSet(template.id, setTemplate.id, {
+                              duration_seconds:
                                 nextValue.trim() === ""
                                   ? null
                                   : Number.parseInt(nextValue, 10),

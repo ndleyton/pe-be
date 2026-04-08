@@ -221,6 +221,7 @@ async def create_routine(
                     ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
+                    duration_seconds=set_template_data.duration_seconds,
                     intensity=set_template_data.intensity,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
@@ -304,6 +305,7 @@ async def create_routine_admin(
                     ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
+                    duration_seconds=set_template_data.duration_seconds,
                     intensity=set_template_data.intensity,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
@@ -393,6 +395,7 @@ async def update_routine(
                     ).id
                 set_template = SetTemplate(
                     reps=set_template_data.reps,
+                    duration_seconds=set_template_data.duration_seconds,
                     intensity=set_template_data.intensity,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,

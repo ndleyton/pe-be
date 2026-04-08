@@ -15,6 +15,7 @@ export const makeRoutineSetTemplate = (
 ): SetTemplate => ({
   id: nextId(),
   reps: 10,
+  duration_seconds: null,
   intensity: 50,
   intensity_unit_id: 1,
   created_at: DEFAULT_TIMESTAMP,

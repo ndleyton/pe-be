@@ -49,6 +49,7 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
         [
             SetTemplate(
                 reps=12,
+                duration_seconds=900,
                 intensity=30.0,
                 intensity_unit_id=iu.id,
                 exercise_template_id=etmpl.id,
@@ -95,6 +96,10 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
     )
     created_sets = res3.scalars().all()
     assert len(created_sets) == 2
+    assert {exercise_set.duration_seconds for exercise_set in created_sets} == {
+        900,
+        None,
+    }
     assert {exercise_set.canonical_intensity for exercise_set in created_sets} == {
         Decimal("30.00000"),
         Decimal("35.00000"),
@@ -201,6 +206,7 @@ async def test_create_workout_from_public_routine_allows_nonreleased_exercise_ty
     db_session.add(
         SetTemplate(
             reps=8,
+            duration_seconds=300,
             intensity=40.0,
             intensity_unit_id=iu.id,
             exercise_template_id=exercise_template.id,

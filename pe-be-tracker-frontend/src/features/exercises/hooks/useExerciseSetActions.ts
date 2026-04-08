@@ -15,7 +15,11 @@ import {
   toGuestExerciseSets,
   type ExerciseRowProps,
 } from "@/features/exercises/lib/exerciseRow";
-import { convertIntensityValue } from "@/features/exercises/lib/intensityUnits";
+import {
+  convertIntensityValue,
+  DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+  prefersDurationForIntensityUnit,
+} from "@/features/exercises/lib/intensityUnits";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps";
@@ -286,6 +290,21 @@ export const useExerciseSetActions = ({
 
     const currentExerciseSets = exerciseSetsRef.current;
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
+    const durationPreferred = prefersDurationForIntensityUnit({
+      id: intensityUnitId,
+      name: "",
+      abbreviation: "",
+    });
+    const nextDurationSeconds = lastSet
+      ? (
+        lastSet.duration_seconds ??
+        (lastSet.reps == null && durationPreferred
+          ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+          : null)
+      )
+      : durationPreferred
+        ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
+        : null;
     const tempId = `temp-${Date.now()}`;
     const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
     const nextIntensity = convertIntensityValue(
@@ -296,6 +315,7 @@ export const useExerciseSetActions = ({
     const optimisticSet: ExerciseSet = {
       id: tempId,
       reps: lastSet?.reps,
+      duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
       intensity_unit_id: intensityUnitId,
       exercise_id: exercise.id,
@@ -318,7 +338,6 @@ export const useExerciseSetActions = ({
 
     try {
       const payload: CreateExerciseSetData = {
-        reps: lastSet?.reps || 0,
         intensity: nextIntensity || 0,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,
@@ -326,6 +345,9 @@ export const useExerciseSetActions = ({
         done: false,
         notes: undefined,
         type: nextSetType,
+        ...(nextDurationSeconds != null
+          ? { duration_seconds: nextDurationSeconds }
+          : { reps: lastSet?.reps || 0 }),
       };
 
       const createdSet = await createExerciseSet(payload);

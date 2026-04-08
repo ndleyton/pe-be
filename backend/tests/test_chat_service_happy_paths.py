@@ -134,6 +134,49 @@ async def test_get_workout_summary_by_date_happy_path(monkeypatch):
     assert "Set notes: Could have gone heavier" in summary
 
 
+async def test_get_last_workout_summary_formats_duration_based_sets(monkeypatch):
+    svc = ChatService(user_id=444, session=object())
+    workout = SimpleNamespace(
+        id=8,
+        name="Treadmill Session",
+        start_time=datetime(2026, 3, 2, tzinfo=timezone.utc),
+        notes=None,
+    )
+    exercise = SimpleNamespace(
+        exercise_type=SimpleNamespace(name="Treadmill"),
+        notes=None,
+        exercise_sets=[
+            SimpleNamespace(
+                id=11,
+                reps=None,
+                duration_seconds=1200,
+                intensity=10,
+                intensity_unit=SimpleNamespace(abbreviation="km/h"),
+                notes=None,
+            )
+        ],
+    )
+
+    async def _fake_get_latest_workout_for_user(session, user_id):
+        assert user_id == 444
+        return workout
+
+    async def _fake_get_exercises_for_workout(session, workout_id):
+        assert workout_id == 8
+        return [exercise]
+
+    monkeypatch.setattr(
+        "src.chat.service.get_latest_workout_for_user",
+        _fake_get_latest_workout_for_user,
+    )
+    monkeypatch.setattr(
+        "src.chat.service.get_exercises_for_workout", _fake_get_exercises_for_workout
+    )
+
+    summary = await svc._get_last_workout_summary()
+    assert "20 min at 10 km/h" in summary
+
+
 async def test_generate_response_happy_path_without_persistence(monkeypatch):
     monkeypatch.setattr(
         "src.chat.service.settings.GOOGLE_AI_KEY", "test-key", raising=False
