@@ -233,7 +233,7 @@ describe("useRoutineEditor", () => {
     );
   });
 
-  it("omits null duration_seconds from routine update payloads", () => {
+  it("omits null duration_seconds and null rpe from routine update payloads", () => {
     const payload = buildRoutinePayload([
       {
         id: "101",
@@ -246,6 +246,7 @@ describe("useRoutineEditor", () => {
             reps: 12,
             duration_seconds: null,
             intensity: null,
+            rpe: null,
             intensity_unit_id: 1,
             intensity_unit: null,
           },

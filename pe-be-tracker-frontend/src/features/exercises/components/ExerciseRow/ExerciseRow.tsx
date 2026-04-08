@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 import { ExerciseRowHeader } from "./ExerciseRowHeader";
 import { ExerciseSetTable } from "./ExerciseSetTable";
 import { ExerciseRowImagePanel } from "./ExerciseRowImagePanel";
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem
 } from "@/shared/components/ui/accordion";
 
 const ExerciseRow = ({
@@ -37,7 +37,7 @@ const ExerciseRow = ({
     toggleSetCompletion,
     updateExerciseNotes,
     updateSetField,
-    updateSetNotes,
+    updateSetOptions,
   } = useExerciseSetActions({
     exercise,
     onExerciseDelete,
@@ -62,17 +62,19 @@ const ExerciseRow = ({
     setExerciseSettingsOpen,
     setIntensityInputValue,
     setNotesValue,
+    setRpeValue,
     setRepsInputValue,
+    setSetRpeValue,
     setSetNotesValue,
     closeSetOptions,
   } = useExerciseRowState({
     exercise,
     exerciseSets,
-    updateSetNotes,
+    updateSetOptions,
   });
 
-  const hasImages = 
-    (exercise.exercise_type.status ?? "released") === "released" && 
+  const hasImages =
+    (exercise.exercise_type.status ?? "released") === "released" &&
     (exercise.exercise_type.images?.length ?? 0) > 0;
 
   const handleExpandedChange = useCallback((nextExpanded: boolean) => {
@@ -94,9 +96,9 @@ const ExerciseRow = ({
   }, [handleExpandedChange, isExpanded]);
 
   return (
-    <Accordion 
-      type="single" 
-      collapsible 
+    <Accordion
+      type="single"
+      collapsible
       value={isExpanded ? "images" : ""}
       onValueChange={(value: string) => {
         handleExpandedChange(value === "images");
@@ -156,12 +158,14 @@ const ExerciseRow = ({
               onOpenSetOptions={openSetOptions}
               onSetOptionsOpenChange={handleSetOptionsOpenChange}
               onSetNotesValueChange={setSetNotesValue}
+              onSetRpeValueChange={setSetRpeValue}
               onSetRepsInputValue={setRepsInputValue}
               onSetWeightInputValue={setIntensityInputValue}
               onToggleSetCompletion={toggleSetCompletion}
               onUpdateSetField={updateSetField}
               repsInputs={repsInputs}
               setNotesValue={setNotesValue}
+              setRpeValue={setRpeValue}
             />
           </CardContent>
         </Card>

@@ -13,6 +13,7 @@ export interface CreateRoutineData {
       reps?: number | null;
       duration_seconds?: number | null;
       intensity?: number | null;
+      rpe?: number | null;
       intensity_unit_id: number;
     }>;
   }>;
@@ -24,6 +25,7 @@ export interface RoutineTemplatePayload {
     reps?: number | null;
     duration_seconds?: number | null;
     intensity?: number | null;
+    rpe?: number | null;
     intensity_unit_id: number;
   }>;
 }

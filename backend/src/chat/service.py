@@ -66,6 +66,7 @@ class ChatService:
             reps=getattr(exercise_set, "reps", None),
             duration_seconds=getattr(exercise_set, "duration_seconds", None),
             intensity=getattr(exercise_set, "intensity", None),
+            rpe=getattr(exercise_set, "rpe", None),
             intensity_unit_abbreviation=getattr(intensity_unit, "abbreviation", None),
         )
         summary = f"  - Set {exercise_set.id}: {rendered_summary}\n"
@@ -431,6 +432,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []
+        normalized_messages = self._normalize_incoming_messages(messages)
+        if not normalized_messages:
+            raise ValueError("At least one chat message is required")
+
         if save_to_db and self.session:
             if conversation_id:
                 conversation = await get_conversation_by_id(
@@ -444,9 +449,6 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     if message.role in {"user", "assistant"}
                 ]
             else:
-                normalized_messages = [
-                    ChatMessage.model_validate(message) for message in messages or []
-                ]
                 title = self._title_from_messages(normalized_messages)
                 conversation = await create_conversation(
                     self.session,
@@ -454,13 +456,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                     self.user_id,
                 )
 
-        normalized_messages = [
-            ChatMessage.model_validate(message) for message in messages or []
-        ]
-        if not normalized_messages:
-            raise ValueError("At least one chat message is required")
-
-        new_messages = self._split_new_messages(normalized_messages, persisted_history)
+        new_messages = normalized_messages
 
         llm_messages = [
             ConversationMessage(role="system", content=self._get_system_prompt())
@@ -914,6 +910,23 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             if summary:
                 return summary[:50] + "..." if len(summary) > 50 else summary
         return None
+
+    def _normalize_incoming_messages(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[ChatMessage]:
+        normalized_messages = [
+            ChatMessage.model_validate(message) for message in messages or []
+        ]
+        invalid_roles = {
+            message.role for message in normalized_messages if message.role != "user"
+        }
+        if invalid_roles:
+            invalid_roles_text = ", ".join(sorted(invalid_roles))
+            raise ValueError(
+                "Chat requests may only include user messages. "
+                f"Received unsupported role(s): {invalid_roles_text}."
+            )
+        return normalized_messages
 
     def _attachment_storage_dir(self) -> Path:
         return Path(settings.CHAT_ATTACHMENT_STORAGE_DIR).expanduser().resolve()

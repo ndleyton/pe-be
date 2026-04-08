@@ -34,8 +34,22 @@ class ChatMessage(BaseModel):
         return self
 
 
+class ChatRequestMessage(BaseModel):
+    role: Literal["user"]
+    content: Optional[str] = None
+    parts: Optional[List[ChatMessagePart]] = None
+
+    @model_validator(mode="after")
+    def validate_message(self) -> "ChatRequestMessage":
+        has_content = bool((self.content or "").strip())
+        has_parts = bool(self.parts)
+        if not has_content and not has_parts:
+            raise ValueError("message must include content or parts")
+        return self
+
+
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
+    messages: List[ChatRequestMessage]
     conversation_id: Optional[int] = None
 
 

@@ -17,6 +17,7 @@ export interface SetTemplate {
   reps?: number | null;
   duration_seconds?: number | null;
   intensity?: number | null;
+  rpe?: number | null;
   intensity_unit_id: number;
   created_at: string;
   updated_at: string;

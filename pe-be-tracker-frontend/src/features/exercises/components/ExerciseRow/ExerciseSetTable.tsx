@@ -18,6 +18,7 @@ import {
   Input,
   Textarea,
 } from "@/shared/components/ui";
+import { Slider } from "@/shared/components/ui/slider";
 
 type ExerciseSetTableProps = {
   activeSetId: string | number | null;
@@ -31,9 +32,14 @@ type ExerciseSetTableProps = {
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
   onIncrementReps: (setId: string | number) => void;
-  onOpenSetOptions: (setId: string | number, initialNotes: string) => void;
+  onOpenSetOptions: (
+    setId: string | number,
+    initialNotes: string,
+    initialRpe: number | null | undefined,
+  ) => void;
   onSetOptionsOpenChange: (open: boolean) => void;
   onSetNotesValueChange: (value: string) => void;
+  onSetRpeValueChange: (value: number | null) => void;
   onSetRepsInputValue: (setId: string | number, value: string) => void;
   onSetWeightInputValue: (setId: string | number, value: string) => void;
   onToggleSetCompletion: (setId: string | number) => void | Promise<void>;
@@ -45,6 +51,7 @@ type ExerciseSetTableProps = {
   ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
+  setRpeValue: number | null;
 };
 
 export const ExerciseSetTable = ({
@@ -62,12 +69,14 @@ export const ExerciseSetTable = ({
   onOpenSetOptions,
   onSetOptionsOpenChange,
   onSetNotesValueChange,
+  onSetRpeValueChange,
   onSetRepsInputValue,
   onSetWeightInputValue,
   onToggleSetCompletion,
   onUpdateSetField,
   repsInputs,
   setNotesValue,
+  setRpeValue,
 }: ExerciseSetTableProps) => (
   <>
     <div
@@ -84,6 +93,7 @@ export const ExerciseSetTable = ({
     <div className="space-y-2">
       {exerciseSets.map((set, index) => {
         const setKey = String(set.id);
+        const effortLabelId = `set-effort-label-${set.id}`;
         const savedDisplayIntensity = convertIntensityValue(
           set.intensity,
           set.intensity_unit_id,
@@ -230,7 +240,9 @@ export const ExerciseSetTable = ({
                     variant="ghost"
                     size="sm"
                     className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
-                    onClick={() => onOpenSetOptions(set.id, set.notes || "")}
+                    onClick={() =>
+                      onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null)
+                    }
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -243,6 +255,42 @@ export const ExerciseSetTable = ({
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <div>
+                      <label
+                        id={effortLabelId}
+                        className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        Effort
+                      </label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{setRpeValue == null ? "Not set" : `RPE ${setRpeValue}`}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => onSetRpeValueChange(null)}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <Slider
+                          value={[setRpeValue ?? 0]}
+                          min={0}
+                          max={10}
+                          step={0.5}
+                          className="mx-auto w-full max-w-xs"
+                          aria-labelledby={effortLabelId}
+                          aria-valuetext={
+                            setRpeValue == null ? "Not set" : `Effort ${setRpeValue}`
+                          }
+                          onValueChange={(values: number[]) =>
+                            onSetRpeValueChange(values[0] ?? null)
+                          }
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Notes for Set {index + 1}

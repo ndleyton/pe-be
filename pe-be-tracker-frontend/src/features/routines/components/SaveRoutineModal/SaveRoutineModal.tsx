@@ -83,6 +83,7 @@ export const SaveRoutineModal: React.FC<SaveRoutineModalProps> = ({
             reps: set.reps,
             duration_seconds: set.duration_seconds ?? null,
             intensity: set.intensity,
+            rpe: set.rpe ?? null,
             intensity_unit_id: Number(set.intensity_unit_id),
           })),
         })),
