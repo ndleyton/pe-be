@@ -6,6 +6,7 @@ import {
   makeRoutineExerciseTemplate,
   makeRoutineSetTemplate,
 } from "@/test/fixtures";
+import { buildRoutinePayload } from "@/features/routines/lib/routineEditor";
 import { useRoutineEditor } from "./useRoutineEditor";
 import type { RoutineIntensityUnitOption } from "@/features/routines/lib/routineEditor";
 
@@ -230,5 +231,40 @@ describe("useRoutineEditor", () => {
     expect(result.current.editorTemplates[0].set_templates[0].intensity_unit_id).toBe(
       3,
     );
+  });
+
+  it("omits null duration_seconds from routine update payloads", () => {
+    const payload = buildRoutinePayload([
+      {
+        id: "101",
+        exercise_type_id: 301,
+        exercise_type: null,
+        notes: "",
+        set_templates: [
+          {
+            id: "201",
+            reps: 12,
+            duration_seconds: null,
+            intensity: null,
+            intensity_unit_id: 1,
+            intensity_unit: null,
+          },
+        ],
+      },
+    ]);
+
+    expect(payload).toEqual([
+      {
+        exercise_type_id: 301,
+        notes: null,
+        set_templates: [
+          {
+            reps: 12,
+            intensity: null,
+            intensity_unit_id: 1,
+          },
+        ],
+      },
+    ]);
   });
 });

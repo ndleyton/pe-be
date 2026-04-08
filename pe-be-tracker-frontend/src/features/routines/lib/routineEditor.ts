@@ -143,9 +143,11 @@ export const buildRoutinePayload = (
     notes: template.notes.trim() || null,
     set_templates: template.set_templates.map((setTemplate) => ({
       reps: setTemplate.reps,
-      duration_seconds: setTemplate.duration_seconds,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
+      ...(setTemplate.duration_seconds != null
+        ? { duration_seconds: setTemplate.duration_seconds }
+        : {}),
     })),
   }));
 
