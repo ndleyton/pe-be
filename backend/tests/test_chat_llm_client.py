@@ -237,17 +237,17 @@ async def test_personalized_routine_schema_cleaning_collapses_nullable_fields():
     assert cleaned["properties"]["description"]["type"] == "STRING"
     assert cleaned["properties"]["intended_use"]["type"] == "STRING"
     assert cleaned["properties"]["restrictions"]["type"] == "STRING"
-    set_properties = (
-        cleaned["properties"]["exercises"]["items"]["properties"]["sets"]["items"][
-            "properties"
-        ]
-    )
+    set_properties = cleaned["properties"]["exercises"]["items"]["properties"]["sets"][
+        "items"
+    ]["properties"]
     assert set_properties["reps"]["type"] == "INTEGER"
     assert set_properties["duration_seconds"]["type"] == "INTEGER"
+    assert set_properties["rpe"]["anyOf"] == [{"type": "NUMBER"}, {"type": "STRING"}]
     assert set_properties["intensity"]["anyOf"] == [
         {"type": "NUMBER"},
         {"type": "STRING"},
     ]
+    assert set_properties["intensity_unit"]["type"] == "STRING"
 
 
 async def test_coerce_raw_args_list_value():

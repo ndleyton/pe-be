@@ -309,7 +309,7 @@ async def test_create_personalized_routine_success(
         SimpleNamespace(id=4, name="Strength Training")
     ]
     mock_get_exercise_types.return_value = MagicMock(
-        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+        data=[SimpleNamespace(id=9, name="Goblet Squat", default_intensity_unit=3)]
     )
     mock_get_intensity_units.return_value = [
         SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
@@ -333,8 +333,8 @@ async def test_create_personalized_routine_success(
             {
                 "exercise_type_name": "Goblet Squat",
                 "sets": [
-                    {"reps": 10, "intensity_unit": "BW"},
-                    {"reps": 10, "intensity_unit": "BW"},
+                    {"reps": 10},
+                    {"reps": 10},
                 ],
             }
         ],
@@ -372,7 +372,7 @@ async def test_create_personalized_routine_persists_duration_seconds(
 ):
     mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
     mock_get_exercise_types.return_value = MagicMock(
-        data=[SimpleNamespace(id=9, name="Sled Push")]
+        data=[SimpleNamespace(id=9, name="Sled Push", default_intensity_unit=7)]
     )
     mock_get_intensity_units.return_value = [
         SimpleNamespace(id=7, name="Time Based", abbreviation="time-based")
@@ -401,8 +401,7 @@ async def test_create_personalized_routine_persists_duration_seconds(
     routine_payload = mock_create_routine.await_args.args[1]
     assert routine_payload.exercise_templates[0].set_templates[0].reps is None
     assert (
-        routine_payload.exercise_templates[0].set_templates[0].duration_seconds
-        == 600
+        routine_payload.exercise_templates[0].set_templates[0].duration_seconds == 600
     )
 
 
@@ -420,7 +419,7 @@ async def test_create_personalized_routine_defaults_duration_for_speed_units(
 ):
     mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
     mock_get_exercise_types.return_value = MagicMock(
-        data=[SimpleNamespace(id=9, name="Treadmill Run")]
+        data=[SimpleNamespace(id=9, name="Treadmill Run", default_intensity_unit=8)]
     )
     mock_get_intensity_units.return_value = [
         SimpleNamespace(id=8, name="Kilometers per Hour", abbreviation="km/h")
@@ -449,8 +448,7 @@ async def test_create_personalized_routine_defaults_duration_for_speed_units(
     routine_payload = mock_create_routine.await_args.args[1]
     assert routine_payload.exercise_templates[0].set_templates[0].reps is None
     assert (
-        routine_payload.exercise_templates[0].set_templates[0].duration_seconds
-        == 600
+        routine_payload.exercise_templates[0].set_templates[0].duration_seconds == 600
     )
     assert routine_payload.exercise_templates[0].set_templates[0].intensity == 12
 
@@ -523,7 +521,7 @@ async def test_create_personalized_routine_unknown_intensity_unit(
 ):
     mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
     mock_get_exercise_types.return_value = MagicMock(
-        data=[SimpleNamespace(id=9, name="Goblet Squat")]
+        data=[SimpleNamespace(id=9, name="Goblet Squat", default_intensity_unit=3)]
     )
     mock_get_intensity_units.return_value = [
         SimpleNamespace(id=3, name="Bodyweight", abbreviation="bw")
@@ -549,6 +547,94 @@ async def test_create_personalized_routine_unknown_intensity_unit(
     )
 
 
+@pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_intensity_units")
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_persists_rpe_and_default_intensity_unit(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    mock_get_intensity_units,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[
+            SimpleNamespace(
+                id=9,
+                name="Barbell Bench Press",
+                default_intensity_unit=5,
+            )
+        ]
+    )
+    mock_get_intensity_units.return_value = [
+        SimpleNamespace(id=5, name="Kilograms", abbreviation="kg")
+    ]
+    mock_create_routine.return_value = SimpleNamespace(
+        id=103,
+        name="Bench Builder",
+        description="desc",
+        workout_type_id=4,
+        exercise_templates=[SimpleNamespace(set_templates=[SimpleNamespace()])],
+    )
+
+    await chat_service_with_db._create_personalized_routine(
+        name="Bench Builder",
+        workout_type_name="Strength",
+        goal_summary="Build bench strength",
+        equipment_notes="Full gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Barbell Bench Press",
+                "sets": [{"reps": 5, "rpe": "RPE 7-8"}],
+            }
+        ],
+    )
+
+    routine_payload = mock_create_routine.await_args.args[1]
+    set_template = routine_payload.exercise_templates[0].set_templates[0]
+    assert set_template.rpe == 8
+    assert set_template.intensity_unit_id == 5
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_exercise_types")
+@patch("src.chat.service.get_workout_types")
+async def test_create_personalized_routine_requires_unit_when_exercise_has_no_default(
+    mock_get_workout_types,
+    mock_get_exercise_types,
+    chat_service_with_db,
+):
+    mock_get_workout_types.return_value = [SimpleNamespace(id=4, name="Strength")]
+    mock_get_exercise_types.return_value = MagicMock(
+        data=[
+            SimpleNamespace(
+                id=9, name="Barbell Bench Press", default_intensity_unit=None
+            )
+        ]
+    )
+
+    result = await chat_service_with_db._create_personalized_routine(
+        name="Bench Builder",
+        workout_type_name="Strength",
+        goal_summary="Build bench strength",
+        equipment_notes="Full gym access",
+        exercises=[
+            {
+                "exercise_type_name": "Barbell Bench Press",
+                "sets": [{"reps": 5, "rpe": 8}],
+            }
+        ],
+    )
+
+    assert result == (
+        "Failed to create routine: Exercise type 'Barbell Bench Press' does not have "
+        "a default intensity unit. Provide an intensity_unit."
+    )
+
+
 def test_personalized_routine_set_args_normalizes_rep_range_text():
     parsed = PersonalizedRoutineSetArgs.model_validate(
         {"reps": "6-8 or AMRAP", "intensity_unit": "bw"}
@@ -565,6 +651,20 @@ def test_personalized_routine_set_args_converts_time_text_to_duration_seconds():
 
     assert parsed.reps is None
     assert parsed.duration_seconds == 600
+
+
+def test_personalized_routine_set_args_normalizes_intensity_range_text():
+    parsed = PersonalizedRoutineSetArgs.model_validate(
+        {"intensity": "75-80", "reps": 6, "intensity_unit": "kg"}
+    )
+
+    assert parsed.intensity == 80
+
+
+def test_personalized_routine_set_args_normalizes_rpe_range_text():
+    parsed = PersonalizedRoutineSetArgs.model_validate({"rpe": "RPE 7-8", "reps": 6})
+
+    assert parsed.rpe == 8
 
 
 @pytest.mark.asyncio

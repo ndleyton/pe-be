@@ -79,7 +79,8 @@ class PersonalizedRoutineSetArgs(BaseModel):
     reps: int | None = Field(default=None, ge=1)
     duration_seconds: int | None = Field(default=None, ge=1)
     intensity: Decimal | None = None
-    intensity_unit: str = Field(..., min_length=1)
+    rpe: Decimal | None = None
+    intensity_unit: str | None = Field(default=None, min_length=1)
 
     TIME_KEYWORDS: ClassVar[tuple[str, ...]] = (
         "min",
@@ -145,6 +146,22 @@ class PersonalizedRoutineSetArgs(BaseModel):
                 return int(stripped)
         return value
 
+    @classmethod
+    def _normalize_optional_decimal(cls, value: Any) -> Decimal | None | Any:
+        if value is None or isinstance(value, (Decimal, int, float)):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+
+            numbers = cls._extract_numbers(stripped)
+            if not numbers:
+                return value
+
+            return numbers[-1]
+        return value
+
     @model_validator(mode="before")
     @classmethod
     def normalize_set_prescription(cls, obj: Any) -> Any:
@@ -155,6 +172,10 @@ class PersonalizedRoutineSetArgs(BaseModel):
         normalized["duration_seconds"] = cls._normalize_optional_int(
             normalized.get("duration_seconds")
         )
+        normalized["intensity"] = cls._normalize_optional_decimal(
+            normalized.get("intensity")
+        )
+        normalized["rpe"] = cls._normalize_optional_decimal(normalized.get("rpe"))
         reps = normalized.get("reps")
         if isinstance(reps, str):
             normalized_reps = cls._normalize_reps_text(reps)
@@ -446,6 +467,35 @@ class ChatService:
             f"Unknown intensity unit '{intensity_unit_text}'. Available units: {available_units}."
         )
 
+    async def _resolve_default_intensity_unit(self, exercise_type: Any) -> Any:
+        if not self.session:
+            raise ValueError("Database session not available.")
+
+        default_unit_id = getattr(exercise_type, "default_intensity_unit", None)
+        if default_unit_id is None:
+            raise ValueError(
+                f"Exercise type '{exercise_type.name}' does not have a default intensity unit. "
+                "Provide an intensity_unit."
+            )
+
+        intensity_units = await get_intensity_units(self.session)
+        if not intensity_units:
+            raise ValueError("No intensity units are configured.")
+
+        unit = next(
+            (
+                candidate
+                for candidate in intensity_units
+                if candidate.id == default_unit_id
+            ),
+            None,
+        )
+        if unit is None:
+            raise ValueError(
+                f"Exercise type '{exercise_type.name}' references an unknown default intensity unit."
+            )
+        return unit
+
     @staticmethod
     def _build_routine_description(draft: PersonalizedRoutineArgs) -> str:
         if draft.description:
@@ -678,8 +728,10 @@ class ChatService:
                 )
                 set_templates: list[SetTemplateCreate] = []
                 for set_draft in exercise_draft.sets:
-                    intensity_unit = await self._resolve_intensity_unit(
-                        set_draft.intensity_unit
+                    intensity_unit = (
+                        await self._resolve_intensity_unit(set_draft.intensity_unit)
+                        if set_draft.intensity_unit
+                        else await self._resolve_default_intensity_unit(exercise_type)
                     )
                     duration_seconds = set_draft.duration_seconds
                     if (
@@ -694,6 +746,7 @@ class ChatService:
                             reps=set_draft.reps,
                             duration_seconds=duration_seconds,
                             intensity=set_draft.intensity,
+                            rpe=set_draft.rpe,
                             intensity_unit_id=intensity_unit.id,
                         )
                     )
@@ -755,8 +808,8 @@ class ChatService:
                     "- notes: Optional workout notes\n"
                     "- exercises: List of exercises, each with exercise_type_name, "
                     "optional notes, and sets (either reps or duration_seconds, "
-                    "plus optional intensity, intensity_unit, rest_time_seconds, "
-                    "and optional notes)\n"
+                    "plus optional intensity, rpe, intensity_unit, "
+                    "rest_time_seconds, and optional notes)\n"
                 ),
             ),
             ToolDefinition(
@@ -770,10 +823,13 @@ class ChatService:
                     "helpful, and equipment context. This phase supports a "
                     "single saved routine, not a full multi-day split. Use human-"
                     "readable names only: workout_type_name, exercise_type_name, and "
-                    "intensity_unit. For sets, use reps for rep-based work and "
-                    "duration_seconds for time-based work. If you are thinking in "
-                    "rep ranges like 6-8, choose a single target rep count. Do not "
-                    "invent internal numeric IDs."
+                    "intensity_unit. For sets, use reps for rep-based work, "
+                    "duration_seconds for time-based work, and rpe for effort "
+                    "targets such as RPE 7-8. intensity_unit is optional when the "
+                    "exercise's default load unit should be used. If you are "
+                    "thinking in rep ranges like 6-8 or effort ranges like RPE 7-8, "
+                    "choose a single target value. Do not invent internal numeric "
+                    "IDs."
                 ),
             ),
             ToolDefinition(
@@ -807,6 +863,9 @@ Routine creation policy:
   - equipment constraints or gym/home context
   - intended use when it materially affects the single routine
   - injuries or movement restrictions if the user mentions them
+- For create_personalized_routine, use rpe for effort targets like RPE 7-8.
+- Do not put RPE or RIR into intensity_unit.
+- intensity_unit is the quantitative load or time domain, and can be omitted when the exercise's default unit should apply.
 - If the user asks for a multi-day split, explain that you can create one workout routine at a time in this phase.
 - Do not call create_personalized_routine more than once per request.
 """.strip()
@@ -1095,8 +1154,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             error_msg = str(exc)
             if self._is_provider_busy_error(error_msg):
                 raise ValueError(
-                    "The AI service is currently busy. "
-                    "Please try again in a minute."
+                    "The AI service is currently busy. Please try again in a minute."
                 )
 
             raise ValueError(f"Error generating response with Gemini: {exc}")
