@@ -29,6 +29,7 @@ from src.exercises.schemas import (
     ExerciseTypeCreate,
     ExerciseTypeUpdate,
     IntensityUnitRead,
+    MuscleRead,
     MuscleGroupRead,
     ExerciseTypeStats,
     PaginatedExerciseTypesResponse,
@@ -37,6 +38,7 @@ from src.exercises.service import (
     ExerciseService,
     ExerciseTypeService,
     IntensityUnitService,
+    MuscleService,
     MuscleGroupService,
 )
 from src.core.database import get_async_session
@@ -167,6 +169,7 @@ async def delete_exercise(
 
 # Exercise Types endpoints
 exercise_types_router = APIRouter(prefix="/exercise-types", tags=["exercise-types"])
+muscles_router = APIRouter(prefix="/muscles", tags=["muscles"])
 muscle_groups_router = APIRouter(prefix="/muscle-groups", tags=["muscle-groups"])
 
 
@@ -429,6 +432,53 @@ async def get_muscle_groups(
     )
 
 
+@muscles_router.get("/", response_model=List[MuscleRead])
+async def get_muscles(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get all muscles."""
+    cache_key = "muscles"
+    cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
+    cached_response = await response_cache.get(cache_key)
+    if cached_response is not None:
+        _annotate_cache("muscles", decision="hit", key=cache_key)
+        return build_cached_json_response(
+            request,
+            body=cached_response.body,
+            etag=cached_response.etag,
+            cache_control=cache_control,
+            extra_headers={"X-Cache-Status": "HIT"},
+        )
+    _annotate_cache("muscles", decision="miss", key=cache_key)
+
+    muscles = await MuscleService.get_all_muscles(session)
+    response_models = traced_model_validate_many(
+        MuscleRead,
+        muscles,
+        span_name="exercises.get_muscles.response_model_validate",
+        attributes={"serialization.item_count": len(muscles)},
+    )
+    response_payload = traced_model_dump_many(
+        response_models,
+        span_name="exercises.get_muscles.response_model_dump",
+        attributes={"serialization.item_count": len(response_models)},
+    )
+    cached_response = await response_cache.set(
+        cache_key,
+        body=render_json_bytes(response_payload),
+        ttl_seconds=settings.TAXONOMY_CACHE_TTL_SECONDS,
+        tags=(EXERCISE_TAXONOMY_CACHE_TAG,),
+    )
+    return build_cached_json_response(
+        request,
+        body=cached_response.body,
+        etag=cached_response.etag,
+        cache_control=cache_control,
+        extra_headers={"X-Cache-Status": "MISS"},
+    )
+
+
 # Intensity Units endpoints
 intensity_units_router = APIRouter(prefix="/intensity-units", tags=["intensity-units"])
 
@@ -483,5 +533,6 @@ async def get_intensity_units(
 # Include sub-routers
 router.include_router(assets_router)
 router.include_router(exercise_types_router)
+router.include_router(muscles_router)
 router.include_router(intensity_units_router)
 router.include_router(muscle_groups_router)

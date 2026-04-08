@@ -189,6 +189,23 @@ async def test_get_muscle_groups_orders_alphabetically(db_session):
     assert [group.name for group in result] == ["Arms Crud", "Legs Crud"]
 
 
+async def test_get_muscles_orders_by_group_then_name(db_session):
+    back = await _seed_muscle_group(db_session, "Back Crud")
+    chest = await _seed_muscle_group(db_session, "Chest Crud")
+    await _seed_muscle(db_session, "Row", back.id)
+    await _seed_muscle(db_session, "Bench", chest.id)
+    await _seed_muscle(db_session, "Cable Fly", chest.id)
+    await db_session.commit()
+
+    result = await crud.get_muscles(db_session)
+
+    assert [(muscle.muscle_group.name, muscle.name) for muscle in result] == [
+        ("Back Crud", "Row"),
+        ("Chest Crud", "Bench"),
+        ("Chest Crud", "Cable Fly"),
+    ]
+
+
 async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session):
     owner = await _seed_user(db_session, "exercise-queries@example.com")
     workout_type = await _seed_workout_type(db_session, "Strength")

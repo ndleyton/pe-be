@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { render } from "@/test/testUtils";
-import { makeExerciseType } from "@/test/fixtures";
+import { makeExerciseType, makeMuscle, makeMuscleGroup } from "@/test/fixtures";
 import ExerciseTypeDetailsPage from "./ExerciseTypeDetailsPage";
 import {
   getExerciseTypeById,
+  getIntensityUnits,
+  getMuscles,
   getExerciseTypeStats,
   releaseExerciseType,
   requestExerciseTypeEvaluation,
@@ -21,6 +23,8 @@ vi.mock("@/features/exercises/api", async () => {
   return {
     ...actual,
     getExerciseTypeById: vi.fn(),
+    getIntensityUnits: vi.fn(),
+    getMuscles: vi.fn(),
     getExerciseTypeStats: vi.fn(),
     updateExerciseType: vi.fn(),
     requestExerciseTypeEvaluation: vi.fn(),
@@ -55,16 +59,46 @@ vi.mock("react-router-dom", async () => {
 });
 
 const mockGetExerciseTypeById = vi.mocked(getExerciseTypeById);
+const mockGetIntensityUnits = vi.mocked(getIntensityUnits);
+const mockGetMuscles = vi.mocked(getMuscles);
 const mockGetExerciseTypeStats = vi.mocked(getExerciseTypeStats);
 const mockUpdateExerciseType = vi.mocked(updateExerciseType);
 const mockRequestExerciseTypeEvaluation = vi.mocked(requestExerciseTypeEvaluation);
 const mockReleaseExerciseType = vi.mocked(releaseExerciseType);
 
 describe("ExerciseTypeDetailsPage", () => {
+  beforeAll(() => {
+    if (!Element.prototype.hasPointerCapture) {
+      Element.prototype.hasPointerCapture = () => false;
+    }
+    if (!Element.prototype.releasePointerCapture) {
+      Element.prototype.releasePointerCapture = () => {};
+    }
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = () => {};
+    }
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
     mockAuthState.user = { id: 1, is_superuser: true };
+    mockGetIntensityUnits.mockResolvedValue([
+      { id: 1, name: "Kilograms", abbreviation: "kg" },
+      { id: 2, name: "Pounds", abbreviation: "lb" },
+    ]);
+    mockGetMuscles.mockResolvedValue([
+      makeMuscle({
+        id: 10,
+        name: "Latissimus Dorsi",
+        muscle_group: makeMuscleGroup({ id: 100, name: "Back" }),
+      }),
+      makeMuscle({
+        id: 11,
+        name: "Biceps",
+        muscle_group: makeMuscleGroup({ id: 101, name: "Arms" }),
+      }),
+    ]);
     mockGetExerciseTypeStats.mockResolvedValue({
       progressiveOverload: [],
       lastWorkout: null,
@@ -124,11 +158,19 @@ describe("ExerciseTypeDetailsPage", () => {
   });
 
   it("saves admin edits for a released exercise type after entering edit mode", async () => {
+    const backGroup = makeMuscleGroup({ id: 100, name: "Back" });
+    const lat = makeMuscle({
+      id: 10,
+      name: "Latissimus Dorsi",
+      muscle_group: backGroup,
+    });
     mockGetExerciseTypeById.mockResolvedValue(
       makeExerciseType({
         id: 12,
         name: "Lat Pulldown",
         description: "Cable back exercise",
+        default_intensity_unit: 1,
+        muscles: [lat],
         status: "released",
         owner_id: null,
         images: [],
@@ -143,15 +185,25 @@ describe("ExerciseTypeDetailsPage", () => {
     const nameInput = await screen.findByLabelText(/name/i);
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Wide Grip Lat Pulldown");
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /default intensity unit/i }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "lb - Pounds" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Latissimus Dorsi" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Biceps" }));
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
       expect(mockUpdateExerciseType).toHaveBeenCalledWith(12, {
         name: "Wide Grip Lat Pulldown",
         description: "Cable back exercise",
+        default_intensity_unit: 2,
         equipment: null,
         category: null,
         instructions: null,
+        muscle_ids: [11],
       });
     });
   });

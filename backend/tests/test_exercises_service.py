@@ -11,6 +11,7 @@ from src.exercises.service import (
     ExerciseService,
     ExerciseTypeService,
     IntensityUnitService,
+    MuscleService,
     MuscleGroupService,
 )
 
@@ -107,6 +108,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     stats = {"totalSets": 3}
     created_type = SimpleNamespace(id=6)
     units = [SimpleNamespace(id=1, name="kg")]
+    muscles = [SimpleNamespace(id=3, name="Biceps")]
     muscle_groups = [SimpleNamespace(id=2, name="Chest")]
 
     fake_get_exercise_types = AsyncMock(return_value=paginated)
@@ -114,6 +116,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     fake_get_exercise_type_stats = AsyncMock(return_value=stats)
     fake_create_exercise_type = AsyncMock(return_value=created_type)
     fake_get_intensity_units = AsyncMock(return_value=units)
+    fake_get_muscles = AsyncMock(return_value=muscles)
     fake_get_muscle_groups = AsyncMock(return_value=muscle_groups)
 
     monkeypatch.setattr(
@@ -131,6 +134,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     monkeypatch.setattr(
         exercises_service, "get_intensity_units", fake_get_intensity_units
     )
+    monkeypatch.setattr(exercises_service, "get_muscles", fake_get_muscles)
     monkeypatch.setattr(
         exercises_service,
         "get_muscle_groups",
@@ -160,6 +164,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
         is created_type
     )
     assert await IntensityUnitService.get_all_intensity_units(session) == units
+    assert await MuscleService.get_all_muscles(session) == muscles
     assert await MuscleGroupService.get_all_muscle_groups(session) == muscle_groups
 
     fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
@@ -167,6 +172,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     fake_get_exercise_type_stats.assert_awaited_once_with(session, 5, 12)
     fake_create_exercise_type.assert_awaited_once_with(session, payload)
     fake_get_intensity_units.assert_awaited_once_with(session)
+    fake_get_muscles.assert_awaited_once_with(session)
     fake_get_muscle_groups.assert_awaited_once_with(session)
 
 

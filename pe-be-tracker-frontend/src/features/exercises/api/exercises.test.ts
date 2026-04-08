@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getExerciseTypes,
   getExercisesInWorkout,
+  getMuscles,
   getMuscleGroups,
 } from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
@@ -252,6 +253,32 @@ describe("exercises API - pagination", () => {
 
       expect(mockApi.get).toHaveBeenCalledWith("/exercises/muscle-groups/");
       expect(result).toEqual(muscleGroups);
+    });
+  });
+
+  describe("getMuscles", () => {
+    it("should fetch muscles from the API", async () => {
+      const muscles = [
+        {
+          id: 1,
+          name: "Pectoralis Major",
+          muscle_group_id: 10,
+          muscle_group: {
+            id: 10,
+            name: "Chest",
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+          },
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+      ];
+      mockApi.get.mockResolvedValue({ data: muscles });
+
+      const result = await getMuscles();
+
+      expect(mockApi.get).toHaveBeenCalledWith("/exercises/muscles/");
+      expect(result).toEqual(muscles);
     });
   });
 });

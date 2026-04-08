@@ -14,6 +14,7 @@ from src.exercises.crud import (
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
+    get_muscles,
     get_muscle_groups,
     get_exercise_owner_id,
     get_exercise_type_review_queue,
@@ -21,7 +22,7 @@ from src.exercises.crud import (
     request_exercise_type_evaluation,
     update_exercise_type,
 )
-from src.exercises.models import Exercise, ExerciseType, IntensityUnit, MuscleGroup
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit, Muscle, MuscleGroup
 from src.exercise_sets.models import ExerciseSet
 from src.exercises.schemas import (
     ExerciseCreate,
@@ -335,3 +336,12 @@ class MuscleGroupService:
     async def get_all_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
         """Get all muscle groups."""
         return await get_muscle_groups(session)
+
+
+class MuscleService:
+    """Service layer for muscle lookup."""
+
+    @staticmethod
+    async def get_all_muscles(session: AsyncSession) -> List[Muscle]:
+        """Get all muscles."""
+        return await get_muscles(session)
