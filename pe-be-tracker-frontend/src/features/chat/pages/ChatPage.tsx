@@ -237,7 +237,7 @@ const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
 };
 
 const ChatRoutineWidget = ({ event }: { event: RoutineCreatedEvent }) => {
-  const routinePath = endpoints.routineById(event.routine.id);
+  const routinePath = `${NAV_PATHS.ROUTINES}/${event.routine.id}`;
   const exerciseLabel = `${event.routine.exercise_count} exercise${event.routine.exercise_count === 1 ? "" : "s"}`;
   const setLabel = `${event.routine.set_count} set${event.routine.set_count === 1 ? "" : "s"}`;
 
