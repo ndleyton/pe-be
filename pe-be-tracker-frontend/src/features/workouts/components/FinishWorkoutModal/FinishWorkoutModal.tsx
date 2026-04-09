@@ -6,7 +6,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
 import { toPng } from "html-to-image";
-import { Download, RefreshCw, Sparkles, Timer } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Timer, CircleAlert } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -180,7 +180,25 @@ const FinishWorkoutModal = ({
         className="text-card-foreground mx-4 flex max-h-[90vh] w-full max-w-md flex-col"
         data-testid="finish-workout-modal"
       >
-        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
+        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6 flex flex-col min-h-[300px]">
+          {totalSets === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in zoom-in duration-300">
+              <div className="relative">
+                <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full" />
+                <div className="relative bg-primary/10 p-5 rounded-3xl border border-primary/20 shadow-xl">
+                  <CircleAlert className="h-12 w-12 text-primary drop-shadow-sm" />
+                </div>
+              </div>
+              <div className="space-y-2 max-w-[260px]">
+                <h3 className="text-foreground text-lg font-black tracking-tight leading-tight">
+                  No Sets Done Yet!
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  You have not completed any sets, mark some sets as done and come back to finish your workout
+                </p>
+              </div>
+            </div>
+          )}
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}

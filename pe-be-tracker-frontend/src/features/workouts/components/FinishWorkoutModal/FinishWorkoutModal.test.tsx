@@ -438,12 +438,15 @@ describe("FinishWorkoutModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should handle exercises prop defaulting to empty array", () => {
+    it("should handle exercises prop defaulting to empty array by showing the empty state", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
+      expect(screen.getByText("No Sets Done Yet!")).toBeInTheDocument();
       expect(
-        screen.queryByText("Great Training Session!"),
-      ).not.toBeInTheDocument();
+        screen.getByText(
+          "You have not completed any sets, mark some sets as done and come back to finish your workout",
+        ),
+      ).toBeInTheDocument();
       expect(
         screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
