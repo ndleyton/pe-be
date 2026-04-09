@@ -6,7 +6,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
 import { toPng } from "html-to-image";
-import { Download, RefreshCw, Sparkles } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Timer } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -200,7 +200,8 @@ const FinishWorkoutModal = ({
                     <span>Bestie.com</span>
                   </div>
                 </div>
-                <div className="text-primary text-sm font-semibold">
+                <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 text-primary text-xs font-black tracking-wide shadow-sm">
+                  <Timer className="h-3.5 w-3.5" />
                   {formattedDuration}
                 </div>
               </div>
@@ -225,23 +226,29 @@ const FinishWorkoutModal = ({
                 </Button>
               </div>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 {muscleGroupSummary.map((group) => (
                   <div
                     key={group.name}
-                    className="bg-muted flex items-center justify-between rounded px-3 py-2"
+                    className="group flex items-center justify-between rounded-2xl border border-border/40 bg-muted/20 px-4 py-3 transition-all hover:bg-muted/30 hover:border-border/60"
                   >
-                    <span className="font-medium">{group.name}</span>
-                    <span className="text-primary font-bold">
+                    <span className="text-sm font-black uppercase tracking-widest opacity-70">
+                      {group.name}
+                    </span>
+                    <span className="text-primary text-sm font-black">
                       {group.setCount} set{group.setCount !== 1 ? "s" : ""}
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="border-border mt-3 border-t pt-3">
-                <div className="flex items-center justify-between font-bold">
-                  <span>Total Sets Completed:</span>
-                  <span className="text-primary text-lg">{totalSets}</span>
+              <div className="mt-4 border-t border-dashed border-border/60 pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] opacity-40">
+                    Total Sets Completed
+                  </span>
+                  <span className="text-primary text-xl font-black drop-shadow-sm">
+                    {totalSets}
+                  </span>
                 </div>
               </div>
             </div>

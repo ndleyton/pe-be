@@ -398,7 +398,7 @@ describe("FinishWorkoutModal", () => {
       expect(screen.getByText("Great Training Session!")).toBeInTheDocument();
       expect(screen.getByText("Legs")).toBeInTheDocument();
       expect(screen.getByText("Chest")).toBeInTheDocument();
-      expect(screen.getByText("Total Sets Completed:")).toBeInTheDocument();
+      expect(screen.getByText("Total Sets Completed")).toBeInTheDocument();
       expect(screen.getByText("5")).toBeInTheDocument(); // 2 chest + 3 legs
     });
 
@@ -410,7 +410,7 @@ describe("FinishWorkoutModal", () => {
         screen.queryByText("Great Training Session!"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
@@ -434,7 +434,7 @@ describe("FinishWorkoutModal", () => {
         screen.queryByText("Great Training Session!"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
@@ -445,7 +445,7 @@ describe("FinishWorkoutModal", () => {
         screen.queryByText("Great Training Session!"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
