@@ -13,16 +13,16 @@ const ExerciseTypeDetailsPageSkeleton: React.FC = () => (
       {/* Title Row */}
       <div className="mb-4 flex items-center gap-3 sm:gap-4">
         <Skeleton className="h-10 w-10 shrink-0 rounded" />
-        <Skeleton className="h-8 min-w-0 flex-1" />
+        <Skeleton className="h-8 min-w-0 w-full max-w-[16rem] flex-1" />
       </div>
       {/* Muscles and Button Row */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
           <Skeleton className="h-6 w-20 rounded-full" />
           <Skeleton className="h-6 w-24 rounded-full" />
           <Skeleton className="h-6 w-16 rounded-full" />
         </div>
-        <Skeleton className="h-9 w-28 shrink-0 rounded" />
+        <Skeleton className="h-9 w-full rounded sm:w-28 sm:shrink-0" />
       </div>
     </div>
 
@@ -45,7 +45,7 @@ const ExerciseTypeDetailsPageSkeleton: React.FC = () => (
             key={i}
             className="bg-card border-border/20 rounded-2xl border p-6 shadow-md"
           >
-            <Skeleton className="mb-4 h-6 w-56" />
+            <Skeleton className="mb-4 h-6 w-full max-w-[14rem]" />
             <Skeleton className="h-40 w-full" />
           </div>
         ))}

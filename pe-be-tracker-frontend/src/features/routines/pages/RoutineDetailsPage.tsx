@@ -7,9 +7,9 @@ import {
   IntensityUnitModal,
 } from "@/features/exercises/components";
 import {
-  RoutineDetailsPageSkeleton,
   RoutineInfoCard,
   RoutineTemplatesCard,
+  RoutineDetailsPageSkeleton,
 } from "@/features/routines/components";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import {
@@ -131,7 +131,7 @@ const RoutineDetailsPage = () => {
             size="icon"
             asChild
             aria-label="Go back"
-            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+            className="rounded-full bg-primary/5 transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
           >
             <Link to="/routines">
               <ArrowLeft className="h-5 w-5" />
@@ -139,7 +139,7 @@ const RoutineDetailsPage = () => {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
+              <h1 className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-3xl font-black tracking-tight text-transparent text-glow truncate">
                 {isPageDataPending
                   ? "Routine Details"
                   : canEdit || isEditing
@@ -149,14 +149,14 @@ const RoutineDetailsPage = () => {
               {editAccessMessage && !isEditing && !isPageDataPending && (
                 <Badge
                   variant="secondary"
-                  className="rounded-lg bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary px-2 py-0.5 text-[10px] font-black uppercase tracking-widest gap-1.5 flex h-fit"
+                  className="flex h-fit gap-1.5 rounded-lg border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10"
                 >
                   <Eye className="h-3 w-3" />
                   View-only
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground/70 mt-1 text-xs font-bold uppercase tracking-widest">
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
               {isEditing ? "Management Mode" : "Plan Overview"}
             </p>
           </div>
@@ -174,8 +174,13 @@ const RoutineDetailsPage = () => {
           ) : null}
 
           {actionError && !showUnavailableState && (
-            <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md">
-              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Action failed</AlertTitle>
+            <Alert
+              variant="destructive"
+              className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md"
+            >
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">
+                Action failed
+              </AlertTitle>
               <AlertDescription className="text-sm">
                 {actionError instanceof Error
                   ? actionError.message
@@ -184,73 +189,84 @@ const RoutineDetailsPage = () => {
             </Alert>
           )}
 
-          {!showUnavailableState ? (
-            isPageDataPending ? (
-              <RoutineDetailsPageSkeleton />
-            ) : (
-              <div className="space-y-8">
-                <RoutineInfoCard
-                  canEdit={canEdit}
-                  editDisabled={unitsPending}
-                  editLabel={unitsPending ? "Preparing editor..." : "Edit Routine"}
-                  isEditing={isEditing}
-                  deleteDisabled={deleteMutation.isPending}
-                  deleteLabel={deleteMutation.isPending ? "Deleting..." : "Delete Routine"}
-                  description={description}
-                  hasInvalidTemplates={hasInvalidTemplates}
-                  name={name}
-                  visibility={visibility}
-                  onDelete={handleDelete}
-                  onDescriptionChange={setDescription}
-                  onNameChange={setName}
-                  onVisibilityChange={setVisibility}
-                  onSave={handleSave}
-                  onStartWorkout={() => startMutation.mutate()}
-                  onEdit={() => {
-                    if (unitsPending) {
-                      return;
-                    }
-                    setIsEditing(true);
-                  }}
-                  onCancel={handleCancel}
-                  saveDisabled={
-                    hasInvalidTemplates || !hasUnsavedChanges || saveMutation.isPending
-                  }
-                  saveLabel={saveMutation.isPending ? "Saving..." : "Save Routine"}
-                  startDisabled={startMutation.isPending}
-                  startLabel={startMutation.isPending ? "Starting..." : "Start Workout"}
-                />
+          {!showUnavailableState && isPageDataPending && (
+            <RoutineDetailsPageSkeleton />
+          )}
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-border/40"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
-                    <span className="bg-background px-4 text-muted-foreground/40">Exercise Sequence</span>
-                  </div>
+          {!showUnavailableState && !isPageDataPending ? (
+            <div className="space-y-8">
+              <RoutineInfoCard
+                canEdit={canEdit}
+                editDisabled={unitsPending}
+                editLabel={unitsPending ? "Preparing editor..." : "Edit Routine"}
+                isEditing={isEditing}
+                deleteDisabled={deleteMutation.isPending}
+                deleteLabel={
+                  deleteMutation.isPending ? "Deleting..." : "Delete Routine"
+                }
+                description={description}
+                hasInvalidTemplates={hasInvalidTemplates}
+                name={name}
+                visibility={visibility}
+                onDelete={handleDelete}
+                onDescriptionChange={setDescription}
+                onNameChange={setName}
+                onVisibilityChange={setVisibility}
+                onSave={handleSave}
+                onStartWorkout={() => startMutation.mutate()}
+                onEdit={() => {
+                  if (unitsPending) {
+                    return;
+                  }
+                  setIsEditing(true);
+                }}
+                onCancel={handleCancel}
+                saveDisabled={
+                  hasInvalidTemplates ||
+                  !hasUnsavedChanges ||
+                  saveMutation.isPending
+                }
+                saveLabel={saveMutation.isPending ? "Saving..." : "Save Routine"}
+                startDisabled={startMutation.isPending}
+                startLabel={
+                  startMutation.isPending ? "Starting..." : "Start Workout"
+                }
+              />
+
+              <div className="relative">
+                <div
+                  className="absolute inset-0 flex items-center"
+                  aria-hidden="true"
+                >
+                  <div className="w-full border-t border-border/40"></div>
                 </div>
-
-                <RoutineTemplatesCard
-                  canEdit={isEditing}
-                  editorTemplates={editorTemplates}
-                  onAddExercise={() => openExercisePicker({ mode: "add" })}
-                  onAddSet={addSetToTemplate}
-                  onChangeExercise={(templateId) =>
-                    openExercisePicker({
-                      mode: "replace",
-                      templateId,
-                    })
-                  }
-                  onRemoveSet={removeSetFromTemplate}
-                  onRemoveTemplate={removeTemplate}
-                  onSelectUnit={(templateId, setId) =>
-                    openUnitPicker({ templateId, setId })
-                  }
-                  onUpdateSet={updateSet}
-                  onUpdateTemplate={updateTemplate}
-                />
+                <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
+                  <span className="bg-background px-4 text-muted-foreground/40">
+                    Exercise Sequence
+                  </span>
+                </div>
               </div>
-            )
+
+              <RoutineTemplatesCard
+                canEdit={isEditing}
+                editorTemplates={editorTemplates}
+                onAddExercise={() => openExercisePicker({ mode: "add" })}
+                onAddSet={addSetToTemplate}
+                onChangeExercise={(templateId) =>
+                  openExercisePicker({
+                    mode: "replace",
+                    templateId,
+                  })
+                }
+                onRemoveSet={removeSetFromTemplate}
+                onRemoveTemplate={removeTemplate}
+                onSelectUnit={(templateId, setId) =>
+                  openUnitPicker({ templateId, setId })
+                }
+                onUpdateSet={updateSet}
+                onUpdateTemplate={updateTemplate}
+              />
+            </div>
           ) : null}
         </div>
       </div>

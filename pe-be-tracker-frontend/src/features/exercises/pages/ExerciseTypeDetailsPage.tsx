@@ -18,6 +18,7 @@ import {
   type Exercise,
   type IntensityUnit,
 } from "@/features/exercises/api";
+import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -367,6 +368,10 @@ const ExerciseTypeDetailsPage = () => {
     );
   }
 
+  if (isPageDataPending) {
+    return <ExerciseTypeDetailsLoadingState />;
+  }
+
   const statusLabel =
     exerciseType?.status === "candidate"
       ? "Candidate"
@@ -434,7 +439,7 @@ const ExerciseTypeDetailsPage = () => {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {isPageDataPending ? (
-                  <Skeleton className="h-8 w-64 sm:h-9 sm:w-80" />
+                  <Skeleton className="h-8 w-full max-w-[16rem] sm:h-9 sm:max-w-[20rem]" />
                 ) : (
                   <h1 className="text-2xl leading-tight font-bold break-words sm:text-3xl">
                     {exerciseType?.name}
@@ -471,10 +476,7 @@ const ExerciseTypeDetailsPage = () => {
 
           <div className="flex shrink-0 gap-2">
             {isPageDataPending ? (
-              <>
-                <Skeleton className="hidden h-9 w-28 rounded-xl sm:block" />
-                <Skeleton className="h-9 w-16 rounded-xl" />
-              </>
+              <Skeleton className="h-9 w-16 rounded-xl" />
             ) : null}
             {isSuperuser && !isPageDataPending ? (
               <Button size="sm" variant="glass" asChild className="hidden rounded-xl sm:inline-flex">
@@ -595,7 +597,13 @@ const ExerciseTypeDetailsPage = () => {
               ) : null}
               <Button
                 className="w-full rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-sm sm:w-auto"
-                onClick={() => updateMutation.mutate()}
+                disabled={updateMutation.isPending}
+                onClick={() => {
+                  if (updateMutation.isPending) {
+                    return;
+                  }
+                  updateMutation.mutate();
+                }}
               >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>

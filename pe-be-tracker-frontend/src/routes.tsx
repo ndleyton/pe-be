@@ -5,8 +5,12 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
-import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
+import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
+import {
+  RoutineDetailsLoadingState,
+  RoutinesPageSkeleton,
+} from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
@@ -87,7 +91,7 @@ const ExerciseTypesPageWrapper = ({ children }: { children: ReactNode }) => (
 
 // Wrapper component for ExerciseTypeDetailsPage with custom fallback
 const ExerciseTypeDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>{children}</Suspense>
+  <Suspense fallback={<ExerciseTypeDetailsLoadingState />}>{children}</Suspense>
 );
 
 // Wrapper component for ProfilePage with custom fallback
@@ -112,55 +116,7 @@ const RoutinesPageFallback = () => (
         <Skeleton className="h-10 w-full sm:w-40" />
       </div>
     </div>
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="rounded-2xl border p-4 text-left">
-          <Skeleton className="mb-3 h-6 w-2/3" />
-          <Skeleton className="mb-2 h-4 w-full" />
-          <Skeleton className="mb-4 h-4 w-5/6" />
-          <div className="flex gap-2">
-            <Skeleton className="h-9 flex-1" />
-            <Skeleton className="h-9 flex-1" />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const RoutineDetailsFallback = () => (
-  <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
-    <div className="mb-8 flex items-center gap-4 text-left">
-      <Skeleton className="h-10 w-10 rounded-full" />
-      <div className="min-w-0 flex-1">
-        <Skeleton className="mb-2 h-9 w-56" />
-        <Skeleton className="h-4 w-32" />
-      </div>
-    </div>
-    <div className="space-y-8">
-      <div className="rounded-2xl border p-4">
-        <Skeleton className="mb-3 h-7 w-56" />
-        <Skeleton className="mb-2 h-4 w-full" />
-        <Skeleton className="mb-4 h-4 w-5/6" />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      </div>
-      <div className="rounded-2xl border p-4">
-        <Skeleton className="mb-3 h-6 w-48" />
-        <Skeleton className="mb-4 h-4 w-3/4" />
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-md border p-3">
-              <Skeleton className="mb-2 h-5 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <RoutinesPageSkeleton />
   </div>
 );
 
@@ -169,7 +125,7 @@ const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
 );
 
 const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<RoutineDetailsFallback />}>{children}</Suspense>
+  <Suspense fallback={<RoutineDetailsLoadingState />}>{children}</Suspense>
 );
 
 const routes: RouteObject[] = [

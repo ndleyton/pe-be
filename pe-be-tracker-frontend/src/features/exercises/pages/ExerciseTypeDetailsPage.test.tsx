@@ -123,6 +123,20 @@ describe("ExerciseTypeDetailsPage", () => {
     );
   });
 
+  it("keeps the exercise detail shell visible while data is pending", () => {
+    mockGetExerciseTypeById.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const { container } = render(<ExerciseTypeDetailsPage />);
+
+    expect(screen.getByRole("link", { name: /go back/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /progressive overload/i }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+  });
+
   it("lets a superuser enter edit mode for a released exercise type", async () => {
     mockGetExerciseTypeById.mockResolvedValue(
       makeExerciseType({
@@ -206,6 +220,53 @@ describe("ExerciseTypeDetailsPage", () => {
         muscle_ids: [11],
       });
     });
+  });
+
+  it("disables the save button while an update is pending", async () => {
+    let resolveUpdate = () => {};
+    mockUpdateExerciseType.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = () =>
+            resolve(
+              makeExerciseType({
+                id: 12,
+                name: "Lat Pulldown",
+                status: "released",
+                owner_id: null,
+                images: [],
+              }),
+            );
+        }),
+    );
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Lat Pulldown",
+        status: "released",
+        owner_id: null,
+        images: [],
+      }),
+    );
+
+    render(<ExerciseTypeDetailsPage />);
+
+    await screen.findByRole("button", { name: /^edit$/i });
+    await userEvent.click(screen.getByRole("button", { name: /^edit$/i }));
+
+    const saveButton = await screen.findByRole("button", {
+      name: /save changes/i,
+    });
+    await userEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /saving/i }));
+    expect(mockUpdateExerciseType).toHaveBeenCalledTimes(1);
+
+    resolveUpdate();
   });
 
   it("keeps candidate and in-review exercise types editable without the extra button", async () => {
