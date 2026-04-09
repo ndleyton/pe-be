@@ -7,10 +7,13 @@ import {
 } from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 import {
   makeExerciseType,
   makeExerciseTypes,
   makePaginatedExerciseTypes,
+  makeMuscle,
+  makeMuscleGroup,
 } from "@/test/fixtures";
 
 vi.mock("@/shared/api/client", () => ({
@@ -239,19 +242,12 @@ describe("exercises API - pagination", () => {
 
   describe("getMuscleGroups", () => {
     it("should fetch muscle groups from the API", async () => {
-      const muscleGroups = [
-        {
-          id: 1,
-          name: "Chest",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
+      const muscleGroups = [makeMuscleGroup({ id: 1, name: "Chest" })];
       mockApi.get.mockResolvedValue({ data: muscleGroups });
 
       const result = await getMuscleGroups();
 
-      expect(mockApi.get).toHaveBeenCalledWith("/exercises/muscle-groups/");
+      expect(mockApi.get).toHaveBeenCalledWith(endpoints.muscleGroups);
       expect(result).toEqual(muscleGroups);
     });
   });
@@ -259,25 +255,17 @@ describe("exercises API - pagination", () => {
   describe("getMuscles", () => {
     it("should fetch muscles from the API", async () => {
       const muscles = [
-        {
+        makeMuscle({
           id: 1,
           name: "Pectoralis Major",
-          muscle_group_id: 10,
-          muscle_group: {
-            id: 10,
-            name: "Chest",
-            created_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
-          },
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
+          muscle_group: makeMuscleGroup({ id: 10, name: "Chest" }),
+        }),
       ];
       mockApi.get.mockResolvedValue({ data: muscles });
 
       const result = await getMuscles();
 
-      expect(mockApi.get).toHaveBeenCalledWith("/exercises/muscles/");
+      expect(mockApi.get).toHaveBeenCalledWith(endpoints.muscles);
       expect(result).toEqual(muscles);
     });
   });
