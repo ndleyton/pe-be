@@ -194,7 +194,7 @@ const FinishWorkoutModal = ({
                   No Sets Done Yet!
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  You have not completed any sets, mark some sets as done and come back to finish your workout
+                  You have not completed any sets, mark some sets as done and come back to finish your workout.
                 </p>
               </div>
             </div>
@@ -206,18 +206,18 @@ const FinishWorkoutModal = ({
             >
               {/* Header: Logo and Duration for shareable image */}
               <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 rounded-full bg-primary/5 px-2.5 py-1 border border-primary/10 shadow-sm">
-                    <img
-                      src={logoDataUrl ?? "/assets/logo.svg"}
-                      alt="Personal Bestie Logo"
-                      className="h-7 w-7"
-                      crossOrigin="anonymous"
-                    />
-                    <div className="flex flex-col items-start drop-shadow-sm text-left text-[13px] leading-[0.85] font-black tracking-tight text-primary pr-1">
-                      <span>Personal</span>
-                      <span>Bestie.com</span>
-                    </div>
+                <div className="flex items-center gap-2 rounded-full bg-primary/5 px-2.5 py-1 border border-primary/10 shadow-sm">
+                  <img
+                    src={logoDataUrl ?? "/assets/logo.svg"}
+                    alt="Personal Bestie Logo"
+                    className="h-7 w-7"
+                    crossOrigin="anonymous"
+                  />
+                  <div className="flex flex-col items-start drop-shadow-sm text-left text-[13px] leading-[0.85] font-black tracking-tight text-primary pr-1">
+                    <span>Personal</span>
+                    <span>Bestie.com</span>
                   </div>
+                </div>
                 <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 text-primary text-xs font-black tracking-wide shadow-sm">
                   <Timer className="h-3.5 w-3.5" />
                   {formattedDuration}
@@ -294,7 +294,7 @@ const FinishWorkoutModal = ({
                         e.stopPropagation();
                         onRegenerateRecap();
                       }}
-                      className="text-muted-foreground hover:text-primary transition-colors focus:ring-primary/20 rounded-full p-1.5 hover:bg-primary/5 transition-transform active:rotate-180"
+                      className="text-muted-foreground hover:text-primary focus:ring-primary/20 rounded-full p-1.5 hover:bg-primary/5 transition active:rotate-180"
                       title="Regenerate recap"
                       aria-label="Regenerate AI recap"
                     >
