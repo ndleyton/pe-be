@@ -131,7 +131,10 @@ export const ProgressiveOverloadChart = ({
               tickMargin={8}
               tickCount={3}
             />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <ChartTooltip
+              cursor={false}
+              content={(props) => <ChartTooltipContent {...props} />}
+            />
             {activeMetric === "maxWeight" ? (
               <Area
                 dataKey="maxWeight"

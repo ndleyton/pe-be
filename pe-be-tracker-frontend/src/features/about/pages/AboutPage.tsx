@@ -1,4 +1,4 @@
-
+import type { SVGProps } from "react";
 import {
   Card,
   CardContent,
@@ -6,7 +6,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, Github, Linkedin, ExternalLink } from "lucide-react";
+import { Mail, ExternalLink } from "lucide-react";
+
+const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M12 1.5a10.5 10.5 0 0 0-3.32 20.46c.53.1.72-.23.72-.5v-1.94c-2.94.64-3.56-1.25-3.56-1.25-.48-1.2-1.16-1.52-1.16-1.52-.95-.65.07-.64.07-.64 1.04.08 1.59 1.07 1.59 1.07.94 1.6 2.45 1.13 3.05.87.1-.68.36-1.13.65-1.39-2.35-.27-4.82-1.18-4.82-5.25 0-1.16.42-2.1 1.08-2.85-.11-.27-.47-1.36.1-2.83 0 0 .9-.29 2.94 1.09a10.12 10.12 0 0 1 5.36 0c2.04-1.38 2.94-1.09 2.94-1.09.57 1.47.21 2.56.1 2.83.67.75 1.08 1.69 1.08 2.85 0 4.08-2.47 4.97-4.83 5.24.37.32.7.96.7 1.94v2.88c0 .28.19.61.72.5A10.5 10.5 0 0 0 12 1.5Z" />
+  </svg>
+);
+
+const LinkedInIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M6.94 8.5H3.56V20h3.38V8.5Zm.22-3.56A1.96 1.96 0 0 0 5.2 3a1.97 1.97 0 1 0 0 3.94 1.96 1.96 0 0 0 1.96-2ZM20 12.86c0-3.46-1.85-5.07-4.32-5.07-1.99 0-2.88 1.1-3.38 1.87V8.5H8.94c.04.78 0 11.5 0 11.5h3.38v-6.42c0-.34.02-.68.13-.92.27-.68.88-1.38 1.9-1.38 1.34 0 1.88 1.03 1.88 2.54V20H20v-7.14Z" />
+  </svg>
+);
 
 const AboutPage = () => {
   return (
@@ -67,7 +89,7 @@ const AboutPage = () => {
               className="group hover:bg-accent/50 -mx-3 flex items-center gap-4 rounded-lg p-3 transition-colors"
             >
               <div className="bg-primary/10 text-foreground flex h-10 w-10 items-center justify-center rounded-full">
-                <Github className="h-5 w-5" />
+                <GitHubIcon className="h-5 w-5" />
               </div>
               <div className="flex-1 text-left">
                 <h3 className="font-medium">GitHub</h3>
@@ -85,7 +107,7 @@ const AboutPage = () => {
               className="group hover:bg-accent/50 -mx-3 flex items-center gap-4 rounded-lg p-3 transition-colors"
             >
               <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full text-[#0A66C2]">
-                <Linkedin className="h-5 w-5" />
+                <LinkedInIcon className="h-5 w-5" />
               </div>
               <div className="flex-1 text-left">
                 <h3 className="font-medium">LinkedIn</h3>

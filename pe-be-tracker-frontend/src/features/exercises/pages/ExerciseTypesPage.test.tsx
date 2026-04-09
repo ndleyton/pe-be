@@ -304,11 +304,14 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     await userEvent.click(screen.getByTitle('Create "Nordic Curl"'));
 
     await waitFor(() => {
-      expect(mockCreateExerciseType).toHaveBeenCalledWith({
-        name: "Nordic Curl",
-        description: "Custom exercise",
-        default_intensity_unit: 1,
-      });
+      expect(mockCreateExerciseType).toHaveBeenCalledWith(
+        {
+          name: "Nordic Curl",
+          description: "Custom exercise",
+          default_intensity_unit: 1,
+        },
+        expect.any(Object),
+      );
     });
   });
 
