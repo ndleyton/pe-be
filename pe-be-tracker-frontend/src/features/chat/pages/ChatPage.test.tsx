@@ -203,11 +203,13 @@ describe("ChatPage", () => {
     }
 
     expect(
-      screen.getByText("Ask questions, log workouts, or attach photos for coaching and analysis."),
+      screen.getByText(
+        "Ask questions, log workouts, get coaching, or create a personalized routine just for you.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Sign in to use chat and image uploads. This feature is for logged-in users.",
+        /Sign in to use chat and image uploads/,
       ),
     ).toBeInTheDocument();
 
