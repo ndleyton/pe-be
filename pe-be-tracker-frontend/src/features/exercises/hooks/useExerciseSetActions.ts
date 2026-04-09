@@ -345,11 +345,7 @@ export const useExerciseSetActions = ({
 
     const currentExerciseSets = exerciseSetsRef.current;
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
-    const durationPreferred = prefersDurationForIntensityUnit({
-      id: intensityUnitId,
-      name: "",
-      abbreviation: "",
-    });
+    const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
     const nextDurationSeconds = durationPreferred
       ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
       : (lastSet?.duration_seconds ?? null);

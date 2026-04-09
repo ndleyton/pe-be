@@ -217,12 +217,9 @@ export const RoutineTemplatesCard = ({
               {template.set_templates.map((setTemplate, setIndex) =>
                 canEdit ? (
                   (() => {
-                    const prefersTimeByDefault = prefersDurationForIntensityUnit({
-                      id: setTemplate.intensity_unit_id,
-                      name: setTemplate.intensity_unit?.name ?? "",
-                      abbreviation:
-                        setTemplate.intensity_unit?.abbreviation ?? "",
-                    });
+                    const prefersTimeByDefault = prefersDurationForIntensityUnit(
+                      setTemplate.intensity_unit_id,
+                    );
                     const setValueMode = resolveSetValueMode(
                       setTemplate,
                       prefersTimeByDefault,

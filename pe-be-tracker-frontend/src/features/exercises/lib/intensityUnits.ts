@@ -7,6 +7,7 @@ export interface GuestIntensityUnit {
 }
 
 type IntensityUnitLike = IntensityUnit | GuestIntensityUnit;
+type IntensityUnitInput = IntensityUnitLike | number;
 type IntensityUnitFamily = "mass" | "speed" | "bodyweight";
 
 type IntensityUnitDefinition = {
@@ -38,8 +39,11 @@ export const getIntensityUnitFamily = (
   getIntensityUnitDefinition(unit?.id)?.family ?? null;
 
 export const prefersDurationForIntensityUnit = (
-  unit: IntensityUnitLike | null | undefined,
-): boolean => getIntensityUnitFamily(unit) === "speed";
+  unit: IntensityUnitInput | null | undefined,
+): boolean =>
+  getIntensityUnitDefinition(
+    typeof unit === "number" ? unit : unit?.id,
+  )?.family === "speed";
 
 export const areIntensityUnitsCompatible = (
   sourceUnitId: number | null | undefined,

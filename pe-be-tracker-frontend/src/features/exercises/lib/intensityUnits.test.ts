@@ -47,5 +47,7 @@ describe("intensityUnits", () => {
     expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[2])).toBe(true);
     expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[3])).toBe(true);
     expect(prefersDurationForIntensityUnit(KNOWN_INTENSITY_UNITS[0])).toBe(false);
+    expect(prefersDurationForIntensityUnit(3)).toBe(true);
+    expect(prefersDurationForIntensityUnit(1)).toBe(false);
   });
 });

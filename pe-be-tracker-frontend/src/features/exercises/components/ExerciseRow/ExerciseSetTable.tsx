@@ -94,11 +94,9 @@ export const ExerciseSetTable = ({
   setNotesValue,
   setRpeValue,
 }: ExerciseSetTableProps) => {
-  const prefersTimeByDefault = prefersDurationForIntensityUnit({
-    id: currentIntensityUnitId,
-    name: "",
-    abbreviation: currentIntensityUnitAbbreviation,
-  });
+  const prefersTimeByDefault = prefersDurationForIntensityUnit(
+    currentIntensityUnitId,
+  );
 
   return (
     <>
