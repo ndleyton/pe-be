@@ -88,7 +88,11 @@ const AnatomicalImage = ({ muscleGroupSummary }: AnatomicalImageProps) => {
   }, [rawSvgContent, muscleGroupSummary]);
 
   if (!processedSvgContent) {
-    return <div>Loading anatomical image...</div>;
+    return (
+      <div className="anatomical-image-container h-full w-full flex items-center justify-center p-6">
+        <div className="w-full max-w-[240px] aspect-[4/5] bg-muted/20 animate-pulse rounded-[2.5rem] border border-border/20 shadow-inner" />
+      </div>
+    );
   }
 
   return (
