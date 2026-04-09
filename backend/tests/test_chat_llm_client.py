@@ -410,6 +410,85 @@ async def test_gemini_client_reuses_provider_parts_for_assistant_history(
     assert contents[1].parts[0] is provider_function_part
 
 
+@patch("google.genai.Client")
+async def test_gemini_3_chat_uses_low_thinking_level_when_supported(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+    mock_aio = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.candidates = [
+        MagicMock(content=MagicMock(parts=[types.Part.from_text(text="Done")]))
+    ]
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client.aio = mock_aio
+    mock_client_class.return_value = mock_client
+
+    with patch.dict(types.ThinkingConfig.model_fields, {"thinking_level": MagicMock()}):
+        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-flash-preview")
+        client.client = mock_client
+
+        await client.acomplete(
+            messages=[ConversationMessage(role="user", content="Hello")],
+            tools=[],
+        )
+
+    config = mock_aio.models.generate_content.await_args.kwargs["config"]
+    assert config.thinking_config is not None
+    assert str(config.thinking_config.thinking_level).upper().endswith("LOW")
+
+
+@patch("google.genai.Client")
+async def test_gemini_3_chat_skips_low_thinking_level_when_sdk_lacks_field(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+    mock_aio = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.candidates = [
+        MagicMock(content=MagicMock(parts=[types.Part.from_text(text="Done")]))
+    ]
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client.aio = mock_aio
+    mock_client_class.return_value = mock_client
+
+    with patch.object(types.ThinkingConfig, "model_fields", {}, create=True):
+        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-flash-preview")
+        client.client = mock_client
+
+        await client.acomplete(
+            messages=[ConversationMessage(role="user", content="Hello")],
+            tools=[],
+        )
+
+    config = mock_aio.models.generate_content.await_args.kwargs["config"]
+    assert config.thinking_config is None
+
+
+@patch("google.genai.Client")
+async def test_gemini_25_chat_does_not_set_gemini_3_thinking_level(mock_client_class):
+    mock_client = MagicMock()
+    mock_aio = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.candidates = [
+        MagicMock(content=MagicMock(parts=[types.Part.from_text(text="Done")]))
+    ]
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client.aio = mock_aio
+    mock_client_class.return_value = mock_client
+
+    client = GeminiGenAIClient(api_key="test", model_name="gemini-2.5-flash")
+    client.client = mock_client
+
+    await client.acomplete(
+        messages=[ConversationMessage(role="user", content="Hello")],
+        tools=[],
+    )
+
+    config = mock_aio.models.generate_content.await_args.kwargs["config"]
+    assert config.thinking_config is None
+
+
 async def test_gemini_client_builds_image_parts_from_uri():
     client = GeminiGenAIClient(api_key="test")
     message = ConversationMessage(

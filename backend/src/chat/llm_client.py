@@ -292,6 +292,7 @@ class GeminiGenAIClient:
             system_instruction=system_instruction,
             tools=gemini_tools,
             tool_config=tool_config,
+            thinking_config=self._thinking_config(),
             media_resolution=(
                 types.MediaResolution.MEDIA_RESOLUTION_HIGH if saw_image else None
             ),
@@ -398,6 +399,16 @@ class GeminiGenAIClient:
                 )
             )
         return parts
+
+    def _thinking_config(self) -> types.ThinkingConfig | None:
+        if not self.model_name.startswith("gemini-3"):
+            return None
+
+        thinking_fields = getattr(types.ThinkingConfig, "model_fields", {})
+        if "thinking_level" not in thinking_fields:
+            return None
+
+        return types.ThinkingConfig(thinking_level="low")
 
     def _normalize_response(self, response: Any) -> LLMResponse:
         tool_calls: list[ToolCall] = []
