@@ -166,7 +166,7 @@ Prefer defensive migrations for schema changes that may hit drifted environments
 
 1. Run `ruff` and the relevant backend tests before handoff.
 2. Use focused tests during iteration, then run broader coverage before finalizing backend changes.
-3. For frontend work, run the relevant npm checks from `pe-be-tracker-frontend/`.
+3. For frontend work, run the relevant pnpm checks from `pe-be-tracker-frontend/`.
 4. When extracting significant frontend logic into custom hooks, add dedicated hook tests for the new behavior instead of relying only on page/component tests.
 5. If a refactor introduces new reusable frontend test data shapes, add them to `pe-be-tracker-frontend/src/test/fixtures/` and reuse them instead of copying nested objects between tests.
 6. When refactoring frontend pages, preserve or improve partial rendering behavior. Prefer section loading states and skeletons over coarse route-level loading gates.
