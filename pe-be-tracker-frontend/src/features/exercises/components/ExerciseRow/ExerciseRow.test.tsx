@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
@@ -194,6 +194,11 @@ describe("ExerciseRow", () => {
     });
     (updateExerciseSet as any).mockResolvedValue({});
     (deleteExercise as any).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
   it("renders exercise information in card format", () => {

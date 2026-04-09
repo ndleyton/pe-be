@@ -434,7 +434,7 @@ const ExerciseTypeDetailsPage = () => {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {isPageDataPending ? (
-                  <Skeleton className="h-8 w-64 sm:h-9 sm:w-80" />
+                  <Skeleton className="h-8 w-full max-w-[16rem] sm:h-9 sm:max-w-[20rem]" />
                 ) : (
                   <h1 className="text-2xl leading-tight font-bold break-words sm:text-3xl">
                     {exerciseType?.name}

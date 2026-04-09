@@ -133,13 +133,13 @@ const RoutineDetailsFallback = () => (
     <div className="mb-8 flex items-center gap-4 text-left">
       <Skeleton className="h-10 w-10 rounded-full" />
       <div className="min-w-0 flex-1">
-        <Skeleton className="mb-2 h-9 w-56" />
+        <Skeleton className="mb-2 h-9 w-full max-w-[14rem]" />
         <Skeleton className="h-4 w-32" />
       </div>
     </div>
     <div className="space-y-8">
       <div className="rounded-2xl border p-4">
-        <Skeleton className="mb-3 h-7 w-56" />
+        <Skeleton className="mb-3 h-7 w-full max-w-[14rem]" />
         <Skeleton className="mb-2 h-4 w-full" />
         <Skeleton className="mb-4 h-4 w-5/6" />
         <div className="grid gap-3 sm:grid-cols-3">
@@ -149,7 +149,7 @@ const RoutineDetailsFallback = () => (
         </div>
       </div>
       <div className="rounded-2xl border p-4">
-        <Skeleton className="mb-3 h-6 w-48" />
+        <Skeleton className="mb-3 h-6 w-full max-w-[12rem]" />
         <Skeleton className="mb-4 h-4 w-3/4" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
