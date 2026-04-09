@@ -23,7 +23,7 @@ const NavItemLink = ({
   const Icon = item.icon;
 
   return (
-    <li key={item.key}>
+    <li>
       <Link
         to={href}
         onClick={(event) => {
