@@ -125,6 +125,7 @@ describe("ExerciseRow", () => {
   const mockExerciseSet1: ExerciseSet = {
     id: 1,
     reps: 10,
+    duration_seconds: null,
     intensity: 50.5,
     intensity_unit_id: 1,
     exercise_id: 123,
@@ -137,6 +138,7 @@ describe("ExerciseRow", () => {
   const mockExerciseSet2: ExerciseSet = {
     id: 2,
     reps: 12,
+    duration_seconds: null,
     intensity: 55.0,
     intensity_unit_id: 1,
     exercise_id: 123,
@@ -184,6 +186,7 @@ describe("ExerciseRow", () => {
     (createExerciseSet as any).mockResolvedValue({
       id: 999,
       reps: 0,
+      duration_seconds: null,
       intensity: 0,
       intensity_unit_id: 2,
       exercise_id: 123,
@@ -287,6 +290,34 @@ describe("ExerciseRow", () => {
     expect(screen.getByText("KG")).toBeInTheDocument(); // Default intensity unit
     expect(screen.getByText("REPS")).toBeInTheDocument();
     expect(screen.getByText("DONE")).toBeInTheDocument();
+  });
+
+  it("shows Time for speed-based exercises and formats the input as MM:SS", () => {
+    const speedExercise: Exercise = {
+      ...mockExercise,
+      exercise_type: {
+        ...mockExercise.exercise_type,
+        default_intensity_unit: 3,
+      },
+      exercise_sets: [
+        {
+          ...mockExerciseSet1,
+          reps: null,
+          duration_seconds: 605,
+          intensity_unit_id: 3,
+        },
+      ],
+    };
+
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={speedExercise}
+      />,
+    );
+
+    expect(screen.getByText("TIME")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("10:05")).toBeInTheDocument();
   });
 
   it("displays exercise sets in grid format", () => {
@@ -563,7 +594,79 @@ describe("ExerciseRow", () => {
       expect(
         screen.getByPlaceholderText(/add notes for this set/i),
       ).toBeInTheDocument();
+      expect(screen.getByText("Tracking")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Reps" }),
+      ).toHaveAttribute("aria-pressed", "true");
     }
+  });
+
+  it("can switch a set to Time from set options", async () => {
+    const user = userEvent.setup();
+    render(<ExerciseRow {...defaultProps} />);
+
+    const moreButtons = screen.getAllByTestId("more-vertical-icon");
+    const setOptionsButton = moreButtons[1].closest("button");
+
+    if (setOptionsButton) {
+      await user.click(setOptionsButton);
+      await user.click(screen.getByRole("button", { name: "Time" }));
+
+      await waitFor(() => {
+        expect(updateExerciseSet).toHaveBeenCalledWith(1, {
+          reps: null,
+          duration_seconds: 600,
+        });
+      });
+    }
+  });
+
+  it("commits time input as duration seconds", async () => {
+    const user = userEvent.setup();
+    const speedExercise: Exercise = {
+      ...mockExercise,
+      exercise_type: {
+        ...mockExercise.exercise_type,
+        default_intensity_unit: 3,
+      },
+      exercise_sets: [
+        {
+          ...mockExerciseSet1,
+          reps: null,
+          duration_seconds: 600,
+          intensity_unit_id: 3,
+        },
+      ],
+    };
+
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={speedExercise}
+      />,
+    );
+
+    const timeInput = screen.getByDisplayValue("10:00");
+    await user.clear(timeInput);
+    await user.type(timeInput, "12:34");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(updateExerciseSet).toHaveBeenCalledWith(1, {
+        duration_seconds: 754,
+        reps: null,
+      });
+      expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
+        ...speedExercise,
+        exercise_sets: [
+          {
+            ...speedExercise.exercise_sets[0],
+            duration_seconds: 754,
+            reps: null,
+          },
+        ],
+      });
+    });
   });
 
   it("handles exercise without sets", () => {
@@ -670,7 +773,10 @@ describe("ExerciseRow", () => {
     await user.keyboard("{Enter}");
 
     await waitFor(() => {
-      expect(updateExerciseSet).toHaveBeenCalledWith(1, { reps: null });
+      expect(updateExerciseSet).toHaveBeenCalledWith(1, {
+        reps: null,
+        duration_seconds: null,
+      });
       expect(mockOnExerciseUpdate).toHaveBeenCalledWith({
         ...mockExercise,
         exercise_sets: [{ ...mockExerciseSet1, reps: null }, mockExerciseSet2],

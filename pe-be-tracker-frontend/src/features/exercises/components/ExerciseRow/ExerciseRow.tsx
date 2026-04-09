@@ -34,6 +34,7 @@ const ExerciseRow = ({
     handleExerciseDelete,
     incrementReps,
     isUnsavedExercise,
+    setSetValueMode,
     toggleSetCompletion,
     updateExerciseNotes,
     updateSetField,
@@ -48,6 +49,7 @@ const ExerciseRow = ({
   const {
     activeSetId,
     currentIntensityUnit,
+    durationInputs,
     exerciseNotesOpen,
     exerciseNotesValue,
     exerciseSettingsOpen,
@@ -58,6 +60,7 @@ const ExerciseRow = ({
     openExerciseNotes,
     openSetOptions,
     repsInputs,
+    setDurationInputValue,
     setExerciseNotesValue,
     setExerciseSettingsOpen,
     setIntensityInputValue,
@@ -147,6 +150,7 @@ const ExerciseRow = ({
               activeSetId={activeSetId}
               currentIntensityUnitAbbreviation={currentIntensityUnit.abbreviation}
               currentIntensityUnitId={currentIntensityUnit.id}
+              durationInputs={durationInputs}
               exerciseSets={exerciseSets}
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
@@ -157,9 +161,11 @@ const ExerciseRow = ({
               onIncrementReps={incrementReps}
               onOpenSetOptions={openSetOptions}
               onSetOptionsOpenChange={handleSetOptionsOpenChange}
+              onSetDurationInputValue={setDurationInputValue}
               onSetNotesValueChange={setSetNotesValue}
               onSetRpeValueChange={setSetRpeValue}
               onSetRepsInputValue={setRepsInputValue}
+              onSetValueModeChange={setSetValueMode}
               onSetWeightInputValue={setIntensityInputValue}
               onToggleSetCompletion={toggleSetCompletion}
               onUpdateSetField={updateSetField}
