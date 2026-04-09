@@ -136,7 +136,9 @@ const FinishWorkoutModal = ({
       const image = await toPng(node, {
         backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
         cacheBust: true,
-        filter: (domNode) => domNode.dataset.exportIgnore !== "true",
+        filter: (domNode) =>
+          !(domNode instanceof Element) ||
+          domNode.getAttribute("data-export-ignore") !== "true",
         pixelRatio: Math.max(
           window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
           MIN_EXPORT_PIXEL_RATIO,
@@ -182,20 +184,8 @@ const FinishWorkoutModal = ({
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
-              className="bg-background relative mb-6 rounded-lg p-4"
+              className="bg-background mb-6 rounded-lg p-4"
             >
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleDownload}
-                data-export-ignore="true"
-                aria-label="Download workout summary image"
-                title="Download image"
-                className="text-primary hover:text-primary absolute top-3 right-3 z-10 rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
               {/* Header: Logo and Duration for shareable image */}
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -214,12 +204,24 @@ const FinishWorkoutModal = ({
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-3">
+              <div className="mb-3 flex items-start justify-between gap-3">
                 <h3 className="text-foreground break-words text-2xl leading-tight font-black tracking-tight">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
                   </span>
                 </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDownload}
+                  data-export-ignore="true"
+                  aria-label="Download workout summary image"
+                  title="Download image"
+                  className="text-primary hover:text-primary -mr-2 shrink-0 rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
               </div>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
               <div className="space-y-2">
