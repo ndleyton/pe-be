@@ -203,9 +203,16 @@ const FinishWorkoutModal = ({
                   <span className="text-primary">{formattedDuration}</span>
                 </div>
               </div>
-              <h3 className="text-primary mb-1 text-lg font-bold">
-                {workoutName ?? "Great Training Session!"}
-              </h3>
+              <div className="mb-3 space-y-1">
+                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.24em]">
+                  Workout Summary
+                </p>
+                <h3 className="text-foreground break-words text-2xl leading-tight font-black tracking-tight">
+                  <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    {workoutName ?? "Great Training Session!"}
+                  </span>
+                </h3>
+              </div>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
               <div className="space-y-2">
                 {muscleGroupSummary.map((group) => (
