@@ -204,8 +204,9 @@ const FinishWorkoutModal = ({
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <h3 className="text-foreground break-words text-2xl leading-tight font-black tracking-tight">
+              <div className="mb-3 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
+                <div aria-hidden="true" className="size-9" />
+                <h3 className="text-foreground break-words text-center text-2xl leading-tight font-black tracking-tight">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
                   </span>
@@ -218,7 +219,7 @@ const FinishWorkoutModal = ({
                   data-export-ignore="true"
                   aria-label="Download workout summary image"
                   title="Download image"
-                  className="text-primary hover:text-primary -mr-2 shrink-0 rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
+                  className="text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
                 >
                   <Download className="h-4 w-4" />
                 </Button>
