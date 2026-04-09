@@ -779,14 +779,14 @@ const WorkoutPage = () => {
           <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 text-left mb-6">
             {/* Subtle background glow */}
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
-            
+
             <div className="relative">
               <div className="mb-3 flex items-center gap-2">
                 <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
                   <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 </div>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
-                  Personal Bestie
+                  Personal Bestie:
                 </h4>
               </div>
               <p className="text-foreground/90 text-[13px] leading-relaxed italic font-medium">

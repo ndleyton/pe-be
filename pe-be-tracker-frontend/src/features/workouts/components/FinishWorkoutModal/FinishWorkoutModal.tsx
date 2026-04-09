@@ -5,9 +5,8 @@ import {
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
-import DownloadImageButton from "./DownloadImageButton/DownloadImageButton";
 import { toPng } from "html-to-image";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Download, RefreshCw, Sparkles } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -137,6 +136,7 @@ const FinishWorkoutModal = ({
       const image = await toPng(node, {
         backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
         cacheBust: true,
+        filter: (domNode) => domNode.dataset.exportIgnore !== "true",
         pixelRatio: Math.max(
           window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
           MIN_EXPORT_PIXEL_RATIO,
@@ -182,8 +182,20 @@ const FinishWorkoutModal = ({
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
-              className="bg-background mb-6 rounded-lg p-4"
+              className="bg-background relative mb-6 rounded-lg p-4"
             >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleDownload}
+                data-export-ignore="true"
+                aria-label="Download workout summary image"
+                title="Download image"
+                className="text-primary hover:text-primary absolute top-3 right-3 z-10 rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
               {/* Header: Logo and Duration for shareable image */}
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -237,7 +249,7 @@ const FinishWorkoutModal = ({
             <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 mb-4">
               {/* Subtle background glow */}
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
-              
+
               <div className="relative">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -245,7 +257,7 @@ const FinishWorkoutModal = ({
                       <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                     </div>
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
-                      Personal Bestie
+                      Personal Bestie:
                     </h4>
                   </div>
                   {onRegenerateRecap && !isRecapLoading && (
@@ -283,12 +295,6 @@ const FinishWorkoutModal = ({
                   </p>
                 )}
               </div>
-            </div>
-          )}
-
-          {muscleGroupSummary.length > 0 && (
-            <div className="mb-4">
-              <DownloadImageButton onDownload={handleDownload} />
             </div>
           )}
 
