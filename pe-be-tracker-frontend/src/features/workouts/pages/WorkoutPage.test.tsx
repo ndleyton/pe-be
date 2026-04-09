@@ -126,6 +126,12 @@ const mockUIState = {
   getFormattedWorkoutTime: vi.fn(() => "00:00"),
 };
 
+const mockAppHistoryState = {
+  entries: [],
+  syncEntry: vi.fn(),
+  reset: vi.fn(),
+};
+
 const mockWorkout = {
   id: Number(mockWorkoutId),
   name: "Chest Day",
@@ -148,6 +154,9 @@ vi.mock("@/stores", () => ({
   },
   useUIStore: (selector: (state: typeof mockUIState) => unknown) =>
     selector(mockUIState),
+  useAppHistoryStore: (
+    selector: (state: typeof mockAppHistoryState) => unknown,
+  ) => selector(mockAppHistoryState),
 }));
 
 describe("WorkoutPage", () => {

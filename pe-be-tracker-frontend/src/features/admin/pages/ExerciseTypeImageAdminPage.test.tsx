@@ -23,6 +23,12 @@ vi.mock("@/stores", () => ({
       initialized: true,
       user: { id: 1, is_superuser: true },
     }),
+  useAppHistoryStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      entries: [],
+      syncEntry: vi.fn(),
+      reset: vi.fn(),
+    }),
 }));
 
 vi.mock("react-router-dom", async () => {

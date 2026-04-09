@@ -28,6 +28,12 @@ vi.mock("@/shared/hooks", async () => {
 vi.mock("@/stores", () => ({
   useAuthStore: (selector: (state: { isAuthenticated: boolean }) => unknown) =>
     selector({ isAuthenticated: true }),
+  useAppHistoryStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      entries: [],
+      syncEntry: vi.fn(),
+      reset: vi.fn(),
+    }),
 }));
 
 const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
