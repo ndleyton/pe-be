@@ -184,28 +184,28 @@ const FinishWorkoutModal = ({
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
-              className="bg-background mb-6 rounded-lg p-4"
+              className="bg-background mb-4 rounded-lg p-3"
             >
               {/* Header: Logo and Duration for shareable image */}
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <img
-                    src={logoDataUrl ?? "/assets/logo.svg"}
-                    alt="Personal Bestie Logo"
-                    className="h-8 w-8"
-                    crossOrigin="anonymous"
-                  />
-                  <div className="flex flex-col items-start drop-shadow-sm text-left text-base leading-[0.9] font-black tracking-tight text-primary">
-                    <span>Personal</span>
-                    <span>Bestie.com</span>
+              <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2 rounded-full bg-primary/5 px-2.5 py-1 border border-primary/10 shadow-sm">
+                    <img
+                      src={logoDataUrl ?? "/assets/logo.svg"}
+                      alt="Personal Bestie Logo"
+                      className="h-7 w-7"
+                      crossOrigin="anonymous"
+                    />
+                    <div className="flex flex-col items-start drop-shadow-sm text-left text-[13px] leading-[0.85] font-black tracking-tight text-primary pr-1">
+                      <span>Personal</span>
+                      <span>Bestie.com</span>
+                    </div>
                   </div>
-                </div>
                 <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 text-primary text-xs font-black tracking-wide shadow-sm">
                   <Timer className="h-3.5 w-3.5" />
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-3 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
+              <div className="mb-2 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
                 <div aria-hidden="true" className="size-9" />
                 <h3 className="text-foreground break-words text-center text-2xl leading-tight font-black tracking-tight">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -241,7 +241,7 @@ const FinishWorkoutModal = ({
                   </div>
                 ))}
               </div>
-              <div className="mt-4 border-t border-dashed border-border/60 pt-4">
+              <div className="mt-3 border-t border-dashed border-border/60 pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-[0.2em] opacity-40">
                     Total Sets Completed
