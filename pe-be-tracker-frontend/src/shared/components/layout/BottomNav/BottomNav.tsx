@@ -1,25 +1,23 @@
-
-import { NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { useNavigation } from "@/shared/hooks/useNavigation";
 
 const NavItemLink = ({ item }: { item: NavItem }) => {
-  const lastVisited = useNavigation(item.key, item.to);
+  const { href, isActive, handleClick } = useNavigation(item.key);
   const IconComponent = item.icon;
 
   return (
-    <NavLink
-      to={lastVisited}
+    <Link
+      to={href}
+      onClick={handleClick}
       aria-label={item.label}
-      className={({ isActive }) =>
-        `flex h-full w-full flex-col items-center justify-center gap-0.5 py-2 ${
-          isActive ? "text-primary" : "text-muted-foreground"
-        }`
-      }
+      className={`flex h-full w-full flex-col items-center justify-center gap-0.5 py-2 ${
+        isActive ? "text-primary" : "text-muted-foreground"
+      }`}
     >
       <IconComponent className="h-6 w-6" />
       <span className="text-xs">{item.label}</span>
-    </NavLink>
+    </Link>
   );
 };
 

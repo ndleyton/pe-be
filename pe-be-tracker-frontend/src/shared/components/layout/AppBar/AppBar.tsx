@@ -4,7 +4,7 @@ import { useUIStore, useAuthStore } from "@/stores";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { Button } from "@/shared/components/ui/button";
-import { NAV_PATHS } from "@/shared/navigation/constants";
+import { useHomeNavigation } from "@/shared/hooks";
 
 const AppBar = () => {
   const toggleDrawer = useUIStore((state) => state.toggleDrawer);
@@ -17,6 +17,7 @@ const AppBar = () => {
   const formatted = useUIStore((state) => state.getFormattedWorkoutTime());
   const paused = useUIStore((state) => state.workoutTimer.paused);
   const togglePause = useUIStore((state) => state.toggleWorkoutTimer);
+  const { href, handleClick } = useHomeNavigation();
 
   return (
     <header
@@ -39,7 +40,7 @@ const AppBar = () => {
 
         <div className="flex items-center lg:hidden">
           <Button asChild variant="ghost" className="text-xl">
-            <Link to={NAV_PATHS.WORKOUTS} aria-label="Go to workouts">
+            <Link to={href} onClick={handleClick} aria-label="Go to workouts">
               <HomeLogo />
             </Link>
           </Button>

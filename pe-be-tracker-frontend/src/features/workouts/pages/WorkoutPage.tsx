@@ -28,6 +28,7 @@ import {
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import { useAppBackNavigation } from "@/shared/hooks";
 
 // Lazy load heavy components
 const FinishWorkoutModal = lazy(() =>
@@ -123,6 +124,7 @@ const scrollContainerTo = (
 const WorkoutPage = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
+  const goBack = useAppBackNavigation("/workouts");
   const location = useLocation();
   const queryClient = useQueryClient();
 
@@ -585,6 +587,19 @@ const WorkoutPage = () => {
     setShowSaveRoutineModal(true);
   };
 
+  const handleBack = () => {
+    const endTime = isAuthenticated
+      ? serverWorkout?.end_time
+      : guestWorkout?.end_time;
+
+    if (!endTime) {
+      setShowFinishModal(true);
+      return;
+    }
+
+    goBack();
+  };
+
   const warmExerciseTypeModal = useCallback(() => {
     preloadExerciseTypeModal();
 
@@ -733,13 +748,12 @@ const WorkoutPage = () => {
         <Button
           variant="ghost"
           size="icon"
-          asChild
           className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
           aria-label="Go back"
+          type="button"
+          onClick={handleBack}
         >
-          <Link to="/workouts">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <h2 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
           {showLoadingTitle ? (

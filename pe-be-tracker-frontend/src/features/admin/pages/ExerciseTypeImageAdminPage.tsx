@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ImagePlus, RefreshCcw } from "lucide-react";
 
@@ -12,6 +12,7 @@ import {
   type ExerciseImageOption,
 } from "@/features/admin/api/exerciseImageOptions";
 import { useAuthStore } from "@/stores";
+import { useAppBackNavigation } from "@/shared/hooks";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -175,6 +176,9 @@ const LoadingState = () => (
 
 const ExerciseTypeImageAdminPage = () => {
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
+  const handleBack = useAppBackNavigation(
+    exerciseTypeId ? `/exercise-types/${exerciseTypeId}` : "/exercise-types",
+  );
   const user = useAuthStore((state) => state.user);
   const initialized = useAuthStore((state) => state.initialized);
   const isAdmin = Boolean(user?.is_superuser);
@@ -317,11 +321,9 @@ const ExerciseTypeImageAdminPage = () => {
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <Button variant="ghost" asChild className="px-0">
-            <Link to={`/exercise-types/${exerciseTypeId}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to exercise
-            </Link>
+          <Button variant="ghost" className="px-0" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to exercise
           </Button>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
