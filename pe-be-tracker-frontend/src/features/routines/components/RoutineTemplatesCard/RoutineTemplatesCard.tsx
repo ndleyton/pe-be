@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
@@ -42,6 +43,22 @@ type RoutineTemplatesCardProps = {
   ) => void;
 };
 
+const buildDurationDrafts = (
+  templates: RoutineEditorTemplate[],
+): Record<string, string> => {
+  const drafts: Record<string, string> = {};
+
+  templates.forEach((template) => {
+    template.set_templates.forEach((setTemplate) => {
+      drafts[`${template.id}-${setTemplate.id}`] = formatDurationInputValue(
+        setTemplate.duration_seconds,
+      );
+    });
+  });
+
+  return drafts;
+};
+
 export const RoutineTemplatesCard = ({
   canEdit,
   editorTemplates,
@@ -53,37 +70,78 @@ export const RoutineTemplatesCard = ({
   onSelectUnit,
   onUpdateSet,
   onUpdateTemplate,
-}: RoutineTemplatesCardProps) => (
-  <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
-    <CardHeader className="pb-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
-              Exercise Sequence
-            </h4>
+}: RoutineTemplatesCardProps) => {
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>(
+    () => buildDurationDrafts(editorTemplates),
+  );
+
+  useEffect(() => {
+    setDurationDrafts((current) => {
+      const nextDrafts: Record<string, string> = {};
+
+      editorTemplates.forEach((template) => {
+        template.set_templates.forEach((setTemplate) => {
+          const key = `${template.id}-${setTemplate.id}`;
+          const formattedDuration = formatDurationInputValue(
+            setTemplate.duration_seconds,
+          );
+          const currentDraft = current[key];
+          const parsedDraft =
+            currentDraft == null ? null : parseDurationInputValue(currentDraft);
+
+          if (
+            currentDraft != null &&
+            parsedDraft == null &&
+            currentDraft.trim() !== ""
+          ) {
+            nextDrafts[key] = currentDraft;
+            return;
+          }
+
+          if (currentDraft != null && parsedDraft === (setTemplate.duration_seconds ?? null)) {
+            nextDrafts[key] = currentDraft;
+            return;
+          }
+
+          nextDrafts[key] = formattedDuration;
+        });
+      });
+
+      return nextDrafts;
+    });
+  }, [editorTemplates]);
+
+  return (
+    <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Exercise Sequence
+              </h4>
+            </div>
           </div>
+          {canEdit && (
+            <Button
+              data-testid="add-routine-exercise-button"
+              onClick={onAddExercise}
+              size="sm"
+              className="rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Exercise
+            </Button>
+          )}
         </div>
-        {canEdit && (
-          <Button
-            data-testid="add-routine-exercise-button"
-            onClick={onAddExercise}
-            size="sm"
-            className="rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Exercise
-          </Button>
-        )}
-      </div>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      {editorTemplates.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground bg-primary/5 italic">
-          No exercise templates yet. Add one to start building the routine.
-        </div>
-      ) : (
-        editorTemplates.map((template, templateIndex) => (
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {editorTemplates.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground bg-primary/5 italic">
+            No exercise templates yet. Add one to start building the routine.
+          </div>
+        ) : (
+          editorTemplates.map((template, templateIndex) => (
           <div
             key={template.id}
             data-testid={`routine-template-${templateIndex}`}
@@ -170,6 +228,10 @@ export const RoutineTemplatesCard = ({
                       prefersTimeByDefault,
                     );
                     const isTimeMode = setValueMode === "time";
+                    const durationDraftKey = `${template.id}-${setTemplate.id}`;
+                    const durationDraft =
+                      durationDrafts[durationDraftKey] ??
+                      formatDurationInputValue(setTemplate.duration_seconds);
 
                     return (
                       <div
@@ -212,17 +274,57 @@ export const RoutineTemplatesCard = ({
                                 data-testid={`routine-set-time-${templateIndex}-${setIndex}`}
                                 type="text"
                                 inputMode="numeric"
-                                value={formatDurationInputValue(setTemplate.duration_seconds)}
+                                value={durationDraft}
                                 onChange={(event) => {
                                   const nextValue = event.target.value;
                                   if (!canUpdateDurationInputValue(nextValue)) {
                                     return;
                                   }
 
+                                  setDurationDrafts((current) => ({
+                                    ...current,
+                                    [durationDraftKey]: nextValue,
+                                  }));
+
+                                  const parsedDuration = parseDurationInputValue(
+                                    nextValue,
+                                  );
+                                  if (parsedDuration == null) {
+                                    return;
+                                  }
+
                                   onUpdateSet(template.id, setTemplate.id, {
                                     reps: null,
-                                    duration_seconds:
-                                      parseDurationInputValue(nextValue),
+                                    duration_seconds: parsedDuration,
+                                  });
+                                }}
+                                onBlur={() => {
+                                  const parsedDuration = parseDurationInputValue(
+                                    durationDraft,
+                                  );
+
+                                  if (durationDraft.trim() === "") {
+                                    onUpdateSet(template.id, setTemplate.id, {
+                                      reps: null,
+                                      duration_seconds: null,
+                                    });
+                                    return;
+                                  }
+
+                                  if (parsedDuration == null) {
+                                    setDurationDrafts((current) => ({
+                                      ...current,
+                                      [durationDraftKey]:
+                                        formatDurationInputValue(
+                                          setTemplate.duration_seconds,
+                                        ),
+                                    }));
+                                    return;
+                                  }
+
+                                  onUpdateSet(template.id, setTemplate.id, {
+                                    reps: null,
+                                    duration_seconds: parsedDuration,
                                   });
                                 }}
                                 placeholder="00:00"
@@ -331,6 +433,7 @@ export const RoutineTemplatesCard = ({
           </div>
         ))
       )}
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};

@@ -783,4 +783,28 @@ describe("ExerciseRow", () => {
       });
     });
   });
+
+  it("restores the saved reps value on Escape", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ExerciseRow {...defaultProps} />);
+
+    const repsInputs = Array.from(
+      container.querySelectorAll('input[inputmode="numeric"]'),
+    ) as HTMLInputElement[];
+    const repsInput = repsInputs[0];
+
+    await user.clear(repsInput);
+    await user.type(repsInput, "15");
+    expect(repsInput).toHaveValue("15");
+
+    fireEvent.keyDown(repsInput, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(repsInput).toHaveValue("10");
+    });
+    expect(updateExerciseSet).not.toHaveBeenCalledWith(1, {
+      reps: 15,
+      duration_seconds: null,
+    });
+  });
 });

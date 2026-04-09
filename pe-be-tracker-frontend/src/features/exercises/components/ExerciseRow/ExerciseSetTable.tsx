@@ -292,6 +292,13 @@ export const ExerciseSetTable = ({
                         event.preventDefault();
                         (event.currentTarget as HTMLInputElement).blur();
                       }
+
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        onSetRepsInputValue(set.id, savedRepsValue);
+                        event.currentTarget.value = savedRepsValue;
+                        (event.currentTarget as HTMLInputElement).blur();
+                      }
                     }}
                     className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[8ch]"
                     disabled={set.done}
