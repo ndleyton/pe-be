@@ -123,6 +123,20 @@ describe("ExerciseTypeDetailsPage", () => {
     );
   });
 
+  it("keeps the exercise detail shell visible while data is pending", () => {
+    mockGetExerciseTypeById.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const { container } = render(<ExerciseTypeDetailsPage />);
+
+    expect(screen.getByRole("link", { name: /go back/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /progressive overload/i }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+  });
+
   it("lets a superuser enter edit mode for a released exercise type", async () => {
     mockGetExerciseTypeById.mockResolvedValue(
       makeExerciseType({

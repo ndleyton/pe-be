@@ -5,7 +5,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
-import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
+import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 import { RoutineDetailsLoadingState } from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
@@ -89,7 +89,7 @@ const ExerciseTypesPageWrapper = ({ children }: { children: ReactNode }) => (
 
 // Wrapper component for ExerciseTypeDetailsPage with custom fallback
 const ExerciseTypeDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<ExerciseTypeDetailsPageSkeleton />}>{children}</Suspense>
+  <Suspense fallback={<ExerciseTypeDetailsLoadingState />}>{children}</Suspense>
 );
 
 // Wrapper component for ProfilePage with custom fallback
