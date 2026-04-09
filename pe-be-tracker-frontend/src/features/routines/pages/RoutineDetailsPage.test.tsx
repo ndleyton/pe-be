@@ -122,7 +122,7 @@ describe("RoutineDetailsPage", () => {
     expect(
       screen.getByRole("heading", { name: /routine details/i, level: 1 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /go back/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument();
     expect(screen.queryByText(/loading routine/i)).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
