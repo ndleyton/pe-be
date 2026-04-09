@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
 import DownloadImageButton from "./DownloadImageButton/DownloadImageButton";
 import { toPng } from "html-to-image";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Sparkles } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -198,15 +198,11 @@ const FinishWorkoutModal = ({
                     <span>Bestie.com</span>
                   </div>
                 </div>
-                <div className="text-foreground text-sm font-semibold">
-                  Workout Duration:{" "}
-                  <span className="text-primary">{formattedDuration}</span>
+                <div className="text-primary text-sm font-semibold">
+                  {formattedDuration}
                 </div>
               </div>
-              <div className="mb-3 space-y-1">
-                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.24em]">
-                  Workout Summary
-                </p>
+              <div className="mb-3">
                 <h3 className="text-foreground break-words text-2xl leading-tight font-black tracking-tight">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
@@ -238,47 +234,55 @@ const FinishWorkoutModal = ({
 
           {/* AI Recap Section */}
           {totalSets > 0 && (
-            <div className="bg-card/80 border-border mb-4 rounded-lg border p-4 shadow-sm backdrop-blur-sm">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">✨</span>
-                  <h4 className="text-sm font-bold uppercase tracking-wider">
-                    AI Recap
-                  </h4>
+            <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 mb-4">
+              {/* Subtle background glow */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
+              
+              <div className="relative">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                      <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+                      Personal AI Coach
+                    </h4>
+                  </div>
+                  {onRegenerateRecap && !isRecapLoading && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRegenerateRecap();
+                      }}
+                      className="text-muted-foreground hover:text-primary transition-colors focus:ring-primary/20 rounded-full p-1.5 hover:bg-primary/5 transition-transform active:rotate-180"
+                      title="Regenerate recap"
+                      aria-label="Regenerate AI recap"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                {onRegenerateRecap && !isRecapLoading && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRegenerateRecap();
-                    }}
-                    className="text-muted-foreground hover:text-primary transition-colors focus:ring-primary/20 rounded-full p-1 transition-transform active:rotate-180"
-                    title="Regenerate recap"
-                    aria-label="Regenerate AI recap"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </button>
+
+                {isRecapLoading ? (
+                  <div className="space-y-3 py-1">
+                    <div className="h-3 w-full animate-pulse rounded-full bg-primary/10" />
+                    <div className="h-3 w-[90%] animate-pulse rounded-full bg-primary/5" />
+                    <div className="h-3 w-[75%] animate-pulse rounded-full bg-primary/10" />
+                  </div>
+                ) : recap ? (
+                  <p className="text-foreground/90 text-[13px] leading-relaxed italic font-medium">
+                    &ldquo;{recap}&rdquo;
+                  </p>
+                ) : !isAuthenticated ? (
+                  <p className="text-muted-foreground text-[11px] italic opacity-70">
+                    AI recaps are available for logged-in users.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-[11px] italic opacity-70">
+                    Recap generation skipped or failed.
+                  </p>
                 )}
               </div>
-              {isRecapLoading ? (
-                <div className="space-y-2 py-1">
-                  <div className="bg-muted h-3 w-full animate-pulse rounded" />
-                  <div className="bg-muted h-3 w-4/5 animate-pulse rounded" />
-                  <div className="bg-muted h-3 w-3/4 animate-pulse rounded" />
-                </div>
-              ) : recap ? (
-                <p className="text-foreground text-sm leading-relaxed italic">
-                  &ldquo;{recap}&rdquo;
-                </p>
-              ) : !isAuthenticated ? (
-                <p className="text-muted-foreground text-xs italic">
-                  AI recaps are available for logged-in users.
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-xs italic">
-                  Recap generation skipped or failed.
-                </p>
-              )}
             </div>
           )}
 

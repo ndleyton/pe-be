@@ -127,7 +127,7 @@ export const RoutineTemplatesCard = ({
               data-testid="add-routine-exercise-button"
               onClick={onAddExercise}
               size="sm"
-              className="rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
+              className="rounded-xl bg-primary/20 border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Exercise
@@ -420,7 +420,7 @@ export const RoutineTemplatesCard = ({
                 data-testid={`add-routine-set-${templateIndex}`}
                 variant="secondary"
                 size="sm"
-                className="mt-4 w-full h-10 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all font-bold text-xs uppercase tracking-widest"
+                className="mt-4 w-full h-10 rounded-xl bg-primary/20 border border-primary/30 hover:bg-primary/20 transition-all font-bold text-xs uppercase tracking-widest"
                 onClick={() => onAddSet(template.id)}
               >
                 <Plus className="mr-2 h-4 w-4" />
