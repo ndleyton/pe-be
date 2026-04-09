@@ -401,7 +401,8 @@ class GeminiGenAIClient:
         return parts
 
     def _thinking_config(self) -> types.ThinkingConfig | None:
-        if not self.model_name.startswith("gemini-3"):
+        model_id = self.model_name.split("/")[-1]
+        if not model_id.startswith("gemini-3"):
             return None
 
         thinking_fields = getattr(types.ThinkingConfig, "model_fields", {})
