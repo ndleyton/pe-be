@@ -5,9 +5,8 @@ import {
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
-import DownloadImageButton from "./DownloadImageButton/DownloadImageButton";
 import { toPng } from "html-to-image";
-import { RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Timer, CircleAlert } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -137,6 +136,9 @@ const FinishWorkoutModal = ({
       const image = await toPng(node, {
         backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
         cacheBust: true,
+        filter: (domNode) =>
+          !(domNode instanceof Element) ||
+          domNode.getAttribute("data-export-ignore") !== "true",
         pixelRatio: Math.max(
           window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
           MIN_EXPORT_PIXEL_RATIO,
@@ -178,52 +180,93 @@ const FinishWorkoutModal = ({
         className="text-card-foreground mx-4 flex max-h-[90vh] w-full max-w-md flex-col"
         data-testid="finish-workout-modal"
       >
-        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6">
+        <div className="bg-card flex-1 overflow-y-auto rounded-lg p-6 flex flex-col min-h-[300px]">
+          {totalSets === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in zoom-in duration-300">
+              <div className="relative">
+                <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full" />
+                <div className="relative bg-primary/10 p-5 rounded-3xl border border-primary/20 shadow-xl">
+                  <CircleAlert className="h-12 w-12 text-primary drop-shadow-sm" />
+                </div>
+              </div>
+              <div className="space-y-2 max-w-[260px]">
+                <h3 className="text-foreground text-lg font-black tracking-tight leading-tight">
+                  No Sets Done Yet!
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  You have not completed any sets, mark some sets as done and come back to finish your workout.
+                </p>
+              </div>
+            </div>
+          )}
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
-              className="bg-background mb-6 rounded-lg p-4"
+              className="bg-background mb-4 rounded-lg p-3"
             >
               {/* Header: Logo and Duration for shareable image */}
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-1">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 rounded-full bg-primary/5 px-2.5 py-1 border border-primary/10 shadow-sm">
                   <img
                     src={logoDataUrl ?? "/assets/logo.svg"}
                     alt="Personal Bestie Logo"
-                    className="h-8 w-8"
+                    className="h-7 w-7"
                     crossOrigin="anonymous"
                   />
-                  <div className="text-primary flex flex-col items-start text-left text-base leading-none font-bold">
+                  <div className="flex flex-col items-start drop-shadow-sm text-left text-[13px] leading-[0.85] font-black tracking-tight text-primary pr-1">
                     <span>Personal</span>
                     <span>Bestie.com</span>
                   </div>
                 </div>
-                <div className="text-foreground text-sm font-semibold">
-                  Workout Duration:{" "}
-                  <span className="text-primary">{formattedDuration}</span>
+                <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 text-primary text-xs font-black tracking-wide shadow-sm">
+                  <Timer className="h-3.5 w-3.5" />
+                  {formattedDuration}
                 </div>
               </div>
-              <h3 className="text-primary mb-1 text-lg font-bold">
-                {workoutName ?? "Great Training Session!"}
-              </h3>
+              <div className="mb-2 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
+                <div aria-hidden="true" className="size-9" />
+                <h3 className="text-foreground break-words text-center text-2xl leading-tight font-black tracking-tight">
+                  <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    {workoutName ?? "Great Training Session!"}
+                  </span>
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDownload}
+                  data-export-ignore="true"
+                  aria-label="Download workout summary image"
+                  title="Download image"
+                  className="text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 {muscleGroupSummary.map((group) => (
                   <div
                     key={group.name}
-                    className="bg-muted flex items-center justify-between rounded px-3 py-2"
+                    className="group flex items-center justify-between rounded-2xl border border-border/40 bg-muted/20 px-4 py-3 transition-all hover:bg-muted/30 hover:border-border/60"
                   >
-                    <span className="font-medium">{group.name}</span>
-                    <span className="text-primary font-bold">
+                    <span className="text-sm font-black uppercase tracking-widest opacity-70">
+                      {group.name}
+                    </span>
+                    <span className="text-primary text-sm font-black">
                       {group.setCount} set{group.setCount !== 1 ? "s" : ""}
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="border-border mt-3 border-t pt-3">
-                <div className="flex items-center justify-between font-bold">
-                  <span>Total Sets Completed:</span>
-                  <span className="text-primary text-lg">{totalSets}</span>
+              <div className="mt-3 border-t border-dashed border-border/60 pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] opacity-40">
+                    Total Sets Completed
+                  </span>
+                  <span className="text-primary text-xl font-black drop-shadow-sm">
+                    {totalSets}
+                  </span>
                 </div>
               </div>
             </div>
@@ -231,53 +274,55 @@ const FinishWorkoutModal = ({
 
           {/* AI Recap Section */}
           {totalSets > 0 && (
-            <div className="bg-card/80 border-border mb-4 rounded-lg border p-4 shadow-sm backdrop-blur-sm">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">✨</span>
-                  <h4 className="text-sm font-bold uppercase tracking-wider">
-                    AI Recap
-                  </h4>
+            <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 mb-4">
+              {/* Subtle background glow */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
+
+              <div className="relative">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                      <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+                      Personal Bestie:
+                    </h4>
+                  </div>
+                  {onRegenerateRecap && !isRecapLoading && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRegenerateRecap();
+                      }}
+                      className="text-muted-foreground hover:text-primary focus:ring-primary/20 rounded-full p-1.5 hover:bg-primary/5 transition active:rotate-180"
+                      title="Regenerate recap"
+                      aria-label="Regenerate AI recap"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                {onRegenerateRecap && !isRecapLoading && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRegenerateRecap();
-                    }}
-                    className="text-muted-foreground hover:text-primary transition-colors focus:ring-primary/20 rounded-full p-1 transition-transform active:rotate-180"
-                    title="Regenerate recap"
-                    aria-label="Regenerate AI recap"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </button>
+
+                {isRecapLoading ? (
+                  <div className="space-y-3 py-1">
+                    <div className="h-3 w-full animate-pulse rounded-full bg-primary/10" />
+                    <div className="h-3 w-[90%] animate-pulse rounded-full bg-primary/5" />
+                    <div className="h-3 w-[75%] animate-pulse rounded-full bg-primary/10" />
+                  </div>
+                ) : recap ? (
+                  <p className="text-foreground/90 text-[13px] leading-relaxed italic font-medium">
+                    &ldquo;{recap}&rdquo;
+                  </p>
+                ) : !isAuthenticated ? (
+                  <p className="text-muted-foreground text-[11px] italic opacity-70">
+                    AI recaps are available for logged-in users.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-[11px] italic opacity-70">
+                    Recap generation skipped or failed.
+                  </p>
                 )}
               </div>
-              {isRecapLoading ? (
-                <div className="space-y-2 py-1">
-                  <div className="bg-muted h-3 w-full animate-pulse rounded" />
-                  <div className="bg-muted h-3 w-4/5 animate-pulse rounded" />
-                  <div className="bg-muted h-3 w-3/4 animate-pulse rounded" />
-                </div>
-              ) : recap ? (
-                <p className="text-foreground text-sm leading-relaxed italic">
-                  &ldquo;{recap}&rdquo;
-                </p>
-              ) : !isAuthenticated ? (
-                <p className="text-muted-foreground text-xs italic">
-                  AI recaps are available for logged-in users.
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-xs italic">
-                  Recap generation skipped or failed.
-                </p>
-              )}
-            </div>
-          )}
-
-          {muscleGroupSummary.length > 0 && (
-            <div className="mb-4">
-              <DownloadImageButton onDownload={handleDownload} />
             </div>
           )}
 

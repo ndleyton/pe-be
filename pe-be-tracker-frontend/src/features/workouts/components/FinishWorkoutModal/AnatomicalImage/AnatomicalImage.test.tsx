@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@/test/testUtils";
+import { render, waitFor } from "@/test/testUtils";
 import AnatomicalImage from "./AnatomicalImage";
 import { vi } from "vitest";
 
@@ -32,8 +32,8 @@ global.fetch = vi.fn(
 
 describe("AnatomicalImage", () => {
   it("renders loading state initially", () => {
-    render(<AnatomicalImage muscleGroupSummary={[]} />);
-    expect(screen.getByText("Loading anatomical image...")).toBeInTheDocument();
+    const { container } = render(<AnatomicalImage muscleGroupSummary={[]} />);
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("renders SVG content after fetching", async () => {

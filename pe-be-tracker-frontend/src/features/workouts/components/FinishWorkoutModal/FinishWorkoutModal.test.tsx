@@ -398,7 +398,7 @@ describe("FinishWorkoutModal", () => {
       expect(screen.getByText("Great Training Session!")).toBeInTheDocument();
       expect(screen.getByText("Legs")).toBeInTheDocument();
       expect(screen.getByText("Chest")).toBeInTheDocument();
-      expect(screen.getByText("Total Sets Completed:")).toBeInTheDocument();
+      expect(screen.getByText("Total Sets Completed")).toBeInTheDocument();
       expect(screen.getByText("5")).toBeInTheDocument(); // 2 chest + 3 legs
     });
 
@@ -410,7 +410,7 @@ describe("FinishWorkoutModal", () => {
         screen.queryByText("Great Training Session!"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
@@ -434,18 +434,21 @@ describe("FinishWorkoutModal", () => {
         screen.queryByText("Great Training Session!"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
-    it("should handle exercises prop defaulting to empty array", () => {
+    it("should handle exercises prop defaulting to empty array by showing the empty state", () => {
       render(<FinishWorkoutModal {...defaultProps} />);
 
+      expect(screen.getByText("No Sets Done Yet!")).toBeInTheDocument();
       expect(
-        screen.queryByText("Great Training Session!"),
-      ).not.toBeInTheDocument();
+        screen.getByText(
+          "You have not completed any sets, mark some sets as done and come back to finish your workout.",
+        ),
+      ).toBeInTheDocument();
       expect(
-        screen.queryByText("Total Sets Completed:"),
+        screen.queryByText("Total Sets Completed"),
       ).not.toBeInTheDocument();
     });
 
