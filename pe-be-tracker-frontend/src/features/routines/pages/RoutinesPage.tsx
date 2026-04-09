@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Search, ArrowLeft } from "lucide-react";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
+import { RoutinesPageSkeleton } from "@/features/routines/components";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
 import type { Routine } from "@/features/routines/types";
@@ -122,11 +123,7 @@ const RoutinesPage = () => {
       </div>
 
       {/* Loading State */}
-      {isPending && (
-        <div className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      )}
+      {isPending && <RoutinesPageSkeleton />}
 
       {/* Routines Grid */}
       {!isPending && (

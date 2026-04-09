@@ -8,6 +8,7 @@ import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons
 import ExerciseTypeDetailsPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypeDetailsPageSkeleton";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
+import RoutinesPageSkeleton from "@/features/routines/components/skeletons/RoutinesPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -112,19 +113,7 @@ const RoutinesPageFallback = () => (
         <Skeleton className="h-10 w-full sm:w-40" />
       </div>
     </div>
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="rounded-2xl border p-4 text-left">
-          <Skeleton className="mb-3 h-6 w-2/3" />
-          <Skeleton className="mb-2 h-4 w-full" />
-          <Skeleton className="mb-4 h-4 w-5/6" />
-          <div className="flex gap-2">
-            <Skeleton className="h-9 flex-1" />
-            <Skeleton className="h-9 flex-1" />
-          </div>
-        </div>
-      ))}
-    </div>
+    <RoutinesPageSkeleton />
   </div>
 );
 

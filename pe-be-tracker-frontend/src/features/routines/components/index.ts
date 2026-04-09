@@ -4,3 +4,4 @@ export { RoutineQuickStartCard } from "./RoutineQuickStartCard/RoutineQuickStart
 export { RoutineInfoCard } from "./RoutineInfoCard/RoutineInfoCard";
 export { RoutineTemplatesCard } from "./RoutineTemplatesCard/RoutineTemplatesCard";
 export { default as RoutineDetailsPageSkeleton } from "./skeletons/RoutineDetailsPageSkeleton";
+export { default as RoutinesPageSkeleton } from "./skeletons/RoutinesPageSkeleton";
