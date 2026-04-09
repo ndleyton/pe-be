@@ -46,13 +46,13 @@ Notes:
 
 ## Frontend Commands
 
-- Install dependencies: `cd pe-be-tracker-frontend && npm install`
-- Start dev server: `cd pe-be-tracker-frontend && npm run dev`
-- Run linting: `cd pe-be-tracker-frontend && npm run lint`
-- Run type checking: `cd pe-be-tracker-frontend && npm run typecheck`
-- Run unit tests: `cd pe-be-tracker-frontend && npm test`
-- Run coverage: `cd pe-be-tracker-frontend && npm run test:coverage`
-- Run Playwright E2E: `cd pe-be-tracker-frontend && npm run test:e2e`
+- Install dependencies: `cd pe-be-tracker-frontend && corepack enable && pnpm install`
+- Start dev server: `cd pe-be-tracker-frontend && pnpm run dev`
+- Run linting: `cd pe-be-tracker-frontend && pnpm run lint`
+- Run type checking: `cd pe-be-tracker-frontend && pnpm run typecheck`
+- Run unit tests: `cd pe-be-tracker-frontend && pnpm test`
+- Run coverage: `cd pe-be-tracker-frontend && pnpm run test:coverage`
+- Run Playwright E2E: `cd pe-be-tracker-frontend && pnpm run test:e2e`
 
 Notes:
 - Frontend scripts assume `node_modules` is installed first.
@@ -166,7 +166,7 @@ Prefer defensive migrations for schema changes that may hit drifted environments
 
 1. Run `ruff` and the relevant backend tests before handoff.
 2. Use focused tests during iteration, then run broader coverage before finalizing backend changes.
-3. For frontend work, run the relevant npm checks from `pe-be-tracker-frontend/`.
+3. For frontend work, run the relevant pnpm checks from `pe-be-tracker-frontend/`.
 4. When extracting significant frontend logic into custom hooks, add dedicated hook tests for the new behavior instead of relying only on page/component tests.
 5. If a refactor introduces new reusable frontend test data shapes, add them to `pe-be-tracker-frontend/src/test/fixtures/` and reuse them instead of copying nested objects between tests.
 6. When refactoring frontend pages, preserve or improve partial rendering behavior. Prefer section loading states and skeletons over coarse route-level loading gates.

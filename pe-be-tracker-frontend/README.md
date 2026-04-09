@@ -16,7 +16,8 @@ A React + TypeScript fitness tracking application with local-first guest mode an
 1. **Install dependencies**:
 
    ```bash
-   npm install
+   corepack enable
+   pnpm install
    ```
 
 2. **Set up environment variables** (see section below)
@@ -24,7 +25,7 @@ A React + TypeScript fitness tracking application with local-first guest mode an
 3. **Start the development server**:
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 4. **Visit the app**: Open your browser to `http://localhost:5173`
@@ -79,7 +80,7 @@ The app supports Google OAuth for secure authentication:
 ### Run Tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 ### Test Coverage
@@ -141,7 +142,7 @@ This project relies on Vite's built-in environment system. **Only variables pref
 Create per-environment files at the root of `personalbestie-frontend`:
 
 ```
-.env.development      # loaded while `npm run dev`
+.env.development      # loaded while `pnpm run dev`
 .env.production       # loaded when building/previewing the production bundle
 .env.local            # values shared across modes, ignored by git
 .env.<mode>.local     # mode-specific + git-ignored

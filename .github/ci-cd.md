@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-This repository uses GitHub Actions for automated testing, packaging, and deployment support.
+This repository uses GitHub Actions for automated testing, packaging, and deployment support, and Dependabot for automated dependency updates.
 
 The deployment model is in transition after the migration from Render-hosted backend infrastructure to a Hetzner VPS. CI is active today, production VPS deployment is supported today through a manual GitHub Actions workflow, and fuller automatic deployment from `main` is an upcoming feature rather than the current state.
 
@@ -43,15 +43,7 @@ The deployment model is in transition after the migration from Render-hosted bac
 - **PR Validation**: Semantic PR titles, security checks
 - **Integration Tests**: Full stack testing when both frontend/backend change
 
-### 6. Dependency Updates (`dependency-update.yml`)
-**Triggers:** Weekly schedule (Mondays 9 AM UTC) + manual dispatch
-
-**Jobs:**
-- **Frontend Updates**: Auto-update npm dependencies
-- **Backend Updates**: Auto-update uv dependencies
-- Creates PRs for review
-
-### 7. Release (`release.yml`)
+### 6. Release (`release.yml`)
 **Triggers:** Git tags starting with `v*`
 
 **Jobs:**
@@ -95,6 +87,11 @@ Create these environments in GitHub Settings:
 4. CI runs validation and tests
 5. After approval, merge to `develop`
 6. Staging deployment remains a placeholder in GitHub Actions today
+
+### Dependency Updates:
+1. Dependabot opens frontend and backend dependency PRs on the configured weekly schedule
+2. CI validates the update PRs like any other change
+3. Review and merge selectively
 
 ### For Production Release:
 1. Create PR from `develop` to `main`
@@ -163,7 +160,7 @@ Create these environments in GitHub Settings:
 ### Automated Security Scanning
 - **Bandit**: Python security linting
 - **Sensitive File Detection**: Prevents committing secrets
-- **Dependency Vulnerability**: Weekly dependency updates
+- **Dependency Vulnerability**: Dependabot version and security updates
 
 ### Best Practices
 - No hardcoded secrets in code

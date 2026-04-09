@@ -38,11 +38,11 @@ PersonalBestie is a React + TypeScript fitness app built around a personalized A
 
 ## Development
 
-- Install dependencies: `npm install`
-- Start the app: `npm run dev`
-- Run lint: `npm run lint`
-- Run tests: `npm test`
-- Run type checking: `npm run typecheck`
+- Install dependencies: `corepack enable && pnpm install`
+- Start the app: `pnpm run dev`
+- Run lint: `pnpm run lint`
+- Run tests: `pnpm test`
+- Run type checking: `pnpm run typecheck`
 
 ## Architecture Notes
 

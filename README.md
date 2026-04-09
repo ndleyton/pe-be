@@ -47,7 +47,7 @@ The recommended workflow is to run the backend and frontend separately from thei
 
 - Python 3.10 to 3.12
 - [`uv`](https://docs.astral.sh/uv/)
-- Node.js and npm
+- Node.js 20+ with Corepack-enabled pnpm
 - PostgreSQL
 
 ### 1. Start the Backend
@@ -88,9 +88,10 @@ http://localhost:8000/health
 From [`pe-be-tracker-frontend/`](pe-be-tracker-frontend/):
 
 ```bash
-npm install
+corepack enable
+pnpm install
 cp env.example .env.development
-npm run dev
+pnpm run dev
 ```
 
 Minimum frontend env vars:
@@ -153,12 +154,12 @@ Notes:
 ### Frontend
 
 ```bash
-npm run dev
-npm run lint
-npm run typecheck
-npm test
-npm run test:coverage
-npm run test:e2e
+pnpm run dev
+pnpm run lint
+pnpm run typecheck
+pnpm test
+pnpm run test:coverage
+pnpm run test:e2e
 ```
 
 ## Architecture Notes

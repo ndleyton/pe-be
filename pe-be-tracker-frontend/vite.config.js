@@ -47,23 +47,6 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       sourcemap: hasSentrySourceMaps,
-      rollupOptions: {
-        output: {
-          manualChunks: (id) => {
-            if (id.includes("node_modules")) {
-              if (
-                id.includes("recharts") ||
-                id.includes("d3") ||
-                id.includes("html-to-image")
-              ) {
-                return "vendor-viz";
-              }
-              // Group all other core vendors together to prevent React context issues
-              return "vendor";
-            }
-          },
-        },
-      },
     },
     plugins,
     resolve: {
