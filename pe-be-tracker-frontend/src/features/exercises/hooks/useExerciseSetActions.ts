@@ -20,9 +20,10 @@ import {
   DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
   prefersDurationForIntensityUnit,
 } from "@/features/exercises/lib/intensityUnits";
+import { type SetValueMode } from "@/features/exercises/lib/setValue";
 import { useAuthStore, useGuestStore } from "@/stores";
 
-type SetField = "weight" | "reps";
+type SetField = "weight" | "reps" | "duration_seconds";
 
 export const useExerciseSetActions = ({
   exercise,
@@ -174,12 +175,18 @@ export const useExerciseSetActions = ({
             currentSet.intensity_unit_id,
           )
         : value;
+    const localFieldUpdates =
+      field === "weight"
+        ? { intensity: nextValue }
+        : field === "reps"
+          ? { reps: value, duration_seconds: null }
+          : { duration_seconds: value, reps: null };
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
         String(set.id) === String(setId)
           ? {
               ...set,
-              [field === "weight" ? "intensity" : "reps"]: nextValue,
+              ...localFieldUpdates,
             }
           : set,
       ),
@@ -190,7 +197,11 @@ export const useExerciseSetActions = ({
     }
 
     const updateData: UpdateExerciseSetData =
-      field === "weight" ? { intensity: nextValue } : { reps: value };
+      field === "weight"
+        ? { intensity: nextValue }
+        : field === "reps"
+          ? { reps: value, duration_seconds: null }
+          : { duration_seconds: value, reps: null };
 
     queueSetUpdate(setId, updateData);
   };
@@ -209,6 +220,47 @@ export const useExerciseSetActions = ({
     );
     const nextReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSetField(setId, "reps", nextReps);
+  };
+
+  const setSetValueMode = (
+    setId: string | number,
+    mode: SetValueMode,
+  ) => {
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => String(set.id) === String(setId),
+    );
+    if (!currentSet) {
+      return;
+    }
+
+    const updates: Pick<UpdateExerciseSetData, "reps" | "duration_seconds"> =
+      mode === "time"
+        ? {
+            reps: null,
+            duration_seconds:
+              currentSet.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
+          }
+        : {
+            reps: currentSet.reps ?? 0,
+            duration_seconds: null,
+          };
+
+    applyLocalExerciseSets((currentExerciseSets) =>
+      currentExerciseSets.map((set) =>
+        String(set.id) === String(setId)
+          ? {
+              ...set,
+              ...updates,
+            }
+          : set,
+      ),
+    );
+
+    if (!isAuthenticated) {
+      return;
+    }
+
+    queueSetUpdate(setId, updates);
   };
 
   const toggleSetCompletion = async (setId: string | number) => {
@@ -293,21 +345,11 @@ export const useExerciseSetActions = ({
 
     const currentExerciseSets = exerciseSetsRef.current;
     const lastSet = currentExerciseSets[currentExerciseSets.length - 1];
-    const durationPreferred = prefersDurationForIntensityUnit({
-      id: intensityUnitId,
-      name: "",
-      abbreviation: "",
-    });
-    const nextDurationSeconds = lastSet
-      ? (
-        lastSet.duration_seconds ??
-        (lastSet.reps == null && durationPreferred
-          ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
-          : null)
-      )
-      : durationPreferred
-        ? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS
-        : null;
+    const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
+    const nextDurationSeconds = durationPreferred
+      ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
+      : (lastSet?.duration_seconds ?? null);
+    const nextReps = durationPreferred ? null : (lastSet?.reps ?? null);
     const tempId = `temp-${Date.now()}`;
     const nextSetType = currentExerciseSets.length === 0 ? "warmup" : "working";
     const nextIntensity = convertIntensityValue(
@@ -317,7 +359,7 @@ export const useExerciseSetActions = ({
     );
     const optimisticSet: ExerciseSet = {
       id: tempId,
-      reps: lastSet?.reps,
+      reps: nextReps,
       duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
       rpe: lastSet?.rpe ?? null,
@@ -352,7 +394,7 @@ export const useExerciseSetActions = ({
         type: nextSetType,
         ...(nextDurationSeconds != null
           ? { duration_seconds: nextDurationSeconds }
-          : { reps: lastSet?.reps || 0 }),
+          : { reps: nextReps || 0 }),
       };
 
       const createdSet = await createExerciseSet(payload);
@@ -408,6 +450,7 @@ export const useExerciseSetActions = ({
     incrementReps,
     isAuthenticated,
     isUnsavedExercise,
+    setSetValueMode,
     toggleSetCompletion,
     updateExerciseNotes,
     updateSetField,

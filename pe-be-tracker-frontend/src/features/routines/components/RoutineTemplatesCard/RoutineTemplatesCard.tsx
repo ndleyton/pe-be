@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
@@ -5,6 +6,13 @@ import {
   type RoutineEditorSet,
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
+import { prefersDurationForIntensityUnit } from "@/features/exercises/lib/intensityUnits";
+import {
+  canUpdateDurationInputValue,
+  formatDurationInputValue,
+  parseDurationInputValue,
+  resolveSetValueMode,
+} from "@/features/exercises/lib/setValue";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { formatDecimal, parseDecimalInput } from "@/utils/format";
 import { Button } from "@/shared/components/ui/button";
@@ -35,6 +43,22 @@ type RoutineTemplatesCardProps = {
   ) => void;
 };
 
+const buildDurationDrafts = (
+  templates: RoutineEditorTemplate[],
+): Record<string, string> => {
+  const drafts: Record<string, string> = {};
+
+  templates.forEach((template) => {
+    template.set_templates.forEach((setTemplate) => {
+      drafts[`${template.id}-${setTemplate.id}`] = formatDurationInputValue(
+        setTemplate.duration_seconds,
+      );
+    });
+  });
+
+  return drafts;
+};
+
 export const RoutineTemplatesCard = ({
   canEdit,
   editorTemplates,
@@ -46,37 +70,78 @@ export const RoutineTemplatesCard = ({
   onSelectUnit,
   onUpdateSet,
   onUpdateTemplate,
-}: RoutineTemplatesCardProps) => (
-  <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
-    <CardHeader className="pb-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
-              Exercise Sequence
-            </h4>
+}: RoutineTemplatesCardProps) => {
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>(
+    () => buildDurationDrafts(editorTemplates),
+  );
+
+  useEffect(() => {
+    setDurationDrafts((current) => {
+      const nextDrafts: Record<string, string> = {};
+
+      editorTemplates.forEach((template) => {
+        template.set_templates.forEach((setTemplate) => {
+          const key = `${template.id}-${setTemplate.id}`;
+          const formattedDuration = formatDurationInputValue(
+            setTemplate.duration_seconds,
+          );
+          const currentDraft = current[key];
+          const parsedDraft =
+            currentDraft == null ? null : parseDurationInputValue(currentDraft);
+
+          if (
+            currentDraft != null &&
+            parsedDraft == null &&
+            currentDraft.trim() !== ""
+          ) {
+            nextDrafts[key] = currentDraft;
+            return;
+          }
+
+          if (currentDraft != null && parsedDraft === (setTemplate.duration_seconds ?? null)) {
+            nextDrafts[key] = currentDraft;
+            return;
+          }
+
+          nextDrafts[key] = formattedDuration;
+        });
+      });
+
+      return nextDrafts;
+    });
+  }, [editorTemplates]);
+
+  return (
+    <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Exercise Sequence
+              </h4>
+            </div>
           </div>
+          {canEdit && (
+            <Button
+              data-testid="add-routine-exercise-button"
+              onClick={onAddExercise}
+              size="sm"
+              className="rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Exercise
+            </Button>
+          )}
         </div>
-        {canEdit && (
-          <Button
-            data-testid="add-routine-exercise-button"
-            onClick={onAddExercise}
-            size="sm"
-            className="rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Exercise
-          </Button>
-        )}
-      </div>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      {editorTemplates.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground bg-primary/5 italic">
-          No exercise templates yet. Add one to start building the routine.
-        </div>
-      ) : (
-        editorTemplates.map((template, templateIndex) => (
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {editorTemplates.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground bg-primary/5 italic">
+            No exercise templates yet. Add one to start building the routine.
+          </div>
+        ) : (
+          editorTemplates.map((template, templateIndex) => (
           <div
             key={template.id}
             data-testid={`routine-template-${templateIndex}`}
@@ -151,135 +216,191 @@ export const RoutineTemplatesCard = ({
             <div className={canEdit ? "space-y-3" : "flex flex-wrap gap-2 mt-2"}>
               {template.set_templates.map((setTemplate, setIndex) =>
                 canEdit ? (
-                  <div
-                    key={setTemplate.id}
-                    data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
-                    className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
-                  >
-                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/10 pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-black border border-primary/10">
-                          {setIndex + 1}
-                        </div>
-                        <div className="text-xs font-black uppercase tracking-widest opacity-80">
-                          {formatSetSummary(setTemplate)}
-                        </div>
-                      </div>
-                      <Button
-                        data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveSet(template.id, setTemplate.id)}
-                        className="h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-bold transition-all text-[10px] uppercase tracking-wider"
+                  (() => {
+                    const prefersTimeByDefault = prefersDurationForIntensityUnit(
+                      setTemplate.intensity_unit_id,
+                    );
+                    const setValueMode = resolveSetValueMode(
+                      setTemplate,
+                      prefersTimeByDefault,
+                    );
+                    const isTimeMode = setValueMode === "time";
+                    const durationDraftKey = `${template.id}-${setTemplate.id}`;
+                    const durationDraft =
+                      durationDrafts[durationDraftKey] ??
+                      formatDurationInputValue(setTemplate.duration_seconds);
+
+                    return (
+                      <div
+                        key={setTemplate.id}
+                        data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
+                        className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
                       >
-                        <Trash2 className="mr-1.5 h-3 w-3" />
-                        Remove
-                      </Button>
-                    </div>
+                        <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/10 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-black border border-primary/10">
+                              {setIndex + 1}
+                            </div>
+                            <div className="text-xs font-black uppercase tracking-widest opacity-80">
+                              {formatSetSummary(setTemplate)}
+                            </div>
+                          </div>
+                          <Button
+                            data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRemoveSet(template.id, setTemplate.id)}
+                            className="h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-bold transition-all text-[10px] uppercase tracking-wider"
+                          >
+                            <Trash2 className="mr-1.5 h-3 w-3" />
+                            Remove
+                          </Button>
+                        </div>
 
-                    <div className="grid gap-4 md:grid-cols-4">
-                      <div className="grid gap-1.5">
-                        <label
-                          htmlFor={`${template.id}-${setTemplate.id}-reps`}
-                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                        >
-                          Reps
-                        </label>
-                        <Input
-                          id={`${template.id}-${setTemplate.id}-reps`}
-                          data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={setTemplate.reps ?? ""}
-                          onChange={(event) => {
-                            const nextValue = event.target.value;
-                            onUpdateSet(template.id, setTemplate.id, {
-                              reps:
-                                nextValue.trim() === ""
-                                  ? null
-                                  : Number.parseInt(nextValue, 10),
-                            });
-                          }}
-                          placeholder="0"
-                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
-                        />
-                      </div>
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="grid gap-1.5">
+                            <label
+                              htmlFor={`${template.id}-${setTemplate.id}-${isTimeMode ? "time" : "reps"}`}
+                              className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                            >
+                              {isTimeMode ? "Time" : "Reps"}
+                            </label>
+                            {isTimeMode ? (
+                              <Input
+                                id={`${template.id}-${setTemplate.id}-time`}
+                                data-testid={`routine-set-time-${templateIndex}-${setIndex}`}
+                                type="text"
+                                inputMode="numeric"
+                                value={durationDraft}
+                                onChange={(event) => {
+                                  const nextValue = event.target.value;
+                                  if (!canUpdateDurationInputValue(nextValue)) {
+                                    return;
+                                  }
 
-                      <div className="grid gap-1.5">
-                        <label
-                          htmlFor={`${template.id}-${setTemplate.id}-duration`}
-                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                        >
-                          Duration (sec)
-                        </label>
-                        <Input
-                          id={`${template.id}-${setTemplate.id}-duration`}
-                          data-testid={`routine-set-duration-${templateIndex}-${setIndex}`}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={setTemplate.duration_seconds ?? ""}
-                          onChange={(event) => {
-                            const nextValue = event.target.value;
-                            onUpdateSet(template.id, setTemplate.id, {
-                              duration_seconds:
-                                nextValue.trim() === ""
-                                  ? null
-                                  : Number.parseInt(nextValue, 10),
-                            });
-                          }}
-                          placeholder="0"
-                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
-                        />
-                      </div>
+                                  setDurationDrafts((current) => ({
+                                    ...current,
+                                    [durationDraftKey]: nextValue,
+                                  }));
 
-                      <div className="grid gap-1.5">
-                        <label
-                          htmlFor={`${template.id}-${setTemplate.id}-intensity`}
-                          className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                        >
-                          Intensity
-                        </label>
-                        <Input
-                          id={`${template.id}-${setTemplate.id}-intensity`}
-                          data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
-                          inputMode="decimal"
-                          value={
-                            setTemplate.intensity != null
-                              ? formatDecimal(setTemplate.intensity)
-                              : ""
-                          }
-                          onChange={(event) =>
-                            onUpdateSet(template.id, setTemplate.id, {
-                              intensity: parseDecimalInput(event.target.value),
-                            })
-                          }
-                          placeholder="0.0"
-                          className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
-                        />
-                      </div>
+                                  const parsedDuration = parseDurationInputValue(
+                                    nextValue,
+                                  );
+                                  if (parsedDuration == null) {
+                                    return;
+                                  }
 
-                      <div className="grid gap-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">
-                          Unit
-                        </span>
-                        <Button
-                          data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
-                          variant="outline"
-                          className="h-10 rounded-xl bg-primary/5 border-primary/5 hover:border-primary/20 transition-all font-semibold text-xs justify-between"
-                          onClick={() => onSelectUnit(template.id, setTemplate.id)}
-                        >
-                          <span className="truncate">
-                            {setTemplate.intensity_unit
-                              ? setTemplate.intensity_unit.abbreviation
-                              : "---"}
-                          </span>
-                          <span className="text-[8px] opacity-40 uppercase">Change</span>
-                        </Button>
+                                  onUpdateSet(template.id, setTemplate.id, {
+                                    reps: null,
+                                    duration_seconds: parsedDuration,
+                                  });
+                                }}
+                                onBlur={() => {
+                                  const parsedDuration = parseDurationInputValue(
+                                    durationDraft,
+                                  );
+
+                                  if (durationDraft.trim() === "") {
+                                    onUpdateSet(template.id, setTemplate.id, {
+                                      reps: null,
+                                      duration_seconds: null,
+                                    });
+                                    return;
+                                  }
+
+                                  if (parsedDuration == null) {
+                                    setDurationDrafts((current) => ({
+                                      ...current,
+                                      [durationDraftKey]:
+                                        formatDurationInputValue(
+                                          setTemplate.duration_seconds,
+                                        ),
+                                    }));
+                                    return;
+                                  }
+
+                                  onUpdateSet(template.id, setTemplate.id, {
+                                    reps: null,
+                                    duration_seconds: parsedDuration,
+                                  });
+                                }}
+                                placeholder="00:00"
+                                className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                              />
+                            ) : (
+                              <Input
+                                id={`${template.id}-${setTemplate.id}-reps`}
+                                data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={setTemplate.reps ?? ""}
+                                onChange={(event) => {
+                                  const nextValue = event.target.value;
+                                  onUpdateSet(template.id, setTemplate.id, {
+                                    reps:
+                                      nextValue.trim() === ""
+                                        ? null
+                                        : Number.parseInt(nextValue, 10),
+                                    duration_seconds: null,
+                                  });
+                                }}
+                                placeholder="0"
+                                className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                              />
+                            )}
+                          </div>
+
+                          <div className="grid gap-1.5">
+                            <label
+                              htmlFor={`${template.id}-${setTemplate.id}-intensity`}
+                              className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                            >
+                              Intensity
+                            </label>
+                            <Input
+                              id={`${template.id}-${setTemplate.id}-intensity`}
+                              data-testid={`routine-set-intensity-${templateIndex}-${setIndex}`}
+                              inputMode="decimal"
+                              value={
+                                setTemplate.intensity != null
+                                  ? formatDecimal(setTemplate.intensity)
+                                  : ""
+                              }
+                              onChange={(event) =>
+                                onUpdateSet(template.id, setTemplate.id, {
+                                  intensity: parseDecimalInput(event.target.value),
+                                })
+                              }
+                              placeholder="0.0"
+                              className="h-10 rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all font-semibold text-center"
+                            />
+                          </div>
+
+                          <div className="grid gap-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">
+                              Unit
+                            </span>
+                            <Button
+                              data-testid={`routine-set-unit-${templateIndex}-${setIndex}`}
+                              variant="outline"
+                              className="h-10 rounded-xl bg-primary/5 border-primary/5 hover:border-primary/20 transition-all font-semibold text-xs justify-between"
+                              onClick={() => onSelectUnit(template.id, setTemplate.id)}
+                            >
+                              <span className="truncate">
+                                {setTemplate.intensity_unit
+                                  ? setTemplate.intensity_unit.abbreviation
+                                  : "---"}
+                              </span>
+                              <span className="text-[8px] opacity-40 uppercase">
+                                Change
+                              </span>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()
                 ) : (
                   <div
                     key={setTemplate.id}
@@ -309,6 +430,7 @@ export const RoutineTemplatesCard = ({
           </div>
         ))
       )}
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};

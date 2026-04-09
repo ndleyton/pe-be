@@ -207,6 +207,7 @@ describe("useExerciseRowState", () => {
 
     expect(result.current.currentIntensityUnit.abbreviation).toBe("kg");
     expect(result.current.intensityInputs["1"]).toBe("50");
+    expect(result.current.durationInputs["1"]).toBe("");
 
     act(() => {
       result.current.setExerciseSettingsOpen(true);

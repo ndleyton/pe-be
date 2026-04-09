@@ -7,6 +7,7 @@ import type {
 } from "@/features/exercises/api";
 import {
   DEFAULT_INTENSITY_UNIT,
+  buildDurationInputs,
   buildIntensityInputs,
   buildRepsInputs,
 } from "@/features/exercises/lib/exerciseRow";
@@ -51,6 +52,9 @@ export const useExerciseRowState = ({
   const [repsInputs, setRepsInputs] = useState<Record<string, string>>(() =>
     buildRepsInputs(exercise.exercise_sets || []),
   );
+  const [durationInputs, setDurationInputs] = useState<Record<string, string>>(
+    () => buildDurationInputs(exercise.exercise_sets || []),
+  );
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState(false);
   const [exerciseNotesValue, setExerciseNotesValue] = useState("");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
@@ -64,6 +68,7 @@ export const useExerciseRowState = ({
   useEffect(() => {
     setIntensityInputs(buildIntensityInputs(exerciseSets, currentIntensityUnit.id));
     setRepsInputs(buildRepsInputs(exerciseSets));
+    setDurationInputs(buildDurationInputs(exerciseSets));
   }, [currentIntensityUnit.id, exerciseSets]);
 
   useEffect(() => {
@@ -150,6 +155,7 @@ export const useExerciseRowState = ({
   return {
     activeSetId,
     currentIntensityUnit,
+    durationInputs,
     exerciseNotesOpen,
     exerciseNotesValue,
     exerciseSettingsOpen,
@@ -160,6 +166,11 @@ export const useExerciseRowState = ({
     openExerciseNotes,
     openSetOptions,
     repsInputs,
+    setDurationInputValue: (setId: string | number, value: string) =>
+      setDurationInputs((current) => ({
+        ...current,
+        [String(setId)]: value,
+      })),
     setExerciseNotesValue,
     setExerciseSettingsOpen,
     setIntensityInputValue: (setId: string | number, value: string) =>

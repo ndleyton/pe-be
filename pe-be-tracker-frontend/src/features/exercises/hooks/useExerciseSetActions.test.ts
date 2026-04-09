@@ -137,6 +137,47 @@ describe("useExerciseSetActions", () => {
     expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
       intensity: 100,
       reps: 12,
+      duration_seconds: null,
+    });
+  });
+
+  it("stores time updates as duration_seconds and clears reps", async () => {
+    const exercise = makeExercise({
+      id: 123,
+      workout_id: 456,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: 10,
+          duration_seconds: null,
+          intensity: 12,
+          intensity_unit_id: 3,
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+        workoutId: "456",
+      }),
+    );
+
+    act(() => {
+      result.current.updateSetField(1, "duration_seconds", 605);
+    });
+
+    expect(result.current.exerciseSets[0].duration_seconds).toBe(605);
+    expect(result.current.exerciseSets[0].reps).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
+      duration_seconds: 605,
+      reps: null,
     });
   });
 
@@ -304,6 +345,96 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "warmup",
+    });
+  });
+
+  it("swaps rep-based speed sets to time when creating a new set", async () => {
+    mockCreateExerciseSet.mockResolvedValue(
+      makeExerciseSet({
+        id: 999,
+        reps: null,
+        duration_seconds: 600,
+        intensity: 10,
+        intensity_unit_id: 3,
+        exercise_id: 123,
+      }),
+    );
+
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: 12,
+          duration_seconds: null,
+          intensity: 10,
+          intensity_unit_id: 3,
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.addSet(3);
+    });
+
+    expect(result.current.exerciseSets[1].reps).toBeNull();
+    expect(result.current.exerciseSets[1].duration_seconds).toBe(600);
+    expect(mockCreateExerciseSet).toHaveBeenCalledWith({
+      duration_seconds: 600,
+      intensity: 10,
+      rpe: null,
+      intensity_unit_id: 3,
+      exercise_id: 123,
+      rest_time_seconds: 0,
+      done: false,
+      notes: undefined,
+      type: "working",
+    });
+  });
+
+  it("can toggle a set between reps and time", async () => {
+    const exercise = makeExercise({
+      id: 123,
+      workout_id: 456,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: 10,
+          duration_seconds: null,
+          intensity_unit_id: 3,
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+        workoutId: "456",
+      }),
+    );
+
+    act(() => {
+      result.current.setSetValueMode(1, "time");
+    });
+
+    expect(result.current.exerciseSets[0].reps).toBeNull();
+    expect(result.current.exerciseSets[0].duration_seconds).toBe(600);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
+      reps: null,
+      duration_seconds: 600,
     });
   });
 

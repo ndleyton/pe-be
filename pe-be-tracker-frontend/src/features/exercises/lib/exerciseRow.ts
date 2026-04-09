@@ -9,6 +9,7 @@ import {
   convertIntensityValue,
   type GuestIntensityUnit,
 } from "@/features/exercises/lib/intensityUnits";
+import { formatDurationInputValue } from "@/features/exercises/lib/setValue";
 
 export interface ExerciseRowProps {
   exercise: Exercise;
@@ -50,6 +51,14 @@ export const buildRepsInputs = (sets: ExerciseSet[]): Record<string, string> =>
   sets.reduce<Record<string, string>>((acc, set) => {
     acc[String(set.id)] =
       set.reps === null || set.reps === undefined ? "" : String(set.reps);
+    return acc;
+  }, {});
+
+export const buildDurationInputs = (
+  sets: ExerciseSet[],
+): Record<string, string> =>
+  sets.reduce<Record<string, string>>((acc, set) => {
+    acc[String(set.id)] = formatDurationInputValue(set.duration_seconds);
     return acc;
   }, {});
 
