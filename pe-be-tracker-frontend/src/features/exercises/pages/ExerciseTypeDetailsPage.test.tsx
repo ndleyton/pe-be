@@ -209,12 +209,20 @@ describe("ExerciseTypeDetailsPage", () => {
   });
 
   it("disables the save button while an update is pending", async () => {
-    let resolveUpdate: ((value: ReturnType<typeof makeExerciseType>) => void) | null =
-      null;
+    let resolveUpdate = () => {};
     mockUpdateExerciseType.mockImplementation(
       () =>
         new Promise((resolve) => {
-          resolveUpdate = resolve;
+          resolveUpdate = () =>
+            resolve(
+              makeExerciseType({
+                id: 12,
+                name: "Lat Pulldown",
+                status: "released",
+                owner_id: null,
+                images: [],
+              }),
+            );
         }),
     );
     mockGetExerciseTypeById.mockResolvedValue(
@@ -244,15 +252,7 @@ describe("ExerciseTypeDetailsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /saving/i }));
     expect(mockUpdateExerciseType).toHaveBeenCalledTimes(1);
 
-    resolveUpdate?.(
-      makeExerciseType({
-        id: 12,
-        name: "Lat Pulldown",
-        status: "released",
-        owner_id: null,
-        images: [],
-      }),
-    );
+    resolveUpdate();
   });
 
   it("keeps candidate and in-review exercise types editable without the extra button", async () => {
