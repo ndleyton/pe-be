@@ -7,9 +7,11 @@ import LoginPage from "./features/auth/pages/LoginPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
-import { RoutineDetailsLoadingState } from "@/features/routines/components";
+import {
+  RoutineDetailsLoadingState,
+  RoutinesPageSkeleton,
+} from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
-import { RoutinesPageSkeleton } from "@/features/routines/components/skeletons/RoutinesPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
