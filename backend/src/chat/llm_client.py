@@ -49,6 +49,7 @@ class ConversationMessage:
     role: ChatRole
     content: str
     parts: list[ContentPart] = field(default_factory=list)
+    provider_parts: list[Any] = field(default_factory=list)
     tool_call_id: Optional[str] = None
     tool_name: Optional[str] = None
     tool_calls: list[ToolCall] = field(default_factory=list)
@@ -261,16 +262,11 @@ class GeminiGenAIClient:
                 continue
 
             if message.role == "assistant":
-                parts: list[types.Part] = []
-                if message.content:
-                    parts.append(types.Part.from_text(text=message.content))
-                for tool_call in message.tool_calls:
-                    parts.append(
-                        types.Part.from_function_call(
-                            name=tool_call.name,
-                            args=tool_call.args,
-                        )
-                    )
+                parts = (
+                    list(message.provider_parts)
+                    if message.provider_parts
+                    else self._to_genai_assistant_parts(message)
+                )
                 if parts:
                     contents.append(types.Content(role="model", parts=parts))
                 continue
@@ -388,13 +384,30 @@ class GeminiGenAIClient:
 
         return parts
 
+    def _to_genai_assistant_parts(
+        self, message: ConversationMessage
+    ) -> list[types.Part]:
+        parts: list[types.Part] = []
+        if message.content:
+            parts.append(types.Part.from_text(text=message.content))
+        for tool_call in message.tool_calls:
+            parts.append(
+                types.Part.from_function_call(
+                    name=tool_call.name,
+                    args=tool_call.args,
+                )
+            )
+        return parts
+
     def _normalize_response(self, response: Any) -> LLMResponse:
         tool_calls: list[ToolCall] = []
         text_content = ""
+        provider_parts: list[Any] = []
 
         candidates = getattr(response, "candidates", None) or []
         if candidates and getattr(candidates[0], "content", None):
             for index, part in enumerate(candidates[0].content.parts or []):
+                provider_parts.append(part)
                 if getattr(part, "text", None):
                     text = part.text
                     text_content = (
@@ -424,6 +437,7 @@ class GeminiGenAIClient:
                     if text_content
                     else []
                 ),
+                provider_parts=provider_parts,
                 tool_calls=tool_calls,
             ),
             metadata=self._extract_metadata(response),

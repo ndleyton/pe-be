@@ -75,6 +75,7 @@ async def test_gemini_client_normalizes_provider_response():
 
     assert normalized.message.role == "assistant"
     assert normalized.message.content == "Ready"
+    assert len(normalized.message.provider_parts) == 2
     assert len(normalized.tool_calls) == 1
     assert normalized.tool_calls[0].name == "get_last_workout_summary"
     assert normalized.tool_calls[0].args == {}
@@ -355,6 +356,58 @@ async def test_gemini_client_acomplete_messages(mock_client_class):
 
     # Assert generate was called inside
     mock_aio.models.generate_content.assert_called_once()
+
+
+@patch("google.genai.Client")
+async def test_gemini_client_reuses_provider_parts_for_assistant_history(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+    mock_aio = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.candidates = [
+        MagicMock(content=MagicMock(parts=[types.Part.from_text(text="Done")]))
+    ]
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client.aio = mock_aio
+    mock_client_class.return_value = mock_client
+
+    client = GeminiGenAIClient(api_key="test")
+    client.client = mock_client
+
+    provider_function_part = types.Part.from_function_call(
+        name="get_last_workout_summary",
+        args={},
+    )
+    messages = [
+        ConversationMessage(role="system", content="System instruction"),
+        ConversationMessage(role="user", content="Hello"),
+        ConversationMessage(
+            role="assistant",
+            content="",
+            provider_parts=[provider_function_part],
+            tool_calls=[
+                ToolCall(call_id="123", name="ignored_tool_name", args={"a": 1})
+            ],
+        ),
+        ConversationMessage(
+            role="tool",
+            content="Tool result",
+            tool_name="get_last_workout_summary",
+        ),
+    ]
+
+    tool = ToolDefinition(
+        name="get_last_workout_summary",
+        description="A tool",
+        handler=_unused_handler,
+    )
+
+    await client.acomplete(messages, [tool])
+
+    call_kwargs = mock_aio.models.generate_content.await_args.kwargs
+    contents = call_kwargs["contents"]
+    assert contents[1].parts[0] is provider_function_part
 
 
 async def test_gemini_client_builds_image_parts_from_uri():
