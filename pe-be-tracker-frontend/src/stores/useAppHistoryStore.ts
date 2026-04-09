@@ -55,10 +55,6 @@ export const useAppHistoryStore = create<AppHistoryState>()((set) => ({
         };
       }
 
-      if (lastEntry.key === entry.key) {
-        return state;
-      }
-
       return { entries: [entry] };
     }),
   reset: () => set({ entries: [] }),
