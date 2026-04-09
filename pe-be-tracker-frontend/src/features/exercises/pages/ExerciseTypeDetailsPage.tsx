@@ -595,7 +595,13 @@ const ExerciseTypeDetailsPage = () => {
               ) : null}
               <Button
                 className="w-full rounded-xl bg-primary/95 font-bold shadow-lg shadow-primary/10 backdrop-blur-sm sm:w-auto"
-                onClick={() => updateMutation.mutate()}
+                disabled={updateMutation.isPending}
+                onClick={() => {
+                  if (updateMutation.isPending) {
+                    return;
+                  }
+                  updateMutation.mutate();
+                }}
               >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>

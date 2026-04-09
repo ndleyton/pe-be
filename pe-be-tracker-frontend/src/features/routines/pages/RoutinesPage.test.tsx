@@ -43,9 +43,12 @@ describe("RoutinesPage", () => {
     mockUseInfiniteScroll.mockReturnValue({
       data: [],
       isPending: true,
+      isFetched: false,
       isFetchingNextPage: false,
       hasMore: false,
       error: null,
+      refetch: vi.fn(),
+      reset: vi.fn(),
     });
 
     const { container } = render(<RoutinesPage />);
