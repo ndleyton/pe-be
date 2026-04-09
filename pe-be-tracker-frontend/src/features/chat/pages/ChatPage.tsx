@@ -785,11 +785,10 @@ const ChatPage = () => {
                 <Bot className="text-primary h-8 w-8" />
               </div>
               <h3 className="mb-2 text-lg font-semibold">
-                Welcome to your Personal AI Trainer
+                Meet Personal Bestie
               </h3>
               <p className="text-muted-foreground mb-6 text-sm">
-                Ask questions, log workouts, or attach photos for coaching and
-                analysis.
+                Ask questions, log workouts, get coaching, or create a personalized routine just for you.
               </p>
               <div className="mx-auto max-w-md space-y-2">
                 <p className="text-muted-foreground mb-3 text-xs font-medium">
