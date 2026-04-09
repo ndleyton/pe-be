@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@/test/testUtils";
+import { render, waitFor } from "@/test/testUtils";
 import AnatomicalImage from "./AnatomicalImage";
 import { vi } from "vitest";
 
