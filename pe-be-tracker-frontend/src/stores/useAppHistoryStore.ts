@@ -33,14 +33,8 @@ export const useAppHistoryStore = create<AppHistoryState>()((set) => ({
       }
 
       if (action === "REPLACE") {
-        if (lastEntry.key === entry.key) {
-          if (lastEntry.path === entry.path) {
-            return state;
-          }
-
-          return {
-            entries: [...state.entries.slice(0, -1), entry],
-          };
+        if (lastEntry.key === entry.key && lastEntry.path === entry.path) {
+          return state;
         }
 
         return {

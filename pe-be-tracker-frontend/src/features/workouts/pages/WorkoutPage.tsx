@@ -588,11 +588,13 @@ const WorkoutPage = () => {
   };
 
   const handleBack = () => {
-    const endTime = isAuthenticated
-      ? serverWorkout?.end_time
-      : guestWorkout?.end_time;
+    const workout = isAuthenticated ? serverWorkout : guestWorkout;
 
-    if (!endTime) {
+    if (workout === undefined) {
+      return;
+    }
+
+    if (!workout.end_time) {
       setShowFinishModal(true);
       return;
     }
