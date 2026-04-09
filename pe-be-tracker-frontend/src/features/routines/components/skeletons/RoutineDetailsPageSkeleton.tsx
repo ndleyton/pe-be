@@ -80,7 +80,7 @@ const RoutineTemplatesCardSkeleton = () => (
   </Card>
 );
 
-const RoutineDetailsPageSkeleton = () => (
+export const RoutineDetailsPageSkeleton = () => (
   <div className="space-y-8 overflow-hidden" aria-busy="true" aria-live="polite">
     <RoutineInfoCardSkeleton />
 
@@ -98,5 +98,3 @@ const RoutineDetailsPageSkeleton = () => (
     <RoutineTemplatesCardSkeleton />
   </div>
 );
-
-export default RoutineDetailsPageSkeleton;

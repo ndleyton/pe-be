@@ -30,7 +30,7 @@ const RoutineQuickStartCardSkeleton = () => (
   </Card>
 );
 
-const RoutinesPageSkeleton = ({
+export const RoutinesPageSkeleton = ({
   count = 6,
 }: RoutinesPageSkeletonProps) => (
   <div
@@ -43,5 +43,3 @@ const RoutinesPageSkeleton = ({
     ))}
   </div>
 );
-
-export default RoutinesPageSkeleton;

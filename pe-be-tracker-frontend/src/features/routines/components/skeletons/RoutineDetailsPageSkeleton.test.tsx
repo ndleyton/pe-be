@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { render } from "@/test/testUtils";
 
-import RoutineDetailsPageSkeleton from "./RoutineDetailsPageSkeleton";
+import { RoutineDetailsPageSkeleton } from "./RoutineDetailsPageSkeleton";
 
 describe("RoutineDetailsPageSkeleton", () => {
   it("stacks the template header placeholders before the small breakpoint", () => {

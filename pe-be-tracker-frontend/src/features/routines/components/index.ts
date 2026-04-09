@@ -3,5 +3,6 @@ export { SaveRoutineModal } from "./SaveRoutineModal/SaveRoutineModal";
 export { RoutineQuickStartCard } from "./RoutineQuickStartCard/RoutineQuickStartCard";
 export { RoutineInfoCard } from "./RoutineInfoCard/RoutineInfoCard";
 export { RoutineTemplatesCard } from "./RoutineTemplatesCard/RoutineTemplatesCard";
-export { default as RoutineDetailsPageSkeleton } from "./skeletons/RoutineDetailsPageSkeleton";
-export { default as RoutinesPageSkeleton } from "./skeletons/RoutinesPageSkeleton";
+export { RoutineDetailsLoadingState } from "./skeletons/RoutineDetailsLoadingState";
+export { RoutineDetailsPageSkeleton } from "./skeletons/RoutineDetailsPageSkeleton";
+export { RoutinesPageSkeleton } from "./skeletons/RoutinesPageSkeleton";
