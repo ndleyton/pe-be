@@ -245,7 +245,7 @@ const FinishWorkoutModal = ({
                       <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                     </div>
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
-                      Personal AI Coach
+                      Personal Bestie
                     </h4>
                   </div>
                   {onRegenerateRecap && !isRecapLoading && (

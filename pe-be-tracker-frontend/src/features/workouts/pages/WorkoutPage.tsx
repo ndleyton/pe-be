@@ -17,7 +17,7 @@ import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { endpoints } from "@/shared/api/endpoints";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import {
   useGuestStore,
@@ -776,16 +776,23 @@ const WorkoutPage = () => {
 
       <div className="space-y-6">
         {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
-          <div className="bg-card/80 border-border/40 rounded-2xl border p-5 text-left shadow-xl backdrop-blur-md">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-lg">✨</span>
-              <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
-                Workout Summary
-              </h4>
+          <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 text-left mb-6">
+            {/* Subtle background glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
+            
+            <div className="relative">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+                  Personal Bestie
+                </h4>
+              </div>
+              <p className="text-foreground/90 text-[13px] leading-relaxed italic font-medium">
+                &ldquo;{serverWorkout.recap}&rdquo;
+              </p>
             </div>
-            <p className="text-foreground text-sm leading-relaxed italic">
-              &ldquo;{serverWorkout.recap}&rdquo;
-            </p>
           </div>
         )}
         <ExerciseList

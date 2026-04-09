@@ -771,7 +771,7 @@ const ChatPage = () => {
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-base leading-tight font-semibold">
-            AI Personal Trainer
+            Personal Bestie
           </h1>
           <p className="text-muted-foreground text-xs">Text + image coaching</p>
         </div>
@@ -785,7 +785,7 @@ const ChatPage = () => {
                 <Bot className="text-primary h-8 w-8" />
               </div>
               <h3 className="mb-2 text-lg font-semibold">
-                Welcome to your AI Personal Trainer
+                Welcome to your Personal AI Trainer
               </h3>
               <p className="text-muted-foreground mb-6 text-sm">
                 Ask questions, log workouts, or attach photos for coaching and
@@ -826,21 +826,19 @@ const ChatPage = () => {
               >
                 {message.role !== "user" && (
                   <div
-                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      message.role === "system" ? "bg-accent/20" : "bg-muted"
-                    }`}
+                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${message.role === "system" ? "bg-accent/20" : "bg-muted"
+                      }`}
                   >
                     <Bot className="text-muted-foreground h-4 w-4" />
                   </div>
                 )}
                 <div
-                  className={`px-4 py-2.5 ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
-                      : message.role === "system"
-                        ? "bg-accent/50 text-accent-foreground rounded-2xl shadow-sm"
-                        : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
-                  }`}
+                  className={`px-4 py-2.5 ${message.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
+                    : message.role === "system"
+                      ? "bg-accent/50 text-accent-foreground rounded-2xl shadow-sm"
+                      : "bg-muted/80 text-foreground rounded-2xl rounded-tl-sm shadow-sm"
+                    }`}
                 >
                   {renderMessageParts(message)}
                   {renderMessageWidget(message)}
