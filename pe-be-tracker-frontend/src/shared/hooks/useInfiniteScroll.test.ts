@@ -1,11 +1,34 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from "vitest";
 import { renderHook, waitFor } from "@/test/testUtils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useInfiniteScroll } from "./useInfiniteScroll";
 
 // Helper to wrap arrays into cursor response
-const wrap = <T>(items: T[], next: number | null = null) => ({
+type CursorResponse<T> = {
+  data: T[];
+  next_cursor?: number | null;
+};
+
+type TestItem = {
+  id: number;
+  name: string;
+};
+
+type TestQueryFn = (
+  cursor?: number | null,
+  limit?: number,
+) => Promise<CursorResponse<TestItem>>;
+
+const wrap = <T>(items: T[], next: number | null = null): CursorResponse<T> => ({
   data: items,
   next_cursor: next,
 });
@@ -56,10 +79,10 @@ Object.defineProperty(document.documentElement, "scrollTop", {
 });
 
 describe("useInfiniteScroll", () => {
-  let mockQueryFn: ReturnType<typeof vi.fn>;
+  let mockQueryFn: Mock<TestQueryFn>;
 
   beforeEach(() => {
-    mockQueryFn = vi.fn();
+    mockQueryFn = vi.fn<TestQueryFn>();
     vi.clearAllMocks();
   });
 

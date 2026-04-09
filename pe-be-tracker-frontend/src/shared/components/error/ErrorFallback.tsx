@@ -12,20 +12,27 @@ interface CustomFallbackProps extends FallbackProps {
   message?: string;
 }
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : null;
+
+const getErrorStack = (error: unknown) =>
+  error instanceof Error ? error.stack : null;
+
 export const ErrorFallback = ({
   error,
   resetErrorBoundary,
   message,
 }: CustomFallbackProps) => {
+  const fallbackMessage = getErrorMessage(error);
   const errorMessage =
-    message || error?.message || "An unexpected error occurred";
+    message || fallbackMessage || "An unexpected error occurred";
   const isNetworkError =
-    error?.message?.includes("Network Error") ||
-    error?.message?.includes("fetch");
+    fallbackMessage?.includes("Network Error") ||
+    fallbackMessage?.includes("fetch");
   const isAuthError =
-    error?.message?.includes("401") ||
-    error?.message?.includes("403") ||
-    error?.message?.includes("Unauthorized");
+    fallbackMessage?.includes("401") ||
+    fallbackMessage?.includes("403") ||
+    fallbackMessage?.includes("Unauthorized");
 
   const handleGoHome = () => {
     window.location.href = "/";
@@ -104,7 +111,7 @@ export const ErrorFallback = ({
                   Developer Details (Development Only)
                 </summary>
                 <pre className="text-muted-foreground mt-2 max-h-40 overflow-auto text-xs">
-                  {error?.stack || error?.toString()}
+                  {getErrorStack(error) || String(error)}
                 </pre>
               </details>
             )}

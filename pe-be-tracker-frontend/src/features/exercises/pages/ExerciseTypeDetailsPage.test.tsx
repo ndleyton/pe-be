@@ -157,7 +157,9 @@ describe("ExerciseTypeDetailsPage", () => {
     expect(
       screen.queryByRole("heading", { name: /edit exercise type/i }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /^edit$/i }),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /^edit$/i }));
 

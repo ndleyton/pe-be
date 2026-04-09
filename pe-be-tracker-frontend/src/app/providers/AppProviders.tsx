@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "react-error-boundary";
@@ -41,11 +41,12 @@ const SimpleErrorFallback = () => (
 const PostHogErrorBoundary = ({ children }: { children: ReactNode }) => {
   const posthog = usePostHog();
 
-  const handleError = (error: Error) => {
+  const handleError = (error: unknown, info: ErrorInfo) => {
     console.error("App Error:", error);
     posthog?.captureException(error, {
       source: "react-error-boundary",
       timestamp: new Date().toISOString(),
+      componentStack: info.componentStack,
     });
   };
 

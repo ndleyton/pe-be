@@ -12,6 +12,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "ignoreDeprecations": "6.0",
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "ESNext",
@@ -50,7 +51,8 @@
       ]
     },
     "types": [
-      "vite/client"
+      "vite/client",
+      "node"
     ]
   },
   "include": [

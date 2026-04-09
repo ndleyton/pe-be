@@ -86,7 +86,9 @@ describe("ExerciseTypeImageAdminPage", () => {
       expect(mockGetExerciseImageOptions).toHaveBeenCalledWith("12");
     });
 
-    expect(screen.getByText(/generation style/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/generation style/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /generate clean outline/i }),
     ).toBeInTheDocument();
