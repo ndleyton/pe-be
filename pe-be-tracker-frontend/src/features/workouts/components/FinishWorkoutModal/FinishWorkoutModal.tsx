@@ -195,7 +195,7 @@ const FinishWorkoutModal = ({
                     className="h-8 w-8"
                     crossOrigin="anonymous"
                   />
-                  <div className="text-primary flex flex-col items-start text-left text-base leading-none font-bold">
+                  <div className="flex flex-col items-start drop-shadow-sm text-left text-base leading-[0.9] font-black tracking-tight text-primary">
                     <span>Personal</span>
                     <span>Bestie.com</span>
                   </div>
