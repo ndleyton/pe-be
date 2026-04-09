@@ -141,22 +141,12 @@ jobs:
         env:
           VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
         run: |
-          nohup pnpm run dev:test >/tmp/frontend.log 2>&1 &
-          timeout=60
-          elapsed=0
-          ready=0
-          while [ $elapsed -lt $timeout ]; do
-            if curl -fsS http://localhost:5173 > /dev/null 2>&1; then
-              ready=1
-              break
-            fi
+          pnpm run dev:test >/tmp/frontend.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://localhost:5173 >/dev/null 2>&1 && break
             sleep 2
-            elapsed=$((elapsed + 2))
           done
-          if [ "$ready" -ne 1 ]; then
-            echo "Timeout waiting for frontend dev server"
-            exit 1
-          fi
+          curl -fsS http://localhost:5173 >/dev/null
 
       - name: Run frontend E2E tests
         working-directory: pe-be-tracker-frontend
