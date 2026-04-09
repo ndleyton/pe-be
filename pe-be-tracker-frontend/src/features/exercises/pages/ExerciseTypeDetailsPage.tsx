@@ -38,6 +38,7 @@ import { PersonalBestInfo } from "@/features/exercises/components/PersonalBestIn
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
+import { useAppBackNavigation } from "@/shared/hooks";
 import {
   Alert,
   AlertDescription,
@@ -80,6 +81,7 @@ const ExerciseTypeDetailsPage = () => {
   const [firstImageLoaded, setFirstImageLoaded] = useState<boolean>(false);
   const { exerciseTypeId } = useParams<{ exerciseTypeId: string }>();
   const navigate = useNavigate();
+  const handleBack = useAppBackNavigation("/exercise-types");
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -431,10 +433,15 @@ const ExerciseTypeDetailsPage = () => {
         {/* Title Row */}
         <div className="flex items-start justify-between gap-3 sm:gap-4 text-left">
           <div className="flex items-start gap-3 sm:gap-4 flex-1">
-            <Button variant="ghost" size="icon" asChild className="mt-1 shrink-0">
-              <Link to="/exercise-types">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mt-1 shrink-0"
+              type="button"
+              aria-label="Go back"
+              onClick={handleBack}
+            >
                 <ArrowLeft className="h-5 w-5" />
-              </Link>
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

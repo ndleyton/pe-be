@@ -8,6 +8,7 @@ import SideDrawer from "../shared/components/layout/SideDrawer";
 import DesktopSidebar from "../shared/components/layout/DesktopSidebar";
 import BottomNav from "../shared/components/layout/BottomNav";
 import GuestModeBanner from "../shared/components/feedback/GuestModeBanner";
+import { useAppHistoryTracker } from "@/shared/hooks";
 
 const getActiveWorkout = <T extends {
   id: string | number;
@@ -30,6 +31,8 @@ const getActiveWorkout = <T extends {
   }, null);
 
 const AppLayout = () => {
+  useAppHistoryTracker();
+
   // Guest banner is rendered as an overlay so it won't affect layout
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

@@ -78,6 +78,7 @@ const mockGuestState = {
 const mockAuthState = {
   isAuthenticated: true,
   loading: false,
+  initialized: true,
 };
 
 const mockUIState = {
@@ -86,6 +87,12 @@ const mockUIState = {
   stopWorkoutTimer: vi.fn(),
   syncWorkoutTimer: vi.fn(),
   getFormattedWorkoutTime: vi.fn(() => "00:00"),
+};
+
+const mockAppHistoryState = {
+  entries: [],
+  syncEntry: vi.fn(),
+  reset: vi.fn(),
 };
 
 vi.mock("@/stores", () => ({
@@ -99,6 +106,9 @@ vi.mock("@/stores", () => ({
   },
   useUIStore: (selector: (state: typeof mockUIState) => unknown) =>
     selector(mockUIState),
+  useAppHistoryStore: (
+    selector: (state: typeof mockAppHistoryState) => unknown,
+  ) => selector(mockAppHistoryState),
 }));
 
 describe("routes", () => {
@@ -106,6 +116,7 @@ describe("routes", () => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
     mockAuthState.loading = false;
+    mockAuthState.initialized = true;
     mockGuestState.workouts = [];
     mockGuestState.hydrated = true;
     vi.mocked(api.get).mockImplementation((url: string) => {

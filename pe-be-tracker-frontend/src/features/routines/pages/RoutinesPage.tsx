@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search, ArrowLeft } from "lucide-react";
+import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import { RoutinesPageSkeleton } from "@/features/routines/components";
@@ -22,14 +23,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
-import { useInfiniteScroll } from "@/shared/hooks";
-import { Link } from "react-router-dom";
 
 const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const handleBack = useAppBackNavigation("/workouts");
 
   const {
     data: routines,
@@ -75,13 +75,12 @@ const RoutinesPage = () => {
           <Button
             variant="ghost"
             size="icon"
-            asChild
             aria-label="Go back"
+            type="button"
+            onClick={handleBack}
             className="md:hidden -ml-2"
           >
-            <Link to="/workouts">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">

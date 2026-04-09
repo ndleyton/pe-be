@@ -41,9 +41,18 @@ const mockAuthState = {
   user: { id: 1, is_superuser: true },
 };
 
+const mockAppHistoryState = {
+  entries: [],
+  syncEntry: vi.fn(),
+  reset: vi.fn(),
+};
+
 vi.mock("@/stores", () => ({
   useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
     selector(mockAuthState),
+  useAppHistoryStore: (
+    selector: (state: typeof mockAppHistoryState) => unknown,
+  ) => selector(mockAppHistoryState),
 }));
 
 vi.mock("react-router-dom", async () => {

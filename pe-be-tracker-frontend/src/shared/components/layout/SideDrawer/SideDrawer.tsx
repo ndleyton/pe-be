@@ -1,7 +1,6 @@
-
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useUIStore, useAuthStore } from "@/stores";
-import { navItems } from "@/shared/navigation/navItems";
+import { navItems, type NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
 import {
   Sheet,
@@ -11,6 +10,38 @@ import {
   SheetTitle,
 } from "@/shared/components/ui/sheet";
 import { useGoogleSignIn } from "@/features/auth/hooks";
+import { useNavigation } from "@/shared/hooks";
+
+const NavItemLink = ({
+  item,
+  onSelect,
+}: {
+  item: NavItem;
+  onSelect: () => void;
+}) => {
+  const { href, isActive, handleClick } = useNavigation(item.key);
+  const Icon = item.icon;
+
+  return (
+    <li>
+      <Link
+        to={href}
+        onClick={(event) => {
+          handleClick(event);
+          onSelect();
+        }}
+        className={`flex items-center space-x-3 rounded-lg p-3 transition-colors ${
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        }`}
+      >
+        <Icon className="h-5 w-5" />
+        <span>{item.label}</span>
+      </Link>
+    </li>
+  );
+};
 
 const SideDrawer = () => {
   const isOpen = useUIStore((state) => state.isDrawerOpen);
@@ -37,27 +68,9 @@ const SideDrawer = () => {
           aria-label="Secondary navigation"
         >
           <ul className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    onClick={closeDrawer}
-                    className={({ isActive }) =>
-                      `flex items-center space-x-3 rounded-lg p-3 transition-colors ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      }`
-                    }
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                </li>
-              );
-            })}
+            {navItems.map((item) => (
+              <NavItemLink key={item.key} item={item} onSelect={closeDrawer} />
+            ))}
           </ul>
         </nav>
         <div className="mt-auto border-t pt-4">

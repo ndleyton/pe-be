@@ -1,6 +1,6 @@
 import { ArrowLeft, Eye } from "lucide-react";
 import { useCallback, useState } from "react";
-import { Link, useBlocker, useParams } from "react-router-dom";
+import { useBlocker, useParams } from "react-router-dom";
 
 import {
   ExerciseTypeModal,
@@ -35,10 +35,12 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
+import { useAppBackNavigation } from "@/shared/hooks";
 
 const RoutineDetailsPage = () => {
   const { routineId } = useParams();
   const [isEditing, setIsEditing] = useState(false);
+  const handleBack = useAppBackNavigation("/routines");
 
   const {
     availableIntensityUnits,
@@ -129,13 +131,12 @@ const RoutineDetailsPage = () => {
           <Button
             variant="ghost"
             size="icon"
-            asChild
             aria-label="Go back"
-            className="rounded-full bg-primary/5 transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
+            type="button"
+            onClick={handleBack}
+            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
           >
-            <Link to="/routines">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">

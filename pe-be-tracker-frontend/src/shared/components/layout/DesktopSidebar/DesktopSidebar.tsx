@@ -1,30 +1,28 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useAuthStore } from "@/stores";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
-import { NAV_PATHS } from "@/shared/navigation/constants";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
-import { useNavigation } from "@/shared/hooks/useNavigation";
+import { useHomeNavigation, useNavigation } from "@/shared/hooks";
 
 const NavItemLink = ({ item }: { item: NavItem }) => {
-  const lastVisited = useNavigation(item.key, item.to);
+  const { href, isActive, handleClick } = useNavigation(item.key);
   const IconComponent = item.icon;
 
   return (
-    <NavLink
-      to={lastVisited}
-      className={({ isActive }) =>
-        `flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-          isActive
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        }`
-      }
+    <Link
+      to={href}
+      onClick={handleClick}
+      className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      }`}
     >
       <IconComponent className="mr-3 h-5 w-5" />
       {item.label}
-    </NavLink>
+    </Link>
   );
 };
 
@@ -33,18 +31,20 @@ const DesktopSidebar = () => {
   const initialized = useAuthStore((state) => state.initialized);
   const signOut = useAuthStore((state) => state.signOut);
   const googleSignIn = useGoogleSignIn();
+  const { href, handleClick } = useHomeNavigation();
 
   return (
     <aside className="lg:bg-background hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:border-r">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex h-16 items-center border-b px-6">
-          <NavLink
-            to={NAV_PATHS.WORKOUTS}
+          <Link
+            to={href}
+            onClick={handleClick}
             aria-label="Go to workouts"
             className="rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             <HomeLogo />
-          </NavLink>
+          </Link>
         </div>
         <nav
           className="flex-1 space-y-2 px-4 py-6"
