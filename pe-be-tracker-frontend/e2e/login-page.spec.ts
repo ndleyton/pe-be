@@ -39,7 +39,7 @@ test.describe("Guest Mode Landing", () => {
     // Wait explicitly to avoid flakiness across browsers.
     await page.waitForTimeout(1200);
     await expect(
-      page.getByText("Guest Mode: Your workout data is stored locally", {
+      page.getByText("Guest mode: Your workouts are stored locally", {
         exact: false,
       }),
     ).toBeVisible({ timeout: 5000 });
