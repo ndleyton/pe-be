@@ -1,19 +1,22 @@
 import logging
 from typing import Optional
 
+import jwt
 from fastapi.responses import RedirectResponse
 from fastapi import Depends, Request, status, Response
-from fastapi_users import BaseUserManager, IntegerIDMixin
+from fastapi_users import BaseUserManager, IntegerIDMixin, exceptions, models
 from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
+from fastapi_users.jwt import decode_jwt
 from httpx_oauth.clients.google import GoogleOAuth2
 
 from src.core.config import settings
 from src.core.dependencies import get_user_db
+from src.core.observability import traced_span
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +102,55 @@ class CookieTransportWithRedirect(CookieTransport):
         return response
 
 
+class TracedJWTStrategy(JWTStrategy):
+    """Expose JWT decode and user fetch latency as child spans."""
+
+    async def read_token(
+        self,
+        token: Optional[str],
+        user_manager: BaseUserManager[models.UP, models.ID],
+    ) -> Optional[models.UP]:
+        if token is None:
+            return None
+
+        with traced_span(
+            "auth.jwt.decode",
+            attributes={"auth.backend": "jwt"},
+        ) as span:
+            try:
+                data = decode_jwt(
+                    token,
+                    self.decode_key,
+                    self.token_audience,
+                    algorithms=[self.algorithm],
+                )
+                user_id = data.get("sub")
+                span.set_attribute("auth.jwt.subject_present", user_id is not None)
+                if user_id is None:
+                    span.set_attribute("auth.jwt.valid", False)
+                    return None
+                span.set_attribute("auth.jwt.valid", True)
+            except jwt.PyJWTError:
+                span.set_attribute("auth.jwt.valid", False)
+                return None
+
+        with traced_span(
+            "auth.user.lookup",
+            attributes={"auth.backend": "jwt"},
+        ):
+            try:
+                parsed_id = user_manager.parse_id(user_id)
+                return await user_manager.get(parsed_id)
+            except (exceptions.UserNotExists, exceptions.InvalidID):
+                return None
+
+
 def get_jwt_strategy() -> JWTStrategy:
     """JWT strategy for authentication"""
-    return JWTStrategy(secret=SECRET, lifetime_seconds=settings.JWT_LIFETIME_SECONDS)
+    return TracedJWTStrategy(
+        secret=SECRET,
+        lifetime_seconds=settings.JWT_LIFETIME_SECONDS,
+    )
 
 
 # Authentication backend
