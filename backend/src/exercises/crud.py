@@ -309,11 +309,13 @@ async def get_exercise_by_id(
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type)
+            joinedload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))),
+            .joinedload(ExerciseMuscle.muscle)
+            .joinedload(Muscle.muscle_group),
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).joinedload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
@@ -337,13 +339,13 @@ async def get_exercises_for_workout(
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type)
+            joinedload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group),
+            .joinedload(ExerciseMuscle.muscle)
+            .joinedload(Muscle.muscle_group),
             selectinload(
                 Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
-            ).selectinload(ExerciseSet.intensity_unit),
+            ).joinedload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.workout_id == workout_id, Exercise.deleted_at.is_(None))
         .order_by(Exercise.id.asc())
@@ -392,11 +394,13 @@ async def create_exercise(
     result = await session.execute(
         select(Exercise)
         .options(
-            selectinload(Exercise.exercise_type)
+            joinedload(Exercise.exercise_type)
             .selectinload(ExerciseType.exercise_muscles)
-            .selectinload(ExerciseMuscle.muscle)
-            .selectinload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))),
+            .joinedload(ExerciseMuscle.muscle)
+            .joinedload(Muscle.muscle_group),
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).joinedload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.id == exercise.id)
     )
