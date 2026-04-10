@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
-import { Sparkles, LogIn } from "lucide-react";
-import { useAuthStore, useGuestStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
-import { useGoogleSignIn } from "@/features/auth/hooks";
 
 // Delay in milliseconds before showing the banner to avoid layout shift
 const BANNER_DISPLAY_DELAY_MS = 800;
@@ -11,7 +7,6 @@ const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authLoading = useAuthStore((state) => state.loading);
   const workouts = useGuestStore((state) => state.workouts);
-  const googleSignIn = useGoogleSignIn();
 
   // Ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
@@ -45,7 +40,7 @@ const GuestModeBanner = () => {
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+              <Info className="h-5 w-5 text-primary" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -62,17 +57,6 @@ const GuestModeBanner = () => {
                 Your progress is local. <span className="text-muted-foreground font-normal">Sign in to sync your data and unlock the full potential of your Personal Bestie.</span>
               </p>
             </div>
-          </div>
-          
-          <div className="shrink-0">
-            <Button
-              onClick={googleSignIn}
-              size="sm"
-              className="w-full sm:w-auto rounded-xl font-bold bg-primary/90 hover:bg-primary shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px]"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Sign In
-            </Button>
           </div>
         </div>
       </div>
