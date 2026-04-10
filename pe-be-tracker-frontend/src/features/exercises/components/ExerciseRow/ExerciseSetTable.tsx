@@ -2,7 +2,7 @@ import { Check, Minus, MoreVertical, Plus, Trash2 } from "lucide-react";
 
 import type { ExerciseSet } from "@/features/exercises/api";
 import {
-  EXERCISE_SETS_GRID_TEMPLATE,
+  EXERCISE_SETS_GRID_CLASSES,
   formatIntensityInputValue,
 } from "@/features/exercises/lib/exerciseRow";
 import {
@@ -101,8 +101,7 @@ export const ExerciseSetTable = ({
   return (
     <>
       <div
-        className="bg-card/50 border-border/10 mb-3 grid items-center gap-2 rounded-lg border-b px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 sm:gap-4"
-        style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
+        className={`bg-card/50 border-border/10 mb-3 grid items-center gap-2 rounded-lg border-b px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES}`}
       >
         <div className="text-center">SET</div>
         <div className="text-center">
@@ -139,19 +138,18 @@ export const ExerciseSetTable = ({
           return (
             <div
               key={set.id}
-              className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${
+              className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${
                 set.done
                   ? "bg-done/10 border-done/20 shadow-inner"
                   : "bg-muted/50 border-transparent shadow-sm"
               }`}
-              style={{ gridTemplateColumns: EXERCISE_SETS_GRID_TEMPLATE }}
             >
               <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
                 <span className="text-muted-foreground text-xs font-black">
                   {index + 1}
                 </span>
               </div>
-              <div>
+              <div className="min-w-0 flex justify-center">
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -207,7 +205,7 @@ export const ExerciseSetTable = ({
               </div>
 
               {isTimeMode ? (
-                <div>
+                <div className="min-w-0 flex justify-center">
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -252,7 +250,7 @@ export const ExerciseSetTable = ({
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-0.5 sm:gap-1">
+                <div className="min-w-0 flex items-center justify-center gap-0.5 sm:gap-1">
                   <Button
                     variant="outline"
                     size="sm"

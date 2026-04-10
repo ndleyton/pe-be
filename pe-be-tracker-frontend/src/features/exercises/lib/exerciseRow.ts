@@ -26,7 +26,8 @@ export const DEFAULT_INTENSITY_UNIT: IntensityUnit | GuestIntensityUnit = {
   abbreviation: "kg",
 };
 
-export const EXERCISE_SETS_GRID_TEMPLATE = "30px 60px 1fr 40px 32px";
+export const EXERCISE_SETS_GRID_CLASSES =
+  "grid-cols-[30px_60px_minmax(0,1fr)_40px_32px] md:grid-cols-[32px_72px_minmax(0,1fr)_44px_36px] lg:grid-cols-[36px_88px_minmax(0,1fr)_48px_40px]";
 
 export const formatIntensityInputValue = (
   value: ExerciseSet["intensity"],
