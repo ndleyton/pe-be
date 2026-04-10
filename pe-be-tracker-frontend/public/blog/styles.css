@@ -1,33 +1,37 @@
 :root {
     --background: rgb(247, 247, 247);
-    --card: rgba(247, 247, 247, 0.92);
+    --card: rgba(255, 255, 255, 0.8);
     --foreground: rgb(26, 25, 25);
+    --foreground-rgb: 26, 25, 25;
     --muted-foreground: rgb(102, 96, 96);
     --primary: rgb(204, 0, 51);
     --primary-foreground: rgb(242, 242, 242);
     --secondary: rgb(220, 213, 213);
     --secondary-foreground: rgb(26, 26, 26);
-    --border: rgba(209, 183, 183, 0.92);
+    --border: rgba(0, 0, 0, 0.1);
     --surface-soft: rgba(236, 231, 231, 0.78);
-    --shadow: 0 18px 50px rgba(47, 24, 24, 0.08);
-    --gradient-a: rgba(204, 0, 51, 0.12);
+    --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --gradient-a: rgba(204, 0, 51, 0.1);
     --gradient-b: rgba(255, 255, 255, 0.7);
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1.25rem;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --background: rgb(28, 25, 25);
-        --card: rgba(39, 33, 33, 0.94);
+        --background: rgb(32, 29, 29);
+        --card: rgba(39, 33, 33, 0.8);
         --foreground: rgb(242, 240, 240);
+        --foreground-rgb: 242, 240, 240;
         --muted-foreground: rgb(182, 171, 171);
-        --primary: rgb(255, 69, 115);
-        --primary-foreground: rgb(255, 246, 248);
+        --primary: rgb(255, 51, 102);
+        --primary-foreground: rgb(242, 242, 242);
         --secondary: rgb(56, 45, 45);
         --secondary-foreground: rgb(242, 242, 242);
-        --border: rgba(73, 58, 58, 0.95);
+        --border: rgba(255, 255, 255, 0.1);
         --surface-soft: rgba(47, 39, 39, 0.84);
-        --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
-        --gradient-a: rgba(255, 69, 115, 0.18);
+        --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        --gradient-a: rgba(255, 51, 102, 0.18);
         --gradient-b: rgba(39, 33, 33, 0.82);
     }
 }
@@ -73,9 +77,10 @@ img {
 .faq-item {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-2xl);
     box-shadow: var(--shadow);
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .site-header {
@@ -127,9 +132,12 @@ img {
     justify-content: center;
     gap: 0.55rem;
     padding: 0.85rem 1.2rem;
-    border-radius: 999px;
-    font-weight: 700;
-    transition: transform 160ms ease, filter 160ms ease, background-color 160ms ease;
+    border-radius: var(--radius-xl);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+    transition: all 300ms ease;
 }
 
 .btn:hover {
@@ -174,9 +182,9 @@ img {
     background: var(--surface-soft);
     border: 1px solid var(--border);
     color: var(--primary);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
 }
 
@@ -185,6 +193,13 @@ img {
     margin: 0.9rem 0 0;
     line-height: 1.05;
     letter-spacing: -0.04em;
+}
+
+.text-glow {
+    background: linear-gradient(to bottom, var(--foreground) 0%, rgba(var(--foreground-rgb), 0.7) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .hero h1 {
