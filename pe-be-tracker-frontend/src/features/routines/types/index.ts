@@ -48,3 +48,18 @@ export interface Routine {
   updated_at: string;
   exercise_templates: ExerciseTemplate[];
 }
+
+export interface RoutineSummary {
+  id: number;
+  name: string;
+  description?: string | null;
+  workout_type_id: number;
+  creator_id: number;
+  visibility: RoutineVisibility;
+  is_readonly: boolean;
+  created_at: string;
+  updated_at: string;
+  exercise_count: number;
+  set_count: number;
+  exercise_names_preview: string[];
+}

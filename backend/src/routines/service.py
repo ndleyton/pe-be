@@ -9,6 +9,7 @@ from src.routines.schemas import (
     RoutineCreate,
     RoutineRead,
     RoutineUpdate,
+    RoutineSummary,
 )
 from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
@@ -33,6 +34,20 @@ class RoutineService:
         """Get routines visible to the current viewer with pagination."""
         routines = await crud.get_visible_routines(session, user_id, offset, limit)
         return [RoutineRead.model_validate(routine) for routine in routines]
+
+    async def get_visible_routines_summary(
+        self,
+        session: AsyncSession,
+        user_id: int | None,
+        offset: int,
+        limit: int,
+        order_by: str,
+    ) -> List[RoutineSummary]:
+        """Get routines visible to the current viewer as a summary list."""
+        routines_summary = await crud.get_visible_routines_summary(
+            session, user_id, offset, limit, order_by
+        )
+        return [RoutineSummary.model_validate(r) for r in routines_summary]
 
     async def get_routine(
         self, session: AsyncSession, routine_id: int, user_id: int | None

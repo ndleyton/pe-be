@@ -8,6 +8,7 @@ from src.core.errors import DomainValidationError
 from src.exercises.intensity_units import normalize_intensity_for_storage
 from src.exercises.models import IntensityUnit
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate
+from src.exercises.models import ExerciseType
 from src.routines.schemas import (
     AdminRoutineCreate,
     RoutineCreate,
@@ -171,6 +172,117 @@ async def get_visible_routines(
 
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def get_visible_routines_summary(
+    session: AsyncSession,
+    user_id: int | None,
+    offset: int = 0,
+    limit: int = 100,
+    order_by: str = "createdAt",
+) -> List[dict]:
+    """Get routines visible to the current viewer as summary dictionaries mapped to RoutineSummary."""
+    from sqlalchemy import func
+    from src.core.observability import traced_span
+
+    with traced_span("routine.list.sql_phase") as span:
+        # Base query for routines
+        query = select(Routine)
+
+        if user_id is None:
+            query = query.where(Routine.visibility == Routine.RoutineVisibility.public)
+        else:
+            query = query.where(
+                or_(
+                    Routine.creator_id == user_id,
+                    Routine.visibility == Routine.RoutineVisibility.public,
+                )
+            )
+
+        # Ordering
+        if order_by == "name":
+            query = query.order_by(Routine.name.asc())
+        else:
+            query = query.order_by(Routine.created_at.desc())
+
+        query = query.offset(offset).limit(limit)
+
+        result = await session.execute(query)
+        routines = result.scalars().all()
+
+        if not routines:
+            span.set_attribute("routine.list.row_count", 0)
+            return []
+
+        span.set_attribute("routine.list.row_count", len(routines))
+
+        routine_ids = [r.id for r in routines]
+
+        # Aggregate counts
+        count_query = (
+            select(
+                ExerciseTemplate.routine_id,
+                func.count(ExerciseTemplate.id.distinct()).label("exercise_count"),
+                func.count(SetTemplate.id).label("set_count"),
+            )
+            .outerjoin(SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id)
+            .where(ExerciseTemplate.routine_id.in_(routine_ids))
+            .group_by(ExerciseTemplate.routine_id)
+        )
+
+        count_result = await session.execute(count_query)
+        counts_by_routine = {
+            row.routine_id: {"exercise_count": row.exercise_count, "set_count": row.set_count}
+            for row in count_result.all()
+        }
+
+        # Bounded preview of exercise names
+        preview_query = (
+            select(
+                ExerciseTemplate.routine_id,
+                ExerciseType.name
+            )
+            .join(ExerciseType, ExerciseTemplate.exercise_type_id == ExerciseType.id)
+            .where(ExerciseTemplate.routine_id.in_(routine_ids))
+            .order_by(ExerciseTemplate.routine_id, ExerciseTemplate.id)
+        )
+
+        preview_result = await session.execute(preview_query)
+        previews_by_routine = {}
+        for row in preview_result.all():
+            if row.routine_id not in previews_by_routine:
+                previews_by_routine[row.routine_id] = []
+            if len(previews_by_routine[row.routine_id]) < 5:
+                previews_by_routine[row.routine_id].append(row.name)
+
+        total_exercises = 0
+        total_sets = 0
+        summary_list = []
+        for r in routines:
+            counts = counts_by_routine.get(r.id, {"exercise_count": 0, "set_count": 0})
+            previews = previews_by_routine.get(r.id, [])
+            total_exercises += counts["exercise_count"]
+            total_sets += counts["set_count"]
+
+            summary_list.append({
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "workout_type_id": r.workout_type_id,
+                "creator_id": r.creator_id,
+                "visibility": r.visibility,
+                "is_readonly": r.is_readonly,
+                "created_at": r.created_at,
+                "updated_at": r.updated_at,
+                "exercise_count": counts["exercise_count"],
+                "set_count": counts["set_count"],
+                "exercise_names_preview": previews,
+            })
+
+        span.set_attribute("routine.list.exercise_count_total", total_exercises)
+        span.set_attribute("routine.list.set_count_total", total_sets)
+
+        return summary_list
 
 
 async def create_routine(

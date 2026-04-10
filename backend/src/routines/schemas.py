@@ -102,6 +102,21 @@ class RoutineRead(RoutineBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RoutineSummary(RoutineBase):
+    """Schema for a routine list summary."""
+
+    id: int
+    creator_id: int
+    visibility: RoutineModel.RoutineVisibility
+    is_readonly: bool
+    created_at: datetime
+    updated_at: datetime
+    exercise_count: int
+    set_count: int
+    exercise_names_preview: List[str]
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RoutineUpdate(BaseModel):
     """Schema for updating routines"""
 

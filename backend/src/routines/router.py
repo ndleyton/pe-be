@@ -2,7 +2,7 @@ from typing import List
 from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate
+from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate, RoutineSummary
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
 from src.core.database import get_async_session
@@ -28,6 +28,20 @@ async def get_visible_routines(
     """
     return await routine_service.get_visible_routines(
         session, user.id if user else None, offset, limit
+    )
+
+
+@router.get("/summary", response_model=List[RoutineSummary])
+async def get_visible_routines_summary(
+    user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
+    offset: int = 0,
+    limit: int = 100,
+    order_by: str = "createdAt",
+):
+    """Get summarized routines visible to the current viewer."""
+    return await routine_service.get_visible_routines_summary(
+        session, user.id if user else None, offset, limit, order_by
     )
 
 

@@ -1,5 +1,5 @@
 import api from "@/shared/api/client";
-import { Routine, type RoutineVisibility } from "@/features/routines/types";
+import { Routine, type RoutineVisibility, type RoutineSummary } from "@/features/routines/types";
 import { endpoints } from "@/shared/api/endpoints";
 
 // Create/Update payload types for routines
@@ -42,17 +42,16 @@ export const getRoutines = async (
   orderBy: "name" | "createdAt" = "createdAt",
   cursor?: number | null,
   limit: number = 100,
-): Promise<{ data: Routine[]; next_cursor?: number | null }> => {
+): Promise<{ data: RoutineSummary[]; next_cursor?: number | null }> => {
   const currentOffset = cursor ?? 0;
-  const response = await api.get(endpoints.routines, {
+  const response = await api.get(endpoints.routinesSummary, {
     params: {
-      // Backend currently ignores order_by; safe to pass for future-proofing
       order_by: orderBy,
       offset: currentOffset,
       limit: limit,
     },
   });
-  const items: Routine[] = Array.isArray(response.data) ? response.data : [];
+  const items: RoutineSummary[] = Array.isArray(response.data) ? response.data : [];
   const next_cursor =
     items.length < limit ? null : currentOffset + items.length;
   return { data: items, next_cursor };
