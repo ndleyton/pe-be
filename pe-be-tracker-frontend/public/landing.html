@@ -38,48 +38,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --background: rgb(247, 247, 247);
-            --card: rgba(255, 255, 255, 0.8);
-            --foreground: rgb(26, 25, 25);
+            --primary-rose: #CC0033;
+            --primary-rose-soft: rgba(204, 0, 51, 0.1);
+            --background: #F7F7F7;
+            --card: rgba(255, 255, 255, 0.7);
+            --foreground: #1A1919;
             --foreground-rgb: 26, 25, 25;
-            --card-foreground: rgb(26, 25, 25);
-            --primary: rgb(204, 0, 51);
-            --primary-foreground: rgb(242, 242, 242);
-            --secondary: rgb(220, 213, 213);
-            --secondary-foreground: rgb(26, 26, 26);
-            --muted: rgb(219, 213, 213);
-            --muted-foreground: rgb(129, 125, 125);
+            --muted-foreground: #666060;
             --border: rgba(0, 0, 0, 0.1);
-            --ring: rgb(219, 146, 146);
-            --input: rgb(206, 185, 185);
             --radius-xl: 0.75rem;
-            --radius-2xl: 1rem;
-            --grid-line: rgba(209, 183, 183, 0.3);
-            --surface-soft: rgb(236, 231, 231);
-            --metric-bg: rgb(232, 226, 226);
-            --badge-bg: rgba(204, 0, 51, 0.1);
+            --radius-2xl: 1.25rem;
+            --glass-blur: 12px;
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --background: rgb(32, 29, 29);
-                --card: rgba(39, 33, 33, 0.8);
-                --foreground: rgb(242, 240, 240);
+                --primary-rose: #FF3366;
+                --primary-rose-soft: rgba(255, 51, 102, 0.15);
+                --background: #201D1D;
+                --card: rgba(39, 33, 33, 0.7);
+                --foreground: #F2F0F0;
                 --foreground-rgb: 242, 240, 240;
-                --card-foreground: rgb(242, 240, 240);
-                --primary: rgb(255, 51, 102);
-                --primary-foreground: rgb(242, 242, 242);
-                --secondary: rgb(56, 45, 45);
-                --secondary-foreground: rgb(242, 242, 242);
-                --muted: rgb(71, 56, 56);
-                --muted-foreground: rgb(161, 147, 147);
+                --muted-foreground: #A19393;
                 --border: rgba(255, 255, 255, 0.1);
-                --ring: rgb(80, 47, 47);
-                --input: rgb(61, 48, 48);
-                --grid-line: rgba(62, 48, 48, 0.35);
-                --surface-soft: rgb(42, 35, 35);
-                --metric-bg: rgb(46, 38, 38);
-                --badge-bg: rgba(255, 51, 102, 0.14);
             }
         }
 
@@ -94,203 +75,236 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: var(--background);
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--background);
             color: var(--foreground);
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .app-shell {
+            overflow-x: hidden;
             position: relative;
-            min-height: 100vh;
-            background: var(--background);
         }
 
-        .app-shell::before {
+        body::before {
             content: "";
-            position: absolute;
+            position: fixed;
             inset: 0;
+            z-index: -1;
             pointer-events: none;
-            background-image: linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-            background-size: 100% 72px;
-            opacity: 0.18;
+            background-image: linear-gradient(135deg, var(--primary-rose) 0%, #FF3366 100%);
+            opacity: 0.12;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3Cg transform='translate(-75 0)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(0 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(-75 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3Cg transform='translate(-75 0)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(0 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(-75 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            -webkit-mask-size: 75px 75px;
+            mask-size: 75px 75px;
+            -webkit-mask-repeat: repeat;
+            mask-repeat: repeat;
         }
 
-        .surface {
+        @media (prefers-color-scheme: dark) {
+            body::before {
+                opacity: 0.15;
+                background-image: linear-gradient(135deg, #CC0033 0%, #FF3366 100%);
+            }
+        }
+
+        .bg-glow-container {
+            display: none;
+        }
+
+        .glass-panel {
             background: var(--card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--border);
             border-radius: var(--radius-2xl);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
         }
 
-        .surface-soft {
-            background: var(--surface-soft);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-2xl);
+        .glass-panel:hover {
+            border-color: rgba(var(--foreground-rgb), 0.2);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.12);
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
             border-radius: var(--radius-xl);
-            font-size: 0.95rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            transition: all 300ms ease;
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
         }
 
         .btn-primary {
-            background: var(--primary);
-            color: var(--primary-foreground);
+            background: var(--primary-rose);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(204, 0, 51, 0.25);
         }
 
         .btn-primary:hover {
-            filter: brightness(0.94);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(204, 0, 51, 0.35);
         }
 
-        .btn-secondary {
-            background: var(--secondary);
-            color: var(--secondary-foreground);
+        .btn-glass {
+            background: rgba(var(--foreground-rgb), 0.05);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--border);
+            color: var(--foreground);
         }
 
-        .btn-secondary:hover {
-            filter: brightness(0.98);
-        }
-
-        .metric {
-            background: var(--metric-bg);
-            border: 1px solid var(--border);
-            border-radius: 0.75rem;
+        .btn-glass:hover {
+            background: rgba(var(--foreground-rgb), 0.1);
+            border-color: rgba(var(--foreground-rgb), 0.2);
         }
 
         .text-glow {
-            background: linear-gradient(to bottom, var(--foreground) 0%, rgba(var(--foreground-rgb), 0.7) 100%);
+            background: linear-gradient(to bottom, var(--foreground) 0%, rgba(var(--foreground-rgb), 0.6) 100%);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            filter: drop-shadow(0 0 15px rgba(var(--foreground-rgb), 0.05));
+        }
+
+        .caps-label {
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--primary-rose);
+            opacity: 0.9;
         }
 
         .logo-wordmark {
-            color: var(--primary);
+            color: var(--primary-rose);
             line-height: 0.9 !important;
             font-weight: 900;
             letter-spacing: -0.025em;
-            filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.05));
-            text-align: left;
+        }
+
+        .metric-card {
+            background: rgba(var(--foreground-rgb), 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(var(--foreground-rgb), 0.06);
+            transform: translateY(-2px);
         }
     </style>
 </head>
 <body class="antialiased">
-    <div class="app-shell">
-        <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
-            <header class="py-4">
-                <div class="surface flex items-center justify-between px-4 py-3 sm:px-6">
+    <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
+            <header class="py-6">
+                <div class="glass-panel flex items-center justify-between px-6 py-4">
                     <a href="https://www.personalbestie.com/" class="flex items-center gap-2 text-lg font-bold">
                         <img alt="PBestie Logo" class="h-8 w-8" src="assets/logo.svg" width="32" height="32">
-                        <div class="logo-wordmark flex flex-col items-start text-left text-base">
+                        <div class="logo-wordmark flex flex-col items-start leading-none">
                             <span>Personal</span>
                             <span>Bestie</span>
                         </div>
                     </a>
-                    <div class="flex items-center gap-3">
-                        <a href="#features" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">Features</a>
-                        <a href="#flow" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">How it works</a>
-                        <a href="https://www.personalbestie.com/blog/" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">Blog</a>
-                        <a href="https://app.personalbestie.com/login?auth_intent=google&next=/workouts&utm_source=landing&utm_medium=cta&utm_campaign=login" class="btn btn-primary px-4 py-2">Log In</a>
+                    <div class="flex items-center gap-6">
+                        <a href="#features" class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Features</a>
+                        <a href="#flow" class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Flow</a>
+                        <a href="https://www.personalbestie.com/blog/" class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Blog</a>
+                        <a href="https://app.personalbestie.com/login" class="btn btn-primary">Log In</a>
                     </div>
                 </div>
             </header>
 
-            <main class="flex-1 py-8 sm:py-12">
-                <section class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <main class="flex-1 py-12">
+                <section class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                     <div>
-                        <div class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]" style="border-color: var(--border); background: var(--surface-soft);">
+                        <div class="caps-label inline-block">
                             Fitness tracker + AI coach
                         </div>
-                        <h1 class="text-glow mt-6 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-                            Surpass your personal bests with your personalized AI coach.
+                        <h1 class="text-glow mt-6 max-w-4xl text-5xl font-black tracking-tighter sm:text-6xl lg:text-7xl leading-[1.05]">
+                            Surpass your personal bests.
                         </h1>
-                        <p class="mt-5 max-w-2xl text-lg leading-8 text-[color:var(--muted-foreground)]">
-                            PersonalBestie is your fitness tracker and your bestie in the gym. Log workouts, follow routines, and use AI to review progress, answer questions, and help you push past your last best session.
+                        <p class="mt-8 max-w-2xl text-xl leading-relaxed text-[color:var(--muted-foreground)]">
+                            PersonalBestie is the fitness tracker that actually helps you improve. Log workouts, follow routines, and use AI to Review progress, answer questions, and push past your last best session.
                         </p>
-                        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                            <a href="https://app.personalbestie.com" class="btn btn-primary px-6 py-3">
+                        <div class="mt-10 flex flex-col gap-4 sm:flex-row">
+                            <a href="https://app.personalbestie.com" class="btn btn-primary px-8 py-4">
                                 Start Tracking
                             </a>
-                            <a href="https://app.personalbestie.com" class="btn btn-secondary px-6 py-3">
+                            <a href="https://app.personalbestie.com" class="btn btn-glass px-8 py-4">
                                 Try Guest Mode
                             </a>
                         </div>
-                        <div class="mt-8 grid gap-3 sm:grid-cols-3">
-                            <div class="metric p-4">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Workout log</div>
-                                <div class="mt-2 text-lg font-semibold">Log every set clearly</div>
+                        <div class="mt-12 grid gap-4 sm:grid-cols-3">
+                            <div class="metric-card">
+                                <div class="caps-label text-[10px]">Workout log</div>
+                                <div class="mt-1 text-base font-bold">Log every set clearly</div>
                             </div>
-                            <div class="metric p-4">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Routine sharing</div>
-                                <div class="mt-2 text-lg font-semibold">Share with one click</div>
+                            <div class="metric-card">
+                                <div class="caps-label text-[10px]">Routine sharing</div>
+                                <div class="mt-1 text-base font-bold">Share with one click</div>
                             </div>
-                            <div class="metric p-4">
-                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">Instant AI Recaps</div>
-                                <div class="mt-2 text-lg font-semibold">Get immediate coaching insights</div>
+                            <div class="metric-card">
+                                <div class="caps-label text-[10px]">AI Recaps</div>
+                                <div class="mt-1 text-base font-bold">Immediate coaching insights</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="surface p-4 sm:p-6">
-                        <picture>
-                            <source type="image/avif" srcset="finish-workout.avif">
-                            <img
-                                src="finish-workout.avif"
-                                alt="Workout summary showing muscle groups trained and total sets completed"
-                                width="430"
-                                height="760"
-                                class="block h-auto w-full rounded-lg border"
-                                style="border-color: var(--border);"
-                                decoding="async"
-                                fetchpriority="high"
-                            >
-                        </picture>
+                    <div class="glass-panel p-2">
+                        <div class="overflow-hidden rounded-xl">
+                            <picture>
+                                <source type="image/avif" srcset="finish-workout.avif">
+                                <img
+                                    src="finish-workout.avif"
+                                    alt="Workout summary"
+                                    width="430"
+                                    height="760"
+                                    class="block h-auto w-full transition-transform duration-700 hover:scale-105"
+                                    decoding="async"
+                                    fetchpriority="high"
+                                >
+                            </picture>
+                        </div>
                     </div>
                 </section>
 
-                <section id="features" class="mt-16 sm:mt-20">
-                    <div class="mb-6 max-w-2xl">
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Why it works</div>
-                        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                            Start with tracking. Use AI when it actually helps.
+                <section id="features" class="mt-24 sm:mt-32">
+                    <div class="mb-12 max-w-2xl">
+                        <div class="caps-label">Why it works</div>
+                        <h2 class="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+                            Tracking that empowers.
                         </h2>
                     </div>
-                    <div class="grid gap-4 lg:grid-cols-3">
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Personalized AI coach</div>
-                            <h3 class="mt-3 text-xl font-semibold">Push past old numbers with coaching tied to your history</h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
-                                PersonalBestie helps you surpass your personal bests by using your own logged training as context for progression, adjustments, and next-step advice.
+                    <div class="grid gap-6 lg:grid-cols-3">
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">Personalized AI coach</div>
+                            <h3 class="mt-4 text-2xl font-bold leading-tight">Push past old numbers with history-tied coaching</h3>
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
+                                PersonalBestie uses your own logged training as context for progression, adjustments, and next-step advice.
                             </p>
                         </article>
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Shareable routines</div>
-                            <h3 class="mt-3 text-xl font-semibold">Share your routine with one click, no app download needed</h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
-                                Send a routine to a friend, client, or training partner instantly. They can open it right away without installing the app first.
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">Shareable routines</div>
+                            <h3 class="mt-4 text-2xl font-bold leading-tight">One-click sharing, no app download needed</h3>
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
+                                Send a routine to anyone instantly. They can open it right away in their browser without installing anything.
                             </p>
                         </article>
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Instant AI Recaps</div>
-                            <h3 class="mt-3 text-xl font-semibold">Get a data-driven breakdown the moment you finish</h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
-                                No more guessing what to do next. PersonalBestie automatically analyzes your session, highlights new PRs and volume deltas, and gives you a grounded suggestion for your next workout.
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">Instant AI Recaps</div>
+                            <h3 class="mt-4 text-2xl font-bold leading-tight">Data-driven breakdown the moment you finish</h3>
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
+                                Automatically analyze your session, highlight PRs, and get grounded suggestions for your next session.
                             </p>
                         </article>
                     </div>
@@ -337,60 +351,57 @@
                     </div>
                 </section>
 
-                <section class="pb-10 sm:pb-16">
-                    <div class="mb-6 max-w-2xl">
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">From the blog</div>
-                        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                            Search-friendly guides tied to what the app actually does.
+                <section class="pb-24">
+                    <div class="mb-12 max-w-2xl">
+                        <div class="caps-label">From the blog</div>
+                        <h2 class="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+                            Practical guides.
                         </h2>
-                        <p class="mt-4 leading-7 text-[color:var(--muted-foreground)]">
-                            We are publishing practical articles around workout tracking, AI recaps, and routine sharing so search engines and LLMs can discover concrete explanations tied to PersonalBestie’s real product surface.
-                        </p>
                     </div>
-                    <div class="grid gap-4 lg:grid-cols-3">
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">AI Coaching</div>
-                            <h3 class="mt-3 text-xl font-semibold">
-                                <a href="https://www.personalbestie.com/blog/ai-workout-recaps/">AI workout recaps that actually help</a>
+                    <div class="grid gap-6 lg:grid-cols-3">
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">AI Coaching</div>
+                            <h3 class="mt-4 text-2xl font-bold">
+                                <a href="https://www.personalbestie.com/blog/ai-workout-recaps/" class="hover:text-[var(--primary-rose)] transition-colors">AI workout recaps that actually help</a>
                             </h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
-                                Why grounded session data matters more than generic coaching language when you finish a workout.
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
+                                Why grounded session data matters more than generic coaching language.
                             </p>
                         </article>
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Workout Tracking</div>
-                            <h3 class="mt-3 text-xl font-semibold">
-                                <a href="https://www.personalbestie.com/blog/progressive-overload-workout-tracker/">How to track progressive overload without a spreadsheet</a>
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">Workout Tracking</div>
+                            <h3 class="mt-4 text-2xl font-bold">
+                                <a href="https://www.personalbestie.com/blog/progressive-overload-workout-tracker/" class="hover:text-[var(--primary-rose)] transition-colors">Track progressive overload properly</a>
                             </h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
-                                A cleaner approach to seeing progression through sets, reps, intensity, and previous-session context.
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
+                                A cleaner approach to seeing progression through sets, reps, and intensity.
                             </p>
                         </article>
-                        <article class="surface p-6">
-                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Routine Sharing</div>
-                            <h3 class="mt-3 text-xl font-semibold">
-                                <a href="https://www.personalbestie.com/blog/share-workout-routines/">How to share a workout routine with a friend or client</a>
+                        <article class="glass-panel p-8">
+                            <div class="caps-label">Routine Sharing</div>
+                            <h3 class="mt-4 text-2xl font-bold">
+                                <a href="https://www.personalbestie.com/blog/share-workout-routines/" class="hover:text-[var(--primary-rose)] transition-colors">How to share routines</a>
                             </h3>
-                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
+                            <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
                                 What a shareable routine page should include if you want someone else to actually use it.
                             </p>
                         </article>
                     </div>
-                    <div class="mt-6">
-                        <a href="https://www.personalbestie.com/blog/" class="btn btn-secondary px-6 py-3">Read the blog</a>
+                    <div class="mt-12">
+                        <a href="https://www.personalbestie.com/blog/" class="btn btn-glass px-8 py-4">Read more</a>
                     </div>
                 </section>
             </main>
 
-            <footer class="border-t py-6 text-sm text-[color:var(--muted-foreground)]" style="border-color: var(--border);">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <footer class="mt-12 border-t border-[var(--border)] py-12 text-sm text-[color:var(--muted-foreground)]">
+                <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                     <div>&copy; <span id="year"></span> PersonalBestie · Built by Nicolas Leyton</div>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                        <a href="https://app.personalbestie.com">Open app</a>
-                        <a href="https://www.personalbestie.com/blog/">Blog</a>
-                        <a href="/llms.txt">LLMs.txt</a>
-                        <a href="mailto:ndleyton@uc.cl">ndleyton@uc.cl</a>
-                        <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                    <div class="flex flex-wrap gap-6">
+                        <a href="https://app.personalbestie.com" class="hover:text-[var(--primary-rose)] transition-colors">Open app</a>
+                        <a href="https://www.personalbestie.com/blog/" class="hover:text-[var(--primary-rose)] transition-colors">Blog</a>
+                        <a href="/llms.txt" class="hover:text-[var(--primary-rose)] transition-colors">LLMs.txt</a>
+                        <a href="mailto:ndleyton@uc.cl" class="hover:text-[var(--primary-rose)] transition-colors">Email</a>
+                        <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer" class="hover:text-[var(--primary-rose)] transition-colors">LinkedIn</a>
                     </div>
                 </div>
             </footer>
