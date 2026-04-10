@@ -118,12 +118,10 @@ class ExerciseType(Base):
     owner: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[owner_id],
-        lazy="joined",
     )
     reviewer: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[reviewed_by],
-        lazy="joined",
     )
 
 
