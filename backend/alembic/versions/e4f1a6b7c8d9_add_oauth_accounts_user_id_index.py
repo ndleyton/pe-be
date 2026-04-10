@@ -1,7 +1,7 @@
 """add oauth_accounts.user_id index
 
 Revision ID: e4f1a6b7c8d9
-Revises: add002_duration_seconds_sets, d598608f5fc4
+Revises: f2a9c6d1b4e7
 Create Date: 2026-04-09 23:45:00.000000
 
 """
@@ -14,10 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "e4f1a6b7c8d9"
-down_revision: Union[str, tuple[str, str], None] = (
-    "add002_duration_seconds_sets",
-    "d598608f5fc4",
-)
+down_revision: Union[str, tuple[str, str], None] = "f2a9c6d1b4e7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
