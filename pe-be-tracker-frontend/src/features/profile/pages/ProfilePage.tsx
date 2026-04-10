@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { GoogleSignInButton } from "@/features/auth/components";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { useAuthStore, useGuestStore } from "@/stores";
@@ -10,7 +11,7 @@ import {
   AlertTitle,
 } from "@/shared/components/ui/alert";
 import { ModeToggle } from "@/shared/components/theme/mode-toggle";
-import { Dumbbell, Check, Timer } from "lucide-react";
+import { Dumbbell, Check, Timer, Sparkles, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
@@ -172,7 +173,7 @@ const ProfilePage = () => {
               <div className="text-left">
                 <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Storage Sync</label>
                 <p className="text-lg font-black text-foreground">
-                  {isAuthenticated ? "Authenticated Session" : "Local Guest Storage"}
+                  {isAuthenticated ? "Authenticated Session" : "Guest Mode (Stored Locally)"}
                 </p>
               </div>
               <div className={cn(
@@ -182,13 +183,68 @@ const ProfilePage = () => {
             </div>
 
             {!isAuthenticated && (
-              <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-4 text-left">
+              <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-5 text-left">
                 <AlertTitle className="text-primary flex items-center gap-2 font-black text-sm uppercase tracking-wider mb-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">!</span>
-                  Sync Recommended
+                  Unlock More With Sign-In
                 </AlertTitle>
-                <AlertDescription className="text-sm font-medium leading-relaxed opacity-90">
-                  You're currently using guest storage. Sign in to protect your data and access it from any device.
+                <AlertDescription className="space-y-4 text-sm font-medium leading-relaxed opacity-90">
+                  <p>
+                    Guest mode is great for getting started. Sign in to unlock
+                    the full PersonalBestie setup and keep your progress synced
+                    to your account.
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                        <Dumbbell className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-foreground font-semibold">
+                          More exercise options
+                        </p>
+                        <p className="text-muted-foreground">
+                          Browse the full exercise library instead of staying
+                          limited to the default guest set.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-foreground font-semibold">
+                          AI recaps and coaching feedback
+                        </p>
+                        <p className="text-muted-foreground">
+                          Get post-workout AI recaps plus grounded feedback based
+                          on the sets and notes you log.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                        <MessageSquare className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-foreground font-semibold">
+                          Ask follow-up questions anytime
+                        </p>
+                        <p className="text-muted-foreground">
+                          Use the AI coach chat when you want extra guidance
+                          between sessions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <GoogleSignInButton />
+                  </div>
                 </AlertDescription>
               </Alert>
             )}

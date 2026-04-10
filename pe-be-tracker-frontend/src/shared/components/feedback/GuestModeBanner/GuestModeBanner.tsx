@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 // Delay in milliseconds before showing the banner to avoid layout shift
@@ -33,39 +34,29 @@ const GuestModeBanner = () => {
   }
 
   return (
-    <div className="pointer-events-none">
-      <div className="fixed top-16 right-0 left-0 z-40 px-4 lg:left-64">
-        <div className="bg-accent/80 border-primary pointer-events-auto rounded-md border-l-4 p-4 shadow-lg backdrop-blur-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="text-primary h-5 w-5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-accent-foreground text-sm">
-                <strong>Guest Mode:</strong> Your workout data is stored locally
-                on this device.
-                {safeWorkouts.length > 0 && (
-                  <span className="ml-1">
-                    You have {safeWorkouts.length} workout
-                    {safeWorkouts.length !== 1 ? "s" : ""} saved.
-                  </span>
-                )}{" "}
-                <span className="font-medium">
-                  Sign in with Google to sync your data across all devices and
-                  save it permanently.
+    <div className="pointer-events-none fixed top-16 right-0 left-0 z-40 px-4 py-3 lg:left-64">
+      <div className="pointer-events-auto group relative overflow-hidden rounded-2xl border border-primary/20 bg-card/40 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:border-primary/40 active:scale-[0.99] lg:p-5">
+        {/* Animated background glow */}
+        <div className="absolute -inset-24 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5 opacity-40 blur-3xl group-hover:opacity-60 transition-opacity duration-1000" />
+        
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
+            <Info className="h-5 w-5 text-primary" />
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
+                Guest Mode
+              </span>
+              {safeWorkouts.length > 0 && (
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  {safeWorkouts.length} Workout{safeWorkouts.length !== 1 ? "s" : ""}
                 </span>
-              </p>
+              )}
             </div>
+            <p className="text-foreground/90 text-[13px] leading-relaxed font-medium">
+              Your progress is local. <span className="text-muted-foreground font-normal">Sign in to sync your data to your account and keep going on any device.</span>
+            </p>
           </div>
         </div>
       </div>
