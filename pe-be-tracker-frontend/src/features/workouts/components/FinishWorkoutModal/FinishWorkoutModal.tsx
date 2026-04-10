@@ -202,7 +202,7 @@ const FinishWorkoutModal = ({
           {muscleGroupSummary.length > 0 && (
             <div
               ref={downloadAreaRef}
-              className="bg-background mb-4 rounded-lg p-3"
+              className="bg-background mb-4 shrink-0 rounded-lg p-3"
             >
               {/* Header: Logo and Duration for shareable image */}
               <div className="mb-2 flex items-center justify-between">
@@ -274,7 +274,7 @@ const FinishWorkoutModal = ({
 
           {/* AI Recap Section */}
           {totalSets > 0 && (
-            <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 mb-4">
+            <div className="relative group mb-4 shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40">
               {/* Subtle background glow */}
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
 
@@ -310,7 +310,7 @@ const FinishWorkoutModal = ({
                     <div className="h-3 w-[75%] animate-pulse rounded-full bg-primary/10" />
                   </div>
                 ) : recap ? (
-                  <p className="text-foreground/90 text-[13px] leading-relaxed italic font-medium">
+                  <p className="text-foreground/90 break-words text-[13px] leading-relaxed italic font-medium">
                     &ldquo;{recap}&rdquo;
                   </p>
                 ) : !isAuthenticated ? (
@@ -327,7 +327,7 @@ const FinishWorkoutModal = ({
           )}
 
           {onSaveRoutine && exercises.length > 0 && (
-            <div className="bg-accent/10 border-accent/20 mb-4 rounded-lg border p-3">
+            <div className="bg-accent/10 border-accent/20 mb-4 shrink-0 rounded-lg border p-3">
               <div className="mb-2 flex items-center space-x-2">
                 <span className="text-sm font-medium">📋 Save as Routine</span>
               </div>
