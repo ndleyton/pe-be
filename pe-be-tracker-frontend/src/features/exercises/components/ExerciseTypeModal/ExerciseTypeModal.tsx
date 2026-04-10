@@ -621,7 +621,7 @@ const ExerciseTypeModal = ({
           Search existing exercise types or create a new one to add to the workout.
         </DialogDescription>
 
-        <div className="px-6 pt-12 pb-2">
+        <div className="px-4 pt-9 pb-1 sm:px-5 sm:pt-10 sm:pb-2">
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
@@ -687,7 +687,7 @@ const ExerciseTypeModal = ({
           ref={scrollContainerRef}
           onScroll={handleResultsScroll}
           data-testid="exercise-type-modal-scroll-container"
-          className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-border/20"
+          className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin scrollbar-thumb-border/20 sm:px-5 sm:pb-5"
         >
           {renderContent()}
         </div>
