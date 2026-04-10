@@ -110,8 +110,12 @@ img {
 .brand-wordmark {
     display: flex;
     flex-direction: column;
-    line-height: 1;
-    color: rgb(251, 113, 133);
+    line-height: 0.9 !important;
+    color: var(--primary);
+    font-weight: 900;
+    letter-spacing: -0.025em;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.05));
+    text-align: left;
 }
 
 .nav-links {
