@@ -6,7 +6,9 @@ from src.users.models import OAuthAccount, User
 
 class _CaptureUserDatabase(AppSQLAlchemyUserDatabase):
     def __init__(self):
-        super().__init__(session=None, user_table=User, oauth_account_table=OAuthAccount)
+        super().__init__(
+            session=None, user_table=User, oauth_account_table=OAuthAccount
+        )
         self.statement = None
 
     async def _get_user(self, statement):
