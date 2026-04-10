@@ -181,18 +181,12 @@ describe("navigation behavior", () => {
     expect(screen.getByTestId("pathname")).toHaveTextContent("/exercise-types");
   });
 
-  it("uses app history when available before falling back", async () => {
+  it("navigates to the parent route instead of the previous history entry", async () => {
     const user = userEvent.setup();
     renderHarness({
-      initialEntries: ["/exercise-types"],
+      initialEntries: ["/workouts", "/exercise-types/42"],
       navKey: NAV_KEYS.EXERCISES,
       fallbackPath: NAV_PATHS.EXERCISES,
-    });
-
-    await user.click(screen.getByRole("button", { name: /push detail/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("pathname")).toHaveTextContent("/exercise-types/42");
     });
 
     await user.click(screen.getByRole("button", { name: /back nav/i }));
