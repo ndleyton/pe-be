@@ -16,7 +16,7 @@ import sqlalchemy as sa
 revision: str = "e4f1a6b7c8d9"
 down_revision: Union[str, tuple[str, str], None] = (
     "add002_duration_seconds_sets",
-    "148a1c691036",
+    "d598608f5fc4",
 )
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,14 +30,12 @@ def upgrade() -> None:
     if "oauth_accounts" not in inspector.get_table_names():
         return
 
-    indexes = {index["name"] for index in inspector.get_indexes("oauth_accounts")}
-    if "ix_oauth_accounts_user_id" not in indexes:
-        op.create_index(
-            "ix_oauth_accounts_user_id",
-            "oauth_accounts",
-            ["user_id"],
-            unique=False,
+    op.execute(
+        sa.text(
+            "CREATE INDEX IF NOT EXISTS ix_oauth_accounts_user_id "
+            "ON oauth_accounts (user_id)"
         )
+    )
 
 
 def downgrade() -> None:
@@ -48,6 +46,4 @@ def downgrade() -> None:
     if "oauth_accounts" not in inspector.get_table_names():
         return
 
-    indexes = {index["name"] for index in inspector.get_indexes("oauth_accounts")}
-    if "ix_oauth_accounts_user_id" in indexes:
-        op.drop_index("ix_oauth_accounts_user_id", table_name="oauth_accounts")
+    op.execute(sa.text("DROP INDEX IF EXISTS ix_oauth_accounts_user_id"))
