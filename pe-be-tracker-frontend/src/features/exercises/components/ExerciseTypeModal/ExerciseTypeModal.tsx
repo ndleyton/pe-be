@@ -30,7 +30,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { Search, X, Plus, Info, Dumbbell } from "lucide-react";
+import { Search, X, Plus, Info, Dumbbell, Loader2 } from "lucide-react";
 
 interface ExerciseTypeModalProps {
   isOpen: boolean;
@@ -45,6 +45,11 @@ const EXERCISE_TYPE_MODAL_QUERY_KEY = [
   "exerciseTypes",
   "modal",
   "usage",
+] as const;
+const EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY = [
+  "exerciseTypes",
+  "modal",
+  "search",
 ] as const;
 
 type ExerciseTypePage = {
@@ -71,20 +76,26 @@ const ExerciseTypeModal = ({
   const [visibleResultCount, setVisibleResultCount] = useState(
     EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT,
   );
+  const [lastSettledSearchResults, setLastSettledSearchResults] = useState<
+    ExerciseType[]
+  >([]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
+  const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
   const {
-    data: serverExerciseTypesResponse,
-    isPending: isLoading,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    error,
+    data: browseExerciseTypesResponse,
+    isPending: isBrowseLoading,
+    hasNextPage: hasBrowseNextPage,
+    fetchNextPage: fetchBrowseNextPage,
+    isFetchingNextPage: isFetchingBrowseNextPage,
+    error: browseError,
   } = useInfiniteQuery({
     queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY,
     queryFn: ({ pageParam }) =>
@@ -94,49 +105,73 @@ const ExerciseTypeModal = ({
     enabled: isAuthenticated && isOpen,
   });
 
-  const serverExerciseTypes = useMemo(
+  const {
+    data: searchExerciseTypesResponse,
+    isPending: isSearchLoading,
+    hasNextPage: hasSearchNextPage,
+    fetchNextPage: fetchSearchNextPage,
+    isFetchingNextPage: isFetchingSearchNextPage,
+    error: searchError,
+  } = useInfiniteQuery({
+    queryKey: [
+      ...EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY,
+      trimmedDeferredSearchTerm.toLowerCase(),
+    ],
+    queryFn: ({ pageParam }) =>
+      getExerciseTypes(
+        "name",
+        pageParam,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        trimmedDeferredSearchTerm,
+      ),
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    enabled: isAuthenticated && isOpen && isSearchActive,
+  });
+
+  const browseExerciseTypes = useMemo(
     () =>
-      serverExerciseTypesResponse?.pages.flatMap((page) =>
+      browseExerciseTypesResponse?.pages.flatMap((page) =>
         Array.isArray(page?.data) ? page.data : [],
       ) ?? [],
-    [serverExerciseTypesResponse],
+    [browseExerciseTypesResponse],
   );
+
+  const searchExerciseTypes = useMemo(
+    () =>
+      searchExerciseTypesResponse?.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : [],
+      ) ?? [],
+    [searchExerciseTypesResponse],
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || !isSearchActive) {
+      setLastSettledSearchResults([]);
+      return;
+    }
+
+    if (!isSearchLoading) {
+      setLastSettledSearchResults(searchExerciseTypes);
+    }
+  }, [
+    isAuthenticated,
+    isSearchActive,
+    isSearchLoading,
+    searchExerciseTypes,
+  ]);
 
   // Use guest data if not authenticated, server data if authenticated
   const exerciseTypes = isAuthenticated
-    ? serverExerciseTypes
+    ? isSearchActive
+      ? searchExerciseTypes.length > 0 || !isSearchLoading
+        ? searchExerciseTypes
+        : lastSettledSearchResults
+      : browseExerciseTypes
     : Array.isArray(guestData.exerciseTypes)
       ? guestData.exerciseTypes
       : [];
-
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      handleSelect(newExerciseType);
-    },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        // Backend indicates the type already exists — select it instead of showing an error
-        const existing = exerciseTypes.find(
-          (t: ExerciseType | GuestExerciseType) =>
-            t.name.toLowerCase() === searchTerm.toLowerCase(),
-        );
-        if (existing) {
-          handleSelect(existing);
-          // No need to show an error since we handled it gracefully
-          return;
-        }
-      }
-    },
-  });
-
-  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,18 +203,71 @@ const ExerciseTypeModal = ({
   }, [deferredSearchTerm]);
 
   const filteredExerciseTypes = useMemo(() => {
-    if (!deferredSearchTerm.trim()) return exerciseTypes;
-    const term = deferredSearchTerm.toLowerCase().trim();
+    if (isAuthenticated) {
+      return exerciseTypes;
+    }
+
+    if (!trimmedDeferredSearchTerm) return exerciseTypes;
+    const term = trimmedDeferredSearchTerm.toLowerCase();
     return exerciseTypes.filter(
       (type: ExerciseType | GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [deferredSearchTerm, exerciseTypes]);
+  }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
 
+  const createMutation = useMutation({
+    mutationFn: createExerciseType,
+    onSuccess: (newExerciseType) => {
+      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
+      handleSelect(newExerciseType);
+    },
+    onError: (err: unknown) => {
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        typeof err.response.data?.detail === "string" &&
+        err.response.data.detail.toLowerCase().includes("already exists")
+      ) {
+        const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+        // Backend indicates the type already exists — select it instead of showing an error
+        const existing = exerciseTypes.find(
+          (t: ExerciseType | GuestExerciseType) =>
+            t.name.toLowerCase() === normalizedSearchTerm,
+        );
+        if (existing) {
+          handleSelect(existing);
+          // No need to show an error since we handled it gracefully
+          return;
+        }
+      }
+    },
+  });
+
+  const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
+  const fetchNextPage = isSearchActive
+    ? fetchSearchNextPage
+    : fetchBrowseNextPage;
+  const isFetchingNextPage = isSearchActive
+    ? isFetchingSearchNextPage
+    : isFetchingBrowseNextPage;
+  const isLoading = isSearchActive ? isSearchLoading : isBrowseLoading;
+  const error = isSearchActive ? searchError : browseError;
+  const isInitialBrowseLoading =
+    isAuthenticated &&
+    !isSearchActive &&
+    isLoading &&
+    exerciseTypes.length === 0;
+  const isSearchingWithoutResults =
+    isAuthenticated &&
+    isSearchActive &&
+    isSearchLoading &&
+    lastSettledSearchResults.length === 0 &&
+    searchExerciseTypes.length === 0;
   const showCreateButton =
-    searchTerm.trim() && filteredExerciseTypes.length === 0;
-  const isSearchActive = deferredSearchTerm.trim().length > 0;
+    searchTerm.trim() &&
+    filteredExerciseTypes.length === 0 &&
+    !isSearchingWithoutResults;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
@@ -304,7 +392,7 @@ const ExerciseTypeModal = ({
 
   const loadMoreBrowseResults = useCallback(
     (container?: HTMLDivElement | null) => {
-      if (!isOpen || isSearchActive) {
+      if (!isOpen) {
         return;
       }
 
@@ -353,7 +441,6 @@ const ExerciseTypeModal = ({
       isAuthenticated,
       isFetchingNextPage,
       isOpen,
-      isSearchActive,
       visibleResultCount,
     ],
   );
@@ -361,22 +448,6 @@ const ExerciseTypeModal = ({
   const handleResultsScroll = (event: UIEvent<HTMLDivElement>) => {
     loadMoreBrowseResults(event.currentTarget);
   };
-
-  useEffect(() => {
-    if (!isOpen || isSearchActive) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      loadMoreBrowseResults();
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [
-    isOpen,
-    isSearchActive,
-    loadMoreBrowseResults,
-  ]);
 
   const SkeletonCard = () => (
     <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
@@ -391,11 +462,21 @@ const ExerciseTypeModal = ({
   );
 
   const renderContent = () => {
-    if (isAuthenticated && isLoading) {
+    if (isInitialBrowseLoading) {
       return (
         <div className="grid gap-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <SkeletonCard key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    if (isSearchingWithoutResults) {
+      return (
+        <div className="grid gap-3 p-1">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonCard key={`search-skeleton-${index}`} />
           ))}
         </div>
       );
@@ -435,7 +516,11 @@ const ExerciseTypeModal = ({
       );
     }
 
-    if (searchTerm.trim() && filteredExerciseTypes.length === 0) {
+    if (
+      searchTerm.trim() &&
+      filteredExerciseTypes.length === 0 &&
+      !isSearchingWithoutResults
+    ) {
       return (
         <div className="py-12 text-center">
           <div className="bg-primary/5 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
@@ -463,55 +548,55 @@ const ExerciseTypeModal = ({
       <div className="space-y-4 p-1">
         <div className="grid gap-3">
           {visibleExerciseTypes.map(
-          (exerciseType: ExerciseType | GuestExerciseType) => (
-            <button
-              key={exerciseType.id}
-              onClick={() => handleSelect(exerciseType)}
-              className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xl transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-                <span>{exerciseType.name.charAt(0)}</span>
-              </div>
-
-              <div className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
-                    {exerciseType.name}
-                  </h4>
+            (exerciseType: ExerciseType | GuestExerciseType) => (
+              <button
+                key={exerciseType.id}
+                onClick={() => handleSelect(exerciseType)}
+                className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xl transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <span>{exerciseType.name.charAt(0)}</span>
                 </div>
 
-                <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
-                  {exerciseType.description || "No description provided."}
-                </p>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
+                      {exerciseType.name}
+                    </h4>
+                  </div>
 
-                {hasMusclesProperty(exerciseType) &&
-                  exerciseType.muscles.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-1.5 grayscale-[0.5] group-hover:grayscale-0 transition-all">
-                      {exerciseType.muscles
-                        .slice(0, MUSCLE_DISPLAY_LIMIT)
-                        .map((muscle) => (
-                          <span
-                            key={muscle.id}
-                            className="inline-flex items-center rounded-lg bg-secondary/80 px-2 py-0.5 text-[10px] font-bold text-secondary-foreground border border-border/30"
-                          >
-                            {muscle.name}
+                  <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
+                    {exerciseType.description || "No description provided."}
+                  </p>
+
+                  {hasMusclesProperty(exerciseType) &&
+                    exerciseType.muscles.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 grayscale-[0.5] group-hover:grayscale-0 transition-all">
+                        {exerciseType.muscles
+                          .slice(0, MUSCLE_DISPLAY_LIMIT)
+                          .map((muscle) => (
+                            <span
+                              key={muscle.id}
+                              className="inline-flex items-center rounded-lg bg-secondary/80 px-2 py-0.5 text-[10px] font-bold text-secondary-foreground border border-border/30"
+                            >
+                              {muscle.name}
+                            </span>
+                          ))}
+                        {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
+                          <span className="inline-flex items-center rounded-lg bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground border border-border/20">
+                            +{exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT}
                           </span>
-                        ))}
-                      {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
-                        <span className="inline-flex items-center rounded-lg bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground border border-border/20">
-                          +{exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT}
-                        </span>
-                      )}
-                    </div>
-                  )}
-              </div>
+                        )}
+                      </div>
+                    )}
+                </div>
 
-              <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
-                <Plus className="h-5 w-5" />
-              </div>
-            </button>
-          ),
-        )}
+                <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
+                  <Plus className="h-5 w-5" />
+                </div>
+              </button>
+            ),
+          )}
         </div>
 
         {isAuthenticated && isFetchingNextPage && !isSearchActive && (
@@ -537,7 +622,7 @@ const ExerciseTypeModal = ({
           Search existing exercise types or create a new one to add to the workout.
         </DialogDescription>
 
-        <div className="px-6 pt-12 pb-2">
+        <div className="px-4 pt-9 pb-1 sm:px-5 sm:pt-10 sm:pb-2">
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
@@ -554,13 +639,21 @@ const ExerciseTypeModal = ({
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
               {searchTerm && !showCreateButton && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-all"
-                  title="Clear search"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-all"
+                    title="Clear search"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+
+                  {isAuthenticated && isSearchActive && isSearchLoading && (
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-background/20">
+                      <Loader2 className="text-muted-foreground/10 h-8 w-8 animate-spin" />
+                    </span>
+                  )}
+                </div>
               )}
 
               {showCreateButton && (
@@ -595,7 +688,7 @@ const ExerciseTypeModal = ({
           ref={scrollContainerRef}
           onScroll={handleResultsScroll}
           data-testid="exercise-type-modal-scroll-container"
-          className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-border/20"
+          className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin scrollbar-thumb-border/20 sm:px-5 sm:pb-5"
         >
           {renderContent()}
         </div>
