@@ -39,26 +39,24 @@ const GuestModeBanner = () => {
         {/* Animated background glow */}
         <div className="absolute -inset-24 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5 opacity-40 blur-3xl group-hover:opacity-60 transition-opacity duration-1000" />
         
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3 flex-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-              <Info className="h-5 w-5 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
-                  Guest Mode
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
+            <Info className="h-5 w-5 text-primary" />
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
+                Guest Mode
+              </span>
+              {safeWorkouts.length > 0 && (
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  {safeWorkouts.length} Workout{safeWorkouts.length !== 1 ? "s" : ""}
                 </span>
-                {safeWorkouts.length > 0 && (
-                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-                    {safeWorkouts.length} Workout{safeWorkouts.length !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-              <p className="text-foreground/90 text-sm leading-relaxed font-medium max-w-2xl">
-                Your progress is local. <span className="text-muted-foreground font-normal">Sign in to sync your data and unlock the full potential of your Personal Bestie.</span>
-              </p>
+              )}
             </div>
+            <p className="text-foreground/90 text-[13px] leading-relaxed font-medium">
+              Your progress is local. <span className="text-muted-foreground font-normal">Sign in to sync your data to your account and keep going on any device.</span>
+            </p>
           </div>
         </div>
       </div>
