@@ -138,9 +138,9 @@ const RoutineDetailsPage = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-3xl font-black tracking-tight text-transparent text-glow truncate">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <h1 className="min-w-0 truncate bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-3xl font-black tracking-tight text-transparent text-glow">
                 {isPageDataPending
                   ? "Routine Details"
                   : canEdit || isEditing
@@ -150,7 +150,7 @@ const RoutineDetailsPage = () => {
               {editAccessMessage && !isEditing && !isPageDataPending && (
                 <Badge
                   variant="secondary"
-                  className="flex h-fit gap-1.5 rounded-lg border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10"
+                  className="flex h-fit shrink-0 gap-1.5 rounded-lg border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10"
                 >
                   <Eye className="h-3 w-3" />
                   View-only

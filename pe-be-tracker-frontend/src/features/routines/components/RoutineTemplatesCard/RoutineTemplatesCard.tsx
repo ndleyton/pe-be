@@ -114,8 +114,8 @@ export const RoutineTemplatesCard = ({
   return (
     <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="text-xs font-bold uppercase tracking-wider opacity-70">
                 Exercise Sequence
@@ -148,12 +148,12 @@ export const RoutineTemplatesCard = ({
             className="rounded-2xl border border-border/40 bg-muted/20 p-5 shadow-sm transition-all hover:bg-muted/30"
           >
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-4">
+              <div className="flex min-w-0 items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background border border-border/40 text-xl font-black shadow-inner">
                   {templateIndex + 1}
                 </div>
-                <div>
-                  <h2 className="text-lg font-black tracking-tight">
+                <div className="min-w-0">
+                  <h2 className="break-words text-lg font-black tracking-tight">
                     {template.exercise_type?.name ?? "Missing Selection"}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
@@ -236,12 +236,12 @@ export const RoutineTemplatesCard = ({
                         data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
                         className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
                       >
-                        <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/10 pb-3">
-                          <div className="flex items-center gap-3">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border/10 pb-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-black border border-primary/10">
                               {setIndex + 1}
                             </div>
-                            <div className="text-xs font-black uppercase tracking-widest opacity-80">
+                            <div className="min-w-0 break-words text-xs font-black uppercase tracking-widest opacity-80">
                               {formatSetSummary(setTemplate)}
                             </div>
                           </div>
@@ -404,10 +404,10 @@ export const RoutineTemplatesCard = ({
                 ) : (
                   <div
                     key={setTemplate.id}
-                    className="flex items-center gap-2 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/20 shadow-lg shadow-primary/5 backdrop-blur-sm"
+                    className="flex max-w-full items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
                   >
                     <span className="text-[10px] font-black text-primary opacity-40">{setIndex + 1}</span>
-                    <span className="text-xs font-bold tracking-tight italic text-foreground opacity-90">
+                    <span className="min-w-0 break-words text-xs font-bold tracking-tight italic text-foreground opacity-90">
                       {formatSetSummary(setTemplate)}
                     </span>
                   </div>
