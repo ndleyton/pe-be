@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, Iterable, TypeVar
 
 from fastapi import FastAPI
@@ -40,6 +42,17 @@ def _set_span_attributes(span: Span, attributes: dict[str, Any] | None) -> None:
 
 def set_current_span_attributes(attributes: dict[str, Any] | None) -> None:
     _set_span_attributes(trace.get_current_span(), attributes)
+
+
+@contextmanager
+def traced_span(
+    span_name: str,
+    *,
+    attributes: dict[str, Any] | None = None,
+) -> Iterator[Span]:
+    with _tracer.start_as_current_span(span_name) as span:
+        _set_span_attributes(span, attributes)
+        yield span
 
 
 def _build_resource() -> Resource:

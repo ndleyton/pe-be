@@ -23,7 +23,10 @@ class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):
 
     # Add user_id foreign key that FastAPI-Users needs
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="cascade"), nullable=False
+        Integer,
+        ForeignKey("users.id", ondelete="cascade"),
+        nullable=False,
+        index=True,
     )
 
     # Add user relationship
