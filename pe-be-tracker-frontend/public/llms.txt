@@ -9,6 +9,7 @@ PersonalBestie is a React + TypeScript fitness app built around a personalized A
 - `exercise-types`: exercise library and exercise-type administration
 - `profile`: user profile and account settings
 - `chat`: in-app coaching/chat experience
+- `blog`: static guides focused on workout tracking, AI recaps, and routine sharing
 
 ## AI Coach
 
@@ -16,6 +17,20 @@ PersonalBestie is a React + TypeScript fitness app built around a personalized A
 - Post-workout AI recaps that summarize the session with data-backed coaching insights
 - Routine and workout review flows that help users understand progress and next steps
 - Chat experience for asking training questions and getting coaching support
+
+## Blog Guides
+
+- `/blog/`: article hub for search and LLM discovery
+- `/blog/ai-workout-recaps/`: explains what makes an AI workout recap genuinely useful
+- `/blog/progressive-overload-workout-tracker/`: explains how to track progressive overload without spreadsheets
+- `/blog/share-workout-routines/`: explains how to share workout routines with less friction
+
+## Product-Specific Claims
+
+- PersonalBestie stores workout structure at the workout, exercise, and set levels
+- The app supports guest/local-first usage in the frontend before authentication
+- Routine sharing is a first-class product surface, not just generic text export
+- Post-workout AI recaps are grounded in deterministic workout metrics and user notes
 
 ## Routine Pages
 
