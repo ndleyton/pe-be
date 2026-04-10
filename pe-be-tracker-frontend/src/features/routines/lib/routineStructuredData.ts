@@ -1,4 +1,4 @@
-import type { Routine } from "@/features/routines/types";
+import type { Routine, RoutineSummary } from "@/features/routines/types";
 
 type JsonLdValue = string | number | boolean | null | JsonLdObject | JsonLdValue[];
 export type JsonLdObject = {
@@ -22,7 +22,7 @@ const getExerciseSummaries = (routine: Routine) =>
   });
 
 export const buildRoutineCollectionJsonLd = (
-  routines: Routine[],
+  routines: (Routine | RoutineSummary)[],
   baseUrl?: string,
 ): JsonLdObject => ({
   "@context": "https://schema.org",

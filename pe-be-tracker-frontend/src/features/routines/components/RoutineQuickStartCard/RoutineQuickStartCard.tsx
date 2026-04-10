@@ -1,4 +1,4 @@
-import type { Routine } from "@/features/routines/types";
+import type { RoutineSummary } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -15,19 +15,17 @@ const preloadRoutineDetailsPage = createIntentPreload(() =>
 );
 
 interface RoutineQuickStartCardProps {
-  routine: Routine;
-  onStartWorkout: (routine: Routine) => void;
+  routine: RoutineSummary;
+  onStartWorkout: (routine: RoutineSummary) => void;
 }
 
 export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
 }: RoutineQuickStartCardProps) => {
-  const exerciseCount = routine.exercise_templates.length;
-  const totalSets = routine.exercise_templates.reduce(
-    (total, exercise) => total + exercise.set_templates.length,
-    0,
-  );
+  const exerciseCount = routine.exercise_count;
+  const totalSets = routine.set_count;
+  const exerciseNamesPreview = routine.exercise_names_preview;
 
   return (
     <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
@@ -47,15 +45,15 @@ export const RoutineQuickStartCard = ({
       </CardHeader>
       <CardContent className="pt-0 pb-6">
         <div className="space-y-1 mb-5">
-          {routine.exercise_templates.slice(0, 3).map((exercise) => (
-            <div key={exercise.id} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
+          {exerciseNamesPreview.slice(0, 3).map((name: string, i: number) => (
+            <div key={i} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
               <div className="h-1 w-1 rounded-full bg-primary/30" />
-              <span className="truncate">{exercise.exercise_type?.name ?? "Unknown Exercise"}</span>
+              <span className="truncate">{name}</span>
             </div>
           ))}
-          {routine.exercise_templates.length > 3 && (
+          {exerciseNamesPreview.length > 3 && (
             <div className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider pl-2.5 pt-1">
-              +{routine.exercise_templates.length - 3} more
+              +{exerciseNamesPreview.length - 3} more
             </div>
           )}
         </div>
