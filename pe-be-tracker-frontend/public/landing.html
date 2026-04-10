@@ -19,6 +19,7 @@
         name="description"
         content="PersonalBestie is a fitness tracker that helps you surpass your personal bests with a personalized AI coach, share routines instantly, and get instant, data-driven recaps after every workout."
     >
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt">
     <script>
         const hasAuthCookie = document.cookie.split("; ").some((row) => row.startsWith("personalbestie_session="));
         if (hasAuthCookie) {
@@ -177,6 +178,7 @@
                     <div class="flex items-center gap-3">
                         <a href="#features" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">Features</a>
                         <a href="#flow" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">How it works</a>
+                        <a href="https://app.personalbestie.com/blog/" class="hidden text-sm font-medium text-[color:var(--muted-foreground)] md:inline">Blog</a>
                         <a href="https://app.personalbestie.com/login?auth_intent=google&next=/workouts&utm_source=landing&utm_medium=cta&utm_campaign=login" class="btn btn-primary px-4 py-2">Log In</a>
                     </div>
                 </div>
@@ -307,6 +309,50 @@
                         </div>
                     </div>
                 </section>
+
+                <section class="pb-10 sm:pb-16">
+                    <div class="mb-6 max-w-2xl">
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">From the blog</div>
+                        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+                            Search-friendly guides tied to what the app actually does.
+                        </h2>
+                        <p class="mt-4 leading-7 text-[color:var(--muted-foreground)]">
+                            We are publishing practical articles around workout tracking, AI recaps, and routine sharing so search engines and LLMs can discover concrete explanations tied to PersonalBestie’s real product surface.
+                        </p>
+                    </div>
+                    <div class="grid gap-4 lg:grid-cols-3">
+                        <article class="surface p-6">
+                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">AI Coaching</div>
+                            <h3 class="mt-3 text-xl font-semibold">
+                                <a href="https://app.personalbestie.com/blog/ai-workout-recaps/">AI workout recaps that actually help</a>
+                            </h3>
+                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
+                                Why grounded session data matters more than generic coaching language when you finish a workout.
+                            </p>
+                        </article>
+                        <article class="surface p-6">
+                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Workout Tracking</div>
+                            <h3 class="mt-3 text-xl font-semibold">
+                                <a href="https://app.personalbestie.com/blog/progressive-overload-workout-tracker/">How to track progressive overload without a spreadsheet</a>
+                            </h3>
+                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
+                                A cleaner approach to seeing progression through sets, reps, intensity, and previous-session context.
+                            </p>
+                        </article>
+                        <article class="surface p-6">
+                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--primary)]">Routine Sharing</div>
+                            <h3 class="mt-3 text-xl font-semibold">
+                                <a href="https://app.personalbestie.com/blog/share-workout-routines/">How to share a workout routine with a friend or client</a>
+                            </h3>
+                            <p class="mt-3 leading-7 text-[color:var(--muted-foreground)]">
+                                What a shareable routine page should include if you want someone else to actually use it.
+                            </p>
+                        </article>
+                    </div>
+                    <div class="mt-6">
+                        <a href="https://app.personalbestie.com/blog/" class="btn btn-secondary px-6 py-3">Read the blog</a>
+                    </div>
+                </section>
             </main>
 
             <footer class="border-t py-6 text-sm text-[color:var(--muted-foreground)]" style="border-color: var(--border);">
@@ -314,6 +360,8 @@
                     <div>&copy; <span id="year"></span> PersonalBestie · Built by Nicolas Leyton</div>
                     <div class="flex flex-col gap-2 sm:flex-row sm:gap-4">
                         <a href="https://app.personalbestie.com">Open app</a>
+                        <a href="https://app.personalbestie.com/blog/">Blog</a>
+                        <a href="/llms.txt">LLMs.txt</a>
                         <a href="mailto:ndleyton@uc.cl">ndleyton@uc.cl</a>
                         <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
                     </div>
