@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
@@ -448,5 +448,101 @@ describe("ExerciseTypeModal", () => {
     await waitFor(() => {
       expect(screen.getByText("Exercise Match 31")).toBeInTheDocument();
     });
+  });
+
+  it("keeps the previous authenticated search results visible while the next search is pending", async () => {
+    mockIsAuthenticated = true;
+    let resolveDeadSearch:
+      | ((value: ReturnType<typeof makePaginatedExerciseTypes>) => void)
+      | null = null;
+
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (orderBy === "name" && name === "Bench") {
+          return Promise.resolve(
+            makePaginatedExerciseTypes([
+              makeExerciseType({
+                id: 201,
+                name: "Bench Press",
+              }),
+            ]),
+          );
+        }
+
+        if (orderBy === "name" && name === "Dead") {
+          return new Promise((resolve) => {
+            resolveDeadSearch = resolve;
+          });
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes(
+            Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+              makeExerciseType({
+                id: index + 1,
+                name: `Browse Exercise ${index + 1}`,
+              }),
+            ),
+            30,
+          ),
+        );
+      },
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = await screen.findByPlaceholderText(
+      /search exercise types/i,
+    );
+
+    fireEvent.change(searchInput, { target: { value: "Bench" } });
+
+    await waitFor(() => {
+      expect(screen.getByText("Bench Press")).toBeInTheDocument();
+    });
+
+    fireEvent.change(searchInput, { target: { value: "Dead" } });
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "name",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        "Dead",
+      );
+    });
+
+    expect(screen.getByText("Bench Press")).toBeInTheDocument();
+    expect(screen.queryByText("Deadlift")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveDeadSearch?.(
+        makePaginatedExerciseTypes([
+          makeExerciseType({
+            id: 202,
+            name: "Deadlift",
+          }),
+        ]),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Deadlift")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
   });
 });

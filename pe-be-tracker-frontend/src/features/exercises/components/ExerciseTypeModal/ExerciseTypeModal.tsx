@@ -257,7 +257,7 @@ const ExerciseTypeModal = ({
     !isSearchActive &&
     isLoading &&
     exerciseTypes.length === 0;
-  const isSearchingWithoutPreviousResults =
+  const isSearchingWithoutResults =
     isAuthenticated &&
     isSearchActive &&
     isSearchLoading &&
@@ -266,7 +266,7 @@ const ExerciseTypeModal = ({
   const showCreateButton =
     searchTerm.trim() &&
     filteredExerciseTypes.length === 0 &&
-    !isSearchingWithoutPreviousResults;
+    !isSearchingWithoutResults;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
@@ -486,16 +486,12 @@ const ExerciseTypeModal = ({
       );
     }
 
-    if (isSearchingWithoutPreviousResults) {
+    if (isSearchingWithoutResults) {
       return (
-        <div className="py-12 text-center">
-          <div className="bg-primary/5 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <Search className="text-primary/40 h-8 w-8 animate-pulse" />
-          </div>
-          <h4 className="text-foreground mb-1 font-bold text-lg">Searching</h4>
-          <p className="text-muted-foreground text-sm px-4">
-            Looking for matching exercise types...
-          </p>
+        <div className="grid gap-3 p-1">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonCard key={`search-skeleton-${index}`} />
+          ))}
         </div>
       );
     }
@@ -537,7 +533,7 @@ const ExerciseTypeModal = ({
     if (
       searchTerm.trim() &&
       filteredExerciseTypes.length === 0 &&
-      !isSearchingWithoutPreviousResults
+      !isSearchingWithoutResults
     ) {
       return (
         <div className="py-12 text-center">

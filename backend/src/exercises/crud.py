@@ -34,7 +34,7 @@ from src.exercises.intensity_units import (
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
 # search is without hunting through the implementation.
-FUZZY_SCORE_CUTOFF = 50  # permissive enough for minor typos
+FUZZY_SCORE_CUTOFF = 70  # stricter to reduce loosely related search matches
 MAX_FUZZY_SEARCH_RESULTS = 1000
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -591,40 +591,8 @@ async def get_exercise_types(
             )
             next_cursor = _next_cursor_for_page(offset, limit, total_results)
         else:
-            # Last-resort: take the single best match with a minimum acceptance threshold
-            with tracer.start_as_current_span(
-                "exercises.crud.get_exercise_types.fuzzy_matching_fallback"
-            ) as span:
-                span.set_attribute(
-                    "exercise_types.search.valid_candidate_count",
-                    len(candidate_names),
-                )
-                best = (
-                    process.extractOne(name, candidate_names, scorer=fuzz.WRatio)
-                    if candidate_names
-                    else None
-                )
-            if best and best[1] >= 60:
-                matched_name = best[0]
-                matched_id = name_to_id.get(matched_name)
-                if matched_id is not None:
-                    total_results = 1
-                    paged_matched_ids = [matched_id][offset : offset + limit]
-                    exercise_types = await _hydrate_exercise_types_by_ids(
-                        session,
-                        paged_matched_ids,
-                        user_id=user_id,
-                        is_admin=is_admin,
-                        released_only=released_only,
-                    )
-                    next_cursor = _next_cursor_for_page(offset, limit, total_results)
-                else:
-                    exercise_types = []
-                    next_cursor = None
-            else:
-                # No acceptable matches
-                exercise_types = []
-                next_cursor = None
+            exercise_types = []
+            next_cursor = None
     else:
         # Original pagination logic when no name is provided
         if order_by == "usage":

@@ -496,31 +496,22 @@ async def test_get_exercise_types_applies_name_search_within_muscle_group_filter
     assert [item.id for item in exact.data] == [arms_type.id]
 
 
-async def test_get_exercise_types_uses_extract_one_fallback(db_session, monkeypatch):
-    exercise_type = await _seed_exercise_type(
-        db_session, "Fallback Lift", description="fallback"
-    )
+async def test_get_exercise_types_returns_no_results_when_extract_bests_finds_none(
+    db_session, monkeypatch
+):
+    await _seed_exercise_type(db_session, "Fallback Lift", description="fallback")
     await db_session.commit()
 
     monkeypatch.setattr(crud.process, "extractBests", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         crud.process,
         "extractOne",
-        lambda *args, **kwargs: ("Fallback Lift", 61),
+        lambda *args, **kwargs: pytest.fail("extractOne fallback should not be called"),
     )
 
-    accepted = await crud.get_exercise_types(db_session, name="fallbak lift", limit=10)
-    assert [item.id for item in accepted.data] == [exercise_type.id]
-
-    monkeypatch.setattr(
-        crud.process,
-        "extractOne",
-        lambda *args, **kwargs: ("Fallback Lift", 59),
-    )
-
-    rejected = await crud.get_exercise_types(db_session, name="fallbak lift", limit=10)
-    assert rejected.data == []
-    assert rejected.next_cursor is None
+    result = await crud.get_exercise_types(db_session, name="fallbak lift", limit=10)
+    assert result.data == []
+    assert result.next_cursor is None
 
 
 async def test_get_exercise_types_preserves_fuzzy_order_after_hydration(
