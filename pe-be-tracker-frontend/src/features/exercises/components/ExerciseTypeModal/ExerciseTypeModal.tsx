@@ -46,6 +46,11 @@ const EXERCISE_TYPE_MODAL_QUERY_KEY = [
   "modal",
   "usage",
 ] as const;
+const EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY = [
+  "exerciseTypes",
+  "modal",
+  "search",
+] as const;
 
 type ExerciseTypePage = {
   data: ExerciseType[];
@@ -77,14 +82,17 @@ const ExerciseTypeModal = ({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
+  const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
   const {
-    data: serverExerciseTypesResponse,
-    isPending: isLoading,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    error,
+    data: browseExerciseTypesResponse,
+    isPending: isBrowseLoading,
+    hasNextPage: hasBrowseNextPage,
+    fetchNextPage: fetchBrowseNextPage,
+    isFetchingNextPage: isFetchingBrowseNextPage,
+    error: browseError,
   } = useInfiniteQuery({
     queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY,
     queryFn: ({ pageParam }) =>
@@ -94,49 +102,55 @@ const ExerciseTypeModal = ({
     enabled: isAuthenticated && isOpen,
   });
 
-  const serverExerciseTypes = useMemo(
+  const {
+    data: searchExerciseTypesResponse,
+    isPending: isSearchLoading,
+    hasNextPage: hasSearchNextPage,
+    fetchNextPage: fetchSearchNextPage,
+    isFetchingNextPage: isFetchingSearchNextPage,
+    error: searchError,
+  } = useInfiniteQuery({
+    queryKey: [
+      ...EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY,
+      trimmedDeferredSearchTerm.toLowerCase(),
+    ],
+    queryFn: ({ pageParam }) =>
+      getExerciseTypes(
+        "name",
+        pageParam,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        trimmedDeferredSearchTerm,
+      ),
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    enabled: isAuthenticated && isOpen && isSearchActive,
+  });
+
+  const browseExerciseTypes = useMemo(
     () =>
-      serverExerciseTypesResponse?.pages.flatMap((page) =>
+      browseExerciseTypesResponse?.pages.flatMap((page) =>
         Array.isArray(page?.data) ? page.data : [],
       ) ?? [],
-    [serverExerciseTypesResponse],
+    [browseExerciseTypesResponse],
+  );
+
+  const searchExerciseTypes = useMemo(
+    () =>
+      searchExerciseTypesResponse?.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : [],
+      ) ?? [],
+    [searchExerciseTypesResponse],
   );
 
   // Use guest data if not authenticated, server data if authenticated
   const exerciseTypes = isAuthenticated
-    ? serverExerciseTypes
+    ? isSearchActive
+      ? searchExerciseTypes
+      : browseExerciseTypes
     : Array.isArray(guestData.exerciseTypes)
       ? guestData.exerciseTypes
       : [];
-
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      handleSelect(newExerciseType);
-    },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        // Backend indicates the type already exists — select it instead of showing an error
-        const existing = exerciseTypes.find(
-          (t: ExerciseType | GuestExerciseType) =>
-            t.name.toLowerCase() === searchTerm.toLowerCase(),
-        );
-        if (existing) {
-          handleSelect(existing);
-          // No need to show an error since we handled it gracefully
-          return;
-        }
-      }
-    },
-  });
-
-  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
     if (!isOpen) {
@@ -167,19 +181,66 @@ const ExerciseTypeModal = ({
     setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
   }, [deferredSearchTerm]);
 
+  useEffect(() => {
+    if (!isOpen || !scrollContainerRef.current) {
+      return;
+    }
+
+    scrollContainerRef.current.scrollTop = 0;
+  }, [isOpen, trimmedDeferredSearchTerm]);
+
   const filteredExerciseTypes = useMemo(() => {
-    if (!deferredSearchTerm.trim()) return exerciseTypes;
-    const term = deferredSearchTerm.toLowerCase().trim();
+    if (isAuthenticated) {
+      return exerciseTypes;
+    }
+
+    if (!trimmedDeferredSearchTerm) return exerciseTypes;
+    const term = trimmedDeferredSearchTerm.toLowerCase();
     return exerciseTypes.filter(
       (type: ExerciseType | GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [deferredSearchTerm, exerciseTypes]);
+  }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
+
+  const createMutation = useMutation({
+    mutationFn: createExerciseType,
+    onSuccess: (newExerciseType) => {
+      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
+      handleSelect(newExerciseType);
+    },
+    onError: (err: unknown) => {
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        typeof err.response.data?.detail === "string" &&
+        err.response.data.detail.toLowerCase().includes("already exists")
+      ) {
+        // Backend indicates the type already exists — select it instead of showing an error
+        const existing = exerciseTypes.find(
+          (t: ExerciseType | GuestExerciseType) =>
+            t.name.toLowerCase() === searchTerm.toLowerCase(),
+        );
+        if (existing) {
+          handleSelect(existing);
+          // No need to show an error since we handled it gracefully
+          return;
+        }
+      }
+    },
+  });
 
   const showCreateButton =
     searchTerm.trim() && filteredExerciseTypes.length === 0;
-  const isSearchActive = deferredSearchTerm.trim().length > 0;
+  const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
+  const fetchNextPage = isSearchActive
+    ? fetchSearchNextPage
+    : fetchBrowseNextPage;
+  const isFetchingNextPage = isSearchActive
+    ? isFetchingSearchNextPage
+    : isFetchingBrowseNextPage;
+  const isLoading = isSearchActive ? isSearchLoading : isBrowseLoading;
+  const error = isSearchActive ? searchError : browseError;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
@@ -304,7 +365,7 @@ const ExerciseTypeModal = ({
 
   const loadMoreBrowseResults = useCallback(
     (container?: HTMLDivElement | null) => {
-      if (!isOpen || isSearchActive) {
+      if (!isOpen) {
         return;
       }
 
@@ -353,7 +414,6 @@ const ExerciseTypeModal = ({
       isAuthenticated,
       isFetchingNextPage,
       isOpen,
-      isSearchActive,
       visibleResultCount,
     ],
   );
@@ -363,7 +423,7 @@ const ExerciseTypeModal = ({
   };
 
   useEffect(() => {
-    if (!isOpen || isSearchActive) {
+    if (!isOpen) {
       return;
     }
 
@@ -374,7 +434,6 @@ const ExerciseTypeModal = ({
     return () => window.cancelAnimationFrame(frameId);
   }, [
     isOpen,
-    isSearchActive,
     loadMoreBrowseResults,
   ]);
 

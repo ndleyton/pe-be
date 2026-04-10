@@ -297,18 +297,39 @@ describe("ExerciseTypeModal", () => {
     });
   });
 
-  it("searches only across exercise types that have already been loaded", async () => {
+  it("queries authenticated search results instead of filtering only the loaded browse page", async () => {
     mockIsAuthenticated = true;
-    mockGetExerciseTypes.mockResolvedValue(
-      makePaginatedExerciseTypes(
-        Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
-          makeExerciseType({
-            id: index + 1,
-            name: `Exercise ${index + 1}`,
-          }),
-        ),
-        30,
-      ),
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (orderBy === "name" && name === "Exercise 31") {
+          return Promise.resolve(
+            makePaginatedExerciseTypes([
+              makeExerciseType({
+                id: 31,
+                name: "Exercise 31",
+              }),
+            ]),
+          );
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes(
+            Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+              makeExerciseType({
+                id: index + 1,
+                name: `Exercise ${index + 1}`,
+              }),
+            ),
+            30,
+          ),
+        );
+      },
     );
 
     const user = userEvent.setup();
@@ -327,9 +348,105 @@ describe("ExerciseTypeModal", () => {
     await user.type(searchInput, "Exercise 31");
 
     await waitFor(() => {
-      expect(screen.getByText(/no matches/i)).toBeInTheDocument();
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "name",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        "Exercise 31",
+      );
     });
 
-    expect(screen.queryByText("Exercise 31")).not.toBeInTheDocument();
+    expect(screen.getByText("Exercise 31")).toBeInTheDocument();
+    expect(screen.queryByText(/no matches/i)).not.toBeInTheDocument();
+  });
+
+  it("fetches the next authenticated search page when the filtered list is scrolled", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (orderBy === "name" && name === "Exercise") {
+          if (cursor === 30) {
+            return Promise.resolve(
+              makePaginatedExerciseTypes(
+                [makeExerciseType({ id: 31, name: "Exercise Match 31" })],
+                null,
+              ),
+            );
+          }
+
+          return Promise.resolve(
+            makePaginatedExerciseTypes(
+              Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+                makeExerciseType({
+                  id: index + 1,
+                  name: `Exercise Match ${index + 1}`,
+                }),
+              ),
+              30,
+            ),
+          );
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes(
+            Array.from({ length: EXERCISE_TYPE_MODAL_INITIAL_LIMIT }, (_, index) =>
+              makeExerciseType({
+                id: index + 1,
+                name: `Browse Exercise ${index + 1}`,
+              }),
+            ),
+            30,
+          ),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = await screen.findByPlaceholderText(
+      /search exercise types/i,
+    );
+    await user.type(searchInput, "Exercise");
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise Match 30")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Exercise Match 31")).not.toBeInTheDocument();
+
+    const scrollContainer = screen.getByTestId(
+      "exercise-type-modal-scroll-container",
+    );
+    setScrollMetrics(scrollContainer);
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "name",
+        30,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        "Exercise",
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Exercise Match 31")).toBeInTheDocument();
+    });
   });
 });
