@@ -70,6 +70,17 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
+    - name: Verify exactly one Alembic head
+      run: |
+        heads_output="$(uv run alembic heads)"
+        printf '%s\n' "$heads_output"
+
+        head_count="$(printf '%s\n' "$heads_output" | awk '/\(head\)/ {count++} END {print count+0}')"
+        if [ "$head_count" -ne 1 ]; then
+          echo "Expected exactly one Alembic head, found $head_count"
+          exit 1
+        fi
+
     - name: Run ruff linting
       run: uv run ruff check src/ tests/
 
