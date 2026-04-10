@@ -99,7 +99,7 @@ export const ExerciseSetTable = ({
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <>
       <div
         className={`bg-card/50 border-border/10 mb-3 grid items-center gap-2 rounded-lg border-b px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES}`}
       >
@@ -480,6 +480,6 @@ export const ExerciseSetTable = ({
         <Plus className="mr-2 h-5 w-5" />
         <span className="font-bold tracking-tight">Add Set</span>
       </Button>
-    </div>
+    </>
   );
 };
