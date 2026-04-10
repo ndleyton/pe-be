@@ -149,7 +149,7 @@ export const ExerciseSetTable = ({
                   {index + 1}
                 </span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex justify-center">
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -205,7 +205,7 @@ export const ExerciseSetTable = ({
               </div>
 
               {isTimeMode ? (
-                <div className="min-w-0">
+                <div className="min-w-0 flex justify-center">
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -250,7 +250,7 @@ export const ExerciseSetTable = ({
                   />
                 </div>
               ) : (
-                <div className="min-w-0 flex items-center gap-0.5 sm:gap-1">
+                <div className="min-w-0 flex items-center justify-center gap-0.5 sm:gap-1">
                   <Button
                     variant="outline"
                     size="sm"
