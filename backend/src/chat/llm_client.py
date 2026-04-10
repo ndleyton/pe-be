@@ -49,6 +49,7 @@ class ConversationMessage:
     role: ChatRole
     content: str
     parts: list[ContentPart] = field(default_factory=list)
+    provider_parts: list[Any] = field(default_factory=list)
     tool_call_id: Optional[str] = None
     tool_name: Optional[str] = None
     tool_calls: list[ToolCall] = field(default_factory=list)
@@ -261,16 +262,11 @@ class GeminiGenAIClient:
                 continue
 
             if message.role == "assistant":
-                parts: list[types.Part] = []
-                if message.content:
-                    parts.append(types.Part.from_text(text=message.content))
-                for tool_call in message.tool_calls:
-                    parts.append(
-                        types.Part.from_function_call(
-                            name=tool_call.name,
-                            args=tool_call.args,
-                        )
-                    )
+                parts = (
+                    list(message.provider_parts)
+                    if message.provider_parts
+                    else self._to_genai_assistant_parts(message)
+                )
                 if parts:
                     contents.append(types.Content(role="model", parts=parts))
                 continue
@@ -296,6 +292,7 @@ class GeminiGenAIClient:
             system_instruction=system_instruction,
             tools=gemini_tools,
             tool_config=tool_config,
+            thinking_config=self._thinking_config(),
             media_resolution=(
                 types.MediaResolution.MEDIA_RESOLUTION_HIGH if saw_image else None
             ),
@@ -388,13 +385,41 @@ class GeminiGenAIClient:
 
         return parts
 
+    def _to_genai_assistant_parts(
+        self, message: ConversationMessage
+    ) -> list[types.Part]:
+        parts: list[types.Part] = []
+        if message.content:
+            parts.append(types.Part.from_text(text=message.content))
+        for tool_call in message.tool_calls:
+            parts.append(
+                types.Part.from_function_call(
+                    name=tool_call.name,
+                    args=tool_call.args,
+                )
+            )
+        return parts
+
+    def _thinking_config(self) -> types.ThinkingConfig | None:
+        model_id = self.model_name.split("/")[-1]
+        if not model_id.startswith("gemini-3"):
+            return None
+
+        thinking_fields = getattr(types.ThinkingConfig, "model_fields", {})
+        if "thinking_level" not in thinking_fields:
+            return None
+
+        return types.ThinkingConfig(thinking_level="low")
+
     def _normalize_response(self, response: Any) -> LLMResponse:
         tool_calls: list[ToolCall] = []
         text_content = ""
+        provider_parts: list[Any] = []
 
         candidates = getattr(response, "candidates", None) or []
         if candidates and getattr(candidates[0], "content", None):
             for index, part in enumerate(candidates[0].content.parts or []):
+                provider_parts.append(part)
                 if getattr(part, "text", None):
                     text = part.text
                     text_content = (
@@ -424,6 +449,7 @@ class GeminiGenAIClient:
                     if text_content
                     else []
                 ),
+                provider_parts=provider_parts,
                 tool_calls=tool_calls,
             ),
             metadata=self._extract_metadata(response),

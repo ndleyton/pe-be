@@ -1,5 +1,5 @@
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from unittest.mock import patch, MagicMock
 from fastapi import FastAPI
 from src.chat.router import router
@@ -27,7 +27,9 @@ async def test_handle_chat_error(mock_chat_service, override_get_current_user):
     mock_instance.generate_response.side_effect = Exception("Test unexpected error")
     mock_chat_service.return_value = mock_instance
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.post(
             "/chat",
             json={
@@ -45,7 +47,9 @@ async def test_handle_chat_error(mock_chat_service, override_get_current_user):
 async def test_get_conversations_error(mock_get, override_get_current_user):
     mock_get.side_effect = Exception("DB error")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.get("/conversations")
 
     assert response.status_code == 500
@@ -57,7 +61,9 @@ async def test_get_conversations_error(mock_get, override_get_current_user):
 async def test_get_conversation_error(mock_get, override_get_current_user):
     mock_get.side_effect = Exception("DB error")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.get("/conversations/1")
 
     assert response.status_code == 500
@@ -69,7 +75,9 @@ async def test_get_conversation_error(mock_get, override_get_current_user):
 async def test_create_new_conversation_error(mock_create, override_get_current_user):
     mock_create.side_effect = Exception("DB error")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.post("/conversations/", json={"title": "test"})
 
     assert response.status_code == 500
@@ -81,7 +89,9 @@ async def test_create_new_conversation_error(mock_create, override_get_current_u
 async def test_update_conversation_error(mock_update, override_get_current_user):
     mock_update.side_effect = Exception("DB error")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.put("/conversations/1", json={"title": "new"})
 
     assert response.status_code == 500
@@ -93,7 +103,9 @@ async def test_update_conversation_error(mock_update, override_get_current_user)
 async def test_delete_conversation_error(mock_delete, override_get_current_user):
     mock_delete.side_effect = Exception("DB error")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.delete("/conversations/1")
 
     assert response.status_code == 500
@@ -115,7 +127,9 @@ async def test_get_conversation_loads_messages_error(
 
     mock_get.return_value = mock_conv
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.get("/conversations/1")
 
     assert response.status_code == 200
@@ -129,7 +143,9 @@ async def test_handle_chat_value_error(mock_chat_service, override_get_current_u
     mock_instance.generate_response.side_effect = ValueError("Test bad request error")
     mock_chat_service.return_value = mock_instance
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.post(
             "/chat",
             json={
@@ -144,7 +160,9 @@ async def test_handle_chat_value_error(mock_chat_service, override_get_current_u
 
 @pytest.mark.asyncio
 async def test_handle_chat_rejects_non_user_roles(override_get_current_user):
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.post(
             "/chat",
             json={
@@ -162,7 +180,9 @@ async def test_get_conversation_not_found_bubbles(mock_get, override_get_current
     # This verifies the `except HTTPException: raise` branch
     mock_get.return_value = None
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.get("/conversations/1")
 
     assert response.status_code == 404
@@ -176,7 +196,9 @@ async def test_update_conversation_not_found_bubbles(
 ):
     mock_update.return_value = None
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.put("/conversations/1", json={"title": "new"})
 
     assert response.status_code == 404
@@ -194,7 +216,9 @@ async def test_delete_conversation_not_found_handled(
 
     mock_delete.side_effect = HTTPException(status_code=403, detail="Forbidden")
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         response = await ac.delete("/conversations/1")
 
     assert response.status_code == 403
