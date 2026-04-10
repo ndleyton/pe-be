@@ -313,8 +313,9 @@ async def get_exercise_by_id(
             .selectinload(ExerciseType.exercise_muscles)
             .joinedload(ExerciseMuscle.muscle)
             .joinedload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
-            .joinedload(ExerciseSet.intensity_unit),
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).joinedload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.id == exercise_id, Exercise.deleted_at.is_(None))
     )
@@ -397,8 +398,9 @@ async def create_exercise(
             .selectinload(ExerciseType.exercise_muscles)
             .joinedload(ExerciseMuscle.muscle)
             .joinedload(Muscle.muscle_group),
-            selectinload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
-            .joinedload(ExerciseSet.intensity_unit),
+            selectinload(
+                Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
+            ).joinedload(ExerciseSet.intensity_unit),
         )
         .where(Exercise.id == exercise.id)
     )
