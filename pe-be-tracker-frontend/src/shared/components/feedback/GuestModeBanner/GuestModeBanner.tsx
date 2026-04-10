@@ -1,4 +1,6 @@
-import { Button } from "@/shared/components/ui/button";
+import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
+import { useAuthStore, useGuestStore } from "@/stores";
 
 // Delay in milliseconds before showing the banner to avoid layout shift
 const BANNER_DISPLAY_DELAY_MS = 800;
