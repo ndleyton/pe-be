@@ -1,6 +1,10 @@
 :root {
     --primary-rose: #CC0033;
     --primary-rose-soft: rgba(204, 0, 51, 0.1);
+    --primary: var(--primary-rose);
+    --primary-foreground: #FFFFFF;
+    --secondary: #E8E8E3;
+    --secondary-foreground: #1A1919;
     --background: #F7F7F7;
     --card: rgba(255, 255, 255, 0.7);
     --foreground: #1A1919;
@@ -17,6 +21,10 @@
     :root {
         --primary-rose: #FF3366;
         --primary-rose-soft: rgba(255, 51, 102, 0.15);
+        --primary: var(--primary-rose);
+        --primary-foreground: #FFFFFF;
+        --secondary: #3D3535;
+        --secondary-foreground: #F2F0F0;
         --background: #201D1D;
         --card: rgba(39, 33, 33, 0.7);
         --foreground: #F2F0F0;
@@ -27,22 +35,28 @@
     }
 }
 
+.surface {
+    background-color: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
 * {
     box-sizing: border-box;
 }
 
 html {
     scroll-behavior: smooth;
-}
-
-html {
     background-color: var(--background);
 }
 
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: var(--foreground);
     position: relative;
 }
