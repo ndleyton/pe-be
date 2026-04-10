@@ -127,7 +127,7 @@ const AppLayout = () => {
         {/* Main Content */}
         <main
           id="main-content"
-          className="flex min-h-0 flex-1 flex-col pb-16 md:pb-0"
+          className="flex-1 pb-16 md:pb-0"
           role="main"
           style={{ minHeight: "calc(100vh - 4rem)" }}
         >
