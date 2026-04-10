@@ -1,7 +1,7 @@
 """add oauth_accounts.user_id index
 
 Revision ID: e4f1a6b7c8d9
-Revises: add002_duration_seconds_sets, 148a1c691036
+Revises: add002_duration_seconds_sets, d598608f5fc4
 Create Date: 2026-04-09 23:45:00.000000
 
 """
