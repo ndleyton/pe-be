@@ -448,21 +448,6 @@ const ExerciseTypeModal = ({
     loadMoreBrowseResults(event.currentTarget);
   };
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      loadMoreBrowseResults();
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [
-    isOpen,
-    loadMoreBrowseResults,
-  ]);
-
   const SkeletonCard = () => (
     <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
       <div className="flex items-center space-x-4">
