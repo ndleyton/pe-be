@@ -229,10 +229,11 @@ const ExerciseTypeModal = ({
         typeof err.response.data?.detail === "string" &&
         err.response.data.detail.toLowerCase().includes("already exists")
       ) {
+        const normalizedSearchTerm = searchTerm.trim().toLowerCase();
         // Backend indicates the type already exists — select it instead of showing an error
         const existing = exerciseTypes.find(
           (t: ExerciseType | GuestExerciseType) =>
-            t.name.toLowerCase() === searchTerm.toLowerCase(),
+            t.name.toLowerCase() === normalizedSearchTerm,
         );
         if (existing) {
           handleSelect(existing);
