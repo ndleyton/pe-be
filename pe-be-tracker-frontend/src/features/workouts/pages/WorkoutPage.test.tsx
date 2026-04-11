@@ -161,6 +161,7 @@ vi.mock("@/stores", () => ({
 
 describe("WorkoutPage", () => {
   let windowScrollToMock: ReturnType<typeof vi.fn>;
+  let scrollIntoViewMock: ReturnType<typeof vi.fn>;
   const buildApiGetImplementation = (
     workoutHandler?: () => Promise<{ data: unknown }>,
   ) =>
@@ -189,19 +190,15 @@ describe("WorkoutPage", () => {
       writable: true,
       value: windowScrollToMock,
     });
+    scrollIntoViewMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      writable: true,
+      value: scrollIntoViewMock,
+    });
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 0;
-    });
-    Object.defineProperty(document.documentElement, "scrollHeight", {
-      configurable: true,
-      writable: true,
-      value: 1600,
-    });
-    Object.defineProperty(document.body, "scrollHeight", {
-      configurable: true,
-      writable: true,
-      value: 1600,
     });
     exerciseComponentsMocks.ExerciseListMock.mockClear();
     exerciseApiMocks.mockGetExercisesInWorkout.mockReset();
@@ -307,7 +304,11 @@ describe("WorkoutPage", () => {
       expect(screen.getByText(/optimistic-/i)).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(windowScrollToMock).toHaveBeenCalled();
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest",
+      });
     });
 
     const createdExercise = {
@@ -460,7 +461,7 @@ describe("WorkoutPage", () => {
     ).toHaveAttribute("href", "/workouts");
   });
 
-  it("smoothly scrolls to the bottom when entering an in-progress workout", async () => {
+  it("scrolls the bottom anchor into view when entering an in-progress workout", async () => {
     render(<WorkoutPage />);
 
     await waitFor(() => {
@@ -471,9 +472,10 @@ describe("WorkoutPage", () => {
     });
 
     await waitFor(() => {
-      expect(windowScrollToMock).toHaveBeenCalledWith({
-        top: 1600,
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
         behavior: "smooth",
+        block: "end",
+        inline: "nearest",
       });
     });
   });
@@ -491,9 +493,10 @@ describe("WorkoutPage", () => {
     });
 
     await waitFor(() => {
-      expect(windowScrollToMock).toHaveBeenCalledWith({
-        top: 1600,
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
         behavior: "smooth",
+        block: "end",
+        inline: "nearest",
       });
     });
   });
