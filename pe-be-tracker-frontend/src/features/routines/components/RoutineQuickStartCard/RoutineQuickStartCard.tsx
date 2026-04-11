@@ -26,6 +26,10 @@ export const RoutineQuickStartCard = ({
   const exerciseCount = routine.exercise_count;
   const totalSets = routine.set_count;
   const exerciseNamesPreview = routine.exercise_names_preview;
+  const hiddenExerciseCount = Math.max(
+    0,
+    exerciseCount - exerciseNamesPreview.length,
+  );
 
   return (
     <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
@@ -51,9 +55,9 @@ export const RoutineQuickStartCard = ({
               <span className="truncate">{name}</span>
             </div>
           ))}
-          {exerciseNamesPreview.length > 3 && (
+          {hiddenExerciseCount > 0 && (
             <div className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider pl-2.5 pt-1">
-              +{exerciseNamesPreview.length - 3} more
+              +{hiddenExerciseCount} more
             </div>
           )}
         </div>

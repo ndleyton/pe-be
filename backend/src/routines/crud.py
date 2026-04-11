@@ -201,9 +201,9 @@ async def get_visible_routines_summary(
 
         # Ordering
         if order_by == "name":
-            query = query.order_by(Routine.name.asc())
+            query = query.order_by(Routine.name.asc(), Routine.id.asc())
         else:
-            query = query.order_by(Routine.created_at.desc())
+            query = query.order_by(Routine.created_at.desc(), Routine.id.asc())
 
         query = query.offset(offset).limit(limit)
 
