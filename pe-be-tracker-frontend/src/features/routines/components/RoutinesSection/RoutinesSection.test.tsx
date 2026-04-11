@@ -66,27 +66,33 @@ describe("RoutinesSection", () => {
       expect(trigger).toHaveAttribute("aria-expanded", "true");
     });
     expect(screen.getByText("Push Day")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /browse all routines/i }),
+    ).toBeVisible();
   });
 
-  it("stays collapsed by default while keeping the browse link visible", async () => {
+  it("stays collapsed by default and hides the browse link", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
     const trigger = await screen.findByRole("button", {
       name: /quick start routines/i,
     });
-    const browseLink = await screen.findByRole("link", {
-      name: /browse all routines/i,
-    });
 
     await waitFor(() => {
       expect(trigger).toHaveAttribute("aria-expanded", "false");
     });
-    expect(browseLink).toBeVisible();
-    expect(screen.getByText("Push Day")).not.toBeVisible();
+    expect(screen.queryByText("Push Day")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /browse all routines/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("preloads the routines page when the browse button shows intent", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /quick start routines/i }),
+    );
 
     const browseButton = await screen.findByRole("link", {
       name: /browse all routines/i,
