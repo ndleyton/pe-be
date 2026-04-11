@@ -231,6 +231,7 @@ class WorkoutService:
                 Exercise.exercise_type_id == payload.exercise_type_id,
                 Exercise.deleted_at.is_(None),
             )
+            .order_by(Exercise.id.asc())
             .limit(1)
         )
         if exercise_id is None:

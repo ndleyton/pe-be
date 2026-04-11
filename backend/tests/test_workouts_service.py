@@ -197,6 +197,73 @@ async def test_add_exercise_to_current_workout_reuses_existing_exercise(db_sessi
     assert [exercise.id for exercise in exercises] == [existing_exercise.id]
 
 
+async def test_add_exercise_to_current_workout_reuses_lowest_id_when_duplicates_exist(
+    db_session,
+):
+    owner = await _seed_user(db_session, "workout-service-reuse-duplicates@example.com")
+    db_session.add(
+        WorkoutType(
+            id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+            name="Strength Training",
+            description="Seeded for service tests",
+        )
+    )
+    await db_session.flush()
+    exercise_type = await _seed_exercise_type(db_session, "Service Deadlift")
+    intensity_unit = await _seed_intensity_unit(db_session, "Pounds", "lbs")
+    workout = await _seed_workout(
+        db_session,
+        owner.id,
+        DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+        name="Today",
+    )
+    workout.start_time = datetime.now(timezone.utc) - timedelta(hours=1)
+    first_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=workout.start_time,
+    )
+    second_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=workout.start_time + timedelta(minutes=5),
+    )
+    await db_session.commit()
+
+    result = await WorkoutService.add_exercise_to_current_workout(
+        session=db_session,
+        user_id=owner.id,
+        payload=AddExerciseRequest(
+            exercise_type_id=exercise_type.id,
+            initial_set=ExerciseSetInput(
+                reps=5,
+                intensity=225,
+                intensity_unit_id=intensity_unit.id,
+                rest_time_seconds=180,
+            ),
+        ),
+    )
+
+    assert result.id == workout.id
+    exercises = await exercises_crud.get_exercises_for_workout(db_session, workout.id)
+    assert [exercise.id for exercise in exercises] == [
+        first_exercise.id,
+        second_exercise.id,
+    ]
+
+    first_sets = await exercise_sets_crud.get_exercise_sets_for_exercise(
+        db_session, first_exercise.id
+    )
+    second_sets = await exercise_sets_crud.get_exercise_sets_for_exercise(
+        db_session, second_exercise.id
+    )
+    assert len(first_sets) == 1
+    assert first_sets[0].intensity_unit_id == intensity_unit.id
+    assert second_sets == []
+
+
 async def test_add_exercise_to_current_workout_creates_missing_workout_and_set(
     db_session,
 ):
