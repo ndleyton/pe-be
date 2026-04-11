@@ -223,11 +223,17 @@ class Settings(BaseSettings):
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = Field(
         "", validation_alias="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
     )
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
+    )
     OTEL_EXPORTER_OTLP_HEADERS: str = Field(
         "", validation_alias="OTEL_EXPORTER_OTLP_HEADERS"
     )
     OTEL_TRACES_SAMPLER_ARG: float = Field(
         0.1, validation_alias="OTEL_TRACES_SAMPLER_ARG"
+    )
+    OTEL_METRIC_EXPORT_INTERVAL_MILLIS: int = Field(
+        60000, validation_alias="OTEL_METRIC_EXPORT_INTERVAL_MILLIS"
     )
     OTEL_EXCLUDED_URLS: str = Field("/health", validation_alias="OTEL_EXCLUDED_URLS")
 

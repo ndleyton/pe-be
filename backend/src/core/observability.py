@@ -3,11 +3,14 @@ from contextlib import contextmanager
 from typing import Any, Iterable, TypeVar
 
 from fastapi import FastAPI
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from pydantic import BaseModel
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import (
     DEPLOYMENT_ENVIRONMENT,
     SERVICE_NAME,
@@ -69,6 +72,20 @@ def _build_resource() -> Resource:
 def _excluded_urls() -> str | None:
     paths = [path.strip() for path in settings.OTEL_EXCLUDED_URLS.split(",")]
     return ",".join(path for path in paths if path)
+
+
+def _has_trace_export_endpoint() -> bool:
+    return bool(
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT
+        or settings.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+    )
+
+
+def _has_metric_export_endpoint() -> bool:
+    return bool(
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT
+        or settings.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+    )
 
 
 def _server_request_hook(span: Span, scope: dict) -> None:
@@ -145,29 +162,45 @@ def configure_observability(app: FastAPI) -> None:
     if _configured or not settings.OTEL_ENABLED:
         return
 
-    if not (
-        settings.OTEL_EXPORTER_OTLP_ENDPOINT
-        or settings.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-    ):
+    traces_enabled = _has_trace_export_endpoint()
+    metrics_enabled = _has_metric_export_endpoint()
+    if not traces_enabled and not metrics_enabled:
         return
 
-    tracer_provider = TracerProvider(
-        resource=_build_resource(),
-        sampler=ParentBased(TraceIdRatioBased(settings.OTEL_TRACES_SAMPLER_ARG)),
-    )
-    # OTLPSpanExporter reads standard OTEL_* endpoint and auth env vars.
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-    trace.set_tracer_provider(tracer_provider)
+    if traces_enabled:
+        tracer_provider = TracerProvider(
+            resource=_build_resource(),
+            sampler=ParentBased(TraceIdRatioBased(settings.OTEL_TRACES_SAMPLER_ARG)),
+        )
+        # OTLPSpanExporter reads standard OTEL_* endpoint and auth env vars.
+        tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+        trace.set_tracer_provider(tracer_provider)
 
-    _sqlalchemy_instrumentor.instrument(
-        engine=engine.sync_engine,
-        tracer_provider=tracer_provider,
-    )
-    _fastapi_instrumentor.instrument_app(
-        app,
-        tracer_provider=tracer_provider,
-        excluded_urls=_excluded_urls(),
-        server_request_hook=_server_request_hook,
-    )
+        _sqlalchemy_instrumentor.instrument(
+            engine=engine.sync_engine,
+            tracer_provider=tracer_provider,
+        )
+        _fastapi_instrumentor.instrument_app(
+            app,
+            tracer_provider=tracer_provider,
+            excluded_urls=_excluded_urls(),
+            server_request_hook=_server_request_hook,
+        )
+
+    if metrics_enabled:
+        metric_reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(),
+            export_interval_millis=settings.OTEL_METRIC_EXPORT_INTERVAL_MILLIS,
+        )
+        metrics.set_meter_provider(
+            MeterProvider(
+                resource=_build_resource(),
+                metric_readers=[metric_reader],
+            )
+        )
+        from src.core.cache_metrics import register_response_cache_metrics
+        from src.core.http_cache import response_cache
+
+        register_response_cache_metrics(response_cache)
 
     _configured = True
