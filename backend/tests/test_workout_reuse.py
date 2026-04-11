@@ -10,7 +10,9 @@ from src.workouts.models import Workout
 
 @pytest.fixture
 def mock_session():
-    return AsyncMock()
+    session = AsyncMock()
+    session.scalar.return_value = None
+    return session
 
 
 @pytest.fixture
@@ -45,7 +47,6 @@ async def test_reuse_recent_unfinished_workout(
             "src.workouts.service.get_latest_workout_for_user",
             return_value=existing_workout,
         ),
-        patch("src.workouts.service.get_exercises_for_workout", return_value=[]),
         patch(
             "src.workouts.service.create_exercise", return_value=SimpleNamespace(id=1)
         ),
@@ -85,10 +86,10 @@ async def test_create_new_if_latest_is_finished(
         patch(
             "src.workouts.service.create_workout", return_value=new_workout
         ) as mock_create_workout,
-        patch("src.workouts.service.get_exercises_for_workout", return_value=[]),
         patch(
             "src.workouts.service.create_exercise", return_value=SimpleNamespace(id=1)
         ),
+        patch("src.workouts.service.create_exercise_set", return_value=None),
         patch("src.workouts.service.get_workout_by_id", return_value=new_workout),
     ):
         result = await WorkoutService.add_exercise_to_current_workout(
@@ -119,10 +120,10 @@ async def test_create_new_if_latest_is_too_old(
         patch(
             "src.workouts.service.create_workout", return_value=new_workout
         ) as mock_create_workout,
-        patch("src.workouts.service.get_exercises_for_workout", return_value=[]),
         patch(
             "src.workouts.service.create_exercise", return_value=SimpleNamespace(id=1)
         ),
+        patch("src.workouts.service.create_exercise_set", return_value=None),
         patch("src.workouts.service.get_workout_by_id", return_value=new_workout),
     ):
         result = await WorkoutService.add_exercise_to_current_workout(
@@ -147,10 +148,10 @@ async def test_create_new_if_no_previous_workout(
         patch(
             "src.workouts.service.create_workout", return_value=new_workout
         ) as mock_create_workout,
-        patch("src.workouts.service.get_exercises_for_workout", return_value=[]),
         patch(
             "src.workouts.service.create_exercise", return_value=SimpleNamespace(id=1)
         ),
+        patch("src.workouts.service.create_exercise_set", return_value=None),
         patch("src.workouts.service.get_workout_by_id", return_value=new_workout),
     ):
         result = await WorkoutService.add_exercise_to_current_workout(
@@ -159,3 +160,35 @@ async def test_create_new_if_no_previous_workout(
 
         assert result.id == 101
         mock_create_workout.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_reuse_current_workout_existing_exercise_without_creating_duplicate(
+    mock_session, user_id, add_exercise_payload
+):
+    recent_start = datetime.now(timezone.utc) - timedelta(hours=1)
+    existing_workout = Workout(
+        id=100, owner_id=user_id, start_time=recent_start, end_time=None
+    )
+    mock_session.scalar.return_value = 42
+
+    with (
+        patch(
+            "src.workouts.service.get_latest_workout_for_user",
+            return_value=existing_workout,
+        ),
+        patch("src.workouts.service.create_exercise") as mock_create_exercise,
+        patch(
+            "src.workouts.service.create_exercise_set", return_value=None
+        ) as mock_create_exercise_set,
+        patch("src.workouts.service.get_workout_by_id", return_value=existing_workout),
+    ):
+        result = await WorkoutService.add_exercise_to_current_workout(
+            mock_session, user_id, add_exercise_payload
+        )
+
+        assert result.id == 100
+        mock_create_exercise.assert_not_called()
+        mock_create_exercise_set.assert_awaited_once()
+        created_set = mock_create_exercise_set.await_args.args[1]
+        assert created_set.exercise_id == 42
