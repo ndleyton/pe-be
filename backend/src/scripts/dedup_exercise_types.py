@@ -248,7 +248,9 @@ def build_dedup_plan(
         owner_id=non_released_owner_id,
     )
     if released.id == non_released.id:
-        raise ValueError("Released and non-released exercise types resolved to the same row.")
+        raise ValueError(
+            "Released and non-released exercise types resolved to the same row."
+        )
 
     return DedupPlan(
         released=released,
