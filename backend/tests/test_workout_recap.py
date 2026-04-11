@@ -54,7 +54,20 @@ class _FakeClient:
         self.aio = SimpleNamespace(models=self.models)
 
 
-def _build_exercise(*, notes=None, set_notes=None):
+def _extract_metrics_payload(prompt: str):
+    metrics_json = prompt.split("Metrics:\n", maxsplit=1)[1].split(
+        "\n\nGuidelines:", maxsplit=1
+    )[0]
+    return recap_module.json.loads(metrics_json)
+
+
+def _build_exercise(
+    *,
+    notes=None,
+    set_notes=None,
+    intensity=165,
+    intensity_unit_abbreviation=None,
+):
     return SimpleNamespace(
         exercise_type_id=10,
         notes=notes,
@@ -62,18 +75,28 @@ def _build_exercise(*, notes=None, set_notes=None):
         exercise_sets=[
             SimpleNamespace(
                 deleted_at=None,
-                intensity=165,
+                intensity=intensity,
                 reps=6,
                 notes=note,
+                intensity_unit=(
+                    SimpleNamespace(abbreviation=intensity_unit_abbreviation)
+                    if intensity_unit_abbreviation
+                    else None
+                ),
             )
             for note in (set_notes or [])
         ]
         or [
             SimpleNamespace(
                 deleted_at=None,
-                intensity=165,
+                intensity=intensity,
                 reps=6,
                 notes=None,
+                intensity_unit=(
+                    SimpleNamespace(abbreviation=intensity_unit_abbreviation)
+                    if intensity_unit_abbreviation
+                    else None
+                ),
             )
         ],
     )
@@ -143,6 +166,74 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
     assert "Push Day" in langfuse.trace_obj.generations[0]["input"][0]["content"]
     assert langfuse.trace_obj.generations[0]["output"] == recap
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "success"
+
+
+async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
+    monkeypatch,
+):
+    workout = SimpleNamespace(
+        id=11,
+        name="Push Day",
+        notes=None,
+        start_time=datetime(2026, 4, 3, tzinfo=timezone.utc),
+        recap=None,
+    )
+    exercise = _build_exercise(intensity=225, intensity_unit_abbreviation="lb")
+    session = SimpleNamespace(commit=AsyncMock())
+    client_holder = {}
+
+    async def fake_get_workout_by_id(session, workout_id, user_id):
+        return workout
+
+    async def fake_get_exercises_for_workout(session, workout_id):
+        return [exercise]
+
+    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+        return {
+            "progressiveOverload": [
+                {
+                    "date": "2026-04-02",
+                    "maxWeight": 100,
+                    "totalVolume": 600,
+                }
+            ],
+            "intensityUnit": {
+                "id": 1,
+                "name": "Kilograms",
+                "abbreviation": "kg",
+            },
+        }
+
+    def fake_client_factory(*, api_key):
+        client = _FakeClient(response_text="Solid work.", api_key=api_key)
+        client_holder["client"] = client
+        return client
+
+    monkeypatch.setattr(settings, "GOOGLE_AI_KEY", "google-key")
+    monkeypatch.setattr(
+        WorkoutRecapService,
+        "_get_langfuse_client",
+        staticmethod(lambda: None),
+    )
+    monkeypatch.setattr(recap_module, "get_workout_by_id", fake_get_workout_by_id)
+    monkeypatch.setattr(
+        recap_module, "get_exercises_for_workout", fake_get_exercises_for_workout
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercise_type_stats", fake_get_exercise_type_stats
+    )
+    monkeypatch.setattr(recap_module.genai, "Client", fake_client_factory)
+
+    recap = await WorkoutRecapService.generate_recap(session, 11, 42)
+
+    assert recap == "Solid work."
+    prompt = client_holder["client"].models.calls[0]["contents"][0]
+    metrics = _extract_metrics_payload(prompt)
+    assert metrics[0]["intensity_unit"] == "kg"
+    assert metrics[0]["current"]["top_set_intensity_achieved"] == pytest.approx(102.058)
+    assert metrics[0]["current"]["total_volume"] == pytest.approx(612.348)
+    assert metrics[0]["previous"]["max_intensity"] == 100
+    assert "top_set_intensity_achieved" in prompt
 
 
 async def test_generate_recap_updates_langfuse_on_error(monkeypatch):

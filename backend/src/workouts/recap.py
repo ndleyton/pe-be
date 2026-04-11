@@ -1,5 +1,6 @@
 import logging
 import json
+from decimal import Decimal
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from google import genai
@@ -9,11 +10,57 @@ from langfuse import Langfuse
 from src.core.config import settings
 from src.workouts.crud import get_workout_by_id
 from src.exercises.crud import get_exercise_type_stats, get_exercises_for_workout
+from src.exercises.intensity_units import convert_intensity_value
 
 logger = logging.getLogger(__name__)
 
 
 class WorkoutRecapService:
+    @staticmethod
+    def _serialize_metric_value(value: Decimal | int | float | None) -> int | float:
+        if value is None:
+            return 0
+
+        if isinstance(value, Decimal):
+            if value == value.to_integral_value():
+                return int(value)
+            return float(value)
+
+        if isinstance(value, int):
+            return value
+
+        if value.is_integer():
+            return int(value)
+        return value
+
+    @staticmethod
+    def _get_display_intensity_unit(stats: dict, current_sets: list) -> str | None:
+        intensity_unit = stats.get("intensityUnit") or {}
+        abbreviation = intensity_unit.get("abbreviation")
+        if abbreviation:
+            return abbreviation
+
+        for exercise_set in current_sets:
+            set_unit = getattr(exercise_set, "intensity_unit", None)
+            set_abbreviation = getattr(set_unit, "abbreviation", None)
+            if set_abbreviation:
+                return set_abbreviation
+
+        return None
+
+    @staticmethod
+    def _get_display_intensity_value(
+        exercise_set,
+        *,
+        target_unit: str | None,
+    ) -> Decimal:
+        converted_intensity = convert_intensity_value(
+            getattr(exercise_set, "intensity", None),
+            getattr(exercise_set, "intensity_unit", None),
+            target_unit,
+        )
+        return converted_intensity or Decimal("0")
+
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
         if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
@@ -46,20 +93,35 @@ class WorkoutRecapService:
 
             # Current session stats
             current_sets = [s for s in exercise.exercise_sets if s.deleted_at is None]
+            display_intensity_unit = WorkoutRecapService._get_display_intensity_unit(
+                stats, current_sets
+            )
 
-            # Find the "top set" (highest weight, then highest reps)
+            current_sets_with_display_intensity = [
+                (
+                    exercise_set,
+                    WorkoutRecapService._get_display_intensity_value(
+                        exercise_set,
+                        target_unit=display_intensity_unit,
+                    ),
+                )
+                for exercise_set in current_sets
+            ]
+
+            # Find the "top set" using the same display unit as the historical stats.
             top_set = max(
-                current_sets,
-                key=lambda s: (s.intensity or 0, s.reps or 0),
+                current_sets_with_display_intensity,
+                key=lambda item: (item[1], item[0].reps or 0),
                 default=None,
             )
 
-            current_max_weight = top_set.intensity or 0 if top_set else 0
-            current_top_set_reps = top_set.reps or 0 if top_set else 0
+            current_top_intensity = top_set[1] if top_set else Decimal("0")
+            current_top_set_reps = top_set[0].reps or 0 if top_set else 0
             current_total_sets = len(current_sets)
             current_total_reps = sum(s.reps or 0 for s in current_sets)
             current_total_volume = sum(
-                (s.intensity or 0) * (s.reps or 0) for s in current_sets
+                intensity_value * (exercise_set.reps or 0)
+                for exercise_set, intensity_value in current_sets_with_display_intensity
             )
 
             # Historical stats (progressiveOverload list contains historical points)
@@ -76,12 +138,17 @@ class WorkoutRecapService:
 
             metric = {
                 "exercise_name": exercise.exercise_type.name,
+                "intensity_unit": display_intensity_unit,
                 "current": {
                     "sets": current_total_sets,
                     "total_reps": current_total_reps,
-                    "top_set_weight_achieved": float(current_max_weight),
+                    "top_set_intensity_achieved": WorkoutRecapService._serialize_metric_value(
+                        current_top_intensity
+                    ),
                     "top_set_reps": current_top_set_reps,
-                    "total_volume": float(current_total_volume),
+                    "total_volume": WorkoutRecapService._serialize_metric_value(
+                        current_total_volume
+                    ),
                 },
                 "is_pr": False,
             }
@@ -97,13 +164,13 @@ class WorkoutRecapService:
 
             if prev_session:
                 metric["previous"] = {
-                    "max_weight": float(prev_session["maxWeight"]),
-                    "volume": float(prev_session["totalVolume"]),
+                    "max_intensity": prev_session["maxWeight"],
+                    "volume": prev_session["totalVolume"],
                 }
                 # PR detection: higher weight or higher volume
-                if current_max_weight > prev_session["maxWeight"]:
+                if current_top_intensity > Decimal(str(prev_session["maxWeight"])):
                     metric["is_pr"] = True
-                if current_total_volume > prev_session["totalVolume"]:
+                if current_total_volume > Decimal(str(prev_session["totalVolume"])):
                     metric["volume_increased"] = True
             else:
                 metric["is_new_exercise"] = True
@@ -122,7 +189,8 @@ Metrics:
 
 Guidelines:
 - Keep it concise (2-4 sentences).
-- Use `top_set_weight_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
+- Each exercise metric includes `intensity_unit` when a unit is available. Use that unit for any specific numbers you mention.
+- Use `top_set_intensity_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
 - Use `sets` and `total_reps` for general volume highlights.
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
 - Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
