@@ -7,9 +7,13 @@ import { useGuestStore } from "./useGuestStore";
 
 interface StoreInitializerProps {
   children: ReactNode;
+  posthogReady?: boolean;
 }
 
-export const StoreInitializer = ({ children }: StoreInitializerProps) => {
+export const StoreInitializer = ({
+  children,
+  posthogReady = true,
+}: StoreInitializerProps) => {
   const initialized = useRef(false);
   const user = useAuthStore((state) => state.user);
   const syncWithServer = useGuestStore((state) => state.syncWithServer);
@@ -31,7 +35,7 @@ export const StoreInitializer = ({ children }: StoreInitializerProps) => {
 
   // Identify the user in PostHog when authenticated, reset on sign-out
   useEffect(() => {
-    if (!posthog) return;
+    if (!posthogReady || !posthog) return;
 
     if (user) {
       const distinctId = String(user.id);
@@ -62,7 +66,7 @@ export const StoreInitializer = ({ children }: StoreInitializerProps) => {
       posthog.reset();
       lastIdentifiedIdRef.current = null;
     }
-  }, [user, posthog]);
+  }, [user, posthog, posthogReady]);
 
   return <>{children}</>;
 };

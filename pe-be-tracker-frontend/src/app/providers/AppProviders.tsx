@@ -1,7 +1,13 @@
-import type { ErrorInfo, ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "react-error-boundary";
+import posthog from "posthog-js";
 import { PostHogProvider, usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
 import { StoreInitializer } from "@/stores";
@@ -60,6 +66,76 @@ const PostHogErrorBoundary = ({ children }: { children: ReactNode }) => {
   );
 };
 
+const posthogOptions = {
+  api_host: config.posthogHost,
+  capture_exceptions: true,
+  debug: config.isDevelopment,
+  disable_surveys: true,
+} as const;
+
+const DeferredPostHogProvider = ({ children }: { children: ReactNode }) => {
+  const [posthogReady, setPostHogReady] = useState(posthog.__loaded);
+
+  useEffect(() => {
+    if (posthog.__loaded) {
+      setPostHogReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const initializePostHog = () => {
+      if (cancelled || posthog.__loaded) {
+        if (!cancelled && posthog.__loaded) {
+          setPostHogReady(true);
+        }
+        return;
+      }
+
+      posthog.init(config.posthogApiKey, posthogOptions);
+      if (!cancelled) {
+        setPostHogReady(true);
+      }
+    };
+
+    const browserWindow = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (
+          callback: IdleRequestCallback,
+          options?: IdleRequestOptions,
+        ) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+
+    if (typeof browserWindow.requestIdleCallback === "function") {
+      const idleId = browserWindow.requestIdleCallback(initializePostHog, {
+        timeout: 2000,
+      });
+
+      return () => {
+        cancelled = true;
+        browserWindow.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = globalThis.setTimeout(initializePostHog, 0);
+    return () => {
+      cancelled = true;
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return (
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary>
+        <StoreInitializer posthogReady={posthogReady}>
+          {children}
+        </StoreInitializer>
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  );
+};
+
 export const AppProviders = ({ children }: { children: ReactNode }) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
   const isPostHogConfigured =
@@ -72,18 +148,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
       {isPostHogConfigured ? (
-        <PostHogProvider
-          apiKey={config.posthogApiKey}
-          options={{
-            api_host: config.posthogHost,
-            capture_exceptions: true, // Enable automatic exception capture for unhandled errors
-            debug: config.isDevelopment,
-          }}
-        >
-          <PostHogErrorBoundary>
-            <StoreInitializer>{children}</StoreInitializer>
-          </PostHogErrorBoundary>
-        </PostHogProvider>
+        <DeferredPostHogProvider>{children}</DeferredPostHogProvider>
       ) : (
         <ErrorBoundary
           FallbackComponent={SimpleErrorFallback}
