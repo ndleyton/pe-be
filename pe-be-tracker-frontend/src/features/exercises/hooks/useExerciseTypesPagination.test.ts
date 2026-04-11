@@ -37,6 +37,17 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
+
 describe("useExerciseTypesPagination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -186,6 +197,204 @@ describe("useExerciseTypesPagination", () => {
         undefined,
       );
       expect(result.current.exerciseTypes).toHaveLength(2);
+    });
+  });
+
+  it("surfaces exercise type errors and falls back to empty muscle groups when queries fail", async () => {
+    mockGetExerciseTypes.mockRejectedValueOnce(new Error("exercise fetch failed"));
+    mockGetMuscleGroups.mockRejectedValueOnce(new Error("muscle fetch failed"));
+
+    const { result } = renderHook(
+      () =>
+        useExerciseTypesPagination({
+          orderBy: "usage",
+          activeMuscleGroupId: undefined,
+          normalizedSearchTerm: "",
+          trimmedDeferredSearchTerm: "",
+          isSearchActive: false,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual(new Error("exercise fetch failed"));
+      expect(result.current.exerciseTypes).toEqual([]);
+      expect(result.current.muscleGroups).toEqual([]);
+      expect(result.current.isMuscleGroupsLoading).toBe(false);
+      expect(result.current.isInitialLoading).toBe(false);
+    });
+  });
+
+  it("flips isSearchingWithoutResults correctly across empty and populated searches", async () => {
+    const emptySearch = createDeferred<
+      ReturnType<typeof makePaginatedExerciseTypes>
+    >();
+    const populatedSearch = createDeferred<
+      ReturnType<typeof makePaginatedExerciseTypes>
+    >();
+
+    mockGetExerciseTypes.mockImplementation(
+      async (
+        _orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (name === "Missing") {
+          return emptySearch.promise;
+        }
+
+        if (name === "Deadlift") {
+          return populatedSearch.promise;
+        }
+
+        return makePaginatedExerciseTypes([
+          makeExerciseType({ id: 1, name: "Push-ups" }),
+        ]);
+      },
+    );
+
+    const queryClient = createTestQueryClient();
+    const stableWrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+    const { result, rerender } = renderHook(
+      ({
+        normalizedSearchTerm,
+        trimmedDeferredSearchTerm,
+      }: {
+        normalizedSearchTerm: string;
+        trimmedDeferredSearchTerm: string;
+      }) =>
+        useExerciseTypesPagination({
+          orderBy: "usage",
+          activeMuscleGroupId: undefined,
+          normalizedSearchTerm,
+          trimmedDeferredSearchTerm,
+          isSearchActive: true,
+        }),
+      {
+        wrapper: stableWrapper,
+        initialProps: {
+          normalizedSearchTerm: "missing",
+          trimmedDeferredSearchTerm: "Missing",
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSearchingWithoutResults).toBe(true);
+    });
+
+    emptySearch.resolve(makePaginatedExerciseTypes([]));
+
+    await waitFor(() => {
+      expect(result.current.isSearchingWithoutResults).toBe(false);
+      expect(result.current.exerciseTypes).toEqual([]);
+    });
+
+    rerender({
+      normalizedSearchTerm: "deadlift",
+      trimmedDeferredSearchTerm: "Deadlift",
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSearchingWithoutResults).toBe(true);
+    });
+
+    populatedSearch.resolve(
+      makePaginatedExerciseTypes([
+        makeExerciseType({ id: 2, name: "Deadlift Match" }),
+      ]),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSearchingWithoutResults).toBe(false);
+      expect(result.current.exerciseTypes[0]?.name).toBe("Deadlift Match");
+    });
+  });
+
+  it("keeps the previous settled search results visible while the next search is pending", async () => {
+    const pendingSearch = createDeferred<
+      ReturnType<typeof makePaginatedExerciseTypes>
+    >();
+
+    mockGetExerciseTypes.mockImplementation(
+      async (
+        _orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (name === "Bench") {
+          return makePaginatedExerciseTypes([
+            makeExerciseType({ id: 10, name: "Bench Press" }),
+          ]);
+        }
+
+        if (name === "Dead") {
+          return pendingSearch.promise;
+        }
+
+        return makePaginatedExerciseTypes([
+          makeExerciseType({ id: 1, name: "Push-ups" }),
+        ]);
+      },
+    );
+
+    const queryClient = createTestQueryClient();
+    const stableWrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+    const { result, rerender } = renderHook(
+      ({
+        normalizedSearchTerm,
+        trimmedDeferredSearchTerm,
+      }: {
+        normalizedSearchTerm: string;
+        trimmedDeferredSearchTerm: string;
+      }) =>
+        useExerciseTypesPagination({
+          orderBy: "usage",
+          activeMuscleGroupId: undefined,
+          normalizedSearchTerm,
+          trimmedDeferredSearchTerm,
+          isSearchActive: true,
+        }),
+      {
+        wrapper: stableWrapper,
+        initialProps: {
+          normalizedSearchTerm: "bench",
+          trimmedDeferredSearchTerm: "Bench",
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.exerciseTypes[0]?.name).toBe("Bench Press");
+      expect(result.current.isSearchingWithoutResults).toBe(false);
+    });
+
+    rerender({
+      normalizedSearchTerm: "dead",
+      trimmedDeferredSearchTerm: "Dead",
+    });
+
+    await waitFor(() => {
+      expect(result.current.exerciseTypes[0]?.name).toBe("Bench Press");
+      expect(result.current.isSearchingWithoutResults).toBe(false);
+    });
+
+    pendingSearch.resolve(
+      makePaginatedExerciseTypes([
+        makeExerciseType({ id: 11, name: "Deadlift" }),
+      ]),
+    );
+
+    await waitFor(() => {
+      expect(result.current.exerciseTypes[0]?.name).toBe("Deadlift");
     });
   });
 });
