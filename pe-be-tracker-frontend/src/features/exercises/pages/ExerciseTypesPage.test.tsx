@@ -5,16 +5,19 @@ import { render } from "@/test/testUtils";
 import {
   makeExerciseType,
   makeExerciseTypes,
+  makeMuscleGroup,
   makePaginatedExerciseTypes,
 } from "@/test/fixtures";
 import ExerciseTypesPage from "./ExerciseTypesPage";
 import {
   createExerciseType,
   getExerciseTypes,
+  getMuscleGroups,
 } from "@/features/exercises/api";
 import type { ExerciseType } from "@/features/exercises/types";
 
 vi.mock("@/features/exercises/api");
+
 let mockIsAuthenticated = false;
 
 vi.mock("@/stores", () => ({
@@ -31,6 +34,7 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 const mockGetExerciseTypes = vi.mocked(getExerciseTypes);
+const mockGetMuscleGroups = vi.mocked(getMuscleGroups);
 const mockCreateExerciseType = vi.mocked(createExerciseType);
 
 const mockExerciseTypes: ExerciseType[] = [
@@ -42,21 +46,6 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 10,
     default_intensity_unit: 1,
     times_used: 10,
-    muscles: [
-      {
-        id: 101,
-        name: "Pectorals",
-        muscle_group_id: 1,
-        muscle_group: {
-          id: 1,
-          name: "Chest",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-    ],
   }),
   makeExerciseType({
     id: 2,
@@ -66,21 +55,6 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 8,
     default_intensity_unit: 1,
     times_used: 8,
-    muscles: [
-      {
-        id: 201,
-        name: "Quadriceps",
-        muscle_group_id: 2,
-        muscle_group: {
-          id: 2,
-          name: "Legs",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-    ],
   }),
   makeExerciseType({
     id: 3,
@@ -91,34 +65,40 @@ const mockExerciseTypes: ExerciseType[] = [
     usage_count: 6,
     default_intensity_unit: 1,
     times_used: 6,
-    muscles: [
-      {
-        id: 301,
-        name: "Lats",
-        muscle_group_id: 3,
-        muscle_group: {
-          id: 3,
-          name: "Back",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-    ],
   }),
 ];
 
-describe("ExerciseTypesPage - Infinite Scroll", () => {
+const mockMuscleGroups = [
+  makeMuscleGroup({ id: 1, name: "Chest" }),
+  makeMuscleGroup({ id: 2, name: "Legs" }),
+  makeMuscleGroup({ id: 3, name: "Back" }),
+];
+
+describe("ExerciseTypesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsAuthenticated = false;
     Element.prototype.hasPointerCapture ??= vi.fn(() => false);
     Element.prototype.releasePointerCapture ??= vi.fn();
     Element.prototype.scrollIntoView ??= vi.fn();
+
+    Object.defineProperty(document.documentElement, "scrollTop", {
+      value: 0,
+      configurable: true,
+    });
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      value: 800,
+      configurable: true,
+    });
+
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes(mockExerciseTypes),
     );
+    mockGetMuscleGroups.mockResolvedValue(mockMuscleGroups);
     mockCreateExerciseType.mockResolvedValue(makeExerciseType({ id: 999 }));
   });
 
@@ -129,7 +109,7 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       screen.getByRole("heading", { name: /exercises/i, level: 1 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText(/Search exercises.../i),
+      screen.getByPlaceholderText(/search exercises/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: /filter by muscle group/i }),
@@ -137,12 +117,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     expect(
       screen.getByRole("button", { name: /popular/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /a-z/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /a-z/i })).toBeInTheDocument();
   });
 
-  it("calls getExerciseTypes with default parameters on initial load", async () => {
+  it("loads the default browse query and muscle groups", async () => {
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
@@ -152,6 +130,7 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
         100,
         undefined,
       );
+      expect(mockGetMuscleGroups).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -177,29 +156,19 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     });
   });
 
-  it("keeps the muscle-group selector usable when the lookup request fails", async () => {
+  it("keeps the muscle-group selector enabled when the muscle-group lookup fails", async () => {
+    mockGetMuscleGroups.mockRejectedValueOnce(new Error("lookup failed"));
+
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const muscleGroupSelect = screen.getByRole("combobox", {
-      name: /filter by muscle group/i,
-    });
-
-    expect(muscleGroupSelect).toBeEnabled();
-
-    await userEvent.click(muscleGroupSelect);
-    await userEvent.click(await screen.findByRole("option", { name: "Chest" }));
-
     await waitFor(() => {
-      expect(mockGetExerciseTypes).toHaveBeenLastCalledWith(
-        "usage",
-        undefined,
-        100,
-        1,
-      );
+      expect(
+        screen.getByRole("combobox", { name: /filter by muscle group/i }),
+      ).toBeEnabled();
     });
   });
 
@@ -211,64 +180,85 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       expect(screen.getByTestId("exercise-type-2")).toBeInTheDocument();
       expect(screen.getByTestId("exercise-type-3")).toBeInTheDocument();
     });
-
-    expect(screen.getByText("Push-ups")).toBeInTheDocument();
-    expect(screen.getByText("Squats")).toBeInTheDocument();
-    expect(screen.getByText("Pull-ups")).toBeInTheDocument();
   });
 
-  it("filters exercise types based on search term", async () => {
+  it("uses server-backed search instead of filtering only the loaded browse page", async () => {
+    const searchResult = makeExerciseType({
+      id: 44,
+      name: "Nordic Curl",
+      description: "Hamstring exercise",
+    });
+
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) => {
+        if (name === "Nordic") {
+          return makePaginatedExerciseTypes([searchResult]);
+        }
+
+        return makePaginatedExerciseTypes(mockExerciseTypes);
+      },
+    );
+
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "push");
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Nordic",
+    );
 
-    // Should only show Push-ups
-    expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("exercise-type-2")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("exercise-type-3")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        undefined,
+        100,
+        undefined,
+        "Nordic",
+      );
+      expect(screen.getByTestId("exercise-type-44")).toBeInTheDocument();
+    });
   });
 
-  it("filters exercise types based on description", async () => {
+  it("shows empty state when the server search returns no matches", async () => {
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name
+          ? makePaginatedExerciseTypes([])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
+
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "bodyweight");
-
-    // Should only show Push-ups (has "bodyweight" in description)
-    expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("exercise-type-2")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("exercise-type-3")).not.toBeInTheDocument();
-  });
-
-  it("shows empty state when no exercise types match search", async () => {
-    render(<ExerciseTypesPage />);
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "nonexistent",
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+      expect(
+        screen.getByText(/no exercise types match your current filters/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /clear filters/i }),
+      ).toBeInTheDocument();
     });
-
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "nonexistent");
-
-    expect(
-      screen.getByText(/no exercise types match your current filters/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /clear filters/i }),
-    ).toBeInTheDocument();
   });
 
-  it("shows an inline create control for authenticated users with no matches", async () => {
+  it("shows an inline create control for authenticated users with no server matches", async () => {
     mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name
+          ? makePaginatedExerciseTypes([])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
 
     render(<ExerciseTypesPage />);
 
@@ -276,14 +266,24 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "Nordic Curl");
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Nordic Curl",
+    );
 
-    expect(screen.getByTitle('Create "Nordic Curl"')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTitle('Create "Nordic Curl"')).toBeInTheDocument();
+    });
   });
 
-  it("creates a new exercise type from search for authenticated users", async () => {
+  it("creates a new exercise type from server-backed search for authenticated users", async () => {
     mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name
+          ? makePaginatedExerciseTypes([])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
     mockCreateExerciseType.mockResolvedValue(
       makeExerciseType({
         id: 44,
@@ -299,8 +299,10 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "Nordic Curl");
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Nordic Curl",
+    );
     await userEvent.click(screen.getByTitle('Create "Nordic Curl"'));
 
     await waitFor(() => {
@@ -315,44 +317,66 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
     });
   });
 
-  it("clears search when clear button is clicked", async () => {
+  it("restores the browse results when the search is cleared", async () => {
+    const searchResult = makeExerciseType({
+      id: 44,
+      name: "Nordic Curl",
+      description: "Hamstring exercise",
+    });
+
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name === "Nordic"
+          ? makePaginatedExerciseTypes([searchResult])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
+
     render(<ExerciseTypesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "nonexistent");
+    const searchInput = screen.getByPlaceholderText(/search exercises/i);
+    await userEvent.type(searchInput, "Nordic");
 
-    expect(
-      screen.getByText(/no exercise types match your current filters/i),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-44")).toBeInTheDocument();
+    });
 
-    const clearButton = screen.getByRole("button", { name: /clear filters/i });
-    await userEvent.click(clearButton);
+    await userEvent.clear(searchInput);
 
-    expect(searchInput).toHaveValue("");
-    expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    expect(screen.getByTestId("exercise-type-2")).toBeInTheDocument();
-    expect(screen.getByTestId("exercise-type-3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+      expect(screen.queryByTestId("exercise-type-44")).not.toBeInTheDocument();
+    });
   });
 
-  it("shows loading more indicator when fetching next page", async () => {
-    // Mock first call returning full page, second call for next page
-    const fullPage = makeExerciseTypes(100, (i) => ({
-      id: i + 1,
-      name: `Exercise ${i + 1}`,
-      description: `Description ${i + 1}`,
+  it("fetches the next browse page when the user scrolls near the bottom", async () => {
+    const fullPage = makeExerciseTypes(100, (index) => ({
+      id: index + 1,
+      name: `Exercise ${index + 1}`,
+      description: `Description ${index + 1}`,
       muscle_groups: ["test"],
-      usage_count: i + 1,
+      usage_count: index + 1,
       default_intensity_unit: 1,
-      times_used: i + 1,
+      times_used: index + 1,
     }));
+    const nextPage = [makeExerciseType({ id: 101, name: "Exercise 101" })];
 
-    mockGetExerciseTypes
-      .mockResolvedValueOnce(makePaginatedExerciseTypes(fullPage, 100))
-      .mockImplementation(() => new Promise(() => {})); // Pending next page
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, cursor, _limit, _muscleGroupId, name) => {
+        if (name) {
+          return makePaginatedExerciseTypes([]);
+        }
+
+        if (cursor === 100) {
+          return makePaginatedExerciseTypes(nextPage);
+        }
+
+        return makePaginatedExerciseTypes(fullPage, 100);
+      },
+    );
 
     render(<ExerciseTypesPage />);
 
@@ -360,33 +384,83 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
     });
 
-    // Simulate scroll to trigger next page
     Object.defineProperty(document.documentElement, "scrollTop", {
       value: 900,
-      configurable: true,
-    });
-    Object.defineProperty(document.documentElement, "scrollHeight", {
-      value: 1000,
-      configurable: true,
-    });
-    Object.defineProperty(window, "innerHeight", {
-      value: 800,
       configurable: true,
     });
 
     fireEvent.scroll(window);
 
-    // Should show loading more indicator
     await waitFor(() => {
-      expect(document.querySelector(".loading-spinner")).toBeInTheDocument();
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        100,
+        100,
+        undefined,
+      );
+      expect(screen.getByTestId("exercise-type-101")).toBeInTheDocument();
+    });
+  });
+
+  it("fetches the next search page when the user scrolls during search", async () => {
+    const firstSearchPage = [
+      makeExerciseType({ id: 201, name: "Push Exercise 201" }),
+    ];
+    const secondSearchPage = [
+      makeExerciseType({ id: 202, name: "Push Exercise 202" }),
+    ];
+
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, cursor, _limit, _muscleGroupId, name) => {
+        if (name === "Push") {
+          if (cursor === 100) {
+            return makePaginatedExerciseTypes(secondSearchPage);
+          }
+
+          return makePaginatedExerciseTypes(firstSearchPage, 100);
+        }
+
+        return makePaginatedExerciseTypes(mockExerciseTypes);
+      },
+    );
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Push",
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-201")).toBeInTheDocument();
+    });
+
+    Object.defineProperty(document.documentElement, "scrollTop", {
+      value: 900,
+      configurable: true,
+    });
+
+    fireEvent.scroll(window);
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        100,
+        100,
+        undefined,
+        "Push",
+      );
+      expect(screen.getByTestId("exercise-type-202")).toBeInTheDocument();
     });
   });
 
   it("shows no more items message when all data is loaded", async () => {
-    // Mock API to return less than limit (indicating end of data)
-    const partialPage = mockExerciseTypes.slice(0, 2);
     mockGetExerciseTypes.mockResolvedValue({
-      data: partialPage,
+      data: mockExerciseTypes.slice(0, 2),
       next_cursor: null,
     });
 
@@ -394,16 +468,13 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
       expect(
         screen.getByText(/no more exercise types to load/i),
       ).toBeInTheDocument();
     });
   });
 
-  it("shows error message when API call fails", async () => {
+  it("shows an error message when the active exercise-type query fails", async () => {
     mockGetExerciseTypes.mockRejectedValue(new Error("API Error"));
 
     render(<ExerciseTypesPage />);
@@ -426,49 +497,5 @@ describe("ExerciseTypesPage - Infinite Scroll", () => {
         screen.getByText(/no exercise types available/i),
       ).toBeInTheDocument();
     });
-  });
-
-  it("handles case-insensitive search", async () => {
-    render(<ExerciseTypesPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "PUSH");
-
-    // Should still find Push-ups despite case difference
-    expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("exercise-type-2")).not.toBeInTheDocument();
-  });
-
-  it("maintains infinite scroll functionality with filtering", async () => {
-    const manyExerciseTypes = makeExerciseTypes(200, (i) => ({
-      id: i + 1,
-      name: i < 100 ? `Push Exercise ${i + 1}` : `Pull Exercise ${i + 1}`,
-      description: `Description ${i + 1}`,
-      muscle_groups: ["test"],
-      usage_count: i + 1,
-      default_intensity_unit: 1,
-      times_used: i + 1,
-    }));
-
-    mockGetExerciseTypes.mockResolvedValue(
-      makePaginatedExerciseTypes(manyExerciseTypes),
-    );
-
-    render(<ExerciseTypesPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText(/Search exercises.../i);
-    await userEvent.type(searchInput, "Push");
-
-    // Should show only Push exercises (filtered client-side)
-    const pushExercises = screen.getAllByText(/Push Exercise/);
-    expect(pushExercises).toHaveLength(100);
   });
 });

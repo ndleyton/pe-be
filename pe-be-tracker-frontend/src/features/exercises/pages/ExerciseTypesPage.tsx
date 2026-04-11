@@ -1,11 +1,24 @@
-import { useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import axios from "axios";
 import { Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   createExerciseType,
   getExerciseTypes,
+  getMuscleGroups,
   type ExerciseType,
 } from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
@@ -24,70 +37,188 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
-import { useInfiniteScroll } from "@/shared/hooks";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+const EXERCISE_TYPES_PAGE_LIMIT = 100;
+const EXERCISE_TYPES_PAGE_SCROLL_THRESHOLD = 300;
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
+  const [lastSettledSearchResults, setLastSettledSearchResults] = useState<
+    ExerciseType[]
+  >([]);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const createInFlight = useRef(false);
+  const infiniteScrollLoadingRef = useRef(false);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
+  const normalizedSearchTerm = trimmedDeferredSearchTerm.toLowerCase();
+  const isSearchActive = trimmedDeferredSearchTerm.length > 0;
   const activeMuscleGroupId =
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
 
   const {
-    data: exerciseTypes,
-    isPending,
-    isFetchingNextPage,
-    hasMore,
-    error,
-  } = useInfiniteScroll<ExerciseType>({
-    queryKey: ["exerciseTypes", orderBy, selectedMuscleGroupId],
-    queryFn: (cursor, limit) =>
-      getExerciseTypes(orderBy, cursor, limit, activeMuscleGroupId),
-    limit: 100,
+    data: browseExerciseTypesResponse,
+    isPending: isBrowseLoading,
+    isFetchingNextPage: isFetchingBrowseNextPage,
+    hasNextPage: hasBrowseNextPage,
+    fetchNextPage: fetchBrowseNextPage,
+    error: browseError,
+  } = useInfiniteQuery({
+    queryKey: [
+      "exerciseTypes",
+      "page",
+      "browse",
+      orderBy,
+      activeMuscleGroupId ?? "all",
+    ],
+    queryFn: ({ pageParam }) =>
+      getExerciseTypes(
+        orderBy,
+        pageParam,
+        EXERCISE_TYPES_PAGE_LIMIT,
+        activeMuscleGroupId,
+      ),
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    enabled: !isSearchActive,
   });
 
-  const filteredExerciseTypes = useMemo(() => {
-    if (!searchTerm) return exerciseTypes;
+  const {
+    data: searchExerciseTypesResponse,
+    isPending: isSearchLoading,
+    isFetchingNextPage: isFetchingSearchNextPage,
+    hasNextPage: hasSearchNextPage,
+    fetchNextPage: fetchSearchNextPage,
+    error: searchError,
+  } = useInfiniteQuery({
+    queryKey: [
+      "exerciseTypes",
+      "page",
+      "search",
+      orderBy,
+      activeMuscleGroupId ?? "all",
+      normalizedSearchTerm,
+    ],
+    queryFn: ({ pageParam }) =>
+      getExerciseTypes(
+        orderBy,
+        pageParam,
+        EXERCISE_TYPES_PAGE_LIMIT,
+        activeMuscleGroupId,
+        trimmedDeferredSearchTerm,
+      ),
+    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    enabled: isSearchActive,
+  });
 
-    return exerciseTypes.filter(
-      (exerciseType) =>
-        exerciseType.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (exerciseType.description &&
-          exerciseType.description
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())),
-    );
-  }, [exerciseTypes, searchTerm]);
-  const fallbackMuscleGroups = useMemo(() => {
-    const groupsById = new Map<number, { id: number; name: string }>();
+  const { data: muscleGroups = [], isPending: isMuscleGroupsLoading } = useQuery(
+    {
+      queryKey: ["muscleGroups"],
+      queryFn: getMuscleGroups,
+    },
+  );
 
-    exerciseTypes.forEach((exerciseType) => {
-      exerciseType.muscles?.forEach((muscle) => {
-        groupsById.set(muscle.muscle_group.id, {
-          id: muscle.muscle_group.id,
-          name: muscle.muscle_group.name,
-        });
-      });
+  const browseExerciseTypes = useMemo(
+    () =>
+      browseExerciseTypesResponse?.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : [],
+      ) ?? [],
+    [browseExerciseTypesResponse],
+  );
+
+  const searchExerciseTypes = useMemo(
+    () =>
+      searchExerciseTypesResponse?.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : [],
+      ) ?? [],
+    [searchExerciseTypesResponse],
+  );
+
+  useEffect(() => {
+    if (!isSearchActive) {
+      setLastSettledSearchResults([]);
+      return;
+    }
+
+    if (!isSearchLoading) {
+      setLastSettledSearchResults(searchExerciseTypes);
+    }
+  }, [isSearchActive, isSearchLoading, searchExerciseTypes]);
+
+  const exerciseTypes = isSearchActive
+    ? searchExerciseTypes.length > 0 || !isSearchLoading
+      ? searchExerciseTypes
+      : lastSettledSearchResults
+    : browseExerciseTypes;
+
+  const hasMore = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
+  const isFetchingNextPage = isSearchActive
+    ? isFetchingSearchNextPage
+    : isFetchingBrowseNextPage;
+  const error = isSearchActive ? searchError : browseError;
+  const isPending = isSearchActive ? isSearchLoading : isBrowseLoading;
+  const isInitialLoading = isPending && exerciseTypes.length === 0;
+  const fetchNextPage = isSearchActive
+    ? fetchSearchNextPage
+    : fetchBrowseNextPage;
+  const isSearchingWithoutResults =
+    isSearchActive &&
+    isSearchLoading &&
+    lastSettledSearchResults.length === 0 &&
+    searchExerciseTypes.length === 0;
+
+  const loadMoreResults = useCallback(() => {
+    if (!hasMore || isFetchingNextPage || infiniteScrollLoadingRef.current) {
+      return;
+    }
+
+    const scrollTop =
+      document.documentElement.scrollTop || document.body.scrollTop;
+    const scrollHeight =
+      document.documentElement.scrollHeight || document.body.scrollHeight;
+    const clientHeight = window.innerHeight;
+
+    if (
+      scrollTop + clientHeight <
+      scrollHeight - EXERCISE_TYPES_PAGE_SCROLL_THRESHOLD
+    ) {
+      return;
+    }
+
+    infiniteScrollLoadingRef.current = true;
+    void fetchNextPage().finally(() => {
+      infiniteScrollLoadingRef.current = false;
     });
+  }, [fetchNextPage, hasMore, isFetchingNextPage]);
 
-    return Array.from(groupsById.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [exerciseTypes]);
-  const isMuscleGroupSelectorDisabled =
-    isPending && fallbackMuscleGroups.length === 0;
+  useEffect(() => {
+    const handleScroll = () => {
+      window.requestAnimationFrame(loadMoreResults);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loadMoreResults]);
+
+  const sortedMuscleGroups = useMemo(
+    () => [...muscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
+    [muscleGroups],
+  );
+  const isMuscleGroupSelectorDisabled = isMuscleGroupsLoading;
   const hasActiveFilters =
     searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
   const showCreateButton =
     isAuthenticated &&
     searchTerm.trim().length > 0 &&
-    filteredExerciseTypes.length === 0;
+    exerciseTypes.length === 0 &&
+    !isSearchingWithoutResults;
 
   const createMutation = useMutation({
     mutationFn: createExerciseType,
@@ -234,7 +365,7 @@ const ExerciseTypesPage = () => {
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl">
                 <SelectItem value="all">All Muscle Groups</SelectItem>
-                {fallbackMuscleGroups.map((muscleGroup) => (
+                {sortedMuscleGroups.map((muscleGroup) => (
                   <SelectItem
                     key={muscleGroup.id}
                     value={String(muscleGroup.id)}
@@ -274,7 +405,7 @@ const ExerciseTypesPage = () => {
 
         {/* Exercise Types Grid - Always show structure */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {isPending ? (
+          {isInitialLoading ? (
             <>
               {Array.from({ length: 9 }).map((_, i) => (
                 <div
@@ -298,7 +429,7 @@ const ExerciseTypesPage = () => {
               ))}
             </>
           ) : (
-            filteredExerciseTypes.map((exerciseType) => (
+            exerciseTypes.map((exerciseType) => (
               <ExerciseTypeCard
                 key={exerciseType.id}
                 exerciseType={exerciseType}
@@ -308,14 +439,14 @@ const ExerciseTypesPage = () => {
         </div>
 
         {/* Loading more indicator */}
-        {!isPending && isFetchingNextPage && (
+        {!isInitialLoading && isFetchingNextPage && (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent loading-spinner" />
           </div>
         )}
 
         {/* End of results indicator */}
-        {!isPending && !hasMore && filteredExerciseTypes.length > 0 && (
+        {!isInitialLoading && !hasMore && exerciseTypes.length > 0 && (
           <div className="py-12 text-center">
             <p className="text-muted-foreground text-sm font-medium opacity-50">
               No more exercise types to load
@@ -324,7 +455,7 @@ const ExerciseTypesPage = () => {
         )}
 
         {/* Empty State */}
-        {!isPending && filteredExerciseTypes.length === 0 && (
+        {!isInitialLoading && exerciseTypes.length === 0 && (
           <div className="py-20 text-center">
             <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
               <Search className="text-muted-foreground h-10 w-10 opacity-20" />
