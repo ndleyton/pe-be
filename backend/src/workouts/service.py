@@ -3,7 +3,7 @@ from typing import Optional, List
 import json
 from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from google import genai
 from google.genai import types
 from datetime import datetime, timezone, timedelta
@@ -34,6 +34,7 @@ from src.exercises.crud import (
     create_exercise_type,
     get_intensity_units,
 )
+from src.exercises.models import Exercise
 from src.exercises.intensity_units import (
     DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
     prefers_duration_for_intensity_unit,
@@ -41,7 +42,6 @@ from src.exercises.intensity_units import (
 from src.exercise_sets.crud import create_exercise_set
 from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
 from src.exercise_sets.schemas import ExerciseSetCreate
-from src.exercises.crud import get_exercises_for_workout
 
 logger = logging.getLogger(__name__)
 
@@ -223,17 +223,17 @@ class WorkoutService:
             )
             workout = await create_workout(session, workout_create, user_id)
 
-        # 3. Check if exercise type already exists in workout
-        existing_exercises = await get_exercises_for_workout(session, workout.id)
-        exercise = next(
-            (
-                ex
-                for ex in existing_exercises
-                if ex.exercise_type_id == payload.exercise_type_id
-            ),
-            None,
+        # 3. Check if exercise type already exists in workout with a narrow lookup.
+        exercise_id = await session.scalar(
+            select(Exercise.id)
+            .where(
+                Exercise.workout_id == workout.id,
+                Exercise.exercise_type_id == payload.exercise_type_id,
+                Exercise.deleted_at.is_(None),
+            )
+            .limit(1)
         )
-        if not exercise:
+        if exercise_id is None:
             # create new exercise
             exercise_create = ExerciseCreate(
                 timestamp=datetime.now(timezone.utc),
@@ -245,6 +245,7 @@ class WorkoutService:
                 exercise_create,
                 user_id=user_id,
             )
+            exercise_id = exercise.id
 
         # 4. Add initial set if provided
         if payload.initial_set:
@@ -255,7 +256,7 @@ class WorkoutService:
                 rpe=payload.initial_set.rpe,
                 intensity_unit_id=payload.initial_set.intensity_unit_id,
                 rest_time_seconds=payload.initial_set.rest_time_seconds,
-                exercise_id=exercise.id,
+                exercise_id=exercise_id,
                 done=False,  # New set is not done by default
             )
             await create_exercise_set(session, initial_set_create)
