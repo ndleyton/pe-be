@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { makeRoutineSummary } from "@/test/fixtures";
 import { RoutinesSection } from "./RoutinesSection";
@@ -74,20 +73,20 @@ describe("RoutinesSection", () => {
     const trigger = await screen.findByRole("button", {
       name: /quick start routines/i,
     });
+    const browseLink = screen.getByRole("link", {
+      name: /browse all routines/i,
+    });
 
     await waitFor(() => {
       expect(trigger).toHaveAttribute("aria-expanded", "false");
     });
+    expect(browseLink).toBeVisible();
   });
 
   it("preloads the routines page when the browse button shows intent", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /quick start routines/i }),
-    );
-
-    const browseButton = screen.getByRole("link", {
+    const browseButton = await screen.findByRole("link", {
       name: /browse all routines/i,
     });
 

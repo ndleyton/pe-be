@@ -28,7 +28,9 @@ test.describe("Routines quick-start navigation", () => {
             is_readonly: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            exercise_templates: [],
+            exercise_count: 3,
+            set_count: 9,
+            exercise_names_preview: ["Push-ups", "Rows", "Squats"],
           },
         ]),
       });

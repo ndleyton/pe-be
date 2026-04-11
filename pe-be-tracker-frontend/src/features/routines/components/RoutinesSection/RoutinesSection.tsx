@@ -79,51 +79,54 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
 
   return (
     <div className="mb-6 w-full">
-      <Accordion
-        type="single"
-        collapsible
-        value={accordionValue}
-        onValueChange={setAccordionValue}
-      >
-        <AccordionItem value={QUICK_START_ROUTINES_VALUE}>
-          <AccordionTrigger className="justify-start gap-2 py-0">
-            <h3 className="text-muted-foreground text-lg font-semibold">
-              Quick Start Routines
-            </h3>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="w-full px-1 sm:px-3">
-              <div className="flex w-full items-center gap-2">
-                <div className="w-0 min-w-0 flex-1 overflow-x-auto">
-                  <div className="flex flex-nowrap gap-2 py-1">
-                    {routines.map((routine) => (
-                      <div key={routine.id}>
-                        <RoutineQuickStartCard
-                          routine={routine}
-                          onStartWorkout={onStartWorkout}
-                        />
-                      </div>
-                    ))}
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <Accordion
+            type="single"
+            collapsible
+            value={accordionValue}
+            onValueChange={setAccordionValue}
+          >
+            <AccordionItem value={QUICK_START_ROUTINES_VALUE}>
+              <AccordionTrigger className="min-w-0 justify-start gap-2 py-0">
+                <h3 className="text-muted-foreground text-lg font-semibold">
+                  Quick Start Routines
+                </h3>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="w-full px-1 sm:px-3">
+                  <div className="w-0 min-w-0 overflow-x-auto">
+                    <div className="flex flex-nowrap gap-2 py-1">
+                      {routines.map((routine) => (
+                        <div key={routine.id}>
+                          <RoutineQuickStartCard
+                            routine={routine}
+                            onStartWorkout={onStartWorkout}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <Button
-                  asChild
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Browse all routines"
-                  onMouseEnter={preloadRoutinesPage}
-                  onTouchStart={preloadRoutinesPage}
-                  onFocus={preloadRoutinesPage}
-                >
-                  <Link to="/routines">
-                    <ChevronRight className="text-muted-foreground h-5 w-5" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <Button
+          asChild
+          size="icon"
+          variant="ghost"
+          aria-label="Browse all routines"
+          className="shrink-0"
+          onMouseEnter={preloadRoutinesPage}
+          onTouchStart={preloadRoutinesPage}
+          onFocus={preloadRoutinesPage}
+        >
+          <Link to="/routines">
+            <ChevronRight className="text-muted-foreground h-5 w-5" />
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 };

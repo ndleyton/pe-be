@@ -66,7 +66,7 @@ export const makeRoutine = (
 export const makeRoutineSummary = (
   overrides: Partial<RoutineSummary> = {},
 ): RoutineSummary => ({
-  id: nextId(),
+  id: 1,
   name: "Test Routine",
   description: "A test routine",
   workout_type_id: 1,
@@ -75,8 +75,8 @@ export const makeRoutineSummary = (
   is_readonly: false,
   created_at: DEFAULT_TIMESTAMP,
   updated_at: DEFAULT_TIMESTAMP,
-  exercise_count: 1,
-  set_count: 1,
-  exercise_names_preview: ["Push-ups"],
+  exercise_count: 3,
+  set_count: 9,
+  exercise_names_preview: ["Push-ups", "Rows", "Squats"],
   ...overrides,
 });
