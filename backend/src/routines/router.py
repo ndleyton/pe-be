@@ -18,6 +18,9 @@ from src.users.models import User
 # The backing database table remains "recipes".
 router = APIRouter(tags=["routines"])
 
+MAX_ROUTINE_LIMIT = 500
+ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name"}
+
 
 @router.get("/", response_model=List[RoutineRead])
 async def get_visible_routines(
@@ -45,6 +48,28 @@ async def get_visible_routines_summary(
     order_by: str = "createdAt",
 ):
     """Get summarized routines visible to the current viewer."""
+    # Validation
+    if offset < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Offset must be non-negative",
+        )
+    if limit <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Limit must be a positive integer",
+        )
+    if limit > MAX_ROUTINE_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Limit exceeds maximum allowed ({MAX_ROUTINE_LIMIT})",
+        )
+    if order_by not in ALLOWED_SORT_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid order_by. Supported values: {', '.join(sorted(ALLOWED_SORT_KEYS))}",
+        )
+
     return await routine_service.get_visible_routines_summary(
         session, user.id if user else None, offset, limit, order_by
     )

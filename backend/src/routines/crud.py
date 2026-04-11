@@ -250,7 +250,10 @@ async def get_visible_routines_summary(
         # Ordering
         if order_by == "name":
             query = query.order_by(Routine.name.asc(), Routine.id.asc())
+        elif order_by == "updatedAt":
+            query = query.order_by(Routine.updated_at.desc(), Routine.id.asc())
         else:
+            # Default to createdAt
             query = query.order_by(Routine.created_at.desc(), Routine.id.asc())
 
         query = query.offset(offset).limit(limit)
