@@ -1,6 +1,7 @@
 import type {
   ExerciseTemplate,
   Routine,
+  RoutineSummary,
   SetTemplate,
 } from "@/features/routines/types";
 
@@ -59,5 +60,23 @@ export const makeRoutine = (
   created_at: DEFAULT_TIMESTAMP,
   updated_at: DEFAULT_TIMESTAMP,
   exercise_templates: [makeRoutineExerciseTemplate()],
+  ...overrides,
+});
+
+export const makeRoutineSummary = (
+  overrides: Partial<RoutineSummary> = {},
+): RoutineSummary => ({
+  id: nextId(),
+  name: "Test Routine",
+  description: "A test routine",
+  workout_type_id: 1,
+  creator_id: 1,
+  visibility: "private",
+  is_readonly: false,
+  created_at: DEFAULT_TIMESTAMP,
+  updated_at: DEFAULT_TIMESTAMP,
+  exercise_count: 1,
+  set_count: 1,
+  exercise_names_preview: ["Push-ups"],
   ...overrides,
 });

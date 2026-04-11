@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import { makeRoutineSummary } from "@/test/fixtures";
 import { RoutinesSection } from "./RoutinesSection";
 import { getRoutines } from "@/features/routines/api";
 
@@ -36,18 +37,17 @@ vi.mock("@/features/routines/components", () => ({
 const mockGetRoutines = vi.mocked(getRoutines);
 
 const routines = [
-  {
+  makeRoutineSummary({
     id: 1,
     name: "Push Day",
     description: null,
     workout_type_id: 2,
     creator_id: 1,
-    visibility: "public" as const,
+    visibility: "public",
     is_readonly: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    exercise_templates: [],
-  },
+  }),
 ];
 
 describe("RoutinesSection", () => {

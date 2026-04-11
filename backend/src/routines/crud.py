@@ -225,23 +225,25 @@ async def get_visible_routines_summary(
                 func.count(ExerciseTemplate.id.distinct()).label("exercise_count"),
                 func.count(SetTemplate.id).label("set_count"),
             )
-            .outerjoin(SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id)
+            .outerjoin(
+                SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id
+            )
             .where(ExerciseTemplate.routine_id.in_(routine_ids))
             .group_by(ExerciseTemplate.routine_id)
         )
 
         count_result = await session.execute(count_query)
         counts_by_routine = {
-            row.routine_id: {"exercise_count": row.exercise_count, "set_count": row.set_count}
+            row.routine_id: {
+                "exercise_count": row.exercise_count,
+                "set_count": row.set_count,
+            }
             for row in count_result.all()
         }
 
         # Bounded preview of exercise names
         preview_query = (
-            select(
-                ExerciseTemplate.routine_id,
-                ExerciseType.name
-            )
+            select(ExerciseTemplate.routine_id, ExerciseType.name)
             .join(ExerciseType, ExerciseTemplate.exercise_type_id == ExerciseType.id)
             .where(ExerciseTemplate.routine_id.in_(routine_ids))
             .order_by(ExerciseTemplate.routine_id, ExerciseTemplate.id)
@@ -264,20 +266,22 @@ async def get_visible_routines_summary(
             total_exercises += counts["exercise_count"]
             total_sets += counts["set_count"]
 
-            summary_list.append({
-                "id": r.id,
-                "name": r.name,
-                "description": r.description,
-                "workout_type_id": r.workout_type_id,
-                "creator_id": r.creator_id,
-                "visibility": r.visibility,
-                "is_readonly": r.is_readonly,
-                "created_at": r.created_at,
-                "updated_at": r.updated_at,
-                "exercise_count": counts["exercise_count"],
-                "set_count": counts["set_count"],
-                "exercise_names_preview": previews,
-            })
+            summary_list.append(
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "description": r.description,
+                    "workout_type_id": r.workout_type_id,
+                    "creator_id": r.creator_id,
+                    "visibility": r.visibility,
+                    "is_readonly": r.is_readonly,
+                    "created_at": r.created_at,
+                    "updated_at": r.updated_at,
+                    "exercise_count": counts["exercise_count"],
+                    "set_count": counts["set_count"],
+                    "exercise_names_preview": previews,
+                }
+            )
 
         span.set_attribute("routine.list.exercise_count_total", total_exercises)
         span.set_attribute("routine.list.set_count_total", total_sets)

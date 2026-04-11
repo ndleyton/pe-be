@@ -2,7 +2,12 @@ from typing import List
 from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate, RoutineSummary
+from src.routines.schemas import (
+    RoutineRead,
+    RoutineCreate,
+    RoutineUpdate,
+    RoutineSummary,
+)
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
 from src.core.database import get_async_session

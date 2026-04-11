@@ -1,9 +1,11 @@
-import type { Routine, RoutineSummary } from "@/features/routines/types";
+import type { Routine, RoutineBase } from "@/features/routines/types";
 
 type JsonLdValue = string | number | boolean | null | JsonLdObject | JsonLdValue[];
 export type JsonLdObject = {
   [key: string]: JsonLdValue | undefined;
 };
+
+type RoutineCollectionEntry = Pick<RoutineBase, "id" | "name" | "description">;
 
 const DEFAULT_ORIGIN = "https://app.personalbestie.com";
 
@@ -22,7 +24,7 @@ const getExerciseSummaries = (routine: Routine) =>
   });
 
 export const buildRoutineCollectionJsonLd = (
-  routines: (Routine | RoutineSummary)[],
+  routines: RoutineCollectionEntry[],
   baseUrl?: string,
 ): JsonLdObject => ({
   "@context": "https://schema.org",

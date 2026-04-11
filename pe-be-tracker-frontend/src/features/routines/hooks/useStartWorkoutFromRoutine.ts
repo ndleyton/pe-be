@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { startWorkoutFromRoutine as startWorkoutFromRoutineRequest, getRoutine } from "@/features/routines/api";
-import type { RoutineSummary } from "@/features/routines/types";
+import type { RoutineReference } from "@/features/routines/types";
 import {
   DATE_LABEL_LOCALE,
   DATE_LABEL_OPTIONS,
@@ -25,16 +25,16 @@ export const useStartWorkoutFromRoutine = () => {
   const addGuestWorkout = useGuestStore((state) => state.addWorkout);
 
   return useCallback(
-    async (routineSummary: RoutineSummary) => {
+    async (routine: RoutineReference) => {
       try {
         if (isAuthenticated) {
-          const newWorkout = await startWorkoutFromRoutineRequest(routineSummary.id);
+          const newWorkout = await startWorkoutFromRoutineRequest(routine.id);
           navigate(`/workouts/${newWorkout.id}`);
           return;
         }
 
         // Guests need the full routine tree to instantiate local default sets
-        const fullRoutine = await getRoutine(routineSummary.id);
+        const fullRoutine = await getRoutine(routine.id);
 
         const defaultWorkoutType =
           guestWorkoutTypes.find(
