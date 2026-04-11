@@ -7,7 +7,7 @@ maintainers = [{ name = "Nicolas Leyton", email = "ndleyton@uc.cl" }]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
 dependencies = [
-    "fastapi>=0.110.0,<0.111",
+    "fastapi>=0.110.0,<1",
     "uvicorn[standard]>=0.29.0,<0.31",
     "sqlalchemy>=2.0.29,<3",
     "alembic>=1.13.1,<2",
