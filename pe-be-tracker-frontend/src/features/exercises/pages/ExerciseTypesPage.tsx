@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import {
   createExerciseType,
   getExerciseTypes,
-  type ExerciseType,
 } from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
 import { useExerciseTypesPagination } from "@/features/exercises/hooks";
