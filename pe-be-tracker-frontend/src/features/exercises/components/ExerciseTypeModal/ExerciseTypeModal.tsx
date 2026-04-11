@@ -41,6 +41,7 @@ interface ExerciseTypeModalProps {
 const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
 const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
 const EXERCISE_TYPE_MODAL_SCROLL_THRESHOLD = 160;
+const normalizeExerciseTypeName = (name: string) => name.trim().toLowerCase();
 const EXERCISE_TYPE_MODAL_QUERY_KEY = [
   "exerciseTypes",
   "modal",
@@ -86,6 +87,7 @@ const ExerciseTypeModal = ({
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedSearchTerm = searchTerm.trim();
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
@@ -216,6 +218,18 @@ const ExerciseTypeModal = ({
     );
   }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
 
+  const exactExerciseTypeMatch = useMemo(
+    () =>
+      trimmedSearchTerm
+        ? filteredExerciseTypes.find(
+            (type: ExerciseType | GuestExerciseType) =>
+              normalizeExerciseTypeName(type.name) ===
+              normalizeExerciseTypeName(trimmedSearchTerm),
+          )
+        : undefined,
+    [filteredExerciseTypes, trimmedSearchTerm],
+  );
+
   const createMutation = useMutation({
     mutationFn: createExerciseType,
     onSuccess: (newExerciseType) => {
@@ -229,17 +243,13 @@ const ExerciseTypeModal = ({
         typeof err.response.data?.detail === "string" &&
         err.response.data.detail.toLowerCase().includes("already exists")
       ) {
-        const normalizedSearchTerm = searchTerm.trim().toLowerCase();
         // Backend indicates the type already exists — select it instead of showing an error
-        const existing = exerciseTypes.find(
-          (t: ExerciseType | GuestExerciseType) =>
-            t.name.toLowerCase() === normalizedSearchTerm,
-        );
-        if (existing) {
-          handleSelect(existing);
-          // No need to show an error since we handled it gracefully
-          return;
-        }
+        void findExactExerciseTypeMatch(searchTerm).then((existing) => {
+          if (existing) {
+            handleSelect(existing);
+          }
+        });
+        return;
       }
     },
   });
@@ -264,9 +274,13 @@ const ExerciseTypeModal = ({
     isSearchLoading &&
     lastSettledSearchResults.length === 0 &&
     searchExerciseTypes.length === 0;
+  const isSearchSettled =
+    trimmedSearchTerm.length === 0 ||
+    (trimmedSearchTerm === trimmedDeferredSearchTerm && !isSearchLoading);
   const showCreateButton =
-    searchTerm.trim() &&
-    filteredExerciseTypes.length === 0 &&
+    trimmedSearchTerm &&
+    isSearchSettled &&
+    !exactExerciseTypeMatch &&
     !isSearchingWithoutResults;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
@@ -274,6 +288,35 @@ const ExerciseTypeModal = ({
       : filteredExerciseTypes.slice(0, visibleResultCount);
 
   const createInFlight = useRef(false);
+
+  const findExactExerciseTypeMatch = useCallback(
+    async (name: string) => {
+      const normalizedName = normalizeExerciseTypeName(name);
+      const existingInResults = filteredExerciseTypes.find(
+        (type: ExerciseType | GuestExerciseType) =>
+          normalizeExerciseTypeName(type.name) === normalizedName,
+      );
+      if (existingInResults) {
+        return existingInResults;
+      }
+
+      if (!isAuthenticated) {
+        return undefined;
+      }
+
+      const response = await getExerciseTypes(
+        "name",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        undefined,
+        name,
+      );
+      return response.data.find(
+        (type) => normalizeExerciseTypeName(type.name) === normalizedName,
+      );
+    },
+    [filteredExerciseTypes, isAuthenticated],
+  );
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
@@ -330,16 +373,13 @@ const ExerciseTypeModal = ({
 
   const handleCreateExerciseType = () => {
     if (createInFlight.current) return; // ignore duplicate clicks while pending
-    const trimmedName = searchTerm.trim();
+    const trimmedName = trimmedSearchTerm;
     if (!trimmedName) return;
 
     createInFlight.current = true;
 
     // Avoid creating duplicates — if a type with the same name (case-insensitive) already exists, reuse it
-    const existingType = exerciseTypes.find(
-      (type: ExerciseType | GuestExerciseType) =>
-        type.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
+    const existingType = exactExerciseTypeMatch;
 
     if (existingType) {
       handleSelect(existingType);
@@ -517,7 +557,7 @@ const ExerciseTypeModal = ({
     }
 
     if (
-      searchTerm.trim() &&
+      trimmedSearchTerm &&
       filteredExerciseTypes.length === 0 &&
       !isSearchingWithoutResults
     ) {
@@ -528,7 +568,7 @@ const ExerciseTypeModal = ({
           </div>
           <h4 className="text-foreground mb-1 font-bold text-lg">No matches</h4>
           <p className="text-muted-foreground text-sm px-4">
-            Create &quot;{searchTerm.trim()}&quot; using the button above.
+            Create &quot;{trimmedSearchTerm}&quot; using the button above.
           </p>
         </div>
       );
@@ -661,7 +701,7 @@ const ExerciseTypeModal = ({
                   onClick={handleCreateExerciseType}
                   disabled={isAuthenticated && createMutation.isPending}
                   className="flex items-center gap-1.5 bg-primary px-3 py-1.5 rounded-xl text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                  title={`Create "${searchTerm.trim()}"`}
+                  title={`Create "${trimmedSearchTerm}"`}
                 >
                   {isAuthenticated && createMutation.isPending ? (
                     <Plus className="h-4 w-4 animate-spin" />

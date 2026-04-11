@@ -359,6 +359,64 @@ describe("ExerciseTypesPage", () => {
     });
   });
 
+  it("keeps create available when fuzzy search returns similar but not exact matches", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name === "Deadlift"
+          ? makePaginatedExerciseTypes([
+              makeExerciseType({ id: 70, name: "Romanian Deadlift" }),
+            ])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Deadlift",
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-70")).toBeInTheDocument();
+      expect(screen.getByTitle('Create "Deadlift"')).toBeInTheDocument();
+    });
+  });
+
+  it("hides create when the search results already contain an exact name match", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      async (_orderBy, _cursor, _limit, _muscleGroupId, name) =>
+        name === "Deadlift"
+          ? makePaginatedExerciseTypes([
+              makeExerciseType({ id: 70, name: "Romanian Deadlift" }),
+              makeExerciseType({ id: 71, name: "Deadlift" }),
+            ])
+          : makePaginatedExerciseTypes(mockExerciseTypes),
+    );
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-1")).toBeInTheDocument();
+    });
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/search exercises/i),
+      "Deadlift",
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-71")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTitle('Create "Deadlift"')).not.toBeInTheDocument();
+  });
+
   it("creates a new exercise type from server-backed search for authenticated users", async () => {
     mockIsAuthenticated = true;
     mockGetExerciseTypes.mockImplementation(

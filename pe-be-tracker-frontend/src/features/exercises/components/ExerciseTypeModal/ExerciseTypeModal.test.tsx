@@ -361,6 +361,117 @@ describe("ExerciseTypeModal", () => {
     expect(screen.queryByText(/no matches/i)).not.toBeInTheDocument();
   });
 
+  it("keeps create available when authenticated fuzzy search returns similar but not exact matches", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (orderBy === "name" && name === "Deadlift") {
+          return Promise.resolve(
+            makePaginatedExerciseTypes([
+              makeExerciseType({
+                id: 301,
+                name: "Romanian Deadlift",
+              }),
+            ]),
+          );
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({
+              id: 1,
+              name: "Browse Exercise 1",
+            }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = await screen.findByPlaceholderText(
+      /search exercise types/i,
+    );
+    await user.type(searchInput, "Deadlift");
+
+    await waitFor(() => {
+      expect(screen.getByText("Romanian Deadlift")).toBeInTheDocument();
+      expect(screen.getByTitle('Create "Deadlift"')).toBeInTheDocument();
+    });
+  });
+
+  it("hides create when authenticated search results contain an exact name match", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        _muscleGroupId?: number,
+        name?: string,
+      ) => {
+        if (orderBy === "name" && name === "Deadlift") {
+          return Promise.resolve(
+            makePaginatedExerciseTypes([
+              makeExerciseType({
+                id: 301,
+                name: "Romanian Deadlift",
+              }),
+              makeExerciseType({
+                id: 302,
+                name: "Deadlift",
+              }),
+            ]),
+          );
+        }
+
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({
+              id: 1,
+              name: "Browse Exercise 1",
+            }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = await screen.findByPlaceholderText(
+      /search exercise types/i,
+    );
+    await user.type(searchInput, "Deadlift");
+
+    await waitFor(() => {
+      expect(screen.getByText("Deadlift")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTitle('Create "Deadlift"')).not.toBeInTheDocument();
+  });
+
   it("fetches the next authenticated search page when the filtered list is scrolled", async () => {
     mockIsAuthenticated = true;
     mockGetExerciseTypes.mockImplementation(

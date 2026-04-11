@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 
 const EXERCISE_TYPES_PAGE_LIMIT = 100;
 const EXERCISE_TYPES_PAGE_SCROLL_THRESHOLD = 300;
+const normalizeExerciseTypeName = (name: string) => name.trim().toLowerCase();
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,8 +57,11 @@ const ExerciseTypesPage = () => {
   const createInFlight = useRef(false);
   const infiniteScrollLoadingRef = useRef(false);
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedSearchTerm = searchTerm.trim();
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const normalizedSearchTerm = trimmedDeferredSearchTerm.toLowerCase();
+  const normalizedEnteredSearchTerm =
+    normalizeExerciseTypeName(trimmedSearchTerm);
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
   const activeMuscleGroupId =
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
@@ -168,6 +172,9 @@ const ExerciseTypesPage = () => {
   const fetchNextPage = isSearchActive
     ? fetchSearchNextPage
     : fetchBrowseNextPage;
+  const isSearchSettled =
+    trimmedSearchTerm.length === 0 ||
+    (trimmedSearchTerm === trimmedDeferredSearchTerm && !isSearchLoading);
   const isSearchingWithoutResults =
     isSearchActive &&
     isSearchLoading &&
@@ -211,14 +218,52 @@ const ExerciseTypesPage = () => {
     () => [...muscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
     [muscleGroups],
   );
+  const exactExerciseTypeMatch = useMemo(
+    () =>
+      trimmedSearchTerm
+        ? exerciseTypes.find(
+            (exerciseType) =>
+              normalizeExerciseTypeName(exerciseType.name) ===
+              normalizedEnteredSearchTerm,
+          )
+        : undefined,
+    [exerciseTypes, normalizedEnteredSearchTerm, trimmedSearchTerm],
+  );
   const isMuscleGroupSelectorDisabled = isMuscleGroupsLoading;
   const hasActiveFilters =
-    searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
+    trimmedSearchTerm.length > 0 || selectedMuscleGroupId !== "all";
   const showCreateButton =
     isAuthenticated &&
-    searchTerm.trim().length > 0 &&
-    exerciseTypes.length === 0 &&
+    trimmedSearchTerm.length > 0 &&
+    isSearchSettled &&
+    !exactExerciseTypeMatch &&
     !isSearchingWithoutResults;
+
+  const findExactExerciseTypeMatch = useCallback(
+    async (name: string) => {
+      const normalizedName = normalizeExerciseTypeName(name);
+      const existingInResults = exerciseTypes.find(
+        (exerciseType) =>
+          normalizeExerciseTypeName(exerciseType.name) === normalizedName,
+      );
+      if (existingInResults) {
+        return existingInResults;
+      }
+
+      const response = await getExerciseTypes(
+        "name",
+        undefined,
+        EXERCISE_TYPES_PAGE_LIMIT,
+        undefined,
+        name,
+      );
+      return response.data.find(
+        (exerciseType) =>
+          normalizeExerciseTypeName(exerciseType.name) === normalizedName,
+      );
+    },
+    [exerciseTypes],
+  );
 
   const createMutation = useMutation({
     mutationFn: createExerciseType,
@@ -233,13 +278,11 @@ const ExerciseTypesPage = () => {
         typeof err.response.data?.detail === "string" &&
         err.response.data.detail.toLowerCase().includes("already exists")
       ) {
-        const existing = exerciseTypes.find(
-          (exerciseType) =>
-            exerciseType.name.toLowerCase() === searchTerm.trim().toLowerCase(),
-        );
-        if (existing) {
-          navigate(`/exercise-types/${existing.id}`);
-        }
+        void findExactExerciseTypeMatch(searchTerm).then((existing) => {
+          if (existing) {
+            navigate(`/exercise-types/${existing.id}`);
+          }
+        });
       }
     },
   });
@@ -247,13 +290,10 @@ const ExerciseTypesPage = () => {
   const handleCreateExerciseType = () => {
     if (createInFlight.current) return;
 
-    const trimmedName = searchTerm.trim();
+    const trimmedName = trimmedSearchTerm;
     if (!trimmedName) return;
 
-    const existing = exerciseTypes.find(
-      (exerciseType) =>
-        exerciseType.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
+    const existing = exactExerciseTypeMatch;
     if (existing) {
       navigate(`/exercise-types/${existing.id}`);
       return;
@@ -326,7 +366,7 @@ const ExerciseTypesPage = () => {
             {showCreateButton && (
               <button
                 type="button"
-                title={`Create "${searchTerm.trim()}"`}
+                title={`Create "${trimmedSearchTerm}"`}
                 onClick={handleCreateExerciseType}
                 disabled={createMutation.isPending}
                 className="absolute inset-y-0 right-2 flex items-center pr-2"
