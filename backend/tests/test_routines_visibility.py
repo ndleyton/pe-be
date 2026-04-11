@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.users.models import User
 from src.workouts.models import WorkoutType
 from src.routines.models import Routine
+from src.exercises.models import ExerciseType
+from src.routines.models import ExerciseTemplate
 from src.routines import crud
 
 
@@ -278,4 +280,67 @@ async def test_visible_routines_summary_uses_stable_tiebreakers(
         alpha_first.id,
         alpha_second.id,
         gamma.id,
+    ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_visible_routines_summary_limits_preview_names_per_routine_in_sql(
+    db_session: AsyncSession,
+):
+    """Summary preview includes at most five exercise names in template order."""
+    wt = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(wt)
+    await db_session.flush()
+
+    owner = User(
+        email="visibility-summary-preview@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(owner)
+    await db_session.flush()
+
+    routine = Routine(
+        name="Preview Limit",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+    )
+    db_session.add(routine)
+    await db_session.flush()
+
+    exercise_types = [
+        ExerciseType(name=f"Exercise {index}", description=f"Description {index}")
+        for index in range(1, 8)
+    ]
+    db_session.add_all(exercise_types)
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            ExerciseTemplate(
+                routine_id=routine.id,
+                exercise_type_id=exercise_type.id,
+            )
+            for exercise_type in exercise_types
+        ]
+    )
+    await db_session.flush()
+
+    summaries = await crud.get_visible_routines_summary(
+        db_session, user_id=None, offset=0, limit=10, order_by="createdAt"
+    )
+
+    summary = next(item for item in summaries if item["id"] == routine.id)
+    assert summary["exercise_count"] == 7
+    assert summary["exercise_names_preview"] == [
+        "Exercise 1",
+        "Exercise 2",
+        "Exercise 3",
+        "Exercise 4",
+        "Exercise 5",
     ]

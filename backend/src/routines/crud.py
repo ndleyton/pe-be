@@ -242,11 +242,25 @@ async def get_visible_routines_summary(
         }
 
         # Bounded preview of exercise names
-        preview_query = (
-            select(ExerciseTemplate.routine_id, ExerciseType.name)
-            .join(ExerciseType, ExerciseTemplate.exercise_type_id == ExerciseType.id)
+        preview_ranked = (
+            select(
+                ExerciseTemplate.routine_id.label("routine_id"),
+                ExerciseTemplate.exercise_type_id.label("exercise_type_id"),
+                func.row_number()
+                .over(
+                    partition_by=ExerciseTemplate.routine_id,
+                    order_by=ExerciseTemplate.id,
+                )
+                .label("preview_rank"),
+            )
             .where(ExerciseTemplate.routine_id.in_(routine_ids))
-            .order_by(ExerciseTemplate.routine_id, ExerciseTemplate.id)
+            .subquery()
+        )
+        preview_query = (
+            select(preview_ranked.c.routine_id, ExerciseType.name)
+            .join(ExerciseType, preview_ranked.c.exercise_type_id == ExerciseType.id)
+            .where(preview_ranked.c.preview_rank <= 5)
+            .order_by(preview_ranked.c.routine_id, preview_ranked.c.preview_rank)
         )
 
         preview_result = await session.execute(preview_query)
