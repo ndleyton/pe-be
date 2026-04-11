@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      sourcemap: hasSentrySourceMaps,
+      sourcemap: hasSentrySourceMaps ? "hidden" : false,
     },
     plugins,
     resolve: {

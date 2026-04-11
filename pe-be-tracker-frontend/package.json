@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node ./scripts/check-no-public-sourcemaps.mjs",
     "dev": "vite",
     "dev:test": "vite --mode test",
     "lint": "eslint .",
