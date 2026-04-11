@@ -1,27 +1,15 @@
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   createExerciseType,
   getExerciseTypes,
-  getMuscleGroups,
   type ExerciseType,
 } from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
+import { useExerciseTypesPagination } from "@/features/exercises/hooks";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -41,21 +29,16 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const EXERCISE_TYPES_PAGE_LIMIT = 100;
-const EXERCISE_TYPES_PAGE_SCROLL_THRESHOLD = 300;
 const normalizeExerciseTypeName = (name: string) => name.trim().toLowerCase();
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
-  const [lastSettledSearchResults, setLastSettledSearchResults] = useState<
-    ExerciseType[]
-  >([]);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const createInFlight = useRef(false);
-  const infiniteScrollLoadingRef = useRef(false);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const trimmedSearchTerm = searchTerm.trim();
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
@@ -67,152 +50,25 @@ const ExerciseTypesPage = () => {
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
 
   const {
-    data: browseExerciseTypesResponse,
-    isPending: isBrowseLoading,
-    isFetchingNextPage: isFetchingBrowseNextPage,
-    hasNextPage: hasBrowseNextPage,
-    fetchNextPage: fetchBrowseNextPage,
-    error: browseError,
-  } = useInfiniteQuery({
-    queryKey: [
-      "exerciseTypes",
-      "page",
-      "browse",
-      orderBy,
-      activeMuscleGroupId ?? "all",
-    ],
-    queryFn: ({ pageParam }) =>
-      getExerciseTypes(
-        orderBy,
-        pageParam,
-        EXERCISE_TYPES_PAGE_LIMIT,
-        activeMuscleGroupId,
-      ),
-    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
-    initialPageParam: undefined as number | undefined,
-    enabled: !isSearchActive,
+    exerciseTypes,
+    muscleGroups,
+    isMuscleGroupsLoading,
+    isInitialLoading,
+    hasMore,
+    isFetchingNextPage,
+    error,
+    isSearchingWithoutResults,
+  } = useExerciseTypesPagination({
+    orderBy,
+    activeMuscleGroupId,
+    normalizedSearchTerm,
+    trimmedDeferredSearchTerm,
+    isSearchActive,
   });
 
-  const {
-    data: searchExerciseTypesResponse,
-    isPending: isSearchLoading,
-    isFetchingNextPage: isFetchingSearchNextPage,
-    hasNextPage: hasSearchNextPage,
-    fetchNextPage: fetchSearchNextPage,
-    error: searchError,
-  } = useInfiniteQuery({
-    queryKey: [
-      "exerciseTypes",
-      "page",
-      "search",
-      orderBy,
-      activeMuscleGroupId ?? "all",
-      normalizedSearchTerm,
-    ],
-    queryFn: ({ pageParam }) =>
-      getExerciseTypes(
-        orderBy,
-        pageParam,
-        EXERCISE_TYPES_PAGE_LIMIT,
-        activeMuscleGroupId,
-        trimmedDeferredSearchTerm,
-      ),
-    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
-    initialPageParam: undefined as number | undefined,
-    enabled: isSearchActive,
-  });
-
-  const { data: muscleGroups = [], isPending: isMuscleGroupsLoading } = useQuery(
-    {
-      queryKey: ["muscleGroups"],
-      queryFn: getMuscleGroups,
-    },
-  );
-
-  const browseExerciseTypes = useMemo(
-    () =>
-      browseExerciseTypesResponse?.pages.flatMap((page) =>
-        Array.isArray(page?.data) ? page.data : [],
-      ) ?? [],
-    [browseExerciseTypesResponse],
-  );
-
-  const searchExerciseTypes = useMemo(
-    () =>
-      searchExerciseTypesResponse?.pages.flatMap((page) =>
-        Array.isArray(page?.data) ? page.data : [],
-      ) ?? [],
-    [searchExerciseTypesResponse],
-  );
-
-  useEffect(() => {
-    if (!isSearchActive) {
-      setLastSettledSearchResults([]);
-      return;
-    }
-
-    if (!isSearchLoading) {
-      setLastSettledSearchResults(searchExerciseTypes);
-    }
-  }, [isSearchActive, isSearchLoading, searchExerciseTypes]);
-
-  const exerciseTypes = isSearchActive
-    ? searchExerciseTypes.length > 0 || !isSearchLoading
-      ? searchExerciseTypes
-      : lastSettledSearchResults
-    : browseExerciseTypes;
-
-  const hasMore = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
-  const isFetchingNextPage = isSearchActive
-    ? isFetchingSearchNextPage
-    : isFetchingBrowseNextPage;
-  const error = isSearchActive ? searchError : browseError;
-  const isPending = isSearchActive ? isSearchLoading : isBrowseLoading;
-  const isInitialLoading = isPending && exerciseTypes.length === 0;
-  const fetchNextPage = isSearchActive
-    ? fetchSearchNextPage
-    : fetchBrowseNextPage;
   const isSearchSettled =
     trimmedSearchTerm.length === 0 ||
-    (trimmedSearchTerm === trimmedDeferredSearchTerm && !isSearchLoading);
-  const isSearchingWithoutResults =
-    isSearchActive &&
-    isSearchLoading &&
-    lastSettledSearchResults.length === 0 &&
-    searchExerciseTypes.length === 0;
-
-  const loadMoreResults = useCallback(() => {
-    if (!hasMore || isFetchingNextPage || infiniteScrollLoadingRef.current) {
-      return;
-    }
-
-    const scrollTop =
-      document.documentElement.scrollTop || document.body.scrollTop;
-    const scrollHeight =
-      document.documentElement.scrollHeight || document.body.scrollHeight;
-    const clientHeight = window.innerHeight;
-
-    if (
-      scrollTop + clientHeight <
-      scrollHeight - EXERCISE_TYPES_PAGE_SCROLL_THRESHOLD
-    ) {
-      return;
-    }
-
-    infiniteScrollLoadingRef.current = true;
-    void fetchNextPage().finally(() => {
-      infiniteScrollLoadingRef.current = false;
-    });
-  }, [fetchNextPage, hasMore, isFetchingNextPage]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      window.requestAnimationFrame(loadMoreResults);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [loadMoreResults]);
+    trimmedSearchTerm === trimmedDeferredSearchTerm;
 
   const sortedMuscleGroups = useMemo(
     () => [...muscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
