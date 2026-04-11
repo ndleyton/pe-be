@@ -36,7 +36,9 @@ def test_server_request_hook_sets_request_id():
 
 
 def test_has_trace_export_endpoint_uses_shared_or_trace_specific(monkeypatch):
-    monkeypatch.setattr("src.core.observability.settings.OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    monkeypatch.setattr(
+        "src.core.observability.settings.OTEL_EXPORTER_OTLP_ENDPOINT", ""
+    )
     monkeypatch.setattr(
         "src.core.observability.settings.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", ""
     )
@@ -50,7 +52,9 @@ def test_has_trace_export_endpoint_uses_shared_or_trace_specific(monkeypatch):
 
 
 def test_has_metric_export_endpoint_uses_shared_or_metric_specific(monkeypatch):
-    monkeypatch.setattr("src.core.observability.settings.OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    monkeypatch.setattr(
+        "src.core.observability.settings.OTEL_EXPORTER_OTLP_ENDPOINT", ""
+    )
     monkeypatch.setattr(
         "src.core.observability.settings.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", ""
     )
