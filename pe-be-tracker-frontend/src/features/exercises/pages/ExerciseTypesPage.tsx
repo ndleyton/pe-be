@@ -1,14 +1,11 @@
-import { useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  createExerciseType,
-  getExerciseTypes,
-  type ExerciseType,
-} from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
+import {
+  useExerciseTypeCreation,
+  useExerciseTypesPagination,
+} from "@/features/exercises/hooks";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -24,139 +21,68 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
-import { useInfiniteScroll } from "@/shared/hooks";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+const EXERCISE_TYPES_PAGE_LIMIT = 100;
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const createInFlight = useRef(false);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
+  const normalizedSearchTerm = trimmedDeferredSearchTerm.toLowerCase();
+  const isSearchActive = trimmedDeferredSearchTerm.length > 0;
   const activeMuscleGroupId =
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
 
   const {
-    data: exerciseTypes,
-    isPending,
-    isFetchingNextPage,
+    exerciseTypes,
+    muscleGroups,
+    isMuscleGroupsLoading,
+    isInitialLoading,
     hasMore,
+    isFetchingNextPage,
     error,
-  } = useInfiniteScroll<ExerciseType>({
-    queryKey: ["exerciseTypes", orderBy, selectedMuscleGroupId],
-    queryFn: (cursor, limit) =>
-      getExerciseTypes(orderBy, cursor, limit, activeMuscleGroupId),
-    limit: 100,
+    isSearchingWithoutResults,
+  } = useExerciseTypesPagination({
+    orderBy,
+    activeMuscleGroupId,
+    normalizedSearchTerm,
+    trimmedDeferredSearchTerm,
+    isSearchActive,
   });
 
-  const filteredExerciseTypes = useMemo(() => {
-    if (!searchTerm) return exerciseTypes;
-
-    return exerciseTypes.filter(
-      (exerciseType) =>
-        exerciseType.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (exerciseType.description &&
-          exerciseType.description
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())),
-    );
-  }, [exerciseTypes, searchTerm]);
-  const fallbackMuscleGroups = useMemo(() => {
-    const groupsById = new Map<number, { id: number; name: string }>();
-
-    exerciseTypes.forEach((exerciseType) => {
-      exerciseType.muscles?.forEach((muscle) => {
-        groupsById.set(muscle.muscle_group.id, {
-          id: muscle.muscle_group.id,
-          name: muscle.muscle_group.name,
-        });
-      });
-    });
-
-    return Array.from(groupsById.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [exerciseTypes]);
-  const isMuscleGroupSelectorDisabled =
-    isPending && fallbackMuscleGroups.length === 0;
+  const sortedMuscleGroups = useMemo(
+    () => [...muscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
+    [muscleGroups],
+  );
+  const isMuscleGroupSelectorDisabled = isMuscleGroupsLoading;
   const hasActiveFilters =
     searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
-  const showCreateButton =
-    isAuthenticated &&
-    searchTerm.trim().length > 0 &&
-    filteredExerciseTypes.length === 0;
-
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      navigate(`/exercise-types/${newExerciseType.id}`);
+  const handleResolvedExerciseType = useCallback(
+    (exerciseType: { id: string | number }) => {
+      navigate(`/exercise-types/${exerciseType.id}`);
     },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        const existing = exerciseTypes.find(
-          (exerciseType) =>
-            exerciseType.name.toLowerCase() === searchTerm.trim().toLowerCase(),
-        );
-        if (existing) {
-          navigate(`/exercise-types/${existing.id}`);
-        }
-      }
-    },
+    [navigate],
+  );
+  const {
+    trimmedSearchTerm,
+    showCreateButton,
+    createMutation,
+    handleCreateExerciseType,
+  } = useExerciseTypeCreation({
+    searchTerm,
+    deferredSearchTerm,
+    exerciseTypes,
+    isSearchingWithoutResults,
+    isAuthenticated,
+    lookupLimit: EXERCISE_TYPES_PAGE_LIMIT,
+    onResolvedExerciseType: handleResolvedExerciseType,
   });
-
-  const handleCreateExerciseType = () => {
-    if (createInFlight.current) return;
-
-    const trimmedName = searchTerm.trim();
-    if (!trimmedName) return;
-
-    const existing = exerciseTypes.find(
-      (exerciseType) =>
-        exerciseType.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
-    if (existing) {
-      navigate(`/exercise-types/${existing.id}`);
-      return;
-    }
-
-    createInFlight.current = true;
-
-    const cardioKeywords = [
-      "walking",
-      "running",
-      "cycling",
-      "swimming",
-      "treadmill",
-      "rowing",
-      "elliptical",
-      "jogging",
-    ];
-    const isCardio = cardioKeywords.some((keyword) =>
-      trimmedName.toLowerCase().includes(keyword),
-    );
-
-    createMutation.mutate(
-      {
-        name: trimmedName,
-        description: "Custom exercise",
-        default_intensity_unit: isCardio ? 3 : 1,
-      },
-      {
-        onSettled: () => {
-          createInFlight.current = false;
-        },
-      },
-    );
-  };
 
   if (error) {
     return (
@@ -195,7 +121,7 @@ const ExerciseTypesPage = () => {
             {showCreateButton && (
               <button
                 type="button"
-                title={`Create "${searchTerm.trim()}"`}
+                title={`Create "${trimmedSearchTerm}"`}
                 onClick={handleCreateExerciseType}
                 disabled={createMutation.isPending}
                 className="absolute inset-y-0 right-2 flex items-center pr-2"
@@ -234,7 +160,7 @@ const ExerciseTypesPage = () => {
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl">
                 <SelectItem value="all">All Muscle Groups</SelectItem>
-                {fallbackMuscleGroups.map((muscleGroup) => (
+                {sortedMuscleGroups.map((muscleGroup) => (
                   <SelectItem
                     key={muscleGroup.id}
                     value={String(muscleGroup.id)}
@@ -274,7 +200,7 @@ const ExerciseTypesPage = () => {
 
         {/* Exercise Types Grid - Always show structure */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {isPending ? (
+          {isInitialLoading ? (
             <>
               {Array.from({ length: 9 }).map((_, i) => (
                 <div
@@ -298,7 +224,7 @@ const ExerciseTypesPage = () => {
               ))}
             </>
           ) : (
-            filteredExerciseTypes.map((exerciseType) => (
+            exerciseTypes.map((exerciseType) => (
               <ExerciseTypeCard
                 key={exerciseType.id}
                 exerciseType={exerciseType}
@@ -308,14 +234,14 @@ const ExerciseTypesPage = () => {
         </div>
 
         {/* Loading more indicator */}
-        {!isPending && isFetchingNextPage && (
+        {!isInitialLoading && isFetchingNextPage && (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent loading-spinner" />
           </div>
         )}
 
         {/* End of results indicator */}
-        {!isPending && !hasMore && filteredExerciseTypes.length > 0 && (
+        {!isInitialLoading && !hasMore && exerciseTypes.length > 0 && (
           <div className="py-12 text-center">
             <p className="text-muted-foreground text-sm font-medium opacity-50">
               No more exercise types to load
@@ -324,7 +250,7 @@ const ExerciseTypesPage = () => {
         )}
 
         {/* Empty State */}
-        {!isPending && filteredExerciseTypes.length === 0 && (
+        {!isInitialLoading && exerciseTypes.length === 0 && (
           <div className="py-20 text-center">
             <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
               <Search className="text-muted-foreground h-10 w-10 opacity-20" />

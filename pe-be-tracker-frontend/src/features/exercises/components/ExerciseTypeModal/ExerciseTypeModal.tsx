@@ -11,17 +11,16 @@ import {
 } from "react";
 import {
   useInfiniteQuery,
-  useMutation,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
 import {
   getExerciseTypes,
-  createExerciseType,
+  type CreateExerciseTypeData,
   type ExerciseType,
 } from "@/features/exercises/api";
+import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
-import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import {
@@ -86,6 +85,7 @@ const ExerciseTypeModal = ({
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const trimmedSearchTerm = searchTerm.trim();
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
@@ -216,34 +216,6 @@ const ExerciseTypeModal = ({
     );
   }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
 
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      handleSelect(newExerciseType);
-    },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        const normalizedSearchTerm = searchTerm.trim().toLowerCase();
-        // Backend indicates the type already exists — select it instead of showing an error
-        const existing = exerciseTypes.find(
-          (t: ExerciseType | GuestExerciseType) =>
-            t.name.toLowerCase() === normalizedSearchTerm,
-        );
-        if (existing) {
-          handleSelect(existing);
-          // No need to show an error since we handled it gracefully
-          return;
-        }
-      }
-    },
-  });
-
   const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
   const fetchNextPage = isSearchActive
     ? fetchSearchNextPage
@@ -264,16 +236,10 @@ const ExerciseTypeModal = ({
     isSearchLoading &&
     lastSettledSearchResults.length === 0 &&
     searchExerciseTypes.length === 0;
-  const showCreateButton =
-    searchTerm.trim() &&
-    filteredExerciseTypes.length === 0 &&
-    !isSearchingWithoutResults;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
       : filteredExerciseTypes.slice(0, visibleResultCount);
-
-  const createInFlight = useRef(false);
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
@@ -328,59 +294,33 @@ const ExerciseTypeModal = ({
     onSelect(exerciseType);
   };
 
-  const handleCreateExerciseType = () => {
-    if (createInFlight.current) return; // ignore duplicate clicks while pending
-    const trimmedName = searchTerm.trim();
-    if (!trimmedName) return;
-
-    createInFlight.current = true;
-
-    // Avoid creating duplicates — if a type with the same name (case-insensitive) already exists, reuse it
-    const existingType = exerciseTypes.find(
-      (type: ExerciseType | GuestExerciseType) =>
-        type.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
-
-    if (existingType) {
-      handleSelect(existingType);
-      createInFlight.current = false;
-      return;
-    }
-
-    // Heuristic for default intensity unit
-    const cardioKeywords = ["walking", "running", "cycling", "swimming", "treadmill", "rowing", "elliptical", "jogging"];
-    const isCardio = cardioKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword));
-    const defaultUnitId = isCardio ? 3 : 1; // 3 = km/h, 1 = kg
-
-    if (isAuthenticated) {
-      createMutation.mutate(
-        {
-          name: trimmedName,
-          description: "Custom exercise",
-          default_intensity_unit: defaultUnitId,
-        },
-        {
-          onSettled: () => {
-            createInFlight.current = false;
-          },
-        },
-      );
-    } else {
+  const createGuestExerciseType = useCallback(
+    (payload: CreateExerciseTypeData) => {
       const newExerciseTypeId = guestActions.addExerciseType({
-        name: trimmedName,
-        description: "Custom exercise",
-        default_intensity_unit: defaultUnitId,
+        name: payload.name,
+        description: payload.description ?? null,
+        default_intensity_unit: payload.default_intensity_unit ?? 1,
       });
-
-      const newExerciseType = guestData.exerciseTypes.find(
-        (et) => et.id === newExerciseTypeId,
-      );
-      if (newExerciseType) {
-        handleSelect(newExerciseType);
-        createInFlight.current = false;
-      }
-    }
-  };
+      return guestData.exerciseTypes.find((exerciseType) => {
+        return exerciseType.id === newExerciseTypeId;
+      });
+    },
+    [guestActions, guestData.exerciseTypes],
+  );
+  const {
+    showCreateButton,
+    createMutation,
+    handleCreateExerciseType,
+  } = useExerciseTypeCreation<ExerciseType | GuestExerciseType>({
+    searchTerm,
+    deferredSearchTerm,
+    exerciseTypes: filteredExerciseTypes,
+    isSearchingWithoutResults,
+    isAuthenticated,
+    lookupLimit: EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+    onResolvedExerciseType: handleSelect,
+    createGuestExerciseType,
+  });
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && filteredExerciseTypes.length > 0) {
@@ -517,7 +457,7 @@ const ExerciseTypeModal = ({
     }
 
     if (
-      searchTerm.trim() &&
+      trimmedSearchTerm &&
       filteredExerciseTypes.length === 0 &&
       !isSearchingWithoutResults
     ) {
@@ -528,7 +468,7 @@ const ExerciseTypeModal = ({
           </div>
           <h4 className="text-foreground mb-1 font-bold text-lg">No matches</h4>
           <p className="text-muted-foreground text-sm px-4">
-            Create &quot;{searchTerm.trim()}&quot; using the button above.
+            Create &quot;{trimmedSearchTerm}&quot; using the button above.
           </p>
         </div>
       );
@@ -661,7 +601,7 @@ const ExerciseTypeModal = ({
                   onClick={handleCreateExerciseType}
                   disabled={isAuthenticated && createMutation.isPending}
                   className="flex items-center gap-1.5 bg-primary px-3 py-1.5 rounded-xl text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                  title={`Create "${searchTerm.trim()}"`}
+                  title={`Create "${trimmedSearchTerm}"`}
                 >
                   {isAuthenticated && createMutation.isPending ? (
                     <Plus className="h-4 w-4 animate-spin" />
