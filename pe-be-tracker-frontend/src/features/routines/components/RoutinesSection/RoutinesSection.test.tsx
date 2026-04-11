@@ -55,7 +55,7 @@ describe("RoutinesSection", () => {
     mockGetRoutines.mockResolvedValue({ data: routines, next_cursor: null });
   });
 
-  it("auto-opens the accordion when requested", async () => {
+  it("auto-opens the routines list when requested", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
 
     const trigger = await screen.findByRole("button", {
@@ -65,15 +65,16 @@ describe("RoutinesSection", () => {
     await waitFor(() => {
       expect(trigger).toHaveAttribute("aria-expanded", "true");
     });
+    expect(screen.getByText("Push Day")).toBeVisible();
   });
 
-  it("stays collapsed by default", async () => {
+  it("stays collapsed by default while keeping the browse link visible", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
     const trigger = await screen.findByRole("button", {
       name: /quick start routines/i,
     });
-    const browseLink = screen.getByRole("link", {
+    const browseLink = await screen.findByRole("link", {
       name: /browse all routines/i,
     });
 
@@ -81,6 +82,7 @@ describe("RoutinesSection", () => {
       expect(trigger).toHaveAttribute("aria-expanded", "false");
     });
     expect(browseLink).toBeVisible();
+    expect(screen.getByText("Push Day")).not.toBeVisible();
   });
 
   it("preloads the routines page when the browse button shows intent", async () => {
