@@ -164,9 +164,7 @@ async def _fetch_routine_counts(session: AsyncSession, routine_ids: List[int]) -
             func.count(ExerciseTemplate.id.distinct()).label("exercise_count"),
             func.count(SetTemplate.id).label("set_count"),
         )
-        .outerjoin(
-            SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id
-        )
+        .outerjoin(SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id)
         .where(ExerciseTemplate.routine_id.in_(routine_ids))
         .group_by(ExerciseTemplate.routine_id)
     )
