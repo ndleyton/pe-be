@@ -36,7 +36,7 @@ export interface ExerciseTemplate {
 
 export type RoutineVisibility = "private" | "public" | "link_only";
 
-export interface Routine {
+export interface RoutineBase {
   id: number;
   name: string;
   description?: string | null;
@@ -46,5 +46,16 @@ export interface Routine {
   is_readonly: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export type RoutineReference = Pick<RoutineBase, "id">;
+
+export interface Routine extends RoutineBase {
   exercise_templates: ExerciseTemplate[];
+}
+
+export interface RoutineSummary extends RoutineBase {
+  exercise_count: number;
+  set_count: number;
+  exercise_names_preview: string[];
 }

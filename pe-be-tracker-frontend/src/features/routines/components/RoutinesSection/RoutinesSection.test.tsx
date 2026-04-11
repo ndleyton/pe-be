@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
+import { makeRoutineSummary } from "@/test/fixtures";
 import { RoutinesSection } from "./RoutinesSection";
 import { getRoutines } from "@/features/routines/api";
 
@@ -36,18 +36,17 @@ vi.mock("@/features/routines/components", () => ({
 const mockGetRoutines = vi.mocked(getRoutines);
 
 const routines = [
-  {
+  makeRoutineSummary({
     id: 1,
     name: "Push Day",
     description: null,
     workout_type_id: 2,
     creator_id: 1,
-    visibility: "public" as const,
+    visibility: "public",
     is_readonly: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    exercise_templates: [],
-  },
+  }),
 ];
 
 describe("RoutinesSection", () => {
@@ -56,7 +55,7 @@ describe("RoutinesSection", () => {
     mockGetRoutines.mockResolvedValue({ data: routines, next_cursor: null });
   });
 
-  it("auto-opens the accordion when requested", async () => {
+  it("auto-opens the routines list when requested", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
 
     const trigger = await screen.findByRole("button", {
@@ -66,9 +65,13 @@ describe("RoutinesSection", () => {
     await waitFor(() => {
       expect(trigger).toHaveAttribute("aria-expanded", "true");
     });
+    expect(screen.getByText("Push Day")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /browse all routines/i }),
+    ).toBeVisible();
   });
 
-  it("stays collapsed by default", async () => {
+  it("stays collapsed by default and hides the browse link", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
     const trigger = await screen.findByRole("button", {
@@ -78,16 +81,20 @@ describe("RoutinesSection", () => {
     await waitFor(() => {
       expect(trigger).toHaveAttribute("aria-expanded", "false");
     });
+    expect(screen.queryByText("Push Day")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /browse all routines/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("preloads the routines page when the browse button shows intent", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
-    await userEvent.click(
+    fireEvent.click(
       await screen.findByRole("button", { name: /quick start routines/i }),
     );
 
-    const browseButton = screen.getByRole("link", {
+    const browseButton = await screen.findByRole("link", {
       name: /browse all routines/i,
     });
 

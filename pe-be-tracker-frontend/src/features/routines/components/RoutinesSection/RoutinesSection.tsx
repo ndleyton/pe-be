@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Routine } from "@/features/routines/types";
+import type { RoutineSummary } from "@/features/routines/types";
 import { useAuthStore } from "@/stores";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineQuickStartCard } from "@/features/routines/components";
@@ -20,7 +20,7 @@ const preloadRoutinesPage = createIntentPreload(() =>
 );
 
 interface RoutinesSectionProps {
-  onStartWorkout: (routine: Routine) => void;
+  onStartWorkout: (routine: RoutineSummary) => void;
   autoOpen?: boolean;
 }
 
@@ -111,6 +111,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
                   size="icon"
                   variant="ghost"
                   aria-label="Browse all routines"
+                  className="shrink-0"
                   onMouseEnter={preloadRoutinesPage}
                   onTouchStart={preloadRoutinesPage}
                   onFocus={preloadRoutinesPage}

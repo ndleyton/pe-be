@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
@@ -8,6 +8,7 @@ from src.core.errors import DomainValidationError
 from src.exercises.intensity_units import normalize_intensity_for_storage
 from src.exercises.models import IntensityUnit
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate
+from src.exercises.models import ExerciseType
 from src.routines.schemas import (
     AdminRoutineCreate,
     RoutineCreate,
@@ -145,6 +146,70 @@ async def get_public_routine_by_id(
     return result.scalar_one_or_none()
 
 
+def _apply_visibility_filter(query, user_id: int | None):
+    if user_id is None:
+        return query.where(Routine.visibility == Routine.RoutineVisibility.public)
+    return query.where(
+        or_(
+            Routine.creator_id == user_id,
+            Routine.visibility == Routine.RoutineVisibility.public,
+        )
+    )
+
+
+async def _fetch_routine_counts(session: AsyncSession, routine_ids: List[int]) -> dict:
+    count_query = (
+        select(
+            ExerciseTemplate.routine_id,
+            func.count(ExerciseTemplate.id.distinct()).label("exercise_count"),
+            func.count(SetTemplate.id).label("set_count"),
+        )
+        .outerjoin(SetTemplate, ExerciseTemplate.id == SetTemplate.exercise_template_id)
+        .where(ExerciseTemplate.routine_id.in_(routine_ids))
+        .group_by(ExerciseTemplate.routine_id)
+    )
+    count_result = await session.execute(count_query)
+    return {
+        row.routine_id: {
+            "exercise_count": row.exercise_count,
+            "set_count": row.set_count,
+        }
+        for row in count_result.all()
+    }
+
+
+async def _fetch_routine_previews(
+    session: AsyncSession, routine_ids: List[int], limit: int = 5
+) -> dict:
+    preview_ranked = (
+        select(
+            ExerciseTemplate.routine_id.label("routine_id"),
+            ExerciseTemplate.exercise_type_id.label("exercise_type_id"),
+            func.row_number()
+            .over(
+                partition_by=ExerciseTemplate.routine_id,
+                order_by=ExerciseTemplate.id,
+            )
+            .label("preview_rank"),
+        )
+        .where(ExerciseTemplate.routine_id.in_(routine_ids))
+        .subquery()
+    )
+    preview_query = (
+        select(preview_ranked.c.routine_id, ExerciseType.name)
+        .join(ExerciseType, preview_ranked.c.exercise_type_id == ExerciseType.id)
+        .where(preview_ranked.c.preview_rank <= limit)
+        .order_by(preview_ranked.c.routine_id, preview_ranked.c.preview_rank)
+    )
+    preview_result = await session.execute(preview_query)
+    previews = {}
+    for row in preview_result.all():
+        if row.routine_id not in previews:
+            previews[row.routine_id] = []
+        previews[row.routine_id].append(row.name)
+    return previews
+
+
 async def get_visible_routines(
     session: AsyncSession,
     user_id: int | None,
@@ -159,18 +224,83 @@ async def get_visible_routines(
         .limit(limit)
     )
 
-    if user_id is None:
-        query = query.where(Routine.visibility == Routine.RoutineVisibility.public)
-    else:
-        query = query.where(
-            or_(
-                Routine.creator_id == user_id,
-                Routine.visibility == Routine.RoutineVisibility.public,
-            )
-        )
+    query = _apply_visibility_filter(query, user_id)
 
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def get_visible_routines_summary(
+    session: AsyncSession,
+    user_id: int | None,
+    offset: int = 0,
+    limit: int = 100,
+    order_by: str = "createdAt",
+) -> List[dict]:
+    """Get routines visible to the current viewer as summary dictionaries mapped to RoutineSummary."""
+    from src.core.observability import traced_span
+
+    with traced_span("routine.list.sql_phase") as span:
+        # 1. Base query for routines
+        query = select(Routine)
+        query = _apply_visibility_filter(query, user_id)
+
+        # Ordering
+        if order_by == "name":
+            query = query.order_by(Routine.name.asc(), Routine.id.asc())
+        elif order_by == "updatedAt":
+            query = query.order_by(Routine.updated_at.desc(), Routine.id.asc())
+        else:
+            # Default to createdAt
+            query = query.order_by(Routine.created_at.desc(), Routine.id.asc())
+
+        query = query.offset(offset).limit(limit)
+
+        result = await session.execute(query)
+        routines = result.scalars().all()
+
+        if not routines:
+            span.set_attribute("routine.list.row_count", 0)
+            return []
+
+        span.set_attribute("routine.list.row_count", len(routines))
+        routine_ids = [r.id for r in routines]
+
+        # 2. Aggregations and Previews
+        counts_by_routine = await _fetch_routine_counts(session, routine_ids)
+        previews_by_routine = await _fetch_routine_previews(session, routine_ids)
+
+        # 3. Final Assembly
+        total_exercises = 0
+        total_sets = 0
+        summary_list = []
+        for r in routines:
+            counts = counts_by_routine.get(r.id, {"exercise_count": 0, "set_count": 0})
+            previews = previews_by_routine.get(r.id, [])
+            total_exercises += counts["exercise_count"]
+            total_sets += counts["set_count"]
+
+            summary_list.append(
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "description": r.description,
+                    "workout_type_id": r.workout_type_id,
+                    "creator_id": r.creator_id,
+                    "visibility": r.visibility,
+                    "is_readonly": r.is_readonly,
+                    "created_at": r.created_at,
+                    "updated_at": r.updated_at,
+                    "exercise_count": counts["exercise_count"],
+                    "set_count": counts["set_count"],
+                    "exercise_names_preview": previews,
+                }
+            )
+
+        span.set_attribute("routine.list.exercise_count_total", total_exercises)
+        span.set_attribute("routine.list.set_count_total", total_sets)
+
+        return summary_list
 
 
 async def create_routine(

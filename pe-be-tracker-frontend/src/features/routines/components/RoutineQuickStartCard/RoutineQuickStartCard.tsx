@@ -1,4 +1,4 @@
-import type { Routine } from "@/features/routines/types";
+import type { RoutineSummary } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -15,18 +15,20 @@ const preloadRoutineDetailsPage = createIntentPreload(() =>
 );
 
 interface RoutineQuickStartCardProps {
-  routine: Routine;
-  onStartWorkout: (routine: Routine) => void;
+  routine: RoutineSummary;
+  onStartWorkout: (routine: RoutineSummary) => void;
 }
 
 export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
 }: RoutineQuickStartCardProps) => {
-  const exerciseCount = routine.exercise_templates.length;
-  const totalSets = routine.exercise_templates.reduce(
-    (total, exercise) => total + exercise.set_templates.length,
+  const exerciseCount = routine.exercise_count;
+  const totalSets = routine.set_count;
+  const exerciseNamesPreview = routine.exercise_names_preview;
+  const hiddenExerciseCount = Math.max(
     0,
+    exerciseCount - exerciseNamesPreview.length,
   );
 
   return (
@@ -47,15 +49,15 @@ export const RoutineQuickStartCard = ({
       </CardHeader>
       <CardContent className="pt-0 pb-6">
         <div className="space-y-1 mb-5">
-          {routine.exercise_templates.slice(0, 3).map((exercise) => (
-            <div key={exercise.id} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
+          {exerciseNamesPreview.slice(0, 3).map((name: string, i: number) => (
+            <div key={i} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
               <div className="h-1 w-1 rounded-full bg-primary/30" />
-              <span className="truncate">{exercise.exercise_type?.name ?? "Unknown Exercise"}</span>
+              <span className="truncate">{name}</span>
             </div>
           ))}
-          {routine.exercise_templates.length > 3 && (
+          {hiddenExerciseCount > 0 && (
             <div className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider pl-2.5 pt-1">
-              +{routine.exercise_templates.length - 3} more
+              +{hiddenExerciseCount} more
             </div>
           )}
         </div>

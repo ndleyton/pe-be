@@ -14,6 +14,7 @@ import {
   makeGuestWorkoutType,
   makeRoutine,
   makeRoutineExerciseTemplate,
+  makeRoutineSummary,
   makeRoutineSetTemplate,
 } from "@/test/fixtures";
 
@@ -21,11 +22,13 @@ const mockNavigate = vi.fn();
 
 const {
   mockStartWorkoutFromRoutine,
+  mockGetRoutine,
   mockAddWorkout,
   mockAuthState,
   mockGuestState,
 } = vi.hoisted(() => ({
   mockStartWorkoutFromRoutine: vi.fn(),
+  mockGetRoutine: vi.fn(),
   mockAddWorkout: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
@@ -47,6 +50,7 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("@/features/routines/api", () => ({
   startWorkoutFromRoutine: mockStartWorkoutFromRoutine,
+  getRoutine: mockGetRoutine,
 }));
 
 vi.mock("@/stores", () => ({
@@ -89,10 +93,13 @@ describe("useStartWorkoutFromRoutine", () => {
     mockGuestState.workoutTypes = [];
     mockStartWorkoutFromRoutine.mockResolvedValue({ id: 321 });
     mockAddWorkout.mockReturnValue("guest-workout-1");
+    mockGetRoutine.mockImplementation(async (id: number) =>
+      makeRoutine({ id, name: "Push Day" }),
+    );
   });
 
   it("starts a server workout for authenticated users", async () => {
-    const routine = makeRoutine({ id: 42, name: "Push Day" });
+    const routine = makeRoutineSummary({ id: 42, name: "Push Day" });
     const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
       wrapper: createWrapper(),
     });
@@ -116,7 +123,11 @@ describe("useStartWorkoutFromRoutine", () => {
     });
     mockGuestState.workoutTypes = [fallbackWorkoutType, defaultWorkoutType];
 
-    const routine = makeRoutine({
+    const routineSummary = makeRoutineSummary({
+      id: 42,
+      name: "Push Day",
+    });
+    const fullRoutine = makeRoutine({
       id: 42,
       name: "Push Day",
       exercise_templates: [
@@ -125,13 +136,15 @@ describe("useStartWorkoutFromRoutine", () => {
         }),
       ],
     });
+    mockGetRoutine.mockResolvedValue(fullRoutine);
     const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
       wrapper: createWrapper(),
     });
 
-    await result.current(routine);
+    await result.current(routineSummary);
 
     expect(mockStartWorkoutFromRoutine).not.toHaveBeenCalled();
+    expect(mockGetRoutine).toHaveBeenCalledWith(42);
     expect(mockAddWorkout).toHaveBeenCalledTimes(1);
     expect(mockAddWorkout).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,7 +157,7 @@ describe("useStartWorkoutFromRoutine", () => {
       }),
     );
     expect(mockNavigate).toHaveBeenCalledWith("/workouts/guest-workout-1", {
-      state: { routine },
+      state: { routine: fullRoutine },
     });
   });
 
@@ -156,7 +169,7 @@ describe("useStartWorkoutFromRoutine", () => {
     });
     mockGuestState.workoutTypes = [fallbackWorkoutType];
 
-    const routine = makeRoutine({ id: 42 });
+    const routine = makeRoutineSummary({ id: 42 });
     const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
       wrapper: createWrapper(),
     });

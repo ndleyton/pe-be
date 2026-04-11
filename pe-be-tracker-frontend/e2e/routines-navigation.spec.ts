@@ -28,7 +28,9 @@ test.describe("Routines quick-start navigation", () => {
             is_readonly: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            exercise_templates: [],
+            exercise_count: 3,
+            set_count: 9,
+            exercise_names_preview: ["Push-ups", "Rows", "Squats"],
           },
         ]),
       });
@@ -37,6 +39,8 @@ test.describe("Routines quick-start navigation", () => {
     await page.goto("/workouts");
     await page.waitForURL(/\/workouts$/);
     await page.getByTestId("fab-add-workout").waitFor({ state: "visible" });
+    await expect(page.getByTestId("week-tracking")).toBeVisible();
+    await expect(page.getByText("Server Routine")).toBeVisible();
 
     const moreLink = page.getByRole("link", { name: "Browse all routines" });
     await expect(moreLink).toBeVisible({ timeout: 10000 });

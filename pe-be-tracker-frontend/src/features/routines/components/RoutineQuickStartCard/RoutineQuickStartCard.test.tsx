@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { makeRoutineSummary } from "@/test/fixtures";
 import { render } from "@/test/testUtils";
-import { makeRoutine } from "@/test/fixtures";
 import { RoutineQuickStartCard } from "./RoutineQuickStartCard";
 
 const { preloadSpy } = vi.hoisted(() => ({
@@ -20,7 +20,7 @@ describe("RoutineQuickStartCard", () => {
   it("preloads the routine details page when details intent is detected", () => {
     render(
       <RoutineQuickStartCard
-        routine={makeRoutine({ id: 7, name: "Push Day" })}
+        routine={makeRoutineSummary({ id: 7, name: "Push Day" })}
         onStartWorkout={vi.fn()}
       />,
     );
@@ -38,10 +38,11 @@ describe("RoutineQuickStartCard", () => {
 
   it("still starts a workout from the primary action", async () => {
     const onStartWorkout = vi.fn();
+    const routine = makeRoutineSummary({ id: 9, name: "Pull Day" });
 
     render(
       <RoutineQuickStartCard
-        routine={makeRoutine({ id: 9, name: "Pull Day" })}
+        routine={routine}
         onStartWorkout={onStartWorkout}
       />,
     );
@@ -49,5 +50,22 @@ describe("RoutineQuickStartCard", () => {
     await fireEvent.click(screen.getByRole("button", { name: /start workout/i }));
 
     expect(onStartWorkout).toHaveBeenCalledTimes(1);
+    expect(onStartWorkout).toHaveBeenCalledWith(
+      expect.objectContaining({ id: routine.id, name: routine.name }),
+    );
+  });
+
+  it("shows the backend-truncated remainder count from exercise_count", () => {
+    render(
+      <RoutineQuickStartCard
+        routine={makeRoutineSummary({
+          exercise_count: 8,
+          exercise_names_preview: ["Push-ups", "Rows", "Squats"],
+        })}
+        onStartWorkout={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("+5 more")).toBeInTheDocument();
   });
 });

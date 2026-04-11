@@ -69,6 +69,7 @@ export const endpoints = {
 
   // Routine endpoints (recipes in backend, routines for users)
   routines: "/routines/",
+  routinesSummary: "/routines/summary",
   routineById: (id: string | number) => `/routines/${id}`,
   startWorkoutFromRoutine: (id: string | number) => `/routines/${id}/start`,
 

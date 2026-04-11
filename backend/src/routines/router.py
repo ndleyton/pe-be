@@ -2,7 +2,12 @@ from typing import List
 from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.routines.schemas import RoutineRead, RoutineCreate, RoutineUpdate
+from src.routines.schemas import (
+    RoutineRead,
+    RoutineCreate,
+    RoutineUpdate,
+    RoutineSummary,
+)
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
 from src.core.database import get_async_session
@@ -12,6 +17,9 @@ from src.users.models import User
 # NOTE: The application exposes these as routines.
 # The backing database table remains "recipes".
 router = APIRouter(tags=["routines"])
+
+MAX_ROUTINE_LIMIT = 500
+ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name"}
 
 
 @router.get("/", response_model=List[RoutineRead])
@@ -28,6 +36,42 @@ async def get_visible_routines(
     """
     return await routine_service.get_visible_routines(
         session, user.id if user else None, offset, limit
+    )
+
+
+@router.get("/summary", response_model=List[RoutineSummary])
+async def get_visible_routines_summary(
+    user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
+    offset: int = 0,
+    limit: int = 100,
+    order_by: str = "createdAt",
+):
+    """Get summarized routines visible to the current viewer."""
+    # Validation
+    if offset < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Offset must be non-negative",
+        )
+    if limit <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Limit must be a positive integer",
+        )
+    if limit > MAX_ROUTINE_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Limit exceeds maximum allowed ({MAX_ROUTINE_LIMIT})",
+        )
+    if order_by not in ALLOWED_SORT_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid order_by. Supported values: {', '.join(sorted(ALLOWED_SORT_KEYS))}",
+        )
+
+    return await routine_service.get_visible_routines_summary(
+        session, user.id if user else None, offset, limit, order_by
     )
 
 

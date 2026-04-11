@@ -1,9 +1,12 @@
 import pytest
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.users.models import User
 from src.workouts.models import WorkoutType
 from src.routines.models import Routine
+from src.exercises.models import ExerciseType
+from src.routines.models import ExerciseTemplate
 from src.routines import crud
 
 
@@ -199,3 +202,145 @@ async def test_visibility_get_by_id_allows_shareable_blocks_private(
     # Private not accessible
     got2 = await crud.get_routine_by_id_for_user(db_session, r_other_private.id, me.id)
     assert got2 is None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_visible_routines_summary_uses_stable_tiebreakers(
+    db_session: AsyncSession,
+):
+    """Summary listing keeps tied name/created_at values in deterministic ID order."""
+    wt = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(wt)
+    await db_session.flush()
+
+    owner = User(
+        email="visibility-summary-order@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(owner)
+    await db_session.flush()
+
+    shared_created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    newest_created_at = datetime(2026, 1, 2, tzinfo=timezone.utc)
+
+    alpha_first = Routine(
+        name="Alpha",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+        created_at=shared_created_at,
+    )
+    alpha_second = Routine(
+        name="Alpha",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+        created_at=shared_created_at,
+    )
+    newest = Routine(
+        name="Beta",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+        created_at=newest_created_at,
+    )
+    gamma = Routine(
+        name="Gamma",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+        created_at=shared_created_at,
+    )
+    db_session.add_all([alpha_first, alpha_second, newest, gamma])
+    await db_session.flush()
+
+    by_name = await crud.get_visible_routines_summary(
+        db_session, user_id=None, offset=0, limit=10, order_by="name"
+    )
+    assert [routine["id"] for routine in by_name] == [
+        alpha_first.id,
+        alpha_second.id,
+        newest.id,
+        gamma.id,
+    ]
+
+    by_created_at = await crud.get_visible_routines_summary(
+        db_session, user_id=None, offset=0, limit=10, order_by="createdAt"
+    )
+    assert [routine["id"] for routine in by_created_at] == [
+        newest.id,
+        alpha_first.id,
+        alpha_second.id,
+        gamma.id,
+    ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_visible_routines_summary_limits_preview_names_per_routine_in_sql(
+    db_session: AsyncSession,
+):
+    """Summary preview includes at most five exercise names in template order."""
+    wt = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(wt)
+    await db_session.flush()
+
+    owner = User(
+        email="visibility-summary-preview@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(owner)
+    await db_session.flush()
+
+    routine = Routine(
+        name="Preview Limit",
+        workout_type_id=wt.id,
+        creator_id=owner.id,
+        visibility=Routine.RoutineVisibility.public,
+        is_readonly=True,
+    )
+    db_session.add(routine)
+    await db_session.flush()
+
+    exercise_types = [
+        ExerciseType(name=f"Exercise {index}", description=f"Description {index}")
+        for index in range(1, 8)
+    ]
+    db_session.add_all(exercise_types)
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            ExerciseTemplate(
+                routine_id=routine.id,
+                exercise_type_id=exercise_type.id,
+            )
+            for exercise_type in exercise_types
+        ]
+    )
+    await db_session.flush()
+
+    summaries = await crud.get_visible_routines_summary(
+        db_session, user_id=None, offset=0, limit=10, order_by="createdAt"
+    )
+
+    summary = next(item for item in summaries if item["id"] == routine.id)
+    assert summary["exercise_count"] == 7
+    assert summary["exercise_names_preview"] == [
+        "Exercise 1",
+        "Exercise 2",
+        "Exercise 3",
+        "Exercise 4",
+        "Exercise 5",
+    ]

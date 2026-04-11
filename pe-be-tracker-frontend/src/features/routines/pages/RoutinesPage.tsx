@@ -6,7 +6,7 @@ import { RoutineStructuredData } from "@/features/routines/components/RoutineStr
 import { RoutinesPageSkeleton } from "@/features/routines/components";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
-import type { Routine } from "@/features/routines/types";
+import type { RoutineSummary } from "@/features/routines/types";
 import { RoutineQuickStartCard } from "@/features/routines/components";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
@@ -36,7 +36,7 @@ const RoutinesPage = () => {
     isPending,
     isFetchingNextPage,
     error,
-  } = useInfiniteScroll<Routine>({
+  } = useInfiniteScroll<RoutineSummary>({
     queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
