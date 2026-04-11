@@ -74,6 +74,17 @@ const mockMuscleGroups = [
   makeMuscleGroup({ id: 3, name: "Back" }),
 ];
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
+
 describe("ExerciseTypesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -156,6 +167,55 @@ describe("ExerciseTypesPage", () => {
     });
   });
 
+  it("populates muscle-group options from getMuscleGroups instead of exercise pages", async () => {
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([
+        makeExerciseType({
+          id: 10,
+          name: "Cable Row",
+          muscle_groups: ["back"],
+        }),
+      ]),
+    );
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 9, name: "Shoulders" }),
+    ]);
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-type-10")).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    );
+
+    expect(await screen.findByRole("option", { name: "Shoulders" })).toBeVisible();
+    expect(
+      screen.queryByRole("option", { name: "Back" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the muscle-group selector loading state while getMuscleGroups is pending", async () => {
+    const deferred = createDeferred<typeof mockMuscleGroups>();
+    mockGetMuscleGroups.mockReturnValueOnce(deferred.promise);
+
+    render(<ExerciseTypesPage />);
+
+    expect(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    ).toBeDisabled();
+
+    deferred.resolve(mockMuscleGroups);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: /filter by muscle group/i }),
+      ).toBeEnabled();
+    });
+  });
+
   it("keeps the muscle-group selector enabled when the muscle-group lookup fails", async () => {
     mockGetMuscleGroups.mockRejectedValueOnce(new Error("lookup failed"));
 
@@ -170,6 +230,29 @@ describe("ExerciseTypesPage", () => {
         screen.getByRole("combobox", { name: /filter by muscle group/i }),
       ).toBeEnabled();
     });
+  });
+
+  it("falls back to an empty muscle-group option list when getMuscleGroups fails", async () => {
+    mockGetMuscleGroups.mockRejectedValueOnce(new Error("lookup failed"));
+
+    render(<ExerciseTypesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: /filter by muscle group/i }),
+      ).toBeEnabled();
+    });
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /filter by muscle group/i }),
+    );
+
+    expect(
+      await screen.findByRole("option", { name: "All Muscle Groups" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("option", { name: "Chest" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Legs" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Back" })).not.toBeInTheDocument();
   });
 
   it("displays exercise types after loading", async () => {

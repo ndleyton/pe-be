@@ -179,6 +179,8 @@ Add or update frontend tests to cover:
 - search pagination continuing within the search query
 - browse pagination continuing within the browse query
 - muscle-group selector being populated from `getMuscleGroups()` rather than from loaded exercise pages
+- muscle-group selector loading state while `getMuscleGroups()` is still pending
+- muscle-group query failure fallback, such as empty options or an explicit error state if the UI later adds one
 - authenticated create behavior remaining unchanged when search has zero matches
 
 Manual verification should include:
