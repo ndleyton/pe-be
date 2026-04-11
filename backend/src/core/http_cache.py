@@ -8,6 +8,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
+from src.core.cache_metrics import CacheMetricsSnapshot
+
 
 @dataclass(slots=True)
 class CachedJSONBody:
@@ -23,6 +25,8 @@ class TTLResponseCache:
         self._lock = asyncio.Lock()
         self._sweep_interval_seconds = sweep_interval_seconds
         self._next_sweep_at = 0.0
+        self._body_bytes = 0
+        self._approx_bytes = 0
 
     async def get(self, key: str) -> CachedJSONBody | None:
         async with self._lock:
@@ -54,6 +58,8 @@ class TTLResponseCache:
             self._maybe_sweep_unlocked(now)
             self._remove_key_unlocked(key)
             self._entries[key] = entry
+            self._body_bytes += len(entry.body)
+            self._approx_bytes += _estimate_entry_size(key, entry)
             for tag in tags:
                 self._tag_index.setdefault(tag, set()).add(key)
         return entry
@@ -73,11 +79,24 @@ class TTLResponseCache:
             self._entries.clear()
             self._tag_index.clear()
             self._next_sweep_at = 0.0
+            self._body_bytes = 0
+            self._approx_bytes = 0
+
+    def metrics_snapshot(self) -> CacheMetricsSnapshot:
+        return CacheMetricsSnapshot(
+            entry_count=len(self._entries),
+            tag_count=len(self._tag_index),
+            body_bytes=self._body_bytes,
+            approx_bytes=self._approx_bytes,
+        )
 
     def _remove_key_unlocked(self, key: str) -> None:
-        if key not in self._entries:
+        entry = self._entries.get(key)
+        if entry is None:
             return
 
+        self._body_bytes -= len(entry.body)
+        self._approx_bytes -= _estimate_entry_size(key, entry)
         self._entries.pop(key, None)
         empty_tags: list[str] = []
         for tag, keys in self._tag_index.items():
@@ -142,6 +161,11 @@ def build_cached_json_response(
 
 def _build_etag(body: bytes) -> str:
     return f'"{hashlib.sha256(body).hexdigest()}"'
+
+
+def _estimate_entry_size(key: str, entry: CachedJSONBody) -> int:
+    # Approximate payload retained in-process, excluding Python container overhead.
+    return len(key.encode("utf-8")) + len(entry.body) + len(entry.etag.encode("utf-8"))
 
 
 def _etag_matches(header_value: str | None, etag: str) -> bool:

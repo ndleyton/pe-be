@@ -9,6 +9,7 @@ from src.core.cache_tags import (
     EXERCISE_PUBLIC_CACHE_TAG,
     EXERCISE_TAXONOMY_CACHE_TAG,
 )
+from src.core.cache_metrics import record_cache_request
 from src.core.config import settings
 from src.core.http_cache import (
     build_cached_json_response,
@@ -16,7 +17,6 @@ from src.core.http_cache import (
     response_cache,
 )
 from src.core.observability import (
-    set_current_span_attributes,
     traced_model_dump,
     traced_model_dump_many,
     traced_model_validate_many,
@@ -97,14 +97,7 @@ def _exercise_types_cache_headers(
 
 
 def _annotate_cache(route_name: str, *, decision: str, key: str | None) -> None:
-    attributes = {
-        "cache.system": "in_memory_ttl",
-        "cache.route": route_name,
-        "cache.decision": decision,
-    }
-    if key is not None:
-        attributes["cache.key"] = key
-    set_current_span_attributes(attributes)
+    record_cache_request(route_name, decision=decision, key=key)
 
 
 # Exercise endpoints

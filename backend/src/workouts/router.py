@@ -3,6 +3,7 @@ from fastapi import Depends, APIRouter, status, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.cache_metrics import record_cache_request
 from src.core.config import settings
 from src.core.http_cache import (
     build_cached_json_response,
@@ -10,7 +11,6 @@ from src.core.http_cache import (
     response_cache,
 )
 from src.core.observability import traced_model_dump_many, traced_model_validate_many
-from src.core.observability import set_current_span_attributes
 from src.workouts.schemas import (
     WorkoutRead,
     WorkoutCreate,
@@ -80,14 +80,7 @@ async def get_workout_types(
     cache_control = f"public, max-age={settings.TAXONOMY_CACHE_TTL_SECONDS}"
     cached_response = await response_cache.get(cache_key)
     if cached_response is not None:
-        set_current_span_attributes(
-            {
-                "cache.system": "in_memory_ttl",
-                "cache.route": "workout_types",
-                "cache.decision": "hit",
-                "cache.key": cache_key,
-            }
-        )
+        record_cache_request("workout_types", decision="hit", key=cache_key)
         return build_cached_json_response(
             request,
             body=cached_response.body,
@@ -95,14 +88,7 @@ async def get_workout_types(
             cache_control=cache_control,
             extra_headers={"X-Cache-Status": "HIT"},
         )
-    set_current_span_attributes(
-        {
-            "cache.system": "in_memory_ttl",
-            "cache.route": "workout_types",
-            "cache.decision": "miss",
-            "cache.key": cache_key,
-        }
-    )
+    record_cache_request("workout_types", decision="miss", key=cache_key)
 
     workout_types = await WorkoutTypeService.get_all_workout_types(session)
     response_models = traced_model_validate_many(
