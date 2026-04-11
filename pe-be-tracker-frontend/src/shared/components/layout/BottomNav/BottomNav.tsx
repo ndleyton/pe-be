@@ -23,7 +23,7 @@ const NavItemLink = ({ item }: { item: NavItem }) => {
 
 const BottomNav = () => (
   <nav
-    className="bg-background/80 fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t backdrop-blur-md md:hidden"
+    className="bg-background/80 fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t backdrop-blur-md md:hidden"
     style={{ bottom: "env(safe-area-inset-bottom)" }}
     aria-label="Bottom navigation"
   >

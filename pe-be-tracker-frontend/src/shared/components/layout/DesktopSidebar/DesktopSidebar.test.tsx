@@ -86,6 +86,9 @@ describe("DesktopSidebar", () => {
         within(nav).getByRole("link", { name: /^workouts$/i }),
       ).toBeInTheDocument();
       expect(
+        within(nav).getByRole("link", { name: /routines/i }),
+      ).toBeInTheDocument();
+      expect(
         within(nav).getByRole("link", { name: /exercises/i }),
       ).toBeInTheDocument();
       expect(
@@ -101,6 +104,10 @@ describe("DesktopSidebar", () => {
       expect(within(nav).getByRole("link", { name: /^workouts$/i })).toHaveAttribute(
         "href",
         "/workouts",
+      );
+      expect(within(nav).getByRole("link", { name: /routines/i })).toHaveAttribute(
+        "href",
+        "/routines",
       );
       expect(within(nav).getByRole("link", { name: /exercises/i })).toHaveAttribute(
         "href",
@@ -173,6 +180,9 @@ describe("DesktopSidebar", () => {
 
       await user.tab();
       expect(screen.getByRole("link", { name: /^workouts$/i })).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByRole("link", { name: /routines/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByRole("link", { name: /exercises/i })).toHaveFocus();

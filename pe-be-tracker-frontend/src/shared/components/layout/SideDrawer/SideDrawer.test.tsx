@@ -152,6 +152,9 @@ describe("SideDrawer", () => {
         screen.getByRole("link", { name: /workouts/i }),
       ).toBeInTheDocument();
       expect(
+        screen.getByRole("link", { name: /routines/i }),
+      ).toBeInTheDocument();
+      expect(
         screen.getByRole("link", { name: /exercises/i }),
       ).toBeInTheDocument();
       expect(
@@ -166,6 +169,10 @@ describe("SideDrawer", () => {
       expect(screen.getByRole("link", { name: /workouts/i })).toHaveAttribute(
         "href",
         "/workouts",
+      );
+      expect(screen.getByRole("link", { name: /routines/i })).toHaveAttribute(
+        "href",
+        "/routines",
       );
       expect(screen.getByRole("link", { name: /exercises/i })).toHaveAttribute(
         "href",
