@@ -1,14 +1,11 @@
-import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  createExerciseType,
-  getExerciseTypes,
-} from "@/features/exercises/api";
 import { ExerciseTypeCard } from "@/features/exercises/components";
-import { useExerciseTypesPagination } from "@/features/exercises/hooks";
+import {
+  useExerciseTypeCreation,
+  useExerciseTypesPagination,
+} from "@/features/exercises/hooks";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -28,22 +25,16 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const EXERCISE_TYPES_PAGE_LIMIT = 100;
-const normalizeExerciseTypeName = (name: string) => name.trim().toLowerCase();
 
 const ExerciseTypesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [orderBy, setOrderBy] = useState<"usage" | "name">("usage");
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const createInFlight = useRef(false);
   const deferredSearchTerm = useDeferredValue(searchTerm);
-  const trimmedSearchTerm = searchTerm.trim();
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const normalizedSearchTerm = trimmedDeferredSearchTerm.toLowerCase();
-  const normalizedEnteredSearchTerm =
-    normalizeExerciseTypeName(trimmedSearchTerm);
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
   const activeMuscleGroupId =
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
@@ -65,124 +56,33 @@ const ExerciseTypesPage = () => {
     isSearchActive,
   });
 
-  const isSearchSettled =
-    trimmedSearchTerm.length === 0 ||
-    trimmedSearchTerm === trimmedDeferredSearchTerm;
-
   const sortedMuscleGroups = useMemo(
     () => [...muscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
     [muscleGroups],
   );
-  const exactExerciseTypeMatch = useMemo(
-    () =>
-      trimmedSearchTerm
-        ? exerciseTypes.find(
-            (exerciseType) =>
-              normalizeExerciseTypeName(exerciseType.name) ===
-              normalizedEnteredSearchTerm,
-          )
-        : undefined,
-    [exerciseTypes, normalizedEnteredSearchTerm, trimmedSearchTerm],
-  );
   const isMuscleGroupSelectorDisabled = isMuscleGroupsLoading;
   const hasActiveFilters =
-    trimmedSearchTerm.length > 0 || selectedMuscleGroupId !== "all";
-  const showCreateButton =
-    isAuthenticated &&
-    trimmedSearchTerm.length > 0 &&
-    isSearchSettled &&
-    !exactExerciseTypeMatch &&
-    !isSearchingWithoutResults;
-
-  const findExactExerciseTypeMatch = useCallback(
-    async (name: string) => {
-      const normalizedName = normalizeExerciseTypeName(name);
-      const existingInResults = exerciseTypes.find(
-        (exerciseType) =>
-          normalizeExerciseTypeName(exerciseType.name) === normalizedName,
-      );
-      if (existingInResults) {
-        return existingInResults;
-      }
-
-      const response = await getExerciseTypes(
-        "name",
-        undefined,
-        EXERCISE_TYPES_PAGE_LIMIT,
-        undefined,
-        name,
-      );
-      return response.data.find(
-        (exerciseType) =>
-          normalizeExerciseTypeName(exerciseType.name) === normalizedName,
-      );
+    searchTerm.trim().length > 0 || selectedMuscleGroupId !== "all";
+  const handleResolvedExerciseType = useCallback(
+    (exerciseType: { id: string | number }) => {
+      navigate(`/exercise-types/${exerciseType.id}`);
     },
-    [exerciseTypes],
+    [navigate],
   );
-
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      navigate(`/exercise-types/${newExerciseType.id}`);
-    },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        void findExactExerciseTypeMatch(searchTerm).then((existing) => {
-          if (existing) {
-            navigate(`/exercise-types/${existing.id}`);
-          }
-        });
-      }
-    },
+  const {
+    trimmedSearchTerm,
+    showCreateButton,
+    createMutation,
+    handleCreateExerciseType,
+  } = useExerciseTypeCreation({
+    searchTerm,
+    deferredSearchTerm,
+    exerciseTypes,
+    isSearchingWithoutResults,
+    isAuthenticated,
+    lookupLimit: EXERCISE_TYPES_PAGE_LIMIT,
+    onResolvedExerciseType: handleResolvedExerciseType,
   });
-
-  const handleCreateExerciseType = () => {
-    if (createInFlight.current) return;
-
-    const trimmedName = trimmedSearchTerm;
-    if (!trimmedName) return;
-
-    const existing = exactExerciseTypeMatch;
-    if (existing) {
-      navigate(`/exercise-types/${existing.id}`);
-      return;
-    }
-
-    createInFlight.current = true;
-
-    const cardioKeywords = [
-      "walking",
-      "running",
-      "cycling",
-      "swimming",
-      "treadmill",
-      "rowing",
-      "elliptical",
-      "jogging",
-    ];
-    const isCardio = cardioKeywords.some((keyword) =>
-      trimmedName.toLowerCase().includes(keyword),
-    );
-
-    createMutation.mutate(
-      {
-        name: trimmedName,
-        description: "Custom exercise",
-        default_intensity_unit: isCardio ? 3 : 1,
-      },
-      {
-        onSettled: () => {
-          createInFlight.current = false;
-        },
-      },
-    );
-  };
 
   if (error) {
     return (

@@ -11,17 +11,16 @@ import {
 } from "react";
 import {
   useInfiniteQuery,
-  useMutation,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
 import {
   getExerciseTypes,
-  createExerciseType,
+  type CreateExerciseTypeData,
   type ExerciseType,
 } from "@/features/exercises/api";
+import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
-import axios from "axios";
 import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import {
@@ -41,7 +40,6 @@ interface ExerciseTypeModalProps {
 const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
 const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
 const EXERCISE_TYPE_MODAL_SCROLL_THRESHOLD = 160;
-const normalizeExerciseTypeName = (name: string) => name.trim().toLowerCase();
 const EXERCISE_TYPE_MODAL_QUERY_KEY = [
   "exerciseTypes",
   "modal",
@@ -218,42 +216,6 @@ const ExerciseTypeModal = ({
     );
   }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
 
-  const exactExerciseTypeMatch = useMemo(
-    () =>
-      trimmedSearchTerm
-        ? filteredExerciseTypes.find(
-            (type: ExerciseType | GuestExerciseType) =>
-              normalizeExerciseTypeName(type.name) ===
-              normalizeExerciseTypeName(trimmedSearchTerm),
-          )
-        : undefined,
-    [filteredExerciseTypes, trimmedSearchTerm],
-  );
-
-  const createMutation = useMutation({
-    mutationFn: createExerciseType,
-    onSuccess: (newExerciseType) => {
-      queryClient.invalidateQueries({ queryKey: ["exerciseTypes"] });
-      handleSelect(newExerciseType);
-    },
-    onError: (err: unknown) => {
-      if (
-        axios.isAxiosError(err) &&
-        err.response?.status === 400 &&
-        typeof err.response.data?.detail === "string" &&
-        err.response.data.detail.toLowerCase().includes("already exists")
-      ) {
-        // Backend indicates the type already exists — select it instead of showing an error
-        void findExactExerciseTypeMatch(searchTerm).then((existing) => {
-          if (existing) {
-            handleSelect(existing);
-          }
-        });
-        return;
-      }
-    },
-  });
-
   const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
   const fetchNextPage = isSearchActive
     ? fetchSearchNextPage
@@ -274,49 +236,10 @@ const ExerciseTypeModal = ({
     isSearchLoading &&
     lastSettledSearchResults.length === 0 &&
     searchExerciseTypes.length === 0;
-  const isSearchSettled =
-    trimmedSearchTerm.length === 0 ||
-    (trimmedSearchTerm === trimmedDeferredSearchTerm && !isSearchLoading);
-  const showCreateButton =
-    trimmedSearchTerm &&
-    isSearchSettled &&
-    !exactExerciseTypeMatch &&
-    !isSearchingWithoutResults;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
       : filteredExerciseTypes.slice(0, visibleResultCount);
-
-  const createInFlight = useRef(false);
-
-  const findExactExerciseTypeMatch = useCallback(
-    async (name: string) => {
-      const normalizedName = normalizeExerciseTypeName(name);
-      const existingInResults = filteredExerciseTypes.find(
-        (type: ExerciseType | GuestExerciseType) =>
-          normalizeExerciseTypeName(type.name) === normalizedName,
-      );
-      if (existingInResults) {
-        return existingInResults;
-      }
-
-      if (!isAuthenticated) {
-        return undefined;
-      }
-
-      const response = await getExerciseTypes(
-        "name",
-        undefined,
-        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        undefined,
-        name,
-      );
-      return response.data.find(
-        (type) => normalizeExerciseTypeName(type.name) === normalizedName,
-      );
-    },
-    [filteredExerciseTypes, isAuthenticated],
-  );
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
@@ -371,56 +294,33 @@ const ExerciseTypeModal = ({
     onSelect(exerciseType);
   };
 
-  const handleCreateExerciseType = () => {
-    if (createInFlight.current) return; // ignore duplicate clicks while pending
-    const trimmedName = trimmedSearchTerm;
-    if (!trimmedName) return;
-
-    createInFlight.current = true;
-
-    // Avoid creating duplicates — if a type with the same name (case-insensitive) already exists, reuse it
-    const existingType = exactExerciseTypeMatch;
-
-    if (existingType) {
-      handleSelect(existingType);
-      createInFlight.current = false;
-      return;
-    }
-
-    // Heuristic for default intensity unit
-    const cardioKeywords = ["walking", "running", "cycling", "swimming", "treadmill", "rowing", "elliptical", "jogging"];
-    const isCardio = cardioKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword));
-    const defaultUnitId = isCardio ? 3 : 1; // 3 = km/h, 1 = kg
-
-    if (isAuthenticated) {
-      createMutation.mutate(
-        {
-          name: trimmedName,
-          description: "Custom exercise",
-          default_intensity_unit: defaultUnitId,
-        },
-        {
-          onSettled: () => {
-            createInFlight.current = false;
-          },
-        },
-      );
-    } else {
+  const createGuestExerciseType = useCallback(
+    (payload: CreateExerciseTypeData) => {
       const newExerciseTypeId = guestActions.addExerciseType({
-        name: trimmedName,
-        description: "Custom exercise",
-        default_intensity_unit: defaultUnitId,
+        name: payload.name,
+        description: payload.description ?? null,
+        default_intensity_unit: payload.default_intensity_unit ?? 1,
       });
-
-      const newExerciseType = guestData.exerciseTypes.find(
-        (et) => et.id === newExerciseTypeId,
-      );
-      if (newExerciseType) {
-        handleSelect(newExerciseType);
-        createInFlight.current = false;
-      }
-    }
-  };
+      return guestData.exerciseTypes.find((exerciseType) => {
+        return exerciseType.id === newExerciseTypeId;
+      });
+    },
+    [guestActions, guestData.exerciseTypes],
+  );
+  const {
+    showCreateButton,
+    createMutation,
+    handleCreateExerciseType,
+  } = useExerciseTypeCreation<ExerciseType | GuestExerciseType>({
+    searchTerm,
+    deferredSearchTerm,
+    exerciseTypes: filteredExerciseTypes,
+    isSearchingWithoutResults,
+    isAuthenticated,
+    lookupLimit: EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+    onResolvedExerciseType: handleSelect,
+    createGuestExerciseType,
+  });
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && filteredExerciseTypes.length > 0) {
