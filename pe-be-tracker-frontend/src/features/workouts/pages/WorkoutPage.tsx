@@ -87,40 +87,6 @@ const fetchWorkout = async (workoutId: string): Promise<Workout> => {
   return response.data as Workout;
 };
 
-const getScrollContainer = (element: HTMLElement | null): HTMLElement | Window => {
-  let current = element?.parentElement ?? null;
-
-  while (current) {
-    const { overflowY } = window.getComputedStyle(current);
-    const isScrollable = /(auto|scroll|overlay)/.test(overflowY);
-
-    if (isScrollable && current.scrollHeight > current.clientHeight) {
-      return current;
-    }
-
-    current = current.parentElement;
-  }
-
-  return window;
-};
-
-const isElementScrollContainer = (
-  scrollContainer: HTMLElement | Window,
-): scrollContainer is HTMLElement => scrollContainer !== window;
-
-const scrollContainerTo = (
-  scrollContainer: HTMLElement | Window,
-  top: number,
-  behavior: ScrollBehavior,
-) => {
-  if (scrollContainer === window) {
-    window.scrollTo({ top, behavior });
-    return;
-  }
-
-  scrollContainer.scrollTo({ top, behavior });
-};
-
 const WorkoutPage = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
@@ -160,38 +126,17 @@ const WorkoutPage = () => {
 
   const scrollWorkoutPageToBottom = (behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
-      const anchor = bottomScrollAnchorRef.current;
-      const scrollContainer = getScrollContainer(anchor);
-
-      if (scrollContainer === window) {
-        const scrollRoot = document.scrollingElement ?? document.documentElement;
-        const top = Math.max(
-          scrollRoot.scrollHeight,
-          document.documentElement.scrollHeight,
-          document.body.scrollHeight,
-        );
-
-        scrollContainerTo(scrollContainer, top, behavior);
-        return;
-      }
-
-      if (!isElementScrollContainer(scrollContainer)) {
-        return;
-      }
-
-      scrollContainerTo(
-        scrollContainer,
-        scrollContainer.scrollHeight,
+      bottomScrollAnchorRef.current?.scrollIntoView({
         behavior,
-      );
+        block: "end",
+        inline: "nearest",
+      });
     });
   };
 
   const scrollWorkoutPageToTop = () => {
     requestAnimationFrame(() => {
-      const anchor = bottomScrollAnchorRef.current;
-      const scrollContainer = getScrollContainer(anchor);
-      scrollContainerTo(scrollContainer, 0, "auto");
+      window.scrollTo({ top: 0, behavior: "auto" });
     });
   };
 
