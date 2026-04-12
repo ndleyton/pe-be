@@ -497,7 +497,7 @@ const WorkoutPage = () => {
         exercise_sets: guestExerciseSets,
       });
     }
-  }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
+    }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
 
   const handleFinishWorkout = useCallback(() => {
     if (workoutId) {
@@ -524,27 +524,10 @@ const WorkoutPage = () => {
 
   const handleCancelFinish = () => {
     setShowFinishModal(false);
-    // Push the current state back to prevent navigation
-    window.history.pushState(null, "", window.location.pathname);
   };
 
   const handleSaveRoutine = () => {
     setShowSaveRoutineModal(true);
-  };
-
-  const handleBack = () => {
-    const workout = isAuthenticated ? serverWorkout : guestWorkout;
-
-    if (workout === undefined) {
-      return;
-    }
-
-    if (!workout.end_time) {
-      setShowFinishModal(true);
-      return;
-    }
-
-    goBack();
   };
 
   const warmExerciseTypeModal = useCallback(() => {
@@ -590,12 +573,7 @@ const WorkoutPage = () => {
       event.returnValue = "";
     };
 
-    const handlePopState = () => {
-      setShowFinishModal(true);
-    };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("popstate", handlePopState);
 
     // Preload heavy components after a small delay to improve perceived performance
     const preloadTimeout = setTimeout(() => {
@@ -605,7 +583,6 @@ const WorkoutPage = () => {
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("popstate", handlePopState);
       clearTimeout(preloadTimeout);
     };
   }, [hasValidWorkout]);
@@ -698,7 +675,7 @@ const WorkoutPage = () => {
           className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
           aria-label="Go back"
           type="button"
-          onClick={handleBack}
+          onClick={goBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>

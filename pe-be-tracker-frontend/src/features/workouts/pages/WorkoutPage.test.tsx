@@ -261,6 +261,31 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
+  it("does not reopen the finish modal when browser back is pressed after canceling", async () => {
+    render(<WorkoutPage />);
+
+    fireEvent.click(await screen.findByLabelText(/floating action button/i));
+
+    const cancelButton = await screen.findByRole("button", {
+      name: /cancel/i,
+    });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("finish-workout-modal"),
+      ).not.toBeInTheDocument();
+    });
+
+    fireEvent(window, new PopStateEvent("popstate"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("finish-workout-modal"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('shows "Add Exercise" button', () => {
     render(<WorkoutPage />);
     return expect(
@@ -274,6 +299,17 @@ describe("WorkoutPage", () => {
     const backLink = await screen.findByLabelText(/go back/i);
     expect(backLink).toBeInTheDocument();
     expect(backLink).not.toHaveClass("lg:hidden");
+  });
+
+  it("navigates away instead of opening the finish modal when the back button is pressed", async () => {
+    render(<WorkoutPage />);
+
+    fireEvent.click(await screen.findByLabelText(/go back/i));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/workouts", {
+      replace: true,
+    });
+    expect(screen.queryByTestId("finish-workout-modal")).not.toBeInTheDocument();
   });
 
   it("optimistically adds an exercise before the server responds", async () => {
