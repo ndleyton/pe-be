@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import api from "@/shared/api/client";
 import WorkoutPage from "./WorkoutPage";
@@ -299,6 +300,19 @@ describe("WorkoutPage", () => {
     const backLink = await screen.findByLabelText(/go back/i);
     expect(backLink).toBeInTheDocument();
     expect(backLink).not.toHaveClass("lg:hidden");
+  });
+
+  it("navigates away instead of opening the finish modal when the back button is pressed", async () => {
+    const user = userEvent.setup();
+
+    render(<WorkoutPage />);
+
+    await user.click(await screen.findByLabelText(/go back/i));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/workouts", {
+      replace: true,
+    });
+    expect(screen.queryByTestId("finish-workout-modal")).not.toBeInTheDocument();
   });
 
   it("optimistically adds an exercise before the server responds", async () => {

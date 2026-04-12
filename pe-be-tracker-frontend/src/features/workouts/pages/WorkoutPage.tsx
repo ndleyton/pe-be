@@ -537,11 +537,6 @@ const WorkoutPage = () => {
       return;
     }
 
-    if (!workout.end_time) {
-      setShowFinishModal(true);
-      return;
-    }
-
     goBack();
   };
 
