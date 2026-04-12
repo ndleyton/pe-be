@@ -524,8 +524,6 @@ const WorkoutPage = () => {
 
   const handleCancelFinish = () => {
     setShowFinishModal(false);
-    // Push the current state back to prevent navigation
-    window.history.pushState(null, "", window.location.pathname);
   };
 
   const handleSaveRoutine = () => {
@@ -590,12 +588,7 @@ const WorkoutPage = () => {
       event.returnValue = "";
     };
 
-    const handlePopState = () => {
-      setShowFinishModal(true);
-    };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("popstate", handlePopState);
 
     // Preload heavy components after a small delay to improve perceived performance
     const preloadTimeout = setTimeout(() => {
@@ -605,7 +598,6 @@ const WorkoutPage = () => {
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("popstate", handlePopState);
       clearTimeout(preloadTimeout);
     };
   }, [hasValidWorkout]);
