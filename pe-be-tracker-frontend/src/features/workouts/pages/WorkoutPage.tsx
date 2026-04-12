@@ -497,7 +497,7 @@ const WorkoutPage = () => {
         exercise_sets: guestExerciseSets,
       });
     }
-  }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
+    }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
 
   const handleFinishWorkout = useCallback(() => {
     if (workoutId) {
@@ -528,16 +528,6 @@ const WorkoutPage = () => {
 
   const handleSaveRoutine = () => {
     setShowSaveRoutineModal(true);
-  };
-
-  const handleBack = () => {
-    const workout = isAuthenticated ? serverWorkout : guestWorkout;
-
-    if (workout === undefined) {
-      return;
-    }
-
-    goBack();
   };
 
   const warmExerciseTypeModal = useCallback(() => {
@@ -685,7 +675,7 @@ const WorkoutPage = () => {
           className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
           aria-label="Go back"
           type="button"
-          onClick={handleBack}
+          onClick={goBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
