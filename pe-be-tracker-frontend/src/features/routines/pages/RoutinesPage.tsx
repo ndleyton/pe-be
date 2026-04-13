@@ -157,19 +157,23 @@ const RoutinesPage = () => {
 
       {/* Empty State */}
       {!isPending && filteredRoutines.length === 0 && (
-        <div className="py-12 text-center">
-          <div className="text-muted-foreground mb-4">
-            {searchTerm
-              ? "No routines found matching your search."
-              : "No routines available."}
+        <div className="py-20 text-center">
+          <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
+            <Search className="text-muted-foreground h-10 w-10 opacity-20" />
           </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">No routines found</h3>
+          <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+            {searchTerm
+              ? "No routines match your current search"
+              : "No routines available"}
+          </p>
           {searchTerm && (
             <Button
               onClick={() => setSearchTerm("")}
               variant="outline"
-              size="sm"
+              className="rounded-xl border-border/40 font-bold"
             >
-              Clear Search
+              Clear search
             </Button>
           )}
         </div>
