@@ -101,6 +101,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
                         key={routine.id}
                         routine={routine}
                         onStartWorkout={onStartWorkout}
+                        className="w-[18rem] sm:w-80 shrink-0"
                       />
                     ))}
                   </div>

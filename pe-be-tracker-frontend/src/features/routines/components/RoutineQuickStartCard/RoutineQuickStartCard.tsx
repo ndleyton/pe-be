@@ -9,6 +9,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Link } from "react-router-dom";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import { cn } from "@/lib/utils";
 
 const preloadRoutineDetailsPage = createIntentPreload(() =>
   import("@/features/routines/pages/RoutineDetailsPage"),
@@ -17,11 +18,13 @@ const preloadRoutineDetailsPage = createIntentPreload(() =>
 interface RoutineQuickStartCardProps {
   routine: RoutineSummary;
   onStartWorkout: (routine: RoutineSummary) => void;
+  className?: string;
 }
 
 export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
+  className,
 }: RoutineQuickStartCardProps) => {
   const exerciseCount = routine.exercise_count;
   const totalSets = routine.set_count;
@@ -33,7 +36,7 @@ export const RoutineQuickStartCard = ({
   );
 
   return (
-    <Card className="bg-card/60 border-border/40 hover:bg-card/80 shrink-0 relative flex h-full w-[18rem] max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group sm:w-80 gap-2">
+    <Card className={cn("bg-card/60 border-border/40 hover:bg-card/80 relative flex h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group gap-2", className)}>
       <CardHeader className="min-h-[5.25rem] pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
