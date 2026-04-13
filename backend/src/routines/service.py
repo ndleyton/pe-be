@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
@@ -17,7 +17,7 @@ from src.routines.schemas import (
 from src.workouts.models import Workout
 from src.routines.models import Routine
 from src.exercises.intensity_units import normalize_intensity_for_storage
-from src.exercises.models import Exercise, IntensityUnit
+from src.exercises.models import Exercise, ExerciseType, IntensityUnit
 from src.exercise_sets.models import ExerciseSet
 
 
@@ -141,18 +141,15 @@ class RoutineService:
                 for intensity_unit in result.scalars().all()
             }
 
-        exercise_types_by_id = {
-            exercise_template.exercise_type_id: exercise_template.exercise_type
-            for exercise_template in routine.exercise_templates
-            if exercise_template.exercise_type is not None
-        }
         for exercise_type_id, count in Counter(
             exercise_template.exercise_type_id
             for exercise_template in routine.exercise_templates
         ).items():
-            exercise_type = exercise_types_by_id.get(exercise_type_id)
-            if exercise_type is not None:
-                exercise_type.times_used += count
+            await session.execute(
+                update(ExerciseType)
+                .where(ExerciseType.id == exercise_type_id)
+                .values(times_used=ExerciseType.times_used + count)
+            )
 
         workout = Workout(
             name=routine.name,
@@ -177,9 +174,11 @@ class RoutineService:
                     intensity_units_by_id.get(set_template.intensity_unit_id)
                     or set_template.intensity_unit
                 )
-                canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
-                    set_template.intensity,
-                    source_unit,
+                canonical_intensity, canonical_unit_key = (
+                    normalize_intensity_for_storage(
+                        set_template.intensity,
+                        source_unit,
+                    )
                 )
                 canonical_intensity_unit = source_unit
                 if canonical_unit_key is not None:
@@ -188,7 +187,8 @@ class RoutineService:
                             intensity_unit
                             for intensity_unit in intensity_units_by_id.values()
                             if intensity_unit.abbreviation
-                            and intensity_unit.abbreviation.lower() == canonical_unit_key
+                            and intensity_unit.abbreviation.lower()
+                            == canonical_unit_key
                         ),
                         source_unit,
                     )
