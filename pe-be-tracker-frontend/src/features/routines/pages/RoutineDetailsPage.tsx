@@ -35,7 +35,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { useAppBackNavigation } from "@/shared/hooks";
+import { useAppBackNavigation } from "@/shared/hooks/useAppBackNavigation";
 
 const RoutineDetailsPage = () => {
   const { routineId } = useParams();

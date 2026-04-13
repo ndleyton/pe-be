@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect } from "react";
-import { useLocalStorage } from "@/shared/hooks";
+import { useLocalStorage } from "@/shared/hooks/useLocalStorage";
 
 type Theme = "dark" | "light" | "system";
 

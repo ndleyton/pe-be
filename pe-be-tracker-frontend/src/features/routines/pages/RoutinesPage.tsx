@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, ArrowLeft } from "lucide-react";
-import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
+import { useAppBackNavigation } from "@/shared/hooks/useAppBackNavigation";
+import { useInfiniteScroll } from "@/shared/hooks/useInfiniteScroll";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import { RoutinesPageSkeleton } from "@/features/routines/components";

@@ -28,7 +28,7 @@ import {
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
-import { useAppBackNavigation } from "@/shared/hooks";
+import { useAppBackNavigation } from "@/shared/hooks/useAppBackNavigation";
 
 // Lazy load heavy components
 const FinishWorkoutModal = lazy(() =>

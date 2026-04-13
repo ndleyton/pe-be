@@ -18,10 +18,10 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 // These pages are not lazy loaded as they are core pages
 import MyWorkoutsPage from "./features/workouts/pages/MyWorkoutsPage";
-import ChatPage from "./features/chat/pages/ChatPage";
 
 // Lazy load other components with error boundaries
 const WorkoutPage = lazy(() => import("./features/workouts/pages/WorkoutPage"));
+const ChatPage = lazy(() => import("./features/chat/pages/ChatPage"));
 const ExerciseTypesPage = lazy(
   () => import("./features/exercises/pages/ExerciseTypesPage"),
 );
@@ -202,7 +202,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "chat",
-        element: <ChatPage />,
+        element: (
+          <PageWrapper>
+            <ChatPage />
+          </PageWrapper>
+        ),
       },
       {
         path: "profile",
