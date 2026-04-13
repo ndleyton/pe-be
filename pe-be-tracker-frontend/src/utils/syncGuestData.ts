@@ -12,6 +12,22 @@ export interface SyncResult {
   syncedRoutines: number;
 }
 
+interface GuestSyncMarker {
+  signature: string;
+  status: "in_progress" | "complete";
+  timestamp: number;
+}
+
+const GUEST_SYNC_MARKER_KEY = "pe-guest-sync-marker";
+const GUEST_SYNC_MARKER_TTL_MS = 5 * 60 * 1000;
+
+let activeGuestSync:
+  | {
+      signature: string;
+      promise: Promise<SyncResult>;
+    }
+  | null = null;
+
 const describeSyncError = (error: unknown) => {
   if (error instanceof Error) {
     return {
@@ -35,6 +51,91 @@ const logSyncFailure = (
     ...context,
     error: describeSyncError(error),
   });
+};
+
+const getEmptySyncResult = (): SyncResult => ({
+  success: true,
+  syncedWorkouts: 0,
+  syncedExercises: 0,
+  syncedSets: 0,
+  syncedRoutines: 0,
+});
+
+const buildGuestSyncSignature = (guestData: GuestData) =>
+  JSON.stringify(guestData);
+
+const getStoredGuestSyncMarker = (): GuestSyncMarker | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawMarker = window.localStorage.getItem(GUEST_SYNC_MARKER_KEY);
+    if (!rawMarker) {
+      return null;
+    }
+
+    const marker = JSON.parse(rawMarker) as GuestSyncMarker;
+    if (
+      typeof marker.signature !== "string"
+      || typeof marker.timestamp !== "number"
+      || (marker.status !== "in_progress" && marker.status !== "complete")
+    ) {
+      window.localStorage.removeItem(GUEST_SYNC_MARKER_KEY);
+      return null;
+    }
+
+    if (Date.now() - marker.timestamp > GUEST_SYNC_MARKER_TTL_MS) {
+      window.localStorage.removeItem(GUEST_SYNC_MARKER_KEY);
+      return null;
+    }
+
+    return marker;
+  } catch (error) {
+    console.warn("Failed to read guest sync marker:", error);
+    return null;
+  }
+};
+
+const setStoredGuestSyncMarker = (
+  signature: string,
+  status: GuestSyncMarker["status"],
+) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      GUEST_SYNC_MARKER_KEY,
+      JSON.stringify({
+        signature,
+        status,
+        timestamp: Date.now(),
+      } satisfies GuestSyncMarker),
+    );
+  } catch (error) {
+    console.warn("Failed to write guest sync marker:", error);
+  }
+};
+
+const clearStoredGuestSyncMarker = (signature?: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const marker = getStoredGuestSyncMarker();
+    if (!marker) {
+      return;
+    }
+
+    if (!signature || marker.signature === signature) {
+      window.localStorage.removeItem(GUEST_SYNC_MARKER_KEY);
+    }
+  } catch (error) {
+    console.warn("Failed to clear guest sync marker:", error);
+  }
 };
 
 // Helper function to find or create exercise types on the server
@@ -133,6 +234,42 @@ export async function syncGuestDataToServer(
   guestData: GuestData,
   clearGuestData: () => void,
 ): Promise<SyncResult> {
+  const signature = buildGuestSyncSignature(guestData);
+
+  if (activeGuestSync?.signature === signature) {
+    return activeGuestSync.promise;
+  }
+
+  const existingMarker = getStoredGuestSyncMarker();
+  if (existingMarker?.signature === signature) {
+    if (existingMarker.status === "complete") {
+      clearGuestData();
+      return getEmptySyncResult();
+    }
+
+    return getEmptySyncResult();
+  }
+
+  setStoredGuestSyncMarker(signature, "in_progress");
+
+  const syncPromise = performGuestDataSync(guestData, clearGuestData, signature);
+  activeGuestSync = {
+    signature,
+    promise: syncPromise,
+  };
+
+  return syncPromise.finally(() => {
+    if (activeGuestSync?.signature === signature) {
+      activeGuestSync = null;
+    }
+  });
+}
+
+async function performGuestDataSync(
+  guestData: GuestData,
+  clearGuestData: () => void,
+  signature: string,
+): Promise<SyncResult> {
   let syncedWorkouts = 0;
   let syncedExercises = 0;
   let syncedSets = 0;
@@ -142,12 +279,9 @@ export async function syncGuestDataToServer(
   try {
     // If no guest data to sync, return early
     if (guestData.workouts.length === 0) {
+      clearStoredGuestSyncMarker(signature);
       return {
-        success: true,
-        syncedWorkouts: 0,
-        syncedExercises: 0,
-        syncedSets: 0,
-        syncedRoutines: 0,
+        ...getEmptySyncResult(),
       };
     }
 
@@ -304,6 +438,7 @@ export async function syncGuestDataToServer(
     }
 
     if (hadFailures) {
+      clearStoredGuestSyncMarker(signature);
       return {
         success: false,
         error:
@@ -316,6 +451,7 @@ export async function syncGuestDataToServer(
     }
 
     // Clear guest data after successful sync
+    setStoredGuestSyncMarker(signature, "complete");
     clearGuestData();
 
     return {
@@ -326,6 +462,7 @@ export async function syncGuestDataToServer(
       syncedRoutines,
     };
   } catch (error) {
+    clearStoredGuestSyncMarker(signature);
     logSyncFailure("guest sync bootstrap", {}, error);
     return {
       success: false,

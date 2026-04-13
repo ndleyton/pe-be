@@ -26,11 +26,18 @@ vi.mock("@/utils/date", () => ({
 
 import api from "@/shared/api/client";
 
+const flushPromises = async (count = 5) => {
+  for (let index = 0; index < count; index += 1) {
+    await Promise.resolve();
+  }
+};
+
 describe("syncGuestDataToServer", () => {
   const mockClearGuestData = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it("returns success when no guest data to sync", async () => {
@@ -335,6 +342,147 @@ describe("syncGuestDataToServer", () => {
       syncedRoutines: 0,
     });
     expect(mockClearGuestData).not.toHaveBeenCalled();
+  });
+
+  it("reuses the in-flight sync for repeated attempts with the same guest data", async () => {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+    });
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "Push-ups",
+      default_intensity_unit: 1,
+    });
+    const mockGuestData: GuestData = makeGuestData({
+      workouts: [
+        makeGuestWorkout({
+          id: "guest-workout-1",
+          name: "Test Workout",
+          start_time: "2023-01-01T10:00:00Z",
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
+          exercises: [
+            makeGuestExercise({
+              id: "guest-exercise-1",
+              exercise_type: exerciseType,
+              exercise_type_id: exerciseType.id,
+              workout_id: "guest-workout-1",
+              exercise_sets: [],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    let resolveWorkoutPost: ((value: { data: { id: number; name: string } }) => void)
+      | null = null;
+    const workoutPostPromise = new Promise<{ data: { id: number; name: string } }>(
+      (resolve) => {
+        resolveWorkoutPost = resolve;
+      },
+    );
+
+    (api.get as any)
+      .mockResolvedValueOnce({ data: { data: [] } })
+      .mockResolvedValueOnce({ data: [] });
+
+    (api.post as any)
+      .mockResolvedValueOnce({ data: { id: 1, name: "Push-ups" } })
+      .mockResolvedValueOnce({ data: { id: 1, name: "Strength Training" } })
+      .mockImplementationOnce(() => workoutPostPromise)
+      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 1 } });
+
+    const firstSync = syncGuestDataToServer(mockGuestData, mockClearGuestData);
+    const secondSync = syncGuestDataToServer(mockGuestData, mockClearGuestData);
+
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledTimes(3);
+
+    expect(resolveWorkoutPost).toBeTypeOf("function");
+    resolveWorkoutPost!({ data: { id: 1, name: "Test Workout" } });
+
+    const [firstResult, secondResult] = await Promise.all([firstSync, secondSync]);
+
+    expect(firstResult).toEqual(secondResult);
+    expect(firstResult).toEqual({
+      success: true,
+      syncedWorkouts: 1,
+      syncedExercises: 1,
+      syncedSets: 0,
+      syncedRoutines: 0,
+    });
+    expect(api.post).toHaveBeenCalledTimes(4);
+    expect(mockClearGuestData).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips re-posting a guest payload that already finished syncing", async () => {
+    const workoutType = makeGuestWorkoutType({
+      id: "guest-wt-1",
+      name: "Strength Training",
+    });
+    const exerciseType = makeGuestExerciseType({
+      id: "guest-et-1",
+      name: "Push-ups",
+      default_intensity_unit: 1,
+    });
+    const mockGuestData: GuestData = makeGuestData({
+      workouts: [
+        makeGuestWorkout({
+          id: "guest-workout-1",
+          name: "Test Workout",
+          start_time: "2023-01-01T10:00:00Z",
+          workout_type: workoutType,
+          workout_type_id: workoutType.id,
+          exercises: [
+            makeGuestExercise({
+              id: "guest-exercise-1",
+              exercise_type: exerciseType,
+              exercise_type_id: exerciseType.id,
+              workout_id: "guest-workout-1",
+              exercise_sets: [],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    (api.get as any)
+      .mockResolvedValueOnce({ data: { data: [] } })
+      .mockResolvedValueOnce({ data: [] });
+
+    (api.post as any)
+      .mockResolvedValueOnce({ data: { id: 1, name: "Push-ups" } })
+      .mockResolvedValueOnce({ data: { id: 1, name: "Strength Training" } })
+      .mockResolvedValueOnce({ data: { id: 1, name: "Test Workout" } })
+      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 1 } });
+
+    const firstResult = await syncGuestDataToServer(
+      mockGuestData,
+      mockClearGuestData,
+    );
+    const secondResult = await syncGuestDataToServer(
+      mockGuestData,
+      mockClearGuestData,
+    );
+
+    expect(firstResult).toEqual({
+      success: true,
+      syncedWorkouts: 1,
+      syncedExercises: 1,
+      syncedSets: 0,
+      syncedRoutines: 0,
+    });
+    expect(secondResult).toEqual({
+      success: true,
+      syncedWorkouts: 0,
+      syncedExercises: 0,
+      syncedSets: 0,
+      syncedRoutines: 0,
+    });
+    expect(api.post).toHaveBeenCalledTimes(4);
+    expect(mockClearGuestData).toHaveBeenCalledTimes(2);
   });
 
 });
