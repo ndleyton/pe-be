@@ -192,7 +192,9 @@ async def test_create_workout_from_routine_resolves_canonical_intensity_unit(
         select(ExerciseSet).join(Exercise).where(Exercise.workout_id == workout.id)
     )
     created_set = res.scalar_one()
+    assert created_set.intensity_unit_id == lbs.id
     assert created_set.canonical_intensity_unit_id == kg.id
+    assert workout.exercises[0].exercise_sets[0].intensity_unit_id == lbs.id
     assert workout.exercises[0].exercise_sets[0].canonical_intensity_unit_id == kg.id
 
 
