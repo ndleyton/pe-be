@@ -164,7 +164,7 @@ async def test_create_workout_from_routine_resolves_canonical_intensity_unit(
     db_session.add(user)
     await db_session.flush()
 
-    r = Routine(name="Canonical Recipe", workout_type_id=wt.id, creator_id=user.id)
+    r = Routine(name="Canonical Routine", workout_type_id=wt.id, creator_id=user.id)
     db_session.add(r)
     await db_session.flush()
 
@@ -226,7 +226,7 @@ async def test_create_workout_from_routine_preserves_source_unit_when_no_intensi
     await db_session.flush()
 
     routine = Routine(
-        name="No Intensity Recipe",
+        name="No Intensity Routine",
         workout_type_id=wt.id,
         creator_id=user.id,
     )
