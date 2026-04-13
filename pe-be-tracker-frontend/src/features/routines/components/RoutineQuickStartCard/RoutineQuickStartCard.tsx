@@ -26,13 +26,14 @@ export const RoutineQuickStartCard = ({
   const exerciseCount = routine.exercise_count;
   const totalSets = routine.set_count;
   const exerciseNamesPreview = routine.exercise_names_preview;
+  const visibleExercisesCount = Math.min(3, exerciseNamesPreview.length);
   const hiddenExerciseCount = Math.max(
     0,
-    exerciseCount - exerciseNamesPreview.length,
+    exerciseCount - visibleExercisesCount,
   );
 
   return (
-    <Card className="bg-card/60 border-border/40 hover:bg-card/80 shrink-0 relative flex h-full w-[18rem] max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group sm:w-80">
+    <Card className="bg-card/60 border-border/40 hover:bg-card/80 shrink-0 relative flex h-full w-[18rem] max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group sm:w-80 gap-2">
       <CardHeader className="min-h-[5.25rem] pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
