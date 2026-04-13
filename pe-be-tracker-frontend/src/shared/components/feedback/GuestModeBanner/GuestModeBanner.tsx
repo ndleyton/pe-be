@@ -55,7 +55,7 @@ const GuestModeBanner = () => {
             </div>
             <p className="text-muted-foreground text-xs leading-relaxed">
               Your progress is saved on this device.
-              <span className="text-foreground/75"> Sign in to sync it across devices.</span>
+              <span className="text-foreground/75"> Sign in to access AI features and more exercises.</span>
             </p>
           </div>
         </div>
