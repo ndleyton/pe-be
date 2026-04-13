@@ -225,7 +225,7 @@ describe("MyWorkoutsPage", () => {
         "true",
       );
       expect(
-        screen.getByText(/you haven't logged any workouts yet/i),
+        screen.getByText(/no workouts yet\. pick a routine above or tap \+ to begin\./i),
       ).toBeInTheDocument();
     });
   });
@@ -246,7 +246,7 @@ describe("MyWorkoutsPage", () => {
       "false",
     );
     expect(
-      screen.queryByText(/you haven't logged any workouts yet/i),
+      screen.queryByText(/no workouts yet\. pick a routine above or tap \+ to begin\./i),
     ).not.toBeInTheDocument();
 
     await waitFor(() => {

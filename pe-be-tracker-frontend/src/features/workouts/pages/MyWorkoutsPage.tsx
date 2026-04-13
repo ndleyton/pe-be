@@ -1,6 +1,5 @@
 import React from "react";
 import axios from "axios";
-import { Dumbbell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import type { Routine } from "@/features/routines/types";
@@ -201,21 +200,9 @@ const MyWorkoutsPage = () => {
             <>
               <div className="space-y-3 pt-4 sm:space-y-4">
                 {showNoWorkoutsMessage ? (
-                  <div className="bg-muted/30 border-border/60 rounded-xl border px-4 py-5 text-left">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                        <Dumbbell className="text-primary h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-foreground text-sm font-medium">
-                          You haven&apos;t logged any workouts yet.
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          Pick a routine above or tap + to begin.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="px-1 text-left text-sm text-muted-foreground">
+                    No workouts yet. Pick a routine above or tap + to begin.
+                  </p>
                 ) : null}
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
