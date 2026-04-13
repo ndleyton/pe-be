@@ -95,7 +95,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
             <div className="w-full px-1 sm:px-3">
               <div className="flex w-full items-center gap-2">
                 <div className="w-0 min-w-0 flex-1 overflow-x-auto">
-                  <div className="flex items-stretch flex-nowrap gap-2 py-1">
+                  <div className="flex items-stretch flex-nowrap gap-4 pt-2 pb-8 px-2">
                     {routines.map((routine) => (
                       <RoutineQuickStartCard
                         key={routine.id}
