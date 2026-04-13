@@ -75,7 +75,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     expect(
-      screen.queryByPlaceholderText(/search exercise types/i),
+      screen.queryByPlaceholderText(/search exercises/i),
     ).not.toBeInTheDocument();
   });
 
@@ -89,7 +89,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     expect(
-      screen.getByPlaceholderText(/search exercise types/i),
+      screen.getByPlaceholderText(/search exercises/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /close modal/i }),
@@ -106,7 +106,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     expect(
-      screen.getByPlaceholderText(/Search exercise types.../i),
+      screen.getByPlaceholderText(/Search exercises/i),
     ).toBeInTheDocument();
   });
 
@@ -343,7 +343,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     const searchInput = await screen.findByPlaceholderText(
-      /search exercise types/i,
+      /search exercises/i,
     );
     await user.type(searchInput, "Exercise 31");
 
@@ -404,7 +404,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     const searchInput = await screen.findByPlaceholderText(
-      /search exercise types/i,
+      /search exercises/i,
     );
     await user.type(searchInput, "Deadlift");
 
@@ -461,7 +461,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     const searchInput = await screen.findByPlaceholderText(
-      /search exercise types/i,
+      /search exercises/i,
     );
     await user.type(searchInput, "Deadlift");
 
@@ -530,7 +530,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     const searchInput = await screen.findByPlaceholderText(
-      /search exercise types/i,
+      /search exercises/i,
     );
     await user.type(searchInput, "Exercise");
 
@@ -615,7 +615,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     const searchInput = await screen.findByPlaceholderText(
-      /search exercise types/i,
+      /search exercises/i,
     );
 
     fireEvent.change(searchInput, { target: { value: "Bench" } });
