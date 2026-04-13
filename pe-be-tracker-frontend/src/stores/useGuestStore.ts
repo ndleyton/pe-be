@@ -507,7 +507,7 @@ export const useGuestStore = create<GuestStore>()(
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
-        if (persistedVersion == null || persistedVersion < 3) {
+        if (persistedVersion == null || persistedVersion < 4) {
           const guest = migrateGuestData(persistedState);
           return {
             ...createInitialGuestData(generateRandomId),
@@ -520,7 +520,7 @@ export const useGuestStore = create<GuestStore>()(
         // Already at current version — return as-is
         return persistedState as GuestState;
       },
-      version: 3,
+      version: 4,
       onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);

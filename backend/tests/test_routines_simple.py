@@ -249,7 +249,9 @@ class TestRoutineBusinessLogic:
         )
 
         assert len(complex_routine.exercise_templates) == 3
-        assert len(complex_routine.exercise_templates[0].set_templates) == 5  # Deadlifts
+        assert (
+            len(complex_routine.exercise_templates[0].set_templates) == 5
+        )  # Deadlifts
         assert len(complex_routine.exercise_templates[1].set_templates) == 3  # Pull-ups
         assert len(complex_routine.exercise_templates[2].set_templates) == 1  # Cardio
 
