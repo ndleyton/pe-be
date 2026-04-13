@@ -198,6 +198,66 @@ async def test_create_workout_from_routine_resolves_canonical_intensity_unit(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_create_workout_from_routine_preserves_source_unit_when_no_intensity(
+    db_session: AsyncSession,
+):
+    """Service should fall back to the source unit when no canonical key is derived."""
+    wt = WorkoutType(name="Strength No Intensity", description="desc")
+    lbs = IntensityUnit(name="Pounds", abbreviation="lbs")
+    db_session.add_all([wt, lbs])
+    await db_session.flush()
+
+    et = ExerciseType(
+        name="No Intensity Exercise", description="x", default_intensity_unit=lbs.id
+    )
+    db_session.add(et)
+    await db_session.flush()
+
+    user = User(
+        email="no-intensity@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    routine = Routine(
+        name="No Intensity Recipe",
+        workout_type_id=wt.id,
+        creator_id=user.id,
+    )
+    db_session.add(routine)
+    await db_session.flush()
+
+    exercise_template = ExerciseTemplate(exercise_type_id=et.id, routine_id=routine.id)
+    db_session.add(exercise_template)
+    await db_session.flush()
+
+    db_session.add(
+        SetTemplate(
+            reps=8,
+            intensity=None,
+            intensity_unit_id=lbs.id,
+            exercise_template_id=exercise_template.id,
+        )
+    )
+    await db_session.commit()
+
+    workout = await routine_service.create_workout_from_routine(
+        db_session, user.id, routine.id
+    )
+
+    created_set = workout.exercises[0].exercise_sets[0]
+    assert created_set.canonical_intensity is None
+    assert created_set.intensity_unit_id == lbs.id
+    assert created_set.canonical_intensity_unit_id == lbs.id
+    assert created_set.canonical_intensity_unit.id == lbs.id
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_create_workout_from_routine_not_accessible_raises(
     db_session: AsyncSession,
 ):

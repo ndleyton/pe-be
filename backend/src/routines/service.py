@@ -219,11 +219,12 @@ class RoutineService:
                         source_unit,
                     )
                 )
-                canonical_intensity_unit = (
-                    intensity_units_by_abbreviation.get(canonical_unit_key)
-                    if canonical_unit_key is not None
-                    else None
-                )
+                canonical_intensity_unit = source_unit
+                if canonical_unit_key is not None:
+                    canonical_intensity_unit = (
+                        intensity_units_by_abbreviation.get(canonical_unit_key)
+                        or source_unit
+                    )
 
                 exercise_set = ExerciseSet(
                     reps=set_template.reps,
@@ -235,7 +236,7 @@ class RoutineService:
                     canonical_intensity_unit_id=(
                         canonical_intensity_unit.id
                         if canonical_intensity_unit is not None
-                        else None
+                        else set_template.intensity_unit_id
                     ),
                     rest_time_seconds=None,
                     exercise=exercise,
