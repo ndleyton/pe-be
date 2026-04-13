@@ -49,8 +49,8 @@ export const RoutineQuickStartCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0 pb-6">
-        <div className="space-y-1 mb-5">
+      <CardContent className="flex flex-1 flex-col pt-0 pb-4">
+        <div className="space-y-1 mb-3">
           {exerciseNamesPreview.slice(0, 3).map((name: string, i: number) => (
             <div key={i} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
               <div className="h-1 w-1 rounded-full bg-primary/30" />
