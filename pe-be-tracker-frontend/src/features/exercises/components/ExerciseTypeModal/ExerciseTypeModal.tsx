@@ -570,7 +570,7 @@ const ExerciseTypeModal = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search Exercises..."
+              placeholder="Search exercise types..."
               disabled={isAuthenticated && createMutation.isPending}
               className="border-primary/30 bg-card/90 md:h-16 h-14 w-full rounded-2xl md:pr-14 pr-12 md:pl-14 pl-12 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-xl backdrop-blur-md font-black md:text-xl text-base placeholder:font-bold placeholder:text-muted-foreground/30 disabled:opacity-50"
             />
