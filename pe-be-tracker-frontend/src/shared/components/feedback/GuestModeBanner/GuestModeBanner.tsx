@@ -34,28 +34,28 @@ const GuestModeBanner = () => {
   }
 
   return (
-    <div className="pointer-events-none fixed top-16 right-0 left-0 z-40 px-4 py-3 lg:left-64">
-      <div className="pointer-events-auto group relative overflow-hidden rounded-2xl border border-primary/20 bg-card/40 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:border-primary/40 active:scale-[0.99] lg:p-5">
-        {/* Animated background glow */}
-        <div className="absolute -inset-24 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5 opacity-40 blur-3xl group-hover:opacity-60 transition-opacity duration-1000" />
-        
-        <div className="relative flex items-center gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-            <Info className="h-5 w-5 text-primary" />
+    <div className="pointer-events-none fixed top-16 right-0 left-0 z-40 px-4 py-2.5 lg:left-64">
+      <div className="pointer-events-auto group relative overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:px-4">
+        <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent opacity-70" />
+
+        <div className="relative flex items-start gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/8 text-primary/75">
+            <Info className="h-4 w-4" />
           </div>
-          <div className="space-y-0.5">
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/70">
                 Guest Mode
               </span>
               {safeWorkouts.length > 0 && (
-                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                <span className="rounded-full border border-primary/15 bg-primary/8 px-1.5 py-0.5 text-[10px] font-medium text-primary/75">
                   {safeWorkouts.length} Workout{safeWorkouts.length !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
-            <p className="text-foreground/90 text-[13px] leading-relaxed font-medium">
-              Your progress is local. <span className="text-muted-foreground font-normal">Sign in to sync your data to your account and keep going on any device.</span>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Your progress is saved on this device.
+              <span className="text-foreground/75"> Sign in to sync it across devices.</span>
             </p>
           </div>
         </div>
