@@ -26,6 +26,12 @@ export const normalizeGuestTimestamp = (value: unknown): string | null => {
 export const migrateGuestData = (data: unknown): GuestData => {
   const source = asRecord(data);
   const migrated: Record<string, unknown> = { ...source };
+  const routineSource =
+    Array.isArray(migrated.routines)
+      ? migrated.routines
+      : Array.isArray(migrated.recipes)
+        ? migrated.recipes
+        : [];
 
   if (Array.isArray(migrated.workouts)) {
     migrated.workouts = migrated.workouts.map((rawWorkout) => {
@@ -73,5 +79,6 @@ export const migrateGuestData = (data: unknown): GuestData => {
     workoutTypes: Array.isArray(migrated.workoutTypes)
       ? migrated.workoutTypes as GuestData["workoutTypes"]
       : [],
+    routines: routineSource as GuestData["routines"],
   };
 };

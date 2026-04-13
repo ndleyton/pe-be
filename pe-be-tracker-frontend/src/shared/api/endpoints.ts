@@ -67,7 +67,7 @@ export const endpoints = {
   // Add exercise to current workout (or create workout if necessary)
   addExerciseToCurrentWorkout: "/workouts/add-exercise",
 
-  // Routine endpoints (recipes in backend, routines for users)
+  // Routine endpoints backed by the legacy `recipes` table
   routines: "/routines/",
   routinesSummary: "/routines/summary",
   routineById: (id: string | number) => `/routines/${id}`,

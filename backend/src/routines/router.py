@@ -15,7 +15,7 @@ from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
 # NOTE: The application exposes these as routines.
-# The backing database table remains "recipes".
+# The legacy backing database table remains `recipes`.
 router = APIRouter(tags=["routines"])
 
 MAX_ROUTINE_LIMIT = 500

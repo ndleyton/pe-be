@@ -54,6 +54,27 @@ describe("useGuestStore", () => {
     expect(state.hasAttemptedSync).toBe(false);
   });
 
+  it("migrates v3 persisted snapshots to include routines", () => {
+    const persistOptions = useGuestStore.persist.getOptions();
+    const migrate = persistOptions.migrate;
+
+    expect(persistOptions.version).toBe(4);
+    expect(migrate).toBeDefined();
+
+    const migrated = migrate!(
+      {
+        workouts: [],
+        exerciseTypes: [],
+        workoutTypes: [],
+        hasAttemptedSync: true,
+      },
+      3,
+    ) as ReturnType<typeof useGuestStore.getState>;
+
+    expect(migrated.routines).toEqual([]);
+    expect(migrated.hasAttemptedSync).toBe(true);
+  });
+
   it("adds a workout", () => {
     const { result } = renderHook(() => useGuestStore());
 

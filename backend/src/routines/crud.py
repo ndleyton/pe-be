@@ -315,7 +315,7 @@ async def create_routine(
             creator_id=user_id,
         )
         session.add(routine)
-        await session.flush()  # Get the backing recipe ID
+        await session.flush()  # Get the new routine ID from the legacy table
 
         # Create exercise templates
         for exercise_template_data in routine_data.exercise_templates:
@@ -400,7 +400,7 @@ async def create_routine_admin(
     try:
         routine = Routine(**new_routine_kwargs)
         session.add(routine)
-        await session.flush()  # Get the backing recipe ID
+        await session.flush()  # Get the new routine ID from the legacy table
 
         # Create exercise templates
         for exercise_template_data in routine_data.exercise_templates:

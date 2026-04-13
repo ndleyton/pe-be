@@ -45,7 +45,7 @@ async def test_create_routine_admin_sets_visibility_and_readonly(
     await db_session.flush()
 
     payload = AdminRoutineCreate(
-        name="Admin Recipe",
+        name="Admin Routine",
         description="via admin",
         workout_type_id=wt.id,
         visibility=Routine.RoutineVisibility.public,

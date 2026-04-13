@@ -16,9 +16,18 @@ import { NAV_PATHS } from "@/shared/navigation/constants";
 const OAuthCallbackPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { workouts: rawWorkouts, clear } = useGuestStore(
+  const {
+    workouts: rawWorkouts,
+    exerciseTypes,
+    workoutTypes,
+    routines,
+    clear,
+  } = useGuestStore(
     useShallow((state) => ({
       workouts: state.workouts,
+      exerciseTypes: state.exerciseTypes,
+      workoutTypes: state.workoutTypes,
+      routines: state.routines,
       clear: state.clear,
     })),
   );
@@ -63,8 +72,9 @@ const OAuthCallbackPage = () => {
           const syncResult = await syncGuestDataToServer(
             {
               workouts,
-              exerciseTypes: useGuestStore.getState().exerciseTypes,
-              workoutTypes: useGuestStore.getState().workoutTypes,
+              exerciseTypes,
+              workoutTypes,
+              routines,
             },
             clear,
           );
@@ -99,7 +109,15 @@ const OAuthCallbackPage = () => {
     };
 
     handleOAuthCallback();
-  }, [navigate, searchParams, workouts, clear]);
+  }, [
+    clear,
+    exerciseTypes,
+    navigate,
+    routines,
+    searchParams,
+    workoutTypes,
+    workouts,
+  ]);
 
   const getStatusContent = () => {
     switch (syncStatus) {

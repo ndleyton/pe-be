@@ -37,7 +37,7 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
     await db_session.flush()
 
     # Create a routine with one exercise template and two set templates
-    r = Routine(name="Svc Recipe", workout_type_id=wt.id, creator_id=user.id)
+    r = Routine(name="Svc Routine", workout_type_id=wt.id, creator_id=user.id)
     db_session.add(r)
     await db_session.flush()
 

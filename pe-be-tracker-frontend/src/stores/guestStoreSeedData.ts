@@ -15,5 +15,6 @@ export const createInitialGuestData = (
     workouts: [],
     exerciseTypes,
     workoutTypes: buildWorkoutTypes(generateId),
+    routines: [],
   };
 };
