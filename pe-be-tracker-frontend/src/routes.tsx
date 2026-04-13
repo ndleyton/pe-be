@@ -104,6 +104,46 @@ const WorkoutPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<WorkoutPageSkeleton />}>{children}</Suspense>
 );
 
+const ChatPageFallback = () => (
+  <div
+    className="bg-background flex h-[calc(100vh-8rem)] flex-col md:h-[calc(100vh-4rem)]"
+    aria-busy="true"
+    aria-live="polite"
+  >
+    <div className="bg-card border-border/20 flex shrink-0 items-center gap-3 border-b px-4 py-3 shadow-sm">
+      <Skeleton className="h-10 w-10 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+    </div>
+
+    <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+      <div className="mx-auto max-w-4xl px-4 py-8 text-center">
+        <Skeleton className="mx-auto mb-4 h-16 w-16 rounded-full" />
+        <Skeleton className="mx-auto mb-2 h-6 w-52" />
+        <Skeleton className="mx-auto mb-2 h-4 w-full max-w-md" />
+        <Skeleton className="mx-auto mb-6 h-4 w-72 max-w-full" />
+        <div className="mx-auto max-w-md space-y-2">
+          <Skeleton className="mx-auto mb-3 h-3 w-24" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+        </div>
+      </div>
+    </div>
+
+    <div className="border-border/20 bg-card shrink-0 border-t p-3 shadow-sm">
+      <div className="mx-auto flex max-w-4xl gap-2">
+        <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+        <Skeleton className="h-11 flex-1 rounded-xl" />
+        <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+      </div>
+    </div>
+  </div>
+);
+
 const RoutinesPageFallback = () => (
   <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
     <div className="mb-6">
@@ -126,6 +166,10 @@ const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
 
 const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<RoutineDetailsLoadingState />}>{children}</Suspense>
+);
+
+const ChatPageWrapper = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<ChatPageFallback />}>{children}</Suspense>
 );
 
 const routes: RouteObject[] = [
@@ -203,9 +247,9 @@ const routes: RouteObject[] = [
       {
         path: "chat",
         element: (
-          <PageWrapper>
+          <ChatPageWrapper>
             <ChatPage />
-          </PageWrapper>
+          </ChatPageWrapper>
         ),
       },
       {
