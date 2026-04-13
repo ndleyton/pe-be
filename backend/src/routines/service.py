@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone
 
 from src.routines import crud
@@ -163,7 +163,9 @@ class RoutineService:
             query_clauses.append(
                 func.lower(IntensityUnit.abbreviation).in_(canonical_unit_keys)
             )
-            result = await session.execute(select(IntensityUnit).where(or_(*query_clauses)))
+            result = await session.execute(
+                select(IntensityUnit).where(or_(*query_clauses))
+            )
             intensity_units = result.scalars().all()
             intensity_units_by_id = {unit.id: unit for unit in intensity_units}
             intensity_units_by_abbreviation = {
@@ -251,16 +253,16 @@ class RoutineService:
         result = await session.execute(
             select(Workout)
             .options(
-                selectinload(Workout.exercises)
-                .selectinload(Exercise.exercise_sets)
-                .selectinload(ExerciseSet.intensity_unit),
-                selectinload(Workout.exercises)
-                .selectinload(Exercise.exercise_sets)
-                .selectinload(ExerciseSet.canonical_intensity_unit),
+                joinedload(Workout.exercises)
+                .joinedload(Exercise.exercise_sets)
+                .joinedload(ExerciseSet.intensity_unit),
+                joinedload(Workout.exercises)
+                .joinedload(Exercise.exercise_sets)
+                .joinedload(ExerciseSet.canonical_intensity_unit),
             )
             .where(Workout.id == workout.id, Workout.owner_id == user_id)
         )
-        return result.scalar_one()
+        return result.unique().scalar_one()
 
 
 routine_service = RoutineService()
