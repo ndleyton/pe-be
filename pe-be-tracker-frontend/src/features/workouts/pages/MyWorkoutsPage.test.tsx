@@ -224,9 +224,6 @@ describe("MyWorkoutsPage", () => {
         "data-auto-open",
         "true",
       );
-      expect(
-        screen.getByText(/no workouts yet\. pick a routine above or tap \+ to begin\./i),
-      ).toBeInTheDocument();
     });
   });
 
@@ -245,9 +242,6 @@ describe("MyWorkoutsPage", () => {
       "data-auto-open",
       "false",
     );
-    expect(
-      screen.queryByText(/no workouts yet\. pick a routine above or tap \+ to begin\./i),
-    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockGetMyWorkouts).not.toHaveBeenCalled();

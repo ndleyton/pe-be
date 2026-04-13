@@ -199,11 +199,6 @@ const MyWorkoutsPage = () => {
           ) : (
             <>
               <div className="space-y-3 pt-4 sm:space-y-4">
-                {showNoWorkoutsMessage ? (
-                  <p className="px-1 text-left text-sm text-muted-foreground">
-                    No workouts yet. Pick a routine above or tap + to begin.
-                  </p>
-                ) : null}
                 {validWorkouts.map((workout) => (
                   <WorkoutCard
                     key={workout.id}
