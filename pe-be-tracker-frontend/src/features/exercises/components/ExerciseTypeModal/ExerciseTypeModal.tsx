@@ -575,7 +575,7 @@ const ExerciseTypeModal = ({
               className="border-primary/30 bg-card/90 md:h-16 h-14 w-full rounded-2xl md:pr-14 pr-12 md:pl-14 pl-12 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-xl backdrop-blur-md font-black md:text-xl text-base placeholder:font-bold placeholder:text-muted-foreground/30 disabled:opacity-50"
             />
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center md:pl-5 pl-4 z-10">
-              <Search className="text-primary group-focus-within:text-primary md:h-6 md:w-6 h-5 w-5 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
+              <Search className="text-primary group-focus-within:text-primary md:h-6 md:w-6 h-5 w-5 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.4)]" />
             </div>
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">

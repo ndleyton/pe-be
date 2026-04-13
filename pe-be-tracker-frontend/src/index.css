@@ -46,6 +46,7 @@
     --card-foreground: rgb(26, 25, 25);
     --popover-foreground: rgb(26, 25, 25);
     --sidebar-foreground: rgb(26, 25, 25);
+    --primary-rgb: 204, 0, 51;
     --primary: rgb(204, 0, 51);
     --sidebar-primary: rgb(204, 0, 51);
     --primary-foreground: rgb(242, 242, 242);
@@ -86,6 +87,7 @@
     --card-foreground: rgb(242, 240, 240);
     --popover-foreground: rgb(242, 240, 240);
     --sidebar-foreground: rgb(242, 240, 240);
+    --primary-rgb: 255, 51, 102;
     --primary: rgb(255, 51, 102);
     --sidebar-primary: rgb(255, 51, 102);
     --primary-foreground: rgb(242, 242, 242);
