@@ -7,6 +7,14 @@ import {
   makeRoutine,
 } from "@/test/fixtures";
 import { useGuestStore } from "./useGuestStore";
+import { syncGuestDataToServer } from "@/utils/syncGuestData";
+import type { SyncResult } from "@/utils/syncGuestData";
+
+const mocks = vi.hoisted(() => ({
+  authState: {
+    user: null as null | { id: number; email: string },
+  },
+}));
 
 // Mock IndexedDB storage
 vi.mock("./indexedDBStorage", () => ({
@@ -27,15 +35,16 @@ vi.mock("@/utils/syncGuestData", () => ({
 // Mock auth store
 vi.mock("./useAuthStore", () => ({
   useAuthStore: {
-    getState: () => ({
-      user: null,
-    }),
+    getState: () => mocks.authState,
   },
 }));
 
 describe("useGuestStore", () => {
+  const mockSyncGuestDataToServer = vi.mocked(syncGuestDataToServer);
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.authState.user = null;
     // Reset store state between tests
     if (useGuestStore.persist && useGuestStore.persist.clearStorage) {
       await useGuestStore.persist.clearStorage();
@@ -561,5 +570,53 @@ describe("useGuestStore", () => {
     // Should still have default exercise types and workout types
     expect(state.exerciseTypes.length).toBeGreaterThan(0);
     expect(state.workoutTypes.length).toBeGreaterThan(0);
+  });
+
+  it("awaits the shared in-flight sync promise for concurrent callers", async () => {
+    let resolveSync: ((value: SyncResult) => void) | undefined;
+
+    mocks.authState.user = {
+      id: 1,
+      email: "user@example.com",
+    };
+
+    const { result } = renderHook(() => useGuestStore());
+
+    act(() => {
+      addGuestWorkout(result.current, {
+        name: "Pending Sync Workout",
+      });
+    });
+
+    mockSyncGuestDataToServer.mockImplementationOnce(
+      () =>
+        new Promise<SyncResult>((resolve) => {
+          resolveSync = resolve;
+        }),
+    );
+
+    const firstSyncPromise = result.current.syncWithServer();
+    const secondSyncPromise = result.current.syncWithServer();
+
+    expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(1);
+
+    let secondResolved = false;
+    void secondSyncPromise.then(() => {
+      secondResolved = true;
+    });
+
+    await Promise.resolve();
+    expect(secondResolved).toBe(false);
+
+    resolveSync?.({
+      success: true,
+      syncedWorkouts: 1,
+      syncedExercises: 0,
+      syncedSets: 0,
+      syncedRoutines: 0,
+    });
+
+    await expect(firstSyncPromise).resolves.toBe(true);
+    await expect(secondSyncPromise).resolves.toBe(true);
   });
 });

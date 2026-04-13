@@ -475,12 +475,12 @@ export const useGuestStore = create<GuestStore>()(
         const state = get();
         const { user } = useAuthStore.getState();
 
-        if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
-          return true;
-        }
-
         if (syncWithServerPromise) {
           return syncWithServerPromise;
+        }
+
+        if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
+          return true;
         }
 
         set({ hasAttemptedSync: true });

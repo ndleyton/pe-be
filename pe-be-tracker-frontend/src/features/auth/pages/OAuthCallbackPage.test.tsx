@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
     user: null as null | { id: number; email: string },
   };
   const guestState = {
+    hydrated: true,
     workouts: [] as Array<{ id: string }>,
     syncWithServer: vi.fn(),
   };
@@ -91,6 +92,7 @@ describe("OAuthCallbackPage", () => {
     vi.clearAllMocks();
     mocks.authState.user = null;
     mocks.authState.refresh.mockReset();
+    mocks.guestState.hydrated = true;
     mocks.guestState.workouts = [];
     mocks.guestState.syncWithServer.mockReset();
     mocks.consumePostLoginDestination.mockReturnValue(null);
@@ -142,5 +144,54 @@ describe("OAuthCallbackPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent("/login");
     }, { timeout: 4000 });
+  });
+
+  it("waits for guest store hydration before snapshotting workouts for sync", async () => {
+    mocks.consumePostLoginDestination.mockReturnValue("/workouts");
+    mocks.guestState.hydrated = false;
+    mocks.authState.refresh.mockImplementation(async () => {
+      mocks.authState.user = { id: 1, email: "user@example.com" };
+    });
+    mocks.guestState.syncWithServer.mockResolvedValue(true);
+
+    const view = renderPostLoginRoute();
+
+    expect(mocks.authState.refresh).not.toHaveBeenCalled();
+    expect(mocks.guestState.syncWithServer).not.toHaveBeenCalled();
+
+    mocks.guestState.workouts = [{ id: "guest-workout-1" }];
+    mocks.guestState.hydrated = true;
+    view.rerender(
+      <MemoryRouter initialEntries={["/auth/complete"]}>
+        <Routes>
+          <Route
+            path="/auth/complete"
+            element={(
+              <>
+                <OAuthCallbackPage />
+                <LocationProbe />
+              </>
+            )}
+          />
+          <Route
+            path="/oauth/callback"
+            element={(
+              <>
+                <OAuthCallbackPage />
+                <LocationProbe />
+              </>
+            )}
+          />
+          <Route path="*" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mocks.authState.refresh).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
+    });
   });
 });

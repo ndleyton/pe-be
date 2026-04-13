@@ -4,23 +4,41 @@ import { consumePostLoginDestination } from "@/features/auth/lib/postLoginRedire
 import { HomeLogo } from "@/shared/components/layout";
 import { useAuthStore, useGuestStore } from "@/stores";
 import { NAV_PATHS } from "@/shared/navigation/constants";
+import { useShallow } from "zustand/react/shallow";
 
 const PostLoginPage = () => {
   const navigate = useNavigate();
   const refreshAuth = useAuthStore((state) => state.refresh);
   const syncWithServer = useGuestStore((state) => state.syncWithServer);
-  const rawWorkouts = useGuestStore((state) => state.workouts);
+  const { hydrated, workouts: rawWorkouts } = useGuestStore(
+    useShallow((state) => ({
+      hydrated: state.hydrated,
+      workouts: state.workouts,
+    })),
+  );
   const hasStartedRef = useRef(false);
   const redirectTimeoutRef = useRef<number | null>(null);
 
   const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
-  const initialGuestWorkoutCountRef = useRef(workouts.length);
+  const initialGuestWorkoutCountRef = useRef<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<
     "processing" | "syncing" | "error"
   >("processing");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    if (!hydrated || initialGuestWorkoutCountRef.current !== null) {
+      return;
+    }
+
+    initialGuestWorkoutCountRef.current = workouts.length;
+  }, [hydrated, workouts.length]);
+
+  useEffect(() => {
+    if (!hydrated || initialGuestWorkoutCountRef.current === null) {
+      return;
+    }
+
     if (hasStartedRef.current) {
       return;
     }
@@ -31,6 +49,7 @@ const PostLoginPage = () => {
         setSyncStatus("processing");
         const postLoginDestination =
           consumePostLoginDestination() ?? NAV_PATHS.WORKOUTS;
+        const initialGuestWorkoutCount = initialGuestWorkoutCountRef.current ?? 0;
         await refreshAuth();
         const { user } = useAuthStore.getState();
 
@@ -40,7 +59,7 @@ const PostLoginPage = () => {
           );
         }
 
-        if (initialGuestWorkoutCountRef.current > 0) {
+        if (initialGuestWorkoutCount > 0) {
           setSyncStatus("syncing");
           const syncSucceeded = await syncWithServer();
           if (!syncSucceeded) {
@@ -69,7 +88,7 @@ const PostLoginPage = () => {
         window.clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [navigate, refreshAuth, syncWithServer]);
+  }, [hydrated, navigate, refreshAuth, syncWithServer]);
 
   const getStatusContent = () => {
     switch (syncStatus) {
@@ -101,7 +120,7 @@ const PostLoginPage = () => {
             </div>
           ),
           title: "Syncing your data...",
-          description: `Uploading ${initialGuestWorkoutCountRef.current} workout${initialGuestWorkoutCountRef.current !== 1 ? "s" : ""} to your account`,
+          description: `Uploading ${initialGuestWorkoutCountRef.current ?? 0} workout${initialGuestWorkoutCountRef.current === 1 ? "" : "s"} to your account`,
         };
       case "error":
         return {
