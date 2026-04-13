@@ -1,6 +1,9 @@
+from collections import Counter
 from typing import List, Optional
+
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
 
 from src.routines import crud
@@ -11,14 +14,11 @@ from src.routines.schemas import (
     RoutineUpdate,
     RoutineSummary,
 )
-from src.workouts.schemas import WorkoutCreate
 from src.workouts.models import Workout
 from src.routines.models import Routine
-from src.workouts.crud import create_workout, get_workout_by_id
-from src.exercises.schemas import ExerciseCreate
-from src.exercise_sets.schemas import ExerciseSetCreate
-from src.exercises.crud import create_exercise
-from src.exercise_sets.crud import create_exercise_set
+from src.exercises.intensity_units import normalize_intensity_for_storage
+from src.exercises.models import Exercise, IntensityUnit
+from src.exercise_sets.models import ExerciseSet
 
 
 class RoutineService:
@@ -126,47 +126,111 @@ class RoutineService:
         if routine is None:
             raise ValueError("Routine not found or not accessible")
 
-        # 1) Create the workout
-        workout = await create_workout(
-            session,
-            WorkoutCreate(
-                name=routine.name,
-                notes=None,
-                start_time=datetime.now(timezone.utc),
-                workout_type_id=routine.workout_type_id,
-            ),
-            user_id,
-        )
-
-        # 2) Create exercises and sets from templates
-        for exercise_template in routine.exercise_templates:
-            exercise = await create_exercise(
-                session,
-                ExerciseCreate(
-                    timestamp=datetime.now(timezone.utc),
-                    notes=exercise_template.notes,
-                    exercise_type_id=exercise_template.exercise_type_id,
-                    workout_id=workout.id,
-                ),
+        intensity_unit_ids = {
+            set_template.intensity_unit_id
+            for exercise_template in routine.exercise_templates
+            for set_template in exercise_template.set_templates
+        }
+        intensity_units_by_id: dict[int, IntensityUnit] = {}
+        if intensity_unit_ids:
+            result = await session.execute(
+                select(IntensityUnit).where(IntensityUnit.id.in_(intensity_unit_ids))
             )
+            intensity_units_by_id = {
+                intensity_unit.id: intensity_unit
+                for intensity_unit in result.scalars().all()
+            }
+
+        exercise_types_by_id = {
+            exercise_template.exercise_type_id: exercise_template.exercise_type
+            for exercise_template in routine.exercise_templates
+            if exercise_template.exercise_type is not None
+        }
+        for exercise_type_id, count in Counter(
+            exercise_template.exercise_type_id
+            for exercise_template in routine.exercise_templates
+        ).items():
+            exercise_type = exercise_types_by_id.get(exercise_type_id)
+            if exercise_type is not None:
+                exercise_type.times_used += count
+
+        workout = Workout(
+            name=routine.name,
+            notes=None,
+            start_time=datetime.now(timezone.utc),
+            workout_type_id=routine.workout_type_id,
+            owner_id=user_id,
+        )
+        session.add(workout)
+
+        for exercise_template in routine.exercise_templates:
+            exercise = Exercise(
+                timestamp=datetime.now(timezone.utc),
+                notes=exercise_template.notes,
+                exercise_type_id=exercise_template.exercise_type_id,
+                workout=workout,
+            )
+            session.add(exercise)
 
             for set_template in exercise_template.set_templates:
-                await create_exercise_set(
-                    session,
-                    ExerciseSetCreate(
-                        reps=set_template.reps,
-                        duration_seconds=set_template.duration_seconds,
-                        intensity=set_template.intensity,
-                        rpe=set_template.rpe,
-                        intensity_unit_id=set_template.intensity_unit_id,
-                        rest_time_seconds=None,
-                        exercise_id=exercise.id,
-                        done=False,
-                    ),
+                source_unit = (
+                    intensity_units_by_id.get(set_template.intensity_unit_id)
+                    or set_template.intensity_unit
                 )
+                canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
+                    set_template.intensity,
+                    source_unit,
+                )
+                canonical_intensity_unit = source_unit
+                if canonical_unit_key is not None:
+                    canonical_intensity_unit = next(
+                        (
+                            intensity_unit
+                            for intensity_unit in intensity_units_by_id.values()
+                            if intensity_unit.abbreviation
+                            and intensity_unit.abbreviation.lower() == canonical_unit_key
+                        ),
+                        source_unit,
+                    )
 
-        # Return the workout with relationships loaded
-        return await get_workout_by_id(session, workout.id, user_id)
+                exercise_set = ExerciseSet(
+                    reps=set_template.reps,
+                    duration_seconds=set_template.duration_seconds,
+                    intensity=set_template.intensity,
+                    rpe=set_template.rpe,
+                    canonical_intensity=canonical_intensity,
+                    intensity_unit_id=set_template.intensity_unit_id,
+                    canonical_intensity_unit_id=(
+                        canonical_intensity_unit.id
+                        if canonical_intensity_unit is not None
+                        else set_template.intensity_unit_id
+                    ),
+                    rest_time_seconds=None,
+                    exercise=exercise,
+                    done=False,
+                )
+                session.add(exercise_set)
+
+        try:
+            await session.flush()
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+        result = await session.execute(
+            select(Workout)
+            .options(
+                selectinload(Workout.exercises)
+                .selectinload(Exercise.exercise_sets)
+                .selectinload(ExerciseSet.intensity_unit),
+                selectinload(Workout.exercises)
+                .selectinload(Exercise.exercise_sets)
+                .selectinload(ExerciseSet.canonical_intensity_unit),
+            )
+            .where(Workout.id == workout.id, Workout.owner_id == user_id)
+        )
+        return result.scalar_one()
 
 
 routine_service = RoutineService()

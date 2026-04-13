@@ -13,7 +13,9 @@ from src.users.models import User
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_create_workout_from_routine_success(db_session: AsyncSession):
+async def test_create_workout_from_routine_success(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
     """Service creates a workout from a routine with nested templates."""
     wt = WorkoutType(name="Strength Svc", description="desc")
     iu = IntensityUnit(name="Kilograms", abbreviation="kg")
@@ -64,6 +66,16 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
     )
     await db_session.commit()
 
+    commit_calls = 0
+    original_commit = db_session.commit
+
+    async def tracked_commit():
+        nonlocal commit_calls
+        commit_calls += 1
+        return await original_commit()
+
+    monkeypatch.setattr(db_session, "commit", tracked_commit)
+
     # Act
     workout = await routine_service.create_workout_from_routine(
         db_session, user.id, r.id
@@ -72,6 +84,9 @@ async def test_create_workout_from_routine_success(db_session: AsyncSession):
     # Assert workout created
     assert workout is not None
     assert workout.workout_type_id == wt.id
+    assert commit_calls == 1
+    assert len(workout.exercises) == 1
+    assert len(workout.exercises[0].exercise_sets) == 2
 
     # Verify via explicit queries to avoid async lazy-load in tests
     res = await db_session.execute(
