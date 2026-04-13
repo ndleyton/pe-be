@@ -155,11 +155,13 @@ interface GuestActions {
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
-  syncWithServer: () => Promise<void>;
+  syncWithServer: () => Promise<boolean>;
   setHydrated: (hydrated: boolean) => void;
 }
 
 type GuestStore = GuestState & GuestActions;
+let syncWithServerPromise: Promise<boolean> | null = null;
+
 export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
@@ -474,23 +476,36 @@ export const useGuestStore = create<GuestStore>()(
         const { user } = useAuthStore.getState();
 
         if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
-          return;
+          return true;
+        }
+
+        if (syncWithServerPromise) {
+          return syncWithServerPromise;
         }
 
         set({ hasAttemptedSync: true });
 
-        try {
-          const result = await syncGuestDataToServer(state, get().clear);
-          if (result.success) {
-            showSyncSuccessToast(result);
-          } else {
+        syncWithServerPromise = (async () => {
+          try {
+            const result = await syncGuestDataToServer(state, get().clear);
+            if (result.success) {
+              showSyncSuccessToast(result);
+              return true;
+            }
+
             showSyncErrorToast(result.error ?? "Unknown error");
             set({ hasAttemptedSync: false });
+            return false;
+          } catch (error) {
+            console.error("Sync failed:", error);
+            set({ hasAttemptedSync: false });
+            return false;
+          } finally {
+            syncWithServerPromise = null;
           }
-        } catch (error) {
-          console.error("Sync failed:", error);
-          set({ hasAttemptedSync: false });
-        }
+        })();
+
+        return syncWithServerPromise;
       },
       setHydrated: (hydrated) => set({ hydrated }),
     }),

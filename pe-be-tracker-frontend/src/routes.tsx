@@ -134,6 +134,14 @@ const routes: RouteObject[] = [
     element: <LoginPage />,
   },
   {
+    path: "/auth/complete",
+    element: (
+      <PageWrapper>
+        <OAuthCallbackPage />
+      </PageWrapper>
+    ),
+  },
+  {
     path: "/oauth/callback",
     element: (
       <PageWrapper>
