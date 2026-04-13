@@ -28,7 +28,7 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByText("Weekly Activity")).toBeInTheDocument();
-    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/1\/7 active/);
+    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/1 Active/);
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
     expect(screen.getByLabelText(/Workout completed/i)).toBeInTheDocument();
   });
