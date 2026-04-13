@@ -10,10 +10,15 @@ export const WeekTrackingSkeleton = ({
 }: WeekTrackingSkeletonProps) => (
   <div
     className={cn(
-      "relative overflow-hidden rounded-3xl border border-border/50 bg-card/40 p-5 shadow-xl backdrop-blur-xl dark:bg-card/20",
+      "relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-card/55 via-card/40 to-primary/[0.06] p-5 shadow-[0_18px_45px_-28px_rgba(204,0,51,0.35)] backdrop-blur-xl dark:from-card/30 dark:via-card/20 dark:to-primary/[0.12]",
       className,
     )}
   >
+    <div className="pointer-events-none absolute inset-0">
+      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/18 to-transparent" />
+      <div className="absolute -right-10 top-0 h-24 w-24 rounded-full bg-primary/10 blur-3xl dark:bg-primary/14" />
+    </div>
+
     <div className="relative z-10 space-y-5">
       <div className="flex items-center justify-between">
         <div className="space-y-1.5 text-left">
