@@ -12,17 +12,11 @@ import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,32 +86,46 @@ const RoutinesPage = () => {
           </div>
         </div>
         {/* Search and Filter Controls */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="text-muted-foreground h-5 w-5" />
-            </div>
+        <div className="mb-10 flex flex-col gap-4 lg:flex-row">
+          <div className="relative flex-1 group">
             <Input
               type="text"
               placeholder="Search routines..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10"
+              className="border-primary/30 bg-card/90 h-16 w-full rounded-2xl pr-14 pl-14 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-2xl backdrop-blur-md font-black text-xl placeholder:font-bold placeholder:text-muted-foreground/30"
             />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5 z-10">
+              <Search className="text-primary group-focus-within:text-primary h-6 w-6 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
+            </div>
           </div>
 
-          <Select
-            value={orderBy}
-            onValueChange={(value) => setOrderBy(value as "createdAt" | "name")}
-          >
-            <SelectTrigger className="w-full sm:w-auto">
-              <SelectValue placeholder="Order By" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="createdAt">Recent</SelectItem>
-              <SelectItem value="name">Alphabetical</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-row gap-2 sm:gap-4">
+            <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
+              <Button
+                variant={orderBy === "createdAt" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOrderBy("createdAt")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
+                  orderBy === "createdAt" ? "shadow-md scale-[1.02]" : "opacity-60"
+                )}
+              >
+                Recent
+              </Button>
+              <Button
+                variant={orderBy === "name" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOrderBy("name")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
+                  orderBy === "name" ? "shadow-md scale-[1.02]" : "opacity-60"
+                )}
+              >
+                A-Z
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
