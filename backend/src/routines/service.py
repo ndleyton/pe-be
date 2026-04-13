@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import List, Optional
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
@@ -132,6 +132,7 @@ class RoutineService:
             for set_template in exercise_template.set_templates
         }
         intensity_units_by_id: dict[int, IntensityUnit] = {}
+        intensity_units_by_abbreviation: dict[str, IntensityUnit] = {}
         if intensity_unit_ids:
             result = await session.execute(
                 select(IntensityUnit).where(IntensityUnit.id.in_(intensity_unit_ids))
@@ -139,6 +140,42 @@ class RoutineService:
             intensity_units_by_id = {
                 intensity_unit.id: intensity_unit
                 for intensity_unit in result.scalars().all()
+            }
+
+        canonical_unit_keys = set()
+        for exercise_template in routine.exercise_templates:
+            for set_template in exercise_template.set_templates:
+                source_unit = (
+                    intensity_units_by_id.get(set_template.intensity_unit_id)
+                    or set_template.intensity_unit
+                )
+                _, canonical_unit_key = normalize_intensity_for_storage(
+                    set_template.intensity,
+                    source_unit,
+                )
+                if canonical_unit_key is not None:
+                    canonical_unit_keys.add(canonical_unit_key)
+
+        if canonical_unit_keys:
+            query_clauses = []
+            if intensity_unit_ids:
+                query_clauses.append(IntensityUnit.id.in_(intensity_unit_ids))
+            query_clauses.append(
+                func.lower(IntensityUnit.abbreviation).in_(canonical_unit_keys)
+            )
+            result = await session.execute(select(IntensityUnit).where(or_(*query_clauses)))
+            intensity_units = result.scalars().all()
+            intensity_units_by_id = {unit.id: unit for unit in intensity_units}
+            intensity_units_by_abbreviation = {
+                unit.abbreviation.lower(): unit
+                for unit in intensity_units
+                if unit.abbreviation
+            }
+        else:
+            intensity_units_by_abbreviation = {
+                unit.abbreviation.lower(): unit
+                for unit in intensity_units_by_id.values()
+                if unit.abbreviation
             }
 
         for exercise_type_id, count in Counter(
@@ -180,18 +217,11 @@ class RoutineService:
                         source_unit,
                     )
                 )
-                canonical_intensity_unit = source_unit
-                if canonical_unit_key is not None:
-                    canonical_intensity_unit = next(
-                        (
-                            intensity_unit
-                            for intensity_unit in intensity_units_by_id.values()
-                            if intensity_unit.abbreviation
-                            and intensity_unit.abbreviation.lower()
-                            == canonical_unit_key
-                        ),
-                        source_unit,
-                    )
+                canonical_intensity_unit = (
+                    intensity_units_by_abbreviation.get(canonical_unit_key)
+                    if canonical_unit_key is not None
+                    else None
+                )
 
                 exercise_set = ExerciseSet(
                     reps=set_template.reps,
@@ -203,7 +233,7 @@ class RoutineService:
                     canonical_intensity_unit_id=(
                         canonical_intensity_unit.id
                         if canonical_intensity_unit is not None
-                        else set_template.intensity_unit_id
+                        else None
                     ),
                     rest_time_seconds=None,
                     exercise=exercise,

@@ -88,6 +88,18 @@ async def test_create_workout_from_routine_success(
     assert len(workout.exercises) == 1
     assert len(workout.exercises[0].exercise_sets) == 2
 
+    created_exercise = workout.exercises[0]
+    first_set = created_exercise.exercise_sets[0]
+    second_set = created_exercise.exercise_sets[1]
+    assert isinstance(first_set.intensity_unit, IntensityUnit)
+    assert isinstance(first_set.canonical_intensity_unit, IntensityUnit)
+    assert first_set.intensity_unit.id == iu.id
+    assert first_set.canonical_intensity_unit.id == iu.id
+    assert isinstance(second_set.intensity_unit, IntensityUnit)
+    assert isinstance(second_set.canonical_intensity_unit, IntensityUnit)
+    assert second_set.intensity_unit.id == iu.id
+    assert second_set.canonical_intensity_unit.id == iu.id
+
     # Verify via explicit queries to avoid async lazy-load in tests
     res = await db_session.execute(
         select(func.count())
@@ -122,6 +134,68 @@ async def test_create_workout_from_routine_success(
     assert {
         exercise_set.canonical_intensity_unit_id for exercise_set in created_sets
     } == {iu.id}
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_workout_from_routine_resolves_canonical_intensity_unit(
+    db_session: AsyncSession,
+):
+    """Service should store the canonical intensity unit, not the source unit."""
+    wt = WorkoutType(name="Strength Canonical", description="desc")
+    kg = IntensityUnit(name="Kilograms", abbreviation="kg")
+    lbs = IntensityUnit(name="Pounds", abbreviation="lbs")
+    db_session.add_all([wt, kg, lbs])
+    await db_session.flush()
+
+    et = ExerciseType(
+        name="Canonical Exercise", description="x", default_intensity_unit=lbs.id
+    )
+    db_session.add(et)
+    await db_session.flush()
+
+    user = User(
+        email="canonical@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    r = Routine(name="Canonical Recipe", workout_type_id=wt.id, creator_id=user.id)
+    db_session.add(r)
+    await db_session.flush()
+
+    etmpl = ExerciseTemplate(exercise_type_id=et.id, routine_id=r.id)
+    db_session.add(etmpl)
+    await db_session.flush()
+
+    db_session.add(
+        SetTemplate(
+            reps=10,
+            intensity=100.0,
+            intensity_unit_id=lbs.id,
+            exercise_template_id=etmpl.id,
+        )
+    )
+    await db_session.commit()
+
+    workout = await routine_service.create_workout_from_routine(
+        db_session, user.id, r.id
+    )
+
+    from src.exercise_sets.models import ExerciseSet
+
+    res = await db_session.execute(
+        select(ExerciseSet)
+        .join(Exercise)
+        .where(Exercise.workout_id == workout.id)
+    )
+    created_set = res.scalar_one()
+    assert created_set.canonical_intensity_unit_id == kg.id
+    assert workout.exercises[0].exercise_sets[0].canonical_intensity_unit_id == kg.id
 
 
 @pytest.mark.integration
