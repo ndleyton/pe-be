@@ -72,6 +72,10 @@ const WeekTracking = memo(
       return workoutDates.has(date.toDateString());
     };
 
+    const getDayName = (date: Date) => {
+      return DAY_LABELS[date.getDay()];
+    };
+
     const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
     const streakHeading =
       currentStreak === 0 ? "Start Your Streak!" : "Great work!";
@@ -79,29 +83,30 @@ const WeekTracking = memo(
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-card/55 via-card/40 to-primary/[0.06] p-5 shadow-[0_18px_45px_-28px_rgba(204,0,51,0.35)] backdrop-blur-xl dark:from-card/30 dark:via-card/20 dark:to-primary/[0.12]",
+          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/60 to-primary/[0.03] p-5 shadow-sm backdrop-blur-xl dark:from-card/40 dark:to-primary/[0.08]",
           className,
         )}
         data-testid="week-tracking"
         aria-busy={loading || undefined}
       >
+        {/* Refined Accent Decorations */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/18 to-transparent" />
-          <div className="absolute -right-10 top-0 h-24 w-24 rounded-full bg-primary/10 blur-3xl dark:bg-primary/14" />
+          <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+          <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/[0.06] blur-3xl dark:bg-primary/[0.1]" />
         </div>
 
         <div className="relative z-10 space-y-5">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                 Weekly Activity
               </p>
-              <h2 className="text-lg font-black tracking-tight text-foreground/80 dark:text-foreground/85">
+              <h2 className="text-lg font-black tracking-tight text-foreground/90">
                 {streakHeading}
               </h2>
             </div>
-
-            <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
+            
+            <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
               <Flame className="h-3 w-3 fill-primary" />
               {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
@@ -127,36 +132,36 @@ const WeekTracking = memo(
                 >
                   <span
                     className={cn(
-                      "text-[10px] font-bold uppercase tracking-tight text-muted/60 transition-colors",
-                      isToday && "text-primary",
+                      "text-[10px] font-bold tracking-tight text-muted/50 transition-colors uppercase",
+                      isToday && "text-primary/70"
                     )}
                   >
-                    {DAY_LABELS[date.getDay()]}
+                    {getDayName(date)}
                   </span>
 
                   <div
                     className={cn(
                       "relative flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] transition-all duration-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-[11px]",
                       hasWorkout
-                        ? "border-primary/40 bg-primary/10 text-primary shadow-sm"
-                        : "border-border/40 bg-white/5 text-muted-foreground/30 dark:bg-white/[0.02]",
-                      isToday && !hasWorkout && "border-primary/20 bg-primary/5 shadow-inner",
+                        ? "border-primary/25 bg-primary/10 text-primary shadow-sm"
+                        : "border-border/30 bg-white/5 text-muted-foreground/20 dark:bg-white/[0.02]",
+                      isToday && !hasWorkout && "border-primary/20 bg-primary/5",
                     )}
                     title={statusLabel}
                     aria-label={statusLabel}
                   >
                     {hasWorkout ? (
-                      <Flame className="h-4 w-4 fill-primary sm:h-4.5 sm:w-4.5" />
+                      <Flame className="h-4 w-4 fill-primary sm:h-[18px] sm:w-[18px]" />
                     ) : (
                       <span className="font-bold">{date.getDate()}</span>
                     )}
 
-                    {isToday ? (
+                    {isToday && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
                         <div className="h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                         <div className="absolute inset-0 h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               );
