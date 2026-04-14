@@ -129,7 +129,7 @@ const PostLoginPage = () => {
       case "complete":
         return {
           icon: <CheckCircle className="mx-auto h-12 w-12 text-primary" />,
-          title: "Welcome back!",
+          title: "You're all set!",
           description: initialGuestWorkoutCountRef.current && initialGuestWorkoutCountRef.current > 0
             ? "Your data has been synced successfully"
             : "Successfully signed in",
