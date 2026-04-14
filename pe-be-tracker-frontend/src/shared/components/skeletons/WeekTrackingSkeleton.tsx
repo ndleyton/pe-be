@@ -10,32 +10,26 @@ export const WeekTrackingSkeleton = ({
 }: WeekTrackingSkeletonProps) => (
   <div
     className={cn(
-      "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-card/40 p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-card/25",
-      "shadow-[inset_0_0_20px_rgba(204,0,51,0.03)]",
+      "rounded-3xl bg-border p-4 shadow-md",
       className,
     )}
   >
-    <div className="pointer-events-none absolute inset-0">
-      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/18 to-transparent" />
-      <div className="absolute -right-10 top-0 h-24 w-24 rounded-full bg-primary/10 blur-3xl dark:bg-primary/14" />
-    </div>
-
-    <div className="relative z-10 space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="space-y-1.5 text-left">
-          <Skeleton className="h-2 w-16 rounded-full bg-muted/40" />
-          <Skeleton className="h-5 w-28 rounded-full bg-foreground/10" />
+        <div className="space-y-1 text-left">
+          <Skeleton className="h-2 w-16 rounded-full" />
+          <Skeleton className="h-5 w-28 rounded-full" />
         </div>
-        <Skeleton className="h-6 w-16 rounded-full bg-primary/20" />
+        <Skeleton className="h-6 w-16 rounded-full" />
       </div>
 
       <div className="flex justify-between gap-1">
         {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-2.5">
-            <span className="text-[10px] font-bold uppercase tracking-tight text-muted/30">
+            <span className="text-[10px] font-bold uppercase tracking-tight text-card-foreground/60">
               {["S", "M", "T", "W", "T", "F", "S"][i]}
             </span>
-            <Skeleton className="h-11 w-11 rounded-2xl bg-foreground/10" />
+            <Skeleton className="h-9 w-9 rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl" />
           </div>
         ))}
       </div>

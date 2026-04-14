@@ -83,31 +83,24 @@ const WeekTracking = memo(
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-card/40 p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-card/25",
-          "shadow-[inset_0_0_20px_rgba(204,0,51,0.03)]", // Soft rim light / inner glow
+          "rounded-3xl bg-border p-4 shadow-md",
           className,
         )}
         data-testid="week-tracking"
         aria-busy={loading || undefined}
       >
-        {/* Rim Light / Edge Glow Refinement */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_60%,rgba(204,0,51,0.02)_100%)]" />
-          <div className="absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
-        </div>
-
-        <div className="relative z-10 space-y-5">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Weekly Activity
               </p>
-              <h2 className="text-lg font-black tracking-tight text-foreground/85">
+              <h2 className="text-lg font-black tracking-tight text-foreground">
                 {streakHeading}
               </h2>
             </div>
-            
-            <div className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary">
+
+            <div className="flex items-center gap-1.5 rounded-full bg-background/40 px-3 py-1 text-[11px] font-bold text-card-foreground/70">
               <Flame className="h-3 w-3 fill-primary" />
               {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
@@ -133,8 +126,8 @@ const WeekTracking = memo(
                 >
                   <span
                     className={cn(
-                      "text-[10px] font-bold tracking-tight text-muted/40 transition-colors uppercase",
-                      isToday && "text-primary/60"
+                      "text-[10px] font-bold uppercase tracking-tight text-card-foreground/60 transition-colors",
+                      isToday && "text-primary",
                     )}
                   >
                     {getDayName(date)}
@@ -144,9 +137,9 @@ const WeekTracking = memo(
                     className={cn(
                       "relative flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] transition-all duration-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-[11px]",
                       hasWorkout
-                        ? "border-primary/20 bg-primary/[0.06] text-primary"
-                        : "border-border/30 bg-white/[0.02] text-muted-foreground/20",
-                      isToday && !hasWorkout && "border-primary/15 bg-primary/[0.03]",
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border/40 bg-background/40 text-muted-foreground/30",
+                      isToday && !hasWorkout && "border-primary/20 bg-background/40",
                     )}
                     title={statusLabel}
                     aria-label={statusLabel}
@@ -158,9 +151,8 @@ const WeekTracking = memo(
                     )}
 
                     {isToday && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-60">
-                        <div className="h-1 w-1 rounded-full bg-primary/30 blur-[1px] animate-pulse sm:h-1.5 sm:w-1.5" />
-                        <div className="absolute inset-0 h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                        <div className="h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                       </div>
                     )}
                   </div>
