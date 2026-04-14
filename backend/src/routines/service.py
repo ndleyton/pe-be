@@ -140,9 +140,7 @@ class RoutineService:
         # but checking for ANY workout started in the last 10s is a safe enough heuristic
         # for preventing accidental double-clicks/useEffect runs.
         if recent_workout and recent_workout.name.startswith(
-            (
-                await crud.get_routine_by_id_for_user(session, routine_id, user_id)
-            ).name
+            (await crud.get_routine_by_id_for_user(session, routine_id, user_id)).name
         ):
             return recent_workout
 

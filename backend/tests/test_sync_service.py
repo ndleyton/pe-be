@@ -350,7 +350,9 @@ async def test_sync_guest_data_falls_back_to_server_id(db_session: AsyncSession)
                 exercises=[
                     GuestExercise(
                         id="ge2",
-                        exercise_type_id=str(et.id),  # Numeric fallback for exercise type
+                        exercise_type_id=str(
+                            et.id
+                        ),  # Numeric fallback for exercise type
                         exercise_sets=[
                             GuestExerciseSet(id="gs2", reps=10, intensity_unit_id=1)
                         ],

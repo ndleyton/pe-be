@@ -57,7 +57,9 @@ class SyncService:
 
             # 1a. Try to find by external_id (server ID)
             if guest_et.external_id and guest_et.external_id.isdigit():
-                stmt = select(ExerciseType).where(ExerciseType.id == int(guest_et.external_id))
+                stmt = select(ExerciseType).where(
+                    ExerciseType.id == int(guest_et.external_id)
+                )
                 existing_et = (await session.execute(stmt)).scalar_one_or_none()
 
             # 1b. Try to find by name (case-insensitive) if not found by ID
@@ -163,8 +165,11 @@ class SyncService:
                         candidate_id = int(guest_e.exercise_type_id)
                         # Verify it exists and is accessible
                         stmt = select(ExerciseType).where(
-                            (ExerciseType.id == candidate_id) &
-                            ((ExerciseType.owner_id == user_id) | (ExerciseType.status == "released"))
+                            (ExerciseType.id == candidate_id)
+                            & (
+                                (ExerciseType.owner_id == user_id)
+                                | (ExerciseType.status == "released")
+                            )
                         )
                         existing = (await session.execute(stmt)).scalar_one_or_none()
                         if existing:
