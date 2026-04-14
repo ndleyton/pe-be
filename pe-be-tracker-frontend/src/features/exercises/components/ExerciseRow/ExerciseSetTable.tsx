@@ -323,7 +323,7 @@ export const ExerciseSetTable = ({
                   <Check
                     className={`h-6 w-6 transition-all duration-300 ${set.done
                       ? "scale-110 opacity-100"
-                      : "scale-90 opacity-50 group-hover:opacity-100"
+                      : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
                       }`}
                   />
                 </Button>
