@@ -92,21 +92,6 @@ const PostLoginPage = () => {
 
   const getStatusContent = () => {
     switch (syncStatus) {
-      case "processing":
-        return {
-          icon: (
-            <div
-              className="space-y-3"
-              role="status"
-              aria-live="polite"
-              aria-busy="true"
-            >
-              <div className="loading loading-spinner loading-lg mx-auto"></div>
-            </div>
-          ),
-          title: "Signing you in...",
-          description: "Finishing your sign-in",
-        };
       case "syncing":
         return {
           icon: (
@@ -136,6 +121,10 @@ const PostLoginPage = () => {
         };
     }
   };
+
+  if (syncStatus === "processing") {
+    return null;
+  }
 
   const statusContent = getStatusContent();
 

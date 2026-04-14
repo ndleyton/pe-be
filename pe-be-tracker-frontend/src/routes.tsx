@@ -4,6 +4,7 @@ import { type RouteObject, Navigate } from "react-router-dom";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 import LoginPage from "./features/auth/pages/LoginPage";
+import OAuthCallbackPage from "./features/auth/pages/OAuthCallbackPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
@@ -39,9 +40,6 @@ const RoutineDetailsPage = lazy(
 );
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
 const AboutPage = lazy(() => import("./features/about/pages/AboutPage"));
-const OAuthCallbackPage = lazy(
-  () => import("./features/auth/pages/OAuthCallbackPage"),
-);
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
