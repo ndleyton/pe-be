@@ -132,8 +132,24 @@ class SyncService:
                         server_wt_id = existing.id
 
                 if not server_wt_id:
-                    # Fallback to Strength Training (ID 4) if not found
-                    server_wt_id = 4
+                    # Fallback to "Strength Training" resolved by name instead of ID 4
+                    stmt = (
+                        select(WorkoutType)
+                        .where(WorkoutType.name.ilike("Strength Training"))
+                        .limit(1)
+                    )
+                    existing_st = (await session.execute(stmt)).scalar_one_or_none()
+                    if existing_st:
+                        server_wt_id = existing_st.id
+                    else:
+                        # Ensure we have at least one valid type if seeker fails
+                        new_st = WorkoutType(
+                            name="Strength Training",
+                            description="Default strength training type created during sync",
+                        )
+                        session.add(new_st)
+                        await session.flush()
+                        server_wt_id = new_st.id
 
                 # Idempotency check: Don't create if a workout with same start_time exists for user
                 stmt = select(Workout).where(
