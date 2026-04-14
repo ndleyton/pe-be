@@ -107,7 +107,7 @@ const WeekTracking = memo(
           </div>
 
           <div
-            className="flex justify-between gap-1"
+            className="flex justify-between gap-0.5"
             role="list"
             aria-label="Last 7 days workout activity"
           >
@@ -121,13 +121,13 @@ const WeekTracking = memo(
               return (
                 <div
                   key={date.toISOString()}
-                  className="flex flex-col items-center gap-2.5"
+                  className="flex flex-col items-center gap-2"
                   role="listitem"
                 >
                   <span
                     className={cn(
                       "text-[10px] font-bold tracking-tight text-muted/60 transition-colors uppercase",
-                      isToday && "text-primary",
+                      isToday && "text-primary"
                     )}
                   >
                     {getDayName(date)}
@@ -153,6 +153,7 @@ const WeekTracking = memo(
                     {isToday && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
                         <div className="h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
+                        <div className="absolute inset-0 h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                       </div>
                     )}
                   </div>

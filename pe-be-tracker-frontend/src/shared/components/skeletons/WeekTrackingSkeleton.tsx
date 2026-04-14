@@ -23,9 +23,9 @@ export const WeekTrackingSkeleton = ({
         <Skeleton className="h-6 w-16 rounded-full bg-primary/20" />
       </div>
 
-      <div className="flex justify-between gap-1">
+      <div className="flex justify-between gap-0.5">
         {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-2.5">
+          <div key={i} className="flex flex-col items-center gap-2">
             <span className="text-[10px] font-bold tracking-tight text-muted/30 uppercase">
               {["S", "M", "T", "W", "T", "F", "S"][i]}
             </span>
