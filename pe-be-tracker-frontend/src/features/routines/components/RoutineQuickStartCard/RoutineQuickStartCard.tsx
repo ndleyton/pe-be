@@ -1,3 +1,4 @@
+import React from "react";
 import type { RoutineSummary } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -17,7 +18,7 @@ const preloadRoutineDetailsPage = createIntentPreload(() =>
 
 interface RoutineQuickStartCardProps {
   routine: RoutineSummary;
-  onStartWorkout: (routine: RoutineSummary) => void;
+  onStartWorkout: (routine: RoutineSummary) => void | Promise<void>;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export const RoutineQuickStartCard = ({
   onStartWorkout,
   className,
 }: RoutineQuickStartCardProps) => {
+  const [isStarting, setIsStarting] = React.useState(false);
   const exerciseCount = routine.exercise_count;
   const totalSets = routine.set_count;
   const exerciseNamesPreview = routine.exercise_names_preview;
@@ -34,6 +36,17 @@ export const RoutineQuickStartCard = ({
     0,
     exerciseCount - visibleExercisesCount,
   );
+
+  const handleStart = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      await onStartWorkout(routine);
+    } catch (error) {
+      console.error("Failed to start workout:", error);
+      setIsStarting(false);
+    }
+  };
 
   return (
     <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-2", className)}>
@@ -71,7 +84,11 @@ export const RoutineQuickStartCard = ({
           <Button
             asChild
             variant="outline"
-            className="flex-1 rounded-xl text-xs font-bold transition-all hover:bg-accent/50 h-10 shadow-sm"
+            disabled={isStarting}
+            className={cn(
+              "flex-1 rounded-xl text-xs font-bold transition-all hover:bg-accent/50 h-10 shadow-sm",
+              isStarting && "pointer-events-none opacity-50"
+            )}
             onMouseEnter={preloadRoutineDetailsPage}
             onTouchStart={preloadRoutineDetailsPage}
             onFocus={preloadRoutineDetailsPage}
@@ -79,10 +96,11 @@ export const RoutineQuickStartCard = ({
             <Link to={`/routines/${routine.id}`}>Details</Link>
           </Button>
           <Button
-            onClick={() => onStartWorkout(routine)}
+            onClick={handleStart}
+            disabled={isStarting}
             className="bg-primary/90 hover:bg-primary flex-1 rounded-xl text-xs font-bold shadow-lg shadow-primary/10 transition-all active:scale-95 backdrop-blur-sm border border-white/10 h-10"
           >
-            Start Workout
+            {isStarting ? "Starting..." : "Start Workout"}
           </Button>
         </div>
       </CardContent>
