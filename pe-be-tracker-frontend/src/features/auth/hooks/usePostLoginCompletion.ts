@@ -97,7 +97,7 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
         window.clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [hydrated, navigate, refreshAuth, syncWithServer, workouts.length, guestCount]);
+  }, [hydrated, navigate, refreshAuth, syncWithServer, workouts.length]);
 
   return {
     errorMessage,

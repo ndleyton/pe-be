@@ -117,6 +117,8 @@ class SyncService:
                 workout_type_map[guest_wt.id] = new_wt.id
 
         # 3. Create Workouts, Exercises, and Sets (Atomic)
+        from sqlalchemy.exc import IntegrityError
+
         try:
             for guest_w in payload.workouts:
                 server_wt_id = workout_type_map.get(guest_w.workout_type_id)
@@ -137,6 +139,8 @@ class SyncService:
                 stmt = select(Workout).where(
                     Workout.owner_id == user_id,
                     Workout.start_time == guest_w.start_time,
+                    # Ensure we don't pick up soft-deleted workouts?
+                    # Workout.deleted_at.is_(None) is usually implicit but depends on global filters
                 )
                 existing_workout = (await session.execute(stmt)).scalar_one_or_none()
                 if existing_workout:
@@ -160,7 +164,7 @@ class SyncService:
                 for guest_e in guest_w.exercises:
                     server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
 
-                    # Fallback: if not in map, maybe it's already a server ID (e.g. from a partial previous sync or stale state)
+                    # Fallback: if not in map, maybe it's already a server ID
                     if not server_et_id and guest_e.exercise_type_id.isdigit():
                         candidate_id = int(guest_e.exercise_type_id)
                         # Verify it exists and is accessible
@@ -219,7 +223,7 @@ class SyncService:
                 )
                 session.add(sync_log)
 
-            # Commit everything
+            # Atomic commit of all side-effects and the idempotency mark
             await session.commit()
             return SyncResult(
                 success=True,
@@ -228,6 +232,26 @@ class SyncService:
                 syncedSets=synced_sets,
                 syncedRoutines=synced_routines,
             )
+        except IntegrityError:
+            # Handle race condition for duplicate idempotency key
+            await session.rollback()
+            if idempotency_key:
+                stmt = select(SyncLog).where(
+                    SyncLog.user_id == user_id, SyncLog.idempotency_key == idempotency_key
+                )
+                existing_log = (await session.execute(stmt)).scalar_one_or_none()
+                if existing_log:
+                    logger.info("Sync race: returning persistent winner for idempotency key")
+                    return SyncResult(
+                        success=existing_log.success,
+                        syncedWorkouts=existing_log.synced_workouts,
+                        syncedExercises=existing_log.synced_exercises,
+                        syncedSets=existing_log.synced_sets,
+                        syncedRoutines=existing_log.synced_routines,
+                    )
+            # If it's not the idempotency key, re-raise as a generic error
+            logger.exception("Bulk sync hit integrity error not related to idempotency key")
+            return SyncResult(success=False, error="Integrity error during sync commit")
         except Exception as e:
             logger.exception("Bulk sync failed")
             await session.rollback()
