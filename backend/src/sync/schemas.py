@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import BaseModel, field_validator
 
+
 class GuestIntensityUnit(BaseModel):
     id: int
     name: str
+
 
 class GuestExerciseType(BaseModel):
     id: str  # Guest UUID
@@ -13,10 +15,12 @@ class GuestExerciseType(BaseModel):
     description: Optional[str] = None
     default_intensity_unit: Optional[int] = None
 
+
 class GuestWorkoutType(BaseModel):
     id: str  # Guest UUID
     name: str
     description: Optional[str] = None
+
 
 class GuestExerciseSet(BaseModel):
     id: str
@@ -28,6 +32,7 @@ class GuestExerciseSet(BaseModel):
     rest_time_seconds: Optional[int] = None
     done: bool = False
     notes: Optional[str] = None
+
 
 class GuestExercise(BaseModel):
     id: str
@@ -46,6 +51,7 @@ class GuestExercise(BaseModel):
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
+
 
 class GuestWorkout(BaseModel):
     id: str
@@ -67,10 +73,12 @@ class GuestWorkout(BaseModel):
             return v.replace(tzinfo=timezone.utc)
         return v.astimezone(timezone.utc)
 
+
 class GuestSyncPayload(BaseModel):
     workouts: List[GuestWorkout] = []
     exerciseTypes: List[GuestExerciseType] = []
     workoutTypes: List[GuestWorkoutType] = []
+
 
 class SyncResult(BaseModel):
     success: bool

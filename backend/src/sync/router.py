@@ -9,11 +9,12 @@ from src.users.models import User
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
+
 @router.post("/", response_model=SyncResult, status_code=status.HTTP_200_OK)
 async def sync_guest_data(
     payload: GuestSyncPayload,
     user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ):
     """
     Synchronize guest data (workouts, exercises, sets) to the server in a single bulk request.

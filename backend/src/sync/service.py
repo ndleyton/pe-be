@@ -10,12 +10,11 @@ from src.exercise_sets.models import ExerciseSet
 
 logger = logging.getLogger(__name__)
 
+
 class SyncService:
     @staticmethod
     async def sync_guest_data(
-        session: AsyncSession,
-        payload: GuestSyncPayload,
-        user_id: int
+        session: AsyncSession, payload: GuestSyncPayload, user_id: int
     ) -> SyncResult:
         """
         Synchronize guest data to the server in a single transaction.
@@ -34,10 +33,17 @@ class SyncService:
         # or created by this user
         for guest_et in payload.exerciseTypes:
             # Try to find by name (case-insensitive)
-            stmt = select(ExerciseType).where(
-                (ExerciseType.name.ilike(guest_et.name)) &
-                ((ExerciseType.owner_id == user_id) | (ExerciseType.status == "released"))
-            ).limit(1)
+            stmt = (
+                select(ExerciseType)
+                .where(
+                    (ExerciseType.name.ilike(guest_et.name))
+                    & (
+                        (ExerciseType.owner_id == user_id)
+                        | (ExerciseType.status == "released")
+                    )
+                )
+                .limit(1)
+            )
             result = await session.execute(stmt)
             existing_et = result.scalar_one_or_none()
 
@@ -50,16 +56,20 @@ class SyncService:
                     description=guest_et.description or "Synced from guest data",
                     default_intensity_unit=guest_et.default_intensity_unit,
                     owner_id=user_id,
-                    status="candidate"
+                    status="candidate",
                 )
                 session.add(new_et)
-                await session.flush() # Get the ID
+                await session.flush()  # Get the ID
                 exercise_type_map[guest_et.id] = new_et.id
 
         # 2. Map Workout Types
         workout_type_map: Dict[str, int] = {}
         for guest_wt in payload.workoutTypes:
-            stmt = select(WorkoutType).where(WorkoutType.name.ilike(guest_wt.name)).limit(1)
+            stmt = (
+                select(WorkoutType)
+                .where(WorkoutType.name.ilike(guest_wt.name))
+                .limit(1)
+            )
             result = await session.execute(stmt)
             existing_wt = result.scalar_one_or_none()
 
@@ -71,7 +81,7 @@ class SyncService:
                 # For now, let's just create it if it doesn't exist.
                 new_wt = WorkoutType(
                     name=guest_wt.name,
-                    description=guest_wt.description or "Synced from guest data"
+                    description=guest_wt.description or "Synced from guest data",
                 )
                 session.add(new_wt)
                 await session.flush()
@@ -90,7 +100,7 @@ class SyncService:
                 start_time=guest_w.start_time,
                 end_time=guest_w.end_time,
                 workout_type_id=server_wt_id,
-                owner_id=user_id
+                owner_id=user_id,
             )
             session.add(workout)
             await session.flush()
@@ -99,14 +109,16 @@ class SyncService:
             for guest_e in guest_w.exercises:
                 server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
                 if not server_et_id:
-                    logger.warning(f"Skipping exercise with unknown type: {guest_e.exercise_type_id}")
+                    logger.warning(
+                        f"Skipping exercise with unknown type: {guest_e.exercise_type_id}"
+                    )
                     continue
 
                 exercise = Exercise(
                     timestamp=guest_e.timestamp or guest_w.start_time,
                     notes=guest_e.notes,
                     exercise_type_id=server_et_id,
-                    workout_id=workout.id
+                    workout_id=workout.id,
                 )
                 session.add(exercise)
                 await session.flush()
@@ -122,7 +134,7 @@ class SyncService:
                         exercise_id=exercise.id,
                         rest_time_seconds=guest_s.rest_time_seconds,
                         done=guest_s.done,
-                        notes=guest_s.notes
+                        notes=guest_s.notes,
                     )
                     session.add(exercise_set)
                     synced_sets += 1
@@ -135,7 +147,7 @@ class SyncService:
                 syncedWorkouts=synced_workouts,
                 syncedExercises=synced_exercises,
                 syncedSets=synced_sets,
-                syncedRoutines=synced_routines
+                syncedRoutines=synced_routines,
             )
         except Exception:
             logger.exception("Bulk sync failed")
@@ -145,5 +157,5 @@ class SyncService:
                 syncedWorkouts=0,
                 syncedExercises=0,
                 syncedSets=0,
-                syncedRoutines=0
+                syncedRoutines=0,
             )

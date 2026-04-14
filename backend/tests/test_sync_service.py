@@ -11,7 +11,7 @@ from src.sync.schemas import (
     GuestExercise,
     GuestExerciseSet,
     GuestExerciseType,
-    GuestWorkoutType
+    GuestWorkoutType,
 )
 from src.workouts.models import Workout, WorkoutType
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
@@ -20,17 +20,19 @@ from src.users.models import User
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
+
 async def _seed_user(db_session: AsyncSession, email: str = "test@example.com"):
     user = User(
         email=email,
         hashed_password="hashed_password",
         is_active=True,
         is_superuser=False,
-        is_verified=True
+        is_verified=True,
     )
     db_session.add(user)
     await db_session.flush()
     return user
+
 
 async def _seed_intensity_unit(db_session: AsyncSession):
     # Seed intensity unit with ID 1
@@ -38,6 +40,7 @@ async def _seed_intensity_unit(db_session: AsyncSession):
     db_session.add(unit)
     await db_session.flush()
     return unit
+
 
 async def test_sync_guest_data_creates_new_records(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
@@ -63,26 +66,19 @@ async def test_sync_guest_data_creates_new_records(db_session: AsyncSession):
                                 reps=10,
                                 intensity=Decimal("100.5"),
                                 intensity_unit_id=1,
-                                done=True
+                                done=True,
                             )
-                        ]
+                        ],
                     )
-                ]
+                ],
             )
         ],
         exerciseTypes=[
             GuestExerciseType(
-                id="guest-et-1",
-                name="Bench Press",
-                default_intensity_unit=1
+                id="guest-et-1", name="Bench Press", default_intensity_unit=1
             )
         ],
-        workoutTypes=[
-            GuestWorkoutType(
-                id="guest-wt-1",
-                name="Strength Training"
-            )
-        ]
+        workoutTypes=[GuestWorkoutType(id="guest-wt-1", name="Strength Training")],
     )
 
     # Execute sync
@@ -96,7 +92,9 @@ async def test_sync_guest_data_creates_new_records(db_session: AsyncSession):
 
     # Verify records in database
     # Workout
-    stmt = select(Workout).where(Workout.owner_id == user_id, Workout.name == "New Workout")
+    stmt = select(Workout).where(
+        Workout.owner_id == user_id, Workout.name == "New Workout"
+    )
     workout = (await db_session.execute(stmt)).scalar_one()
     assert workout.notes == "Some notes"
 
@@ -118,23 +116,17 @@ async def test_sync_guest_data_creates_new_records(db_session: AsyncSession):
     assert es.intensity == Decimal("100.5")
     assert es.done is True
 
+
 async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
     user = await _seed_user(db_session, email="user2@example.com")
     user_id = user.id
 
     # Create existing exercise type
-    et = ExerciseType(
-        name="Squat",
-        status="released",
-        default_intensity_unit=1
-    )
+    et = ExerciseType(name="Squat", status="released", default_intensity_unit=1)
     db_session.add(et)
 
-    wt = WorkoutType(
-        name="Legs",
-        description="Leg workout"
-    )
+    wt = WorkoutType(name="Legs", description="Leg workout")
     db_session.add(wt)
     await db_session.flush()
 
@@ -151,28 +143,24 @@ async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
                         id="guest-ex2",
                         exercise_type_id="guest-et-squat",
                         exercise_sets=[
-                            GuestExerciseSet(
-                                id="guest-s2",
-                                reps=5,
-                                intensity_unit_id=1
-                            )
-                        ]
+                            GuestExerciseSet(id="guest-s2", reps=5, intensity_unit_id=1)
+                        ],
                     )
-                ]
+                ],
             )
         ],
         exerciseTypes=[
             GuestExerciseType(
                 id="guest-et-squat",
-                name="Squat" # Matches existing by name
+                name="Squat",  # Matches existing by name
             )
         ],
         workoutTypes=[
             GuestWorkoutType(
                 id="guest-wt-legs",
-                name="Legs" # Matches existing by name
+                name="Legs",  # Matches existing by name
             )
-        ]
+        ],
     )
 
     result = await SyncService.sync_guest_data(db_session, payload, user_id)
@@ -184,6 +172,7 @@ async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
     results = (await db_session.execute(stmt)).scalars().all()
     assert len(results) == 1
     assert results[0].id == et.id
+
 
 async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
@@ -208,17 +197,21 @@ async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
                             GuestExerciseSet(
                                 id="guest-s3",
                                 reps=10,
-                                intensity_unit_id=99999, # Likely invalid FK if we had a strict FK,
-                                                         # but let's just trigger a general failure.
-                                done=True
+                                intensity_unit_id=99999,  # Likely invalid FK if we had a strict FK,
+                                # but let's just trigger a general failure.
+                                done=True,
                             )
-                        ]
+                        ],
                     )
-                ]
+                ],
             )
         ],
-        exerciseTypes=[GuestExerciseType(id="guest-et-1", name="Error Exercise", default_intensity_unit=1)],
-        workoutTypes=[GuestWorkoutType(id="guest-wt-1", name="Error Type")]
+        exerciseTypes=[
+            GuestExerciseType(
+                id="guest-et-1", name="Error Exercise", default_intensity_unit=1
+            )
+        ],
+        workoutTypes=[GuestWorkoutType(id="guest-wt-1", name="Error Type")],
     )
 
     # We'll use a mock or just expect it to fail if it violates a constraint.
@@ -231,6 +224,7 @@ async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
 
     # Let's mock the session to raise an error during commit.
     from unittest.mock import patch
+
     with patch.object(db_session, "commit", side_effect=Exception("Simulated Failure")):
         result = await SyncService.sync_guest_data(db_session, payload, user_id)
         assert result.success is False
