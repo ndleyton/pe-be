@@ -88,59 +88,59 @@ class SyncService:
                 workout_type_map[guest_wt.id] = new_wt.id
 
         # 3. Create Workouts, Exercises, and Sets
-        for guest_w in payload.workouts:
-            server_wt_id = workout_type_map.get(guest_w.workout_type_id)
-            if not server_wt_id:
-                # Fallback to Strength Training (ID 4) if not found
-                server_wt_id = 4
-
-            workout = Workout(
-                name=guest_w.name,
-                notes=guest_w.notes,
-                start_time=guest_w.start_time,
-                end_time=guest_w.end_time,
-                workout_type_id=server_wt_id,
-                owner_id=user_id,
-            )
-            session.add(workout)
-            await session.flush()
-            synced_workouts += 1
-
-            for guest_e in guest_w.exercises:
-                server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
-                if not server_et_id:
-                    logger.warning(
-                        f"Skipping exercise with unknown type: {guest_e.exercise_type_id}"
-                    )
-                    continue
-
-                exercise = Exercise(
-                    timestamp=guest_e.timestamp or guest_w.start_time,
-                    notes=guest_e.notes,
-                    exercise_type_id=server_et_id,
-                    workout_id=workout.id,
-                )
-                session.add(exercise)
-                await session.flush()
-                synced_exercises += 1
-
-                for guest_s in guest_e.exercise_sets:
-                    exercise_set = ExerciseSet(
-                        reps=guest_s.reps,
-                        duration_seconds=guest_s.duration_seconds,
-                        intensity=guest_s.intensity,
-                        rpe=guest_s.rpe,
-                        intensity_unit_id=guest_s.intensity_unit_id,
-                        exercise_id=exercise.id,
-                        rest_time_seconds=guest_s.rest_time_seconds,
-                        done=guest_s.done,
-                        notes=guest_s.notes,
-                    )
-                    session.add(exercise_set)
-                    synced_sets += 1
-
-        # Commit everything
         try:
+            for guest_w in payload.workouts:
+                server_wt_id = workout_type_map.get(guest_w.workout_type_id)
+                if not server_wt_id:
+                    # Fallback to Strength Training (ID 4) if not found
+                    server_wt_id = 4
+
+                workout = Workout(
+                    name=guest_w.name,
+                    notes=guest_w.notes,
+                    start_time=guest_w.start_time,
+                    end_time=guest_w.end_time,
+                    workout_type_id=server_wt_id,
+                    owner_id=user_id,
+                )
+                session.add(workout)
+                await session.flush()
+                synced_workouts += 1
+
+                for guest_e in guest_w.exercises:
+                    server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
+                    if not server_et_id:
+                        logger.warning(
+                            f"Skipping exercise with unknown type: {guest_e.exercise_type_id}"
+                        )
+                        continue
+
+                    exercise = Exercise(
+                        timestamp=guest_e.timestamp or guest_w.start_time,
+                        notes=guest_e.notes,
+                        exercise_type_id=server_et_id,
+                        workout_id=workout.id,
+                    )
+                    session.add(exercise)
+                    await session.flush()
+                    synced_exercises += 1
+
+                    for guest_s in guest_e.exercise_sets:
+                        exercise_set = ExerciseSet(
+                            reps=guest_s.reps,
+                            duration_seconds=guest_s.duration_seconds,
+                            intensity=guest_s.intensity,
+                            rpe=guest_s.rpe,
+                            intensity_unit_id=guest_s.intensity_unit_id,
+                            exercise_id=exercise.id,
+                            rest_time_seconds=guest_s.rest_time_seconds,
+                            done=guest_s.done,
+                            notes=guest_s.notes,
+                        )
+                        session.add(exercise_set)
+                        synced_sets += 1
+
+            # Commit everything
             await session.commit()
             return SyncResult(
                 success=True,
@@ -149,7 +149,7 @@ class SyncService:
                 syncedSets=synced_sets,
                 syncedRoutines=synced_routines,
             )
-        except Exception:
+        except Exception as e:
             logger.exception("Bulk sync failed")
             await session.rollback()
             return SyncResult(
@@ -158,4 +158,5 @@ class SyncService:
                 syncedExercises=0,
                 syncedSets=0,
                 syncedRoutines=0,
+                error=str(e),
             )

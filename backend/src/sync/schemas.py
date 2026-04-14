@@ -46,6 +46,8 @@ class GuestExercise(BaseModel):
     def ensure_utc(cls, v):
         if v is None:
             return v
+        if not isinstance(v, (datetime, str)):
+            return v
         if isinstance(v, str):
             v = datetime.fromisoformat(v.replace("Z", "+00:00"))
         if v.tzinfo is None:
@@ -67,6 +69,8 @@ class GuestWorkout(BaseModel):
     def ensure_utc(cls, v):
         if v is None:
             return v
+        if not isinstance(v, (datetime, str)):
+            return v
         if isinstance(v, str):
             v = datetime.fromisoformat(v.replace("Z", "+00:00"))
         if v.tzinfo is None:
@@ -86,3 +90,4 @@ class SyncResult(BaseModel):
     syncedExercises: int
     syncedSets: int
     syncedRoutines: int
+    error: Optional[str] = None
