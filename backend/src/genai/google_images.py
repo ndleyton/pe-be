@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import time
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Dict, List
@@ -11,7 +10,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from google import genai
-from google.genai import errors, types
+from google.genai import types
 from PIL import Image, ImageSequence
 
 from src.core.config import settings

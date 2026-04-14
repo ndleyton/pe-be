@@ -9,7 +9,6 @@ from src.genai.google_images import (
     _build_prompt,
     _generate_image_async,
     _generate_reference_image_async,
-    errors,
     generate_exercise_phase_image,
 )
 
