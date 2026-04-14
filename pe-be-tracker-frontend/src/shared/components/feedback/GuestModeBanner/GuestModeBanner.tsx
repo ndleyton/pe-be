@@ -34,7 +34,7 @@ const GuestModeBanner = () => {
   }
 
   return (
-    <div className="pointer-events-none fixed top-16 right-0 left-0 z-40 px-4 py-2.5 lg:left-64">
+    <div className="z-40 px-4 py-2.5">
       <div className="pointer-events-auto group relative overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:px-4">
         <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent opacity-70" />
 
