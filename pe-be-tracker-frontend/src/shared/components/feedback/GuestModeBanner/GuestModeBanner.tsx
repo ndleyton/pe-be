@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { Info } from "lucide-react";
 import { useAuthStore, useGuestStore } from "@/stores";
 
-const BANNER_DISPLAY_DELAY_MS = 800;
+
 
 const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -11,26 +10,23 @@ const GuestModeBanner = () => {
 
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
-  const [showBanner, setShowBanner] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, BANNER_DISPLAY_DELAY_MS);
-      return () => clearTimeout(timer);
-    } else {
-      setShowBanner(false);
-    }
-  }, [authLoading, isAuthenticated]);
-
-  if (isAuthenticated || authLoading || !showBanner) {
+  // Don't show banner if user is authenticated or still loading auth
+  if (isAuthenticated || authLoading) {
     return null;
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-4 py-2.5">
-      <div className="pointer-events-auto group relative max-w-[calc(100%-88px)] overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:max-w-none">
+    <div
+      className="fixed z-50 px-4 transition-all duration-300 md:px-0"
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom) + 5rem)",
+        left: "1rem",
+        right: "1rem",
+        maxWidth: "min(600px, 100vw - 2rem)",
+        margin: "0 auto",
+      }}
+    >
+      <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 px-4 py-3.5 shadow-2xl shadow-black/20 backdrop-blur-xl hover:border-primary/30">
         <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent opacity-70" />
 
         <div className="relative flex items-start gap-3">
@@ -48,9 +44,9 @@ const GuestModeBanner = () => {
                 </span>
               )}
             </div>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Your progress is saved on this device.
-              <span className="text-foreground/75"> Sign in to access AI features and more exercises.</span>
+            <p className="text-muted-foreground text-[11px] leading-tight font-medium">
+              Progress saved on this device.
+              <span className="text-foreground/80"> Sign in for AI & more.</span>
             </p>
           </div>
         </div>
