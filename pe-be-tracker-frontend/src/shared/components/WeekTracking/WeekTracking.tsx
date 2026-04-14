@@ -105,7 +105,7 @@ const WeekTracking = memo(
                 {streakHeading}
               </h2>
               <div className="relative mt-1 h-1 w-8 dark:h-0.5">
-                <div className="absolute inset-0 rounded-full bg-orange-400/40 blur-[4px] dark:bg-warning/30 dark:blur-[3px]" />
+                <div className="absolute inset-0 rounded-full bg-orange-400/40 blur-[4px] dark:bg-warning/50 dark:blur-[3px]" />
                 <div className="relative h-1 w-8 rounded-full bg-orange-400/70 dark:h-0.5 dark:bg-warning/45" />
               </div>
             </div>
@@ -124,9 +124,8 @@ const WeekTracking = memo(
             {last7Days.map((date) => {
               const hasWorkout = hasWorkoutOnDate(date);
               const isToday = date.toDateString() === new Date().toDateString();
-              const statusLabel = `${date.toLocaleDateString()}: ${
-                hasWorkout ? "Workout completed" : "No workout logged"
-              }`;
+              const statusLabel = `${date.toLocaleDateString()}: ${hasWorkout ? "Workout completed" : "No workout logged"
+                }`;
 
               return (
                 <div
