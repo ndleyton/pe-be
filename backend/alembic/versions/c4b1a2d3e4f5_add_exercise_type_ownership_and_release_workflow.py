@@ -62,9 +62,7 @@ def _assert_no_released_name_duplicates(connection) -> None:
         )
     ).fetchall()
     if duplicates:
-        preview = "; ".join(
-            f"{row.normalized_name}: {row.ids}" for row in duplicates
-        )
+        preview = "; ".join(f"{row.normalized_name}: {row.ids}" for row in duplicates)
         raise RuntimeError(
             "Cannot create released exercise type name uniqueness index because "
             f"case-insensitive duplicates already exist: {preview}"

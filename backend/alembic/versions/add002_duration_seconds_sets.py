@@ -5,6 +5,7 @@ Revises: add001_exercise_template_notes
 Create Date: 2026-04-08 12:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op

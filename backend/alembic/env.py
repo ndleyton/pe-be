@@ -12,7 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 # --- Ensure correct path to import app ---
 # Assuming alembic directory is at the same level as the 'app' directory
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # --- Import Base and all models from domain slices ---
 # This is crucial for autogenerate
@@ -38,11 +38,12 @@ from src.chat.models import (  # noqa: F401
     ConversationMessage,
     ConversationMessagePart,
 )
-from src.sync.models import SyncMapping  # noqa: F401
+from src.sync.models import SyncLog  # noqa: F401
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -57,6 +58,7 @@ if config.config_file_name is not None:
 # This tells autogenerate what models to look at
 target_metadata = Base.metadata
 
+
 # --- Function to get Database URL ---
 def get_url():
     """Retrieves the database URL from environment variables."""
@@ -64,6 +66,7 @@ def get_url():
     if not db_url:
         raise ValueError("DATABASE_URL environment variable is not set or empty.")
     return db_url
+
 
 def get_async_url():
     """Retrieves the async database URL for async operations."""
@@ -74,6 +77,7 @@ def get_async_url():
     elif db_url.startswith("postgres://"):
         return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
     return db_url
+
 
 # --- URL utilities and safety checks ---
 def _redact_url_password(db_url: str) -> str:
@@ -92,11 +96,13 @@ def _redact_url_password(db_url: str) -> str:
         # Fallback to original if parsing fails
         return db_url
 
+
 def _extract_host(db_url: str) -> str:
     try:
         return urlsplit(db_url).hostname or ""
     except Exception:
         return ""
+
 
 def _log_and_validate_db_url(db_url: str) -> None:
     """Log the effective DB URL (redacted) and fail fast if host looks malformed in prod/staging."""
@@ -122,8 +128,11 @@ def _log_and_validate_db_url(db_url: str) -> None:
         if "." not in host and host not in allowed_no_dot_hosts and not is_render_host:
             raise RuntimeError(
                 "DATABASE_URL host appears malformed (no dot). Expected a fully-qualified domain name "
-                "like '...render.com' or your provider's FQDN. Current host: '" + host + "'"
+                "like '...render.com' or your provider's FQDN. Current host: '"
+                + host
+                + "'"
             )
+
 
 # --- Offline Mode ---
 def run_migrations_offline() -> None:
@@ -139,7 +148,7 @@ def run_migrations_offline() -> None:
     """
     # You can use get_url() here too if you want consistency,
     # but reading from alembic.ini is the default offline behavior.
-    url = config.get_main_option("sqlalchemy.url") or get_url() # Fallback to env var
+    url = config.get_main_option("sqlalchemy.url") or get_url()  # Fallback to env var
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -150,12 +159,14 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 # --- Online Mode ---
 def do_run_migrations(connection: Connection) -> None:
     """Helper function to run migrations within a transaction."""
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
+
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode using a synchronous engine."""
@@ -183,6 +194,7 @@ def run_migrations_online() -> None:
 
     connectable.dispose()
 
+
 async def run_migrations_online_async() -> None:
     """Run migrations in 'online' mode using an async engine."""
     async_db_url = get_async_url()
@@ -192,7 +204,7 @@ async def run_migrations_online_async() -> None:
     connectable = create_async_engine(
         async_db_url,
         poolclass=pool.NullPool,
-        future=True, # Recommended for SQLAlchemy 2.0 style
+        future=True,  # Recommended for SQLAlchemy 2.0 style
     )
 
     async with connectable.connect() as connection:
@@ -201,6 +213,7 @@ async def run_migrations_online_async() -> None:
 
     # Dispose the engine explicitly
     await connectable.dispose()
+
 
 # --- Main Execution Logic ---
 if context.is_offline_mode():

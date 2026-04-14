@@ -137,6 +137,8 @@ def downgrade() -> None:
         op.drop_table("conversation_message_parts")
 
     if "chat_attachments" in table_names:
-        op.drop_index(op.f("ix_chat_attachments_user_id"), table_name="chat_attachments")
+        op.drop_index(
+            op.f("ix_chat_attachments_user_id"), table_name="chat_attachments"
+        )
         op.drop_index(op.f("ix_chat_attachments_id"), table_name="chat_attachments")
         op.drop_table("chat_attachments")
