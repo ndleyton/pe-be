@@ -38,6 +38,7 @@ from src.chat.models import (  # noqa: F401
     ConversationMessage,
     ConversationMessagePart,
 )
+from src.sync.models import SyncMapping  # noqa: F401
 
 # --- Load .env file from the project root ---
 from dotenv import load_dotenv
