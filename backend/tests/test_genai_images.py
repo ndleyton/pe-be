@@ -159,9 +159,7 @@ async def test_generate_exercise_phase_image_async(mock_async_gen):
 @pytest.mark.asyncio
 @patch("src.genai.google_images.settings")
 @patch("src.genai.google_images._get_client")
-async def test_generate_reference_image_async_success(
-    mock_get_client, mock_settings
-):
+async def test_generate_reference_image_async_success(mock_get_client, mock_settings):
     mock_settings.EXERCISE_IMAGE_REFERENCE_MODEL = "ref-model"
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
@@ -214,7 +212,9 @@ async def test_generate_reference_image_async_success(
 @patch("src.genai.google_images.asyncio.sleep", new_callable=AsyncMock)
 @patch("src.genai.google_images.settings")
 @patch("src.genai.google_images._get_client")
-async def test_generate_image_retry_on_429_async(mock_get_client, mock_settings, mock_sleep):
+async def test_generate_image_retry_on_429_async(
+    mock_get_client, mock_settings, mock_sleep
+):
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
     # Mock an error that looks like a 429
