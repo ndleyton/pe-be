@@ -11,6 +11,7 @@ import posthog from "posthog-js";
 import { PostHogProvider, usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
 import { StoreInitializer } from "@/stores";
+import { Toaster } from "@/shared/components/ui";
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -162,6 +163,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
       {shouldShowReactQueryDevtools && (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}
+      <Toaster />
     </QueryClientProvider>
   );
 };
