@@ -100,7 +100,7 @@ describe("AppLayout", () => {
 
     const slot = screen.getByTestId("guest-mode-banner-slot");
 
-    expect(slot).toHaveClass("min-h-[5.75rem]");
+    expect(slot).toHaveClass("min-h-23");
     expect(screen.queryByTestId("guest-mode-banner")).not.toBeInTheDocument();
   });
 

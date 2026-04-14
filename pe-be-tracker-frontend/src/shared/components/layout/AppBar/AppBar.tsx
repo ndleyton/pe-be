@@ -24,6 +24,7 @@ const AppBar = () => {
       className="bg-background/80 border-b sticky top-0 z-50 px-4 backdrop-blur-md"
       role="banner"
       aria-label="Primary navigation"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="relative flex h-16 items-center justify-center lg:justify-end">
         <div className="absolute left-0 flex items-center lg:hidden">

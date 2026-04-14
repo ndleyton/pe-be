@@ -63,10 +63,13 @@ describe("AppBar", () => {
   it("renders the app bar banner and mobile navigation controls", () => {
     render(<AppBar />);
 
-    expect(screen.getByRole("banner")).toHaveAttribute(
+    const banner = screen.getByRole("banner");
+
+    expect(banner).toHaveAttribute(
       "aria-label",
       "Primary navigation",
     );
+    expect(banner).toHaveStyle({ paddingTop: "env(safe-area-inset-top)" });
     expect(
       screen.getByRole("button", { name: /open navigation menu/i }),
     ).toBeInTheDocument();
