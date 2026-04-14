@@ -30,7 +30,7 @@ const GuestModeBanner = () => {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-4 py-2.5">
-      <div className="pointer-events-auto group relative overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:px-4">
+      <div className="pointer-events-auto group relative max-w-[calc(100%-88px)] overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:max-w-none">
         <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent opacity-70" />
 
         <div className="relative flex items-start gap-3">
