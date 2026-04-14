@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Frontend URL - used for CORS and post-login redirects
     FRONTEND_URL: str = Field("http://localhost:5173", validation_alias="FRONTEND_URL")
     FRONTEND_POST_LOGIN_PATH: str = Field(
-        "/workouts", validation_alias="FRONTEND_POST_LOGIN_PATH"
+        "/auth/complete", validation_alias="FRONTEND_POST_LOGIN_PATH"
     )
     ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX: str = Field(
         "",

@@ -206,7 +206,7 @@ The production template should be copied to `backend/.env.production` and popula
 The critical values are:
 
 - `FRONTEND_URL=https://app.example.com`
-- `FRONTEND_POST_LOGIN_PATH=/workouts`
+- `FRONTEND_POST_LOGIN_PATH=/auth/complete`
 - `API_ORIGIN_DOMAIN=origin-api.example.com`
 - `GOOGLE_REDIRECT_URI=https://app.example.com/api/v1/auth/google/callback`
 - `ENVIRONMENT=production`

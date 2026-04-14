@@ -1,123 +1,10 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { consumePostLoginDestination } from "@/features/auth/lib/postLoginRedirect";
+import { usePostLoginCompletion } from "@/features/auth/hooks";
 import { HomeLogo } from "@/shared/components/layout";
-import { useGuestStore } from "@/stores";
-import { useShallow } from "zustand/react/shallow";
-import {
-  syncGuestDataToServer,
-  showSyncSuccessToast,
-  showSyncErrorToast,
-} from "@/utils/syncGuestData";
-import api from "@/shared/api/client";
-import { endpoints } from "@/shared/api/endpoints";
-import { NAV_PATHS } from "@/shared/navigation/constants";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
-const OAuthCallbackPage = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const {
-    workouts: rawWorkouts,
-    exerciseTypes,
-    workoutTypes,
-    routines,
-    clear,
-  } = useGuestStore(
-    useShallow((state) => ({
-      workouts: state.workouts,
-      exerciseTypes: state.exerciseTypes,
-      workoutTypes: state.workoutTypes,
-      routines: state.routines,
-      clear: state.clear,
-    })),
-  );
-
-  // Ensure workouts is always an array
-  const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
-  const [syncStatus, setSyncStatus] = useState<
-    "processing" | "syncing" | "complete" | "error"
-  >("processing");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-
-  useEffect(() => {
-    const handleOAuthCallback = async () => {
-      try {
-        setSyncStatus("processing");
-        const postLoginDestination =
-          consumePostLoginDestination() ?? NAV_PATHS.WORKOUTS;
-
-        // Extract authorization code from URL parameters
-        const code = searchParams.get("code");
-        const error = searchParams.get("error");
-
-        if (error) {
-          throw new Error(`OAuth error: ${error}`);
-        }
-
-        if (!code) {
-          throw new Error("No authorization code received");
-        }
-
-        // Exchange code for token
-        await api.post(endpoints.auth.googleCallback, {
-          code: code,
-        });
-
-        // The backend's CookieTransportWithRedirect will set the cookie automatically.
-
-        // Check if there's guest data to sync
-        if (workouts.length > 0) {
-          setSyncStatus("syncing");
-
-          const syncResult = await syncGuestDataToServer(
-            {
-              workouts,
-              exerciseTypes,
-              workoutTypes,
-              routines,
-            },
-            clear,
-          );
-
-          if (syncResult.success) {
-            showSyncSuccessToast(syncResult);
-            setSyncStatus("complete");
-          } else {
-            throw new Error(syncResult.error || "Failed to sync guest data");
-          }
-        } else {
-          setSyncStatus("complete");
-        }
-
-        // Wait a moment to show success state, then redirect
-        setTimeout(() => {
-          navigate(postLoginDestination, { replace: true });
-        }, 1000);
-      } catch (error) {
-        console.error("OAuth callback error:", error);
-        const errorMsg =
-          error instanceof Error ? error.message : "Authentication failed";
-        setErrorMessage(errorMsg);
-        setSyncStatus("error");
-        showSyncErrorToast(errorMsg);
-
-        // Redirect back to login after error
-        setTimeout(() => {
-          navigate(NAV_PATHS.LOGIN, { replace: true });
-        }, 3000);
-      }
-    };
-
-    handleOAuthCallback();
-  }, [
-    clear,
-    exerciseTypes,
-    navigate,
-    routines,
-    searchParams,
-    workoutTypes,
-    workouts,
-  ]);
+const PostLoginPage = () => {
+  const { errorMessage, initialGuestWorkoutCount, syncStatus } =
+    usePostLoginCompletion();
 
   const getStatusContent = () => {
     switch (syncStatus) {
@@ -149,17 +36,19 @@ const OAuthCallbackPage = () => {
             </div>
           ),
           title: "Syncing your data...",
-          description: `Uploading ${workouts.length} workout${workouts.length !== 1 ? "s" : ""} to your account`,
+          description: `Uploading ${initialGuestWorkoutCount} workout${initialGuestWorkoutCount === 1 ? "" : "s"} to your account`,
         };
       case "complete":
         return {
-          icon: <div className="text-4xl text-green-500">✓</div>,
-          title: "Welcome back!",
-          description: "Your data has been synced successfully",
+          icon: <CheckCircle className="mx-auto h-12 w-12 text-primary" />,
+          title: "You're all set!",
+          description: initialGuestWorkoutCount > 0
+            ? "Your data has been synced successfully"
+            : "Successfully signed in",
         };
       case "error":
         return {
-          icon: <div className="text-destructive text-4xl">⚠</div>,
+          icon: <AlertTriangle className="text-destructive mx-auto h-12 w-12" />,
           title: "Authentication failed",
           description: errorMessage,
         };
@@ -182,7 +71,7 @@ const OAuthCallbackPage = () => {
       <div className="flex flex-1 items-center justify-center">
         <div className="mx-auto w-full max-w-3xl p-8 text-center">
           {statusContent.icon}
-          <h1 className="sr-only">OAuth Callback</h1>
+          <h1 className="sr-only">Post Login</h1>
           <h2 className="text-foreground mt-4 text-xl font-semibold">
             {statusContent.title}
           </h2>
@@ -202,4 +91,4 @@ const OAuthCallbackPage = () => {
   );
 };
 
-export default OAuthCallbackPage;
+export default PostLoginPage;

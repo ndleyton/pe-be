@@ -4,8 +4,8 @@ import { endpoints } from "@/shared/api/endpoints";
 
 /**
  * Returns a memoized callback that initiates the Google OAuth flow.
- * The user will be redirected to the Google consent screen and then
- * back to the `/oauth/callback` route defined in the backend.
+ * The backend handles Google's callback, creates the session cookie,
+ * and then redirects the browser back to the frontend post-login route.
  */
 export const useGoogleSignIn = () => {
   return useCallback(async () => {

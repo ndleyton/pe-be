@@ -49,7 +49,6 @@ export const endpoints = {
     register: "/auth/register",
     session: "/auth/session",
     googleAuthorize: "/auth/google/authorize",
-    googleCallback: "/auth/google/callback",
   },
 
   admin: {

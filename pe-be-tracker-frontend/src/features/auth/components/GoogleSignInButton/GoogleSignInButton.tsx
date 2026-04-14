@@ -19,7 +19,8 @@ export default function GoogleSignInButton() {
     try {
       const { data } = await api.get(endpoints.auth.googleAuthorize);
       if (data.authorization_url) {
-        // User will be redirected to Google's OAuth page, then back to /oauth/callback
+        // Google returns to the backend callback; the backend then redirects
+        // the browser to the frontend post-login route.
         window.location.href = data.authorization_url;
       } else {
         throw new Error("No authorization_url in response");
