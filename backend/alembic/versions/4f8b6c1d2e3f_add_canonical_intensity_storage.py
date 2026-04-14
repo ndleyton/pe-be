@@ -102,7 +102,9 @@ def _canonicalize_intensity(
     unit_key_by_id: dict[int, str],
 ) -> tuple[Decimal | None, int]:
     decimal_intensity = (
-        None if intensity is None else Decimal(str(intensity)).quantize(FIVE_DECIMAL_PLACES)
+        None
+        if intensity is None
+        else Decimal(str(intensity)).quantize(FIVE_DECIMAL_PLACES)
     )
     unit_key = unit_key_by_id.get(intensity_unit_id)
     if unit_key is None:
@@ -115,7 +117,9 @@ def _canonicalize_intensity(
         return None, canonical_unit_id
 
     return (
-        (decimal_intensity * factor).quantize(FIVE_DECIMAL_PLACES, rounding=ROUND_HALF_UP),
+        (decimal_intensity * factor).quantize(
+            FIVE_DECIMAL_PLACES, rounding=ROUND_HALF_UP
+        ),
         canonical_unit_id,
     )
 
@@ -128,7 +132,9 @@ def _add_canonical_columns(table_name: str) -> None:
     if "canonical_intensity" not in columns:
         op.add_column(
             table_name,
-            sa.Column("canonical_intensity", sa.Numeric(precision=10, scale=5), nullable=True),
+            sa.Column(
+                "canonical_intensity", sa.Numeric(precision=10, scale=5), nullable=True
+            ),
         )
 
     if "canonical_intensity_unit_id" not in columns:
@@ -160,7 +166,10 @@ def _backfill_table(table_name: str) -> None:
         return
 
     columns = _column_names(inspector, table_name)
-    if "canonical_intensity" not in columns or "canonical_intensity_unit_id" not in columns:
+    if (
+        "canonical_intensity" not in columns
+        or "canonical_intensity_unit_id" not in columns
+    ):
         return
 
     unit_id_by_key, unit_key_by_id = _load_unit_maps(connection)

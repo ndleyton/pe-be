@@ -18,11 +18,11 @@ from src.routines.schemas import (
 
 def _routine_detail_query(*, populate_existing: bool = False):
     query = select(Routine).options(
-        selectinload(Routine.exercise_templates)
-        .selectinload(ExerciseTemplate.set_templates)
-        .selectinload(SetTemplate.intensity_unit),
-        selectinload(Routine.exercise_templates).selectinload(
-            ExerciseTemplate.exercise_type
+        selectinload(Routine.exercise_templates).options(
+            selectinload(ExerciseTemplate.set_templates).selectinload(
+                SetTemplate.intensity_unit
+            ),
+            selectinload(ExerciseTemplate.exercise_type),
         ),
         selectinload(Routine.workout_type),
     )

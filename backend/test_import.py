@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
+
     env_file = backend_dir / ".env"
     if env_file.exists():
         load_dotenv(env_file)

@@ -170,8 +170,24 @@ export const useGuestStore = create<GuestStore>()(
       hydrated: false,
 
       addWorkout: (workout) => {
-        const id = generateRandomId();
+        const state = get();
         const now = getCurrentUTCTimestamp();
+        const nowMs = new Date(now).getTime();
+
+        // Idempotency check: prevent duplicate workouts with same name/type within 2 seconds
+        const recentWorkout = state.workouts.find((w) => {
+          if (w.name !== workout.name || w.workout_type_id !== workout.workout_type_id) {
+            return false;
+          }
+          const createdAtMs = new Date(w.created_at).getTime();
+          return nowMs - createdAtMs < 2000;
+        });
+
+        if (recentWorkout) {
+          return recentWorkout.id;
+        }
+
+        const id = generateRandomId();
         const newWorkout: GuestWorkout = {
           ...workout,
           id,
@@ -378,8 +394,16 @@ export const useGuestStore = create<GuestStore>()(
         }));
       },
       createExercisesFromRoutine: (routine, workoutId) => {
+        const state = get();
+        const workout = state.workouts.find((w) => w.id === workoutId);
+
+        // If workout already has exercises, don't duplicate them
+        if (workout && workout.exercises.length > 0) {
+          return workout.exercises.map((ex) => ex.id);
+        }
+
         const exerciseIds: string[] = [];
-        const { addExercise, addExerciseSet } = get();
+        const { addExercise, addExerciseSet } = state;
 
         routine.exercise_templates.forEach((routineExercise) => {
           const exerciseType = routineExercise.exercise_type;
@@ -518,7 +542,6 @@ export const useGuestStore = create<GuestStore>()(
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
         routines: state.routines,
-        hasAttemptedSync: state.hasAttemptedSync,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)

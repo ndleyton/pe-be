@@ -126,6 +126,26 @@ class RoutineService:
         if routine is None:
             raise ValueError("Routine not found or not accessible")
 
+        # Basic rate-limiting/idempotency: check if user just started this routine
+        # (within the last 10 seconds)
+        from datetime import timedelta
+
+        recent_stmt = (
+            select(Workout)
+            .where(
+                Workout.owner_id == user_id,
+                Workout.start_time > datetime.now(timezone.utc) - timedelta(seconds=10),
+            )
+            .order_by(Workout.start_time.desc())
+            .limit(1)
+        )
+        recent_workout = (await session.execute(recent_stmt)).scalar_one_or_none()
+        # Note: We can't easily check if it was from THIS routine without a back-ref,
+        # but checking for ANY workout started in the last 10s is a safe enough heuristic
+        # for preventing accidental double-clicks/useEffect runs.
+        if recent_workout and recent_workout.name.startswith(routine.name):
+            return recent_workout
+
         intensity_unit_ids = {
             set_template.intensity_unit_id
             for exercise_template in routine.exercise_templates

@@ -146,9 +146,7 @@ def downgrade() -> None:
         op.execute("DROP INDEX IF EXISTS ix_exercise_sets_exercise_id_active_id")
 
     if "exercises" in table_names:
-        op.execute(
-            "DROP INDEX IF EXISTS ix_exercises_exercise_type_id_created_at_desc"
-        )
+        op.execute("DROP INDEX IF EXISTS ix_exercises_exercise_type_id_created_at_desc")
         op.execute("DROP INDEX IF EXISTS ix_exercises_workout_id_active_id")
 
     if "exercise_types" in table_names:
