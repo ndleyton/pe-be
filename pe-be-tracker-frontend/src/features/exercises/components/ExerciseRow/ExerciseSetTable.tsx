@@ -138,11 +138,10 @@ export const ExerciseSetTable = ({
           return (
             <div
               key={set.id}
-              className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${
-                set.done
-                  ? "bg-done/10 border-done/20 shadow-inner"
-                  : "bg-muted/50 border-transparent shadow-sm"
-              }`}
+              className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
+                ? "bg-done/10 border-done/20 shadow-inner"
+                : "bg-muted/50 border-transparent shadow-sm"
+                }`}
             >
               <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
                 <span className="text-muted-foreground text-xs font-black">
@@ -315,19 +314,17 @@ export const ExerciseSetTable = ({
                 <Button
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
-                  className={`group h-10 w-10 rounded-xl transition-all duration-300 ${
-                    set.done
-                      ? "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
-                      : "border-foreground/50 text-done/60 hover:border-done border-2 bg-done/5 hover:bg-done/40"
-                  }`}
+                  className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
+                    ? "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
+                    : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
+                    }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
                   <Check
-                    className={`h-6 w-6 transition-all duration-300 ${
-                      set.done
-                        ? "scale-110 opacity-100"
-                        : "scale-90 opacity-50 group-hover:opacity-100"
-                    }`}
+                    className={`h-6 w-6 transition-all duration-300 ${set.done
+                      ? "scale-110 opacity-100"
+                      : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
+                      }`}
                   />
                 </Button>
               </div>
@@ -367,11 +364,10 @@ export const ExerciseSetTable = ({
                             aria-pressed={setValueMode === "reps"}
                             onClick={() => onSetValueModeChange(set.id, "reps")}
                             disabled={set.done}
-                            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-                              setValueMode === "reps"
-                                ? "bg-background text-foreground shadow"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${setValueMode === "reps"
+                              ? "bg-background text-foreground shadow"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
                           >
                             Reps
                           </button>
@@ -380,11 +376,10 @@ export const ExerciseSetTable = ({
                             aria-pressed={setValueMode === "time"}
                             onClick={() => onSetValueModeChange(set.id, "time")}
                             disabled={set.done}
-                            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-                              setValueMode === "time"
-                                ? "bg-background text-foreground shadow"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${setValueMode === "time"
+                              ? "bg-background text-foreground shadow"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
                           >
                             Time
                           </button>
@@ -472,7 +467,7 @@ export const ExerciseSetTable = ({
 
       <Button
         variant="glass"
-        className="mt-6 w-full rounded-xl py-6 shadow-xl transition-all hover:scale-[1.01]"
+        className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
         data-testid="add-set-button"
         disabled={isUnsavedExercise}
         onClick={onAddSet}

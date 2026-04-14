@@ -98,6 +98,10 @@ const WeekTracking = memo(
               <h2 className="text-lg font-black tracking-tight text-foreground/80 dark:text-foreground/85">
                 {streakHeading}
               </h2>
+              <div className="relative mt-1 h-1 w-8 dark:h-0.5">
+                <div className="absolute inset-0 rounded-full bg-orange-400/40 blur-[4px] dark:bg-warning/30 dark:blur-[3px]" />
+                <div className="relative h-1 w-8 rounded-full bg-orange-400/70 dark:h-0.5 dark:bg-warning/45" />
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
@@ -114,9 +118,8 @@ const WeekTracking = memo(
             {last7Days.map((date) => {
               const hasWorkout = hasWorkoutOnDate(date);
               const isToday = date.toDateString() === new Date().toDateString();
-              const statusLabel = `${date.toLocaleDateString()}: ${
-                hasWorkout ? "Workout completed" : "No workout logged"
-              }`;
+              const statusLabel = `${date.toLocaleDateString()}: ${hasWorkout ? "Workout completed" : "No workout logged"
+                }`;
 
               return (
                 <div
@@ -145,7 +148,7 @@ const WeekTracking = memo(
                     aria-label={statusLabel}
                   >
                     {hasWorkout ? (
-                      <Flame className="h-4 w-4 fill-primary sm:h-4.5 sm:w-4.5" />
+                      <Flame className="h-4 w-4 fill-primary sm:h-[18px] sm:w-[18px]" />
                     ) : (
                       <span className="font-bold">{date.getDate()}</span>
                     )}

@@ -16,11 +16,15 @@ export const WeekTrackingSkeleton = ({
   >
     <div className="relative z-10 space-y-5">
       <div className="flex items-center justify-between">
-        <div className="space-y-1.5 text-left">
+        <div className="space-y-0.5 text-left">
           <Skeleton className="h-2 w-16 rounded-full bg-muted/40" />
           <Skeleton className="h-5 w-28 rounded-full bg-foreground/10" />
+          <div className="relative mt-1 h-1 w-8 dark:h-0.5">
+            <div className="absolute inset-0 rounded-full bg-orange-400/30 blur-[4px] dark:bg-warning/20 dark:blur-[3px]" />
+            <Skeleton className="relative h-1 w-8 rounded-full bg-orange-400/60 dark:h-0.5 dark:bg-warning/35" />
+          </div>
         </div>
-        <Skeleton className="h-6 w-16 rounded-full bg-primary/20" />
+        <Skeleton className="h-6 w-16 rounded-full bg-primary/20 backdrop-blur-sm" />
       </div>
 
       <div className="flex justify-between gap-0.5">

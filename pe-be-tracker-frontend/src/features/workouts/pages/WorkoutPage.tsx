@@ -732,7 +732,7 @@ const WorkoutPage = () => {
             onMouseEnter={warmExerciseTypeModal}
             onTouchStart={warmExerciseTypeModal}
             onFocus={warmExerciseTypeModal}
-            className="h-14 rounded-full bg-primary/20 border border-primary/30 hover:bg-primary hover:text-primary-foreground px-8 py-2 backdrop-blur-md transition-all duration-300 font-bold"
+            className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
             disabled={isAuthenticated && addExerciseMutation.isPending}
           >
             {isAuthenticated && addExerciseMutation.isPending
