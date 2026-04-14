@@ -94,7 +94,13 @@ export async function syncGuestDataToServer(
       }))
     };
 
-    const { data: result } = await api.post(endpoints.sync, payload);
+    const idempotencyKey = crypto.randomUUID?.() || `sync-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const { data: result } = await api.post(endpoints.sync, payload, {
+      headers: {
+        "X-Idempotency-Key": idempotencyKey,
+      },
+    });
 
     if (result.success) {
       // Clear guest data after successful sync

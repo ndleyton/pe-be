@@ -29,27 +29,22 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
   );
   const hasStartedRef = useRef(false);
   const redirectTimeoutRef = useRef<number | null>(null);
-  const initialGuestWorkoutCountRef = useRef<number | null>(null);
   const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
+
   const [syncStatus, setSyncStatus] = useState<PostLoginStatus>("processing");
   const [errorMessage, setErrorMessage] = useState("");
+  const [guestCount, setGuestCount] = useState(0);
 
   useEffect(() => {
-    if (!hydrated || initialGuestWorkoutCountRef.current !== null) {
+    if (!hydrated || hasStartedRef.current) {
       return;
     }
 
-    initialGuestWorkoutCountRef.current = workouts.length;
-  }, [hydrated, workouts.length]);
-
-  useEffect(() => {
-    if (!hydrated || initialGuestWorkoutCountRef.current === null) {
-      return;
+    // Once hydrated, if we have workouts, show them in the UI state
+    if (guestCount === 0 && workouts.length > 0) {
+      setGuestCount(workouts.length);
     }
 
-    if (hasStartedRef.current) {
-      return;
-    }
     hasStartedRef.current = true;
 
     const finalizeLogin = async () => {
@@ -57,7 +52,6 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
         setSyncStatus("processing");
         const postLoginDestination =
           consumePostLoginDestination() ?? NAV_PATHS.WORKOUTS;
-        const initialGuestWorkoutCount = initialGuestWorkoutCountRef.current ?? 0;
 
         await refreshAuth();
         const { user } = useAuthStore.getState();
@@ -68,7 +62,10 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
           );
         }
 
-        if (initialGuestWorkoutCount > 0) {
+        // Check workouts again here to be absolutely sure we use latest state
+        const currentWorkouts = useGuestStore.getState().workouts;
+        if (currentWorkouts.length > 0) {
+          setGuestCount(currentWorkouts.length);
           setSyncStatus("syncing");
           const syncSucceeded = await syncWithServer();
           if (!syncSucceeded) {
@@ -100,11 +97,11 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
         window.clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [hydrated, navigate, refreshAuth, syncWithServer]);
+  }, [hydrated, navigate, refreshAuth, syncWithServer, workouts.length, guestCount]);
 
   return {
     errorMessage,
-    initialGuestWorkoutCount: initialGuestWorkoutCountRef.current ?? 0,
+    initialGuestWorkoutCount: guestCount,
     syncStatus,
   };
 };

@@ -518,7 +518,6 @@ export const useGuestStore = create<GuestStore>()(
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
         routines: state.routines,
-        hasAttemptedSync: state.hasAttemptedSync,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
