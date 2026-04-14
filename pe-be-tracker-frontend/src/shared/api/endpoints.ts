@@ -76,6 +76,8 @@ export const endpoints = {
   chat: "/chat",
   chatAttachments: "/chat/attachments",
   chatAttachmentById: (id: string | number) => `/chat/attachments/${id}`,
+  // Bulk sync
+  sync: "/sync/",
 } as const;
 
 // Type helpers for endpoints

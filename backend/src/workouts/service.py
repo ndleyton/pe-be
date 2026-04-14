@@ -128,6 +128,126 @@ class WorkoutService:
         return await create_workout(session, workout_data, user_id)
 
     @staticmethod
+    async def sync_guest_data(
+        session: AsyncSession,
+        payload: "src.workouts.schemas.GuestSyncPayload",
+        user_id: int,
+    ) -> dict:
+        """Atomically sync multiple workouts and their dependencies from a guest payload."""
+
+        # 1. Map workout types
+        workout_type_map = {}
+        # Preload existing workout types
+        all_wt = await get_workout_types(session)
+        wt_by_name = {wt.name.lower(): wt.id for wt in all_wt}
+        wt_ids = {wt.id for wt in all_wt}
+
+        for gwt in payload.workout_types:
+            # If guest ID is already a numeric ID from seed data
+            if gwt.id.isdigit() and int(gwt.id) in wt_ids:
+                workout_type_map[gwt.id] = int(gwt.id)
+                continue
+
+            # Try to match by name
+            if gwt.name.lower() in wt_by_name:
+                workout_type_map[gwt.id] = wt_by_name[gwt.name.lower()]
+            else:
+                # Create new
+                new_wt = await create_workout_type(
+                    session,
+                    WorkoutTypeCreate(
+                        name=gwt.name,
+                        description=gwt.description or "Synced guest type",
+                    ),
+                )
+                workout_type_map[gwt.id] = new_wt.id
+                wt_by_name[gwt.name.lower()] = new_wt.id
+
+        # 2. Map exercise types
+        exercise_type_map = {}
+        for get in payload.exercise_types:
+            # Try to find by name among ALL released or owned types
+            existing = await get_exercise_types(
+                session, name=get.name, limit=1, user_id=user_id
+            )
+            if existing.data:
+                exercise_type_map[get.id] = existing.data[0].id
+            else:
+                new_et = await create_exercise_type(
+                    session,
+                    ExerciseTypeCreate(
+                        name=get.name,
+                        description=get.description or "Synced guest type",
+                        default_intensity_unit=get.default_intensity_unit,
+                    ),
+                    owner_id=user_id,
+                )
+                exercise_type_map[get.id] = new_et.id
+
+        # 3. Create workouts, exercises, and sets
+        synced_workouts = 0
+        synced_exercises = 0
+        synced_sets = 0
+
+        for gw in payload.workouts:
+            wt_id = workout_type_map.get(gw.workout_type_id)
+            if not wt_id:
+                # fallback to Strength Training
+                wt_id = DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID
+
+            w_create = WorkoutCreate(
+                name=gw.name,
+                notes=gw.notes,
+                start_time=gw.start_time,
+                end_time=gw.end_time,
+                workout_type_id=wt_id,
+            )
+            workout = await create_workout(session, w_create, user_id)
+            synced_workouts += 1
+
+            for ge in gw.exercises:
+                et_id = exercise_type_map.get(ge.exercise_type_id)
+                if not et_id:
+                    continue
+
+                e_create = ExerciseCreate(
+                    exercise_type_id=et_id,
+                    workout_id=workout.id,
+                    timestamp=ge.timestamp or gw.start_time,
+                    notes=ge.notes,
+                )
+                exercise = await create_exercise(session, e_create, user_id)
+                synced_exercises += 1
+
+                for gs in ge.exercise_sets:
+                    s_create = ExerciseSetCreate(
+                        reps=gs.reps,
+                        duration_seconds=gs.duration_seconds,
+                        intensity=gs.intensity,
+                        rpe=gs.rpe,
+                        intensity_unit_id=gs.intensity_unit_id,
+                        rest_time_seconds=gs.rest_time_seconds,
+                        exercise_id=exercise.id,
+                        done=gs.done,
+                        notes=gs.notes,
+                    )
+                    await create_exercise_set(session, s_create)
+                    synced_sets += 1
+
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+        return {
+            "synced_workouts": synced_workouts,
+            "synced_exercises": synced_exercises,
+            "synced_sets": synced_sets,
+            "synced_routines": 0,  # Placeholder for now
+        }
+
+    @staticmethod
     async def update_workout_data(
         session: AsyncSession,
         workout_id: int,

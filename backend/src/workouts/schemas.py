@@ -155,3 +155,52 @@ class PaginatedWorkouts(BaseModel):
     next_cursor: Optional[int] = Field(
         None, description="ID to use as cursor for next page"
     )
+
+
+# --- Guest Sync Schemas ---
+
+
+class GuestExerciseTypeSync(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    default_intensity_unit: int
+
+
+class GuestWorkoutTypeSync(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+
+
+class GuestSetSync(BaseModel):
+    reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    intensity: Optional[Decimal] = None
+    rpe: Optional[Decimal] = None
+    intensity_unit_id: int
+    rest_time_seconds: Optional[int] = None
+    done: bool = False
+    notes: Optional[str] = None
+
+
+class GuestExerciseSync(BaseModel):
+    exercise_type_id: str
+    notes: Optional[str] = None
+    timestamp: Optional[datetime] = None
+    exercise_sets: List[GuestSetSync]
+
+
+class GuestWorkoutSync(BaseModel):
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    workout_type_id: str
+    exercises: List[GuestExerciseSync]
+
+
+class GuestSyncPayload(BaseModel):
+    workouts: List[GuestWorkoutSync]
+    exercise_types: List[GuestExerciseTypeSync]
+    workout_types: List[GuestWorkoutTypeSync]

@@ -34,7 +34,7 @@ describe("syncGuestDataToServer", () => {
   });
 
   it("returns success when no guest data to sync", async () => {
-    const emptyGuestData: GuestData = makeGuestData();
+    const emptyGuestData: GuestData = makeGuestData({ workouts: [] });
 
     const result = await syncGuestDataToServer(
       emptyGuestData,
@@ -51,39 +51,29 @@ describe("syncGuestDataToServer", () => {
     expect(mockClearGuestData).not.toHaveBeenCalled();
   });
 
-  it("syncs workout data successfully", async () => {
+  it("syncs all data in a single bulk request successfully", async () => {
     const workoutType = makeGuestWorkoutType({
       id: "guest-wt-1",
       name: "Strength Training",
-      description: "Traditional strength training",
     });
     const exerciseType = makeGuestExerciseType({
       id: "guest-et-1",
       name: "Push-ups",
-      description: "Upper body exercise",
       default_intensity_unit: 1,
-      times_used: 1,
     });
     const exercise = makeGuestExercise({
       id: "guest-exercise-1",
       timestamp: "2023-01-01T10:30:00Z",
-      notes: "Exercise notes",
       exercise_type: exerciseType,
       exercise_type_id: exerciseType.id,
       workout_id: "guest-workout-1",
-      created_at: "2023-01-01T10:00:00Z",
-      updated_at: "2023-01-01T10:00:00Z",
       exercise_sets: [
         makeGuestExerciseSet({
           id: "guest-set-1",
           reps: 10,
-          intensity: null,
           intensity_unit_id: 1,
           exercise_id: "guest-exercise-1",
-          rest_time_seconds: 60,
           done: true,
-          created_at: "2023-01-01T10:30:00Z",
-          updated_at: "2023-01-01T10:30:00Z",
         }),
       ],
     });
@@ -92,29 +82,26 @@ describe("syncGuestDataToServer", () => {
         makeGuestWorkout({
           id: "guest-workout-1",
           name: "Test Workout",
-          notes: "Test notes",
           start_time: "2023-01-01T10:00:00Z",
-          end_time: "2023-01-01T11:00:00Z",
           workout_type: workoutType,
           workout_type_id: workoutType.id,
           exercises: [exercise],
-          created_at: "2023-01-01T10:00:00Z",
-          updated_at: "2023-01-01T10:00:00Z",
         }),
       ],
+      exerciseTypes: [exerciseType],
+      workoutTypes: [workoutType]
     });
 
-    // Mock API responses
-    (api.get as any)
-      .mockResolvedValueOnce({ data: { data: [] } }) // exercise types
-      .mockResolvedValueOnce({ data: [] }); // workout types
-
-    (api.post as any)
-      .mockResolvedValueOnce({ data: { id: 1, name: "Push-ups" } }) // create exercise type
-      .mockResolvedValueOnce({ data: { id: 1, name: "Strength Training" } }) // create workout type
-      .mockResolvedValueOnce({ data: { id: 1, name: "Test Workout" } }) // create workout
-      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 1 } }) // create exercise
-      .mockResolvedValueOnce({ data: { id: 1, exercise_id: 1 } }); // create exercise set
+    // Mock successful bulk sync response
+    (api.post as any).mockResolvedValueOnce({
+      data: {
+        success: true,
+        syncedWorkouts: 1,
+        syncedExercises: 1,
+        syncedSets: 1,
+        syncedRoutines: 0
+      }
+    });
 
     const result = await syncGuestDataToServer(
       mockGuestData,
@@ -131,210 +118,67 @@ describe("syncGuestDataToServer", () => {
 
     expect(mockClearGuestData).toHaveBeenCalled();
 
-    // Verify API calls
-    expect(api.post).toHaveBeenCalledWith(endpoints.exerciseTypes, {
-      name: "Push-ups",
-      description: "Upper body exercise",
-      default_intensity_unit: 1,
-    });
-
-    expect(api.post).toHaveBeenCalledWith(endpoints.workoutTypes, {
-      name: "Strength Training",
-      description: "Traditional strength training",
-    });
-
-    expect(api.post).toHaveBeenCalledWith("/workouts/", {
-      name: "Test Workout",
-      notes: "Test notes",
-      start_time: "2023-01-01T10:00:00Z",
-      end_time: "2023-01-01T11:00:00Z",
-      workout_type_id: 1,
-    });
+    // Verify correct bulk payload was sent
+    expect(api.post).toHaveBeenCalledWith(endpoints.sync, expect.objectContaining({
+      workouts: expect.arrayContaining([
+        expect.objectContaining({
+          id: "guest-workout-1",
+          exercises: expect.arrayContaining([
+            expect.objectContaining({
+              id: "guest-exercise-1",
+              exercise_sets: expect.arrayContaining([
+                expect.objectContaining({ id: "guest-set-1" })
+              ])
+            })
+          ])
+        })
+      ]),
+      exerciseTypes: expect.arrayContaining([
+        expect.objectContaining({ id: "guest-et-1" })
+      ]),
+      workoutTypes: expect.arrayContaining([
+        expect.objectContaining({ id: "guest-wt-1" })
+      ])
+    }));
   });
 
-  it("handles API errors gracefully", async () => {
-    const workoutType = makeGuestWorkoutType({
-      id: "guest-wt-1",
-      name: "Strength Training",
-      description: "Traditional strength training",
-    });
+  it("handles bulk sync failure gracefully", async () => {
     const mockGuestData: GuestData = makeGuestData({
-      workouts: [
-        makeGuestWorkout({
-          id: "guest-workout-1",
-          name: "Test Workout",
-          start_time: "2023-01-01T10:00:00Z",
-          workout_type: workoutType,
-          workout_type_id: workoutType.id,
-          created_at: "2023-01-01T10:00:00Z",
-          updated_at: "2023-01-01T10:00:00Z",
-        }),
-      ],
+        workouts: [makeGuestWorkout({ id: "w1" })]
     });
 
     // Mock API to throw an error
-    (api.get as any).mockRejectedValue(new Error("Network error"));
+    (api.post as any).mockRejectedValue(new Error("Network error"));
 
     const result = await syncGuestDataToServer(
       mockGuestData,
       mockClearGuestData,
     );
 
-    expect(result).toEqual({
-      success: false,
-      error: "Network error",
-      syncedWorkouts: 0,
-      syncedExercises: 0,
-      syncedSets: 0,
-      syncedRoutines: 0,
-    });
-
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Network error");
     expect(mockClearGuestData).not.toHaveBeenCalled();
   });
 
-  it("finds existing exercise and workout types instead of creating duplicates", async () => {
-    const workoutType = makeGuestWorkoutType({
-      id: "guest-wt-1",
-      name: "Strength Training",
-      description: "Traditional strength training",
-    });
-    const exerciseType = makeGuestExerciseType({
-      id: "guest-et-1",
-      name: "push-ups",
-      description: "Upper body exercise",
-      default_intensity_unit: 1,
-      times_used: 1,
-    });
+  it("handles successful response with success=false", async () => {
     const mockGuestData: GuestData = makeGuestData({
-      workouts: [
-        makeGuestWorkout({
-          id: "guest-workout-1",
-          name: "Test Workout",
-          start_time: "2023-01-01T10:00:00Z",
-          workout_type: workoutType,
-          workout_type_id: workoutType.id,
-          exercises: [
-            makeGuestExercise({
-              id: "guest-exercise-1",
-              timestamp: "2023-01-01T10:30:00Z",
-              exercise_type: exerciseType,
-              exercise_type_id: exerciseType.id,
-              workout_id: "guest-workout-1",
-              created_at: "2023-01-01T10:00:00Z",
-              updated_at: "2023-01-01T10:00:00Z",
-              exercise_sets: [],
-            }),
-          ],
-          created_at: "2023-01-01T10:00:00Z",
-          updated_at: "2023-01-01T10:00:00Z",
-        }),
-      ],
+        workouts: [makeGuestWorkout({ id: "w1" })]
     });
 
-    // Mock API responses with existing types
-    (api.get as any)
-      .mockResolvedValueOnce({
+    (api.post as any).mockResolvedValueOnce({
         data: {
-          data: [{ id: 5, name: "Push-ups", description: "Existing push-ups" }],
-        },
-      }) // existing exercise types
-      .mockResolvedValueOnce({
-        data: [
-          { id: 3, name: "Strength Training", description: "Existing type" },
-        ],
-      }); // existing workout types
-
-    (api.post as any)
-      .mockResolvedValueOnce({ data: { id: 1, name: "Test Workout" } }) // create workout
-      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 5 } }); // create exercise
+          success: false,
+          error: "Database transaction failed"
+        }
+      });
 
     const result = await syncGuestDataToServer(
       mockGuestData,
       mockClearGuestData,
     );
 
-    expect(result.success).toBe(true);
-
-    // Should not have called POST for exercise-types or workout-types since they already exist
-    expect(api.post).toHaveBeenCalledWith("/workouts/", {
-      name: "Test Workout",
-      notes: null,
-      start_time: "2023-01-01T10:00:00Z",
-      end_time: null,
-      workout_type_id: 3, // Uses existing workout type ID
-    });
-
-    expect(api.post).toHaveBeenCalledWith("/exercises/", {
-      exercise_type_id: 5, // Uses existing exercise type ID
-      workout_id: 1,
-      timestamp: "2023-01-01T10:30:00Z",
-      notes: null,
-    });
-  });
-
-  it("returns failure and keeps guest data when a nested set sync fails", async () => {
-    const workoutType = makeGuestWorkoutType({
-      id: "guest-wt-1",
-      name: "Strength Training",
-    });
-    const exerciseType = makeGuestExerciseType({
-      id: "guest-et-1",
-      name: "Push-ups",
-      default_intensity_unit: 1,
-    });
-    const mockGuestData: GuestData = makeGuestData({
-      workouts: [
-        makeGuestWorkout({
-          id: "guest-workout-1",
-          name: "Test Workout",
-          start_time: "2023-01-01T10:00:00Z",
-          workout_type: workoutType,
-          workout_type_id: workoutType.id,
-          exercises: [
-            makeGuestExercise({
-              id: "guest-exercise-1",
-              exercise_type: exerciseType,
-              exercise_type_id: exerciseType.id,
-              workout_id: "guest-workout-1",
-              exercise_sets: [
-                makeGuestExerciseSet({
-                  id: "guest-set-1",
-                  exercise_id: "guest-exercise-1",
-                  intensity_unit_id: 1,
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
-
-    (api.get as any)
-      .mockResolvedValueOnce({ data: { data: [] } })
-      .mockResolvedValueOnce({ data: [] });
-
-    (api.post as any)
-      .mockResolvedValueOnce({ data: { id: 1, name: "Push-ups" } })
-      .mockResolvedValueOnce({ data: { id: 1, name: "Strength Training" } })
-      .mockResolvedValueOnce({ data: { id: 1, name: "Test Workout" } })
-      .mockResolvedValueOnce({ data: { id: 1, exercise_type_id: 1 } })
-      .mockRejectedValueOnce(new Error("Set sync failed"));
-
-    const result = await syncGuestDataToServer(
-      mockGuestData,
-      mockClearGuestData,
-    );
-
-    expect(result).toEqual({
-      success: false,
-      error:
-        "Some of your guest data could not be synced. Your local data was kept so you can retry.",
-      syncedWorkouts: 1,
-      syncedExercises: 1,
-      syncedSets: 0,
-      syncedRoutines: 0,
-    });
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Database transaction failed");
     expect(mockClearGuestData).not.toHaveBeenCalled();
   });
-
 });
