@@ -19,7 +19,6 @@ from src.workouts.schemas import (
     WorkoutTypeCreate,
     AddExerciseRequest,
     PaginatedWorkouts,
-    GuestSyncPayload,
 )
 from src.workouts.service import (
     WorkoutService,
@@ -64,16 +63,6 @@ async def create_workout(
 ):
     """Create a new workout"""
     return await WorkoutService.create_new_workout(session, workout_in, user.id)
-
-
-@router.post("/sync", status_code=status.HTTP_201_CREATED)
-async def sync_guest_workouts(
-    payload: GuestSyncPayload,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-):
-    """Bulk sync guest workouts and their dependencies"""
-    return await WorkoutService.sync_guest_data(session, payload, user.id)
 
 
 # ----- Workout types sub-router -----
