@@ -253,11 +253,14 @@ class SyncService:
             await session.rollback()
             if idempotency_key:
                 stmt = select(SyncLog).where(
-                    SyncLog.user_id == user_id, SyncLog.idempotency_key == idempotency_key
+                    SyncLog.user_id == user_id,
+                    SyncLog.idempotency_key == idempotency_key,
                 )
                 existing_log = (await session.execute(stmt)).scalar_one_or_none()
                 if existing_log:
-                    logger.info("Sync race: returning persistent winner for idempotency key")
+                    logger.info(
+                        "Sync race: returning persistent winner for idempotency key"
+                    )
                     return SyncResult(
                         success=existing_log.success,
                         syncedWorkouts=existing_log.synced_workouts,
@@ -266,7 +269,9 @@ class SyncService:
                         syncedRoutines=existing_log.synced_routines,
                     )
             # If it's not the idempotency key, re-raise as a generic error
-            logger.exception("Bulk sync hit integrity error not related to idempotency key")
+            logger.exception(
+                "Bulk sync hit integrity error not related to idempotency key"
+            )
             return SyncResult(success=False, error="Integrity error during sync commit")
         except Exception as e:
             logger.exception("Bulk sync failed")
