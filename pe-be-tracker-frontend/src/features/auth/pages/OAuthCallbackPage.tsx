@@ -5,6 +5,7 @@ import { HomeLogo } from "@/shared/components/layout";
 import { useAuthStore, useGuestStore } from "@/stores";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 import { useShallow } from "zustand/react/shallow";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
 const PostLoginPage = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const PostLoginPage = () => {
   const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
   const initialGuestWorkoutCountRef = useRef<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<
-    "processing" | "syncing" | "error"
+    "processing" | "syncing" | "complete" | "error"
   >("processing");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -67,6 +68,9 @@ const PostLoginPage = () => {
           }
         }
 
+        setSyncStatus("complete");
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
         navigate(postLoginDestination, { replace: true });
       } catch (error) {
         console.error("Post-login completion error:", error);
@@ -92,6 +96,21 @@ const PostLoginPage = () => {
 
   const getStatusContent = () => {
     switch (syncStatus) {
+      case "processing":
+        return {
+          icon: (
+            <div
+              className="space-y-3"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className="loading loading-spinner loading-lg mx-auto"></div>
+            </div>
+          ),
+          title: "Signing you in...",
+          description: "Processing your authentication",
+        };
       case "syncing":
         return {
           icon: (
@@ -107,9 +126,17 @@ const PostLoginPage = () => {
           title: "Syncing your data...",
           description: `Uploading ${initialGuestWorkoutCountRef.current ?? 0} workout${initialGuestWorkoutCountRef.current === 1 ? "" : "s"} to your account`,
         };
+      case "complete":
+        return {
+          icon: <CheckCircle className="mx-auto h-12 w-12 text-primary" />,
+          title: "Welcome back!",
+          description: initialGuestWorkoutCountRef.current && initialGuestWorkoutCountRef.current > 0
+            ? "Your data has been synced successfully"
+            : "Successfully signed in",
+        };
       case "error":
         return {
-          icon: <div className="text-destructive text-4xl">⚠</div>,
+          icon: <AlertTriangle className="text-destructive mx-auto h-12 w-12" />,
           title: "Authentication failed",
           description: errorMessage,
         };
@@ -121,10 +148,6 @@ const PostLoginPage = () => {
         };
     }
   };
-
-  if (syncStatus === "processing") {
-    return null;
-  }
 
   const statusContent = getStatusContent();
 
