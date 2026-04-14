@@ -78,7 +78,7 @@ const WeekTracking = memo(
 
     const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
     const streakHeading =
-      currentStreak === 0 ? "Let's start a streak!" : "Great work!";
+      currentStreak === 0 ? "Start Your Streak!" : "Great work!";
 
     return (
       <div
