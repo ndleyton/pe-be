@@ -235,6 +235,49 @@ async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
     assert workout is None
 
 
+async def test_sync_guest_data_skips_duplicate_workouts(db_session: AsyncSession):
+    await _seed_intensity_unit(db_session)
+    user = await _seed_user(db_session, email="skip@example.com")
+    user_id = user.id
+    start_time = datetime.now(timezone.utc)
+
+    # Pre-create a workout type
+    wt = WorkoutType(name="Test Type", description="Test")
+    db_session.add(wt)
+    await db_session.flush()
+
+    # Pre-create a workout
+    existing = Workout(
+        name="Existing", start_time=start_time, workout_type_id=wt.id, owner_id=user_id
+    )
+    db_session.add(existing)
+    await db_session.commit()
+
+    # Payload with same start_time
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="g1",
+                name="New Name Same Time",
+                start_time=start_time,
+                workout_type_id="wt1",
+                exercises=[],
+            )
+        ],
+        exerciseTypes=[],
+        workoutTypes=[GuestWorkoutType(id="wt1", name="Test Type")],  # Matches by name
+    )
+
+    result = await SyncService.sync_guest_data(db_session, payload, user_id)
+    assert result.success is True
+    assert result.syncedWorkouts == 0  # Should have been skipped
+
+    # Verify name remains the old one
+    stmt = select(Workout).where(Workout.owner_id == user_id)
+    workout = (await db_session.execute(stmt)).scalar_one()
+    assert workout.name == "Existing"
+
+
 async def test_sync_guest_data_is_idempotent(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
     user = await _seed_user(db_session, email="idempotency@example.com")
