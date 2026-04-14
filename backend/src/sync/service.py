@@ -23,6 +23,7 @@ class SyncService:
         synced_workouts = 0
         synced_exercises = 0
         synced_sets = 0
+        # TODO: Implement routine synchronization
         synced_routines = 0
 
         # 1. Map Exercise Types
