@@ -154,9 +154,5 @@ class SyncService:
             await session.rollback()
             return SyncResult(
                 success=False,
-                syncedWorkouts=0,
-                syncedExercises=0,
-                syncedSets=0,
-                syncedRoutines=0,
                 error=str(e),
             )

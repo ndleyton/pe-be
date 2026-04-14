@@ -86,8 +86,8 @@ class GuestSyncPayload(BaseModel):
 
 class SyncResult(BaseModel):
     success: bool
-    syncedWorkouts: int
-    syncedExercises: int
-    syncedSets: int
-    syncedRoutines: int
+    syncedWorkouts: Optional[int] = None
+    syncedExercises: Optional[int] = None
+    syncedSets: Optional[int] = None
+    syncedRoutines: Optional[int] = None
     error: Optional[str] = None
