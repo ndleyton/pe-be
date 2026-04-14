@@ -28,6 +28,7 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByText("Weekly Activity")).toBeInTheDocument();
+    expect(screen.getByText("Great work!")).toBeInTheDocument();
     expect(screen.getByTestId("week-tracking")).toHaveTextContent(/1 Day/);
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
     expect(screen.getByLabelText(/Workout completed/i)).toBeInTheDocument();
@@ -56,6 +57,14 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByTestId("week-tracking")).toHaveTextContent(/2 Days/);
+    expect(screen.getByText("Great work!")).toBeInTheDocument();
+  });
+
+  it("uses an encouragement message when no streak is active", () => {
+    render(<WeekTracking workouts={[]} />);
+
+    expect(screen.getByText("Let's start a streak!")).toBeInTheDocument();
+    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/0 Days/);
   });
 
   it("keeps the tracker neutral while workout data is loading", () => {

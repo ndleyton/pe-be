@@ -77,6 +77,11 @@ const WeekTracking = memo(
     };
 
     const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
+    const streakHeading = loading
+      ? "Last 7 days"
+      : currentStreak === 0
+        ? "Let's start a streak!"
+        : "Great work!";
 
     return (
       <div
@@ -94,7 +99,7 @@ const WeekTracking = memo(
                 Weekly Activity
               </p>
               <h2 className="text-lg font-black tracking-tight text-foreground">
-                Last 7 days
+                {streakHeading}
               </h2>
             </div>
             
