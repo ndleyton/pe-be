@@ -84,7 +84,8 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByTestId("week-tracking")).toHaveAttribute("aria-busy", "true");
-    expect(screen.getByText("Syncing...")).toBeInTheDocument();
+    expect(screen.getByText("Let's start a streak!")).toBeInTheDocument();
+    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/0 Days/);
     expect(screen.queryByLabelText(/Workout completed/i)).not.toBeInTheDocument();
   });
 });

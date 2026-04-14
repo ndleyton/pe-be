@@ -77,11 +77,8 @@ const WeekTracking = memo(
     };
 
     const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
-    const streakHeading = loading
-      ? "Last 7 days"
-      : currentStreak === 0
-        ? "Let's start a streak!"
-        : "Great work!";
+    const streakHeading =
+      currentStreak === 0 ? "Let's start a streak!" : "Great work!";
 
     return (
       <div
@@ -105,9 +102,7 @@ const WeekTracking = memo(
             
             <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
               <Flame className="h-3 w-3 fill-primary" />
-              {loading
-                ? "Syncing..."
-                : `${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
+              {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
           </div>
 
