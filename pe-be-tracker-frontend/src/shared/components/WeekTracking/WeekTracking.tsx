@@ -95,7 +95,7 @@ const WeekTracking = memo(
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Weekly Activity
               </p>
-              <h2 className="text-lg font-black tracking-tight text-foreground">
+              <h2 className="text-lg font-black tracking-tight text-foreground/80 dark:text-foreground/85">
                 {streakHeading}
               </h2>
             </div>
