@@ -10,7 +10,7 @@ export const WeekTrackingSkeleton = ({
 }: WeekTrackingSkeletonProps) => (
   <div
     className={cn(
-      "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/60 to-primary/[0.03] p-5 shadow-sm backdrop-blur-xl dark:from-card/40 dark:to-primary/[0.08]",
+      "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-primary/[0.015] p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-primary/[0.04]",
       className,
     )}
   >
