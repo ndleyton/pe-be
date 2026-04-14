@@ -1,6 +1,7 @@
 import { Edit2, Play, Save, Share2, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { RoutineVisibility } from "@/features/routines/types";
+import { buildRoutineShareUrl } from "@/features/routines/lib/buildRoutineShareUrl";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -72,7 +73,9 @@ export const RoutineInfoCard = ({
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(
+        buildRoutineShareUrl(window.location.href),
+      );
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
     } catch (err) {
