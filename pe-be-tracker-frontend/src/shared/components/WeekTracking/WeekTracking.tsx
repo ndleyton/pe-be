@@ -31,6 +31,32 @@ const getLast7Days = () => {
   return days;
 };
 
+const getCurrentStreak = (workoutDates: Set<string>) => {
+  if (workoutDates.size === 0) return 0;
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const startDate = workoutDates.has(today.toDateString())
+    ? today
+    : workoutDates.has(yesterday.toDateString())
+      ? yesterday
+      : null;
+
+  if (!startDate) return 0;
+
+  let streak = 0;
+  const cursor = new Date(startDate);
+
+  while (workoutDates.has(cursor.toDateString())) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+};
+
 const WeekTracking = memo(
   ({ workouts, className = "", loading = false }: WeekTrackingProps) => {
     const safeWorkouts = Array.isArray(workouts) ? workouts : [];
@@ -50,9 +76,7 @@ const WeekTracking = memo(
       return DAY_LABELS[date.getDay()];
     };
 
-    const activeDays = loading
-      ? 0
-      : last7Days.filter((date) => hasWorkoutOnDate(date)).length;
+    const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
 
     return (
       <div
@@ -76,7 +100,9 @@ const WeekTracking = memo(
             
             <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
               <Flame className="h-3 w-3 fill-primary" />
-              {loading ? "Syncing..." : `${activeDays} Active`}
+              {loading
+                ? "Syncing..."
+                : `${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
           </div>
 

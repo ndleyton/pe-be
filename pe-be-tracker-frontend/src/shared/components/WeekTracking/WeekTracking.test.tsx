@@ -28,9 +28,34 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByText("Weekly Activity")).toBeInTheDocument();
-    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/1 Active/);
+    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/1 Day/);
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
     expect(screen.getByLabelText(/Workout completed/i)).toBeInTheDocument();
+  });
+
+  it("counts a streak from yesterday when today has no workout yet", () => {
+    render(
+      <WeekTracking
+        workouts={[
+          {
+            id: 1,
+            name: "Leg Day",
+            notes: null,
+            start_time: new Date(2026, 3, 12, 9, 0, 0).toISOString(),
+            end_time: new Date(2026, 3, 12, 10, 0, 0).toISOString(),
+          },
+          {
+            id: 2,
+            name: "Push",
+            notes: null,
+            start_time: new Date(2026, 3, 11, 9, 0, 0).toISOString(),
+            end_time: new Date(2026, 3, 11, 10, 0, 0).toISOString(),
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("week-tracking")).toHaveTextContent(/2 Days/);
   });
 
   it("keeps the tracker neutral while workout data is loading", () => {
