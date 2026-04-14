@@ -104,7 +104,10 @@ const WeekTracking = memo(
               <h2 className="text-lg font-black tracking-tight text-foreground/85">
                 {streakHeading}
               </h2>
-              <div className="mt-1 h-1 w-8 rounded-full bg-orange-400/70 dark:h-0.5 dark:bg-warning/45" />
+              <div className="relative mt-1 h-1 w-8 dark:h-0.5">
+                <div className="absolute inset-0 rounded-full bg-orange-400/40 blur-[4px] dark:bg-warning/30 dark:blur-[3px]" />
+                <div className="relative h-1 w-8 rounded-full bg-orange-400/70 dark:h-0.5 dark:bg-warning/45" />
+              </div>
             </div>
             
             <div className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary">
