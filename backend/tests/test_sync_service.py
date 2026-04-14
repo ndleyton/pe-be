@@ -328,6 +328,11 @@ async def test_sync_guest_data_falls_back_to_server_id(db_session: AsyncSession)
     user = await _seed_user(db_session, email="fallback@example.com")
     user_id = user.id
 
+    # Seed workout type ID 4 (standard strength training)
+    # Using explicit ID in seed to support code constants
+    wt = WorkoutType(id=4, name="Strength Training", description="Standard")
+    db_session.add(wt)
+
     # Create an existing exercise type with a specific ID if possible,
     # but we'll just use whatever ID it gets.
     et = ExerciseType(
@@ -358,7 +363,7 @@ async def test_sync_guest_data_falls_back_to_server_id(db_session: AsyncSession)
     )
 
     result = await SyncService.sync_guest_data(db_session, payload, user_id)
-    assert result.success is True
+    assert result.success is True, f"Sync failed: {result.error}"
 
     # Verify workout type 4 was used
     stmt = select(Workout).where(Workout.owner_id == user_id)
