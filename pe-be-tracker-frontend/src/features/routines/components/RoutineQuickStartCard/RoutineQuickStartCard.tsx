@@ -9,6 +9,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Link } from "react-router-dom";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import { cn } from "@/lib/utils";
 
 const preloadRoutineDetailsPage = createIntentPreload(() =>
   import("@/features/routines/pages/RoutineDetailsPage"),
@@ -17,29 +18,34 @@ const preloadRoutineDetailsPage = createIntentPreload(() =>
 interface RoutineQuickStartCardProps {
   routine: RoutineSummary;
   onStartWorkout: (routine: RoutineSummary) => void;
+  className?: string;
 }
 
 export const RoutineQuickStartCard = ({
   routine,
   onStartWorkout,
+  className,
 }: RoutineQuickStartCardProps) => {
   const exerciseCount = routine.exercise_count;
   const totalSets = routine.set_count;
   const exerciseNamesPreview = routine.exercise_names_preview;
+  const visibleExercisesCount = Math.min(3, exerciseNamesPreview.length);
   const hiddenExerciseCount = Math.max(
     0,
-    exerciseCount - exerciseNamesPreview.length,
+    exerciseCount - visibleExercisesCount,
   );
 
   return (
-    <Card className="bg-card/60 border-border/40 hover:bg-card/80 relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 backdrop-blur-md group">
-      <CardHeader className="pb-3">
+    <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-2", className)}>
+      <CardHeader className="min-h-[5.25rem] pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
             <span className="text-lg">📋</span>
           </div>
-          <div>
-            <CardTitle className="text-base font-black tracking-tight">{routine.name}</CardTitle>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-base font-black leading-tight tracking-tight break-words">
+              {routine.name}
+            </CardTitle>
             <CardDescription className="text-xs font-medium opacity-70">
               {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} •{" "}
               {totalSets} set{totalSets !== 1 ? "s" : ""}
@@ -47,8 +53,8 @@ export const RoutineQuickStartCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 pb-6">
-        <div className="space-y-1 mb-5">
+      <CardContent className="flex flex-1 flex-col pt-0 pb-4">
+        <div className="space-y-1 mb-3">
           {exerciseNamesPreview.slice(0, 3).map((name: string, i: number) => (
             <div key={i} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
               <div className="h-1 w-1 rounded-full bg-primary/30" />

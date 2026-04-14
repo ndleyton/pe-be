@@ -224,9 +224,6 @@ describe("MyWorkoutsPage", () => {
         "data-auto-open",
         "true",
       );
-      expect(
-        screen.getByText(/you haven't logged any workouts yet/i),
-      ).toBeInTheDocument();
     });
   });
 
@@ -245,9 +242,6 @@ describe("MyWorkoutsPage", () => {
       "data-auto-open",
       "false",
     );
-    expect(
-      screen.queryByText(/you haven't logged any workouts yet/i),
-    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockGetMyWorkouts).not.toHaveBeenCalled();

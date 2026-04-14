@@ -29,6 +29,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { Input } from "@/shared/components/ui/input";
 import { Search, X, Plus, Info, Dumbbell, Loader2 } from "lucide-react";
 
 interface ExerciseTypeModalProps {
@@ -564,18 +565,18 @@ const ExerciseTypeModal = ({
 
         <div className="px-4 pt-9 pb-1 sm:px-5 sm:pt-10 sm:pb-2">
           <div className="relative group">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
-            </div>
-            <input
+            <Input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder="Search exercise types..."
               disabled={isAuthenticated && createMutation.isPending}
-              className="border-border/50 bg-accent/30 text-foreground placeholder-muted-foreground/60 focus:ring-primary/20 block w-full rounded-2xl border py-3 pr-12 pl-12 focus:border-primary/30 focus:ring-4 focus:outline-none disabled:opacity-50 transition-all font-medium"
+              className="border-primary/30 bg-card/90 md:h-16 h-14 w-full rounded-2xl md:pr-14 pr-12 md:pl-14 pl-12 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-xl backdrop-blur-md font-black md:text-xl text-base placeholder:font-bold placeholder:text-muted-foreground/30 disabled:opacity-50"
             />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center md:pl-5 pl-4 z-10">
+              <Search className="text-primary group-focus-within:text-primary md:h-6 md:w-6 h-5 w-5 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.4)]" />
+            </div>
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
               {searchTerm && !showCreateButton && (

@@ -106,7 +106,7 @@ describe("ExerciseTypeModal", () => {
     );
 
     expect(
-      screen.getByPlaceholderText(/Search exercise types.../i),
+      screen.getByPlaceholderText(/search exercise types/i),
     ).toBeInTheDocument();
   });
 
