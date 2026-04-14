@@ -140,7 +140,7 @@ const AppLayout = () => {
         {shouldReserveGuestBannerSlot && (
           <div
             data-testid="guest-mode-banner-slot"
-            className="min-h-[5.75rem] lg:min-h-0"
+            className="min-h-23 lg:min-h-0"
           >
             {shouldShowGuestBanner && (
               <GuestModeBanner

@@ -105,11 +105,18 @@ describe("AppLayout", () => {
   });
 
   it("shows the guest banner in the reserved slot for initialized guest sessions", () => {
-    useGuestStore.setState((state) => ({
-      ...state,
-      workouts: [{ id: "guest-workout-1" }],
-      hydrated: true,
-    }));
+    const guestState = useGuestStore.getState();
+    const workoutType = guestState.workoutTypes[0];
+
+    guestState.addWorkout({
+      name: "Guest Workout",
+      notes: null,
+      start_time: "2026-04-14T00:00:00Z",
+      end_time: null,
+      workout_type_id: workoutType.id,
+      workout_type: workoutType,
+      exercises: [],
+    });
 
     render(
       <>
