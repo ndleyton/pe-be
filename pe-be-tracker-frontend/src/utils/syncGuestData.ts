@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { GuestData } from "../stores/useGuestStore";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
@@ -136,15 +137,12 @@ export const showSyncSuccessToast = (result: SyncResult) => {
 
   const message = `Successfully synced ${result.syncedWorkouts} workout${result.syncedWorkouts !== 1 ? "s" : ""}, ${result.syncedRoutines} routine${result.syncedRoutines !== 1 ? "s" : ""}, ${result.syncedExercises} exercise${result.syncedExercises !== 1 ? "s" : ""}, and ${result.syncedSets} set${result.syncedSets !== 1 ? "s" : ""} to your account!`;
 
-  // TODO: Replace with proper toast notification system
-  console.info(message);
+  toast.success(message);
 };
 
 export const showSyncErrorToast = (error: string) => {
   const message = `Guest data sync incomplete: ${error}`;
 
-  // For now, we'll use a simple alert, but this could be replaced with a proper toast library
-  // TODO: Replace with proper toast notification system
-  alert(message);
+  toast.error(message);
   console.error("Sync error:", message);
 };
