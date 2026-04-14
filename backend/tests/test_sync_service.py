@@ -273,3 +273,99 @@ async def test_sync_guest_data_is_idempotent(db_session: AsyncSession):
     stmt = select(Workout).where(Workout.owner_id == user_id)
     workouts = (await db_session.execute(stmt)).scalars().all()
     assert len(workouts) == 1
+
+
+async def test_sync_guest_data_uses_external_id(db_session: AsyncSession):
+    await _seed_intensity_unit(db_session)
+    user = await _seed_user(db_session, email="external_id@example.com")
+    user_id = user.id
+
+    # Create an existing exercise type that we'll refer to by ID
+    et = ExerciseType(
+        name="External Exercise", status="released", default_intensity_unit=1
+    )
+    db_session.add(et)
+    await db_session.flush()
+
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="gw1",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="gwt1",
+                exercises=[
+                    GuestExercise(
+                        id="ge1",
+                        exercise_type_id="guest-uuid-1",
+                        exercise_sets=[
+                            GuestExerciseSet(id="gs1", reps=10, intensity_unit_id=1)
+                        ],
+                    )
+                ],
+            )
+        ],
+        exerciseTypes=[
+            GuestExerciseType(
+                id="guest-uuid-1",
+                name="Different Name",  # Name mismatch is intentional
+                external_id=str(et.id),  # But external_id matches
+            )
+        ],
+        workoutTypes=[GuestWorkoutType(id="gwt1", name="Typical")],
+    )
+
+    result = await SyncService.sync_guest_data(db_session, payload, user_id)
+    assert result.success is True
+
+    # Verify that the exercise was linked to the correct server ID despite name mismatch
+    stmt = select(Exercise).join(Workout).where(Workout.owner_id == user_id)
+    exercise = (await db_session.execute(stmt)).scalar_one()
+    assert exercise.exercise_type_id == et.id
+
+
+async def test_sync_guest_data_falls_back_to_server_id(db_session: AsyncSession):
+    await _seed_intensity_unit(db_session)
+    user = await _seed_user(db_session, email="fallback@example.com")
+    user_id = user.id
+
+    # Create an existing exercise type with a specific ID if possible,
+    # but we'll just use whatever ID it gets.
+    et = ExerciseType(
+        name="Fallback Exercise", status="released", default_intensity_unit=1
+    )
+    db_session.add(et)
+    await db_session.flush()
+
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="gw2",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="4",  # Numeric fallback for Strength Training
+                exercises=[
+                    GuestExercise(
+                        id="ge2",
+                        exercise_type_id=str(et.id),  # Numeric fallback for exercise type
+                        exercise_sets=[
+                            GuestExerciseSet(id="gs2", reps=10, intensity_unit_id=1)
+                        ],
+                    )
+                ],
+            )
+        ],
+        exerciseTypes=[],  # Empty list to force fallback
+        workoutTypes=[],
+    )
+
+    result = await SyncService.sync_guest_data(db_session, payload, user_id)
+    assert result.success is True
+
+    # Verify workout type 4 was used
+    stmt = select(Workout).where(Workout.owner_id == user_id)
+    workout = (await db_session.execute(stmt)).scalar_one()
+    assert workout.workout_type_id == 4
+
+    # Verify exercise type fallback worked
+    stmt = select(Exercise).where(Exercise.workout_id == workout.id)
+    exercise = (await db_session.execute(stmt)).scalar_one()
+    assert exercise.exercise_type_id == et.id
