@@ -83,16 +83,17 @@ const WeekTracking = memo(
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-primary/[0.015] p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-primary/[0.04]",
+          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-card/40 p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-card/25",
+          "shadow-[inset_0_0_20px_rgba(204,0,51,0.03)]", // Soft rim light / inner glow
           className,
         )}
         data-testid="week-tracking"
         aria-busy={loading || undefined}
       >
-        {/* Extreme Subtlety Decorations */}
+        {/* Rim Light / Edge Glow Refinement */}
         <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_60%,rgba(204,0,51,0.02)_100%)]" />
           <div className="absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
-          <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-primary/[0.03] blur-2xl dark:bg-primary/[0.06]" />
         </div>
 
         <div className="relative z-10 space-y-5">
@@ -141,7 +142,7 @@ const WeekTracking = memo(
 
                   <div
                     className={cn(
-                      "relative flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-200",
+                      "relative flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] transition-all duration-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-[11px]",
                       hasWorkout
                         ? "border-primary/20 bg-primary/[0.06] text-primary"
                         : "border-border/30 bg-white/[0.02] text-muted-foreground/20",
@@ -151,15 +152,15 @@ const WeekTracking = memo(
                     aria-label={statusLabel}
                   >
                     {hasWorkout ? (
-                      <Flame className="h-4.5 w-4.5 fill-primary" />
+                      <Flame className="h-4 w-4 fill-primary sm:h-4.5 sm:w-4.5" />
                     ) : (
-                      <span className="text-[11px] font-bold">{date.getDate()}</span>
+                      <span className="font-bold">{date.getDate()}</span>
                     )}
 
                     {isToday && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-60">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary/30 blur-[1px] animate-pulse" />
-                        <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-primary" />
+                        <div className="h-1 w-1 rounded-full bg-primary/30 blur-[1px] animate-pulse sm:h-1.5 sm:w-1.5" />
+                        <div className="absolute inset-0 h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                       </div>
                     )}
                   </div>
