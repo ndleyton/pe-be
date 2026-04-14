@@ -83,30 +83,30 @@ const WeekTracking = memo(
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/60 to-primary/[0.03] p-5 shadow-sm backdrop-blur-xl dark:from-card/40 dark:to-primary/[0.08]",
+          "relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/45 to-primary/[0.015] p-5 shadow-sm backdrop-blur-xl dark:from-card/35 dark:to-primary/[0.04]",
           className,
         )}
         data-testid="week-tracking"
         aria-busy={loading || undefined}
       >
-        {/* Refined Accent Decorations */}
+        {/* Extreme Subtlety Decorations */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
-          <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/[0.06] blur-3xl dark:bg-primary/[0.1]" />
+          <div className="absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+          <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-primary/[0.03] blur-2xl dark:bg-primary/[0.06]" />
         </div>
 
         <div className="relative z-10 space-y-5">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
                 Weekly Activity
               </p>
-              <h2 className="text-lg font-black tracking-tight text-foreground/90">
+              <h2 className="text-lg font-black tracking-tight text-foreground/85">
                 {streakHeading}
               </h2>
             </div>
             
-            <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
+            <div className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary">
               <Flame className="h-3 w-3 fill-primary" />
               {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
@@ -132,8 +132,8 @@ const WeekTracking = memo(
                 >
                   <span
                     className={cn(
-                      "text-[10px] font-bold tracking-tight text-muted/50 transition-colors uppercase",
-                      isToday && "text-primary/70"
+                      "text-[10px] font-bold tracking-tight text-muted/40 transition-colors uppercase",
+                      isToday && "text-primary/60"
                     )}
                   >
                     {getDayName(date)}
@@ -143,22 +143,22 @@ const WeekTracking = memo(
                     className={cn(
                       "relative flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-200",
                       hasWorkout
-                        ? "border-primary/25 bg-primary/10 text-primary shadow-sm"
-                        : "border-border/30 bg-white/5 text-muted-foreground/20 dark:bg-white/[0.02]",
-                      isToday && !hasWorkout && "border-primary/20 bg-primary/5",
+                        ? "border-primary/20 bg-primary/[0.06] text-primary"
+                        : "border-border/30 bg-white/[0.02] text-muted-foreground/20",
+                      isToday && !hasWorkout && "border-primary/15 bg-primary/[0.03]",
                     )}
                     title={statusLabel}
                     aria-label={statusLabel}
                   >
                     {hasWorkout ? (
-                      <Flame className="h-4.5 w-4.5 fill-primary drop-shadow-[0_0_8px_rgba(204,0,51,0.2)]" />
+                      <Flame className="h-4.5 w-4.5 fill-primary" />
                     ) : (
                       <span className="text-[11px] font-bold">{date.getDate()}</span>
                     )}
 
                     {isToday && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary/50 blur-[1px] animate-pulse" />
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-60">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary/30 blur-[1px] animate-pulse" />
                         <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-primary" />
                       </div>
                     )}
