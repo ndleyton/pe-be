@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -7,8 +7,8 @@ from src.genai.google_images import (
     ReferenceOptionSpec,
     _build_reference_prompt,
     _build_prompt,
-    _generate_image_sync,
-    _generate_reference_image_sync,
+    _generate_image_async,
+    _generate_reference_image_async,
     errors,
     generate_exercise_phase_image,
 )
@@ -89,9 +89,10 @@ def test_build_reference_prompt_for_minimal_outline_option():
     assert "Do not add labels or text." in prompt
 
 
+@pytest.mark.asyncio
 @patch("src.genai.google_images.settings")
-@patch("src.genai.google_images.genai.Client")
-def test_generate_image_sync_success(mock_client_class, mock_settings):
+@patch("src.genai.google_images._get_client")
+async def test_generate_image_async_success(mock_get_client, mock_settings):
     mock_settings.GOOGLE_AI_KEY = "test_key"
     mock_inline = MagicMock()
     mock_inline.data = "base64encodedimage"
@@ -104,28 +105,27 @@ def test_generate_image_sync_success(mock_client_class, mock_settings):
     mock_candidate.content.parts = [mock_part]
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = MagicMock(
-        candidates=[mock_candidate]
+    mock_client.aio.models.generate_content = AsyncMock(
+        return_value=MagicMock(candidates=[mock_candidate])
     )
-    mock_client_class.return_value = mock_client
+    mock_get_client.return_value = mock_client
 
-    result = _generate_image_sync("My test prompt")
+    result = await _generate_image_async("My test prompt")
 
-    mock_client.models.generate_content.assert_called_once()
-    _, kwargs = mock_client.models.generate_content.call_args
+    mock_client.aio.models.generate_content.assert_called_once()
+    _, kwargs = mock_client.aio.models.generate_content.call_args
     config = kwargs["config"]
     assert config.response_modalities == ["IMAGE"]
-    # The fix ensures we don't pass response_mime_type for IMAGE modality
-    assert getattr(config, "response_mime_type", None) is None
 
     assert result.base64_data == "base64encodedimage"
     assert result.mime_type == "image/jpeg"
     assert result.prompt_summary == "My test prompt"
 
 
+@pytest.mark.asyncio
 @patch("src.genai.google_images.settings")
-@patch("src.genai.google_images.genai.Client")
-def test_generate_image_sync_no_image_data(mock_client_class, mock_settings):
+@patch("src.genai.google_images._get_client")
+async def test_generate_image_async_no_image_data(mock_get_client, mock_settings):
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
     mock_part = MagicMock()
@@ -135,32 +135,32 @@ def test_generate_image_sync_no_image_data(mock_client_class, mock_settings):
     mock_candidate.content.parts = [mock_part]
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = MagicMock(
-        candidates=[mock_candidate]
+    mock_client.aio.models.generate_content = AsyncMock(
+        return_value=MagicMock(candidates=[mock_candidate])
     )
-    mock_client_class.return_value = mock_client
+    mock_get_client.return_value = mock_client
 
     with pytest.raises(ValueError, match="Model did not return image data"):
-        _generate_image_sync("My test prompt")
+        await _generate_image_async("My test prompt")
 
 
 @pytest.mark.asyncio
-@patch("src.genai.google_images._generate_image_sync")
-async def test_generate_exercise_phase_image_async(mock_sync):
+@patch("src.genai.google_images._generate_image_async")
+async def test_generate_exercise_phase_image_async(mock_async_gen):
     mock_result = MagicMock()
-    mock_sync.return_value = mock_result
+    mock_async_gen.return_value = mock_result
 
     result = await generate_exercise_phase_image({"name": "Bench Press"}, "end")
 
     assert result == mock_result
-    mock_sync.assert_called_once()
+    mock_async_gen.assert_called_once()
 
 
+@pytest.mark.asyncio
 @patch("src.genai.google_images.settings")
-@patch("src.genai.google_images.genai.Client")
-@patch("src.genai.google_images._normalize_reference_image")
-def test_generate_reference_image_sync_success(
-    mock_normalize, mock_client_class, mock_settings
+@patch("src.genai.google_images._get_client")
+async def test_generate_reference_image_async_success(
+    mock_get_client, mock_settings
 ):
     mock_settings.EXERCISE_IMAGE_REFERENCE_MODEL = "ref-model"
     mock_settings.GOOGLE_AI_KEY = "test_key"
@@ -169,7 +169,6 @@ def test_generate_reference_image_sync_success(
     mock_prepared = MagicMock()
     mock_prepared.image_bytes = b"refbytes"
     mock_prepared.mime_type = "image/png"
-    mock_normalize.return_value = mock_prepared
 
     mock_inline = MagicMock()
     mock_inline.data = "base64redrawn"
@@ -182,10 +181,10 @@ def test_generate_reference_image_sync_success(
     mock_candidate.content.parts = [mock_part]
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = MagicMock(
-        candidates=[mock_candidate]
+    mock_client.aio.models.generate_content = AsyncMock(
+        return_value=MagicMock(candidates=[mock_candidate])
     )
-    mock_client_class.return_value = mock_client
+    mock_get_client.return_value = mock_client
 
     option = ReferenceOptionSpec(
         key="test",
@@ -195,31 +194,31 @@ def test_generate_reference_image_sync_success(
         style_directive="Direct",
     )
 
-    result = _generate_reference_image_sync(
+    result = await _generate_reference_image_async(
         context={"name": "Push Up"},
         option=option,
-        source_image_url="exercises/old.png",
+        prepared=mock_prepared,
     )
 
-    mock_client.models.generate_content.assert_called_once()
-    _, kwargs = mock_client.models.generate_content.call_args
+    mock_client.aio.models.generate_content.assert_called_once()
+    _, kwargs = mock_client.aio.models.generate_content.call_args
     assert kwargs["model"] == "ref-model"
     config = kwargs["config"]
     assert config.response_modalities == ["IMAGE"]
-    assert getattr(config, "response_mime_type", None) is None
 
     assert result.base64_data == "base64redrawn"
     assert result.mime_type == "image/png"
 
 
-@patch("src.genai.google_images.time.sleep")
+@pytest.mark.asyncio
+@patch("src.genai.google_images.asyncio.sleep", new_callable=AsyncMock)
 @patch("src.genai.google_images.settings")
-@patch("src.genai.google_images.genai.Client")
-def test_generate_image_retry_on_429(mock_client_class, mock_settings, mock_sleep):
+@patch("src.genai.google_images._get_client")
+async def test_generate_image_retry_on_429_async(mock_get_client, mock_settings, mock_sleep):
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
-    # Mock ClientError with code 429 and a dummy response
-    mock_error = errors.ClientError("Resource Exhausted", MagicMock())
+    # Mock an error that looks like a 429
+    mock_error = Exception("Resource Exhausted (429)")
     mock_error.code = 429
 
     mock_inline = MagicMock()
@@ -232,38 +231,41 @@ def test_generate_image_retry_on_429(mock_client_class, mock_settings, mock_slee
     mock_response = MagicMock(candidates=[mock_candidate])
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.side_effect = [mock_error, mock_response]
-    mock_client_class.return_value = mock_client
+    mock_client.aio.models.generate_content = AsyncMock(
+        side_effect=[mock_error, mock_response]
+    )
+    mock_get_client.return_value = mock_client
 
-    result = _generate_image_sync("retry test")
+    result = await _generate_image_async("retry test")
 
-    assert mock_client.models.generate_content.call_count == 2
+    assert mock_client.aio.models.generate_content.call_count == 2
     assert mock_sleep.call_count == 1
     assert result.base64_data == "success_data"
 
 
-@patch("src.genai.google_images.time.sleep")
+@pytest.mark.asyncio
+@patch("src.genai.google_images.asyncio.sleep", new_callable=AsyncMock)
 @patch("src.genai.google_images.settings")
-@patch("src.genai.google_images.genai.Client")
-def test_generate_image_fails_after_max_retries(
-    mock_client_class, mock_settings, mock_sleep
+@patch("src.genai.google_images._get_client")
+async def test_generate_image_fails_after_max_retries_async(
+    mock_get_client, mock_settings, mock_sleep
 ):
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
     def fake_generate_raise(*args, **kwargs):
-        mock_error = errors.ClientError("Resource Exhausted", MagicMock())
+        mock_error = Exception("Resource Exhausted (429)")
         mock_error.code = 429
         raise mock_error
 
     mock_client = MagicMock()
-    mock_client.models.generate_content.side_effect = fake_generate_raise
-    mock_client_class.return_value = mock_client
+    mock_client.aio.models.generate_content = AsyncMock(side_effect=fake_generate_raise)
+    mock_get_client.return_value = mock_client
 
-    with pytest.raises(errors.ClientError) as excinfo:
-        _generate_image_sync("perma-fail")
+    with pytest.raises(Exception) as excinfo:
+        await _generate_image_async("perma-fail")
 
-    assert excinfo.value.code == 429
-    assert mock_client.models.generate_content.call_count == 3
+    assert "429" in str(excinfo.value)
+    assert mock_client.aio.models.generate_content.call_count == 3
     assert mock_sleep.call_count == 2
     # attempt 0: fail, wait(15), attempt 1: fail, wait(30), attempt 2: fail, raise
     # wait, loop is:

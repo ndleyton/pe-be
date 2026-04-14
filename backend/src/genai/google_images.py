@@ -177,8 +177,14 @@ def _build_reference_prompt(context: Dict, option: ReferenceOptionSpec) -> str:
     )
 
 
-def _client() -> genai.Client:
-    return genai.Client(api_key=settings.GOOGLE_AI_KEY)
+_CLIENT: genai.Client | None = None
+
+
+def _get_client() -> genai.Client:
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = genai.Client(api_key=settings.GOOGLE_AI_KEY)
+    return _CLIENT
 
 
 def _inline_data_to_base64(data: bytes | str) -> str:
@@ -227,12 +233,13 @@ def _extract_inline_result(
     )
 
 
-def _generate_image_sync(prompt: str) -> ExerciseImageResult:
+async def _generate_image_async(prompt: str) -> ExerciseImageResult:
+    client = _get_client()
     model_name = settings.EXERCISE_IMAGE_PHASE_MODEL
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            response = _client().models.generate_content(
+            response = await client.aio.models.generate_content(
                 model=model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -240,27 +247,27 @@ def _generate_image_sync(prompt: str) -> ExerciseImageResult:
                 ),
             )
             return _extract_inline_result(response, prompt, model_name)
-        except errors.ClientError as exc:
-            if exc.code == 429 and attempt < max_retries - 1:
+        except Exception as exc:
+            # Check for rate limit (429)
+            is_retryable = False
+            if hasattr(exc, "code") and exc.code == 429:
+                is_retryable = True
+            elif "429" in str(exc) or "resourceexhausted" in str(exc).lower():
+                is_retryable = True
+
+            if is_retryable and attempt < max_retries - 1:
                 wait_time = 15 * (attempt + 1)
                 logger.warning(
-                    "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
+                    "Gemini API rate limit hit, retrying in %ds... (attempt %d/%d)",
                     wait_time,
                     attempt + 1,
                     max_retries,
                 )
-                time.sleep(wait_time)
+                await asyncio.sleep(wait_time)
                 continue
             raise
-    # Fallback to one last attempt if the loop somehow finish without return/raise
-    response = _client().models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
-        ),
-    )
-    return _extract_inline_result(response, prompt, model_name)
+
+    raise RuntimeError("Gemini image generation retry loop exhausted")
 
 
 def _open_reference_image(source_image_url: str) -> bytes:
@@ -300,20 +307,21 @@ def _normalize_reference_image(source_image_url: str) -> ReferenceImagePrepared:
     return ReferenceImagePrepared(mime_type="image/png", image_bytes=output.getvalue())
 
 
-def _generate_reference_image_sync(
+async def _generate_reference_image_async(
     *,
     context: Dict,
     option: ReferenceOptionSpec,
-    source_image_url: str,
+    prepared: ReferenceImagePrepared,
 ) -> ExerciseImageResult:
-    prepared = _normalize_reference_image(source_image_url)
+    client = _get_client()
     prompt = _build_reference_prompt(context, option)
+    model_name = settings.EXERCISE_IMAGE_REFERENCE_MODEL
 
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            response = _client().models.generate_content(
-                model=settings.EXERCISE_IMAGE_REFERENCE_MODEL,
+            response = await client.aio.models.generate_content(
+                model=model_name,
                 contents=[
                     types.Part.from_text(text=prompt),
                     types.Part.from_bytes(
@@ -328,47 +336,35 @@ def _generate_reference_image_sync(
             return _extract_inline_result(
                 response,
                 prompt,
-                settings.EXERCISE_IMAGE_REFERENCE_MODEL,
+                model_name,
             )
-        except errors.ClientError as exc:
-            if exc.code == 429 and attempt < max_retries - 1:
+        except Exception as exc:
+            is_retryable = False
+            if hasattr(exc, "code") and exc.code == 429:
+                is_retryable = True
+            elif "429" in str(exc) or "resourceexhausted" in str(exc).lower():
+                is_retryable = True
+
+            if is_retryable and attempt < max_retries - 1:
                 wait_time = 15 * (attempt + 1)
                 logger.warning(
-                    "Gemini API rate limit (429) hit, retrying in %ds... (attempt %d/%d)",
+                    "Gemini API rate limit hit, retrying in %ds... (attempt %d/%d)",
                     wait_time,
                     attempt + 1,
                     max_retries,
                 )
-                time.sleep(wait_time)
+                await asyncio.sleep(wait_time)
                 continue
             raise
 
-    # Fallback
-    response = _client().models.generate_content(
-        model=settings.EXERCISE_IMAGE_REFERENCE_MODEL,
-        contents=[
-            types.Part.from_text(text=prompt),
-            types.Part.from_bytes(
-                data=prepared.image_bytes,
-                mime_type=prepared.mime_type,
-            ),
-        ],
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
-        ),
-    )
-    return _extract_inline_result(
-        response,
-        prompt,
-        settings.EXERCISE_IMAGE_REFERENCE_MODEL,
-    )
+    raise RuntimeError("Gemini reference image generation retry loop exhausted")
 
 
 async def generate_exercise_phase_image(
     context: Dict, phase_label: str
 ) -> ExerciseImageResult:
     prompt = _build_prompt(context, phase_label)
-    return await asyncio.to_thread(_generate_image_sync, prompt)
+    return await _generate_image_async(prompt)
 
 
 async def generate_reference_image_variant(
@@ -377,11 +373,11 @@ async def generate_reference_image_variant(
     option: ReferenceOptionSpec,
     source_image_url: str,
 ) -> ExerciseImageResult:
-    return await asyncio.to_thread(
-        _generate_reference_image_sync,
+    prepared = await asyncio.to_thread(_normalize_reference_image, source_image_url)
+    return await _generate_reference_image_async(
         context=context,
         option=option,
-        source_image_url=source_image_url,
+        prepared=prepared,
     )
 
 
