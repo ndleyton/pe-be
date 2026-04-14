@@ -14,6 +14,7 @@ class GuestExerciseType(BaseModel):
     name: str
     description: Optional[str] = None
     default_intensity_unit: Optional[int] = None
+    external_id: Optional[str] = None
 
 
 class GuestWorkoutType(BaseModel):

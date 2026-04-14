@@ -85,7 +85,8 @@ export async function syncGuestDataToServer(
         id: et.id,
         name: et.name,
         description: et.description,
-        default_intensity_unit: et.default_intensity_unit
+        default_intensity_unit: et.default_intensity_unit,
+        external_id: et.external_id
       })),
       workoutTypes: guestData.workoutTypes.map(wt => ({
         id: wt.id,

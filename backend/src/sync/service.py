@@ -52,23 +52,29 @@ class SyncService:
         # We need to map guest UUIDs to server IDs
         exercise_type_map: Dict[str, int] = {}
 
-        # First, check for existing exercise types by name (released)
-        # or created by this user
         for guest_et in payload.exerciseTypes:
-            # Try to find by name (case-insensitive)
-            stmt = (
-                select(ExerciseType)
-                .where(
-                    (ExerciseType.name.ilike(guest_et.name))
-                    & (
-                        (ExerciseType.owner_id == user_id)
-                        | (ExerciseType.status == "released")
+            existing_et = None
+
+            # 1a. Try to find by external_id (server ID)
+            if guest_et.external_id and guest_et.external_id.isdigit():
+                stmt = select(ExerciseType).where(ExerciseType.id == int(guest_et.external_id))
+                existing_et = (await session.execute(stmt)).scalar_one_or_none()
+
+            # 1b. Try to find by name (case-insensitive) if not found by ID
+            if not existing_et:
+                stmt = (
+                    select(ExerciseType)
+                    .where(
+                        (ExerciseType.name.ilike(guest_et.name))
+                        & (
+                            (ExerciseType.owner_id == user_id)
+                            | (ExerciseType.status == "released")
+                        )
                     )
+                    .limit(1)
                 )
-                .limit(1)
-            )
-            result = await session.execute(stmt)
-            existing_et = result.scalar_one_or_none()
+                result = await session.execute(stmt)
+                existing_et = result.scalar_one_or_none()
 
             if existing_et:
                 exercise_type_map[guest_et.id] = existing_et.id
@@ -112,6 +118,15 @@ class SyncService:
         try:
             for guest_w in payload.workouts:
                 server_wt_id = workout_type_map.get(guest_w.workout_type_id)
+
+                # Fallback: if not in map, maybe it's already a server ID
+                if not server_wt_id and guest_w.workout_type_id.isdigit():
+                    candidate_id = int(guest_w.workout_type_id)
+                    stmt = select(WorkoutType).where(WorkoutType.id == candidate_id)
+                    existing = (await session.execute(stmt)).scalar_one_or_none()
+                    if existing:
+                        server_wt_id = existing.id
+
                 if not server_wt_id:
                     # Fallback to Strength Training (ID 4) if not found
                     server_wt_id = 4
@@ -130,6 +145,19 @@ class SyncService:
 
                 for guest_e in guest_w.exercises:
                     server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
+
+                    # Fallback: if not in map, maybe it's already a server ID (e.g. from a partial previous sync or stale state)
+                    if not server_et_id and guest_e.exercise_type_id.isdigit():
+                        candidate_id = int(guest_e.exercise_type_id)
+                        # Verify it exists and is accessible
+                        stmt = select(ExerciseType).where(
+                            (ExerciseType.id == candidate_id) &
+                            ((ExerciseType.owner_id == user_id) | (ExerciseType.status == "released"))
+                        )
+                        existing = (await session.execute(stmt)).scalar_one_or_none()
+                        if existing:
+                            server_et_id = existing.id
+
                     if not server_et_id:
                         logger.warning(
                             f"Skipping exercise with unknown type: {guest_e.exercise_type_id}"
