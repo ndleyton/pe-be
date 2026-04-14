@@ -122,6 +122,30 @@ class RoutineService:
           - Creates the exercise attached to the workout
           - Creates its sets with reps/intensity/unit from the template, marked as not done
         """
+        # Basic rate-limiting/idempotency: check if user just started this routine
+        # (within the last 10 seconds)
+        from datetime import timedelta
+
+        recent_stmt = (
+            select(Workout)
+            .where(
+                Workout.owner_id == user_id,
+                Workout.start_time > datetime.now(timezone.utc) - timedelta(seconds=10),
+            )
+            .order_by(Workout.start_time.desc())
+            .limit(1)
+        )
+        recent_workout = (await session.execute(recent_stmt)).scalar_one_or_none()
+        # Note: We can't easily check if it was from THIS routine without a back-ref,
+        # but checking for ANY workout started in the last 10s is a safe enough heuristic
+        # for preventing accidental double-clicks/useEffect runs.
+        if recent_workout and recent_workout.name.startswith(
+            (
+                await crud.get_routine_by_id_for_user(session, routine_id, user_id)
+            ).name
+        ):
+            return recent_workout
+
         routine = await crud.get_routine_by_id_for_user(session, routine_id, user_id)
         if routine is None:
             raise ValueError("Routine not found or not accessible")

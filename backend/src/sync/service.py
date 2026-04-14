@@ -131,6 +131,18 @@ class SyncService:
                     # Fallback to Strength Training (ID 4) if not found
                     server_wt_id = 4
 
+                # Idempotency check: Don't create if a workout with same start_time exists for user
+                stmt = select(Workout).where(
+                    Workout.owner_id == user_id,
+                    Workout.start_time == guest_w.start_time,
+                )
+                existing_workout = (await session.execute(stmt)).scalar_one_or_none()
+                if existing_workout:
+                    logger.info(
+                        f"Skipping duplicate workout with start_time {guest_w.start_time}"
+                    )
+                    continue
+
                 workout = Workout(
                     name=guest_w.name,
                     notes=guest_w.notes,

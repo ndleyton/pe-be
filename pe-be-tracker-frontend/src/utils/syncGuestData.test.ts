@@ -120,27 +120,35 @@ describe("syncGuestDataToServer", () => {
 
     // Verify correct bulk payload was sent
     expect(api.post).toHaveBeenCalledTimes(1);
-    expect(api.post).toHaveBeenCalledWith(endpoints.sync, expect.objectContaining({
-      workouts: expect.arrayContaining([
-        expect.objectContaining({
-          id: "guest-workout-1",
-          exercises: expect.arrayContaining([
-            expect.objectContaining({
-              id: "guest-exercise-1",
-              exercise_sets: expect.arrayContaining([
-                expect.objectContaining({ id: "guest-set-1" })
-              ])
-            })
-          ])
-        })
-      ]),
-      exerciseTypes: expect.arrayContaining([
-        expect.objectContaining({ id: "guest-et-1" })
-      ]),
-      workoutTypes: expect.arrayContaining([
-        expect.objectContaining({ id: "guest-wt-1" })
-      ])
-    }));
+    expect(api.post).toHaveBeenCalledWith(
+      endpoints.sync,
+      expect.objectContaining({
+        workouts: expect.arrayContaining([
+          expect.objectContaining({
+            id: "guest-workout-1",
+            exercises: expect.arrayContaining([
+              expect.objectContaining({
+                id: "guest-exercise-1",
+                exercise_sets: expect.arrayContaining([
+                  expect.objectContaining({ id: "guest-set-1" }),
+                ]),
+              }),
+            ]),
+          }),
+        ]),
+        exerciseTypes: expect.arrayContaining([
+          expect.objectContaining({ id: "guest-et-1" }),
+        ]),
+        workoutTypes: expect.arrayContaining([
+          expect.objectContaining({ id: "guest-wt-1" }),
+        ]),
+      }),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-Idempotency-Key": expect.any(String),
+        }),
+      }),
+    );
   });
 
   it("handles bulk sync failure gracefully", async () => {
