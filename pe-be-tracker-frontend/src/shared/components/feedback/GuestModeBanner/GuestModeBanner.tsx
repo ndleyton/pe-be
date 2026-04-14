@@ -1,21 +1,35 @@
+import { useEffect, useState } from "react";
 import { Info } from "lucide-react";
 import { useAuthStore, useGuestStore } from "@/stores";
 
+const BANNER_DISPLAY_DELAY_MS = 800;
+
 const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const initialized = useAuthStore((state) => state.initialized);
+  const authLoading = useAuthStore((state) => state.loading);
   const workouts = useGuestStore((state) => state.workouts);
 
-  // Ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
-  // Don't show banner if user is authenticated or still loading auth
-  if (!initialized || isAuthenticated) {
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        setShowBanner(true);
+      }, BANNER_DISPLAY_DELAY_MS);
+      return () => clearTimeout(timer);
+    } else {
+      setShowBanner(false);
+    }
+  }, [authLoading, isAuthenticated]);
+
+  if (isAuthenticated || authLoading || !showBanner) {
     return null;
   }
 
   return (
-    <div className="z-40 px-4 py-2.5">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-4 py-2.5">
       <div className="pointer-events-auto group relative overflow-hidden rounded-xl border border-border/60 bg-background/82 px-3.5 py-3 shadow-lg shadow-black/5 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 lg:px-4">
         <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent opacity-70" />
 
