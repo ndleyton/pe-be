@@ -127,7 +127,7 @@ export const RoutineTemplatesCard = ({
               data-testid="add-routine-exercise-button"
               onClick={onAddExercise}
               size="sm"
-              className="rounded-xl bg-primary/20 border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-bold"
+              className="rounded-xl border border-primary/40 bg-primary/10 font-bold text-primary shadow-sm transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Exercise

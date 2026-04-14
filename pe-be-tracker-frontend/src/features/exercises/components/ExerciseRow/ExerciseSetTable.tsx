@@ -318,7 +318,7 @@ export const ExerciseSetTable = ({
                   className={`group h-10 w-10 rounded-xl transition-all duration-300 ${
                     set.done
                       ? "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
-                      : "border-foreground/50 text-done/60 hover:border-done border-2 bg-done/5 hover:bg-done/40"
+                      : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
                   }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
@@ -472,7 +472,7 @@ export const ExerciseSetTable = ({
 
       <Button
         variant="glass"
-        className="mt-6 w-full rounded-xl py-6 shadow-xl transition-all hover:scale-[1.01]"
+        className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/40 dark:border-border/30"
         data-testid="add-set-button"
         disabled={isUnsavedExercise}
         onClick={onAddSet}
