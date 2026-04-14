@@ -1,30 +1,27 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Info, X } from "lucide-react";
 import { useAuthStore, useGuestStore } from "@/stores";
 const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
   const workouts = useGuestStore((state) => state.workouts);
 
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
-  const [isDismissed, setIsDismissed] = useState(false);
-
-  // Re-check dismissal on mount
-  useEffect(() => {
-    const dismissed = sessionStorage.getItem("guest-mode-banner-dismissed");
-    if (dismissed === "true") {
-      setIsDismissed(true);
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
     }
-  }, []);
+
+    return sessionStorage.getItem("guest-mode-banner-dismissed") === "true";
+  });
 
   const handleDismiss = () => {
     setIsDismissed(true);
     sessionStorage.setItem("guest-mode-banner-dismissed", "true");
   };
 
-  // Don't show banner if user is authenticated, still loading auth, or dismissed
-  if (isAuthenticated || authLoading || isDismissed) {
+  // Render immediately for guest sessions so page content doesn't shift after auth resolves.
+  if (isAuthenticated || isDismissed) {
     return null;
   }
 
