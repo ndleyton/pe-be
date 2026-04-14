@@ -233,3 +233,43 @@ async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
     stmt = select(Workout).where(Workout.name == "Error Workout")
     workout = (await db_session.execute(stmt)).scalar_one_or_none()
     assert workout is None
+
+
+async def test_sync_guest_data_is_idempotent(db_session: AsyncSession):
+    await _seed_intensity_unit(db_session)
+    user = await _seed_user(db_session, email="idempotency@example.com")
+    user_id = user.id
+    idempotency_key = "test-key-123"
+
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="guest-w-idemp",
+                name="Idemp Workout",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="guest-wt-1",
+                exercises=[],
+            )
+        ],
+        exerciseTypes=[],
+        workoutTypes=[GuestWorkoutType(id="guest-wt-1", name="Idemp Type")],
+    )
+
+    # First call
+    result1 = await SyncService.sync_guest_data(
+        db_session, payload, user_id, idempotency_key=idempotency_key
+    )
+    assert result1.success is True
+    assert result1.syncedWorkouts == 1
+
+    # Second call with same key
+    result2 = await SyncService.sync_guest_data(
+        db_session, payload, user_id, idempotency_key=idempotency_key
+    )
+    assert result2.success is True
+    assert result2.syncedWorkouts == 1  # cached result
+
+    # Verify only one workout exists despite two calls
+    stmt = select(Workout).where(Workout.owner_id == user_id)
+    workouts = (await db_session.execute(stmt)).scalars().all()
+    assert len(workouts) == 1

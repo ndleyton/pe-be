@@ -45,6 +45,7 @@ import src.exercise_sets.models  # noqa: F401
 import src.users.models  # noqa: F401
 import src.routines.models  # noqa: F401
 import src.chat.models  # noqa: F401
+import src.sync.models  # noqa: F401
 
 
 def get_test_database_url():
@@ -156,6 +157,7 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
             "workouts",
             "users",
             "recipes",
+            "sync_logs",
         ]:
             await session.execute(text(f"TRUNCATE {table} CASCADE"))
         await session.commit()

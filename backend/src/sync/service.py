@@ -1,12 +1,13 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Dict
+from typing import Dict, Optional
 
 from src.sync.schemas import GuestSyncPayload, SyncResult
 from src.workouts.models import Workout, WorkoutType
 from src.exercises.models import Exercise, ExerciseType
 from src.exercise_sets.models import ExerciseSet
+from src.sync.models import SyncLog
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,33 @@ logger = logging.getLogger(__name__)
 class SyncService:
     @staticmethod
     async def sync_guest_data(
-        session: AsyncSession, payload: GuestSyncPayload, user_id: int
+        session: AsyncSession,
+        payload: GuestSyncPayload,
+        user_id: int,
+        idempotency_key: Optional[str] = None,
     ) -> SyncResult:
         """
         Synchronize guest data to the server in a single transaction.
+        Supports request-level idempotency via an idempotency key.
         """
+        # 0. Check for existing idempotency key
+        if idempotency_key:
+            stmt = select(SyncLog).where(
+                SyncLog.user_id == user_id, SyncLog.idempotency_key == idempotency_key
+            )
+            existing_log = (await session.execute(stmt)).scalar_one_or_none()
+            if existing_log:
+                logger.info(
+                    f"Returning cached sync result for idempotency key: {idempotency_key}"
+                )
+                return SyncResult(
+                    success=existing_log.success,
+                    syncedWorkouts=existing_log.synced_workouts,
+                    syncedExercises=existing_log.synced_exercises,
+                    syncedSets=existing_log.synced_sets,
+                    syncedRoutines=existing_log.synced_routines,
+                )
+
         synced_workouts = 0
         synced_exercises = 0
         synced_sets = 0
@@ -76,9 +99,7 @@ class SyncService:
             if existing_wt:
                 workout_type_map[guest_wt.id] = existing_wt.id
             else:
-                # Workout types are usually globally defined, but if it doesn't exist,
-                # we'll just use a default or create it if the system allows.
-                # For now, let's just create it if it doesn't exist.
+                # Workout types are usually globally defined
                 new_wt = WorkoutType(
                     name=guest_wt.name,
                     description=guest_wt.description or "Synced from guest data",
@@ -87,7 +108,7 @@ class SyncService:
                 await session.flush()
                 workout_type_map[guest_wt.id] = new_wt.id
 
-        # 3. Create Workouts, Exercises, and Sets
+        # 3. Create Workouts, Exercises, and Sets (Atomic)
         try:
             for guest_w in payload.workouts:
                 server_wt_id = workout_type_map.get(guest_w.workout_type_id)
@@ -139,6 +160,19 @@ class SyncService:
                         )
                         session.add(exercise_set)
                         synced_sets += 1
+
+            # Store sync log if idempotency key is present
+            if idempotency_key:
+                sync_log = SyncLog(
+                    user_id=user_id,
+                    idempotency_key=idempotency_key,
+                    success=True,
+                    synced_workouts=synced_workouts,
+                    synced_exercises=synced_exercises,
+                    synced_sets=synced_sets,
+                    synced_routines=synced_routines,
+                )
+                session.add(sync_log)
 
             # Commit everything
             await session.commit()

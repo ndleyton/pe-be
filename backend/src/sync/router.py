@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_async_session
@@ -15,8 +15,12 @@ async def sync_guest_data(
     payload: GuestSyncPayload,
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
 ):
     """
     Synchronize guest data (workouts, exercises, sets) to the server in a single bulk request.
+    Supports request-level idempotency via the X-Idempotency-Key header.
     """
-    return await SyncService.sync_guest_data(session, payload, user.id)
+    return await SyncService.sync_guest_data(
+        session, payload, user.id, idempotency_key=x_idempotency_key
+    )
