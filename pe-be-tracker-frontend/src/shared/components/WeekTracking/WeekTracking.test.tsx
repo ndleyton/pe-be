@@ -63,7 +63,7 @@ describe("WeekTracking", () => {
   it("uses an encouragement message when no streak is active", () => {
     render(<WeekTracking workouts={[]} />);
 
-    expect(screen.getByText("Let's start a streak!")).toBeInTheDocument();
+    expect(screen.getByText("Start Your Streak!")).toBeInTheDocument();
     expect(screen.getByTestId("week-tracking")).toHaveTextContent(/0 Days/);
   });
 
@@ -84,7 +84,7 @@ describe("WeekTracking", () => {
     );
 
     expect(screen.getByTestId("week-tracking")).toHaveAttribute("aria-busy", "true");
-    expect(screen.getByText("Let's start a streak!")).toBeInTheDocument();
+    expect(screen.getByText("Start Your Streak!")).toBeInTheDocument();
     expect(screen.getByTestId("week-tracking")).toHaveTextContent(/0 Days/);
     expect(screen.queryByLabelText(/Workout completed/i)).not.toBeInTheDocument();
   });

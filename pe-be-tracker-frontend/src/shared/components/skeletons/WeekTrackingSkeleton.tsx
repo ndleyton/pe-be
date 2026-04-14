@@ -23,15 +23,15 @@ export const WeekTrackingSkeleton = ({
         <Skeleton className="h-6 w-16 rounded-full bg-primary/20" />
       </div>
 
-      <div className="flex justify-between gap-1">
-      {Array.from({ length: 7 }).map((_, i) => (
-        <div key={i} className="flex flex-col items-center gap-2.5">
-          <span className="text-[10px] font-bold tracking-tight text-muted/30 uppercase">
-            {["S", "M", "T", "W", "T", "F", "S"][i]}
-          </span>
-          <Skeleton className="h-11 w-11 rounded-2xl bg-foreground/10" />
-        </div>
-      ))}
+      <div className="flex justify-between gap-0.5">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2">
+            <span className="text-[10px] font-bold tracking-tight text-muted/30 uppercase">
+              {["S", "M", "T", "W", "T", "F", "S"][i]}
+            </span>
+            <Skeleton className="h-9 w-9 rounded-xl bg-foreground/10 sm:h-11 sm:w-11 sm:rounded-2xl" />
+          </div>
+        ))}
       </div>
     </div>
   </div>

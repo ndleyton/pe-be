@@ -78,7 +78,7 @@ const WeekTracking = memo(
 
     const currentStreak = loading ? 0 : getCurrentStreak(workoutDates);
     const streakHeading =
-      currentStreak === 0 ? "Let's start a streak!" : "Great work!";
+      currentStreak === 0 ? "Start Your Streak!" : "Great work!";
 
     return (
       <div
@@ -99,7 +99,7 @@ const WeekTracking = memo(
                 {streakHeading}
               </h2>
             </div>
-            
+
             <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
               <Flame className="h-3 w-3 fill-primary" />
               {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
@@ -107,7 +107,7 @@ const WeekTracking = memo(
           </div>
 
           <div
-            className="flex justify-between gap-1"
+            className="flex justify-between gap-0.5"
             role="list"
             aria-label="Last 7 days workout activity"
           >
@@ -121,7 +121,7 @@ const WeekTracking = memo(
               return (
                 <div
                   key={date.toISOString()}
-                  className="flex flex-col items-center gap-2.5"
+                  className="flex flex-col items-center gap-2"
                   role="listitem"
                 >
                   <span
@@ -135,7 +135,7 @@ const WeekTracking = memo(
 
                   <div
                     className={cn(
-                      "relative flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-200",
+                      "relative flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] transition-all duration-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-[11px]",
                       hasWorkout
                         ? "border-primary/40 bg-primary/10 text-primary shadow-sm"
                         : "border-border/40 bg-white/5 text-muted-foreground/30 dark:bg-white/[0.02]",
@@ -145,14 +145,15 @@ const WeekTracking = memo(
                     aria-label={statusLabel}
                   >
                     {hasWorkout ? (
-                      <Flame className="h-4.5 w-4.5 fill-primary" />
+                      <Flame className="h-4 w-4 fill-primary sm:h-4.5 sm:w-4.5" />
                     ) : (
-                      <span className="text-[11px] font-bold">{date.getDate()}</span>
+                      <span className="font-bold">{date.getDate()}</span>
                     )}
 
                     {isToday && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-                        <div className="h-1 w-1 rounded-full bg-primary" />
+                        <div className="h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
+                        <div className="absolute inset-0 h-1 w-1 rounded-full bg-primary sm:h-1.5 sm:w-1.5" />
                       </div>
                     )}
                   </div>
