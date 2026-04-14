@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore, useGuestStore, useUIStore } from "@/stores";
@@ -30,15 +30,23 @@ const getActiveWorkout = <T extends {
       : activeWorkout;
   }, null);
 
+const GUEST_BANNER_DISMISSED_KEY = "guest-mode-banner-dismissed";
+
 const AppLayout = () => {
   useAppHistoryTracker();
 
-  // Guest banner is rendered as an overlay so it won't affect layout
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestHydrated = useGuestStore((state) => state.hydrated);
   const guestWorkouts = useGuestStore((state) => state.workouts);
   const syncWorkoutTimer = useUIStore((state) => state.syncWorkoutTimer);
+  const [isGuestBannerDismissed, setIsGuestBannerDismissed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return sessionStorage.getItem(GUEST_BANNER_DISMISSED_KEY) === "true";
+  });
 
   const { data: serverWorkoutsResponse, status: workoutsStatus } = useQuery({
     queryKey: ["workouts"],
@@ -100,6 +108,16 @@ const AppLayout = () => {
     syncWorkoutTimer,
   ]);
 
+  const shouldReserveGuestBannerSlot =
+    !isGuestBannerDismissed && (!initialized || !isAuthenticated);
+  const shouldShowGuestBanner =
+    initialized && !isAuthenticated && !isGuestBannerDismissed;
+
+  const handleDismissGuestBanner = () => {
+    setIsGuestBannerDismissed(true);
+    sessionStorage.setItem(GUEST_BANNER_DISMISSED_KEY, "true");
+  };
+
   return (
     <div className="bg-background flex min-h-screen">
       {/* Skip to content link for accessibility */}
@@ -118,8 +136,20 @@ const AppLayout = () => {
         {/* Top App Bar */}
         <AppBar />
 
-        {/* Guest Mode Banner overlay */}
-        <GuestModeBanner />
+        {/* Mobile guest banner slot reserves space until auth resolves */}
+        {shouldReserveGuestBannerSlot && (
+          <div
+            data-testid="guest-mode-banner-slot"
+            className="min-h-[5.75rem] lg:min-h-0"
+          >
+            {shouldShowGuestBanner && (
+              <GuestModeBanner
+                workoutCount={guestWorkouts.length}
+                onDismiss={handleDismissGuestBanner}
+              />
+            )}
+          </div>
+        )}
 
         {/* Side Drawer (mobile/tablet) */}
         <SideDrawer />
