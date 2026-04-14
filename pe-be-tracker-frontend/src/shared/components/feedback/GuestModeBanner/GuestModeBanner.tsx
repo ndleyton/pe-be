@@ -1,35 +1,16 @@
-import { useEffect, useState } from "react";
 import { Info } from "lucide-react";
 import { useAuthStore, useGuestStore } from "@/stores";
 
-// Delay in milliseconds before showing the banner to avoid layout shift
-const BANNER_DISPLAY_DELAY_MS = 800;
-
 const GuestModeBanner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
+  const initialized = useAuthStore((state) => state.initialized);
   const workouts = useGuestStore((state) => state.workouts);
 
   // Ensure workouts is always an array
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
-  // Delay showing banner to avoid layout shift
-  const [showBanner, setShowBanner] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      // Show banner after a short delay for smoother transition
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, BANNER_DISPLAY_DELAY_MS);
-      return () => clearTimeout(timer);
-    } else {
-      setShowBanner(false);
-    }
-  }, [authLoading, isAuthenticated]);
-
   // Don't show banner if user is authenticated or still loading auth
-  if (isAuthenticated || authLoading || !showBanner) {
+  if (!initialized || isAuthenticated) {
     return null;
   }
 

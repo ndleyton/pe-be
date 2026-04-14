@@ -118,7 +118,7 @@ const AppLayout = () => {
         {/* Top App Bar */}
         <AppBar />
 
-        {/* Guest Mode Banner overlay (positioned relative to this container) */}
+        {/* Guest Mode Banner (pushed content down) */}
         <GuestModeBanner />
 
         {/* Side Drawer (mobile/tablet) */}
