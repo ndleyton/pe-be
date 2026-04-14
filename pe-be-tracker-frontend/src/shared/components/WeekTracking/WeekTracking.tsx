@@ -83,24 +83,24 @@ const WeekTracking = memo(
     return (
       <div
         className={cn(
-          "rounded-3xl bg-border p-4 shadow-md",
+          "relative overflow-hidden rounded-3xl border border-border/50 bg-card/40 p-5 shadow-xl backdrop-blur-xl dark:bg-card/20",
           className,
         )}
         data-testid="week-tracking"
         aria-busy={loading || undefined}
       >
-        <div className="space-y-4">
+        <div className="relative z-10 space-y-5">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 text-left">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Weekly Activity
               </p>
-              <h2 className="text-lg font-black tracking-tight text-foreground">
+              <h2 className="text-lg font-black tracking-tight text-foreground/80 dark:text-foreground/85">
                 {streakHeading}
               </h2>
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-full bg-background/40 px-3 py-1 text-[11px] font-bold text-card-foreground/70">
+            <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-bold text-primary backdrop-blur-sm">
               <Flame className="h-3 w-3 fill-primary" />
               {`${currentStreak} Day${currentStreak === 1 ? "" : "s"}`}
             </div>
@@ -126,7 +126,7 @@ const WeekTracking = memo(
                 >
                   <span
                     className={cn(
-                      "text-[10px] font-bold uppercase tracking-tight text-card-foreground/60 transition-colors",
+                      "text-[10px] font-bold tracking-tight text-muted/60 transition-colors uppercase",
                       isToday && "text-primary",
                     )}
                   >
@@ -137,9 +137,9 @@ const WeekTracking = memo(
                     className={cn(
                       "relative flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] transition-all duration-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-[11px]",
                       hasWorkout
-                        ? "border-primary/30 bg-primary/10 text-primary"
-                        : "border-border/40 bg-background/40 text-muted-foreground/30",
-                      isToday && !hasWorkout && "border-primary/20 bg-background/40",
+                        ? "border-primary/40 bg-primary/10 text-primary shadow-sm"
+                        : "border-border/40 bg-white/5 text-muted-foreground/30 dark:bg-white/[0.02]",
+                      isToday && !hasWorkout && "border-primary/20 bg-primary/5 shadow-inner",
                     )}
                     title={statusLabel}
                     aria-label={statusLabel}
