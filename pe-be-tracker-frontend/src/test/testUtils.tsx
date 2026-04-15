@@ -31,6 +31,8 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
 }
 
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
+
 const AllTheProviders = ({
   children,
   queryClient,
@@ -40,7 +42,9 @@ const AllTheProviders = ({
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <TooltipProvider delayDuration={0}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 };

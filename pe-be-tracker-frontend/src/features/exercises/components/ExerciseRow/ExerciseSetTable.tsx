@@ -376,6 +376,8 @@ const ExerciseSetRow = memo(({
           variant="ghost"
           size="sm"
           className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
+          aria-label={`Open options for set ${index + 1}`}
+          aria-haspopup="dialog"
           onClick={() =>
             onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null, set.rir ?? null)
           }
