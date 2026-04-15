@@ -101,7 +101,7 @@ const AppLayout = () => {
   ]);
 
   return (
-    <div className="bg-background flex min-h-screen">
+    <div className="bg-background flex min-h-screen min-h-dvh">
       {/* Skip to content link for accessibility */}
       <a
         href="#main-content"
@@ -129,7 +129,6 @@ const AppLayout = () => {
           id="main-content"
           className="flex-1 pb-16 md:pb-0"
           role="main"
-          style={{ minHeight: "calc(100vh - 4rem)" }}
         >
           <Outlet />
         </main>
