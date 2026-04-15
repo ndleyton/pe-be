@@ -39,6 +39,7 @@ class ExerciseSet(Base):
     duration_seconds = Column(Integer, nullable=True)
     intensity = Column(Numeric(precision=7, scale=3))
     rpe = Column(Numeric(precision=3, scale=1), nullable=True)
+    rir = Column(Numeric(precision=3, scale=1), nullable=True)
     canonical_intensity = Column(Numeric(precision=10, scale=5), nullable=True)
     intensity_unit_id = Column(
         Integer,

@@ -80,6 +80,7 @@ class PersonalizedRoutineSetArgs(BaseModel):
     duration_seconds: int | None = Field(default=None, ge=1)
     intensity: Decimal | None = None
     rpe: Decimal | None = None
+    rir: Decimal | None = None
     intensity_unit: str | None = Field(default=None, min_length=1)
 
     TIME_KEYWORDS: ClassVar[tuple[str, ...]] = (
@@ -185,6 +186,7 @@ class PersonalizedRoutineSetArgs(BaseModel):
             normalized.get("intensity")
         )
         normalized["rpe"] = cls._normalize_optional_decimal(normalized.get("rpe"))
+        normalized["rir"] = cls._normalize_optional_decimal(normalized.get("rir"))
         normalized["intensity_unit"] = cls._normalize_optional_string(
             normalized.get("intensity_unit")
         )
@@ -268,6 +270,7 @@ class ChatService:
             duration_seconds=getattr(exercise_set, "duration_seconds", None),
             intensity=getattr(exercise_set, "intensity", None),
             rpe=getattr(exercise_set, "rpe", None),
+            rir=getattr(exercise_set, "rir", None),
             intensity_unit_abbreviation=getattr(intensity_unit, "abbreviation", None),
         )
         summary = f"  - Set {exercise_set.id}: {rendered_summary}\n"
@@ -827,6 +830,7 @@ class ChatService:
                             duration_seconds=duration_seconds,
                             intensity=set_draft.intensity,
                             rpe=set_draft.rpe,
+                            rir=set_draft.rir,
                             intensity_unit_id=intensity_unit.id,
                         )
                     )

@@ -144,6 +144,63 @@ async def test_create_exercise_set_success_and_invalid_reference_mapping(db_sess
     assert invalid_exercise.value.field == "exercise_id"
 
 
+async def test_create_exercise_set_with_rir_persists_decimal_value(db_session):
+    """Verify that RIR values like 8.5 persist correctly as Decimal through schema and database."""
+    owner = await _seed_user(db_session, "exercise-set-rir@example.com")
+    workout_type = await _seed_workout_type(db_session, "Set RIR Type")
+    workout = await _seed_workout(db_session, owner.id, workout_type.id)
+    unit = await _seed_intensity_unit(db_session)
+    exercise_type = await _seed_exercise_type(db_session, "Set RIR Exercise")
+    exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 3, 8, tzinfo=timezone.utc),
+    )
+    unit_id = unit.id
+    exercise_id = exercise.id
+    await db_session.commit()
+
+    # Create set with decimal RIR value (as number from frontend)
+    created = await crud.create_exercise_set(
+        db_session,
+        ExerciseSetCreate(
+            reps=10,
+            intensity=100,
+            intensity_unit_id=unit_id,
+            exercise_id=exercise_id,
+            rest_time_seconds=90,
+            done=False,
+            rpe=8.0,
+            rir=8.5,
+            type="working",
+        ),
+    )
+    assert created.id is not None
+    assert created.rpe == Decimal("8.0")
+    assert created.rir == Decimal("8.5")
+
+    # Retrieve and verify decimal persistence
+    retrieved = await crud.get_exercise_set_by_id(db_session, created.id)
+    assert retrieved is not None
+    assert retrieved.rir == Decimal("8.5")
+    assert retrieved.rpe == Decimal("8.0")
+
+    # Update with new decimal RIR value
+    updated = await crud.update_exercise_set(
+        db_session,
+        created.id,
+        ExerciseSetUpdate(rir=2.5),
+    )
+    assert updated is not None
+    assert updated.rir == Decimal("2.5")
+
+    # Verify update persisted
+    re_retrieved = await crud.get_exercise_set_by_id(db_session, created.id)
+    assert re_retrieved is not None
+    assert re_retrieved.rir == Decimal("2.5")
+
+
 async def test_update_exercise_set_handles_missing_deleted_and_invalid_reference(
     db_session,
 ):

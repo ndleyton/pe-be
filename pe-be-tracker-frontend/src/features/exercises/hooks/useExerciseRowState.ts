@@ -31,7 +31,7 @@ export const useExerciseRowState = ({
   exerciseSets: ExerciseSet[];
   updateSetOptions: (
     setId: string | number,
-    updates: { notes?: string; rpe?: number | null },
+    updates: { notes?: string; rpe?: number | null; rir?: number | null },
   ) => Promise<void>;
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -60,10 +60,12 @@ export const useExerciseRowState = ({
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
   const [setRpeValue, setSetRpeValue] = useState<number | null>(null);
+  const [setRirValue, setSetRirValue] = useState<number | null>(null);
   const [exerciseSettingsOpen, setExerciseSettingsOpen] = useState(false);
 
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000);
   const debouncedSetRpeValue = useDebounce(setRpeValue, 1000);
+  const debouncedSetRirValue = useDebounce(setRirValue, 1000);
 
   useEffect(() => {
     setIntensityInputs(buildIntensityInputs(exerciseSets, currentIntensityUnit.id));
@@ -75,7 +77,8 @@ export const useExerciseRowState = ({
     if (
       activeSetId === null ||
       debouncedSetNotesValue !== setNotesValue ||
-      debouncedSetRpeValue !== setRpeValue
+      debouncedSetRpeValue !== setRpeValue ||
+      debouncedSetRirValue !== setRirValue
     ) {
       return;
     }
@@ -90,24 +93,29 @@ export const useExerciseRowState = ({
 
     const nextNotes = debouncedSetNotesValue;
     const nextRpe = debouncedSetRpeValue;
+    const nextRir = debouncedSetRirValue;
     const currentNotes = currentSet.notes || "";
     const currentRpe = currentSet.rpe ?? null;
+    const currentRir = currentSet.rir ?? null;
 
     if (
       nextNotes === currentNotes &&
-      nextRpe === currentRpe
+      nextRpe === currentRpe &&
+      nextRir === currentRir
     ) {
       return;
     }
 
-    void updateSetOptions(activeSetId, { notes: nextNotes, rpe: nextRpe });
+    void updateSetOptions(activeSetId, { notes: nextNotes, rpe: nextRpe, rir: nextRir });
   }, [
     activeSetId,
     debouncedSetNotesValue,
     debouncedSetRpeValue,
+    debouncedSetRirValue,
     exerciseSets,
     setNotesValue,
     setRpeValue,
+    setRirValue,
     updateSetOptions,
   ]);
 
@@ -127,16 +135,19 @@ export const useExerciseRowState = ({
     setActiveSetId(null);
     setSetNotesValue("");
     setSetRpeValue(null);
+    setSetRirValue(null);
   };
 
   const openSetOptions = (
     setId: string | number,
     initialNotes: string,
     initialRpe: number | null | undefined,
+    initialRir: number | null | undefined,
   ) => {
     setActiveSetId(setId);
     setSetNotesValue(initialNotes);
     setSetRpeValue(initialRpe ?? null);
+    setSetRirValue(initialRir ?? null);
   };
 
   const handleSetOptionsOpenChange = (open: boolean) => {
@@ -180,12 +191,14 @@ export const useExerciseRowState = ({
         })),
     setNotesValue,
     setRpeValue,
+    setRirValue,
     setRepsInputValue: (setId: string | number, value: string) =>
       setRepsInputs((current) => ({
         ...current,
         [String(setId)]: value,
       })),
     setSetRpeValue,
+    setSetRirValue,
     setSetNotesValue,
     closeSetOptions,
   };

@@ -590,7 +590,7 @@ describe("ExerciseRow", () => {
 
       expect(screen.getByText("Set Notes & Options")).toBeInTheDocument();
       expect(screen.getByText("Effort")).toBeInTheDocument();
-      expect(screen.getByText("Not set")).toBeInTheDocument();
+      expect(screen.getByText("Reps in Reserve")).toBeInTheDocument();
       expect(
         screen.getByPlaceholderText(/add notes for this set/i),
       ).toBeInTheDocument();

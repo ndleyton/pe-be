@@ -74,6 +74,7 @@ export async function syncGuestDataToServer(
             duration_seconds: s.duration_seconds,
             intensity: s.intensity,
             rpe: s.rpe,
+            rir: s.rir,
             intensity_unit_id: s.intensity_unit_id,
             rest_time_seconds: s.rest_time_seconds,
             done: s.done,

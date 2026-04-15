@@ -53,6 +53,7 @@ export interface GuestExerciseSet {
   duration_seconds?: number | null;
   intensity: number | null;
   rpe?: number | null;
+  rir?: number | null;
   intensity_unit_id: number;
   exercise_id: string;
   rest_time_seconds: number | null;
@@ -291,6 +292,7 @@ export const useGuestStore = create<GuestStore>()(
           id,
           intensity: exerciseSet.intensity,
           rpe: exerciseSet.rpe ?? null,
+          rir: exerciseSet.rir ?? null,
           created_at: now,
           updated_at: now,
         };
@@ -434,6 +436,7 @@ export const useGuestStore = create<GuestStore>()(
               duration_seconds: routineSet.duration_seconds ?? null,
               intensity: routineSet.intensity ?? null,
               rpe: routineSet.rpe ?? null,
+              rir: routineSet.rir ?? null,
               intensity_unit_id: routineSet.intensity_unit_id,
               rest_time_seconds: null,
               done: false,

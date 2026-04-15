@@ -77,7 +77,7 @@ describe("useExerciseRowState", () => {
     );
 
     act(() => {
-      result.current.openSetOptions(1, "Original note", null);
+      result.current.openSetOptions(1, "Original note", null, null);
       result.current.setSetNotesValue("Updated note");
     });
 
@@ -90,6 +90,7 @@ describe("useExerciseRowState", () => {
     expect(updateSetOptions).toHaveBeenCalledWith(1, {
       notes: "Updated note",
       rpe: null,
+      rir: null,
     });
   });
 
@@ -116,7 +117,7 @@ describe("useExerciseRowState", () => {
     );
 
     act(() => {
-      result.current.openSetOptions(1, "Original note", null);
+      result.current.openSetOptions(1, "Original note", null, null);
     });
 
     await act(async () => {
@@ -150,7 +151,7 @@ describe("useExerciseRowState", () => {
     );
 
     act(() => {
-      result.current.openSetOptions(1, "Original note", null);
+      result.current.openSetOptions(1, "Original note", null, null);
       result.current.setSetRpeValue(8.5);
     });
 
@@ -163,6 +164,7 @@ describe("useExerciseRowState", () => {
     expect(updateSetOptions).toHaveBeenCalledWith(1, {
       notes: "Original note",
       rpe: 8.5,
+      rir: null,
     });
   });
 

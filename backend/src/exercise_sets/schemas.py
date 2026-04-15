@@ -11,6 +11,7 @@ class ExerciseSetBase(BaseModel):
     duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
     intensity_unit_id: int
     exercise_id: int
     rest_time_seconds: Optional[int] = None
@@ -32,6 +33,7 @@ class ExerciseSetUpdate(BaseModel):
     duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
     intensity_unit_id: Optional[int] = None
     rest_time_seconds: Optional[int] = None
     done: Optional[bool] = None

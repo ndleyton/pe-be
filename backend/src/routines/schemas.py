@@ -32,6 +32,7 @@ class SetTemplateBase(BaseModel):
     duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
     intensity_unit_id: int
 
 
