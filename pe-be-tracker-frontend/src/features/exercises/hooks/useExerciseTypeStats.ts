@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getExerciseTypeStats, type ExerciseTypeStats, type ExerciseType } from "@/features/exercises/api";
+import { getExerciseTypeStats, type ExerciseType } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export const useExerciseTypeStats = (exerciseTypeId: string | number, _exerciseType?: ExerciseType) => {
