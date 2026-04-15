@@ -236,6 +236,8 @@ async def get_visible_routines_summary(
     offset: int = 0,
     limit: int = 100,
     order_by: str = "createdAt",
+    category: str | None = None,
+    author: str | None = None,
 ) -> List[dict]:
     """Get routines visible to the current viewer as summary dictionaries mapped to RoutineSummary."""
     from src.core.observability import traced_span
@@ -245,11 +247,20 @@ async def get_visible_routines_summary(
         query = select(Routine)
         query = _apply_visibility_filter(query, user_id)
 
+        if category is not None:
+            query = query.where(Routine.category == category)
+        if author is not None:
+            query = query.where(Routine.author == author)
+
         # Ordering
         if order_by == "name":
             query = query.order_by(Routine.name.asc(), Routine.id.asc())
         elif order_by == "updatedAt":
             query = query.order_by(Routine.updated_at.desc(), Routine.id.asc())
+        elif order_by == "author":
+            query = query.order_by(Routine.author.asc().nullslast(), Routine.id.asc())
+        elif order_by == "category":
+            query = query.order_by(Routine.category.asc().nullslast(), Routine.id.asc())
         else:
             # Default to createdAt
             query = query.order_by(Routine.created_at.desc(), Routine.id.asc())
@@ -289,6 +300,8 @@ async def get_visible_routines_summary(
                     "creator_id": r.creator_id,
                     "visibility": r.visibility,
                     "is_readonly": r.is_readonly,
+                    "author": r.author,
+                    "category": r.category,
                     "created_at": r.created_at,
                     "updated_at": r.updated_at,
                     "exercise_count": counts["exercise_count"],
@@ -313,6 +326,8 @@ async def create_routine(
             description=routine_data.description,
             workout_type_id=routine_data.workout_type_id,
             creator_id=user_id,
+            author=routine_data.author,
+            category=routine_data.category,
         )
         session.add(routine)
         await session.flush()  # Get the new routine ID from the legacy table
@@ -388,6 +403,8 @@ async def create_routine_admin(
         "description": routine_data.description,
         "workout_type_id": routine_data.workout_type_id,
         "creator_id": user_id,
+        "author": routine_data.author,
+        "category": routine_data.category,
     }
 
     # Optional admin-only fields
@@ -490,6 +507,10 @@ async def update_routine(
         routine.workout_type_id = routine_data.workout_type_id
     if routine_data.visibility is not None:
         routine.visibility = routine_data.visibility
+    if routine_data.author is not None:
+        routine.author = routine_data.author
+    if routine_data.category is not None:
+        routine.category = routine_data.category
 
     if routine_data.exercise_templates is not None:
         # Full-replace semantics for nested templates on update.

@@ -72,6 +72,10 @@ class Routine(Base):
     # Mutability control for canonical content
     is_readonly = Column(Boolean, default=False, nullable=False)
 
+    # Added fields for filtering/sorting
+    author = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+
     # Relationships
     creator: Mapped["User"] = relationship("User", back_populates="routines")
     workout_type: Mapped["WorkoutType"] = relationship("WorkoutType", lazy="joined")

@@ -19,7 +19,7 @@ from src.users.models import User
 router = APIRouter(tags=["routines"])
 
 MAX_ROUTINE_LIMIT = 500
-ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name"}
+ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name", "author", "category"}
 
 
 @router.get("/", response_model=List[RoutineRead])
@@ -46,6 +46,8 @@ async def get_visible_routines_summary(
     offset: int = 0,
     limit: int = 100,
     order_by: str = "createdAt",
+    category: str | None = None,
+    author: str | None = None,
 ):
     """Get summarized routines visible to the current viewer."""
     # Validation
@@ -71,7 +73,7 @@ async def get_visible_routines_summary(
         )
 
     return await routine_service.get_visible_routines_summary(
-        session, user.id if user else None, offset, limit, order_by
+        session, user.id if user else None, offset, limit, order_by, category, author
     )
 
 

@@ -82,6 +82,8 @@ class RoutineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     workout_type_id: int
+    author: Optional[str] = None
+    category: Optional[str] = None
 
 
 class RoutineCreate(RoutineBase):
@@ -125,6 +127,8 @@ class RoutineUpdate(BaseModel):
     description: Optional[str] = None
     workout_type_id: Optional[int] = None
     visibility: Optional[RoutineModel.RoutineVisibility] = None
+    author: Optional[str] = None
+    category: Optional[str] = None
     exercise_templates: Optional[List[ExerciseTemplateCreate]] = None
 
 
