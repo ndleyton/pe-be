@@ -16,9 +16,9 @@ const { preloadSpy } = vi.hoisted(() => ({
 }));
 
 class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() { }
+  unobserve() { }
+  disconnect() { }
 }
 
 // Mock API functions
@@ -102,6 +102,22 @@ vi.mock("@tanstack/react-query", async () => {
     useQueryClient: vi.fn(() => ({
       invalidateQueries: vi.fn(),
     })),
+    useQuery: vi.fn((options: any) => {
+      if (options.queryKey[0] === "exerciseTypeStats") {
+        return {
+          data: {
+            personalBest: {
+              weight: 100,
+              reps: 5,
+              date: "2023-01-01",
+            },
+            intensityUnit: { id: 1, abbreviation: "kg" },
+          },
+          isLoading: false,
+        };
+      }
+      return { data: null, isLoading: false };
+    }),
   };
 });
 
@@ -116,6 +132,7 @@ vi.mock("lucide-react", async () => {
     Plus: () => <div data-testid="plus-icon">+</div>,
     Minus: () => <div data-testid="minus-icon">-</div>,
     Check: () => <div data-testid="check-icon">✓</div>,
+    Trophy: () => <div data-testid="trophy-icon">🏆</div>,
     X: () => <div data-testid="x-icon">✕</div>,
     XIcon: () => <div data-testid="x-icon">✕</div>,
   };
@@ -469,6 +486,36 @@ describe("ExerciseRow", () => {
         ...mockExercise,
         exercise_sets: [{ ...mockExerciseSet1, done: true }, mockExerciseSet2],
       });
+    });
+  });
+
+  it("shows a trophy icon when a set is a PR and marked as done", async () => {
+    const user = userEvent.setup();
+    // Use a mock exercise where the first set is already above the PR weight (100 in mock stats)
+    const prExercise: Exercise = {
+      ...mockExercise,
+      exercise_sets: [
+        {
+          ...mockExerciseSet1,
+          intensity: 105.0,
+          done: false,
+        },
+        mockExerciseSet2,
+      ],
+    };
+
+    render(<ExerciseRow {...defaultProps} exercise={prExercise} />);
+
+    // Initially shows check icon (since it's not done)
+    const checkButtons = screen.getAllByTestId("check-icon");
+    expect(checkButtons).toHaveLength(2); // Set 1 (not done) and Set 2 (done)
+
+    // Toggle set 1 completion
+    await user.click(checkButtons[0]);
+
+    // Now set 1 should show the trophy icon
+    await waitFor(() => {
+      expect(screen.getByTestId("trophy-icon")).toBeInTheDocument();
     });
   });
 

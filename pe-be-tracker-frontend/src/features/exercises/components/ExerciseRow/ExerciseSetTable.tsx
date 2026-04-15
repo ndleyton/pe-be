@@ -153,7 +153,9 @@ export const ExerciseSetTable = ({
             : 0;
 
           // PR Detection: Improved weight OR same weight with more reps
-          const isPR = personalBest && set.done && (
+          // If personalBest is missing, we consider any completed set with data as a PR (First Record)
+          const isPR = set.done && (currentWeight > 0 || currentReps > 0) && (
+            !personalBest ||
             currentWeight > pbWeightInCurrentUnit ||
             (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 && currentReps > personalBest.reps)
           );
@@ -339,7 +341,7 @@ export const ExerciseSetTable = ({
                 <Button
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
-                  className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
+                  className={`group relative h-10 w-10 rounded-xl transition-all duration-300 ${set.done
                     ? isPR
                       ? "bg-amber-500 text-white scale-110 shadow-lg shadow-amber-500/40 ring-4 ring-amber-500/20"
                       : "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
@@ -347,8 +349,11 @@ export const ExerciseSetTable = ({
                     }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
+                  {isPR && (
+                    <span className="absolute inset-0 animate-ping rounded-xl bg-amber-400/50 duration-1000" />
+                  )}
                   {isPR ? (
-                    <Trophy className="h-6 w-6 scale-110" />
+                    <Trophy className="h-6 w-6 scale-110 animate-tada" />
                   ) : (
                     <Check
                       className={`h-6 w-6 transition-all duration-300 ${set.done
