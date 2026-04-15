@@ -517,6 +517,7 @@ export const ExerciseSetTable = ({
                             size="sm"
                             className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                             onClick={() => onSetRpeValueChange(null)}
+                            aria-label={`Clear RPE for set ${index + 1}`}
                           >
                             Clear
                           </Button>
@@ -564,6 +565,7 @@ export const ExerciseSetTable = ({
                               size="sm"
                               className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                               onClick={() => onSetRirValueChange(null)}
+                              aria-label={`Clear RIR for set ${index + 1}`}
                             >
                               Clear
                             </Button>
