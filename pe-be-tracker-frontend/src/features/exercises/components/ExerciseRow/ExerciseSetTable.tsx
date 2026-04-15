@@ -423,9 +423,9 @@ const SetOptionsDialogContent = ({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Set Notes & Options</DialogTitle>
+        <DialogTitle>Set Details</DialogTitle>
         <DialogDescription>
-          Add notes for this set or remove it from the exercise.
+          Log intensity and notes for this set.
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">

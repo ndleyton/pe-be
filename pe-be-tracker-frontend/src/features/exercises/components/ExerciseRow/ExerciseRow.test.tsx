@@ -652,7 +652,8 @@ describe("ExerciseRow", () => {
     if (setNotesButton) {
       await user.click(setNotesButton);
 
-      expect(screen.getByText("Set Notes & Options")).toBeInTheDocument();
+      expect(screen.getByText("Set Details")).toBeInTheDocument();
+      expect(screen.getByText("Log intensity and notes for this set.")).toBeInTheDocument();
       expect(screen.getByText("RPE")).toBeInTheDocument();
       expect(screen.getByText("RIR")).toBeInTheDocument();
       expect(
