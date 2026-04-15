@@ -350,7 +350,7 @@ export const ExerciseSetTable = ({
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
                   {isPR && (
-                    <span className="absolute inset-0 animate-ping rounded-xl bg-amber-400/50 duration-1000" />
+                    <span className="absolute inset-0 animate-ping animate-twice rounded-xl bg-amber-400/50 duration-1000" />
                   )}
                   {isPR ? (
                     <Trophy className="h-6 w-6 scale-110 animate-tada" />

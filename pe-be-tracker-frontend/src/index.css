@@ -127,3 +127,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .animate-twice {
+    animation-iteration-count: 2 !important;
+  }
+}
