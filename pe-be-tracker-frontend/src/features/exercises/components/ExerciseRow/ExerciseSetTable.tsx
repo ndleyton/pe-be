@@ -31,20 +31,20 @@ import {
 import { Slider } from "@/shared/components/ui/slider";
 
 const getRpeDescription = (rpe: number | null) => {
-  if (rpe === null) return "Not set";
-  if (rpe >= 10) return "Max Effort (0 reps left)";
-  if (rpe >= 9.5) return "Very Hard (Maybe 1 rep left)";
-  if (rpe >= 9) return "Hard (1 rep left)";
-  if (rpe >= 8.5) return "Hard (1-2 reps left)";
-  if (rpe >= 8) return "Moderate (2 reps left)";
-  if (rpe >= 7.5) return "Moderate (2-3 reps left)";
-  if (rpe >= 7) return "Comfortable (3 reps left)";
+  if (rpe === null) return "Slide right for higher effort";
+  if (rpe >= 10) return "Max Effort";
+  if (rpe >= 9.5) return "Very Hard";
+  if (rpe >= 9) return "Hard";
+  if (rpe >= 8.5) return "Hard";
+  if (rpe >= 8) return "Moderate";
+  if (rpe >= 7.5) return "Moderate";
+  if (rpe >= 7) return "Comfortable";
   if (rpe >= 6) return "Warm up / Light";
   return "Light effort";
 };
 
 const getRirDescription = (rir: number | null) => {
-  if (rir === null) return "Not set";
+  if (rir === null) return "Slide right for higher effort";
   if (rir === 0) return "Max Effort (0 reps left)";
   if (rir === 0.5) return "Almost Max (Maybe 1 rep left)";
   if (rir === 1) return "Hard (1 rep left)";
@@ -578,7 +578,7 @@ export const ExerciseSetTable = ({
                               </span>
                             </div>
                             <Slider
-                              value={[setRirValue ?? 0]}
+                              value={[setRirValue == null ? 0 : 10 - setRirValue]}
                               min={0}
                               max={10}
                               step={0.5}
@@ -589,9 +589,10 @@ export const ExerciseSetTable = ({
                                   ? "Not set"
                                   : `Reps in Reserve ${setRirValue}`
                               }
-                              onValueChange={(values: number[]) =>
-                                onSetRirValueChange(values[0] ?? null)
-                              }
+                              onValueChange={(values: number[]) => {
+                                const val = values[0] ?? 0;
+                                onSetRirValueChange(10 - val);
+                              }}
                             />
                           </div>
                         </div>
