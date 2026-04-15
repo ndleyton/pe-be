@@ -48,7 +48,6 @@ const getRpeDescription = (rpe: number | null) => {
 const getRirDescription = (rir: number | null) => {
   if (rir === null) return "Slide up for higher effort";
   if (rir === 0) return "Failure (no reps left)";
-  if (rir >= 4) return "4+ reps left";
 
   const isHalf = rir % 1 !== 0;
   const count = Math.ceil(rir);
