@@ -1,6 +1,6 @@
-import { Check, Minus, MoreVertical, Plus, Trash2 } from "lucide-react";
+import { Check, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
-import type { ExerciseSet } from "@/features/exercises/api";
+import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
 import {
   EXERCISE_SETS_GRID_CLASSES,
   formatIntensityInputValue,
@@ -68,6 +68,8 @@ type ExerciseSetTableProps = {
   setNotesValue: string;
   setRpeValue: number | null;
   setRirValue: number | null;
+  personalBest?: PersonalBestData | null;
+  personalBestUnitId?: number | null;
 };
 
 export const ExerciseSetTable = ({
@@ -98,6 +100,8 @@ export const ExerciseSetTable = ({
   setNotesValue,
   setRpeValue,
   setRirValue,
+  personalBest,
+  personalBestUnitId,
 }: ExerciseSetTableProps) => {
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
@@ -140,11 +144,27 @@ export const ExerciseSetTable = ({
           const setValueMode = resolveSetValueMode(set, prefersTimeByDefault);
           const isTimeMode = setValueMode === "time";
 
+          const currentWeight = parseDecimalInput(intensityValue) ?? 0;
+          const currentReps = Number.parseInt(repsValue, 10) || 0;
+
+          // Convert personal best weight to current unit for accurate comparison
+          const pbWeightInCurrentUnit = personalBest && personalBestUnitId
+            ? convertIntensityValue(personalBest.weight, personalBestUnitId, currentIntensityUnitId) ?? 0
+            : 0;
+
+          // PR Detection: Improved weight OR same weight with more reps
+          const isPR = personalBest && set.done && (
+            currentWeight > pbWeightInCurrentUnit ||
+            (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 && currentReps > personalBest.reps)
+          );
+
           return (
             <div
               key={set.id}
               className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
-                ? "bg-done/10 border-done/20 shadow-inner"
+                ? isPR
+                  ? "bg-amber-500/10 border-amber-500/30 shadow-inner"
+                  : "bg-done/10 border-done/20 shadow-inner"
                 : "bg-muted/50 border-transparent shadow-sm"
                 }`}
             >
@@ -320,17 +340,23 @@ export const ExerciseSetTable = ({
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
                   className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
-                    ? "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
+                    ? isPR
+                      ? "bg-amber-500 text-white scale-110 shadow-lg shadow-amber-500/40 ring-4 ring-amber-500/20"
+                      : "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
                     : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
                     }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
-                  <Check
-                    className={`h-6 w-6 transition-all duration-300 ${set.done
-                      ? "scale-110 opacity-100"
-                      : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
-                      }`}
-                  />
+                  {isPR ? (
+                    <Trophy className="h-6 w-6 scale-110" />
+                  ) : (
+                    <Check
+                      className={`h-6 w-6 transition-all duration-300 ${set.done
+                        ? "scale-110 opacity-100"
+                        : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
+                        }`}
+                    />
+                  )}
                 </Button>
               </div>
 

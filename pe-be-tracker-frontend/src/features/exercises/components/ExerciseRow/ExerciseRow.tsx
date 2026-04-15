@@ -1,6 +1,8 @@
 import { memo, useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { useExerciseRowState, useExerciseSetActions } from "@/features/exercises/hooks";
+import { getExerciseTypeStats } from "@/features/exercises/api";
 import type { ExerciseRowProps } from "@/features/exercises/lib/exerciseRow";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui";
 import { cn } from "@/lib/utils";
@@ -12,6 +14,7 @@ import {
   AccordionContent,
   AccordionItem
 } from "@/shared/components/ui/accordion";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const ExerciseRow = ({
   exercise,
@@ -25,6 +28,8 @@ const ExerciseRow = ({
   const isControlled = isExpandedProp !== undefined;
 
   const isExpanded = isExpandedProp ?? isExpandedInternal;
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const {
     addSet,
@@ -76,6 +81,13 @@ const ExerciseRow = ({
     exercise,
     exerciseSets,
     updateSetOptions,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["exerciseTypeStats", exercise.exercise_type.id],
+    queryFn: () => getExerciseTypeStats(String(exercise.exercise_type.id)),
+    enabled: isAuthenticated && typeof exercise.exercise_type.id === "number",
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const hasImages =
@@ -176,6 +188,8 @@ const ExerciseRow = ({
               setNotesValue={setNotesValue}
               setRpeValue={setRpeValue}
               setRirValue={setRirValue}
+              personalBest={stats?.personalBest}
+              personalBestUnitId={stats?.intensityUnit?.id}
             />
           </CardContent>
         </Card>
