@@ -3,7 +3,7 @@ import { screen } from "@testing-library/react";
 
 import { render } from "@/test/testUtils";
 import RoutinesPage from "./RoutinesPage";
-import { useInfiniteScroll } from "@/shared/hooks";
+import { useInfiniteScroll } from "@/shared/hooks/useInfiniteScroll";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 
 vi.mock("@/features/routines/components/RoutineStructuredData/RoutineStructuredData", () => ({
@@ -14,9 +14,9 @@ vi.mock("@/features/routines/hooks", () => ({
   useStartWorkoutFromRoutine: vi.fn(),
 }));
 
-vi.mock("@/shared/hooks", async () => {
-  const actual = await vi.importActual<typeof import("@/shared/hooks")>(
-    "@/shared/hooks",
+vi.mock("@/shared/hooks/useInfiniteScroll", async () => {
+  const actual = await vi.importActual<typeof import("@/shared/hooks/useInfiniteScroll")>(
+    "@/shared/hooks/useInfiniteScroll",
   );
 
   return {

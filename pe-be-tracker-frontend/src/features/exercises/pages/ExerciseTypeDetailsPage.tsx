@@ -38,7 +38,7 @@ import { PersonalBestInfo } from "@/features/exercises/components/PersonalBestIn
 import { addExerciseToCurrentWorkout } from "@/features/workouts";
 import type { Workout } from "@/features/workouts/types";
 import { Button } from "@/shared/components/ui/button";
-import { useAppBackNavigation } from "@/shared/hooks";
+import { useAppBackNavigation } from "@/shared/hooks/useAppBackNavigation";
 import {
   Alert,
   AlertDescription,

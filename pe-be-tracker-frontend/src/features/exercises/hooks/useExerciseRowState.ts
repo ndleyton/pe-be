@@ -19,7 +19,7 @@ import {
   GUEST_INTENSITY_UNITS,
   KNOWN_INTENSITY_UNITS,
 } from "@/features/exercises/constants";
-import { useDebounce } from "@/shared/hooks";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useAuthStore } from "@/stores";
 
 export const useExerciseRowState = ({

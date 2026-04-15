@@ -5,7 +5,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { config } from "@/app/config/env";
-import { Sentry, sentryEnabled } from "@/instrument";
+import { captureSentryException, sentryEnabled } from "@/instrument";
 
 type RequestMetadata = {
   requestId?: string;
@@ -91,7 +91,7 @@ const captureApiError = (error: unknown): void => {
     getHeaderValue(request?.headers, "X-Request-ID") ||
     getHeaderValue(error.response?.headers, "x-request-id");
 
-  Sentry.withScope((scope) => {
+  captureSentryException(error, (scope) => {
     scope.setTag("error_source", "axios");
     if (request?.method) {
       scope.setTag("http_method", request.method.toUpperCase());
@@ -110,7 +110,6 @@ const captureApiError = (error: unknown): void => {
       requestId,
       responseRequestId: getHeaderValue(error.response?.headers, "x-request-id"),
     });
-    Sentry.captureException(error);
   });
 };
 

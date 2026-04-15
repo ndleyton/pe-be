@@ -4,7 +4,7 @@ import { useUIStore, useAuthStore } from "@/stores";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { Button } from "@/shared/components/ui/button";
-import { useHomeNavigation } from "@/shared/hooks";
+import { useHomeNavigation } from "@/shared/hooks/useHomeNavigation";
 
 const AppBar = () => {
   const toggleDrawer = useUIStore((state) => state.toggleDrawer);

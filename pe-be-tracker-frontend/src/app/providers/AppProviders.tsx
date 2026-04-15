@@ -1,17 +1,19 @@
-import {
-  useEffect,
-  useState,
-  type ErrorInfo,
-  type ReactNode,
-} from "react";
+import { Suspense, lazy, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "react-error-boundary";
-import posthog from "posthog-js";
-import { PostHogProvider, usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
+import {
+  capturePostHogException,
+  schedulePostHogInit,
+} from "@/app/telemetry/posthog";
 import { StoreInitializer } from "@/stores";
 import { Toaster } from "@/shared/components/ui";
+
+const ReactQueryDevtools = lazy(() =>
+  import("@tanstack/react-query-devtools").then((module) => ({
+    default: module.ReactQueryDevtools,
+  })),
+);
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -44,13 +46,10 @@ const SimpleErrorFallback = () => (
   </div>
 );
 
-// Error boundary that sends errors to PostHog
-const PostHogErrorBoundary = ({ children }: { children: ReactNode }) => {
-  const posthog = usePostHog();
-
+const AppErrorBoundary = ({ children }: { children: ReactNode }) => {
   const handleError = (error: unknown, info: ErrorInfo) => {
     console.error("App Error:", error);
-    posthog?.captureException(error, {
+    capturePostHogException(error, {
       source: "react-error-boundary",
       timestamp: new Date().toISOString(),
       componentStack: info.componentStack,
@@ -67,78 +66,7 @@ const PostHogErrorBoundary = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const posthogOptions = {
-  api_host: config.posthogHost,
-  capture_exceptions: true,
-  debug: config.isDevelopment,
-  disable_surveys: true,
-} as const;
-
-const DeferredPostHogProvider = ({ children }: { children: ReactNode }) => {
-  const [posthogReady, setPostHogReady] = useState(posthog.__loaded);
-
-  useEffect(() => {
-    if (posthog.__loaded) {
-      setPostHogReady(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    const initializePostHog = () => {
-      if (cancelled || posthog.__loaded) {
-        if (!cancelled && posthog.__loaded) {
-          setPostHogReady(true);
-        }
-        return;
-      }
-
-      posthog.init(config.posthogApiKey, posthogOptions);
-      if (!cancelled) {
-        setPostHogReady(true);
-      }
-    };
-
-    const browserWindow = window as Window &
-      typeof globalThis & {
-        requestIdleCallback?: (
-          callback: IdleRequestCallback,
-          options?: IdleRequestOptions,
-        ) => number;
-        cancelIdleCallback?: (handle: number) => void;
-      };
-
-    if (typeof browserWindow.requestIdleCallback === "function") {
-      const idleId = browserWindow.requestIdleCallback(initializePostHog, {
-        timeout: 2000,
-      });
-
-      return () => {
-        cancelled = true;
-        browserWindow.cancelIdleCallback?.(idleId);
-      };
-    }
-
-    const timeoutId = globalThis.setTimeout(initializePostHog, 0);
-    return () => {
-      cancelled = true;
-      globalThis.clearTimeout(timeoutId);
-    };
-  }, []);
-
-  return (
-    <PostHogProvider client={posthog}>
-      <PostHogErrorBoundary>
-        <StoreInitializer posthogReady={posthogReady}>
-          {children}
-        </StoreInitializer>
-      </PostHogErrorBoundary>
-    </PostHogProvider>
-  );
-};
-
 export const AppProviders = ({ children }: { children: ReactNode }) => {
-  // Only render PostHogProvider if PostHog is properly configured and not in test mode
   const isPostHogConfigured =
     !config.isTest && config.posthogApiKey && config.posthogHost;
   const isAutomatedBrowser =
@@ -146,10 +74,20 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
   const shouldShowReactQueryDevtools =
     config.isDevelopment && !config.isTest && !isAutomatedBrowser;
 
+  useEffect(() => {
+    if (!isPostHogConfigured) {
+      return;
+    }
+
+    return schedulePostHogInit();
+  }, [isPostHogConfigured]);
+
   return (
     <QueryClientProvider client={queryClient}>
       {isPostHogConfigured ? (
-        <DeferredPostHogProvider>{children}</DeferredPostHogProvider>
+        <AppErrorBoundary>
+          <StoreInitializer>{children}</StoreInitializer>
+        </AppErrorBoundary>
       ) : (
         <ErrorBoundary
           FallbackComponent={SimpleErrorFallback}
@@ -161,7 +99,12 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
         </ErrorBoundary>
       )}
       {shouldShowReactQueryDevtools && (
-        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+        <Suspense fallback={null}>
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-left"
+          />
+        </Suspense>
       )}
       <Toaster />
     </QueryClientProvider>

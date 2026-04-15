@@ -10,7 +10,7 @@ import {
   SheetTitle,
 } from "@/shared/components/ui/sheet";
 import { useGoogleSignIn } from "@/features/auth/hooks";
-import { useNavigation } from "@/shared/hooks";
+import { useNavigation } from "@/shared/hooks/useNavigation";
 
 const NavItemLink = ({
   item,

@@ -12,7 +12,7 @@ import {
   type ExerciseImageOption,
 } from "@/features/admin/api/exerciseImageOptions";
 import { useAuthStore } from "@/stores";
-import { useAppBackNavigation } from "@/shared/hooks";
+import { useAppBackNavigation } from "@/shared/hooks/useAppBackNavigation";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import {

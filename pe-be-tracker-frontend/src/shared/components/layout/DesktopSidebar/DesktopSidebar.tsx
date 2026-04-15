@@ -4,7 +4,8 @@ import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
-import { useHomeNavigation, useNavigation } from "@/shared/hooks";
+import { useHomeNavigation } from "@/shared/hooks/useHomeNavigation";
+import { useNavigation } from "@/shared/hooks/useNavigation";
 
 const NavItemLink = ({ item }: { item: NavItem }) => {
   const { href, isActive, handleClick } = useNavigation(item.key);

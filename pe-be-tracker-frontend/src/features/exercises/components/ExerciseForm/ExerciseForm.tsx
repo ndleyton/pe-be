@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { usePostHog } from "posthog-js/react";
 import { useMutation } from "@tanstack/react-query";
 import ExerciseTypeModal from "../ExerciseTypeModal";
+import { capturePostHogException } from "@/app/telemetry/posthog";
 import { ExerciseType, createExercise } from "@/features/exercises/api";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
@@ -31,7 +31,6 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
     ExerciseType | GuestExerciseType | null
   >(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const posthog = usePostHog();
 
   const {
     register,
@@ -64,7 +63,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
         );
         console.error(error);
         // Feed handled error into PostHog error tracking with context
-        posthog?.captureException(error, {
+        capturePostHogException(error, {
           source: "exercise-form",
           reason: "invalid_workout_id",
           workoutId,

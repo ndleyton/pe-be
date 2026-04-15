@@ -8,7 +8,7 @@ import SideDrawer from "../shared/components/layout/SideDrawer";
 import DesktopSidebar from "../shared/components/layout/DesktopSidebar";
 import BottomNav from "../shared/components/layout/BottomNav";
 import GuestModeBanner from "../shared/components/feedback/GuestModeBanner";
-import { useAppHistoryTracker } from "@/shared/hooks";
+import { useAppHistoryTracker } from "@/shared/hooks/useAppHistoryTracker";
 
 const getActiveWorkout = <T extends {
   id: string | number;
