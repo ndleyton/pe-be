@@ -36,29 +36,28 @@ import {
 import { Slider } from "@/shared/components/ui/slider";
 
 const getRpeDescription = (rpe: number | null) => {
-  if (rpe === null) return "Slide right for higher effort";
+  if (rpe === null) return "Slide up for higher effort";
   if (rpe >= 10) return "Max Effort";
-  if (rpe >= 9.5) return "Very Hard";
-  if (rpe >= 9) return "Hard";
-  if (rpe >= 8.5) return "Hard";
-  if (rpe >= 8) return "Moderate";
-  if (rpe >= 7.5) return "Moderate";
-  if (rpe >= 7) return "Comfortable";
+  if (rpe >= 9) return "Very Hard";
+  if (rpe >= 8) return "Hard";
+  if (rpe >= 7) return "Moderate";
   if (rpe >= 6) return "Warm up / Light";
   return "Light effort";
 };
 
 const getRirDescription = (rir: number | null) => {
-  if (rir === null) return "Slide right for higher effort";
-  if (rir === 0) return "Max Effort (0 reps left)";
-  if (rir === 0.5) return "Almost Max (Maybe 1 rep left)";
-  if (rir === 1) return "Hard (1 rep left)";
-  if (rir === 1.5) return "Hard (1-2 reps left)";
-  if (rir === 2) return "Moderate (2 reps left)";
-  if (rir === 2.5) return "Moderate (2-3 reps left)";
-  if (rir === 3) return "Comfortable (3 reps left)";
-  if (rir >= 4) return "Warm up / Many reps left";
-  return "Light effort";
+  if (rir === null) return "Slide up for higher effort";
+  if (rir === 0) return "Failure (no reps left)";
+  if (rir >= 4) return "4+ reps left";
+
+  const isHalf = rir % 1 !== 0;
+  const count = Math.ceil(rir);
+
+  if (isHalf) {
+    return `Maybe ${count} left`;
+  }
+
+  return `${count} ${count === 1 ? "rep" : "reps"} left`;
 };
 
 type ExerciseSetTableProps = {
@@ -811,18 +810,18 @@ export const ExerciseSetTable = ({
             );
           })()}
         </DialogContent>
-       </Dialog>
+      </Dialog>
 
-       <Button
-         variant="glass"
-         className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
-         data-testid="add-set-button"
-         disabled={isUnsavedExercise}
-         onClick={onAddSet}
-       >
-         <Plus className="mr-2 h-5 w-5" />
-         <span className="font-bold tracking-tight">Add Set</span>
-       </Button>
-     </>
-   );
- };
+      <Button
+        variant="glass"
+        className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
+        data-testid="add-set-button"
+        disabled={isUnsavedExercise}
+        onClick={onAddSet}
+      >
+        <Plus className="mr-2 h-5 w-5" />
+        <span className="font-bold tracking-tight">Add Set</span>
+      </Button>
+    </>
+  );
+};
