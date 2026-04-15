@@ -146,6 +146,7 @@ export const ExerciseSetTable = ({
 
           const currentWeight = parseDecimalInput(intensityValue) ?? 0;
           const currentReps = Number.parseInt(repsValue, 10) || 0;
+          const currentDuration = set.duration_seconds || 0;
 
           // Convert personal best weight to current unit for accurate comparison
           const pbWeightInCurrentUnit = personalBest && personalBestUnitId
@@ -153,9 +154,7 @@ export const ExerciseSetTable = ({
             : 0;
 
           // PR Detection: Improved weight OR same weight with more reps
-          // If personalBest is missing, we consider any completed set with data as a PR (First Record)
-          const isPR = set.done && (currentWeight > 0 || currentReps > 0) && (
-            !personalBest ||
+          const isPR = personalBest && set.done && (currentWeight > 0 || currentReps > 0 || currentDuration > 0) && (
             currentWeight > pbWeightInCurrentUnit ||
             (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 && currentReps > personalBest.reps)
           );
