@@ -217,6 +217,7 @@ class SyncService:
                             duration_seconds=guest_s.duration_seconds,
                             intensity=guest_s.intensity,
                             rpe=guest_s.rpe,
+                            rir=guest_s.rir,
                             intensity_unit_id=guest_s.intensity_unit_id,
                             exercise_id=exercise.id,
                             rest_time_seconds=guest_s.rest_time_seconds,

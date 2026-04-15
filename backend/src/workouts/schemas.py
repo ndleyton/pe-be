@@ -103,6 +103,7 @@ class ParsedExerciseSet(BaseModel):
     duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
     intensity_unit: Optional[str] = None
     rest_time_seconds: Optional[int] = None
     notes: Optional[str] = None
@@ -133,6 +134,7 @@ class ExerciseSetInput(BaseModel):
     duration_seconds: Optional[int] = None
     intensity: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
     intensity_unit_id: int
     rest_time_seconds: Optional[int] = None
 

@@ -251,6 +251,7 @@ class RoutineService:
                     duration_seconds=set_template.duration_seconds,
                     intensity=set_template.intensity,
                     rpe=set_template.rpe,
+                    rir=set_template.rir,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template.intensity_unit_id,
                     canonical_intensity_unit_id=(

@@ -296,7 +296,7 @@ export const useExerciseSetActions = ({
 
   const updateSetOptions = async (
     setId: string | number,
-    updates: Pick<UpdateExerciseSetData, "notes" | "rpe">,
+    updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir">,
   ) => {
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
@@ -363,6 +363,7 @@ export const useExerciseSetActions = ({
       duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
       rpe: lastSet?.rpe ?? null,
+      rir: lastSet?.rir ?? null,
       intensity_unit_id: intensityUnitId,
       exercise_id: exercise.id,
       rest_time_seconds: null,
@@ -386,6 +387,7 @@ export const useExerciseSetActions = ({
       const payload: CreateExerciseSetData = {
         intensity: nextIntensity || 0,
         rpe: lastSet?.rpe ?? null,
+        rir: lastSet?.rir ?? null,
         intensity_unit_id: intensityUnitId,
         exercise_id: exercise.id,
         rest_time_seconds: 0,

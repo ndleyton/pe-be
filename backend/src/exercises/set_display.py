@@ -36,12 +36,20 @@ def _format_rpe(rpe: Decimal | int | float | None) -> str | None:
     return f"RPE {rpe}"
 
 
+def _format_rir(rir: Decimal | int | float | None) -> str | None:
+    if rir is None:
+        return None
+
+    return f"RIR {rir}"
+
+
 def format_set_summary(
     *,
     reps: int | None,
     duration_seconds: int | None,
     intensity: Decimal | int | float | None,
     rpe: Decimal | int | float | None,
+    rir: Decimal | int | float | None,
     intensity_unit_abbreviation: Optional[str],
 ) -> str:
     lead = None
@@ -53,6 +61,7 @@ def format_set_summary(
 
     intensity_display = _format_intensity(intensity, intensity_unit_abbreviation)
     rpe_display = _format_rpe(rpe)
+    rir_display = _format_rir(rir)
 
     parts = []
     if lead:
@@ -61,6 +70,8 @@ def format_set_summary(
         parts.append(f"at {intensity_display}" if lead else intensity_display)
     if rpe_display:
         parts.append(rpe_display)
+    if rir_display:
+        parts.append(rir_display)
 
     if parts:
         return " ".join(parts)

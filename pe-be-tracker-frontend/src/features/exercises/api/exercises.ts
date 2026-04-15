@@ -20,6 +20,7 @@ export interface ExerciseSet {
   duration_seconds?: number | null;
   intensity: number | null;
   rpe?: number | null;
+  rir?: number | null;
   intensity_unit_id: number;
   exercise_id: number | string;
   rest_time_seconds: number | null;
@@ -66,6 +67,7 @@ export interface RoutineSet {
   duration_seconds?: number | null;
   intensity: number | null;
   rpe?: number | null;
+  rir?: number | null;
   intensity_unit_id: number;
   rest_time_seconds: number | null;
 }
@@ -108,6 +110,7 @@ export interface CreateExerciseSetData {
   duration_seconds?: number | null;
   intensity?: number;
   rpe?: number | null;
+  rir?: number | null;
   intensity_unit_id: number;
   exercise_id: string | number;
   rest_time_seconds?: number;
@@ -121,6 +124,7 @@ export interface UpdateExerciseSetData {
   duration_seconds?: number | null;
   intensity?: number | null;
   rpe?: number | null;
+  rir?: number | null;
   intensity_unit_id?: number;
   rest_time_seconds?: number;
   done?: boolean;
