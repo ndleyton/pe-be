@@ -16,9 +16,9 @@ const { preloadSpy } = vi.hoisted(() => ({
 }));
 
 class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() { }
+  unobserve() { }
+  disconnect() { }
 }
 
 // Mock API functions
@@ -87,9 +87,16 @@ vi.mock("../../../exercise-sets/components/AddExerciseSetForm", () => ({
   ),
 }));
 
+const { mockAuthState } = vi.hoisted(() => ({
+  mockAuthState: {
+    isAuthenticated: true,
+  },
+}));
+
 // Mock the auth store and guest store
 vi.mock("@/stores", () => ({
-  useAuthStore: vi.fn(() => ({ isAuthenticated: true })),
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
+    selector(mockAuthState),
   useGuestStore: vi.fn(() => ({ deleteExercise: vi.fn() })),
   GuestExerciseSet: {},
 }));
@@ -102,6 +109,26 @@ vi.mock("@tanstack/react-query", async () => {
     useQueryClient: vi.fn(() => ({
       invalidateQueries: vi.fn(),
     })),
+    useQuery: vi.fn((options: any) => {
+      if (options.queryKey[0] === "exerciseTypeStats") {
+        // Only return stats for the PR test case to avoid side effects in other tests
+        if (options.queryKey[1] === 999 || options.queryKey[1] === "999") {
+          return {
+            data: {
+              personalBest: {
+                weight: 50,
+                reps: 5,
+                date: "2023-01-01",
+              },
+              intensityUnit: { id: 1, abbreviation: "kg" },
+            },
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      }
+      return { data: null, isLoading: false };
+    }),
   };
 });
 
@@ -116,6 +143,7 @@ vi.mock("lucide-react", async () => {
     Plus: () => <div data-testid="plus-icon">+</div>,
     Minus: () => <div data-testid="minus-icon">-</div>,
     Check: () => <div data-testid="check-icon">✓</div>,
+    Trophy: () => <div data-testid="trophy-icon">🏆</div>,
     X: () => <div data-testid="x-icon">✕</div>,
     XIcon: () => <div data-testid="x-icon">✕</div>,
   };
@@ -469,6 +497,42 @@ describe("ExerciseRow", () => {
         ...mockExercise,
         exercise_sets: [{ ...mockExerciseSet1, done: true }, mockExerciseSet2],
       });
+    });
+  });
+
+  it("shows a trophy icon when a set is a PR and marked as done", async () => {
+    const user = userEvent.setup();
+    // Use a mock exercise where the first set is already above the PR weight (50 in mock stats)
+    // and use ID 999 to trigger the mock stats return
+    const prExercise: Exercise = {
+      ...mockExercise,
+      exercise_type: {
+        ...mockExercise.exercise_type,
+        id: 999,
+      },
+      exercise_sets: [
+        {
+          ...mockExerciseSet1,
+          intensity: 105.0,
+          intensity_unit_id: 1,
+          done: false,
+        },
+        mockExerciseSet2,
+      ],
+    };
+
+    render(<ExerciseRow {...defaultProps} exercise={prExercise} />);
+
+    // Initially shows standard check icon (since it's not done)
+    const doneButtons = screen.getAllByTestId("done-button");
+    expect(doneButtons[0]).toHaveAttribute("aria-label", "Mark set done");
+
+    // Toggle set 1 completion
+    await user.click(doneButtons[0]);
+
+    // Now set 1 should show the trophy icon (or at least be marked as done with the correct aria-label)
+    await waitFor(() => {
+      expect(doneButtons[0]).toHaveAttribute("aria-label", "Personal Best");
     });
   });
 

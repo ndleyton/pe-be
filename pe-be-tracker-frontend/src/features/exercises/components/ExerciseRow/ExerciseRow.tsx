@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from "react";
 
-import { useExerciseRowState, useExerciseSetActions } from "@/features/exercises/hooks";
+import { useExerciseRowState, useExerciseSetActions, useExerciseTypeStats } from "@/features/exercises/hooks";
 import type { ExerciseRowProps } from "@/features/exercises/lib/exerciseRow";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui";
 import { cn } from "@/lib/utils";
@@ -77,6 +77,8 @@ const ExerciseRow = ({
     exerciseSets,
     updateSetOptions,
   });
+
+  const { stats } = useExerciseTypeStats(exercise.exercise_type.id, exercise.exercise_type);
 
   const hasImages =
     (exercise.exercise_type.status ?? "released") === "released" &&
@@ -176,6 +178,8 @@ const ExerciseRow = ({
               setNotesValue={setNotesValue}
               setRpeValue={setRpeValue}
               setRirValue={setRirValue}
+              personalBest={stats?.personalBest}
+              personalBestUnitId={stats?.intensityUnit?.id}
             />
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
-import { Check, Minus, MoreVertical, Plus, Trash2 } from "lucide-react";
+import { Check, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
-import type { ExerciseSet } from "@/features/exercises/api";
+import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
 import {
   EXERCISE_SETS_GRID_CLASSES,
   formatIntensityInputValue,
@@ -68,6 +68,8 @@ type ExerciseSetTableProps = {
   setNotesValue: string;
   setRpeValue: number | null;
   setRirValue: number | null;
+  personalBest?: PersonalBestData | null;
+  personalBestUnitId?: number | null;
 };
 
 export const ExerciseSetTable = ({
@@ -98,6 +100,8 @@ export const ExerciseSetTable = ({
   setNotesValue,
   setRpeValue,
   setRirValue,
+  personalBest,
+  personalBestUnitId,
 }: ExerciseSetTableProps) => {
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
@@ -140,17 +144,67 @@ export const ExerciseSetTable = ({
           const setValueMode = resolveSetValueMode(set, prefersTimeByDefault);
           const isTimeMode = setValueMode === "time";
 
+          const parsedWeight = parseDecimalInput(intensityValue);
+          const currentWeight =
+            parsedWeight !== null && Number.isFinite(parsedWeight)
+              ? parsedWeight
+              : null;
+
+          const parsedReps = Number.parseInt(repsValue, 10);
+          const currentReps = !Number.isNaN(parsedReps) ? parsedReps : null;
+
+          const currentDuration = set.duration_seconds ?? null;
+
+          // Convert personal best weight to current unit for accurate comparison
+          const pbWeightInCurrentUnit =
+            personalBest && personalBestUnitId
+              ? convertIntensityValue(
+                personalBest.weight,
+                personalBestUnitId,
+                currentIntensityUnitId,
+              )
+              : null;
+
+          // PR Detection: Improved weight OR same weight with more reps
+          const hasActivity =
+            (currentWeight !== null && currentWeight > 0) ||
+            (currentReps !== null && currentReps > 0) ||
+            (currentDuration !== null && currentDuration > 0);
+
+          const isPR =
+            !!personalBest &&
+            !!set.done &&
+            hasActivity &&
+            currentWeight !== null &&
+            pbWeightInCurrentUnit !== null &&
+            (currentWeight > pbWeightInCurrentUnit ||
+              (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 &&
+                currentReps !== null &&
+                currentReps > personalBest.reps));
+
           return (
             <div
               key={set.id}
               className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
-                ? "bg-done/10 border-done/20 shadow-inner"
+                ? isPR
+                  ? "bg-amber-500/10 border-amber-500/30 shadow-inner"
+                  : "bg-done/10 border-done/20 shadow-inner"
                 : "bg-muted/50 border-transparent shadow-sm"
                 }`}
             >
-              <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
-                <span className="text-muted-foreground text-xs font-black">
-                  {index + 1}
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-500 ${isPR
+                  ? "bg-amber-500 text-white shadow-md scale-110"
+                  : "bg-muted/40"
+                  }`}
+              >
+                <span
+                  className={`font-black transition-all ${isPR
+                    ? "text-[10px] tracking-tighter animate-bounce-once"
+                    : "text-muted-foreground text-xs"
+                    }`}
+                >
+                  {isPR ? "PR" : index + 1}
                 </span>
               </div>
               <div className="min-w-0 flex justify-center">
@@ -319,18 +373,50 @@ export const ExerciseSetTable = ({
                 <Button
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
-                  className={`group h-10 w-10 rounded-xl transition-all duration-300 ${set.done
-                    ? "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
+                  data-testid="done-button"
+                  aria-label={
+                    isPR
+                      ? "Personal Best"
+                      : set.done
+                        ? "Mark set not done"
+                        : "Mark set done"
+                  }
+                  aria-pressed={set.done}
+                  className={`group relative h-10 w-10 rounded-xl transition-all duration-300 ${set.done
+                    ? isPR
+                      ? "bg-amber-500 text-white scale-110 shadow-lg shadow-amber-500/40 ring-4 ring-amber-500/20"
+                      : "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
                     : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
                     }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
-                  <Check
-                    className={`h-6 w-6 transition-all duration-300 ${set.done
-                      ? "scale-110 opacity-100"
-                      : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
-                      }`}
-                  />
+                  <span className="sr-only">
+                    {isPR
+                      ? "Set is PR"
+                      : set.done
+                        ? "Mark set not done"
+                        : "Mark set done"}
+                  </span>
+                  {isPR && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 animate-ping animate-twice rounded-xl bg-amber-400/50 duration-1000"
+                    />
+                  )}
+                  {isPR ? (
+                    <Trophy
+                      aria-hidden="true"
+                      className="h-6 w-6 scale-110 animate-tada"
+                    />
+                  ) : (
+                    <Check
+                      aria-hidden="true"
+                      className={`h-6 w-6 transition-all duration-300 ${set.done
+                        ? "scale-110 opacity-100"
+                        : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"
+                        }`}
+                    />
+                  )}
                 </Button>
               </div>
 
