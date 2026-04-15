@@ -87,12 +87,16 @@ vi.mock("../../../exercise-sets/components/AddExerciseSetForm", () => ({
   ),
 }));
 
+const { mockAuthState } = vi.hoisted(() => ({
+  mockAuthState: {
+    isAuthenticated: true,
+  },
+}));
+
 // Mock the auth store and guest store
 vi.mock("@/stores", () => ({
-  useAuthStore: vi.fn((selector?: any) => {
-    const state = { isAuthenticated: true };
-    return selector ? selector(state) : state;
-  }),
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) =>
+    selector(mockAuthState),
   useGuestStore: vi.fn(() => ({ deleteExercise: vi.fn() })),
   GuestExerciseSet: {},
 }));
@@ -504,6 +508,7 @@ describe("ExerciseRow", () => {
         {
           ...mockExerciseSet1,
           intensity: 105.0,
+          intensity_unit_id: 1,
           done: false,
         },
         mockExerciseSet2,
@@ -513,16 +518,15 @@ describe("ExerciseRow", () => {
     render(<ExerciseRow {...defaultProps} exercise={prExercise} />);
 
     // Initially shows standard check icon (since it's not done)
-    const doneButton = screen.getByLabelText("Mark set done");
-    expect(doneButton).toBeInTheDocument();
+    const doneButtons = screen.getAllByTestId("done-button");
+    expect(doneButtons[0]).toHaveAttribute("aria-label", "Mark set done");
 
     // Toggle set 1 completion
-    await user.click(doneButton);
+    await user.click(doneButtons[0]);
 
     // Now set 1 should show the trophy icon (or at least be marked as done with the correct aria-label)
     await waitFor(() => {
-      const buttons = document.querySelectorAll('button[aria-label="Personal Best"]');
-      expect(buttons.length).toBeGreaterThan(0);
+      expect(doneButtons[0]).toHaveAttribute("aria-label", "Personal Best");
     });
   });
 
