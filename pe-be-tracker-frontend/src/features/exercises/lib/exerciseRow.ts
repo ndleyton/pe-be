@@ -2,6 +2,7 @@ import type {
   Exercise,
   ExerciseSet,
   IntensityUnit,
+  PersonalBestData,
 } from "@/features/exercises/api";
 import type { GuestExerciseSet } from "@/stores";
 import { formatDecimal } from "@/utils/format";
@@ -119,3 +120,57 @@ export const toGuestExerciseSets = (
     id: String(set.id),
     exercise_id: String(set.exercise_id),
   }));
+
+export const calculateIsPersonalBest = (
+  set: ExerciseSet,
+  currentWeight: number | null,
+  currentReps: number | null,
+  currentDuration: number | null,
+  personalBest: PersonalBestData | null,
+  pbWeightInCurrentUnit: number | null,
+): boolean => {
+  if (!personalBest || !set.done) return false;
+
+  const hasActivity =
+    (currentWeight !== null && currentWeight > 0) ||
+    (currentReps !== null && currentReps > 0) ||
+    (currentDuration !== null && currentDuration > 0);
+
+  if (!hasActivity) return false;
+
+  if (currentWeight !== null && pbWeightInCurrentUnit !== null) {
+    return (
+      currentWeight > pbWeightInCurrentUnit + 0.001 ||
+      (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 &&
+        currentReps !== null &&
+        currentReps > personalBest.reps)
+    );
+  }
+
+  return false;
+};
+
+export const getRpeDescription = (rpe: number | null) => {
+  if (rpe === null) return "Slide up for higher effort";
+  if (rpe >= 10) return "Max Effort";
+  if (rpe >= 9) return "Very Hard";
+  if (rpe >= 8) return "Hard";
+  if (rpe >= 7) return "Moderate";
+  if (rpe >= 6) return "Warm up / Light";
+  return "Light effort";
+};
+
+export const getRirDescription = (rir: number | null) => {
+  if (rir === null) return "Slide up for higher effort";
+  if (rir === 0) return "Failure (no reps left)";
+  if (rir >= 4) return "4+ reps left";
+
+  const isHalf = rir % 1 !== 0;
+  const count = Math.ceil(rir);
+
+  if (isHalf) {
+    return `Maybe ${count} left`;
+  }
+
+  return `${count} ${count === 1 ? "rep" : "reps"} left`;
+};

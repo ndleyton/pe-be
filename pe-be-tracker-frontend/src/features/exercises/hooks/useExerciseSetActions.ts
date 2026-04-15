@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -70,7 +70,7 @@ export const useExerciseSetActions = ({
     >
   >({});
 
-  const publishExerciseUpdate = (nextExerciseSets: ExerciseSet[]) => {
+  const publishExerciseUpdate = useCallback((nextExerciseSets: ExerciseSet[]) => {
     if (!onExerciseUpdate) {
       return;
     }
@@ -84,7 +84,7 @@ export const useExerciseSetActions = ({
 
     latestExerciseRef.current = updatedExercise;
     onExerciseUpdate(updatedExercise);
-  };
+  }, [isAuthenticated, onExerciseUpdate]);
 
   const invalidateExerciseQuery = () => {
     if (!workoutId) {
@@ -105,7 +105,7 @@ export const useExerciseSetActions = ({
     };
   }, []);
 
-  const applyLocalExerciseSets = (
+  const applyLocalExerciseSets = useCallback((
     updater:
       | ExerciseSet[]
       | ((currentExerciseSets: ExerciseSet[]) => ExerciseSet[]),
@@ -120,7 +120,7 @@ export const useExerciseSetActions = ({
     setExerciseSets(nextExerciseSets);
     publishExerciseUpdate(nextExerciseSets);
     return nextExerciseSets;
-  };
+  }, [publishExerciseUpdate]);
 
   const queueSetUpdate = (
     setId: string | number,
@@ -154,7 +154,7 @@ export const useExerciseSetActions = ({
     }, 500);
   };
 
-  const updateSetField = (
+  const updateSetField = useCallback((
     setId: string | number,
     field: SetField,
     value: number | null,
@@ -204,25 +204,25 @@ export const useExerciseSetActions = ({
           : { duration_seconds: value, reps: null };
 
     queueSetUpdate(setId, updateData);
-  };
+  }, [applyLocalExerciseSets, isAuthenticated]);
 
-  const incrementReps = (setId: string | number) => {
+  const incrementReps = useCallback((setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
       (set) => String(set.id) === String(setId),
     );
     const nextReps = (currentSet?.reps || 0) + 1;
     updateSetField(setId, "reps", nextReps);
-  };
+  }, [updateSetField]);
 
-  const decrementReps = (setId: string | number) => {
+  const decrementReps = useCallback((setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
       (set) => String(set.id) === String(setId),
     );
     const nextReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSetField(setId, "reps", nextReps);
-  };
+  }, [updateSetField]);
 
-  const setSetValueMode = (
+  const setSetValueMode = useCallback((
     setId: string | number,
     mode: SetValueMode,
   ) => {
@@ -261,9 +261,9 @@ export const useExerciseSetActions = ({
     }
 
     queueSetUpdate(setId, updates);
-  };
+  }, [applyLocalExerciseSets, isAuthenticated]);
 
-  const toggleSetCompletion = async (setId: string | number) => {
+  const toggleSetCompletion = useCallback(async (setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
       (set) => String(set.id) === String(setId),
     );
@@ -292,9 +292,9 @@ export const useExerciseSetActions = ({
       console.error("Failed to toggle exercise set completion:", error);
       invalidateExerciseQuery();
     }
-  };
+  }, [applyLocalExerciseSets, isAuthenticated, invalidateExerciseQuery]);
 
-  const updateSetOptions = async (
+  const updateSetOptions = useCallback(async (
     setId: string | number,
     updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir">,
   ) => {
@@ -319,9 +319,9 @@ export const useExerciseSetActions = ({
       console.error("Failed to update exercise set options:", error);
       invalidateExerciseQuery();
     }
-  };
+  }, [applyLocalExerciseSets, isAuthenticated, invalidateExerciseQuery]);
 
-  const deleteSet = async (setId: string | number) => {
+  const deleteSet = useCallback(async (setId: string | number) => {
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.filter((set) => String(set.id) !== String(setId)),
     );
@@ -336,9 +336,9 @@ export const useExerciseSetActions = ({
       console.error("Failed to delete exercise set:", error);
       invalidateExerciseQuery();
     }
-  };
+  }, [applyLocalExerciseSets, isAuthenticated, invalidateExerciseQuery]);
 
-  const addSet = async (intensityUnitId: number) => {
+  const addSet = useCallback(async (intensityUnitId: number) => {
     if (isUnsavedExercise) {
       return;
     }
@@ -409,9 +409,9 @@ export const useExerciseSetActions = ({
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
     }
-  };
+  }, [applyLocalExerciseSets, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
 
-  const updateExerciseNotes = (notes: string) => {
+  const updateExerciseNotes = useCallback((notes: string) => {
     if (!onExerciseUpdate) {
       return;
     }
@@ -423,9 +423,9 @@ export const useExerciseSetActions = ({
 
     latestExerciseRef.current = updatedExercise;
     onExerciseUpdate(updatedExercise);
-  };
+  }, [onExerciseUpdate]);
 
-  const handleExerciseDelete = async () => {
+  const handleExerciseDelete = useCallback(async () => {
     if (isUnsavedExercise) {
       return;
     }
@@ -441,7 +441,7 @@ export const useExerciseSetActions = ({
     } catch (error) {
       console.error("Error deleting exercise:", error);
     }
-  };
+  }, [exercise.id, guestDeleteExercise, isAuthenticated, isUnsavedExercise, onExerciseDelete]);
 
   return {
     addSet,
