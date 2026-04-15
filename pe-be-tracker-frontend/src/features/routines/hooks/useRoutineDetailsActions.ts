@@ -23,6 +23,8 @@ export const useRoutineDetailsActions = ({
   isAuthenticated,
   name,
   visibility,
+  author,
+  category,
   routine,
   routineId,
 }: {
@@ -32,6 +34,8 @@ export const useRoutineDetailsActions = ({
   isAuthenticated: boolean;
   name: string;
   visibility: RoutineVisibility;
+  author: string | null;
+  category: string | null;
   routine: Routine | null;
   routineId: string | undefined;
 }) => {
@@ -59,6 +63,8 @@ export const useRoutineDetailsActions = ({
         description: description.trim() || null,
         workout_type_id: routine.workout_type_id,
         visibility,
+        author: author?.trim() || null,
+        category: category?.trim() || null,
         exercise_templates: buildRoutinePayload(editorTemplates),
       };
 
@@ -136,6 +142,8 @@ export const useRoutineDetailsActions = ({
         description,
         name,
         visibility,
+        author,
+        category,
         routine,
         templates: editorTemplates,
       });

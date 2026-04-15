@@ -93,6 +93,8 @@ const RoutineDetailsPage = () => {
       isAuthenticated,
       name,
       visibility,
+      author,
+      category,
       routine,
       routineId,
     });
