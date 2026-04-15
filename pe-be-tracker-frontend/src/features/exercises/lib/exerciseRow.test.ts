@@ -15,6 +15,7 @@ describe("exerciseRow library", () => {
       intensity: 100,
       intensity_unit_id: 1,
       reps: 5,
+      rest_time_seconds: 60,
       done: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",
@@ -24,8 +25,8 @@ describe("exerciseRow library", () => {
     const mockPB: PersonalBestData = {
       weight: 100,
       reps: 5,
-      duration_seconds: null,
-      created_at: "2023-01-01T00:00:00Z",
+      volume: 500,
+      date: "2023-01-01T00:00:00Z",
     };
 
     it("should return false if personalBest is null", () => {
