@@ -66,8 +66,10 @@ const ExerciseRow = ({
     setIntensityInputValue,
     setNotesValue,
     setRpeValue,
+    setRirValue,
     setRepsInputValue,
     setSetRpeValue,
+    setSetRirValue,
     setSetNotesValue,
     closeSetOptions,
   } = useExerciseRowState({
@@ -164,6 +166,7 @@ const ExerciseRow = ({
               onSetDurationInputValue={setDurationInputValue}
               onSetNotesValueChange={setSetNotesValue}
               onSetRpeValueChange={setSetRpeValue}
+              onSetRirValueChange={setSetRirValue}
               onSetRepsInputValue={setRepsInputValue}
               onSetValueModeChange={setSetValueMode}
               onSetWeightInputValue={setIntensityInputValue}
@@ -172,6 +175,7 @@ const ExerciseRow = ({
               repsInputs={repsInputs}
               setNotesValue={setNotesValue}
               setRpeValue={setRpeValue}
+              setRirValue={setRirValue}
             />
           </CardContent>
         </Card>

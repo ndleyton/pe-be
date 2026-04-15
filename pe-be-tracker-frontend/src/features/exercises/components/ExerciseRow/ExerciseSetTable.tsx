@@ -47,12 +47,14 @@ type ExerciseSetTableProps = {
     setId: string | number,
     initialNotes: string,
     initialRpe: number | null | undefined,
+    initialRir: number | null | undefined,
   ) => void;
   onSetOptionsOpenChange: (open: boolean) => void;
   onSetDurationInputValue: (setId: string | number, value: string) => void;
   onSetNotesValueChange: (value: string) => void;
   onSetRepsInputValue: (setId: string | number, value: string) => void;
   onSetRpeValueChange: (value: number | null) => void;
+  onSetRirValueChange: (value: number | null) => void;
   onSetValueModeChange: (setId: string | number, mode: SetValueMode) => void;
   onSetWeightInputValue: (setId: string | number, value: string) => void;
   onToggleSetCompletion: (setId: string | number) => void | Promise<void>;
@@ -65,6 +67,7 @@ type ExerciseSetTableProps = {
   repsInputs: Record<string, string>;
   setNotesValue: string;
   setRpeValue: number | null;
+  setRirValue: number | null;
 };
 
 export const ExerciseSetTable = ({
@@ -86,6 +89,7 @@ export const ExerciseSetTable = ({
   onSetNotesValueChange,
   onSetRepsInputValue,
   onSetRpeValueChange,
+  onSetRirValueChange,
   onSetValueModeChange,
   onSetWeightInputValue,
   onToggleSetCompletion,
@@ -93,6 +97,7 @@ export const ExerciseSetTable = ({
   repsInputs,
   setNotesValue,
   setRpeValue,
+  setRirValue,
 }: ExerciseSetTableProps) => {
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
@@ -340,7 +345,7 @@ export const ExerciseSetTable = ({
                       size="sm"
                       className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
                       onClick={() =>
-                        onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null)
+                        onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null, set.rir ?? null)
                       }
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -423,6 +428,44 @@ export const ExerciseSetTable = ({
                             }
                             onValueChange={(values: number[]) =>
                               onSetRpeValueChange(values[0] ?? null)
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Reps in Reserve
+                        </label>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm text-muted-foreground">
+                            <span>
+                              {setRirValue == null
+                                ? "Not set"
+                                : `RIR ${setRirValue}`}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-0 text-xs"
+                              onClick={() => onSetRirValueChange(null)}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                          <Slider
+                            value={[setRirValue ?? 0]}
+                            min={0}
+                            max={10}
+                            step={0.5}
+                            className="mx-auto w-full max-w-xs"
+                            aria-valuetext={
+                              setRirValue == null
+                                ? "Not set"
+                                : `Reps in Reserve ${setRirValue}`
+                            }
+                            onValueChange={(values: number[]) =>
+                              onSetRirValueChange(values[0] ?? null)
                             }
                           />
                         </div>
