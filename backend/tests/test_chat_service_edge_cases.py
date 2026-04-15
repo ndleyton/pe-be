@@ -645,6 +645,12 @@ def test_personalized_routine_set_args_normalizes_rpe_range_text():
     assert parsed.rpe == 8
 
 
+def test_personalized_routine_set_args_normalizes_rir_range_text():
+    parsed = PersonalizedRoutineSetArgs.model_validate({"rir": "RIR 2-3", "reps": 6})
+
+    assert parsed.rir == 3
+
+
 def test_personalized_routine_set_args_normalizes_empty_intensity_unit_to_none():
     parsed = PersonalizedRoutineSetArgs.model_validate(
         {"reps": 6, "intensity_unit": ""}
