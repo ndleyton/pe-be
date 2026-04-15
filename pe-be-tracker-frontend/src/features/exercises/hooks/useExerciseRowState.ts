@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type {
   Exercise,
@@ -131,14 +131,14 @@ export const useExerciseRowState = ({
     setExerciseNotesOpen(true);
   };
 
-  const closeSetOptions = () => {
+  const closeSetOptions = useCallback(() => {
     setActiveSetId(null);
     setSetNotesValue("");
     setSetRpeValue(null);
     setSetRirValue(null);
-  };
+  }, []);
 
-  const openSetOptions = (
+  const openSetOptions = useCallback((
     setId: string | number,
     initialNotes: string,
     initialRpe: number | null | undefined,
@@ -148,20 +148,38 @@ export const useExerciseRowState = ({
     setSetNotesValue(initialNotes);
     setSetRpeValue(initialRpe ?? null);
     setSetRirValue(initialRir ?? null);
-  };
+  }, []);
 
-  const handleSetOptionsOpenChange = (open: boolean) => {
+  const handleSetOptionsOpenChange = useCallback((open: boolean) => {
     if (!open) {
       closeSetOptions();
     }
-  };
+  }, [closeSetOptions]);
 
-  const handleIntensityUnitChange = (
+  const handleIntensityUnitChange = useCallback((
     unit: IntensityUnit | GuestIntensityUnit,
   ) => {
     setCurrentIntensityUnit(unit);
     setExerciseSettingsOpen(false);
-  };
+  }, []);
+
+  const setDurationInputValue = useCallback((setId: string | number, value: string) =>
+    setDurationInputs((current) => ({
+      ...current,
+      [String(setId)]: value,
+    })), []);
+
+  const setIntensityInputValue = useCallback((setId: string | number, value: string) =>
+    setIntensityInputs((current) => ({
+      ...current,
+      [String(setId)]: value,
+    })), []);
+
+  const setRepsInputValue = useCallback((setId: string | number, value: string) =>
+    setRepsInputs((current) => ({
+      ...current,
+      [String(setId)]: value,
+    })), []);
 
   return {
     activeSetId,
@@ -177,26 +195,14 @@ export const useExerciseRowState = ({
     openExerciseNotes,
     openSetOptions,
     repsInputs,
-    setDurationInputValue: (setId: string | number, value: string) =>
-      setDurationInputs((current) => ({
-        ...current,
-        [String(setId)]: value,
-      })),
+    setDurationInputValue,
     setExerciseNotesValue,
     setExerciseSettingsOpen,
-    setIntensityInputValue: (setId: string | number, value: string) =>
-      setIntensityInputs((current) => ({
-        ...current,
-        [String(setId)]: value,
-        })),
+    setIntensityInputValue,
     setNotesValue,
     setRpeValue,
     setRirValue,
-    setRepsInputValue: (setId: string | number, value: string) =>
-      setRepsInputs((current) => ({
-        ...current,
-        [String(setId)]: value,
-      })),
+    setRepsInputValue,
     setSetRpeValue,
     setSetRirValue,
     setSetNotesValue,
