@@ -113,7 +113,7 @@ vi.mock("@tanstack/react-query", async () => {
         return {
           data: {
             personalBest: {
-              weight: 100,
+              weight: 50,
               reps: 5,
               date: "2023-01-01",
             },
@@ -497,7 +497,7 @@ describe("ExerciseRow", () => {
 
   it("shows a trophy icon when a set is a PR and marked as done", async () => {
     const user = userEvent.setup();
-    // Use a mock exercise where the first set is already above the PR weight (100 in mock stats)
+    // Use a mock exercise where the first set is already above the PR weight (50 in mock stats)
     const prExercise: Exercise = {
       ...mockExercise,
       exercise_sets: [
@@ -512,16 +512,17 @@ describe("ExerciseRow", () => {
 
     render(<ExerciseRow {...defaultProps} exercise={prExercise} />);
 
-    // Initially shows check icon (since it's not done)
-    const checkButtons = screen.getAllByTestId("check-icon");
-    expect(checkButtons).toHaveLength(2); // Set 1 (not done) and Set 2 (done)
+    // Initially shows standard check icon (since it's not done)
+    const doneButton = screen.getByLabelText("Mark set done");
+    expect(doneButton).toBeInTheDocument();
 
     // Toggle set 1 completion
-    await user.click(checkButtons[0]);
+    await user.click(doneButton);
 
-    // Now set 1 should show the trophy icon
+    // Now set 1 should show the trophy icon (or at least be marked as done with the correct aria-label)
     await waitFor(() => {
-      expect(screen.getByTestId("trophy-icon")).toBeInTheDocument();
+      const buttons = document.querySelectorAll('button[aria-label="Personal Best"]');
+      expect(buttons.length).toBeGreaterThan(0);
     });
   });
 

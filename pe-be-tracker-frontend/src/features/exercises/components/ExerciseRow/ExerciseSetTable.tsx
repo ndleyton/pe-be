@@ -373,6 +373,7 @@ export const ExerciseSetTable = ({
                 <Button
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
+                  data-testid="done-button"
                   aria-label={
                     isPR
                       ? "Personal Best"
