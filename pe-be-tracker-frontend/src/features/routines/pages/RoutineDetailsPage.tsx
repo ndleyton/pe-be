@@ -61,6 +61,8 @@ const RoutineDetailsPage = () => {
     hasUnsavedChanges,
     name,
     visibility,
+    author,
+    category,
     unitPickerTarget,
     addSetToTemplate,
     closeExercisePicker,
@@ -73,6 +75,8 @@ const RoutineDetailsPage = () => {
     removeTemplate,
     setDescription,
     setVisibility,
+    setAuthor,
+    setCategory,
     setName,
     updateSet,
     updateTemplate,
@@ -209,10 +213,14 @@ const RoutineDetailsPage = () => {
                 hasInvalidTemplates={hasInvalidTemplates}
                 name={name}
                 visibility={visibility}
+                author={author}
+                category={category}
                 onDelete={handleDelete}
                 onDescriptionChange={setDescription}
                 onNameChange={setName}
                 onVisibilityChange={setVisibility}
+                onAuthorChange={setAuthor}
+                onCategoryChange={setCategory}
                 onSave={handleSave}
                 onStartWorkout={() => startMutation.mutate()}
                 onEdit={() => {

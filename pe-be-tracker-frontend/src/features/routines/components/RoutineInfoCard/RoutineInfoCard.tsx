@@ -31,10 +31,14 @@ type RoutineInfoCardProps = {
   hasInvalidTemplates: boolean;
   name: string;
   visibility: RoutineVisibility;
+  author: string | null;
+  category: string | null;
   onDelete: () => void;
   onDescriptionChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onVisibilityChange: (value: RoutineVisibility) => void;
+  onAuthorChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
   onSave: () => void;
   onStartWorkout: () => void;
   onEdit: () => void;
@@ -56,10 +60,14 @@ export const RoutineInfoCard = ({
   hasInvalidTemplates,
   name,
   visibility,
+  author,
+  category,
   onDelete,
   onDescriptionChange,
   onNameChange,
   onVisibilityChange,
+  onAuthorChange,
+  onCategoryChange,
   onSave,
   onStartWorkout,
   onEdit,
@@ -150,6 +158,34 @@ export const RoutineInfoCard = ({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="routine-author" className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                Author
+              </label>
+              <Input
+                id="routine-author"
+                data-testid="routine-author-input"
+                value={author || ""}
+                onChange={(event) => onAuthorChange(event.target.value)}
+                placeholder="Optional author/influencer name"
+                className="h-12 rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all font-semibold"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="routine-category" className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                Category
+              </label>
+              <Input
+                id="routine-category"
+                data-testid="routine-category-input"
+                value={category || ""}
+                onChange={(event) => onCategoryChange(event.target.value)}
+                placeholder="e.g. Classic, Influencer"
+                className="h-12 rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all font-semibold"
+              />
+            </div>
           </>
         )}
 
@@ -196,9 +232,9 @@ export const RoutineInfoCard = ({
                 {startLabel}
               </Button>
               {canEdit && (
-                <Button 
-                  variant="outline" 
-                  onClick={onEdit} 
+                <Button
+                  variant="outline"
+                  onClick={onEdit}
                   disabled={editDisabled}
                   className="h-14 flex-1 rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 font-bold transition-all text-xs uppercase tracking-widest"
                 >

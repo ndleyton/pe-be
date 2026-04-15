@@ -159,12 +159,16 @@ export const buildComparableSnapshot = (
   name: string,
   description: string,
   visibility: RoutineVisibility,
+  author: string | null,
+  category: string | null,
   templates: RoutineEditorTemplate[],
 ) =>
   JSON.stringify({
     name,
     description,
     visibility,
+    author,
+    category,
     exercise_templates: templates.map((template) => ({
       exercise_type_id: template.exercise_type_id,
       notes: template.notes.trim() || null,
@@ -204,12 +208,16 @@ export const buildRoutineFromEditorState = ({
   description,
   name,
   visibility,
+  author,
+  category,
   routine,
   templates,
 }: {
   description: string;
   name: string;
   visibility: RoutineVisibility;
+  author: string | null;
+  category: string | null;
   routine: Routine;
   templates: RoutineEditorTemplate[];
 }): Routine => ({
@@ -217,6 +225,8 @@ export const buildRoutineFromEditorState = ({
   name: name.trim() || routine.name,
   description: description.trim() || null,
   visibility,
+  author: author?.trim() || null,
+  category: category?.trim() || null,
   exercise_templates: templates.map((template, templateIndex) => ({
     id: Number(template.id) || -(templateIndex + 1),
     exercise_type_id: Number(template.exercise_type_id),

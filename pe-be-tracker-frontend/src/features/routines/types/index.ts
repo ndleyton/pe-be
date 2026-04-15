@@ -45,6 +45,8 @@ export interface RoutineBase {
   creator_id: number;
   visibility: RoutineVisibility;
   is_readonly: boolean;
+  author?: string | null;
+  category?: string | null;
   created_at: string;
   updated_at: string;
 }
