@@ -6,6 +6,8 @@ import {
   calculateIsPersonalBest,
   EXERCISE_SETS_GRID_CLASSES,
   formatIntensityInputValue,
+  getRirDescription,
+  getRpeDescription,
 } from "@/features/exercises/lib/exerciseRow";
 import {
   convertIntensityValue,
@@ -35,29 +37,6 @@ import {
 } from "@/shared/components/ui";
 import { Slider } from "@/shared/components/ui/slider";
 
-const getRpeDescription = (rpe: number | null) => {
-  if (rpe === null) return "Slide up for higher effort";
-  if (rpe >= 10) return "Max Effort";
-  if (rpe >= 9) return "Very Hard";
-  if (rpe >= 8) return "Hard";
-  if (rpe >= 7) return "Moderate";
-  if (rpe >= 6) return "Warm up / Light";
-  return "Light effort";
-};
-
-const getRirDescription = (rir: number | null) => {
-  if (rir === null) return "Slide up for higher effort";
-  if (rir === 0) return "Failure (no reps left)";
-
-  const isHalf = rir % 1 !== 0;
-  const count = Math.ceil(rir);
-
-  if (isHalf) {
-    return `Maybe ${count} left`;
-  }
-
-  return `${count} ${count === 1 ? "rep" : "reps"} left`;
-};
 
 type ExerciseSetTableProps = {
   activeSetId: string | number | null;
