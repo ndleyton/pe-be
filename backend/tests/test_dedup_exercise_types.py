@@ -294,3 +294,29 @@ def test_run_dedup_apply_commits_and_prints_applied_counts(monkeypatch):
     output = stream.getvalue()
     assert "APPLY: dedup exercise types" in output
     assert "Applied changes: exercises=10, exercise_templates=4" in output
+
+
+def test_apply_dedup_plan_raises_if_released_row_not_updated():
+    plan = script.DedupPlan(
+        released=make_match(row_id=5, name="R", status="released"),
+        non_released=make_match(row_id=8, name="N", status="candidate"),
+        reference_counts=script.ReferenceCounts(0, 0, 0, 0),
+    )
+    # Cursor returns 0 for the UPDATE of released row (the 5th call)
+    cursor = FakeApplyCursor([0, 0, 0, 0, 0, 1])
+
+    with pytest.raises(RuntimeError, match="Expected exactly 1 released row"):
+        script.apply_dedup_plan(cursor, plan)
+
+
+def test_apply_dedup_plan_raises_if_non_released_row_not_deleted():
+    plan = script.DedupPlan(
+        released=make_match(row_id=5, name="R", status="released"),
+        non_released=make_match(row_id=8, name="N", status="candidate"),
+        reference_counts=script.ReferenceCounts(0, 0, 0, 0),
+    )
+    # Cursor returns 0 for the DELETE of non-released row (the 6th call)
+    cursor = FakeApplyCursor([0, 0, 0, 0, 1, 0])
+
+    with pytest.raises(RuntimeError, match="Expected exactly 1 non-released row"):
+        script.apply_dedup_plan(cursor, plan)

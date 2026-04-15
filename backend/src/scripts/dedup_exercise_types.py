@@ -366,12 +366,20 @@ def apply_dedup_plan(cursor, plan: DedupPlan) -> AppliedChanges:
         (plan.non_released.times_used, now, plan.released.id),
     )
     released_rows_updated = cursor.rowcount
+    if released_rows_updated != 1:
+        raise RuntimeError(
+            f"Expected exactly 1 released row to be updated, but got {released_rows_updated}"
+        )
 
     cursor.execute(
         "DELETE FROM exercise_types WHERE id = %s",
         (plan.non_released.id,),
     )
     deleted_exercise_types = cursor.rowcount
+    if deleted_exercise_types != 1:
+        raise RuntimeError(
+            f"Expected exactly 1 non-released row to be deleted, but got {deleted_exercise_types}"
+        )
 
     return AppliedChanges(
         exercises_updated=exercises_updated,
