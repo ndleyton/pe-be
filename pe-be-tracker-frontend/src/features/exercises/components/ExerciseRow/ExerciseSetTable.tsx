@@ -144,20 +144,43 @@ export const ExerciseSetTable = ({
           const setValueMode = resolveSetValueMode(set, prefersTimeByDefault);
           const isTimeMode = setValueMode === "time";
 
-          const currentWeight = parseDecimalInput(intensityValue) ?? 0;
-          const currentReps = Number.parseInt(repsValue, 10) || 0;
-          const currentDuration = set.duration_seconds || 0;
+          const parsedWeight = parseDecimalInput(intensityValue);
+          const currentWeight =
+            parsedWeight !== null && Number.isFinite(parsedWeight)
+              ? parsedWeight
+              : null;
+
+          const parsedReps = Number.parseInt(repsValue, 10);
+          const currentReps = !Number.isNaN(parsedReps) ? parsedReps : null;
+
+          const currentDuration = set.duration_seconds ?? null;
 
           // Convert personal best weight to current unit for accurate comparison
-          const pbWeightInCurrentUnit = personalBest && personalBestUnitId
-            ? convertIntensityValue(personalBest.weight, personalBestUnitId, currentIntensityUnitId) ?? 0
-            : 0;
+          const pbWeightInCurrentUnit =
+            personalBest && personalBestUnitId
+              ? convertIntensityValue(
+                personalBest.weight,
+                personalBestUnitId,
+                currentIntensityUnitId,
+              )
+              : null;
 
           // PR Detection: Improved weight OR same weight with more reps
-          const isPR = personalBest && set.done && (currentWeight > 0 || currentReps > 0 || currentDuration > 0) && (
-            currentWeight > pbWeightInCurrentUnit ||
-            (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 && currentReps > personalBest.reps)
-          );
+          const hasActivity =
+            (currentWeight !== null && currentWeight > 0) ||
+            (currentReps !== null && currentReps > 0) ||
+            (currentDuration !== null && currentDuration > 0);
+
+          const isPR =
+            !!personalBest &&
+            !!set.done &&
+            hasActivity &&
+            currentWeight !== null &&
+            pbWeightInCurrentUnit !== null &&
+            (currentWeight > pbWeightInCurrentUnit ||
+              (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 &&
+                currentReps !== null &&
+                currentReps > personalBest.reps));
 
           return (
             <div
