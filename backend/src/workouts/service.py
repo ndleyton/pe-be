@@ -694,6 +694,8 @@ Return ONLY valid JSON in this exact format:
           "reps": number or null,
           "duration_seconds": number or null,
           "intensity": number or null,
+          "rpe": number or null,
+          "rir": number or null,
           "intensity_unit": "string",
           "rest_time_seconds": number or null,
           "notes": "string or null"

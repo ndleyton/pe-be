@@ -434,7 +434,10 @@ export const ExerciseSetTable = ({
                       </div>
                       {setValueMode === "reps" && (
                         <div>
-                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label
+                            id={`set-rir-label-${set.id}`}
+                            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
                             Reps in Reserve
                           </label>
                           <div className="space-y-3">
@@ -460,6 +463,7 @@ export const ExerciseSetTable = ({
                               max={10}
                               step={0.5}
                               className="mx-auto w-full max-w-xs"
+                              aria-labelledby={`set-rir-label-${set.id}`}
                               aria-valuetext={
                                 setRirValue == null
                                   ? "Not set"

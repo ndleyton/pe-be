@@ -20,6 +20,8 @@ depends_on = None
 def _get_column_names(table_name):
     connection = op.get_bind()
     inspector = sa.inspect(connection)
+    if table_name not in inspector.get_table_names():
+        return set()
     return {column["name"] for column in inspector.get_columns(table_name)}
 
 
