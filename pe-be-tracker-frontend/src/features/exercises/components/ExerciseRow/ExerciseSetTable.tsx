@@ -169,9 +169,19 @@ export const ExerciseSetTable = ({
                 : "bg-muted/50 border-transparent shadow-sm"
                 }`}
             >
-              <div className="bg-muted/40 flex h-8 w-8 items-center justify-center rounded-lg">
-                <span className="text-muted-foreground text-xs font-black">
-                  {index + 1}
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-500 ${isPR
+                  ? "bg-amber-500 text-white shadow-md scale-110"
+                  : "bg-muted/40"
+                  }`}
+              >
+                <span
+                  className={`font-black transition-all ${isPR
+                    ? "text-[10px] tracking-tighter animate-bounce-once"
+                    : "text-muted-foreground text-xs"
+                    }`}
+                >
+                  {isPR ? "PR" : index + 1}
                 </span>
               </div>
               <div className="min-w-0 flex justify-center">

@@ -123,6 +123,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -131,5 +132,15 @@
 @layer utilities {
   .animate-twice {
     animation-iteration-count: 2 !important;
+  }
+
+  .animate-once {
+    animation-iteration-count: 1 !important;
+  }
+
+  .animate-bounce-once {
+    animation-name: bounce;
+    animation-duration: 1s;
+    animation-iteration-count: 1.5 !important;
   }
 }
