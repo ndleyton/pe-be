@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { getExerciseTypeStats, type ExerciseTypeStats } from "@/features/exercises/api";
+import { getExerciseTypeStats, type ExerciseTypeStats, type ExerciseType } from "@/features/exercises/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-export const useExerciseTypeStats = (exerciseTypeId: string | number) => {
+export const useExerciseTypeStats = (exerciseTypeId: string | number, _exerciseType?: ExerciseType) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const {
     data: stats,
-    isLoading,
+    isLoading: loading,
     error,
-    refetch,
+    refetch: updateStats,
   } = useQuery({
     queryKey: ["exerciseTypeStats", exerciseTypeId],
     queryFn: () => getExerciseTypeStats(String(exerciseTypeId)),
@@ -19,8 +19,8 @@ export const useExerciseTypeStats = (exerciseTypeId: string | number) => {
 
   return {
     stats,
-    isLoading,
+    updateStats,
+    loading,
     error,
-    refetch,
   };
 };

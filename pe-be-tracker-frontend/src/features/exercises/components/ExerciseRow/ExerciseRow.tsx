@@ -78,7 +78,7 @@ const ExerciseRow = ({
     updateSetOptions,
   });
 
-  const { stats } = useExerciseTypeStats(exercise.exercise_type.id);
+  const { stats } = useExerciseTypeStats(exercise.exercise_type.id, exercise.exercise_type);
 
   const hasImages =
     (exercise.exercise_type.status ?? "released") === "released" &&
