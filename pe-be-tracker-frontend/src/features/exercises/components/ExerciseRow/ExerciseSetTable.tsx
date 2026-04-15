@@ -1,4 +1,4 @@
-import { Check, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
+import { Check, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
 import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
 import {
@@ -29,6 +29,32 @@ import {
   Textarea,
 } from "@/shared/components/ui";
 import { Slider } from "@/shared/components/ui/slider";
+
+const getRpeDescription = (rpe: number | null) => {
+  if (rpe === null) return "Not set";
+  if (rpe >= 10) return "Max Effort (0 reps left)";
+  if (rpe >= 9.5) return "Very Hard (Maybe 1 rep left)";
+  if (rpe >= 9) return "Hard (1 rep left)";
+  if (rpe >= 8.5) return "Hard (1-2 reps left)";
+  if (rpe >= 8) return "Moderate (2 reps left)";
+  if (rpe >= 7.5) return "Moderate (2-3 reps left)";
+  if (rpe >= 7) return "Comfortable (3 reps left)";
+  if (rpe >= 6) return "Warm up / Light";
+  return "Light effort";
+};
+
+const getRirDescription = (rir: number | null) => {
+  if (rir === null) return "Not set";
+  if (rir === 0) return "Max Effort (0 reps left)";
+  if (rir === 0.5) return "Almost Max (Maybe 1 rep left)";
+  if (rir === 1) return "Hard (1 rep left)";
+  if (rir === 1.5) return "Hard (1-2 reps left)";
+  if (rir === 2) return "Moderate (2 reps left)";
+  if (rir === 2.5) return "Moderate (2-3 reps left)";
+  if (rir === 3) return "Comfortable (3 reps left)";
+  if (rir >= 4) return "Warm up / Many reps left";
+  return "Light effort";
+};
 
 type ExerciseSetTableProps = {
   activeSetId: string | number | null;
@@ -477,28 +503,32 @@ export const ExerciseSetTable = ({
                         </div>
                       </div>
                       <div>
-                        <label
-                          id={effortLabelId}
-                          className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                          Effort
-                        </label>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>
-                              {setRpeValue == null
-                                ? "Not set"
-                                : `RPE ${setRpeValue}`}
+                        <div className="mb-2 flex items-center justify-between">
+                          <label
+                            id={effortLabelId}
+                            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            Effort (RPE)
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => onSetRpeValueChange(null)}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-2xl font-black text-foreground">
+                              {setRpeValue == null ? "—" : setRpeValue}
                             </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-auto p-0 text-xs"
-                              onClick={() => onSetRpeValueChange(null)}
-                            >
-                              Clear
-                            </Button>
+                            <span className="text-center text-xs font-medium text-muted-foreground">
+                              {getRpeDescription(setRpeValue)}
+                            </span>
                           </div>
                           <Slider
                             value={[setRpeValue ?? 0]}
@@ -520,28 +550,32 @@ export const ExerciseSetTable = ({
                       </div>
                       {setValueMode === "reps" && (
                         <div>
-                          <label
-                            id={`set-rir-label-${set.id}`}
-                            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            Reps in Reserve
-                          </label>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between text-sm text-muted-foreground">
-                              <span>
-                                {setRirValue == null
-                                  ? "Not set"
-                                  : `RIR ${setRirValue}`}
+                          <div className="mb-2 flex items-center justify-between">
+                            <label
+                              id={`set-rir-label-${set.id}`}
+                              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                            >
+                              Reps in Reserve (RIR)
+                              <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            </label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                              onClick={() => onSetRirValueChange(null)}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-2xl font-black text-foreground">
+                                {setRirValue == null ? "—" : setRirValue}
                               </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 text-xs"
-                                onClick={() => onSetRirValueChange(null)}
-                              >
-                                Clear
-                              </Button>
+                              <span className="text-center text-xs font-medium text-muted-foreground">
+                                {getRirDescription(setRirValue)}
+                              </span>
                             </div>
                             <Slider
                               value={[setRirValue ?? 0]}
