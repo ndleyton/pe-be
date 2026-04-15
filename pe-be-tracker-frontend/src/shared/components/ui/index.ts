@@ -10,3 +10,4 @@ export * from "./select";
 export * from "./sheet";
 export * from "./textarea";
 export * from "./sonner";
+export * from "./tooltip";

@@ -11,7 +11,7 @@ import posthog from "posthog-js";
 import { PostHogProvider, usePostHog } from "posthog-js/react";
 import { config } from "@/app/config/env";
 import { StoreInitializer } from "@/stores";
-import { Toaster } from "@/shared/components/ui";
+import { Toaster, TooltipProvider } from "@/shared/components/ui";
 
 // Configure React Query client
 const queryClient = new QueryClient({
@@ -148,22 +148,24 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {isPostHogConfigured ? (
-        <DeferredPostHogProvider>{children}</DeferredPostHogProvider>
-      ) : (
-        <ErrorBoundary
-          FallbackComponent={SimpleErrorFallback}
-          onError={(error) => {
-            console.error("App Error:", error);
-          }}
-        >
-          <StoreInitializer>{children}</StoreInitializer>
-        </ErrorBoundary>
-      )}
-      {shouldShowReactQueryDevtools && (
-        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-      )}
-      <Toaster />
+      <TooltipProvider delayDuration={300}>
+        {isPostHogConfigured ? (
+          <DeferredPostHogProvider>{children}</DeferredPostHogProvider>
+        ) : (
+          <ErrorBoundary
+            FallbackComponent={SimpleErrorFallback}
+            onError={(error) => {
+              console.error("App Error:", error);
+            }}
+          >
+            <StoreInitializer>{children}</StoreInitializer>
+          </ErrorBoundary>
+        )}
+        {shouldShowReactQueryDevtools && (
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+        )}
+        <Toaster />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 };

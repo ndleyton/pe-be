@@ -2,6 +2,7 @@ import type {
   Exercise,
   ExerciseSet,
   IntensityUnit,
+  PersonalBestData,
 } from "@/features/exercises/api";
 import type { GuestExerciseSet } from "@/stores";
 import { formatDecimal } from "@/utils/format";
@@ -119,3 +120,32 @@ export const toGuestExerciseSets = (
     id: String(set.id),
     exercise_id: String(set.exercise_id),
   }));
+
+export const calculateIsPersonalBest = (
+  set: ExerciseSet,
+  currentWeight: number | null,
+  currentReps: number | null,
+  currentDuration: number | null,
+  personalBest: PersonalBestData | null,
+  pbWeightInCurrentUnit: number | null,
+): boolean => {
+  if (!personalBest || !set.done) return false;
+
+  const hasActivity =
+    (currentWeight !== null && currentWeight > 0) ||
+    (currentReps !== null && currentReps > 0) ||
+    (currentDuration !== null && currentDuration > 0);
+
+  if (!hasActivity) return false;
+
+  if (currentWeight !== null && pbWeightInCurrentUnit !== null) {
+    return (
+      currentWeight > pbWeightInCurrentUnit ||
+      (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 &&
+        currentReps !== null &&
+        currentReps > personalBest.reps)
+    );
+  }
+
+  return false;
+};
