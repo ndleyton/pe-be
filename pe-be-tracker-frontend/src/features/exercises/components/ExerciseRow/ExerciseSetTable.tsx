@@ -373,6 +373,14 @@ export const ExerciseSetTable = ({
                 <Button
                   variant={set.done ? "default" : "ghost"}
                   size="sm"
+                  aria-label={
+                    isPR
+                      ? "Personal Best"
+                      : set.done
+                        ? "Mark set not done"
+                        : "Mark set done"
+                  }
+                  aria-pressed={set.done}
                   className={`group relative h-10 w-10 rounded-xl transition-all duration-300 ${set.done
                     ? isPR
                       ? "bg-amber-500 text-white scale-110 shadow-lg shadow-amber-500/40 ring-4 ring-amber-500/20"
@@ -381,13 +389,27 @@ export const ExerciseSetTable = ({
                     }`}
                   onClick={() => onToggleSetCompletion(set.id)}
                 >
+                  <span className="sr-only">
+                    {isPR
+                      ? "Set is PR"
+                      : set.done
+                        ? "Mark set not done"
+                        : "Mark set done"}
+                  </span>
                   {isPR && (
-                    <span className="absolute inset-0 animate-ping animate-twice rounded-xl bg-amber-400/50 duration-1000" />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 animate-ping animate-twice rounded-xl bg-amber-400/50 duration-1000"
+                    />
                   )}
                   {isPR ? (
-                    <Trophy className="h-6 w-6 scale-110 animate-tada" />
+                    <Trophy
+                      aria-hidden="true"
+                      className="h-6 w-6 scale-110 animate-tada"
+                    />
                   ) : (
                     <Check
+                      aria-hidden="true"
                       className={`h-6 w-6 transition-all duration-300 ${set.done
                         ? "scale-110 opacity-100"
                         : "scale-90 opacity-50 group-hover:opacity-100 dark:opacity-70"

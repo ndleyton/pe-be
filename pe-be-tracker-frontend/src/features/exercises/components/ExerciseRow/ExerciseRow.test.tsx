@@ -89,7 +89,10 @@ vi.mock("../../../exercise-sets/components/AddExerciseSetForm", () => ({
 
 // Mock the auth store and guest store
 vi.mock("@/stores", () => ({
-  useAuthStore: vi.fn(() => ({ isAuthenticated: true })),
+  useAuthStore: vi.fn((selector?: any) => {
+    const state = { isAuthenticated: true };
+    return selector ? selector(state) : state;
+  }),
   useGuestStore: vi.fn(() => ({ deleteExercise: vi.fn() })),
   GuestExerciseSet: {},
 }));
@@ -104,6 +107,9 @@ vi.mock("@tanstack/react-query", async () => {
     })),
     useQuery: vi.fn((options: any) => {
       if (options.queryKey[0] === "exerciseTypeStats") {
+        if (options.enabled === false) {
+          return { data: null, isLoading: false };
+        }
         return {
           data: {
             personalBest: {
