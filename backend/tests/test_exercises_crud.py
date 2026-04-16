@@ -970,6 +970,8 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "weight": 105,
         "reps": 3,
         "volume": 315,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 4
     assert stats["intensityUnit"] == {
@@ -996,6 +998,8 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "weight": 500,
         "reps": 1,
         "volume": 500,
+        "rpe": None,
+        "rir": None,
     }
     assert other_owner_stats["totalSets"] == 1
 
@@ -1058,6 +1062,8 @@ async def test_get_exercise_type_stats_last_workout_handles_no_active_sets(db_se
         "weight": 100,
         "reps": 5,
         "volume": 500,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 1
 
@@ -1116,6 +1122,8 @@ async def test_get_exercise_type_stats_handles_latest_exercise_without_sets(db_s
         "weight": 80,
         "reps": 5,
         "volume": 400,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 1
 
