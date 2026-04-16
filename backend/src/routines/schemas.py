@@ -1,7 +1,11 @@
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
-from pydantic import ConfigDict, BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field, computed_field
+from src.exercises.image_assets import (
+    parse_image_url_list,
+    resolve_exercise_image_urls,
+)
 from src.routines.models import Routine as RoutineModel
 
 
@@ -13,6 +17,13 @@ class ExerciseTypeRead(BaseModel):
     description: Optional[str] = None
     default_intensity_unit: Optional[int]
     times_used: int
+    images_url: Optional[str] = None
+
+    @computed_field
+    @property
+    def images(self) -> List[str]:
+        return resolve_exercise_image_urls(parse_image_url_list(self.images_url))
+
     model_config = ConfigDict(from_attributes=True)
 
 
