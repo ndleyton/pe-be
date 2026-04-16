@@ -40,7 +40,13 @@ def is_new_personal_best(
     best_reps: int,
     best_rir: Optional[Decimal],
 ) -> bool:
-    """Helper function to determine if a performance beats a prior best."""
+    """
+    Helper function to determine if a performance beats a prior best.
+
+    This function uses strict comparisons because the backend uses Decimal for
+    exact arithmetic, ensuring data integrity as the project's Source of Truth.
+    Unlike the frontend, it does not require epsilon tolerance for math noise.
+    """
     if current_weight > best_weight:
         return True
     if current_weight == best_weight:

@@ -129,6 +129,9 @@ export const isNewPersonalBest = (
   pbReps: number,
   pbRir: number | null | undefined,
 ): boolean => {
+  // We use a small epsilon (0.001) for weight comparisons in the frontend to handle
+  // floating point noise from IEEE 754 precision and unit conversions (e.g., KG to LBS).
+  // This ensures the UX remains responsive even if there is tiny binary noise.
   if (currentWeight > pbWeight + 0.001) {
     return true;
   }
