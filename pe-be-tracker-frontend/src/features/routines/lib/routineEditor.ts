@@ -164,11 +164,11 @@ export const buildComparableSnapshot = (
   templates: RoutineEditorTemplate[],
 ) =>
   JSON.stringify({
-    name,
-    description,
+    name: name.trim(),
+    description: description.trim() || null,
     visibility,
-    author,
-    category,
+    author: author?.trim() || null,
+    category: category?.trim() || null,
     exercise_templates: templates.map((template) => ({
       exercise_type_id: template.exercise_type_id,
       notes: template.notes.trim() || null,

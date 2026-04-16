@@ -22,21 +22,23 @@ def upgrade() -> None:
     """Upgrade schema."""
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    columns = [col["name"] for col in inspector.get_columns("recipes")]
+    if "recipes" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("recipes")]
 
-    if "author" not in columns:
-        op.add_column('recipes', sa.Column('author', sa.String(), nullable=True))
-    if "category" not in columns:
-        op.add_column('recipes', sa.Column('category', sa.String(), nullable=True))
+        if "author" not in columns:
+            op.add_column('recipes', sa.Column('author', sa.String(), nullable=True))
+        if "category" not in columns:
+            op.add_column('recipes', sa.Column('category', sa.String(), nullable=True))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    columns = [col["name"] for col in inspector.get_columns("recipes")]
+    if "recipes" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("recipes")]
 
-    if "category" in columns:
-        op.drop_column('recipes', 'category')
-    if "author" in columns:
-        op.drop_column('recipes', 'author')
+        if "category" in columns:
+            op.drop_column('recipes', 'category')
+        if "author" in columns:
+            op.drop_column('recipes', 'author')
