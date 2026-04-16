@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import Fade from "embla-carousel-fade";
 import {
   Carousel,
@@ -13,7 +13,7 @@ type ExerciseRowImagePanelProps = {
   exerciseType: ExerciseType;
 };
 
-export const ExerciseRowImagePanel = ({
+export const ExerciseRowImagePanel = memo(({
   exerciseType,
 }: ExerciseRowImagePanelProps) => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -97,4 +97,6 @@ export const ExerciseRowImagePanel = ({
       </div>
     </div>
   );
-};
+});
+
+ExerciseRowImagePanel.displayName = "ExerciseRowImagePanel";

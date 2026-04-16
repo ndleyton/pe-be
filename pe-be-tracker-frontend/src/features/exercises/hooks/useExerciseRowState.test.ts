@@ -25,34 +25,31 @@ describe("useExerciseRowState", () => {
     vi.useRealTimers();
   });
 
-  it("opens and resets exercise notes state", () => {
+  it("initializes and updates exercise notes from props", () => {
     const exercise = makeExercise({
       notes: "Focus on tempo",
       exercise_sets: [makeExerciseSet({ id: 1, exercise_id: 1 })],
     });
     const updateSetOptions = vi.fn().mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useExerciseRowState({
-        exercise,
-        exerciseSets: exercise.exercise_sets,
-        updateSetOptions,
-      }),
+    const { result, rerender } = renderHook(
+      ({ ex }) =>
+        useExerciseRowState({
+          exercise: ex,
+          exerciseSets: ex.exercise_sets,
+          updateSetOptions,
+        }),
+      {
+        initialProps: { ex: exercise },
+      }
     );
 
-    act(() => {
-      result.current.openExerciseNotes();
-    });
-
-    expect(result.current.exerciseNotesOpen).toBe(true);
     expect(result.current.exerciseNotesValue).toBe("Focus on tempo");
 
-    act(() => {
-      result.current.handleExerciseNotesOpenChange(false);
-    });
+    const updatedExercise = { ...exercise, notes: "New note" };
+    rerender({ ex: updatedExercise });
 
-    expect(result.current.exerciseNotesOpen).toBe(false);
-    expect(result.current.exerciseNotesValue).toBe("");
+    expect(result.current.exerciseNotesValue).toBe("New note");
   });
 
   it("debounces set note persistence for the active set", async () => {

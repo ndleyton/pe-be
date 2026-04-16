@@ -247,9 +247,6 @@ describe("ExerciseRow", () => {
     fireEvent.focus(detailsLink);
     expect(preloadSpy).toHaveBeenCalledTimes(3);
     // expect(screen.getByText(/Rest Timer: 2min 30s/)).toBeInTheDocument(); // TODO: Add rest timer back in
-    // Exercise notes are now accessible via the sticky note icon next to the exercise name
-    const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");
-    expect(stickyNoteIcons.length).toBeGreaterThan(0); // Should have at least the exercise notes sticky note
   });
 
   it("hides the exercise details link for guest exercise types", () => {
@@ -291,21 +288,13 @@ describe("ExerciseRow", () => {
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
   });
 
-  it("displays exercise notes in sticky note and dialog", async () => {
-    render(<ExerciseRow {...defaultProps} />);
+  it("displays exercise notes in the accordion content when expanded", async () => {
+    render(<ExerciseRow {...defaultProps} isExpanded={true} />);
 
-    // Get the sticky note icons and click the first one (exercise notes)
-    const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");
-    const exerciseNotesButton = stickyNoteIcons[0].closest("button");
-    expect(exerciseNotesButton).toBeInTheDocument();
-
-    // Click the sticky note to open the dialog
-    fireEvent.click(exerciseNotesButton!);
-
-    // The dialog should open with the notes in a textarea
+    // The notes textarea should be rendered in the document (within the open accordion)
     await waitFor(() => {
       const notesTextarea = screen.getByPlaceholderText(
-        /add notes for this exercise/i,
+        /add exercise notes/i,
       );
       expect(notesTextarea).toHaveValue("Great workout!");
     });
@@ -378,28 +367,48 @@ describe("ExerciseRow", () => {
 
   it("can update exercise notes", async () => {
     const user = userEvent.setup();
-    render(<ExerciseRow {...defaultProps} />);
+    render(<ExerciseRow {...defaultProps} isExpanded={true} />);
 
-    // Click the exercise notes sticky note to open dialog
-    const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");
-    const exerciseNotesButton = stickyNoteIcons[0].closest("button");
-    await user.click(exerciseNotesButton!);
-
-    // Wait for dialog to open and find textarea
+    // Wait for the textarea to be rendered in the open accordion
     await waitFor(() => {
       const notesTextarea = screen.getByPlaceholderText(
-        /add notes for this exercise/i,
+        /add exercise notes/i,
       );
       expect(notesTextarea).toBeInTheDocument();
     });
 
     const notesTextarea = screen.getByPlaceholderText(
-      /add notes for this exercise/i,
+      /add exercise notes/i,
     );
     await user.clear(notesTextarea);
     await user.type(notesTextarea, "Updated notes");
 
     expect(notesTextarea).toHaveValue("Updated notes");
+
+    // Simulate blur to trigger save
+    fireEvent.blur(notesTextarea);
+    // Note: To test the actual update call, we would need to mock the update hook correctly
+    // or verify that it called the onExerciseUpdate callback with the new notes if it does
+  });
+
+  it("displays ghost placeholder when notes are empty and not expanded", () => {
+    const exerciseWithoutNotes = { ...mockExercise, notes: "" };
+    render(<ExerciseRow {...defaultProps} isExpanded={false} exercise={exerciseWithoutNotes} />);
+    expect(screen.getByText("+ Add notes")).toBeInTheDocument();
+  });
+
+  it("displays ghost preview when notes exist and not expanded", () => {
+    const exerciseWithNotes = { ...mockExercise, notes: "Remember to breathe" };
+    render(<ExerciseRow {...defaultProps} isExpanded={false} exercise={exerciseWithNotes} />);
+    expect(screen.getByText("Remember to breathe")).toBeInTheDocument();
+  });
+
+  it("hides ghost placeholder when expanded", () => {
+    const exerciseWithNotes = { ...mockExercise, notes: "Remember to breathe" };
+    render(<ExerciseRow {...defaultProps} isExpanded={true} exercise={exerciseWithNotes} />);
+    const wrapper = screen.getByTestId("ghost-placeholder-wrapper");
+    expect(wrapper).toHaveClass("opacity-0");
+    expect(wrapper).toHaveClass("max-h-0");
   });
 
   it("can increment reps using plus button", async () => {
@@ -767,12 +776,13 @@ describe("ExerciseRow", () => {
       <ExerciseRow
         exercise={exerciseWithoutNotes}
         onExerciseUpdate={mockOnExerciseUpdate}
+        isExpanded={true}
       />,
     );
 
-    // Should still show the sticky note icon for adding notes
-    const stickyNoteIcons = screen.getAllByTestId("sticky-note-icon");
-    expect(stickyNoteIcons.length).toBeGreaterThan(0);
+    // Textarea is present but empty
+    const notesTextarea = screen.getByPlaceholderText(/add exercise notes/i);
+    expect(notesTextarea).toHaveValue("");
   });
 
   it("works without onExerciseUpdate callback", () => {

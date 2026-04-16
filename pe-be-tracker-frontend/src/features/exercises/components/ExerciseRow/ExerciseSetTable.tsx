@@ -589,10 +589,14 @@ const SetOptionsDialogContent = ({
           )}
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor={`set-notes-${activeSet.id}`}
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Notes for Set {activeSetIndex + 1}
           </label>
           <Textarea
+            id={`set-notes-${activeSet.id}`}
             placeholder="Add notes for this set..."
             value={setNotesValue}
             onChange={(event) =>
@@ -622,7 +626,7 @@ const SetOptionsDialogContent = ({
   );
 };
 
-export const ExerciseSetTable = ({
+export const ExerciseSetTable = memo(({
   activeSetId,
   currentIntensityUnitAbbreviation,
   currentIntensityUnitId,
@@ -803,4 +807,6 @@ export const ExerciseSetTable = ({
       </Button>
     </>
   );
-};
+});
+
+ExerciseSetTable.displayName = "ExerciseSetTable";

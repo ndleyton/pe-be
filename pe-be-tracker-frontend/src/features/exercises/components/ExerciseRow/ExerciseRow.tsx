@@ -12,6 +12,7 @@ import {
   AccordionContent,
   AccordionItem
 } from "@/shared/components/ui/accordion";
+import { Textarea } from "@/shared/components/ui/textarea";
 
 const ExerciseRow = ({
   exercise,
@@ -50,14 +51,11 @@ const ExerciseRow = ({
     activeSetId,
     currentIntensityUnit,
     durationInputs,
-    exerciseNotesOpen,
     exerciseNotesValue,
     exerciseSettingsOpen,
-    handleExerciseNotesOpenChange,
     handleIntensityUnitChange,
     handleSetOptionsOpenChange,
     intensityInputs,
-    openExerciseNotes,
     openSetOptions,
     repsInputs,
     setDurationInputValue,
@@ -80,9 +78,6 @@ const ExerciseRow = ({
 
   const { stats } = useExerciseTypeStats(exercise.exercise_type.id, exercise.exercise_type);
 
-  const hasImages =
-    (exercise.exercise_type.status ?? "released") === "released" &&
-    (exercise.exercise_type.images?.length ?? 0) > 0;
 
   const handleExpandedChange = useCallback((nextExpanded: boolean) => {
     if (isControlled) {
@@ -101,6 +96,10 @@ const ExerciseRow = ({
   const handleToggleExpand = useCallback(() => {
     handleExpandedChange(!isExpanded);
   }, [handleExpandedChange, isExpanded]);
+
+  const handleAddSet = useCallback(() => {
+    void addSet(currentIntensityUnit.id);
+  }, [addSet, currentIntensityUnit.id]);
 
   return (
     <Accordion
@@ -125,27 +124,29 @@ const ExerciseRow = ({
             <ExerciseRowHeader
               currentIntensityUnit={currentIntensityUnit}
               exercise={exercise}
-              exerciseNotesOpen={exerciseNotesOpen}
               exerciseNotesValue={exerciseNotesValue}
               exerciseSettingsOpen={exerciseSettingsOpen}
               isUnsavedExercise={isUnsavedExercise}
               isExpanded={isExpanded}
               onToggleExpand={handleToggleExpand}
-              hasImages={hasImages}
               onExerciseDelete={handleExerciseDelete}
-              onExerciseNotesOpen={openExerciseNotes}
-              onExerciseNotesOpenChange={handleExerciseNotesOpenChange}
-              onExerciseNotesSave={() => {
-                updateExerciseNotes(exerciseNotesValue);
-                handleExerciseNotesOpenChange(false);
-              }}
-              onExerciseNotesValueChange={setExerciseNotesValue}
               onExerciseSettingsOpenChange={setExerciseSettingsOpen}
               onIntensityUnitChange={handleIntensityUnitChange}
             />
           </CardHeader>
 
           <AccordionContent className="p-0">
+            <div className="px-4 pb-2 pt-2">
+              <Textarea
+                id={`notes-${exercise.id}`}
+                aria-label="Exercise notes"
+                placeholder="Add exercise notes..."
+                value={exerciseNotesValue}
+                onChange={(e) => setExerciseNotesValue(e.target.value)}
+                onBlur={() => updateExerciseNotes(exerciseNotesValue)}
+                className="min-h-[60px] bg-background/50 resize-none text-sm border-dashed"
+              />
+            </div>
             <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
           </AccordionContent>
 
@@ -158,7 +159,7 @@ const ExerciseRow = ({
               exerciseSets={exerciseSets}
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
-              onAddSet={() => void addSet(currentIntensityUnit.id)}
+              onAddSet={handleAddSet}
               onCloseSetOptions={closeSetOptions}
               onDecrementReps={decrementReps}
               onDeleteSet={deleteSet}

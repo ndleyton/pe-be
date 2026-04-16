@@ -52,34 +52,23 @@ const mockExercise: Exercise = {
 describe("ExerciseRow Accordion", () => {
   it("renders expansion trigger when images are present", () => {
     render(<ExerciseRow exercise={mockExercise} />);
-    
-    expect(screen.getByRole("button", { name: /show exercise images/i })).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: /show details/i })).toBeInTheDocument();
   });
 
-  it("does not render expansion trigger when no images are present", () => {
-    const noImagesExercise = {
-      ...mockExercise,
-      exercise_type: {
-        ...mockExercise.exercise_type,
-        images: [],
-      },
-    };
-    render(<ExerciseRow exercise={noImagesExercise} />);
-    
-    expect(screen.queryByRole("button", { name: /show exercise images/i })).not.toBeInTheDocument();
-  });
+
 
   it("toggles expansion when trigger is clicked", async () => {
     const onToggleExpand = vi.fn();
     render(
-      <ExerciseRow 
-        exercise={mockExercise} 
-        isExpanded={false} 
-        onToggleExpand={onToggleExpand} 
+      <ExerciseRow
+        exercise={mockExercise}
+        isExpanded={false}
+        onToggleExpand={onToggleExpand}
       />
     );
-    
-    const trigger = screen.getByRole("button", { name: /show exercise images/i });
+
+    const trigger = screen.getByRole("button", { name: /show details/i });
     fireEvent.click(trigger);
 
     expect(onToggleExpand).toHaveBeenCalled();
@@ -95,12 +84,12 @@ describe("ExerciseRow Accordion", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /show exercise images/i });
+    const trigger = screen.getByRole("button", { name: /show details/i });
     fireEvent.click(trigger);
 
     expect(onToggleExpand).toHaveBeenCalledWith(mockExercise.id);
     expect(
-      screen.getByRole("button", { name: /hide exercise images/i }),
+      screen.getByRole("button", { name: /hide details/i }),
     ).toBeInTheDocument();
   });
 
@@ -113,18 +102,18 @@ describe("ExerciseRow Accordion", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /hide exercise images/i }),
+      screen.getByRole("button", { name: /hide details/i }),
     ).toBeInTheDocument();
   });
 
   it("shows image panel when expanded", () => {
     render(
-      <ExerciseRow 
-        exercise={mockExercise} 
-        isExpanded={true} 
+      <ExerciseRow
+        exercise={mockExercise}
+        isExpanded={true}
       />
     );
-    
+
     expect(screen.getByTestId("carousel")).toBeInTheDocument();
     // Verify images are rendered
     const images = screen.getAllByRole("img");
@@ -132,17 +121,5 @@ describe("ExerciseRow Accordion", () => {
     expect(images[0]).toHaveAttribute("src", "image1.jpg");
   });
 
-  it("hides expansion trigger for guest exercise types", () => {
-    const guestExercise = {
-      ...mockExercise,
-      exercise_type: {
-        ...mockExercise.exercise_type,
-        id: "guest-1" as any,
-        images: [],
-      },
-    };
-    render(<ExerciseRow exercise={guestExercise} />);
-    
-    expect(screen.queryByRole("button", { name: /show exercise images/i })).not.toBeInTheDocument();
-  });
+
 });
