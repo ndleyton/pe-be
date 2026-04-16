@@ -167,10 +167,10 @@ export const calculateIsPersonalBest = (
 
   if (!hasActivity) return false;
 
-  if (currentWeight !== null && pbWeightInCurrentUnit !== null && currentReps !== null) {
+  if (currentWeight !== null && pbWeightInCurrentUnit !== null) {
     return isNewPersonalBest(
       currentWeight,
-      currentReps,
+      currentReps ?? 0,
       set.rir,
       pbWeightInCurrentUnit,
       personalBest.reps,
