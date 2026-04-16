@@ -64,41 +64,40 @@ export const ExerciseRowHeader = ({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={cn(
         "flex items-center justify-between transition-colors rounded-lg",
         "cursor-pointer select-none hover:bg-foreground/5",
         "p-1 -m-1"
       )}
       onClick={onToggleExpand}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleExpand();
+        }
+      }}
+      aria-expanded={isExpanded}
+      aria-label={isExpanded ? "Hide details" : "Show details"}
       title="Click to expand/collapse"
     >
       <div className="flex items-center gap-3">
-        {hasImages && (
-          <div
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300",
+            isExpanded
+              ? "bg-rose-500 text-primary-foreground"
+              : "bg-primary text-primary-foreground",
+          )}
+        >
+          <ChevronRight
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300",
-              isExpanded
-                ? "bg-rose-500 text-primary-foreground"
-                : "bg-primary text-primary-foreground",
+              "h-4 w-4 transition-transform duration-300",
+              isExpanded ? "rotate-90" : "rotate-0",
             )}
-            aria-label={isExpanded ? "Hide details" : "Show details"}
-            aria-expanded={isExpanded}
-          >
-            <ChevronRight
-              className={cn(
-                "h-4 w-4 transition-transform duration-300",
-                isExpanded ? "rotate-90" : "rotate-0",
-              )}
-            />
-          </div>
-        )}
-        {!hasImages && (
-          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg transition-transform duration-300">
-            <span className="text-primary-foreground text-sm font-bold">
-              {exercise.exercise_type.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
-        )}
+          />
+        </div>
         <div className="flex items-center gap-2">
           <h3 className="text-foreground font-semibold">
             {exercise.exercise_type.name}
@@ -126,35 +125,37 @@ export const ExerciseRowHeader = ({
         </div>
       </div>
 
-      <Dialog
-        open={exerciseSettingsOpen}
-        onOpenChange={onExerciseSettingsOpenChange}
-      >
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Exercise Settings</DialogTitle>
-            <DialogDescription>
-              Adjust the active intensity unit or delete this exercise.
-            </DialogDescription>
-          </DialogHeader>
-          <ExerciseTypeMore
-            currentIntensityUnit={currentIntensityUnit}
-            onIntensityUnitChange={onIntensityUnitChange}
-            onExerciseDelete={onExerciseDelete}
-            disableExerciseDelete={isUnsavedExercise}
-            onClose={() => onExerciseSettingsOpenChange(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      <div className="flex items-center gap-1 relative z-10">
+        <Dialog
+          open={exerciseSettingsOpen}
+          onOpenChange={onExerciseSettingsOpenChange}
+        >
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Exercise Settings</DialogTitle>
+              <DialogDescription>
+                Adjust the active intensity unit or delete this exercise.
+              </DialogDescription>
+            </DialogHeader>
+            <ExerciseTypeMore
+              currentIntensityUnit={currentIntensityUnit}
+              onIntensityUnitChange={onIntensityUnitChange}
+              onExerciseDelete={onExerciseDelete}
+              disableExerciseDelete={isUnsavedExercise}
+              onClose={() => onExerciseSettingsOpenChange(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
