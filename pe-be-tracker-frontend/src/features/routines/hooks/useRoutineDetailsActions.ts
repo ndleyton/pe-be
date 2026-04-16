@@ -63,8 +63,8 @@ export const useRoutineDetailsActions = ({
         description: description.trim() || null,
         workout_type_id: routine.workout_type_id,
         visibility,
-        author: author?.trim() || null,
-        category: category?.trim() || null,
+        author: author != null ? author.trim() : null,
+        category: category != null ? category.trim() : null,
         exercise_templates: buildRoutinePayload(editorTemplates),
       };
 
