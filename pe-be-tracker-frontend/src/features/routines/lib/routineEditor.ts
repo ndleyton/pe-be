@@ -41,6 +41,9 @@ export type RoutineEditorSet = {
   duration_seconds: number | null;
   intensity: number | null;
   rpe: number | null;
+  rir: number | null;
+  notes: string;
+  type: string | null;
   intensity_unit_id: number;
   intensity_unit: RoutineIntensityUnitOption | null;
 };
@@ -112,6 +115,7 @@ export const formatSetSummary = (setTemplate: RoutineEditorSet) => {
     duration_seconds: setTemplate.duration_seconds,
     intensity: setTemplate.intensity,
     rpe: setTemplate.rpe,
+    rir: setTemplate.rir,
     intensityUnitAbbreviation: setTemplate.intensity_unit?.abbreviation,
   });
 };
@@ -131,6 +135,9 @@ export const buildEditorTemplatesFromRoutine = (
       duration_seconds: setTemplate.duration_seconds ?? null,
       intensity: setTemplate.intensity ?? null,
       rpe: setTemplate.rpe ?? null,
+      rir: setTemplate.rir ?? null,
+      notes: setTemplate.notes ?? "",
+      type: setTemplate.type ?? null,
       intensity_unit_id: setTemplate.intensity_unit_id,
       intensity_unit:
         toRoutineIntensityUnitOption(setTemplate.intensity_unit) ??
@@ -148,7 +155,10 @@ export const buildRoutinePayload = (
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
+      notes: setTemplate.notes.trim() || null,
+      type: setTemplate.type || null,
       ...(setTemplate.rpe != null ? { rpe: setTemplate.rpe } : {}),
+      ...(setTemplate.rir != null ? { rir: setTemplate.rir } : {}),
       ...(setTemplate.duration_seconds != null
         ? { duration_seconds: setTemplate.duration_seconds }
         : {}),
@@ -177,6 +187,9 @@ export const buildComparableSnapshot = (
         duration_seconds: setTemplate.duration_seconds,
         intensity: setTemplate.intensity,
         rpe: setTemplate.rpe,
+        rir: setTemplate.rir,
+        notes: setTemplate.notes.trim() || null,
+        type: setTemplate.type,
         intensity_unit_id: setTemplate.intensity_unit_id,
       })),
     })),
@@ -199,6 +212,9 @@ export const createDefaultSet = (
       : null,
     intensity: null,
     rpe: null,
+    rir: null,
+    notes: "",
+    type: null,
     intensity_unit_id: fallbackUnit.id,
     intensity_unit: fallbackUnit,
   };
@@ -248,6 +264,9 @@ export const buildRoutineFromEditorState = ({
       duration_seconds: setTemplate.duration_seconds,
       intensity: setTemplate.intensity,
       rpe: setTemplate.rpe,
+      rir: setTemplate.rir,
+      notes: setTemplate.notes,
+      type: setTemplate.type,
       intensity_unit_id: setTemplate.intensity_unit_id,
       created_at: routine.created_at,
       updated_at: routine.updated_at,

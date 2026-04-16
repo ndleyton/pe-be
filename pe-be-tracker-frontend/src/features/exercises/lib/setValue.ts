@@ -6,9 +6,16 @@ export type SetValueLike = {
 export type SetValueMode = "reps" | "time";
 
 export const resolveSetValueMode = (
-  set: SetValueLike | null | undefined,
+  set: (SetValueLike & { type?: string | null }) | null | undefined,
   prefersTimeByDefault = false,
 ): SetValueMode => {
+  if (set?.type === "time") {
+    return "time";
+  }
+  if (set?.type === "reps") {
+    return "reps";
+  }
+
   if (set?.duration_seconds != null) {
     return "time";
   }
