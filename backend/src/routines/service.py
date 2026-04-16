@@ -42,10 +42,12 @@ class RoutineService:
         offset: int,
         limit: int,
         order_by: str,
+        category: str | None = None,
+        author: str | None = None,
     ) -> List[RoutineSummary]:
         """Get routines visible to the current viewer as a summary list."""
         routines_summary = await crud.get_visible_routines_summary(
-            session, user_id, offset, limit, order_by
+            session, user_id, offset, limit, order_by, category, author
         )
         return [RoutineSummary.model_validate(r) for r in routines_summary]
 

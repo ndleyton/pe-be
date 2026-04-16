@@ -23,6 +23,8 @@ type RoutineEditorState = {
   name: string;
   description: string;
   visibility: RoutineVisibility;
+  author: string | null;
+  category: string | null;
   editorTemplates: RoutineEditorTemplate[];
   initialSnapshot: string;
   exercisePickerTarget: ExercisePickerTarget | null;
@@ -42,6 +44,8 @@ type RoutineEditorAction =
   | { type: "setName"; payload: string }
   | { type: "setDescription"; payload: string }
   | { type: "setVisibility"; payload: RoutineVisibility }
+  | { type: "setAuthor"; payload: string }
+  | { type: "setCategory"; payload: string }
   | { type: "openExercisePicker"; payload: ExercisePickerTarget }
   | { type: "closeExercisePicker" }
   | { type: "openUnitPicker"; payload: UnitPickerTarget }
@@ -92,6 +96,8 @@ const initialState: RoutineEditorState = {
   name: "",
   description: "",
   visibility: "private",
+  author: null,
+  category: null,
   editorTemplates: [],
   initialSnapshot: "",
   exercisePickerTarget: null,
@@ -107,6 +113,8 @@ const routineEditorReducer = (
       const nextName = action.payload.routine.name;
       const nextDescription = action.payload.routine.description ?? "";
       const nextVisibility = action.payload.routine.visibility;
+      const nextAuthor = action.payload.routine.author ?? null;
+      const nextCategory = action.payload.routine.category ?? null;
       const nextTemplates = buildEditorTemplatesFromRoutine(
         action.payload.routine,
         action.payload.availableIntensityUnits,
@@ -117,11 +125,15 @@ const routineEditorReducer = (
         name: nextName,
         description: nextDescription,
         visibility: nextVisibility,
+        author: nextAuthor,
+        category: nextCategory,
         editorTemplates: nextTemplates,
         initialSnapshot: buildComparableSnapshot(
           nextName,
           nextDescription,
           nextVisibility,
+          nextAuthor,
+          nextCategory,
           nextTemplates,
         ),
       };
@@ -140,6 +152,16 @@ const routineEditorReducer = (
       return {
         ...state,
         visibility: action.payload,
+      };
+    case "setAuthor":
+      return {
+        ...state,
+        author: action.payload,
+      };
+    case "setCategory":
+      return {
+        ...state,
+        category: action.payload,
       };
     case "openExercisePicker":
       return {
@@ -353,9 +375,18 @@ export const useRoutineEditor = ({
         state.name,
         state.description,
         state.visibility,
+        state.author,
+        state.category,
         state.editorTemplates,
       ),
-    [state.description, state.editorTemplates, state.name, state.visibility],
+    [
+      state.author,
+      state.category,
+      state.description,
+      state.editorTemplates,
+      state.name,
+      state.visibility,
+    ],
   );
 
   const hasUnsavedChanges =
@@ -380,6 +411,8 @@ export const useRoutineEditor = ({
     hasUnsavedChanges,
     name: state.name,
     visibility: state.visibility,
+    author: state.author,
+    category: state.category,
     unitPickerTarget: state.unitPickerTarget,
     addSetToTemplate: (templateId: string) =>
       dispatch({
@@ -420,6 +453,10 @@ export const useRoutineEditor = ({
       dispatch({ type: "setDescription", payload: value }),
     setVisibility: (value: RoutineVisibility) =>
       dispatch({ type: "setVisibility", payload: value }),
+    setAuthor: (value: string) =>
+      dispatch({ type: "setAuthor", payload: value }),
+    setCategory: (value: string) =>
+      dispatch({ type: "setCategory", payload: value }),
     setName: (value: string) =>
       dispatch({ type: "setName", payload: value }),
     updateSet: (
