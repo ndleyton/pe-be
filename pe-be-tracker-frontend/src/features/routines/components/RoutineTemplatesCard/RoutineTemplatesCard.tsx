@@ -485,6 +485,7 @@ export const RoutineTemplatesCard = ({
               );
               if (!setTemplate || !template) return null;
 
+              const setIndex = template.set_templates.indexOf(setTemplate);
               const effortLabelId = `set-effort-label-active`;
               const prefersTimeByDefault = prefersDurationForIntensityUnit(
                 setTemplate.intensity_unit_id,

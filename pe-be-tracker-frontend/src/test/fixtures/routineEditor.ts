@@ -6,6 +6,9 @@ export const speedSet: RoutineEditorSet = {
   duration_seconds: 605,
   intensity: 10,
   rpe: null,
+  rir: null,
+  notes: "",
+  type: null,
   intensity_unit_id: 3,
   intensity_unit: {
     id: 3,
@@ -20,6 +23,9 @@ export const repSet: RoutineEditorSet = {
   duration_seconds: null,
   intensity: 50,
   rpe: null,
+  rir: null,
+  notes: "",
+  type: null,
   intensity_unit_id: 1,
   intensity_unit: {
     id: 1,
