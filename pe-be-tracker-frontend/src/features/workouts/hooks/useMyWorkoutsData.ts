@@ -5,18 +5,35 @@ import { getMyWorkouts } from "../api";
 import { type Workout } from "../types";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
+const getActiveWorkout = (workouts: Workout[]): Workout | null =>
+  workouts.reduce<Workout | null>((activeWorkout, workout) => {
+    if (workout.end_time) {
+      return activeWorkout;
+    }
+
+    if (!activeWorkout) {
+      return workout;
+    }
+
+    return new Date(workout.start_time).getTime()
+      > new Date(activeWorkout.start_time).getTime()
+      ? workout
+      : activeWorkout;
+  }, null);
+
 export const useMyWorkoutsData = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authLoading = useAuthStore((state) => state.loading);
   const authInitialized = useAuthStore((state) => state.initialized);
-  const guestData = useGuestStore();
   const guestHydrated = useGuestStore((state) => state.hydrated);
+  const guestWorkouts = useGuestStore((state) => state.workouts);
 
   const authResolved = authInitialized && !authLoading;
 
   const {
     data: serverWorkoutsResponse,
     isPending,
+    status,
     error,
     refetch,
   } = useQuery({
@@ -36,10 +53,6 @@ export const useMyWorkoutsData = () => {
         : [];
     }
 
-    const guestWorkouts = Array.isArray(guestData?.workouts)
-      ? guestData.workouts
-      : [];
-
     return guestWorkouts.map((gw) => ({
       id: gw.id,
       name: gw.name,
@@ -50,13 +63,21 @@ export const useMyWorkoutsData = () => {
       created_at: gw.created_at || getCurrentUTCTimestamp(),
       updated_at: gw.updated_at || getCurrentUTCTimestamp(),
     }));
-  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestData?.workouts]);
+  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestWorkouts]);
 
   const isLoading =
     !authResolved || (isAuthenticated ? isPending : !guestHydrated);
+  const hasLoadedWorkouts =
+    authResolved && (isAuthenticated ? status === "success" : guestHydrated);
+  const activeWorkout = useMemo(
+    () => getActiveWorkout(workouts),
+    [workouts],
+  );
 
   return {
     workouts,
+    activeWorkout,
+    hasLoadedWorkouts,
     isLoading,
     error,
     refetch,

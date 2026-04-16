@@ -1,13 +1,34 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/test/testUtils";
 import { useUIStore } from "@/stores";
 import userEvent from "@testing-library/user-event";
 import AppLayout from "./AppLayout";
 
+const mockUseMyWorkoutsData = vi.fn();
+
+vi.mock("@/features/workouts", () => ({
+  useMyWorkoutsData: () => mockUseMyWorkoutsData(),
+}));
+
 const MockComponent = () => <div>Mock Content</div>;
 
 describe("AppLayout", () => {
+  const originalSyncWorkoutTimer = useUIStore.getState().syncWorkoutTimer;
+
+  beforeEach(() => {
+    mockUseMyWorkoutsData.mockReturnValue({
+      workouts: [],
+      activeWorkout: null,
+      hasLoadedWorkouts: true,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isAuthenticated: false,
+    });
+  });
+
   afterEach(() => {
+    useUIStore.setState({ syncWorkoutTimer: originalSyncWorkoutTimer });
     useUIStore.getState().stopWorkoutTimer();
   });
 
@@ -66,5 +87,36 @@ describe("AppLayout", () => {
       name: /bottom navigation/i,
     });
     expect(bottomNav).toBeInTheDocument();
+  });
+
+  it("syncs the workout timer from the shared workouts hook", () => {
+    const mockSyncWorkoutTimer = vi.fn();
+    useUIStore.setState({ syncWorkoutTimer: mockSyncWorkoutTimer });
+    mockUseMyWorkoutsData.mockReturnValue({
+      workouts: [],
+      activeWorkout: {
+        id: 42,
+        start_time: "2024-01-01T08:00:00Z",
+        end_time: null,
+      },
+      hasLoadedWorkouts: true,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isAuthenticated: true,
+    });
+
+    render(
+      <>
+        <AppLayout />
+        <MockComponent />
+      </>,
+    );
+
+    expect(mockSyncWorkoutTimer).toHaveBeenCalledWith({
+      id: 42,
+      startTime: "2024-01-01T08:00:00Z",
+      endTime: null,
+    });
   });
 });
