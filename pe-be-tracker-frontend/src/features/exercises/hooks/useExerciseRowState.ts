@@ -56,7 +56,7 @@ export const useExerciseRowState = ({
     () => buildDurationInputs(exercise.exercise_sets || []),
   );
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState(false);
-  const [exerciseNotesValue, setExerciseNotesValue] = useState("");
+  const [exerciseNotesValue, setExerciseNotesValue] = useState(exercise.notes || "");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
   const [setRpeValue, setSetRpeValue] = useState<number | null>(null);
@@ -72,6 +72,10 @@ export const useExerciseRowState = ({
     setRepsInputs(buildRepsInputs(exerciseSets));
     setDurationInputs(buildDurationInputs(exerciseSets));
   }, [currentIntensityUnit.id, exerciseSets]);
+
+  useEffect(() => {
+    setExerciseNotesValue(exercise.notes || "");
+  }, [exercise.notes]);
 
   useEffect(() => {
     if (
@@ -121,9 +125,6 @@ export const useExerciseRowState = ({
 
   const handleExerciseNotesOpenChange = (open: boolean) => {
     setExerciseNotesOpen(open);
-    if (!open) {
-      setExerciseNotesValue("");
-    }
   };
 
   const openExerciseNotes = () => {
