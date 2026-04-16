@@ -162,6 +162,9 @@ vi.mock("@/stores", () => ({
 describe("WorkoutPage", () => {
   let windowScrollToMock: ReturnType<typeof vi.fn>;
   let scrollIntoViewMock: ReturnType<typeof vi.fn>;
+  let requestIdleCallbackMock: ReturnType<typeof vi.fn>;
+  let cancelIdleCallbackMock: ReturnType<typeof vi.fn>;
+  let preloadedImageUrls: string[];
   const buildApiGetImplementation = (
     workoutHandler?: () => Promise<{ data: unknown }>,
   ) =>
@@ -195,6 +198,31 @@ describe("WorkoutPage", () => {
       configurable: true,
       writable: true,
       value: scrollIntoViewMock,
+    });
+    preloadedImageUrls = [];
+    class MockImage {
+      set src(value: string) {
+        preloadedImageUrls.push(value);
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+    requestIdleCallbackMock = vi.fn((callback: IdleRequestCallback) => {
+      callback({
+        didTimeout: false,
+        timeRemaining: () => 50,
+      } as IdleDeadline);
+      return 1;
+    });
+    cancelIdleCallbackMock = vi.fn();
+    Object.defineProperty(window, "requestIdleCallback", {
+      configurable: true,
+      writable: true,
+      value: requestIdleCallbackMock,
+    });
+    Object.defineProperty(window, "cancelIdleCallback", {
+      configurable: true,
+      writable: true,
+      value: cancelIdleCallbackMock,
     });
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
@@ -513,6 +541,74 @@ describe("WorkoutPage", () => {
         block: "end",
         inline: "nearest",
       });
+    });
+  });
+
+  it("preloads only the first image for the first few exercises", async () => {
+    exerciseApiMocks.mockGetExercisesInWorkout.mockResolvedValue([
+      {
+        id: 1,
+        exercise_type: {
+          ...mockExerciseType,
+          images: ["https://cdn.example.com/bench-1.webp"],
+        },
+      },
+      {
+        id: 2,
+        exercise_type: {
+          ...mockExerciseType,
+          id: 43,
+          name: "Incline Bench Press",
+          images: ["https://cdn.example.com/incline-1.webp"],
+        },
+      },
+      {
+        id: 3,
+        exercise_type: {
+          ...mockExerciseType,
+          id: 44,
+          name: "Dumbbell Press",
+          images: [],
+        },
+      },
+      {
+        id: 4,
+        exercise_type: {
+          ...mockExerciseType,
+          id: 45,
+          name: "Cable Fly",
+          images: ["https://cdn.example.com/fly-1.webp"],
+        },
+      },
+      {
+        id: 5,
+        exercise_type: {
+          ...mockExerciseType,
+          id: 46,
+          name: "Push Up",
+          images: ["https://cdn.example.com/pushup-1.webp"],
+        },
+      },
+      {
+        id: 6,
+        exercise_type: {
+          ...mockExerciseType,
+          id: 47,
+          name: "Chest Dip",
+          images: ["https://cdn.example.com/dip-1.webp"],
+        },
+      },
+    ]);
+
+    render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(requestIdleCallbackMock).toHaveBeenCalled();
+      expect(preloadedImageUrls).toEqual([
+        "https://cdn.example.com/bench-1.webp",
+        "https://cdn.example.com/incline-1.webp",
+        "https://cdn.example.com/fly-1.webp",
+      ]);
     });
   });
 
