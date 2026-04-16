@@ -970,6 +970,8 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "weight": 105,
         "reps": 3,
         "volume": 315,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 4
     assert stats["intensityUnit"] == {
@@ -996,6 +998,8 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "weight": 500,
         "reps": 1,
         "volume": 500,
+        "rpe": None,
+        "rir": None,
     }
     assert other_owner_stats["totalSets"] == 1
 
@@ -1058,6 +1062,8 @@ async def test_get_exercise_type_stats_last_workout_handles_no_active_sets(db_se
         "weight": 100,
         "reps": 5,
         "volume": 500,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 1
 
@@ -1116,6 +1122,8 @@ async def test_get_exercise_type_stats_handles_latest_exercise_without_sets(db_s
         "weight": 80,
         "reps": 5,
         "volume": 400,
+        "rpe": None,
+        "rir": None,
     }
     assert stats["totalSets"] == 1
 
@@ -1221,4 +1229,53 @@ async def test_exercise_owner_queries_respect_user_and_deleted_state(db_session)
     assert await crud.verify_exercise_ownership(db_session, active.id, other.id) is None
     assert (
         await crud.verify_exercise_ownership(db_session, deleted.id, owner.id) is None
+    )
+
+
+def test_is_new_personal_best():
+    from decimal import Decimal
+    from src.exercises.crud import is_new_personal_best
+
+    # strictly higher weight
+    assert (
+        is_new_personal_best(Decimal("105"), 5, None, Decimal("100"), 5, None) is True
+    )
+    # same weight, higher reps
+    assert (
+        is_new_personal_best(Decimal("100"), 6, None, Decimal("100"), 5, None) is True
+    )
+    # worse weight
+    assert (
+        is_new_personal_best(Decimal("95"), 10, None, Decimal("100"), 5, None) is False
+    )
+    # same weight and reps
+    assert (
+        is_new_personal_best(Decimal("100"), 5, None, Decimal("100"), 5, None) is False
+    )
+    # same weight, same reps, missing vs present RIR (present RIR is treated as better unless best has RIR)
+    # Actually wait: code says `if best_rir is None or current_rir > best_rir:`
+    assert (
+        is_new_personal_best(Decimal("100"), 5, Decimal("1"), Decimal("100"), 5, None)
+        is True
+    )
+    # higher RIR
+    assert (
+        is_new_personal_best(
+            Decimal("100"), 5, Decimal("2"), Decimal("100"), 5, Decimal("1")
+        )
+        is True
+    )
+    # lower RIR
+    assert (
+        is_new_personal_best(
+            Decimal("100"), 5, Decimal("1"), Decimal("100"), 5, Decimal("2")
+        )
+        is False
+    )
+    # same RIR
+    assert (
+        is_new_personal_best(
+            Decimal("100"), 5, Decimal("1"), Decimal("100"), 5, Decimal("1")
+        )
+        is False
     )

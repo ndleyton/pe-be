@@ -1,6 +1,6 @@
 import logging
 from decimal import Decimal
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,34 @@ from src.exercises.intensity_units import (
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
+
+
+def is_new_personal_best(
+    current_weight: Decimal,
+    current_reps: int,
+    current_rir: Optional[Decimal],
+    best_weight: Decimal,
+    best_reps: int,
+    best_rir: Optional[Decimal],
+) -> bool:
+    """
+    Helper function to determine if a performance beats a prior best.
+
+    This function uses strict comparisons because the backend uses Decimal for
+    exact arithmetic, ensuring data integrity as the project's Source of Truth.
+    Unlike the frontend, it does not require epsilon tolerance for math noise.
+    """
+    if current_weight > best_weight:
+        return True
+    if current_weight == best_weight:
+        if current_reps > best_reps:
+            return True
+        if current_reps == best_reps:
+            if current_rir is not None:
+                if best_rir is None or current_rir > best_rir:
+                    return True
+    return False
+
 
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
@@ -1017,6 +1045,8 @@ async def get_exercise_type_stats(
     # Get personal best (highest weight for single rep)
     personal_best = None
     best_weight = Decimal("0")
+    best_reps = 0
+    best_rir = None
     best_set = None
     best_exercise = None
 
@@ -1027,23 +1057,40 @@ async def get_exercise_type_stats(
                 intensity_units_by_id=intensity_units_by_id,
                 stats_intensity_unit=stats_intensity_unit,
             )
-            if converted_intensity and converted_intensity > best_weight:
-                best_weight = converted_intensity
-                best_set = exercise_set
-                best_exercise = exercise
+            if converted_intensity:
+                is_new_pr = False
+                if not best_set:
+                    is_new_pr = True
+                else:
+                    is_new_pr = is_new_personal_best(
+                        current_weight=converted_intensity,
+                        current_reps=exercise_set.reps or 0,
+                        current_rir=exercise_set.rir,
+                        best_weight=best_weight,
+                        best_reps=best_reps,
+                        best_rir=best_rir,
+                    )
+
+                if is_new_pr:
+                    best_weight = converted_intensity
+                    best_reps = exercise_set.reps or 0
+                    best_rir = exercise_set.rir
+                    best_set = exercise_set
+                    best_exercise = exercise
 
     if best_set:
-        converted_best_intensity = _get_stats_intensity_value(
-            best_set,
-            intensity_units_by_id=intensity_units_by_id,
-            stats_intensity_unit=stats_intensity_unit,
-        ) or Decimal("0")
-        volume = converted_best_intensity * (best_set.reps or 0)
+        volume = best_weight * (best_reps)
         personal_best = {
             "date": best_exercise.created_at.isoformat(),
-            "weight": _serialize_numeric(converted_best_intensity),
-            "reps": best_set.reps or 0,
+            "weight": _serialize_numeric(best_weight),
+            "reps": best_reps,
             "volume": _serialize_numeric(volume),
+            "rpe": _serialize_numeric(best_set.rpe)
+            if best_set.rpe is not None
+            else None,
+            "rir": _serialize_numeric(best_set.rir)
+            if best_set.rir is not None
+            else None,
         }
 
     # Calculate total sets across all exercises

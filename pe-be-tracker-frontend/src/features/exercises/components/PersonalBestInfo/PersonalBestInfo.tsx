@@ -47,6 +47,20 @@ export const PersonalBestInfo = ({
             {intensityUnit.abbreviation}
           </span>
         </div>
+
+        {(personalBest.rpe != null || personalBest.rir != null) && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground text-sm">Difficulty:</span>
+            <span className="font-medium">
+              {[
+                personalBest.rpe != null && `RPE: ${personalBest.rpe}`,
+                personalBest.rir != null && `RIR: ${personalBest.rir}`,
+              ]
+                .filter(Boolean)
+                .join(" / ")}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="border-t pt-2">

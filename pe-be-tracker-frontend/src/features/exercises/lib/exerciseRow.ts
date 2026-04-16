@@ -121,6 +121,38 @@ export const toGuestExerciseSets = (
     exercise_id: String(set.exercise_id),
   }));
 
+export const isNewPersonalBest = (
+  currentWeight: number,
+  currentReps: number,
+  currentRir: number | null | undefined,
+  pbWeight: number,
+  pbReps: number,
+  pbRir: number | null | undefined,
+): boolean => {
+  // We use a small epsilon (0.001) for weight comparisons in the frontend to handle
+  // floating point noise from IEEE 754 precision and unit conversions (e.g., KG to LBS).
+  // This ensures the UX remains responsive even if there is tiny binary noise.
+  if (currentWeight > pbWeight + 0.001) {
+    return true;
+  }
+
+  if (Math.abs(currentWeight - pbWeight) < 0.001) {
+    if (currentReps > pbReps) {
+      return true;
+    }
+
+    if (
+      currentReps === pbReps &&
+      currentRir != null &&
+      (pbRir == null || currentRir > pbRir)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export const calculateIsPersonalBest = (
   set: ExerciseSet,
   currentWeight: number | null,
@@ -139,11 +171,13 @@ export const calculateIsPersonalBest = (
   if (!hasActivity) return false;
 
   if (currentWeight !== null && pbWeightInCurrentUnit !== null) {
-    return (
-      currentWeight > pbWeightInCurrentUnit + 0.001 ||
-      (Math.abs(currentWeight - pbWeightInCurrentUnit) < 0.001 &&
-        currentReps !== null &&
-        currentReps > personalBest.reps)
+    return isNewPersonalBest(
+      currentWeight,
+      currentReps ?? 0,
+      set.rir,
+      pbWeightInCurrentUnit,
+      personalBest.reps,
+      personalBest.rir,
     );
   }
 
