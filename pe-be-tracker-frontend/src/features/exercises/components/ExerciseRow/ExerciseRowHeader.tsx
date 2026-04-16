@@ -68,8 +68,7 @@ export const ExerciseRowHeader = ({
       tabIndex={0}
       className={cn(
         "flex items-center justify-between transition-colors rounded-lg",
-        "cursor-pointer select-none hover:bg-foreground/5",
-        "p-1 -m-1"
+        "cursor-pointer select-none"
       )}
       onClick={onToggleExpand}
       onKeyDown={(e) => {
@@ -98,29 +97,39 @@ export const ExerciseRowHeader = ({
             )}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-foreground font-semibold">
-            {exercise.exercise_type.name}
-          </h3>
-          {showExerciseTypeDetailsLink && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
-              asChild
-              onMouseEnter={preloadExerciseTypeDetailsPage}
-              onTouchStart={preloadExerciseTypeDetailsPage}
-              onFocus={preloadExerciseTypeDetailsPage}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Link
-                to={`/exercise-types/${exercise.exercise_type.id}`}
-                aria-label={`View details for ${exercise.exercise_type.name}`}
-                title="View exercise details"
+        <div className="flex flex-col justify-center items-start">
+          <div className="flex items-center gap-2">
+            <h3 className="text-foreground font-semibold text-left">
+              {exercise.exercise_type.name}
+            </h3>
+            {showExerciseTypeDetailsLink && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
+                asChild
+                onMouseEnter={preloadExerciseTypeDetailsPage}
+                onTouchStart={preloadExerciseTypeDetailsPage}
+                onFocus={preloadExerciseTypeDetailsPage}
+                onClick={(e) => e.stopPropagation()}
               >
-                <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              </Link>
-            </Button>
+                <Link
+                  to={`/exercise-types/${exercise.exercise_type.id}`}
+                  aria-label={`View details for ${exercise.exercise_type.name}`}
+                  title="View exercise details"
+                >
+                  <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </Link>
+              </Button>
+            )}
+          </div>
+          {!isExpanded && (
+            <p
+              className="text-xs text-left text-muted-foreground opacity-60 truncate w-full max-w-[200px] sm:max-w-[300px] mt-0.5 ml-0.5"
+              aria-hidden="true"
+            >
+              {exerciseNotesValue?.trim() ? exerciseNotesValue : "+ Add notes"}
+            </p>
           )}
         </div>
       </div>
