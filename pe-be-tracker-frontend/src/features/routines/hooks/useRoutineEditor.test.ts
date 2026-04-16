@@ -266,6 +266,8 @@ describe("useRoutineEditor", () => {
             reps: 12,
             intensity: null,
             intensity_unit_id: 1,
+            notes: null,
+            type: null,
           },
         ],
       },
