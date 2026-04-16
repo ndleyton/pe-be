@@ -468,37 +468,65 @@
         const tabs = document.querySelectorAll('.js-tab-btn');
 
         if (slides.length > 1 && tabs.length === slides.length) {
-            tabs.forEach((tab, index) => {
-                tab.addEventListener('click', () => {
-                    // Update Slides Directionally
-                    slides.forEach((s, i) => {
-                        // Strip transform classes
-                        s.classList.remove('translate-x-0', 'translate-x-full', '-translate-x-full');
+            let activeIndex = 0;
 
-                        if (i < index) {
-                            // Slides before the active one hide to the left
-                            s.classList.add('-translate-x-full');
-                            s.classList.replace('pointer-events-auto', 'pointer-events-none');
-                        } else if (i > index) {
-                            // Slides after the active one hide to the right
-                            s.classList.add('translate-x-full');
-                            s.classList.replace('pointer-events-auto', 'pointer-events-none');
-                        } else {
-                            // Active slide centers itself
-                            s.classList.add('translate-x-0');
-                            s.classList.replace('pointer-events-none', 'pointer-events-auto');
-                        }
-                    });
+            const goToSlide = (index) => {
+                if (index === activeIndex) return;
 
-                    // Update Tab Visuals
-                    tabs.forEach(t => {
-                        t.classList.replace('bg-[var(--primary-rose)]', 'bg-[var(--foreground)]');
-                        t.classList.add('opacity-20');
-                    });
-                    tab.classList.replace('bg-[var(--foreground)]', 'bg-[var(--primary-rose)]');
-                    tab.classList.remove('opacity-20');
+                // Update Slides Directionally
+                slides.forEach((s, i) => {
+                    // Strip transform classes
+                    s.classList.remove('translate-x-0', 'translate-x-full', '-translate-x-full');
+
+                    if (i < index) {
+                        s.classList.add('-translate-x-full');
+                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    } else if (i > index) {
+                        s.classList.add('translate-x-full');
+                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    } else {
+                        s.classList.add('translate-x-0');
+                        s.classList.replace('pointer-events-none', 'pointer-events-auto');
+                    }
                 });
+
+                // Update Tab Visuals
+                tabs.forEach(t => {
+                    t.classList.replace('bg-[var(--primary-rose)]', 'bg-[var(--foreground)]');
+                    t.classList.add('opacity-20');
+                });
+
+                tabs[index].classList.replace('bg-[var(--foreground)]', 'bg-[var(--primary-rose)]');
+                tabs[index].classList.remove('opacity-20');
+
+                activeIndex = index;
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => goToSlide(index));
             });
+
+            // Touch Swipe Support
+            const carouselContainer = slides[0].parentElement;
+            let touchStartX = 0;
+
+            carouselContainer.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            carouselContainer.addEventListener('touchend', e => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const swipeDistance = touchStartX - touchEndX;
+
+                // Minimum swipe distance of 50px
+                if (Math.abs(swipeDistance) > 50) {
+                    if (swipeDistance > 0 && activeIndex < slides.length - 1) {
+                        goToSlide(activeIndex + 1); // Swiped Left -> go right
+                    } else if (swipeDistance < 0 && activeIndex > 0) {
+                        goToSlide(activeIndex - 1); // Swiped Right -> go left
+                    }
+                }
+            }, { passive: true });
         }
     </script>
 </body>
