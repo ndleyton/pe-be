@@ -1,6 +1,6 @@
 import logging
 from decimal import Decimal
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional, Set, Tuple
 from datetime import datetime, timezone
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,29 @@ from src.exercises.intensity_units import (
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
+from src.utils.cursor import _next_cursor_for_page
+
+
+def is_new_personal_best(
+    current_weight: Decimal,
+    current_reps: int,
+    current_rir: Optional[Decimal],
+    best_weight: Decimal,
+    best_reps: int,
+    best_rir: Optional[Decimal],
+) -> bool:
+    """Helper function to determine if a performance beats a prior best."""
+    if current_weight > best_weight:
+        return True
+    if current_weight == best_weight:
+        if current_reps > best_reps:
+            return True
+        if current_reps == best_reps:
+            if current_rir is not None:
+                if best_rir is None or current_rir > best_rir:
+                    return True
+    return False
+
 
 # Minimum fuzzy-match score that an exercise-type name must reach to be
 # considered a match.  Tweaking this value lets us control how permissive the
@@ -1020,6 +1043,7 @@ async def get_exercise_type_stats(
     best_set = None
     best_exercise = None
 
+
     for exercise in exercises:
         for exercise_set in exercise.exercise_sets:
             converted_intensity = _get_stats_intensity_value(
@@ -1027,10 +1051,24 @@ async def get_exercise_type_stats(
                 intensity_units_by_id=intensity_units_by_id,
                 stats_intensity_unit=stats_intensity_unit,
             )
-            if converted_intensity and converted_intensity > best_weight:
-                best_weight = converted_intensity
-                best_set = exercise_set
-                best_exercise = exercise
+            if converted_intensity:
+                is_new_pr = False
+                if not best_set:
+                    is_new_pr = True
+                else:
+                    is_new_pr = is_new_personal_best(
+                        current_weight=converted_intensity,
+                        current_reps=exercise_set.reps or 0,
+                        current_rir=exercise_set.rir,
+                        best_weight=best_weight,
+                        best_reps=best_set.reps or 0,
+                        best_rir=best_set.rir,
+                    )
+
+                if is_new_pr:
+                    best_weight = converted_intensity
+                    best_set = exercise_set
+                    best_exercise = exercise
 
     if best_set:
         converted_best_intensity = _get_stats_intensity_value(
