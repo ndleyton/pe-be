@@ -275,7 +275,7 @@ describe("WorkoutPage", () => {
       () => new Promise(() => {}),
     );
 
-    render(<WorkoutPage />);
+    const { rerender } = render(<WorkoutPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
@@ -287,6 +287,13 @@ describe("WorkoutPage", () => {
       replace: true,
       state: null,
     });
+
+    mockLocationState = null;
+    rerender(<WorkoutPage />);
+
+    expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
+      "success",
+    );
   });
 
   it("syncs the timer from the workout lifecycle", async () => {

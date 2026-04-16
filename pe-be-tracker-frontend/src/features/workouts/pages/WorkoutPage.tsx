@@ -119,18 +119,20 @@ const WorkoutPage = () => {
   // Get workout timer state and actions from UI store
   const syncWorkoutTimer = useUIStore((state) => state.syncWorkoutTimer);
 
+  const routeState = location.state as WorkoutPageLocationState | null;
+  const routine = routeState?.routine;
+  const shouldScrollToBottomOnLoad = Boolean(routeState?.scrollToBottomOnLoad);
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [knownEmptyExercisesLatched, setKnownEmptyExercisesLatched] = useState(
+    () => Boolean(routeState?.knownEmptyExercises),
+  );
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
   const preloadedExerciseImagesRef = useRef<Set<string>>(new Set());
-
-  const routeState = location.state as WorkoutPageLocationState | null;
-  const routine = routeState?.routine;
-  const shouldScrollToBottomOnLoad = Boolean(routeState?.scrollToBottomOnLoad);
-  const knownEmptyExercises = Boolean(routeState?.knownEmptyExercises);
 
   const scrollWorkoutPageToBottom = (behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
@@ -402,12 +404,24 @@ const WorkoutPage = () => {
       return;
     }
 
+    setKnownEmptyExercisesLatched(true);
+
     const { knownEmptyExercises: _ignored, ...restState } = routeState;
     navigate(location.pathname, {
       replace: true,
       state: Object.keys(restState).length > 0 ? restState : null,
     });
   }, [location.pathname, navigate, routeState]);
+
+  useEffect(() => {
+    if (
+      knownEmptyExercisesLatched
+      && isAuthenticated
+      && !exercisesLoading
+    ) {
+      setKnownEmptyExercisesLatched(false);
+    }
+  }, [exercisesLoading, isAuthenticated, knownEmptyExercisesLatched]);
 
 
 
@@ -669,7 +683,7 @@ const WorkoutPage = () => {
     isAuthenticated && Boolean(workoutError) && !showNotFound;
   const listPending =
     pagePending
-    || (isAuthenticated && exercisesLoading && !knownEmptyExercises);
+    || (isAuthenticated && exercisesLoading && !knownEmptyExercisesLatched);
   const listStatus: "pending" | "success" | "error" = listPending
     ? "pending"
     : isAuthenticated && exercisesError
