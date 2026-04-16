@@ -3,11 +3,45 @@ import { describe, expect, it } from "vitest";
 import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
 import {
   calculateIsPersonalBest,
+  isNewPersonalBest,
   getRirDescription,
   getRpeDescription,
 } from "./exerciseRow";
 
 describe("exerciseRow library", () => {
+  describe("isNewPersonalBest", () => {
+    it("should return true if current weight is strictly higher", () => {
+      expect(isNewPersonalBest(105, 5, null, 100, 5, null)).toBe(true);
+    });
+
+    it("should return true if current weight is same but reps are higher", () => {
+      expect(isNewPersonalBest(100, 6, null, 100, 5, null)).toBe(true);
+    });
+
+    it("should return false if weight and reps are same or lower without RIR", () => {
+      expect(isNewPersonalBest(100, 5, null, 100, 5, null)).toBe(false);
+      expect(isNewPersonalBest(95, 10, null, 100, 5, null)).toBe(false);
+    });
+
+    it("should handle floating point precision for weight comparison", () => {
+      expect(isNewPersonalBest(100.00001, 5, null, 100, 5, null)).toBe(false);
+      expect(isNewPersonalBest(100.00001, 6, null, 100, 5, null)).toBe(true);
+    });
+
+    it("should return true if weight and reps are same, but RIR is higher", () => {
+      expect(isNewPersonalBest(100, 5, 2, 100, 5, 1)).toBe(true);
+    });
+
+    it("should return false if weight and reps are same, and RIR is lower or same", () => {
+      expect(isNewPersonalBest(100, 5, 1, 100, 5, 2)).toBe(false);
+      expect(isNewPersonalBest(100, 5, 1, 100, 5, 1)).toBe(false);
+    });
+
+    it("should treat missing pbRir as a beatable record if currentRir is present", () => {
+      expect(isNewPersonalBest(100, 5, 1, 100, 5, null)).toBe(true);
+    });
+  });
+
   describe("calculateIsPersonalBest", () => {
     const mockSet: ExerciseSet = {
       id: 1,
@@ -38,24 +72,8 @@ describe("exerciseRow library", () => {
       expect(calculateIsPersonalBest(notDoneSet, 100, 5, null, mockPB, 100)).toBe(false);
     });
 
-    it("should return true if current weight is higher than PB", () => {
+    it("should delegate to isNewPersonalBest appropriately", () => {
       expect(calculateIsPersonalBest(mockSet, 105, 5, null, mockPB, 100)).toBe(true);
-    });
-
-    it("should return true if current weight is same but reps are higher", () => {
-      expect(calculateIsPersonalBest(mockSet, 100, 6, null, mockPB, 100)).toBe(true);
-    });
-
-    it("should return false if weight and reps are same or lower", () => {
-      expect(calculateIsPersonalBest(mockSet, 100, 5, null, mockPB, 100)).toBe(false);
-      expect(calculateIsPersonalBest(mockSet, 95, 10, null, mockPB, 100)).toBe(false);
-    });
-
-    it("should handle floating point precision", () => {
-      // 100.00001 should be same as 100 for PR detection if reps are same
-      expect(calculateIsPersonalBest(mockSet, 100.00001, 5, null, mockPB, 100)).toBe(false);
-      // But higher reps should still trigger PR
-      expect(calculateIsPersonalBest(mockSet, 100.00001, 6, null, mockPB, 100)).toBe(true);
     });
   });
 
