@@ -1,78 +1,28 @@
-import React from "react";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
-import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
-import type { Routine } from "@/features/routines/types";
-import { useGuestStore, useAuthStore } from "@/stores";
-import { useNavigate } from "react-router-dom";
-import { getMyWorkouts, type Workout } from "@/features/workouts";
+import { useMyWorkoutsData } from "@/features/workouts";
 import { WorkoutForm } from "@/features/workouts/components";
 import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
+import { useUIStore, useGuestStore, useAuthStore } from "@/stores";
+import { useNavigate } from "react-router-dom";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
 import { Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
-import { getCurrentUTCTimestamp } from "@/utils/date";
 import { WorkoutListSkeleton } from "@/shared/components/skeletons/WorkoutListSkeleton";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
+import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
+import type { Routine } from "@/features/routines/types";
+import axios from "axios";
+import { useState, useMemo, useEffect } from "react";
 
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
 
-  // Get state from stores
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
-  const authInitialized = useAuthStore((state) => state.initialized);
   const setUser = useAuthStore((state) => state.setUser);
-  const guestData = useGuestStore();
-  const guestHydrated = useGuestStore((state) => state.hydrated);
   const handleStartWorkoutFromRoutine = useStartWorkoutFromRoutine();
 
-  const [showWorkoutForm, setShowWorkoutForm] = React.useState(false);
+  const { isWorkoutFormOpen, openWorkoutForm, closeWorkoutForm } = useUIStore();
+  const { workouts, isLoading: listPending, error, refetch, isAuthenticated } = useMyWorkoutsData();
 
-  const {
-    data: serverWorkoutsResponse,
-    isPending,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["workouts"],
-    queryFn: () => getMyWorkouts(undefined, 100),
-    enabled: authInitialized && !authLoading && isAuthenticated,
-  });
-
-  const authResolved = authInitialized && !authLoading;
-
-  // Use guest data if not authenticated, server data if authenticated
-  const workouts: Workout[] = React.useMemo(() => {
-    if (!authResolved) {
-      return [];
-    }
-
-    if (isAuthenticated) {
-      return Array.isArray(serverWorkoutsResponse?.data)
-        ? serverWorkoutsResponse.data
-        : [];
-    }
-
-    const guestWorkouts = Array.isArray(guestData?.workouts)
-      ? guestData.workouts
-      : [];
-
-    return guestWorkouts.map((gw) => ({
-      id: gw.id,
-      name: gw.name,
-      notes: gw.notes,
-      start_time: gw.start_time,
-      end_time: gw.end_time,
-      workout_type_id: Number(gw.workout_type_id),
-      created_at: gw.created_at || getCurrentUTCTimestamp(),
-      updated_at: gw.updated_at || getCurrentUTCTimestamp(),
-    }));
-  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestData?.workouts]);
-
-  const listPending =
-    !authResolved || (isAuthenticated ? isPending : !guestHydrated);
   const listStatus: "pending" | "success" = listPending ? "pending" : "success";
 
   const getErrorMessage = (error: unknown) => {
@@ -90,17 +40,17 @@ const MyWorkoutsPage = () => {
   };
 
   const [selectedRoutine, setSelectedRoutine] =
-    React.useState<Routine | null>(null);
+    useState<Routine | null>(null);
 
-  const preloadWorkoutPage = React.useMemo(
+  const preloadWorkoutPage = useMemo(
     () => createIntentPreload(() => import("@/features/workouts/pages")),
     [],
   );
 
   // Track if we've detected an auth error to keep showing the message
-  const [sessionExpired, setSessionExpired] = React.useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const authErr =
       axios.isAxiosError(error) &&
       (error.response?.status === 401 || error.response?.status === 403);
@@ -167,9 +117,9 @@ const MyWorkoutsPage = () => {
             autoOpen={shouldAutoOpenQuickStart}
           />
 
-          <Dialog open={showWorkoutForm} onOpenChange={(open) => {
+          <Dialog open={isWorkoutFormOpen} onOpenChange={(open) => {
             if (!open) {
-              setShowWorkoutForm(false);
+              closeWorkoutForm();
               setSelectedRoutine(null);
             }
           }}>
@@ -186,7 +136,7 @@ const MyWorkoutsPage = () => {
                     if (isAuthenticated) {
                       refetch();
                     }
-                    setShowWorkoutForm(false);
+                    closeWorkoutForm();
                     setSelectedRoutine(null);
                   }}
                 />
@@ -215,9 +165,9 @@ const MyWorkoutsPage = () => {
         </div>
       </div>
 
-      {!showWorkoutForm && (
+      {!isWorkoutFormOpen && (
         <FloatingActionButton
-          onClick={() => setShowWorkoutForm(true)}
+          onClick={() => openWorkoutForm()}
           dataTestId="fab-add-workout"
         >
           <span className="text-lg">+</span>
