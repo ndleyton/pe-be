@@ -267,14 +267,38 @@
                     </div>
                 </div>
 
-                <div class="glass-panel p-2">
-                    <div class="overflow-hidden rounded-xl">
-                        <picture>
-                            <source type="image/avif" srcset="finish-workout.avif">
-                            <img src="finish-workout.avif" alt="Workout summary" width="430" height="760"
-                                class="block h-auto w-full transition-transform duration-700 hover:scale-105"
+                <div class="glass-panel p-2 max-w-[360px] w-full mx-auto sm:max-w-[380px] lg:ml-auto shadow-2xl flex flex-col gap-3">
+                    <div class="overflow-hidden rounded-[1.25rem] relative bg-[var(--background)] shrink-0 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+                        <!-- Slide 1 (Chat) - Sets the container frame size natively -->
+                        <picture class="relative block transition-transform duration-500 ease-in-out translate-x-0 js-hero-slide pointer-events-auto">
+                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="chat-dark.avif">
+                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="chat-light.avif">
+                            <img src="chat-light.avif" alt="AI chat logging the workout" width="430" height="850"
+                                class="block h-auto w-full object-cover"
                                 decoding="async" fetchpriority="high">
                         </picture>
+                        <!-- Slide 2 (Finish Workout) -->
+                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
+                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-workout-dark.avif">
+                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-workout-light.avif">
+                            <img src="finish-workout-light.avif" alt="Workout summary" width="430" height="850"
+                                class="block h-full w-full object-cover"
+                                decoding="async">
+                        </picture>
+                        <!-- Slide 3 (Finish Recap) -->
+                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
+                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-recap-dark.avif">
+                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-recap-light.avif">
+                            <img src="finish-recap-light.avif" alt="Workout AI Recap" width="430" height="850"
+                                class="block h-full w-full object-cover"
+                                decoding="async">
+                        </picture>
+                    </div>
+                    <!-- Controls -->
+                    <div class="flex justify-center gap-2 pb-1">
+                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--primary-rose)] transition-colors cursor-pointer" aria-label="View Chat Slide"></button>
+                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--foreground)] opacity-20 hover:opacity-50 transition-all cursor-pointer" aria-label="View Summary Slide"></button>
+                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--foreground)] opacity-20 hover:opacity-50 transition-all cursor-pointer" aria-label="View AI Recap Slide"></button>
                     </div>
                 </div>
             </section>
@@ -331,7 +355,7 @@
                         <div class="glass-panel p-6">
                             <div class="flex items-start gap-4">
                                 <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--primary-rose)] text-sm font-semibold text-white">
+                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose)] text-sm font-semibold text-white shadow-sm">
                                     01</div>
                                 <div>
                                     <h3 class="text-xl font-semibold">Create a routine</h3>
@@ -344,7 +368,7 @@
                         <div class="glass-panel p-6">
                             <div class="flex items-start gap-4">
                                 <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--primary-rose-soft)] text-sm font-semibold text-[var(--primary-rose)]">
+                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose-soft)] text-sm font-semibold text-[var(--primary-rose)] shadow-sm">
                                     02</div>
                                 <div>
                                     <h3 class="text-xl font-semibold">Track each set</h3>
@@ -357,7 +381,7 @@
                         <div class="glass-panel p-6">
                             <div class="flex items-start gap-4">
                                 <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--primary-rose)] text-sm font-semibold text-white">
+                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose)] text-sm font-semibold text-white shadow-sm">
                                     03</div>
                                 <div>
                                     <h3 class="text-xl font-semibold">Instant AI Feedback</h3>
@@ -438,6 +462,72 @@
 
     <script>
         document.getElementById("year").textContent = new Date().getFullYear();
+
+        // Hero Manual Carousel (Native Swipe)
+        const slides = document.querySelectorAll('.js-hero-slide');
+        const tabs = document.querySelectorAll('.js-tab-btn');
+
+        if (slides.length > 1 && tabs.length === slides.length) {
+            let activeIndex = 0;
+
+            const goToSlide = (index) => {
+                if (index === activeIndex) return;
+
+                // Update Slides Directionally
+                slides.forEach((s, i) => {
+                    // Strip transform classes
+                    s.classList.remove('translate-x-0', 'translate-x-full', '-translate-x-full');
+
+                    if (i < index) {
+                        s.classList.add('-translate-x-full');
+                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    } else if (i > index) {
+                        s.classList.add('translate-x-full');
+                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    } else {
+                        s.classList.add('translate-x-0');
+                        s.classList.replace('pointer-events-none', 'pointer-events-auto');
+                    }
+                });
+
+                // Update Tab Visuals
+                tabs.forEach(t => {
+                    t.classList.replace('bg-[var(--primary-rose)]', 'bg-[var(--foreground)]');
+                    t.classList.add('opacity-20');
+                });
+
+                tabs[index].classList.replace('bg-[var(--foreground)]', 'bg-[var(--primary-rose)]');
+                tabs[index].classList.remove('opacity-20');
+
+                activeIndex = index;
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => goToSlide(index));
+            });
+
+            // Touch Swipe Support
+            const carouselContainer = slides[0].parentElement;
+            let touchStartX = 0;
+
+            carouselContainer.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            carouselContainer.addEventListener('touchend', e => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const swipeDistance = touchStartX - touchEndX;
+
+                // Minimum swipe distance of 50px
+                if (Math.abs(swipeDistance) > 50) {
+                    if (swipeDistance > 0 && activeIndex < slides.length - 1) {
+                        goToSlide(activeIndex + 1); // Swiped Left -> go right
+                    } else if (swipeDistance < 0 && activeIndex > 0) {
+                        goToSlide(activeIndex - 1); // Swiped Right -> go left
+                    }
+                }
+            }, { passive: true });
+        }
     </script>
 </body>
 
