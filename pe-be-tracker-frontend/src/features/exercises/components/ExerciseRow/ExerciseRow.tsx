@@ -103,6 +103,10 @@ const ExerciseRow = ({
     handleExpandedChange(!isExpanded);
   }, [handleExpandedChange, isExpanded]);
 
+  const handleAddSet = useCallback(() => {
+    void addSet(currentIntensityUnit.id);
+  }, [addSet, currentIntensityUnit.id]);
+
   return (
     <Accordion
       type="single"
@@ -168,7 +172,7 @@ const ExerciseRow = ({
               exerciseSets={exerciseSets}
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
-              onAddSet={() => void addSet(currentIntensityUnit.id)}
+              onAddSet={handleAddSet}
               onCloseSetOptions={closeSetOptions}
               onDecrementReps={decrementReps}
               onDeleteSet={deleteSet}

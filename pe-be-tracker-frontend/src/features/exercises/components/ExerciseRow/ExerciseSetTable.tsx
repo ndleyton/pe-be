@@ -622,7 +622,7 @@ const SetOptionsDialogContent = ({
   );
 };
 
-export const ExerciseSetTable = ({
+export const ExerciseSetTable = memo(({
   activeSetId,
   currentIntensityUnitAbbreviation,
   currentIntensityUnitId,
@@ -803,4 +803,6 @@ export const ExerciseSetTable = ({
       </Button>
     </>
   );
-};
+});
+
+ExerciseSetTable.displayName = "ExerciseSetTable";
