@@ -11,6 +11,7 @@ import {
 } from "@/shared/components/ui/sheet";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { useNavigation } from "@/shared/hooks";
+import FirstWorkoutCTA from "../FirstWorkoutCTA";
 
 const NavItemLink = ({
   item,
@@ -64,7 +65,7 @@ const SideDrawer = () => {
           </SheetDescription>
         </SheetHeader>
         <nav
-          className="mt-6 flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto"
           aria-label="Secondary navigation"
         >
           <ul className="space-y-2">
@@ -73,6 +74,9 @@ const SideDrawer = () => {
             ))}
           </ul>
         </nav>
+        <div className="px-1 py-2">
+          <FirstWorkoutCTA />
+        </div>
         <div className="mt-auto border-t pt-4">
           <div className="space-y-2">
             {isAuthenticated ? (

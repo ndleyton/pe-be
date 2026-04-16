@@ -5,6 +5,10 @@ import userEvent from "@testing-library/user-event";
 import SideDrawer from "./SideDrawer";
 import api from "@/shared/api/client";
 
+vi.mock("../FirstWorkoutCTA", () => ({
+  default: () => <div data-testid="first-workout-cta" />,
+}));
+
 // Mock the API client
 vi.mock("@/shared/api/client", () => ({
   default: {

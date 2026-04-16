@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { useHomeNavigation, useNavigation } from "@/shared/hooks";
+import FirstWorkoutCTA from "../FirstWorkoutCTA";
 
 const NavItemLink = ({ item }: { item: NavItem }) => {
   const { href, isActive, handleClick } = useNavigation(item.key);
@@ -54,6 +55,9 @@ const DesktopSidebar = () => {
             <NavItemLink key={item.key} item={item} />
           ))}
         </nav>
+        <div className="px-4 py-2">
+          <FirstWorkoutCTA />
+        </div>
         <div className="border-t p-4">
           {isAuthenticated ? (
             <div className="space-y-2">

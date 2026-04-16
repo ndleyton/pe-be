@@ -10,7 +10,24 @@ import {
 } from "@/test/fixtures";
 import api from "@/shared/api/client";
 import MyWorkoutsPage from "./MyWorkoutsPage";
-import { getMyWorkouts } from "@/features/workouts";
+import { getMyWorkouts } from "@/features/workouts/api";
+
+const mockNavigate = vi.fn();
+const mockLocation = {
+  pathname: "/workouts",
+  state: null as { openWorkoutForm?: boolean } | null,
+};
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
+  };
+});
 
 const mockAuthState = {
   isAuthenticated: true,
@@ -54,9 +71,15 @@ vi.mock("@/features/workouts/components", () => ({
   WorkoutForm: () => <div data-testid="workout-form">Mock Workout Form</div>,
 }));
 
-vi.mock("@/features/workouts", () => ({
-  getMyWorkouts: vi.fn(),
-}));
+vi.mock("@/features/workouts/api", async () => {
+  const actual = await vi.importActual<typeof import("@/features/workouts/api")>(
+    "@/features/workouts/api",
+  );
+  return {
+    ...actual,
+    getMyWorkouts: vi.fn(),
+  };
+});
 
 vi.mock("@/shared/components/skeletons/WorkoutListSkeleton", () => ({
   WorkoutListSkeleton: () => (
@@ -160,6 +183,9 @@ const mockWorkouts = [
 describe("MyWorkoutsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockReset();
+    mockLocation.pathname = "/workouts";
+    mockLocation.state = null;
     Object.assign(mockAuthState, {
       isAuthenticated: true,
       user: { id: 1, email: "test@example.com" },
@@ -342,6 +368,21 @@ describe("MyWorkoutsPage", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("workout-form")).not.toBeInTheDocument();
       expect(screen.getByTestId("fab-add-workout")).toBeInTheDocument();
+    });
+  });
+
+  it("opens workout form from route state and clears the flag", async () => {
+    mockLocation.state = { openWorkoutForm: true };
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workout-form")).toBeInTheDocument();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith("/workouts", {
+      replace: true,
+      state: null,
     });
   });
 
