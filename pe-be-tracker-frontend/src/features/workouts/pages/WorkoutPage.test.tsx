@@ -15,7 +15,7 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useParams: () => ({ workoutId: mockWorkoutId }),
     useNavigate: () => mockNavigate,
-    useLocation: () => ({ state: mockLocationState }),
+    useLocation: () => ({ pathname: `/workouts/${mockWorkoutId}`, state: mockLocationState }),
   };
 });
 
@@ -267,6 +267,33 @@ describe("WorkoutPage", () => {
     );
     expect(screen.queryByText(/workout: #123/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/loading workout\.\.\./i)).not.toBeInTheDocument();
+  });
+
+  it("skips the exercise loading state when navigation marks the workout as known empty", async () => {
+    mockLocationState = { knownEmptyExercises: true };
+    exerciseApiMocks.mockGetExercisesInWorkout.mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    const { rerender } = render(<WorkoutPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
+        "success",
+      );
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(`/workouts/${mockWorkoutId}`, {
+      replace: true,
+      state: null,
+    });
+
+    mockLocationState = null;
+    rerender(<WorkoutPage />);
+
+    expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
+      "success",
+    );
   });
 
   it("syncs the timer from the workout lifecycle", async () => {

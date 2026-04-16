@@ -55,6 +55,12 @@ const preloadExerciseTypeModal = createIntentPreload(() =>
 );
 const MAX_EXERCISE_IMAGE_PRELOADS = 4;
 
+interface WorkoutPageLocationState {
+  routine?: Routine;
+  scrollToBottomOnLoad?: boolean;
+  knownEmptyExercises?: boolean;
+}
+
 const getErrorStatus = (error: unknown): number | null => {
   if (typeof error !== "object" || error === null || !("response" in error)) {
     return null;
@@ -113,18 +119,20 @@ const WorkoutPage = () => {
   // Get workout timer state and actions from UI store
   const syncWorkoutTimer = useUIStore((state) => state.syncWorkoutTimer);
 
+  const routeState = location.state as WorkoutPageLocationState | null;
+  const routine = routeState?.routine;
+  const shouldScrollToBottomOnLoad = Boolean(routeState?.scrollToBottomOnLoad);
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [knownEmptyExercisesLatched, setKnownEmptyExercisesLatched] = useState(
+    () => Boolean(routeState?.knownEmptyExercises),
+  );
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
   const preloadedExerciseImagesRef = useRef<Set<string>>(new Set());
-
-  const routine = location.state?.routine as Routine | undefined;
-  const shouldScrollToBottomOnLoad = Boolean(
-    location.state?.scrollToBottomOnLoad,
-  );
 
   const scrollWorkoutPageToBottom = (behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
@@ -391,6 +399,30 @@ const WorkoutPage = () => {
     guestCreateExercisesFromRoutine,
   ]);
 
+  useEffect(() => {
+    if (!routeState?.knownEmptyExercises) {
+      return;
+    }
+
+    setKnownEmptyExercisesLatched(true);
+
+    const { knownEmptyExercises: _ignored, ...restState } = routeState;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(restState).length > 0 ? restState : null,
+    });
+  }, [location.pathname, navigate, routeState]);
+
+  useEffect(() => {
+    if (
+      knownEmptyExercisesLatched
+      && isAuthenticated
+      && !exercisesLoading
+    ) {
+      setKnownEmptyExercisesLatched(false);
+    }
+  }, [exercisesLoading, isAuthenticated, knownEmptyExercisesLatched]);
+
 
 
   type AddExercisePayload = {
@@ -649,7 +681,9 @@ const WorkoutPage = () => {
       && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
   const showRecoverableWorkoutError =
     isAuthenticated && Boolean(workoutError) && !showNotFound;
-  const listPending = pagePending || (isAuthenticated && exercisesLoading);
+  const listPending =
+    pagePending
+    || (isAuthenticated && exercisesLoading && !knownEmptyExercisesLatched);
   const listStatus: "pending" | "success" | "error" = listPending
     ? "pending"
     : isAuthenticated && exercisesError

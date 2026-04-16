@@ -151,7 +151,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       const newWorkoutId = data.id;
       resetForm();
       onWorkoutCreated(newWorkoutId);
-      navigate(`/workouts/${newWorkoutId}`);
+      navigate(`/workouts/${newWorkoutId}`, {
+        state: routine ? undefined : { knownEmptyExercises: true },
+      });
     },
   });
 
@@ -197,7 +199,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
 
       resetForm();
       onWorkoutCreated(newWorkoutId);
-      navigate(`/workouts/${newWorkoutId}`);
+      navigate(`/workouts/${newWorkoutId}`, {
+        state: routine ? undefined : { knownEmptyExercises: true },
+      });
     }
   };
 
