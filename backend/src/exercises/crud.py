@@ -1040,9 +1040,10 @@ async def get_exercise_type_stats(
     # Get personal best (highest weight for single rep)
     personal_best = None
     best_weight = Decimal("0")
+    best_reps = 0
+    best_rir = None
     best_set = None
     best_exercise = None
-
 
     for exercise in exercises:
         for exercise_set in exercise.exercise_sets:
@@ -1061,26 +1062,23 @@ async def get_exercise_type_stats(
                         current_reps=exercise_set.reps or 0,
                         current_rir=exercise_set.rir,
                         best_weight=best_weight,
-                        best_reps=best_set.reps or 0,
-                        best_rir=best_set.rir,
+                        best_reps=best_reps,
+                        best_rir=best_rir,
                     )
 
                 if is_new_pr:
                     best_weight = converted_intensity
+                    best_reps = exercise_set.reps or 0
+                    best_rir = exercise_set.rir
                     best_set = exercise_set
                     best_exercise = exercise
 
     if best_set:
-        converted_best_intensity = _get_stats_intensity_value(
-            best_set,
-            intensity_units_by_id=intensity_units_by_id,
-            stats_intensity_unit=stats_intensity_unit,
-        ) or Decimal("0")
-        volume = converted_best_intensity * (best_set.reps or 0)
+        volume = best_weight * (best_reps)
         personal_best = {
             "date": best_exercise.created_at.isoformat(),
-            "weight": _serialize_numeric(converted_best_intensity),
-            "reps": best_set.reps or 0,
+            "weight": _serialize_numeric(best_weight),
+            "reps": best_reps,
             "volume": _serialize_numeric(volume),
             "rpe": _serialize_numeric(best_set.rpe) if best_set.rpe is not None else None,
             "rir": _serialize_numeric(best_set.rir) if best_set.rir is not None else None,
