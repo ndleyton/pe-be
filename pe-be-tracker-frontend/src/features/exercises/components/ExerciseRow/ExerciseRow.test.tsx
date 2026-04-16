@@ -391,6 +391,24 @@ describe("ExerciseRow", () => {
     // or verify that it called the onExerciseUpdate callback with the new notes if it does
   });
 
+  it("displays ghost placeholder when notes are empty and not expanded", () => {
+    const exerciseWithoutNotes = { ...mockExercise, notes: "" };
+    render(<ExerciseRow {...defaultProps} isExpanded={false} exercise={exerciseWithoutNotes} />);
+    expect(screen.getByText("+ Add notes")).toBeInTheDocument();
+  });
+
+  it("displays ghost preview when notes exist and not expanded", () => {
+    const exerciseWithNotes = { ...mockExercise, notes: "Remember to breathe" };
+    render(<ExerciseRow {...defaultProps} isExpanded={false} exercise={exerciseWithNotes} />);
+    expect(screen.getByText("Remember to breathe")).toBeInTheDocument();
+  });
+
+  it("hides ghost placeholder when expanded", () => {
+    const exerciseWithNotes = { ...mockExercise, notes: "Remember to breathe" };
+    render(<ExerciseRow {...defaultProps} isExpanded={true} exercise={exerciseWithNotes} />);
+    expect(screen.queryByText("Remember to breathe")).not.toBeInTheDocument();
+  });
+
   it("can increment reps using plus button", async () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} />);
