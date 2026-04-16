@@ -130,21 +130,12 @@ const ExerciseRow = ({
             <ExerciseRowHeader
               currentIntensityUnit={currentIntensityUnit}
               exercise={exercise}
-              exerciseNotesOpen={exerciseNotesOpen}
               exerciseNotesValue={exerciseNotesValue}
               exerciseSettingsOpen={exerciseSettingsOpen}
               isUnsavedExercise={isUnsavedExercise}
               isExpanded={isExpanded}
               onToggleExpand={handleToggleExpand}
-              hasImages={hasImages}
               onExerciseDelete={handleExerciseDelete}
-              onExerciseNotesOpen={openExerciseNotes}
-              onExerciseNotesOpenChange={handleExerciseNotesOpenChange}
-              onExerciseNotesSave={() => {
-                updateExerciseNotes(exerciseNotesValue);
-                handleExerciseNotesOpenChange(false);
-              }}
-              onExerciseNotesValueChange={setExerciseNotesValue}
               onExerciseSettingsOpenChange={setExerciseSettingsOpen}
               onIntensityUnitChange={handleIntensityUnitChange}
             />
