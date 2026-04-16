@@ -33,20 +33,20 @@ export const FirstWorkoutCTA = () => {
           <PlusCircle className="h-5 w-5" />
         </div>
 
-        <h3 className="mb-1 text-base font-bold text-foreground tracking-tight">
-          Ready to train?
+        <h3 className="mb-1 text-sm font-bold text-foreground tracking-tight">
+          Start Training
         </h3>
 
-        <p className="mb-4 text-xs text-muted-foreground leading-normal">
-          Log your first session to start tracking your progress and hit your goals.
+        <p className="mb-3 text-[11px] text-muted-foreground leading-normal">
+          Log your first workout to track progress.
         </p>
 
         <Button
           size="sm"
           onClick={handleStart}
-          className="w-full font-semibold shadow-sm transition-all duration-300 hover:shadow-primary/20 hover:translate-y-[-1px]"
+          className="w-full text-xs font-semibold shadow-sm transition-all duration-300 hover:shadow-primary/20"
         >
-          Start First Workout
+          Get Started
         </Button>
       </div>
     </div>

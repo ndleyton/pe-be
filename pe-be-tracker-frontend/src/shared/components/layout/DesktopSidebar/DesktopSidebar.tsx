@@ -54,11 +54,10 @@ const DesktopSidebar = () => {
           {navItems.map((item) => (
             <NavItemLink key={item.key} item={item} />
           ))}
-
-          <div className="mt-8">
-            <FirstWorkoutCTA />
-          </div>
         </nav>
+        <div className="px-4 py-2">
+          <FirstWorkoutCTA />
+        </div>
         <div className="border-t p-4">
           {isAuthenticated ? (
             <div className="space-y-2">

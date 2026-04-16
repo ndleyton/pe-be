@@ -64,9 +64,6 @@ const SideDrawer = () => {
             Navigation menu
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6">
-          <FirstWorkoutCTA />
-        </div>
         <nav
           className="flex-1 overflow-y-auto"
           aria-label="Secondary navigation"
@@ -77,6 +74,9 @@ const SideDrawer = () => {
             ))}
           </ul>
         </nav>
+        <div className="px-1 py-2">
+          <FirstWorkoutCTA />
+        </div>
         <div className="mt-auto border-t pt-4">
           <div className="space-y-2">
             {isAuthenticated ? (
