@@ -51,14 +51,11 @@ const ExerciseRow = ({
     activeSetId,
     currentIntensityUnit,
     durationInputs,
-    exerciseNotesOpen,
     exerciseNotesValue,
     exerciseSettingsOpen,
-    handleExerciseNotesOpenChange,
     handleIntensityUnitChange,
     handleSetOptionsOpenChange,
     intensityInputs,
-    openExerciseNotes,
     openSetOptions,
     repsInputs,
     setDurationInputValue,
@@ -81,9 +78,6 @@ const ExerciseRow = ({
 
   const { stats } = useExerciseTypeStats(exercise.exercise_type.id, exercise.exercise_type);
 
-  const hasImages =
-    (exercise.exercise_type.status ?? "released") === "released" &&
-    (exercise.exercise_type.images?.length ?? 0) > 0;
 
   const handleExpandedChange = useCallback((nextExpanded: boolean) => {
     if (isControlled) {
