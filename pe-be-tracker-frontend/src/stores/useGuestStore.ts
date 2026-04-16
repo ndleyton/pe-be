@@ -39,6 +39,7 @@ export interface GuestExerciseType {
   usage_count?: number;
   muscles?: Array<{ id: number; name: string }>;
   muscle_groups?: string[];
+  images?: string[];
 }
 
 export interface GuestIntensityUnit {
@@ -422,6 +423,7 @@ export const useGuestStore = create<GuestStore>()(
               description: exerciseType.description ?? null,
               default_intensity_unit: exerciseType.default_intensity_unit,
               times_used: exerciseType.times_used,
+              images: exerciseType.images,
             },
             notes: null,
             timestamp: getCurrentUTCTimestamp(),

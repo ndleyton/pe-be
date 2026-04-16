@@ -368,6 +368,7 @@ describe("useGuestStore", () => {
             description: "Chest press",
             default_intensity_unit: 2,
             times_used: 0,
+            images: ["https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Bench_press_1.jpg/500px-Bench_press_1.jpg"],
           },
           set_templates: [
             {
@@ -397,6 +398,9 @@ describe("useGuestStore", () => {
     expect(workout.exercises).toHaveLength(1);
     expect(workout.exercises[0].notes).toBeNull();
     expect(workout.exercises[0].exercise_type.name).toBe("Bench Press");
+    expect(workout.exercises[0].exercise_type.images).toEqual([
+      "https://cdn.example.com/bench-press-1.webp",
+    ]);
     expect(workout.exercises[0].exercise_sets).toHaveLength(1);
     expect(workout.exercises[0].exercise_sets[0].reps).toBe(12);
     expect(workout.exercises[0].exercise_sets[0].done).toBe(false);

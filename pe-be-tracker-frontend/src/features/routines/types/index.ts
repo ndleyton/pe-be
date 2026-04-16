@@ -10,6 +10,7 @@ export interface ExerciseType {
   description?: string | null;
   default_intensity_unit: number;
   times_used: number;
+  images?: string[];
 }
 
 export interface SetTemplate {
