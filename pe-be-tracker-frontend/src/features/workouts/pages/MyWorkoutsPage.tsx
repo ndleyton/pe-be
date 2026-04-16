@@ -2,8 +2,8 @@ import { useMyWorkoutsData } from "@/features/workouts";
 import { WorkoutForm } from "@/features/workouts/components";
 import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
-import { useUIStore, useAuthStore } from "@/stores";
-import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores";
+import { useLocation, useNavigate } from "react-router-dom";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
 import { Card, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui";
@@ -14,14 +14,19 @@ import type { Routine } from "@/features/routines/types";
 import axios from "axios";
 import { useState, useMemo, useEffect } from "react";
 
+interface MyWorkoutsPageLocationState {
+  openWorkoutForm?: boolean;
+}
+
 const MyWorkoutsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const setUser = useAuthStore((state) => state.setUser);
   const handleStartWorkoutFromRoutine = useStartWorkoutFromRoutine();
 
-  const { isWorkoutFormOpen, openWorkoutForm, closeWorkoutForm } = useUIStore();
   const { workouts, isLoading: listPending, error, refetch, isAuthenticated } = useMyWorkoutsData();
+  const [showWorkoutForm, setShowWorkoutForm] = useState(false);
 
   const listStatus: "pending" | "success" = listPending ? "pending" : "success";
 
@@ -61,6 +66,16 @@ const MyWorkoutsPage = () => {
       setSessionExpired(true);
     }
   }, [isAuthenticated, error, setUser]);
+
+  useEffect(() => {
+    const routeState = location.state as MyWorkoutsPageLocationState | null;
+    if (!routeState?.openWorkoutForm) {
+      return;
+    }
+
+    setShowWorkoutForm(true);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const isAuthError =
     axios.isAxiosError(error) &&
@@ -117,9 +132,9 @@ const MyWorkoutsPage = () => {
             autoOpen={shouldAutoOpenQuickStart}
           />
 
-          <Dialog open={isWorkoutFormOpen} onOpenChange={(open) => {
+          <Dialog open={showWorkoutForm} onOpenChange={(open) => {
+            setShowWorkoutForm(open);
             if (!open) {
-              closeWorkoutForm();
               setSelectedRoutine(null);
             }
           }}>
@@ -136,7 +151,7 @@ const MyWorkoutsPage = () => {
                     if (isAuthenticated) {
                       refetch();
                     }
-                    closeWorkoutForm();
+                    setShowWorkoutForm(false);
                     setSelectedRoutine(null);
                   }}
                 />
@@ -165,9 +180,9 @@ const MyWorkoutsPage = () => {
         </div>
       </div>
 
-      {!isWorkoutFormOpen && (
+      {!showWorkoutForm && (
         <FloatingActionButton
-          onClick={() => openWorkoutForm()}
+          onClick={() => setShowWorkoutForm(true)}
           dataTestId="fab-add-workout"
         >
           <span className="text-lg">+</span>

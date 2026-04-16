@@ -4,6 +4,10 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DesktopSidebar from "./DesktopSidebar";
 
+vi.mock("../FirstWorkoutCTA", () => ({
+  default: () => <div data-testid="first-workout-cta" />,
+}));
+
 // Mock Zustand stores
 const mockSignOut = vi.fn();
 const mockIsAuthenticated = vi.fn(() => false);

@@ -7,7 +7,7 @@ import { NAV_PATHS } from "@/shared/navigation/constants";
 
 export const FirstWorkoutCTA = () => {
   const { workouts, isLoading } = useMyWorkoutsData();
-  const { openWorkoutForm, closeDrawer } = useUIStore();
+  const closeDrawer = useUIStore((state) => state.closeDrawer);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,11 +17,11 @@ export const FirstWorkoutCTA = () => {
   }
 
   const handleStart = () => {
-    openWorkoutForm();
     closeDrawer();
-    if (location.pathname !== NAV_PATHS.WORKOUTS) {
-      navigate(NAV_PATHS.WORKOUTS);
-    }
+    navigate(NAV_PATHS.WORKOUTS, {
+      replace: location.pathname === NAV_PATHS.WORKOUTS,
+      state: { openWorkoutForm: true },
+    });
   };
 
   return (

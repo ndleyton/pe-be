@@ -17,7 +17,6 @@ interface WorkoutTimer {
 
 interface UIState {
   isDrawerOpen: boolean;
-  isWorkoutFormOpen: boolean;
   workoutTimer: WorkoutTimer;
 }
 
@@ -25,9 +24,6 @@ interface UIActions {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  openWorkoutForm: () => void;
-  closeWorkoutForm: () => void;
-  toggleWorkoutForm: () => void;
   /**
    * Start the workout timer at an optional absolute time (epoch ms).
    * If omitted, starts at "now".
@@ -85,7 +81,6 @@ export const useUIStore = create<UIStore>()(
   persist(
     (set, get) => ({
   isDrawerOpen: false,
-  isWorkoutFormOpen: false,
   workoutTimer: {
     startTime: null,
     elapsedSeconds: 0,
@@ -101,13 +96,6 @@ export const useUIStore = create<UIStore>()(
   closeDrawer: () => set({ isDrawerOpen: false }),
 
   toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
-
-  openWorkoutForm: () => set({ isWorkoutFormOpen: true }),
-
-  closeWorkoutForm: () => set({ isWorkoutFormOpen: false }),
-
-  toggleWorkoutForm: () =>
-    set((state) => ({ isWorkoutFormOpen: !state.isWorkoutFormOpen })),
 
   startWorkoutTimer: (
     atMs?: number,
