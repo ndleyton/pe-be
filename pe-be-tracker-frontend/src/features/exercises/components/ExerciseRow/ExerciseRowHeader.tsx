@@ -63,20 +63,25 @@ export const ExerciseRowHeader = ({
     (exercise.exercise_type.status ?? "released") === "released";
 
   return (
-    <div className="flex items-center justify-between">
+    <div
+      className={cn(
+        "flex items-center justify-between transition-colors rounded-lg",
+        "cursor-pointer select-none hover:bg-foreground/5",
+        "p-1 -m-1"
+      )}
+      onClick={onToggleExpand}
+      title="Click to expand/collapse"
+    >
       <div className="flex items-center gap-3">
         {hasImages && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <div
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300 active:scale-90",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300",
               isExpanded
-                ? "bg-rose-500 text-primary-foreground hover:bg-rose-500/90"
-                : "bg-primary text-primary-foreground hover:bg-primary/90",
+                ? "bg-rose-500 text-primary-foreground"
+                : "bg-primary text-primary-foreground",
             )}
-            aria-label={isExpanded ? "Hide exercise images" : "Show exercise images"}
-            onClick={onToggleExpand}
+            aria-label={isExpanded ? "Hide details" : "Show details"}
             aria-expanded={isExpanded}
           >
             <ChevronRight
@@ -85,7 +90,7 @@ export const ExerciseRowHeader = ({
                 isExpanded ? "rotate-90" : "rotate-0",
               )}
             />
-          </Button>
+          </div>
         )}
         {!hasImages && (
           <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg transition-transform duration-300">
@@ -98,44 +103,6 @@ export const ExerciseRowHeader = ({
           <h3 className="text-foreground font-semibold">
             {exercise.exercise_type.name}
           </h3>
-          <Dialog
-            open={exerciseNotesOpen}
-            onOpenChange={onExerciseNotesOpenChange}
-          >
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-700"
-                onClick={onExerciseNotesOpen}
-              >
-                <StickyNote className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Exercise Notes</DialogTitle>
-                <DialogDescription>
-                  Save notes that apply to the whole exercise.
-                </DialogDescription>
-              </DialogHeader>
-              <Textarea
-                placeholder="Add notes for this exercise..."
-                value={exerciseNotesValue}
-                onChange={(event) => onExerciseNotesValueChange(event.target.value)}
-                className="min-h-[100px]"
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="glass"
-                  onClick={() => onExerciseNotesOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={onExerciseNotesSave}>Save</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
           {showExerciseTypeDetailsLink && (
             <Button
               variant="ghost"
@@ -145,6 +112,7 @@ export const ExerciseRowHeader = ({
               onMouseEnter={preloadExerciseTypeDetailsPage}
               onTouchStart={preloadExerciseTypeDetailsPage}
               onFocus={preloadExerciseTypeDetailsPage}
+              onClick={(e) => e.stopPropagation()}
             >
               <Link
                 to={`/exercise-types/${exercise.exercise_type.id}`}
@@ -163,7 +131,11 @@ export const ExerciseRowHeader = ({
         onOpenChange={onExerciseSettingsOpenChange}
       >
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DialogTrigger>
