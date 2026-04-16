@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGuestStore, useAuthStore } from "@/stores";
-import { getMyWorkouts, type Workout } from "../api";
+import { getMyWorkouts } from "../api";
+import { type Workout } from "../types";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
 export const useMyWorkoutsData = () => {

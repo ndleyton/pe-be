@@ -2,7 +2,7 @@ import { useMyWorkoutsData } from "@/features/workouts";
 import { WorkoutForm } from "@/features/workouts/components";
 import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
-import { useUIStore, useGuestStore, useAuthStore } from "@/stores";
+import { useUIStore, useAuthStore } from "@/stores";
 import { useNavigate } from "react-router-dom";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { RoutinesSection } from "@/features/routines/components";
