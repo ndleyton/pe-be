@@ -1,6 +1,6 @@
 import logging
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,6 @@ from src.exercises.intensity_units import (
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
-from src.utils.cursor import _next_cursor_for_page
 
 
 def is_new_personal_best(
