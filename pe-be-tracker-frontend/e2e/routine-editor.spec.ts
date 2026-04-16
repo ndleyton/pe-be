@@ -343,6 +343,8 @@ test.describe("Routine editor", () => {
       description: "Before edit",
       workout_type_id: 4,
       visibility: "private",
+      author: null,
+      category: null,
       exercise_templates: [
         {
           exercise_type_id: 22,
