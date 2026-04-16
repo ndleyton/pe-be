@@ -270,7 +270,7 @@
                 <div class="glass-panel p-2 max-w-[360px] w-full mx-auto sm:max-w-[380px] lg:ml-auto shadow-2xl flex flex-col gap-3">
                     <div class="overflow-hidden rounded-[1.25rem] relative bg-[var(--background)] shrink-0 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
                         <!-- Slide 1 (Chat) - Sets the container frame size natively -->
-                        <picture class="relative block transition-all duration-500 ease-in-out opacity-100 scale-100 js-hero-slide pointer-events-auto">
+                        <picture class="relative block transition-transform duration-500 ease-in-out translate-x-0 js-hero-slide pointer-events-auto">
                             <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="chat-dark.avif">
                             <source media="(prefers-color-scheme: light)" type="image/avif" srcset="chat-light.avif">
                             <img src="chat-light.avif" alt="AI chat logging the workout" width="430" height="850"
@@ -278,7 +278,7 @@
                                 decoding="async" fetchpriority="high">
                         </picture>
                         <!-- Slide 2 (Finish Workout) -->
-                        <picture class="absolute inset-0 transition-all duration-500 ease-in-out opacity-0 scale-105 js-hero-slide pointer-events-none">
+                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
                             <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-workout-dark.avif">
                             <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-workout-light.avif">
                             <img src="finish-workout-light.avif" alt="Workout summary" width="430" height="850"
@@ -286,7 +286,7 @@
                                 decoding="async">
                         </picture>
                         <!-- Slide 3 (Finish Recap) -->
-                        <picture class="absolute inset-0 transition-all duration-500 ease-in-out opacity-0 scale-105 js-hero-slide pointer-events-none">
+                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
                             <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-recap-dark.avif">
                             <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-recap-light.avif">
                             <img src="finish-recap-light.avif" alt="Workout AI Recap" width="430" height="850"
@@ -463,29 +463,38 @@
     <script>
         document.getElementById("year").textContent = new Date().getFullYear();
 
-        // Hero Manual Carousel
+        // Hero Manual Carousel (Native Swipe)
         const slides = document.querySelectorAll('.js-hero-slide');
         const tabs = document.querySelectorAll('.js-tab-btn');
 
         if (slides.length > 1 && tabs.length === slides.length) {
             tabs.forEach((tab, index) => {
                 tab.addEventListener('click', () => {
-                    // Reset all
-                    slides.forEach(s => {
-                        s.classList.replace('opacity-100', 'opacity-0');
-                        s.classList.replace('scale-100', 'scale-105');
-                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    // Update Slides Directionally
+                    slides.forEach((s, i) => {
+                        // Strip transform classes
+                        s.classList.remove('translate-x-0', 'translate-x-full', '-translate-x-full');
+
+                        if (i < index) {
+                            // Slides before the active one hide to the left
+                            s.classList.add('-translate-x-full');
+                            s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                        } else if (i > index) {
+                            // Slides after the active one hide to the right
+                            s.classList.add('translate-x-full');
+                            s.classList.replace('pointer-events-auto', 'pointer-events-none');
+                        } else {
+                            // Active slide centers itself
+                            s.classList.add('translate-x-0');
+                            s.classList.replace('pointer-events-none', 'pointer-events-auto');
+                        }
                     });
+
+                    // Update Tab Visuals
                     tabs.forEach(t => {
                         t.classList.replace('bg-[var(--primary-rose)]', 'bg-[var(--foreground)]');
                         t.classList.add('opacity-20');
                     });
-
-                    // Activate selected
-                    slides[index].classList.replace('opacity-0', 'opacity-100');
-                    slides[index].classList.replace('scale-105', 'scale-100');
-                    slides[index].classList.replace('pointer-events-none', 'pointer-events-auto');
-
                     tab.classList.replace('bg-[var(--foreground)]', 'bg-[var(--primary-rose)]');
                     tab.classList.remove('opacity-20');
                 });
