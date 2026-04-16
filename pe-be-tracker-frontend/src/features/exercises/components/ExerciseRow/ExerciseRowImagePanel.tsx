@@ -76,6 +76,8 @@ export const ExerciseRowImagePanel = memo(({
                       src={imageUrl}
                       alt={`${exerciseType.name} - Image ${index + 1}`}
                       className="h-full w-full object-contain"
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
                       onError={() => {
                         setFailedImages((prev) =>
                           new Set(prev).add(imageUrl),

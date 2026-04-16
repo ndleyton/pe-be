@@ -53,6 +53,7 @@ const ExerciseTypeModal = lazy(() =>
 const preloadExerciseTypeModal = createIntentPreload(() =>
   import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
 );
+const MAX_EXERCISE_IMAGE_PRELOADS = 4;
 
 const getErrorStatus = (error: unknown): number | null => {
   if (typeof error !== "object" || error === null || !("response" in error)) {
@@ -118,6 +119,7 @@ const WorkoutPage = () => {
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
+  const preloadedExerciseImagesRef = useRef<Set<string>>(new Set());
 
   const routine = location.state?.routine as Routine | undefined;
   const shouldScrollToBottomOnLoad = Boolean(
@@ -218,6 +220,57 @@ const WorkoutPage = () => {
       ? serverExercises
       : []
     : ((guestWorkout?.exercises ?? []) as unknown as Exercise[]);
+
+  useEffect(() => {
+    const imageUrls = exercises
+      .slice(0, MAX_EXERCISE_IMAGE_PRELOADS)
+      .map((exercise) => exercise.exercise_type.images?.[0])
+      .filter((imageUrl): imageUrl is string => Boolean(imageUrl))
+      .filter((imageUrl) => !preloadedExerciseImagesRef.current.has(imageUrl));
+
+    if (imageUrls.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    const browserWindow = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (
+          callback: IdleRequestCallback,
+          options?: IdleRequestOptions,
+        ) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+
+    const preloadImages = () => {
+      if (cancelled) {
+        return;
+      }
+
+      imageUrls.forEach((imageUrl) => {
+        const img = new window.Image();
+        img.src = imageUrl;
+        preloadedExerciseImagesRef.current.add(imageUrl);
+      });
+    };
+
+    if (typeof browserWindow.requestIdleCallback === "function") {
+      const idleId = browserWindow.requestIdleCallback(preloadImages, {
+        timeout: 1500,
+      });
+
+      return () => {
+        cancelled = true;
+        browserWindow.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(preloadImages, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [exercises]);
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
