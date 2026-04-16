@@ -310,6 +310,8 @@ export interface PersonalBestData {
   weight: number;
   reps: number;
   volume: number;
+  rpe?: number | null;
+  rir?: number | null;
 }
 
 export interface ExerciseTypeStats {

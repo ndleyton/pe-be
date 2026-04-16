@@ -270,6 +270,8 @@ class PersonalBestStat(BaseModel):
     weight: float
     reps: int
     volume: float
+    rpe: Optional[float] = None
+    rir: Optional[float] = None
     model_config = ConfigDict(populate_by_name=True)
 
 

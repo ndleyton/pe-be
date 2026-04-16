@@ -1044,6 +1044,8 @@ async def get_exercise_type_stats(
             "weight": _serialize_numeric(converted_best_intensity),
             "reps": best_set.reps or 0,
             "volume": _serialize_numeric(volume),
+            "rpe": _serialize_numeric(best_set.rpe) if best_set.rpe is not None else None,
+            "rir": _serialize_numeric(best_set.rir) if best_set.rir is not None else None,
         }
 
     # Calculate total sets across all exercises
