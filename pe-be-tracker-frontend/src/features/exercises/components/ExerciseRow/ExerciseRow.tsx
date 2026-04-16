@@ -138,6 +138,8 @@ const ExerciseRow = ({
           <AccordionContent className="p-0">
             <div className="px-4 pb-2 pt-2">
               <Textarea
+                id={`notes-${exercise.id}`}
+                aria-label="Exercise notes"
                 placeholder="Add exercise notes..."
                 value={exerciseNotesValue}
                 onChange={(e) => setExerciseNotesValue(e.target.value)}
