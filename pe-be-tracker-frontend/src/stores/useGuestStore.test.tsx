@@ -368,7 +368,7 @@ describe("useGuestStore", () => {
             description: "Chest press",
             default_intensity_unit: 2,
             times_used: 0,
-            images: ["https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Bench_press_1.jpg/500px-Bench_press_1.jpg"],
+            images: ["https://cdn.example.com/bench-press-1.webp"],
           },
           set_templates: [
             {
