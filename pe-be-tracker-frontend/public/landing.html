@@ -270,8 +270,9 @@
                 <div class="glass-panel p-2">
                     <div class="overflow-hidden rounded-xl">
                         <picture>
-                            <source type="image/avif" srcset="finish-workout.avif">
-                            <img src="finish-workout.avif" alt="Workout summary" width="430" height="760"
+                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="chat-dark.avif">
+                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="chat-light.avif">
+                            <img src="chat-light.avif" alt="AI chat logging the workout" width="430" height="850"
                                 class="block h-auto w-full transition-transform duration-700 hover:scale-105"
                                 decoding="async" fetchpriority="high">
                         </picture>
