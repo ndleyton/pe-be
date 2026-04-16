@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, MoreVertical, StickyNote } from "lucide-react";
+import { ChevronRight, ExternalLink, MoreVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Exercise, IntensityUnit } from "@/features/exercises/api";
@@ -14,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Textarea,
 } from "@/shared/components/ui";
 
 const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
@@ -24,18 +23,12 @@ const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
 type ExerciseRowHeaderProps = {
   currentIntensityUnit: IntensityUnit | GuestIntensityUnit;
   exercise: Exercise;
-  exerciseNotesOpen: boolean;
   exerciseNotesValue: string;
   exerciseSettingsOpen: boolean;
   isUnsavedExercise: boolean;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  hasImages: boolean;
   onExerciseDelete: () => void | Promise<void>;
-  onExerciseNotesOpen: () => void;
-  onExerciseNotesOpenChange: (open: boolean) => void;
-  onExerciseNotesSave: () => void;
-  onExerciseNotesValueChange: (value: string) => void;
   onExerciseSettingsOpenChange: (open: boolean) => void;
   onIntensityUnitChange: (unit: IntensityUnit | GuestIntensityUnit) => void;
 };
@@ -43,18 +36,12 @@ type ExerciseRowHeaderProps = {
 export const ExerciseRowHeader = ({
   currentIntensityUnit,
   exercise,
-  exerciseNotesOpen,
   exerciseNotesValue,
   exerciseSettingsOpen,
   isUnsavedExercise,
   isExpanded,
   onToggleExpand,
-  hasImages,
   onExerciseDelete,
-  onExerciseNotesOpen,
-  onExerciseNotesOpenChange,
-  onExerciseNotesSave,
-  onExerciseNotesValueChange,
   onExerciseSettingsOpenChange,
   onIntensityUnitChange,
 }: ExerciseRowHeaderProps) => {
