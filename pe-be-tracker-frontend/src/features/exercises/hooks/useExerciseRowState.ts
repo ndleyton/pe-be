@@ -55,7 +55,6 @@ export const useExerciseRowState = ({
   const [durationInputs, setDurationInputs] = useState<Record<string, string>>(
     () => buildDurationInputs(exercise.exercise_sets || []),
   );
-  const [exerciseNotesOpen, setExerciseNotesOpen] = useState(false);
   const [exerciseNotesValue, setExerciseNotesValue] = useState(exercise.notes || "");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
@@ -123,14 +122,6 @@ export const useExerciseRowState = ({
     updateSetOptions,
   ]);
 
-  const handleExerciseNotesOpenChange = (open: boolean) => {
-    setExerciseNotesOpen(open);
-  };
-
-  const openExerciseNotes = () => {
-    setExerciseNotesValue(exercise.notes || "");
-    setExerciseNotesOpen(true);
-  };
 
   const closeSetOptions = useCallback(() => {
     setActiveSetId(null);
@@ -186,14 +177,11 @@ export const useExerciseRowState = ({
     activeSetId,
     currentIntensityUnit,
     durationInputs,
-    exerciseNotesOpen,
     exerciseNotesValue,
     exerciseSettingsOpen,
-    handleExerciseNotesOpenChange,
     handleIntensityUnitChange,
     handleSetOptionsOpenChange,
     intensityInputs,
-    openExerciseNotes,
     openSetOptions,
     repsInputs,
     setDurationInputValue,
