@@ -406,7 +406,9 @@ describe("ExerciseRow", () => {
   it("hides ghost placeholder when expanded", () => {
     const exerciseWithNotes = { ...mockExercise, notes: "Remember to breathe" };
     render(<ExerciseRow {...defaultProps} isExpanded={true} exercise={exerciseWithNotes} />);
-    expect(screen.queryByText("Remember to breathe")).not.toBeInTheDocument();
+    const wrapper = screen.getByTestId("ghost-placeholder-wrapper");
+    expect(wrapper).toHaveClass("opacity-0");
+    expect(wrapper).toHaveClass("max-h-0");
   });
 
   it("can increment reps using plus button", async () => {

@@ -123,14 +123,20 @@ export const ExerciseRowHeader = ({
               </Button>
             )}
           </div>
-          {!isExpanded && (
+          <div
+            data-testid="ghost-placeholder-wrapper"
+            className={cn(
+              "overflow-hidden transition-all duration-300 ease-in-out",
+              isExpanded ? "max-h-0 opacity-0 translate-y-2 pointer-events-none" : "max-h-6 opacity-100 translate-y-0"
+            )}
+          >
             <p
               className="text-xs text-left text-muted-foreground opacity-60 truncate w-full max-w-[200px] sm:max-w-[300px] mt-0.5 ml-0.5"
               aria-hidden="true"
             >
               {exerciseNotesValue?.trim() ? exerciseNotesValue : "+ Add notes"}
             </p>
-          )}
+          </div>
         </div>
       </div>
 
