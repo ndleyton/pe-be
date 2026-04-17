@@ -5,8 +5,11 @@ import { endpoints } from "@/shared/api/endpoints";
 // Create/Update payload types for routines
 export interface CreateRoutineData {
   name: string;
-  description?: string;
+  description?: string | null;
   workout_type_id: number;
+  visibility?: RoutineVisibility;
+  author?: string | null;
+  category?: string | null;
   exercise_templates: Array<{
     exercise_type_id: number;
     set_templates: Array<{

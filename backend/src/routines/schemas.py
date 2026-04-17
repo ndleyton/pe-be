@@ -95,6 +95,7 @@ class RoutineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     workout_type_id: int
+    visibility: Optional[RoutineModel.RoutineVisibility] = None
     author: Optional[str] = None
     category: Optional[str] = None
 

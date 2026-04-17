@@ -326,6 +326,7 @@ async def create_routine(
             description=routine_data.description,
             workout_type_id=routine_data.workout_type_id,
             creator_id=user_id,
+            visibility=routine_data.visibility or Routine.RoutineVisibility.private,
             author=routine_data.author,
             category=routine_data.category,
         )
