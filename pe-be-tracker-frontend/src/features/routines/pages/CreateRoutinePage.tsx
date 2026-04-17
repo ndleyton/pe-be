@@ -1,0 +1,308 @@
+import { ArrowLeft } from "lucide-react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useBlocker, useNavigate } from "react-router-dom";
+
+import {
+  RoutineInfoCard,
+  RoutineTemplatesCard,
+} from "@/features/routines/components";
+import {
+  useRoutineCreateActions,
+  useRoutineDetailsData,
+  useRoutineEditor,
+} from "@/features/routines/hooks";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/shared/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { Button } from "@/shared/components/ui/button";
+import { useAppBackNavigation } from "@/shared/hooks";
+
+const ExerciseTypeModal = lazy(
+  () => import("@/features/exercises/components/ExerciseTypeModal"),
+);
+const IntensityUnitModal = lazy(
+  () => import("@/features/exercises/components/IntensityUnitModal"),
+);
+
+const CreateRoutinePage = () => {
+  const handleBack = useAppBackNavigation("/routines");
+  const navigate = useNavigate();
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const allowNavigationAfterSaveRef = useRef(false);
+
+  // We use useRoutineDetailsData with undefined routineId to get available intensity units
+  const {
+    authInitialized,
+    availableIntensityUnits,
+    isAuthenticated,
+    unitsPending,
+  } =
+    useRoutineDetailsData(undefined);
+
+  // Unauthorized users should not have permission to enter the routine creation screen
+  useEffect(() => {
+    if (authInitialized && !isAuthenticated) {
+      navigate("/routines", { replace: true });
+    }
+  }, [authInitialized, isAuthenticated, navigate]);
+
+  const {
+    description,
+    editorTemplates,
+    exercisePickerTarget,
+    hasInvalidTemplates,
+    hasUnsavedChanges,
+    name,
+    visibility,
+    author,
+    category,
+    unitPickerTarget,
+    addSetToTemplate,
+    closeExercisePicker,
+    closeUnitPicker,
+    handleExerciseTypeSelected,
+    handleIntensityUnitSelected,
+    openExercisePicker,
+    openUnitPicker,
+    removeSetFromTemplate,
+    removeTemplate,
+    setDescription,
+    setVisibility,
+    setAuthor,
+    setCategory,
+    setName,
+    updateSet,
+    updateTemplate,
+  } = useRoutineEditor({
+    availableIntensityUnits,
+    routine: null,
+  });
+
+  const { saveMutation } = useRoutineCreateActions({
+    description,
+    editorTemplates,
+    isAuthenticated,
+    name,
+    onBeforeNavigate: () => {
+      allowNavigationAfterSaveRef.current = true;
+    },
+    visibility,
+    author,
+    category,
+  });
+
+  // Guard for unsaved changes
+  const blocker = useBlocker(
+    useCallback(
+      () => hasUnsavedChanges && !allowNavigationAfterSaveRef.current,
+      [hasUnsavedChanges],
+    ),
+  );
+
+  const handleSave = () => {
+    saveMutation.mutate();
+  };
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      setShowExitConfirm(true);
+    } else {
+      handleBack();
+    }
+  };
+
+  const templatesEditable = !isAuthenticated || !unitsPending;
+
+  return (
+    <>
+      <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
+        {/* Header Section */}
+        <div className="mb-8 flex items-center gap-4 text-left">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Go back"
+            type="button"
+            onClick={handleBack}
+            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="min-w-0 truncate bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-3xl font-black tracking-tight text-transparent text-glow">
+              New Routine
+            </h1>
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+              Create a custom plan
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-8 text-left">
+          {saveMutation.error && (
+            <Alert
+              variant="destructive"
+              className="rounded-2xl border-destructive/20 bg-destructive/5 backdrop-blur-md"
+            >
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">
+                Creation failed
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                {saveMutation.error instanceof Error
+                  ? saveMutation.error.message
+                  : "Something went wrong while creating the routine."}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isAuthenticated && unitsPending && (
+            <Alert className="rounded-2xl border-primary/20 bg-primary/5 backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">
+                Preparing editor
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                Loading intensity units before you add exercises to this routine.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-8">
+            <RoutineInfoCard
+              canEdit={true}
+              editDisabled={unitsPending}
+              isEditing={true}
+              deleteDisabled={true}
+              deleteLabel="Delete Routine"
+              description={description}
+              hasInvalidTemplates={hasInvalidTemplates}
+              name={name}
+              visibility={visibility}
+              author={author}
+              category={category}
+              onDescriptionChange={setDescription}
+              onNameChange={setName}
+              onVisibilityChange={setVisibility}
+              onAuthorChange={setAuthor}
+              onCategoryChange={setCategory}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              saveDisabled={
+                hasInvalidTemplates ||
+                !isAuthenticated ||
+                unitsPending ||
+                saveMutation.isPending
+              }
+              saveLabel={
+                saveMutation.isPending ? "Creating..." : "Create Routine"
+              }
+              startDisabled={true}
+              startLabel="Start Workout"
+            />
+
+            <div className="relative">
+              <div
+                className="absolute inset-0 flex items-center"
+                aria-hidden="true"
+              >
+                <div className="w-full border-t border-border/40"></div>
+              </div>
+              <div className="relative flex justify-center text-xs font-bold uppercase tracking-widest">
+                <span className="bg-background px-4 text-muted-foreground/40">
+                  Exercise Sequence
+                </span>
+              </div>
+            </div>
+
+            <RoutineTemplatesCard
+              canEdit={templatesEditable}
+              editorTemplates={editorTemplates}
+              onAddExercise={() => openExercisePicker({ mode: "add" })}
+              onAddSet={addSetToTemplate}
+              onChangeExercise={(templateId) =>
+                openExercisePicker({
+                  mode: "replace",
+                  templateId,
+                })
+              }
+              onRemoveSet={removeSetFromTemplate}
+              onRemoveTemplate={removeTemplate}
+              onSelectUnit={(templateId, setId) =>
+                openUnitPicker({ templateId, setId })
+              }
+              onUpdateSet={updateSet}
+              onUpdateTemplate={updateTemplate}
+            />
+          </div>
+        </div>
+      </div>
+
+      <AlertDialog open={blocker.state === "blocked" || showExitConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in your new routine. Are you sure you
+              want to leave? Your progress will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                if (blocker.state === "blocked") blocker.reset?.();
+                setShowExitConfirm(false);
+              }}
+            >
+              Stay
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (blocker.state === "blocked") {
+                  blocker.proceed?.();
+                } else {
+                  setShowExitConfirm(false);
+                  handleBack();
+                }
+              }}
+            >
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {exercisePickerTarget !== null ? (
+        <Suspense fallback={null}>
+          <ExerciseTypeModal
+            isOpen={true}
+            onClose={closeExercisePicker}
+            onSelect={handleExerciseTypeSelected}
+          />
+        </Suspense>
+      ) : null}
+
+      {unitPickerTarget !== null ? (
+        <Suspense fallback={null}>
+          <IntensityUnitModal
+            isOpen={true}
+            onClose={closeUnitPicker}
+            onSelect={handleIntensityUnitSelected}
+          />
+        </Suspense>
+      ) : null}
+    </>
+  );
+};
+
+export default CreateRoutinePage;

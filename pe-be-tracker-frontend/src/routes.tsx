@@ -38,6 +38,9 @@ const RoutinesPage = lazy(
 const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
 );
+const CreateRoutinePage = lazy(
+  () => import("./features/routines/pages/CreateRoutinePage"),
+);
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
 const AboutPage = lazy(() => import("./features/about/pages/AboutPage"));
 
@@ -102,24 +105,9 @@ const WorkoutPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<WorkoutPageSkeleton />}>{children}</Suspense>
 );
 
-const RoutinesPageFallback = () => (
-  <div className="mx-auto max-w-5xl p-2 text-center md:p-4 lg:p-8">
-    <div className="mb-6">
-      <div className="mb-4 flex items-center gap-4 text-left">
-        <Skeleton className="h-10 w-10 rounded-md lg:hidden" />
-        <Skeleton className="h-9 w-40" />
-      </div>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row">
-        <Skeleton className="h-10 flex-1" />
-        <Skeleton className="h-10 w-full sm:w-40" />
-      </div>
-    </div>
-    <RoutinesPageSkeleton />
-  </div>
-);
-
+// Wrapper component for routines page with custom fallback
 const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<RoutinesPageFallback />}>{children}</Suspense>
+  <Suspense fallback={<RoutinesPageSkeleton />}>{children}</Suspense>
 );
 
 const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
@@ -204,6 +192,14 @@ const routes: RouteObject[] = [
           <RoutineDetailsPageWrapper>
             <RoutineDetailsPage />
           </RoutineDetailsPageWrapper>
+        ),
+      },
+      {
+        path: "routines/new",
+        element: (
+          <RoutinesPageWrapper>
+            <CreateRoutinePage />
+          </RoutinesPageWrapper>
         ),
       },
       {

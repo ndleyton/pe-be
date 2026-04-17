@@ -126,12 +126,16 @@ describe("SaveRoutineModal", () => {
         exercise_templates: [
           {
             exercise_type_id: 7,
+            notes: null,
             set_templates: [
               {
                 reps: null,
                 duration_seconds: 600,
                 intensity: null,
                 rpe: null,
+                rir: null,
+                notes: null,
+                type: null,
                 intensity_unit_id: 2,
               },
               {
@@ -139,6 +143,9 @@ describe("SaveRoutineModal", () => {
                 duration_seconds: null,
                 intensity: 135,
                 rpe: null,
+                rir: null,
+                notes: null,
+                type: null,
                 intensity_unit_id: 2,
               },
             ],

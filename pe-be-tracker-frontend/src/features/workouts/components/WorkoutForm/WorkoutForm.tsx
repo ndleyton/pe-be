@@ -17,6 +17,7 @@ import {
   GuestWorkoutType,
 } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
+import { ClipboardList } from "lucide-react";
 
 interface WorkoutFormData {
   name?: string;
@@ -254,8 +255,9 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
       {routine && (
         <div className="bg-primary/10 border-primary/20 mb-4 rounded-lg border p-3">
           <div className="mb-2 flex items-center space-x-2">
+            <ClipboardList className="text-primary h-4 w-4" />
             <span className="text-primary text-sm font-medium">
-              📋 Starting from Routine
+              Starting from Routine
             </span>
           </div>
           <div className="text-muted-foreground text-sm">

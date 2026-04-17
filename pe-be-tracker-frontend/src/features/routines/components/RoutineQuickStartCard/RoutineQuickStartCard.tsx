@@ -1,4 +1,5 @@
 import React from "react";
+import { ClipboardList } from "lucide-react";
 import type { RoutineSummary } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -53,7 +54,7 @@ export const RoutineQuickStartCard = ({
       <CardHeader className="min-h-[5.25rem] pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-            <span className="text-lg">📋</span>
+            <ClipboardList className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base font-black leading-tight tracking-tight break-words">

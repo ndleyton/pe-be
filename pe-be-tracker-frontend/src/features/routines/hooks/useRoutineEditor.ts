@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type {
   ExerciseType,
@@ -90,7 +90,8 @@ type RoutineEditorAction =
         updates: Partial<RoutineEditorTemplate>;
       };
     }
-  | { type: "removeTemplate"; payload: { templateId: string } };
+  | { type: "removeTemplate"; payload: { templateId: string } }
+  | { type: "initializeEmpty" };
 
 const initialState: RoutineEditorState = {
   name: "",
@@ -341,6 +342,21 @@ const routineEditorReducer = (
           (template) => template.id !== action.payload.templateId,
         ),
       };
+    case "initializeEmpty":
+      if (state.initialSnapshot) {
+        return state;
+      }
+      return {
+        ...state,
+        initialSnapshot: buildComparableSnapshot(
+          initialState.name,
+          initialState.description,
+          initialState.visibility,
+          initialState.author,
+          initialState.category,
+          initialState.editorTemplates,
+        ),
+      };
     default:
       return state;
   }
@@ -357,6 +373,7 @@ export const useRoutineEditor = ({
 
   useEffect(() => {
     if (!routine) {
+      dispatch({ type: "initializeEmpty" });
       return;
     }
 
@@ -403,6 +420,117 @@ export const useRoutineEditor = ({
         ),
     );
 
+  const addSetToTemplate = useCallback(
+    (templateId: string) =>
+      dispatch({
+        type: "addSetToTemplate",
+        payload: { templateId, availableIntensityUnits },
+      }),
+    [availableIntensityUnits],
+  );
+
+  const closeExercisePicker = useCallback(
+    () => dispatch({ type: "closeExercisePicker" }),
+    [],
+  );
+
+  const closeUnitPicker = useCallback(
+    () => dispatch({ type: "closeUnitPicker" }),
+    [],
+  );
+
+  const handleExerciseTypeSelected = useCallback(
+    (selectedExerciseType: ExerciseType | GuestExerciseType) =>
+      dispatch({
+        type: "applyExerciseTypeSelection",
+        payload: { selectedExerciseType, availableIntensityUnits },
+      }),
+    [availableIntensityUnits],
+  );
+
+  const handleIntensityUnitSelected = useCallback(
+    (selectedUnit: IntensityUnit | GuestIntensityUnit) =>
+      dispatch({
+        type: "applyIntensityUnitSelection",
+        payload: selectedUnit,
+      }),
+    [],
+  );
+
+  const openExercisePicker = useCallback(
+    (target: ExercisePickerTarget) =>
+      dispatch({ type: "openExercisePicker", payload: target }),
+    [],
+  );
+
+  const openUnitPicker = useCallback(
+    (target: UnitPickerTarget) =>
+      dispatch({ type: "openUnitPicker", payload: target }),
+    [],
+  );
+
+  const removeSetFromTemplate = useCallback(
+    (templateId: string, setId: string) =>
+      dispatch({
+        type: "removeSetFromTemplate",
+        payload: { setId, templateId },
+      }),
+    [],
+  );
+
+  const removeTemplate = useCallback(
+    (templateId: string) =>
+      dispatch({
+        type: "removeTemplate",
+        payload: { templateId },
+      }),
+    [],
+  );
+
+  const setDescription = useCallback(
+    (value: string) => dispatch({ type: "setDescription", payload: value }),
+    [],
+  );
+
+  const setVisibility = useCallback(
+    (value: RoutineVisibility) =>
+      dispatch({ type: "setVisibility", payload: value }),
+    [],
+  );
+
+  const setAuthor = useCallback(
+    (value: string) => dispatch({ type: "setAuthor", payload: value }),
+    [],
+  );
+
+  const setCategory = useCallback(
+    (value: string) => dispatch({ type: "setCategory", payload: value }),
+    [],
+  );
+
+  const setName = useCallback(
+    (value: string) => dispatch({ type: "setName", payload: value }),
+    [],
+  );
+
+  const updateSet = useCallback(
+    (templateId: string, setId: string, updates: Partial<RoutineEditorSet>) =>
+      dispatch({
+        type: "updateSet",
+        payload: { setId, templateId, updates },
+      }),
+    [],
+  );
+
+  const updateTemplate = useCallback(
+    (templateId: string, updates: Partial<RoutineEditorTemplate>) =>
+      dispatch({
+        type: "updateTemplate",
+        payload: { templateId, updates },
+      }),
+    [],
+  );
+
   return {
     description: state.description,
     editorTemplates: state.editorTemplates,
@@ -414,67 +542,21 @@ export const useRoutineEditor = ({
     author: state.author,
     category: state.category,
     unitPickerTarget: state.unitPickerTarget,
-    addSetToTemplate: (templateId: string) =>
-      dispatch({
-        type: "addSetToTemplate",
-        payload: { templateId, availableIntensityUnits },
-      }),
-    closeExercisePicker: () => dispatch({ type: "closeExercisePicker" }),
-    closeUnitPicker: () => dispatch({ type: "closeUnitPicker" }),
-    handleExerciseTypeSelected: (
-      selectedExerciseType: ExerciseType | GuestExerciseType,
-    ) =>
-      dispatch({
-        type: "applyExerciseTypeSelection",
-        payload: { selectedExerciseType, availableIntensityUnits },
-      }),
-    handleIntensityUnitSelected: (
-      selectedUnit: IntensityUnit | GuestIntensityUnit,
-    ) =>
-      dispatch({
-        type: "applyIntensityUnitSelection",
-        payload: selectedUnit,
-      }),
-    openExercisePicker: (target: ExercisePickerTarget) =>
-      dispatch({ type: "openExercisePicker", payload: target }),
-    openUnitPicker: (target: UnitPickerTarget) =>
-      dispatch({ type: "openUnitPicker", payload: target }),
-    removeSetFromTemplate: (templateId: string, setId: string) =>
-      dispatch({
-        type: "removeSetFromTemplate",
-        payload: { setId, templateId },
-      }),
-    removeTemplate: (templateId: string) =>
-      dispatch({
-        type: "removeTemplate",
-        payload: { templateId },
-      }),
-    setDescription: (value: string) =>
-      dispatch({ type: "setDescription", payload: value }),
-    setVisibility: (value: RoutineVisibility) =>
-      dispatch({ type: "setVisibility", payload: value }),
-    setAuthor: (value: string) =>
-      dispatch({ type: "setAuthor", payload: value }),
-    setCategory: (value: string) =>
-      dispatch({ type: "setCategory", payload: value }),
-    setName: (value: string) =>
-      dispatch({ type: "setName", payload: value }),
-    updateSet: (
-      templateId: string,
-      setId: string,
-      updates: Partial<RoutineEditorSet>,
-    ) =>
-      dispatch({
-        type: "updateSet",
-        payload: { setId, templateId, updates },
-      }),
-    updateTemplate: (
-      templateId: string,
-      updates: Partial<RoutineEditorTemplate>,
-    ) =>
-      dispatch({
-        type: "updateTemplate",
-        payload: { templateId, updates },
-      }),
+    addSetToTemplate,
+    closeExercisePicker,
+    closeUnitPicker,
+    handleExerciseTypeSelected,
+    handleIntensityUnitSelected,
+    openExercisePicker,
+    openUnitPicker,
+    removeSetFromTemplate,
+    removeTemplate,
+    setDescription,
+    setVisibility,
+    setAuthor,
+    setCategory,
+    setName,
+    updateSet,
+    updateTemplate,
   };
 };
