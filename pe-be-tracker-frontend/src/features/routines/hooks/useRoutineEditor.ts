@@ -90,7 +90,8 @@ type RoutineEditorAction =
         updates: Partial<RoutineEditorTemplate>;
       };
     }
-  | { type: "removeTemplate"; payload: { templateId: string } };
+  | { type: "removeTemplate"; payload: { templateId: string } }
+  | { type: "initializeEmpty" };
 
 const initialState: RoutineEditorState = {
   name: "",
@@ -341,6 +342,18 @@ const routineEditorReducer = (
           (template) => template.id !== action.payload.templateId,
         ),
       };
+    case "initializeEmpty":
+      return {
+        ...state,
+        initialSnapshot: buildComparableSnapshot(
+          state.name,
+          state.description,
+          state.visibility,
+          state.author,
+          state.category,
+          state.editorTemplates,
+        ),
+      };
     default:
       return state;
   }
@@ -357,6 +370,7 @@ export const useRoutineEditor = ({
 
   useEffect(() => {
     if (!routine) {
+      dispatch({ type: "initializeEmpty" });
       return;
     }
 

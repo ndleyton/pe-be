@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Search, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
@@ -77,12 +78,25 @@ const RoutinesPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Routines
-            </h1>
-            <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-0.5">
-              Select or search for a plan
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Routines
+                </h1>
+                <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-0.5">
+                  Select or search for a plan
+                </p>
+              </div>
+              <Button
+                asChild
+                className="rounded-xl font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
+              >
+                <Link to="/routines/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Routine
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
         {/* Search and Filter Controls */}

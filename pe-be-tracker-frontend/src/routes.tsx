@@ -38,6 +38,9 @@ const RoutinesPage = lazy(
 const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
 );
+const CreateRoutinePage = lazy(
+  () => import("./features/routines/pages/CreateRoutinePage"),
+);
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
 const AboutPage = lazy(() => import("./features/about/pages/AboutPage"));
 
@@ -204,6 +207,14 @@ const routes: RouteObject[] = [
           <RoutineDetailsPageWrapper>
             <RoutineDetailsPage />
           </RoutineDetailsPageWrapper>
+        ),
+      },
+      {
+        path: "routines/new",
+        element: (
+          <RoutinesPageWrapper>
+            <CreateRoutinePage />
+          </RoutinesPageWrapper>
         ),
       },
       {
