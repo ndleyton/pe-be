@@ -42,8 +42,8 @@ export const useRoutineCreateActions = ({
         description: description.trim() || null,
         workout_type_id: DEFAULT_WORKOUT_TYPE_ID,
         visibility,
-        author: author != null ? author.trim() : null,
-        category: category != null ? category.trim() : null,
+        author: author?.trim() || null,
+        category: category?.trim() || null,
         exercise_templates: buildRoutinePayload(editorTemplates),
       };
 
