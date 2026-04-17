@@ -2,14 +2,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 
 import { render } from "@/test/testUtils";
-import RoutineDetailsPage from "./RoutineDetailsPage";
+import CreateRoutinePage from "./CreateRoutinePage";
 import {
-  useRoutineDetailsActions,
+  useRoutineCreateActions,
   useRoutineDetailsData,
   useRoutineEditor,
 } from "@/features/routines/hooks";
 
-const mockUseParams = vi.fn();
+const mockNavigate = vi.fn();
 const mockUseBlocker = vi.fn();
 
 vi.mock("react-router-dom", async () => {
@@ -19,8 +19,8 @@ vi.mock("react-router-dom", async () => {
 
   return {
     ...actual,
-    useParams: () => mockUseParams(),
     useBlocker: () => mockUseBlocker(),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -30,42 +30,24 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 vi.mock("@/features/routines/components", () => ({
-  RoutineDetailsLoadingState: () => (
-    <div data-testid="routine-details-loading">
-      <div data-slot="skeleton" />
-    </div>
-  ),
   RoutineInfoCard: () => <div data-testid="routine-info-card" />,
   RoutineTemplatesCard: () => <div data-testid="routine-templates-card" />,
-  RoutineDetailsPageSkeleton: () => (
-    <div data-testid="routine-page-skeleton">
-      <div data-slot="skeleton" />
-    </div>
-  ),
 }));
 
-vi.mock(
-  "@/features/routines/components/RoutineStructuredData/RoutineStructuredData",
-  () => ({
-    RoutineStructuredData: () => null,
-  }),
-);
-
 vi.mock("@/features/routines/hooks", () => ({
-  useRoutineDetailsActions: vi.fn(),
+  useRoutineCreateActions: vi.fn(),
   useRoutineDetailsData: vi.fn(),
   useRoutineEditor: vi.fn(),
 }));
 
+const mockUseRoutineCreateActions = vi.mocked(useRoutineCreateActions);
 const mockUseRoutineDetailsData = vi.mocked(useRoutineDetailsData);
 const mockUseRoutineEditor = vi.mocked(useRoutineEditor);
-const mockUseRoutineDetailsActions = vi.mocked(useRoutineDetailsActions);
 
-describe("RoutineDetailsPage", () => {
+describe("CreateRoutinePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseParams.mockReturnValue({ routineId: "42" });
     mockUseBlocker.mockReturnValue({ state: "unblocked" });
 
     mockUseRoutineEditor.mockReturnValue({
@@ -97,57 +79,51 @@ describe("RoutineDetailsPage", () => {
       updateTemplate: vi.fn(),
     } as ReturnType<typeof useRoutineEditor>);
 
-    mockUseRoutineDetailsActions.mockReturnValue({
-      deleteMutation: { error: null, isPending: false },
-      handleDelete: vi.fn(),
+    mockUseRoutineCreateActions.mockReturnValue({
       saveMutation: {
         error: null,
         isPending: false,
-        mutateAsync: vi.fn(),
+        mutate: vi.fn(),
       },
-      startMutation: { error: null, isPending: false, mutate: vi.fn() },
-    } as unknown as ReturnType<typeof useRoutineDetailsActions>);
+    } as ReturnType<typeof useRoutineCreateActions>);
   });
 
-  it("keeps the routine shell visible while data is pending", () => {
+  it("does not redirect before auth initialization completes", () => {
     mockUseRoutineDetailsData.mockReturnValue({
       availableIntensityUnits: [],
-      authInitialized: true,
+      authInitialized: false,
       canEdit: false,
       editAccessMessage: null,
-      isAuthenticated: true,
+      isAuthenticated: false,
       routine: null,
       routineError: null,
-      routinePending: true,
-      unitsPending: false,
-    });
-
-    const { container } = render(<RoutineDetailsPage />);
-
-    expect(
-      screen.getByRole("heading", { name: /routine details/i, level: 1 }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument();
-    expect(screen.queryByText(/loading routine/i)).not.toBeInTheDocument();
-    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
-  });
-
-  it("shows the unavailable alert when the routine request fails", () => {
-    mockUseRoutineDetailsData.mockReturnValue({
-      availableIntensityUnits: [],
-      authInitialized: true,
-      canEdit: false,
-      editAccessMessage: null,
-      isAuthenticated: true,
-      routine: null,
-      routineError: new Error("Request failed"),
       routinePending: false,
       unitsPending: false,
     });
 
-    render(<RoutineDetailsPage />);
+    render(<CreateRoutinePage />);
 
-    expect(screen.getByText(/routine unavailable/i)).toBeInTheDocument();
-    expect(screen.getByText(/we couldn't load this routine/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /new routine/i, level: 1 }),
+    ).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("redirects unauthenticated users after auth initialization", () => {
+    mockUseRoutineDetailsData.mockReturnValue({
+      availableIntensityUnits: [],
+      authInitialized: true,
+      canEdit: false,
+      editAccessMessage: null,
+      isAuthenticated: false,
+      routine: null,
+      routineError: null,
+      routinePending: false,
+      unitsPending: false,
+    });
+
+    render(<CreateRoutinePage />);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/routines", { replace: true });
   });
 });

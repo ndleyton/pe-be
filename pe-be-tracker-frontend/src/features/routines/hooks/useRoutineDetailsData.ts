@@ -17,6 +17,7 @@ const EMPTY_UNITS: any[] = [];
 
 export const useRoutineDetailsData = (routineId: string | undefined) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authInitialized = useAuthStore((state) => state.initialized);
   const currentUser = useAuthStore((state) => state.user);
   const canFetchServerRoutine = routineId != null && /^\d+$/.test(routineId);
 
@@ -89,6 +90,7 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
 
   return {
     availableIntensityUnits,
+    authInitialized,
     canEdit,
     editAccessMessage,
     isAuthenticated,

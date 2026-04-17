@@ -163,13 +163,22 @@ describe("useRoutineCreateActions", () => {
   it("(4) navigation: redirects to the new routine page on success", async () => {
     const createdRoutine = { id: 456 } as any;
     mockCreateRoutine.mockResolvedValue(createdRoutine);
+    const onBeforeNavigate = vi.fn();
 
-    const { result } = renderHook(() => useRoutineCreateActions(defaultProps), {
-      wrapper: TestWrapper,
-    });
+    const { result } = renderHook(
+      () =>
+        useRoutineCreateActions({
+          ...defaultProps,
+          onBeforeNavigate,
+        }),
+      {
+        wrapper: TestWrapper,
+      },
+    );
 
     await result.current.saveMutation.mutateAsync();
 
+    expect(onBeforeNavigate).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith(`/routines/${createdRoutine.id}`);
   });
 });

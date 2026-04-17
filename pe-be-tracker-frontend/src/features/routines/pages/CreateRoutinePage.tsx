@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker, useNavigate } from "react-router-dom";
 
 import {
@@ -37,17 +37,23 @@ const CreateRoutinePage = () => {
   const handleBack = useAppBackNavigation("/routines");
   const navigate = useNavigate();
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const allowNavigationAfterSaveRef = useRef(false);
 
   // We use useRoutineDetailsData with undefined routineId to get available intensity units
-  const { availableIntensityUnits, isAuthenticated, unitsPending } =
+  const {
+    authInitialized,
+    availableIntensityUnits,
+    isAuthenticated,
+    unitsPending,
+  } =
     useRoutineDetailsData(undefined);
 
   // Unauthorized users should not have permission to enter the routine creation screen
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (authInitialized && !isAuthenticated) {
       navigate("/routines", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [authInitialized, isAuthenticated, navigate]);
 
   const {
     description,
@@ -86,6 +92,9 @@ const CreateRoutinePage = () => {
     editorTemplates,
     isAuthenticated,
     name,
+    onBeforeNavigate: () => {
+      allowNavigationAfterSaveRef.current = true;
+    },
     visibility,
     author,
     category,
@@ -93,7 +102,10 @@ const CreateRoutinePage = () => {
 
   // Guard for unsaved changes
   const blocker = useBlocker(
-    useCallback(() => hasUnsavedChanges, [hasUnsavedChanges]),
+    useCallback(
+      () => hasUnsavedChanges && !allowNavigationAfterSaveRef.current,
+      [hasUnsavedChanges],
+    ),
   );
 
   const handleSave = () => {

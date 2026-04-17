@@ -16,6 +16,7 @@ export const useRoutineCreateActions = ({
   editorTemplates,
   isAuthenticated,
   name,
+  onBeforeNavigate,
   visibility,
   author,
   category,
@@ -24,6 +25,7 @@ export const useRoutineCreateActions = ({
   editorTemplates: RoutineEditorTemplate[];
   isAuthenticated: boolean;
   name: string;
+  onBeforeNavigate?: () => void;
   visibility: RoutineVisibility;
   author: string | null;
   category: string | null;
@@ -50,6 +52,7 @@ export const useRoutineCreateActions = ({
       return createRoutine(payload);
     },
     onSuccess: async (createdRoutine) => {
+      onBeforeNavigate?.();
       await queryClient.invalidateQueries({ queryKey: ["routines"] });
       navigate(`/routines/${createdRoutine.id}`);
     },
