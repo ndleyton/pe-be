@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, within } from "@testing-library/react";
 
 import {
   makeRoutineExerciseTemplate,
@@ -14,7 +14,21 @@ import { RoutineTemplatesCard } from "./RoutineTemplatesCard";
 
 const noop = () => undefined;
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 describe("RoutineTemplatesCard", () => {
+  beforeEach(() => {
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("shows a Time input for speed-based sets using MM:SS", async () => {
     const onUpdateSet = vi.fn();
     const baseTemplate = makeRoutineExerciseTemplate();
@@ -133,5 +147,52 @@ describe("RoutineTemplatesCard", () => {
 
     expect(screen.getByLabelText("Reps")).toHaveValue(8);
     expect(screen.queryByLabelText("Time")).not.toBeInTheDocument();
+  });
+
+  it("keeps null RIR neutral until the user explicitly starts editing", () => {
+    const onUpdateSet = vi.fn();
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const repTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [{ ...repSet, intensity_unit: { ...repSet.intensity_unit! } }],
+    };
+
+    render(
+      <RoutineTemplatesCard
+        canEdit
+        editorTemplates={[repTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={onUpdateSet}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Edit set 1 details"));
+    const dialog = screen.getByRole("dialog");
+
+    expect(within(dialog).getByText("Set RIR")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("—")).toHaveLength(2);
+
+    fireEvent.click(within(dialog).getByText("Set RIR"));
+
+    expect(onUpdateSet).not.toHaveBeenCalled();
+
+    const slider = within(dialog).getByRole("slider", { name: "RIR" });
+    expect(slider).toHaveAttribute("aria-valuetext", "RIR: 2 reps remaining");
   });
 });

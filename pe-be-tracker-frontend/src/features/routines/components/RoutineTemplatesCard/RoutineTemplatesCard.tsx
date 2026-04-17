@@ -61,6 +61,9 @@ type RoutineTemplatesCardProps = {
   ) => void;
 };
 
+const DEFAULT_RIR = 2;
+const DEFAULT_RIR_SLIDER_VALUE = 10 - DEFAULT_RIR;
+
 const buildDurationDrafts = (
   templates: RoutineEditorTemplate[],
 ): Record<string, string> => {
@@ -96,6 +99,8 @@ export const RoutineTemplatesCard = ({
     templateId: string;
     setId: string;
   } | null>(null);
+  const [rirDraftValue, setRirDraftValue] = useState<number | null>(null);
+  const [isRirEditingEnabled, setIsRirEditingEnabled] = useState(false);
 
   useEffect(() => {
     setDurationDrafts((current) => {
@@ -132,6 +137,30 @@ export const RoutineTemplatesCard = ({
       return nextDrafts;
     });
   }, [editorTemplates]);
+
+  useEffect(() => {
+    if (!activeSetTarget) {
+      setRirDraftValue(null);
+      setIsRirEditingEnabled(false);
+      return;
+    }
+
+    const activeTemplate = editorTemplates.find(
+      (template) => template.id === activeSetTarget.templateId,
+    );
+    const activeSet = activeTemplate?.set_templates.find(
+      (setTemplate) => setTemplate.id === activeSetTarget.setId,
+    );
+
+    if (!activeSet || activeSet.rir == null) {
+      setRirDraftValue(null);
+      setIsRirEditingEnabled(false);
+      return;
+    }
+
+    setRirDraftValue(10 - activeSet.rir);
+    setIsRirEditingEnabled(true);
+  }, [activeSetTarget, editorTemplates]);
 
   return (
     <Card className="bg-card/80 border-border/40 rounded-2xl border p-2 text-left shadow-xl backdrop-blur-md overflow-hidden">
@@ -272,6 +301,7 @@ export const RoutineTemplatesCard = ({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
+                              aria-label={`Edit set ${setIndex + 1} details`}
                               onClick={() =>
                                 setActiveSetTarget({
                                   templateId: template.id,
@@ -494,6 +524,22 @@ export const RoutineTemplatesCard = ({
                 setTemplate,
                 prefersTimeByDefault,
               );
+              const hasPersistedRir = setTemplate.rir != null;
+              const isRirSliderEnabled =
+                hasPersistedRir || isRirEditingEnabled;
+              const effectiveRirSliderValue =
+                rirDraftValue ??
+                (hasPersistedRir
+                  ? 10 - setTemplate.rir
+                  : DEFAULT_RIR_SLIDER_VALUE);
+              const displayedRir =
+                hasPersistedRir || isRirSliderEnabled
+                  ? 10 - effectiveRirSliderValue
+                  : null;
+              const rirValueText =
+                displayedRir == null
+                  ? "RIR target not set"
+                  : `RIR: ${formatDecimal(displayedRir)} reps remaining`;
 
               return (
                 <>
@@ -639,51 +685,83 @@ export const RoutineTemplatesCard = ({
                                   </TooltipContent>
                                 </Tooltip>
                               </label>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 text-[10px] text-muted-foreground hover:text-foreground"
-                                onClick={() =>
-                                  onUpdateSet(template.id, setTemplate.id, {
-                                    rir: null,
-                                  })
-                                }
-                              >
-                                Clear
-                              </Button>
+                              {isRirSliderEnabled ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-auto p-0 text-[10px] text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    setRirDraftValue(null);
+                                    setIsRirEditingEnabled(false);
+
+                                    if (!hasPersistedRir) {
+                                      return;
+                                    }
+
+                                    onUpdateSet(template.id, setTemplate.id, {
+                                      rir: null,
+                                    });
+                                  }}
+                                >
+                                  {hasPersistedRir ? "Clear" : "Cancel"}
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-auto p-0 text-[10px] text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    setRirDraftValue(DEFAULT_RIR_SLIDER_VALUE);
+                                    setIsRirEditingEnabled(true);
+                                  }}
+                                >
+                                  Set RIR
+                                </Button>
+                              )}
                             </div>
 
                             <div className="flex flex-col items-center gap-4 w-full">
                               <div className="h-32 flex items-center justify-center w-full">
-                                <Slider
-                                  orientation="vertical"
-                                  value={[
-                                    setTemplate.rir == null
-                                      ? 0
-                                      : 10 - setTemplate.rir,
-                                  ]}
-                                  min={0}
-                                  max={10}
-                                  step={0.5}
-                                  className="h-full"
-                                  aria-labelledby="set-rir-label-active"
-                                  onValueChange={(values) => {
-                                    const val = values[0] ?? 0;
-                                    onUpdateSet(template.id, setTemplate.id, {
-                                      rir: 10 - val,
-                                    });
-                                  }}
-                                />
+                                {isRirSliderEnabled ? (
+                                  <Slider
+                                    orientation="vertical"
+                                    value={[effectiveRirSliderValue]}
+                                    min={0}
+                                    max={10}
+                                    step={0.5}
+                                    className="h-full"
+                                    aria-labelledby="set-rir-label-active"
+                                    aria-valuetext={rirValueText}
+                                    onValueChange={(values) => {
+                                      setRirDraftValue(
+                                        values[0] ?? DEFAULT_RIR_SLIDER_VALUE,
+                                      );
+                                    }}
+                                    onValueCommit={(values) => {
+                                      const val =
+                                        values[0] ?? DEFAULT_RIR_SLIDER_VALUE;
+                                      setRirDraftValue(val);
+                                      setIsRirEditingEnabled(true);
+                                      onUpdateSet(template.id, setTemplate.id, {
+                                        rir: 10 - val,
+                                      });
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="h-full w-1.5 rounded-full bg-muted/70"
+                                    aria-hidden="true"
+                                  />
+                                )}
                               </div>
                               <div className="flex flex-col items-center gap-0.5 min-h-[40px]">
                                 <span className="text-xl font-black tabular-nums">
-                                  {setTemplate.rir == null
-                                    ? "—"
-                                    : setTemplate.rir}
+                                  {displayedRir == null ? "—" : displayedRir}
                                 </span>
                                 <span className="text-center text-[8px] font-medium text-muted-foreground leading-tight max-w-[100px]">
-                                  {getRirDescription(setTemplate.rir)}
+                                  {getRirDescription(displayedRir)}
                                 </span>
                               </div>
                             </div>
