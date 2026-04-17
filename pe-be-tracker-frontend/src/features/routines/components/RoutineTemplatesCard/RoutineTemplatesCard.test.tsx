@@ -186,6 +186,47 @@ describe("RoutineTemplatesCard", () => {
     expect(removeSetButton).not.toHaveTextContent("Remove");
   });
 
+  it("uses icon-only exercise template actions in editor mode", () => {
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const repTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [{ ...repSet, intensity_unit: { ...repSet.intensity_unit! } }],
+    };
+
+    render(
+      <RoutineTemplatesCard
+        canEdit
+        editorTemplates={[repTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={vi.fn()}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    const changeButton = screen.getByTestId("change-routine-exercise-0");
+    const removeButton = screen.getByTestId("remove-routine-template-0");
+
+    expect(changeButton).toHaveAccessibleName("Change exercise 1");
+    expect(changeButton).not.toHaveTextContent("Change");
+    expect(removeButton).toHaveAccessibleName("Remove exercise 1");
+    expect(removeButton).not.toHaveTextContent("Remove");
+  });
+
   it("renders view-only sets in a stacked list", () => {
     const baseTemplate = makeRoutineExerciseTemplate();
     const repTemplate: RoutineEditorTemplate = {

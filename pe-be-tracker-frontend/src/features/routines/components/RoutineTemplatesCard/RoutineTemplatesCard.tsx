@@ -215,21 +215,21 @@ export const RoutineTemplatesCard = ({
                     data-testid={`change-routine-exercise-${templateIndex}`}
                     variant="outline"
                     size="sm"
+                    aria-label={`Change exercise ${templateIndex + 1}`}
                     onClick={() => onChangeExercise(template.id)}
-                    className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all text-xs"
+                    className="h-8 w-8 rounded-xl border-border/60 p-0 hover:bg-muted transition-all"
                   >
-                    <Pencil className="mr-2 h-3 w-3" />
-                    Change
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     data-testid={`remove-routine-template-${templateIndex}`}
                     variant="ghost"
                     size="sm"
+                    aria-label={`Remove exercise ${templateIndex + 1}`}
                     onClick={() => onRemoveTemplate(template.id)}
-                    className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-all text-xs"
+                    className="h-8 w-8 rounded-xl p-0 text-destructive hover:bg-destructive/10 hover:text-destructive transition-all"
                   >
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Remove
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               )}
