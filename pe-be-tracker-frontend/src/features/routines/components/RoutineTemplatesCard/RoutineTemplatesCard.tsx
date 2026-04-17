@@ -272,6 +272,7 @@ export const RoutineTemplatesCard = ({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
+                              aria-label={`Edit set ${setIndex + 1} details`}
                               onClick={() =>
                                 setActiveSetTarget({
                                   templateId: template.id,
