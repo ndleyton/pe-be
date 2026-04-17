@@ -33,15 +33,15 @@ type RoutineInfoCardProps = {
   visibility: RoutineVisibility;
   author: string | null;
   category: string | null;
-  onDelete: () => void;
+  onDelete?: () => void;
   onDescriptionChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onVisibilityChange: (value: RoutineVisibility) => void;
   onAuthorChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onSave: () => void;
-  onStartWorkout: () => void;
-  onEdit: () => void;
+  onStartWorkout?: () => void;
+  onEdit?: () => void;
   onCancel: () => void;
   saveDisabled: boolean;
   saveLabel: string;
@@ -209,29 +209,33 @@ export const RoutineInfoCard = ({
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button
-                data-testid="delete-routine-button"
-                onClick={onDelete}
-                disabled={deleteDisabled}
-                variant="ghost"
-                className="h-12 flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-all"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {deleteLabel}
-              </Button>
+              {onDelete && (
+                <Button
+                  data-testid="delete-routine-button"
+                  onClick={onDelete}
+                  disabled={deleteDisabled}
+                  variant="ghost"
+                  className="h-12 flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-all"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {deleteLabel}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                data-testid="start-routine-workout-button"
-                onClick={onStartWorkout}
-                disabled={startDisabled}
-                className="h-14 flex-1 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all text-sm font-black uppercase tracking-tight"
-              >
-                <Play className="mr-2 h-4 w-4 fill-current" />
-                {startLabel}
-              </Button>
-              {canEdit && (
+              {onStartWorkout && (
+                <Button
+                  data-testid="start-routine-workout-button"
+                  onClick={onStartWorkout}
+                  disabled={startDisabled}
+                  className="h-14 flex-1 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all text-sm font-black uppercase tracking-tight"
+                >
+                  <Play className="mr-2 h-4 w-4 fill-current" />
+                  {startLabel}
+                </Button>
+              )}
+              {canEdit && onEdit && (
                 <Button
                   variant="outline"
                   onClick={onEdit}

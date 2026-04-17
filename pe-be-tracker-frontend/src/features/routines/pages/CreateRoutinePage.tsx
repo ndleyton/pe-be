@@ -163,15 +163,12 @@ const CreateRoutinePage = () => {
               visibility={visibility}
               author={author}
               category={category}
-              onDelete={() => {}} // No delete in create mode
               onDescriptionChange={setDescription}
               onNameChange={setName}
               onVisibilityChange={setVisibility}
               onAuthorChange={setAuthor}
               onCategoryChange={setCategory}
               onSave={handleSave}
-              onStartWorkout={() => {}} // No start in create mode
-              onEdit={() => {}}
               onCancel={handleCancel}
               saveDisabled={
                 hasInvalidTemplates || !isAuthenticated || saveMutation.isPending
