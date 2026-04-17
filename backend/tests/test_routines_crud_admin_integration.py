@@ -178,7 +178,9 @@ async def test_update_routine_persists_set_template_notes_and_type(
                 ExerciseTemplateCreate(
                     exercise_type_id=et.id,
                     set_templates=[
-                        SetTemplateCreate(reps=5, intensity=45.0, intensity_unit_id=iu.id)
+                        SetTemplateCreate(
+                            reps=5, intensity=45.0, intensity_unit_id=iu.id
+                        )
                     ],
                 )
             ],
