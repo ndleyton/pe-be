@@ -4,8 +4,9 @@ import { renderHook } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRoutine } from "@/features/routines/api";
+import { createRoutine, type CreateRoutineData } from "@/features/routines/api";
 import { buildRoutinePayload } from "@/features/routines/lib/routineEditor";
+import { type Routine } from "@/features/routines/types";
 import { getWorkoutTypes } from "@/features/workouts/api/workoutTypeApi";
 
 import { useRoutineCreateActions } from "./useRoutineCreateActions";
@@ -111,9 +112,11 @@ describe("useRoutineCreateActions", () => {
       category: "  Trimmed Category  ",
     };
 
-    const mockPayload = [{ exercise_type_id: 1, set_templates: [] }] as any;
+    const mockPayload = [
+      { exercise_type_id: 1, set_templates: [] },
+    ] satisfies CreateRoutineData["exercise_templates"];
     mockBuildRoutinePayload.mockReturnValue(mockPayload);
-    mockCreateRoutine.mockResolvedValue({ id: 123 } as any);
+    mockCreateRoutine.mockResolvedValue({ id: 123 } as unknown as Routine);
 
     const { result } = renderHook(() => useRoutineCreateActions(props), {
       wrapper: TestWrapper,
@@ -143,7 +146,7 @@ describe("useRoutineCreateActions", () => {
         updated_at: "2025-01-01T00:00:00Z",
       },
     ]);
-    mockCreateRoutine.mockResolvedValue({ id: 123 } as any);
+    mockCreateRoutine.mockResolvedValue({ id: 123 } as unknown as Routine);
 
     const { result } = renderHook(() => useRoutineCreateActions(defaultProps), {
       wrapper: TestWrapper,
@@ -166,7 +169,7 @@ describe("useRoutineCreateActions", () => {
       category: "  ",
     };
 
-    mockCreateRoutine.mockResolvedValue({ id: 123 } as any);
+    mockCreateRoutine.mockResolvedValue({ id: 123 } as unknown as Routine);
 
     const { result } = renderHook(() => useRoutineCreateActions(props), {
       wrapper: TestWrapper,
@@ -184,7 +187,7 @@ describe("useRoutineCreateActions", () => {
   });
 
   it("(3) cache invalidation: calls invalidateQueries on success", async () => {
-    mockCreateRoutine.mockResolvedValue({ id: 123 } as any);
+    mockCreateRoutine.mockResolvedValue({ id: 123 } as unknown as Routine);
 
     const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -201,7 +204,7 @@ describe("useRoutineCreateActions", () => {
   });
 
   it("(4) navigation: redirects to the new routine page on success", async () => {
-    const createdRoutine = { id: 456 } as any;
+    const createdRoutine = { id: 456 } as unknown as Routine;
     mockCreateRoutine.mockResolvedValue(createdRoutine);
     const onBeforeNavigate = vi.fn();
 

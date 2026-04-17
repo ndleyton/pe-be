@@ -12,11 +12,15 @@ export interface CreateRoutineData {
   category?: string | null;
   exercise_templates: Array<{
     exercise_type_id: number;
+    notes?: string | null;
     set_templates: Array<{
       reps?: number | null;
       duration_seconds?: number | null;
       intensity?: number | null;
       rpe?: number | null;
+      rir?: number | null;
+      notes?: string | null;
+      type?: string | null;
       intensity_unit_id: number;
     }>;
   }>;
@@ -24,11 +28,15 @@ export interface CreateRoutineData {
 
 export interface RoutineTemplatePayload {
   exercise_type_id: number;
+  notes?: string | null;
   set_templates: Array<{
     reps?: number | null;
     duration_seconds?: number | null;
     intensity?: number | null;
     rpe?: number | null;
+    rir?: number | null;
+    notes?: string | null;
+    type?: string | null;
     intensity_unit_id: number;
   }>;
 }
@@ -38,6 +46,8 @@ export interface UpdateRoutineData {
   description?: string | null;
   workout_type_id?: number;
   visibility?: RoutineVisibility;
+  author?: string | null;
+  category?: string | null;
   exercise_templates?: RoutineTemplatePayload[];
 }
 
