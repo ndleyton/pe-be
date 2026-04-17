@@ -7,9 +7,24 @@ import {
   type RoutineEditorTemplate,
 } from "@/features/routines/lib/routineEditor";
 import type { RoutineVisibility } from "@/features/routines/types";
+import { getWorkoutTypes } from "@/features/workouts/api/workoutTypeApi";
 
-// Default Strength Training workout type ID (from backend/src/workouts/service.py)
-const DEFAULT_WORKOUT_TYPE_ID = 4;
+const resolveDefaultWorkoutTypeId = async (queryClient: ReturnType<typeof useQueryClient>) => {
+  const workoutTypes = await queryClient.ensureQueryData({
+    queryKey: ["workoutTypes"],
+    queryFn: getWorkoutTypes,
+  });
+
+  const defaultWorkoutType =
+    workoutTypes.find((workoutType) => workoutType.name === "Strength Training") ??
+    workoutTypes[0];
+
+  if (!defaultWorkoutType) {
+    throw new Error("No workout types are available for routine creation.");
+  }
+
+  return defaultWorkoutType.id;
+};
 
 export const useRoutineCreateActions = ({
   description,
@@ -39,10 +54,12 @@ export const useRoutineCreateActions = ({
         throw new Error("Sign in to create a routine.");
       }
 
+      const workoutTypeId = await resolveDefaultWorkoutTypeId(queryClient);
+
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
-        workout_type_id: DEFAULT_WORKOUT_TYPE_ID,
+        workout_type_id: workoutTypeId,
         visibility,
         author: author?.trim() || null,
         category: category?.trim() || null,

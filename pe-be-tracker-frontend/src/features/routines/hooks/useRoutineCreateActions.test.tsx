@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRoutine } from "@/features/routines/api";
 import { buildRoutinePayload } from "@/features/routines/lib/routineEditor";
+import { getWorkoutTypes } from "@/features/workouts/api/workoutTypeApi";
 
 import { useRoutineCreateActions } from "./useRoutineCreateActions";
 
@@ -16,6 +17,10 @@ vi.mock("@/features/routines/api", () => ({
 
 vi.mock("@/features/routines/lib/routineEditor", () => ({
   buildRoutinePayload: vi.fn(),
+}));
+
+vi.mock("@/features/workouts/api/workoutTypeApi", () => ({
+  getWorkoutTypes: vi.fn(),
 }));
 
 // Mock useNavigate
@@ -43,10 +48,20 @@ describe("useRoutineCreateActions", () => {
   const mockNavigate = vi.fn();
   const mockCreateRoutine = vi.mocked(createRoutine);
   const mockBuildRoutinePayload = vi.mocked(buildRoutinePayload);
+  const mockGetWorkoutTypes = vi.mocked(getWorkoutTypes);
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    mockGetWorkoutTypes.mockResolvedValue([
+      {
+        id: 42,
+        name: "Strength Training",
+        description: "Default",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+      },
+    ]);
   });
 
 
@@ -87,7 +102,7 @@ describe("useRoutineCreateActions", () => {
     expect(mockCreateRoutine).not.toHaveBeenCalled();
   });
 
-  it("(2) payload shaping: trims data and uses correct default workout type", async () => {
+  it("(2) payload shaping: trims data and resolves the default workout type from cached data", async () => {
     const props = {
       ...defaultProps,
       name: "  Trimmed Name  ",
@@ -110,12 +125,37 @@ describe("useRoutineCreateActions", () => {
     expect(mockCreateRoutine).toHaveBeenCalledWith({
       name: "Trimmed Name",
       description: "Trimmed Desc",
-      workout_type_id: 4, // DEFAULT_WORKOUT_TYPE_ID
+      workout_type_id: 42,
       visibility: "private",
       author: "Trimmed Author",
       category: "Trimmed Category",
       exercise_templates: mockPayload,
     });
+  });
+
+  it("(2) payload shaping: falls back to the first available workout type", async () => {
+    mockGetWorkoutTypes.mockResolvedValue([
+      {
+        id: 7,
+        name: "Other",
+        description: "Fallback",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+      },
+    ]);
+    mockCreateRoutine.mockResolvedValue({ id: 123 } as any);
+
+    const { result } = renderHook(() => useRoutineCreateActions(defaultProps), {
+      wrapper: TestWrapper,
+    });
+
+    await result.current.saveMutation.mutateAsync();
+
+    expect(mockCreateRoutine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workout_type_id: 7,
+      }),
+    );
   });
 
   it("(2) payload shaping: coerces empty description/author/category to null", async () => {
