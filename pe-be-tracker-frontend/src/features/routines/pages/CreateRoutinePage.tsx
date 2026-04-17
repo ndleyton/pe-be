@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useBlocker, useNavigate } from "react-router-dom";
 
 import {
@@ -36,6 +36,7 @@ import { useAppBackNavigation } from "@/shared/hooks";
 const CreateRoutinePage = () => {
   const handleBack = useAppBackNavigation("/routines");
   const navigate = useNavigate();
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // We use useRoutineDetailsData with undefined routineId to get available intensity units
   const { availableIntensityUnits, isAuthenticated, unitsPending } =
@@ -101,11 +102,7 @@ const CreateRoutinePage = () => {
 
   const handleCancel = () => {
     if (hasUnsavedChanges) {
-      if (
-        confirm("You have unsaved changes. Are you sure you want to cancel?")
-      ) {
-        handleBack();
-      }
+      setShowExitConfirm(true);
     } else {
       handleBack();
     }
@@ -223,7 +220,7 @@ const CreateRoutinePage = () => {
         </div>
       </div>
 
-      <AlertDialog open={blocker.state === "blocked"}>
+      <AlertDialog open={blocker.state === "blocked" || showExitConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
@@ -233,10 +230,24 @@ const CreateRoutinePage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>
+            <AlertDialogCancel
+              onClick={() => {
+                if (blocker.state === "blocked") blocker.reset?.();
+                setShowExitConfirm(false);
+              }}
+            >
               Stay
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed?.()}>
+            <AlertDialogAction
+              onClick={() => {
+                if (blocker.state === "blocked") {
+                  blocker.proceed?.();
+                } else {
+                  setShowExitConfirm(false);
+                  handleBack();
+                }
+              }}
+            >
               Leave
             </AlertDialogAction>
           </AlertDialogFooter>
