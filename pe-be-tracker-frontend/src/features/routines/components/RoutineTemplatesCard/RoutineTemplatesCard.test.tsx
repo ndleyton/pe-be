@@ -113,6 +113,98 @@ describe("RoutineTemplatesCard", () => {
     expect(onUpdateSet).not.toHaveBeenCalled();
   });
 
+  it("accepts shorthand time input and normalizes it on blur", () => {
+    const onUpdateSet = vi.fn();
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const speedTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [{ ...speedSet, intensity_unit: { ...speedSet.intensity_unit! } }],
+    };
+
+    render(
+      <RoutineTemplatesCard
+        canEdit
+        editorTemplates={[speedTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={onUpdateSet}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    const input = screen.getByLabelText("Time");
+    fireEvent.change(input, { target: { value: "125" } });
+
+    expect(input).toHaveValue("125");
+    expect(onUpdateSet).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+
+    expect(input).toHaveValue("01:25");
+    expect(onUpdateSet).toHaveBeenLastCalledWith("template-1", "set-1", {
+      reps: null,
+      duration_seconds: 85,
+    });
+  });
+
+  it("restores the saved time draft on escape", () => {
+    const onUpdateSet = vi.fn();
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const speedTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [{ ...speedSet, intensity_unit: { ...speedSet.intensity_unit! } }],
+    };
+
+    render(
+      <RoutineTemplatesCard
+        canEdit
+        editorTemplates={[speedTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={onUpdateSet}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    const input = screen.getByLabelText("Time");
+    fireEvent.change(input, { target: { value: "123" } });
+
+    expect(input).toHaveValue("123");
+
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(input).toHaveValue("10:05");
+    expect(onUpdateSet).not.toHaveBeenCalled();
+  });
+
   it("shows reps for non-speed sets", () => {
     const baseTemplate = makeRoutineExerciseTemplate();
     const repTemplate: RoutineEditorTemplate = {

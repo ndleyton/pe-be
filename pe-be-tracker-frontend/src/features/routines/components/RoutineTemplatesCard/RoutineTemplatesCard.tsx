@@ -10,7 +10,6 @@ import {
 } from "@/features/routines/lib/routineEditor";
 import { prefersDurationForIntensityUnit } from "@/features/exercises/lib/intensityUnits";
 import {
-  canUpdateDurationInputValue,
   formatDurationInputValue,
   parseDurationInputValue,
   resolveSetValueMode,
@@ -72,6 +71,56 @@ type ActiveSetTarget = {
   setId: string;
 };
 
+const canUpdateRoutineDurationDraft = (value: string): boolean => {
+  const normalized = value.trim();
+
+  if (normalized === "") {
+    return true;
+  }
+
+  return /^(\d{0,5}|\d{0,3}:\d{0,2})$/.test(normalized);
+};
+
+const parseRoutineDurationDraft = (value: string): number | null => {
+  const normalized = value.trim();
+
+  if (normalized === "") {
+    return null;
+  }
+
+  const strictDuration = parseDurationInputValue(normalized);
+  if (strictDuration != null) {
+    return strictDuration;
+  }
+
+  const shorthandDurationMatch = normalized.match(/^(\d{1,3}):(\d{1,2})$/);
+  if (shorthandDurationMatch) {
+    const minutes = Number.parseInt(shorthandDurationMatch[1], 10);
+    const seconds = Number.parseInt(shorthandDurationMatch[2], 10);
+
+    if (seconds < 60) {
+      return minutes * 60 + seconds;
+    }
+
+    return null;
+  }
+
+  if (/^\d{1,2}$/.test(normalized)) {
+    return Number.parseInt(normalized, 10);
+  }
+
+  if (/^\d{3,5}$/.test(normalized)) {
+    const minutes = Number.parseInt(normalized.slice(0, -2), 10);
+    const seconds = Number.parseInt(normalized.slice(-2), 10);
+
+    if (seconds < 60) {
+      return minutes * 60 + seconds;
+    }
+  }
+
+  return null;
+};
+
 type EditableRoutineSetRowProps = {
   templateId: string;
   templateIndex: number;
@@ -101,12 +150,12 @@ const EditableRoutineSetRow = memo(
     const [durationDraft, setDurationDraft] = useState(() =>
       formatDurationInputValue(setTemplate.duration_seconds),
     );
+    const savedDurationValue = formatDurationInputValue(
+      setTemplate.duration_seconds,
+    );
 
     useEffect(() => {
       setDurationDraft((currentDraft) => {
-        const formattedDuration = formatDurationInputValue(
-          setTemplate.duration_seconds,
-        );
         const parsedDraft =
           currentDraft == null ? null : parseDurationInputValue(currentDraft);
 
@@ -121,9 +170,9 @@ const EditableRoutineSetRow = memo(
           return currentDraft;
         }
 
-        return formattedDuration;
+        return savedDurationValue;
       });
-    }, [setTemplate.duration_seconds, setTemplate.id]);
+    }, [savedDurationValue, setTemplate.duration_seconds, setTemplate.id]);
 
     const prefersTimeByDefault = prefersDurationForIntensityUnit(
       setTemplate.intensity_unit_id,
@@ -133,6 +182,30 @@ const EditableRoutineSetRow = memo(
       prefersTimeByDefault,
     );
     const isTimeMode = setValueMode === "time";
+    const commitDurationDraft = (nextDraft: string) => {
+      const parsedDuration = parseRoutineDurationDraft(nextDraft);
+
+      if (nextDraft.trim() === "") {
+        setDurationDraft("");
+        onUpdateSet(templateId, setTemplate.id, {
+          reps: null,
+          duration_seconds: null,
+        });
+        return;
+      }
+
+      if (parsedDuration == null) {
+        setDurationDraft(savedDurationValue);
+        return;
+      }
+
+      const normalizedDuration = formatDurationInputValue(parsedDuration);
+      setDurationDraft(normalizedDuration);
+      onUpdateSet(templateId, setTemplate.id, {
+        reps: null,
+        duration_seconds: parsedDuration,
+      });
+    };
 
     return (
       <div
@@ -185,10 +258,11 @@ const EditableRoutineSetRow = memo(
                 data-testid={`routine-set-time-${templateIndex}-${setIndex}`}
                 type="text"
                 inputMode="numeric"
+                maxLength={6}
                 value={durationDraft}
                 onChange={(event) => {
                   const nextValue = event.target.value;
-                  if (!canUpdateDurationInputValue(nextValue)) {
+                  if (!canUpdateRoutineDurationDraft(nextValue)) {
                     return;
                   }
 
@@ -204,28 +278,19 @@ const EditableRoutineSetRow = memo(
                     duration_seconds: parsedDuration,
                   });
                 }}
-                onBlur={() => {
-                  const parsedDuration = parseDurationInputValue(durationDraft);
-
-                  if (durationDraft.trim() === "") {
-                    onUpdateSet(templateId, setTemplate.id, {
-                      reps: null,
-                      duration_seconds: null,
-                    });
-                    return;
+                onBlur={() => commitDurationDraft(durationDraft)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitDurationDraft(durationDraft);
+                    (event.currentTarget as HTMLInputElement).blur();
                   }
 
-                  if (parsedDuration == null) {
-                    setDurationDraft(
-                      formatDurationInputValue(setTemplate.duration_seconds),
-                    );
-                    return;
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setDurationDraft(savedDurationValue);
+                    (event.currentTarget as HTMLInputElement).blur();
                   }
-
-                  onUpdateSet(templateId, setTemplate.id, {
-                    reps: null,
-                    duration_seconds: parsedDuration,
-                  });
                 }}
                 placeholder="00:00"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
