@@ -343,15 +343,18 @@ const routineEditorReducer = (
         ),
       };
     case "initializeEmpty":
+      if (state.initialSnapshot) {
+        return state;
+      }
       return {
         ...state,
         initialSnapshot: buildComparableSnapshot(
-          state.name,
-          state.description,
-          state.visibility,
-          state.author,
-          state.category,
-          state.editorTemplates,
+          initialState.name,
+          initialState.description,
+          initialState.visibility,
+          initialState.author,
+          initialState.category,
+          initialState.editorTemplates,
         ),
       };
     default:
