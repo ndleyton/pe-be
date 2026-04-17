@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Info, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Info, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 
 import {
   formatSetSummary,
@@ -40,6 +42,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+
+const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
+  import("@/features/exercises/pages/ExerciseTypeDetailsPage"),
+);
 
 type RoutineTemplatesCardProps = {
   canEdit: boolean;
@@ -175,9 +181,31 @@ export const RoutineTemplatesCard = ({
                   {templateIndex + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="break-words text-lg font-black tracking-tight leading-tight">
-                    {template.exercise_type?.name ?? "Missing Selection"}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="break-words text-lg font-black tracking-tight leading-tight">
+                      {template.exercise_type?.name ?? "Missing Selection"}
+                    </h2>
+                    {template.exercise_type && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:bg-accent hover:text-accent-foreground h-6 w-6 p-0 dark:hover:bg-gray-800"
+                        asChild
+                        onMouseEnter={preloadExerciseTypeDetailsPage}
+                        onTouchStart={preloadExerciseTypeDetailsPage}
+                        onFocus={preloadExerciseTypeDetailsPage}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Link
+                          to={`/exercise-types/${template.exercise_type.id}`}
+                          aria-label={`View details for ${template.exercise_type.name}`}
+                          title="View exercise details"
+                        >
+                          <ExternalLink className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                       {template.set_templates.length} set{template.set_templates.length !== 1 ? "s" : ""}
