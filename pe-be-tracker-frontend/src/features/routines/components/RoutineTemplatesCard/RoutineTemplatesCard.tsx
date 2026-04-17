@@ -173,7 +173,7 @@ export const RoutineTemplatesCard = ({
           <div
             key={template.id}
             data-testid={`routine-template-${templateIndex}`}
-            className="rounded-2xl border border-border/40 bg-muted/20 p-5 shadow-sm transition-all hover:bg-muted/30"
+            className="rounded-2xl border border-border/40 bg-muted/20 p-4 shadow-sm transition-all hover:bg-muted/30"
           >
             <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/10 pb-4">
               <div className="flex min-w-0 items-start gap-4">
@@ -289,7 +289,7 @@ export const RoutineTemplatesCard = ({
                       <div
                         key={setTemplate.id}
                         data-testid={`routine-template-${templateIndex}-set-${setIndex}`}
-                        className="rounded-xl border border-border/30 bg-background/50 p-4 shadow-sm backdrop-blur-sm"
+                        className="rounded-xl border border-border/30 bg-background/50 px-3 py-4 shadow-sm backdrop-blur-sm"
                       >
                         <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border/10 pb-3">
                           <div className="flex min-w-0 items-center gap-3">
