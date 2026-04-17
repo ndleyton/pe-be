@@ -85,7 +85,7 @@ describe("CreateRoutinePage", () => {
         isPending: false,
         mutate: vi.fn(),
       },
-    } as ReturnType<typeof useRoutineCreateActions>);
+    } as unknown as ReturnType<typeof useRoutineCreateActions>);
   });
 
   it("does not redirect before auth initialization completes", () => {

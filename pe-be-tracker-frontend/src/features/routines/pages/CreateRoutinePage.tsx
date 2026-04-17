@@ -1,11 +1,7 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker, useNavigate } from "react-router-dom";
 
-import {
-  ExerciseTypeModal,
-  IntensityUnitModal,
-} from "@/features/exercises/components";
 import {
   RoutineInfoCard,
   RoutineTemplatesCard,
@@ -32,6 +28,13 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { useAppBackNavigation } from "@/shared/hooks";
+
+const ExerciseTypeModal = lazy(
+  () => import("@/features/exercises/components/ExerciseTypeModal"),
+);
+const IntensityUnitModal = lazy(
+  () => import("@/features/exercises/components/IntensityUnitModal"),
+);
 
 const CreateRoutinePage = () => {
   const handleBack = useAppBackNavigation("/routines");
@@ -263,17 +266,25 @@ const CreateRoutinePage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <ExerciseTypeModal
-        isOpen={exercisePickerTarget !== null}
-        onClose={closeExercisePicker}
-        onSelect={handleExerciseTypeSelected}
-      />
+      {exercisePickerTarget !== null ? (
+        <Suspense fallback={null}>
+          <ExerciseTypeModal
+            isOpen={true}
+            onClose={closeExercisePicker}
+            onSelect={handleExerciseTypeSelected}
+          />
+        </Suspense>
+      ) : null}
 
-      <IntensityUnitModal
-        isOpen={unitPickerTarget !== null}
-        onClose={closeUnitPicker}
-        onSelect={handleIntensityUnitSelected}
-      />
+      {unitPickerTarget !== null ? (
+        <Suspense fallback={null}>
+          <IntensityUnitModal
+            isOpen={true}
+            onClose={closeUnitPicker}
+            onSelect={handleIntensityUnitSelected}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 };
