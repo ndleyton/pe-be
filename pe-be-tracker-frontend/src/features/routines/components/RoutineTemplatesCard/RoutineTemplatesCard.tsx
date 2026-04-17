@@ -668,6 +668,11 @@ export const RoutineTemplatesCard = ({
                                   step={0.5}
                                   className="h-full"
                                   aria-labelledby="set-rir-label-active"
+                                  aria-valuetext={
+                                    setTemplate.rir == null
+                                      ? "RIR not set"
+                                      : `RIR: ${setTemplate.rir} reps remaining`
+                                  }
                                   onValueChange={(values) => {
                                     const val = values[0] ?? 0;
                                     onUpdateSet(template.id, setTemplate.id, {

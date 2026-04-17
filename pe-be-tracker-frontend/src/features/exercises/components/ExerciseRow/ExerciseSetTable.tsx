@@ -566,8 +566,8 @@ const SetOptionsDialogContent = ({
                       aria-labelledby={`set-rir-label-active`}
                       aria-valuetext={
                         setRirValue == null
-                          ? "Not set"
-                          : `Reps in Reserve ${setRirValue}`
+                          ? "RIR not set"
+                          : `RIR: ${setRirValue} reps remaining`
                       }
                       onValueChange={(values: number[]) => {
                         const val = values[0] ?? 0;
