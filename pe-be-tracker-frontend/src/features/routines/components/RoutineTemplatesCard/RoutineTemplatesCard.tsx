@@ -235,7 +235,7 @@ export const RoutineTemplatesCard = ({
               )}
             </div>
 
-            <div className={canEdit ? "space-y-3" : "flex flex-wrap gap-2 mt-2"}>
+            <div className={canEdit ? "space-y-3" : "mt-2 space-y-2"}>
               {template.set_templates.map((setTemplate, setIndex) =>
                 canEdit ? (
                   (() => {
@@ -286,11 +286,11 @@ export const RoutineTemplatesCard = ({
                               data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
                               variant="ghost"
                               size="sm"
+                              aria-label={`Remove set ${setIndex + 1}`}
                               onClick={() => onRemoveSet(template.id, setTemplate.id)}
-                              className="h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-bold transition-all text-[10px] uppercase tracking-wider px-2"
+                              className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
                             >
-                              <Trash2 className="mr-1.5 h-3 w-3" />
-                              Remove
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -442,10 +442,12 @@ export const RoutineTemplatesCard = ({
                 ) : (
                   <div
                     key={setTemplate.id}
-                    className="flex max-w-full items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
+                    className="flex w-full items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
                   >
-                    <span className="text-[10px] font-black text-primary opacity-40">{setIndex + 1}</span>
-                    <span className="min-w-0 break-words text-xs font-bold tracking-tight italic text-foreground opacity-90">
+                    <span className="mt-0.5 text-[10px] font-black text-primary opacity-40">
+                      {setIndex + 1}
+                    </span>
+                    <span className="min-w-0 break-words text-sm font-bold tracking-tight italic text-foreground opacity-90">
                       {formatSetSummary(setTemplate)}
                     </span>
                   </div>

@@ -149,6 +149,88 @@ describe("RoutineTemplatesCard", () => {
     expect(screen.queryByLabelText("Time")).not.toBeInTheDocument();
   });
 
+  it("uses icon-only remove controls in editor mode", () => {
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const repTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [{ ...repSet, intensity_unit: { ...repSet.intensity_unit! } }],
+    };
+
+    render(
+      <RoutineTemplatesCard
+        canEdit
+        editorTemplates={[repTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={vi.fn()}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    const removeSetButton = screen.getByTestId("remove-routine-set-0-0");
+    expect(removeSetButton).toHaveAccessibleName("Remove set 1");
+    expect(removeSetButton).not.toHaveTextContent("Remove");
+  });
+
+  it("renders view-only sets in a stacked list", () => {
+    const baseTemplate = makeRoutineExerciseTemplate();
+    const repTemplate: RoutineEditorTemplate = {
+      id: "template-1",
+      exercise_type_id: baseTemplate.exercise_type_id,
+      exercise_type: {
+        id: baseTemplate.exercise_type?.id ?? 1,
+        name: baseTemplate.exercise_type?.name ?? "Exercise",
+        description: baseTemplate.exercise_type?.description ?? null,
+        default_intensity_unit:
+          baseTemplate.exercise_type?.default_intensity_unit ?? 1,
+        times_used: baseTemplate.exercise_type?.times_used ?? 0,
+      },
+      notes: baseTemplate.notes ?? "",
+      set_templates: [
+        { ...repSet, id: "set-1", intensity_unit: { ...repSet.intensity_unit! } },
+        {
+          ...repSet,
+          id: "set-2",
+          reps: 10,
+          intensity_unit: { ...repSet.intensity_unit! },
+        },
+      ],
+    };
+
+    const { container } = render(
+      <RoutineTemplatesCard
+        canEdit={false}
+        editorTemplates={[repTemplate]}
+        onAddExercise={noop}
+        onAddSet={noop}
+        onChangeExercise={noop}
+        onRemoveSet={noop}
+        onRemoveTemplate={noop}
+        onSelectUnit={noop}
+        onUpdateSet={vi.fn()}
+        onUpdateTemplate={noop}
+      />,
+    );
+
+    expect(screen.getByText(/8 reps/i)).toBeInTheDocument();
+    expect(screen.getByText(/10 reps/i)).toBeInTheDocument();
+    expect(container.querySelector(".mt-2.space-y-2")).not.toBeNull();
+  });
+
   it("exposes RIR aria-valuetext for the inverted slider mapping", () => {
     const baseTemplate = makeRoutineExerciseTemplate();
     const repTemplate: RoutineEditorTemplate = {
