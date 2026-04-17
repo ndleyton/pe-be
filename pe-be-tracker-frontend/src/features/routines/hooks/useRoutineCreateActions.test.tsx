@@ -113,7 +113,7 @@ describe("useRoutineCreateActions", () => {
     };
 
     const mockPayload = [
-      { exercise_type_id: 1, set_templates: [] },
+      { exercise_type_id: 1, notes: null, set_templates: [] },
     ] satisfies CreateRoutineData["exercise_templates"];
     mockBuildRoutinePayload.mockReturnValue(mockPayload);
     mockCreateRoutine.mockResolvedValue({ id: 123 } as unknown as Routine);
