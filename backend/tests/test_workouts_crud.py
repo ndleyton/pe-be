@@ -197,6 +197,27 @@ async def test_create_workout_success_and_integrity_mappings(db_session):
     assert invalid_range.value.field == "end_time"
 
 
+async def test_create_workout_type_rejects_duplicate_names(db_session):
+    await _seed_workout_type(db_session, "Strength Training", "Primary strength work")
+
+    with pytest.raises(ValueError, match="already exists"):
+        await crud.create_workout_type(
+            db_session,
+            WorkoutTypeCreate(
+                name=" Strength Training ",
+                description="Duplicate strength work",
+            ),
+        )
+
+    workout_types = await crud.get_workout_types(db_session)
+    matching_names = [
+        workout_type
+        for workout_type in workout_types
+        if workout_type.name == "Strength Training"
+    ]
+    assert len(matching_names) == 1
+
+
 async def test_update_workout_handles_success_missing_and_integrity_errors(db_session):
     owner = await _seed_user(db_session, "workout-update@example.com")
     other = await _seed_user(db_session, "workout-update-other@example.com")
