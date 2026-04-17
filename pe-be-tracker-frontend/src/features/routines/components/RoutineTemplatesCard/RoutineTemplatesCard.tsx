@@ -169,55 +169,31 @@ export const RoutineTemplatesCard = ({
             data-testid={`routine-template-${templateIndex}`}
             className="rounded-2xl border border-border/40 bg-muted/20 p-5 shadow-sm transition-all hover:bg-muted/30"
           >
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/10 pb-4">
               <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background border border-border/40 text-xl font-black shadow-inner">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background border border-border/40 text-xl font-black shadow-inner">
                   {templateIndex + 1}
                 </div>
-                <div className="min-w-0">
-                  <h2 className="break-words text-lg font-black tracking-tight">
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words text-lg font-black tracking-tight leading-tight">
                     {template.exercise_type?.name ?? "Missing Selection"}
                   </h2>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                       {template.set_templates.length} set{template.set_templates.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  {!canEdit && template.notes && (
-                    <p className="mt-2 text-xs text-muted-foreground italic leading-relaxed max-w-md">
-                      {template.notes}
-                    </p>
-                  )}
-                  {canEdit && (
-                    <div className="mt-3">
-                      <label
-                        htmlFor={`${template.id}-notes`}
-                        className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                      >
-                        Coaching Notes
-                      </label>
-                      <Textarea
-                        id={`${template.id}-notes`}
-                        placeholder="e.g. Focus on tempo, keep core tight..."
-                        value={template.notes}
-                        onChange={(e) =>
-                          onUpdateTemplate(template.id, { notes: e.target.value })
-                        }
-                        className="mt-1 min-h-[60px] cursor-text rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm resize-none"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
               {canEdit && (
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-1.5 pt-1">
                   <Button
                     data-testid={`change-routine-exercise-${templateIndex}`}
                     variant="outline"
                     size="sm"
                     aria-label={`Change exercise ${templateIndex + 1}`}
                     onClick={() => onChangeExercise(template.id)}
-                    className="h-8 w-8 rounded-xl border-border/60 p-0 hover:bg-muted transition-all"
+                    className="h-8 w-8 rounded-xl border-border/60 p-0 hover:bg-muted transition-all shadow-sm"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -231,6 +207,33 @@ export const RoutineTemplatesCard = ({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
+              {!canEdit && template.notes && (
+                <p className="text-xs text-muted-foreground italic leading-relaxed max-w-md">
+                  {template.notes}
+                </p>
+              )}
+              {canEdit && (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor={`${template.id}-notes`}
+                    className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                  >
+                    Coaching Notes
+                  </label>
+                  <Textarea
+                    id={`${template.id}-notes`}
+                    placeholder="e.g. Focus on tempo, keep core tight..."
+                    value={template.notes}
+                    onChange={(e) =>
+                      onUpdateTemplate(template.id, { notes: e.target.value })
+                    }
+                    className="min-h-[80px] cursor-text rounded-2xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm resize-none shadow-inner"
+                  />
                 </div>
               )}
             </div>

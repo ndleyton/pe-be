@@ -95,8 +95,8 @@ const CreateRoutinePage = () => {
     useCallback(() => hasUnsavedChanges, [hasUnsavedChanges]),
   );
 
-  const handleSave = async () => {
-    await saveMutation.mutateAsync();
+  const handleSave = () => {
+    saveMutation.mutate();
   };
 
   const handleCancel = () => {
