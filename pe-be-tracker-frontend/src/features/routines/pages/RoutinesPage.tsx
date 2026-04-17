@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
-import { RoutinesPageSkeleton, RoutinesGridSkeleton } from "@/features/routines/components";
+import { RoutinesGridSkeleton } from "@/features/routines/components";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
 import type { RoutineSummary } from "@/features/routines/types";

@@ -1,6 +1,5 @@
-import React from "react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Card, CardContent } from "@/shared/components/ui/card";
+import { Card } from "@/shared/components/ui/card";
 
 type RoutinesPageSkeletonProps = {
   count?: number;
