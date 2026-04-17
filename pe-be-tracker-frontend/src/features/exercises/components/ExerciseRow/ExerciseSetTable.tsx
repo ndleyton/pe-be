@@ -217,7 +217,7 @@ const ExerciseSetRow = memo(({
         <div className="min-w-0 flex justify-center">
           <Input
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             value={durationValue}
             placeholder="00:00"
             data-testid="time-input"

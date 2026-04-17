@@ -52,7 +52,7 @@ export const canUpdateDurationInputValue = (value: string): boolean => {
     return true;
   }
 
-  return /^\d{0,3}(?::\d{0,2})?$/.test(normalized);
+  return /^:?\d{0,3}(?::\d{0,2})?$/.test(normalized);
 };
 
 export const parseDurationInputValue = (
@@ -64,13 +64,19 @@ export const parseDurationInputValue = (
     return null;
   }
 
-  const match = normalized.match(/^(\d{1,3}):([0-5]\d)$/);
+  // Handle plain seconds (no colon)
+  if (/^\d+$/.test(normalized)) {
+    return Number.parseInt(normalized, 10);
+  }
+
+  // Handle MM:SS or M:S or :S
+  const match = normalized.match(/^(\d{0,3}):(\d{0,2})$/);
   if (!match) {
     return null;
   }
 
-  return (
-    Number.parseInt(match[1], 10) * 60 +
-    Number.parseInt(match[2], 10)
-  );
+  const minutes = match[1] === "" ? 0 : Number.parseInt(match[1], 10);
+  const seconds = match[2] === "" ? 0 : Number.parseInt(match[2], 10);
+
+  return minutes * 60 + seconds;
 };

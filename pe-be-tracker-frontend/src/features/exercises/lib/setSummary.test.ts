@@ -20,7 +20,7 @@ describe("formatSetSummary", () => {
         intensity: 10,
         intensityUnitAbbreviation: "km/h",
       }),
-    ).toBe("20 min @ 10 km/h");
+    ).toBe("20:00 @ 10 km/h");
   });
 
   it("formats duration-only sets", () => {
@@ -28,7 +28,7 @@ describe("formatSetSummary", () => {
       formatSetSummary({
         duration_seconds: 45,
       }),
-    ).toBe("45 sec");
+    ).toBe("00:45");
   });
 
   it("does not append placeholder intensity segments", () => {

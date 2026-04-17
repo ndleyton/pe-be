@@ -1,4 +1,5 @@
 import { formatDecimal } from "@/utils/format";
+import { formatDurationInputValue } from "./setValue";
 
 export type SetSummaryInput = {
   reps?: number | null;
@@ -12,15 +13,11 @@ export type SetSummaryInput = {
 export const formatDurationSeconds = (
   durationSeconds: number | null | undefined,
 ): string | null => {
-  if (durationSeconds == null) {
+  if (durationSeconds == null || durationSeconds === 0) {
     return null;
   }
 
-  if (durationSeconds % 60 === 0) {
-    return `${durationSeconds / 60} min`;
-  }
-
-  return `${durationSeconds} sec`;
+  return formatDurationInputValue(durationSeconds);
 };
 
 export const formatSetSummary = ({

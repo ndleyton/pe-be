@@ -101,6 +101,9 @@ const EditableRoutineSetRow = memo(
     const [durationDraft, setDurationDraft] = useState(() =>
       formatDurationInputValue(setTemplate.duration_seconds),
     );
+    const [repsDraft, setRepsDraft] = useState(() =>
+      setTemplate.reps != null ? String(setTemplate.reps) : "",
+    );
 
     useEffect(() => {
       setDurationDraft((currentDraft) => {
@@ -124,6 +127,26 @@ const EditableRoutineSetRow = memo(
         return formattedDuration;
       });
     }, [setTemplate.duration_seconds, setTemplate.id]);
+
+    useEffect(() => {
+      setRepsDraft((currentDraft) => {
+        const formattedReps =
+          setTemplate.reps != null ? String(setTemplate.reps) : "";
+
+        if (currentDraft.trim() !== "" && isNaN(parseInt(currentDraft, 10))) {
+          return currentDraft;
+        }
+
+        if (
+          currentDraft !== "" &&
+          parseInt(currentDraft, 10) === setTemplate.reps
+        ) {
+          return currentDraft;
+        }
+
+        return formattedReps;
+      });
+    }, [setTemplate.reps, setTemplate.id]);
 
     const prefersTimeByDefault = prefersDurationForIntensityUnit(
       setTemplate.intensity_unit_id,
@@ -184,7 +207,7 @@ const EditableRoutineSetRow = memo(
                 id={`${templateId}-${setTemplate.id}-time`}
                 data-testid={`routine-set-time-${templateIndex}-${setIndex}`}
                 type="text"
-                inputMode="numeric"
+                inputMode="text"
                 value={durationDraft}
                 onChange={(event) => {
                   const nextValue = event.target.value;
@@ -227,6 +250,19 @@ const EditableRoutineSetRow = memo(
                     duration_seconds: parsedDuration,
                   });
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setDurationDraft(
+                      formatDurationInputValue(setTemplate.duration_seconds),
+                    );
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
                 placeholder="00:00"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
               />
@@ -234,19 +270,54 @@ const EditableRoutineSetRow = memo(
               <Input
                 id={`${templateId}-${setTemplate.id}-reps`}
                 data-testid={`routine-set-reps-${templateIndex}-${setIndex}`}
-                type="number"
-                min="0"
-                step="1"
-                value={setTemplate.reps ?? ""}
+                type="text"
+                inputMode="numeric"
+                value={repsDraft}
                 onChange={(event) => {
                   const nextValue = event.target.value;
+                  if (nextValue !== "" && !/^\d+$/.test(nextValue)) {
+                    return;
+                  }
+
+                  setRepsDraft(nextValue);
+
+                  const parsedReps =
+                    nextValue === "" ? null : Number.parseInt(nextValue, 10);
+                  if (parsedReps === null) return;
+
                   onUpdateSet(templateId, setTemplate.id, {
-                    reps:
-                      nextValue.trim() === ""
-                        ? null
-                        : Number.parseInt(nextValue, 10),
+                    reps: parsedReps,
                     duration_seconds: null,
                   });
+                }}
+                onBlur={() => {
+                  const parsedReps =
+                    repsDraft === "" ? null : Number.parseInt(repsDraft, 10);
+
+                  if (repsDraft !== "" && Number.isNaN(parsedReps)) {
+                    setRepsDraft(
+                      setTemplate.reps != null ? String(setTemplate.reps) : "",
+                    );
+                    return;
+                  }
+
+                  onUpdateSet(templateId, setTemplate.id, {
+                    reps: parsedReps,
+                    duration_seconds: null,
+                  });
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setRepsDraft(
+                      setTemplate.reps != null ? String(setTemplate.reps) : "",
+                    );
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }
                 }}
                 placeholder="0"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
@@ -275,6 +346,16 @@ const EditableRoutineSetRow = memo(
                   intensity: parseDecimalInput(event.target.value),
                 })
               }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  (event.currentTarget as HTMLInputElement).blur();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  (event.currentTarget as HTMLInputElement).blur();
+                }
+              }}
               placeholder="0.0"
               className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
             />
