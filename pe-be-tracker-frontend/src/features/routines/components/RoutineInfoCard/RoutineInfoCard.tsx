@@ -168,7 +168,7 @@ export const RoutineInfoCard = ({
                 data-testid="routine-author-input"
                 value={author || ""}
                 onChange={(event) => onAuthorChange(event.target.value)}
-                placeholder="Optional author/influencer name"
+                placeholder="Optional author name"
                 className="h-12 rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all font-semibold"
               />
             </div>
