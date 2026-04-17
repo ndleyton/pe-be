@@ -156,9 +156,7 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
         f"Show correct joint angles and body positioning for this specific phase."
     )
 
-    description_line = (
-        f"Description: {description}\n" if description else ""
-    )
+    description_line = f"Description: {description}\n" if description else ""
 
     return (
         f"{identity}\n"
