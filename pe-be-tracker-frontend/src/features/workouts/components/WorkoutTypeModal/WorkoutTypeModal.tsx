@@ -4,6 +4,7 @@ import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 import { useGuestStore, useAuthStore, GuestWorkoutType } from "@/stores";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { ClipboardList } from "lucide-react";
 import React from "react";
 
 interface WorkoutType {
@@ -97,7 +98,7 @@ const WorkoutTypeModal: React.FC<WorkoutTypeModalProps> = ({
       return (
         <div className="py-10 text-center">
           <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-            <span className="text-muted-foreground text-2xl text-center">📋</span>
+            <ClipboardList className="h-8 w-8 text-muted-foreground/60" />
           </div>
           <h4 className="text-foreground mb-2 font-semibold">
             No workout types available

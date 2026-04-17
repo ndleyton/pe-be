@@ -6,7 +6,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
 import { toPng } from "html-to-image";
-import { Download, RefreshCw, Sparkles, Timer, CircleAlert } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList } from "lucide-react";
 import { useUIStore } from "@/stores";
 
 const LAYOUT_STABILIZATION_DELAY_MS = 50;
@@ -329,7 +329,8 @@ const FinishWorkoutModal = ({
           {onSaveRoutine && exercises.length > 0 && (
             <div className="bg-accent/10 border-accent/20 mb-4 shrink-0 rounded-lg border p-3">
               <div className="mb-2 flex items-center space-x-2">
-                <span className="text-sm font-medium">📋 Save as Routine</span>
+                <ClipboardList className="h-4 w-4" />
+                <span className="text-sm font-medium">Save as Routine</span>
               </div>
               <p className="text-muted-foreground mb-3 text-sm">
                 Save this workout as a reusable routine for quick starts in the
