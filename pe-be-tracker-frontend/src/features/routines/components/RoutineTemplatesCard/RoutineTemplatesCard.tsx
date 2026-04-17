@@ -211,32 +211,34 @@ export const RoutineTemplatesCard = ({
               )}
             </div>
 
-            <div className="mb-6">
-              {!canEdit && template.notes && (
-                <p className="text-xs text-muted-foreground italic leading-relaxed max-w-md">
-                  {template.notes}
-                </p>
-              )}
-              {canEdit && (
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor={`${template.id}-notes`}
-                    className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
-                  >
-                    Coaching Notes
-                  </label>
-                  <Textarea
-                    id={`${template.id}-notes`}
-                    placeholder="e.g. Focus on tempo, keep core tight..."
-                    value={template.notes}
-                    onChange={(e) =>
-                      onUpdateTemplate(template.id, { notes: e.target.value })
-                    }
-                    className="min-h-[80px] cursor-text rounded-2xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm resize-none shadow-inner"
-                  />
-                </div>
-              )}
-            </div>
+            {(canEdit || template.notes) && (
+              <div className="mb-6">
+                {!canEdit && template.notes && (
+                  <p className="text-xs text-muted-foreground italic leading-relaxed max-w-md">
+                    {template.notes}
+                  </p>
+                )}
+                {canEdit && (
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor={`${template.id}-notes`}
+                      className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                    >
+                      Coaching Notes
+                    </label>
+                    <Textarea
+                      id={`${template.id}-notes`}
+                      placeholder="e.g. Focus on tempo, keep core tight..."
+                      value={template.notes}
+                      onChange={(e) =>
+                        onUpdateTemplate(template.id, { notes: e.target.value })
+                      }
+                      className="min-h-[80px] cursor-text rounded-2xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm resize-none shadow-inner"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className={canEdit ? "space-y-3" : "mt-2 space-y-2"}>
               {template.set_templates.map((setTemplate, setIndex) =>
