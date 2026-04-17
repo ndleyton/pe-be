@@ -87,15 +87,17 @@ const RoutinesPage = () => {
                   Select or search for a plan
                 </p>
               </div>
-              <Button
-                asChild
-                className="rounded-xl font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
-              >
-                <Link to="/routines/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Routine
-                </Link>
-              </Button>
+              {isAuthenticated && (
+                <Button
+                  asChild
+                  className="rounded-xl font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
+                >
+                  <Link to="/routines/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Routine
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

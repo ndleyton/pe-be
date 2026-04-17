@@ -1,6 +1,6 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback } from "react";
-import { useBlocker } from "react-router-dom";
+import { useCallback, useEffect } from "react";
+import { useBlocker, useNavigate } from "react-router-dom";
 
 import {
   ExerciseTypeModal,
@@ -35,10 +35,18 @@ import { useAppBackNavigation } from "@/shared/hooks";
 
 const CreateRoutinePage = () => {
   const handleBack = useAppBackNavigation("/routines");
+  const navigate = useNavigate();
 
   // We use useRoutineDetailsData with undefined routineId to get available intensity units
   const { availableIntensityUnits, isAuthenticated, unitsPending } =
     useRoutineDetailsData(undefined);
+
+  // Unauthorized users should not have permission to enter the routine creation screen
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/routines", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const {
     description,
@@ -129,15 +137,6 @@ const CreateRoutinePage = () => {
         </div>
 
         <div className="grid gap-8 text-left">
-          {!isAuthenticated && (
-            <Alert variant="destructive">
-              <AlertTitle>Authentication required</AlertTitle>
-              <AlertDescription>
-                You must be signed in to create and save routines.
-              </AlertDescription>
-            </Alert>
-          )}
-
           {saveMutation.error && (
             <Alert
               variant="destructive"

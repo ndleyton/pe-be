@@ -13,6 +13,8 @@ import {
 } from "@/features/routines/lib/routinePermissions";
 import { useAuthStore } from "@/stores";
 
+const EMPTY_UNITS: any[] = [];
+
 export const useRoutineDetailsData = (routineId: string | undefined) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentUser = useAuthStore((state) => state.user);
@@ -29,7 +31,7 @@ export const useRoutineDetailsData = (routineId: string | undefined) => {
   });
 
   const {
-    data: serverIntensityUnits = [],
+    data: serverIntensityUnits = EMPTY_UNITS,
     isPending: unitsPending,
   } = useQuery({
     queryKey: ["intensityUnits"],
