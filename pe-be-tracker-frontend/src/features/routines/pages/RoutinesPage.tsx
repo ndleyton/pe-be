@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
-import { RoutinesPageSkeleton } from "@/features/routines/components";
+import { RoutinesPageSkeleton, RoutinesGridSkeleton } from "@/features/routines/components";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
 import type { RoutineSummary } from "@/features/routines/types";
@@ -63,44 +63,26 @@ const RoutinesPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <RoutineStructuredData data={routineListJsonLd} />
-      <div className="mb-6">
-        <div className="mb-6 flex items-center gap-4">
+
+      <div className="mx-auto">
+        <div className="mb-8 text-center sm:mb-10 relative">
           <Button
             variant="ghost"
             size="icon"
             aria-label="Go back"
             type="button"
             onClick={handleBack}
-            className="md:hidden -ml-2"
+            className="md:hidden absolute left-0 top-1/2 -translate-y-1/2 -ml-2 shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Routines
-                </h1>
-                <p className="text-muted-foreground/70 text-xs font-bold uppercase tracking-widest mt-0.5">
-                  Select or search for a plan
-                </p>
-              </div>
-              {isAuthenticated && (
-                <Button
-                  asChild
-                  className="rounded-xl font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
-                >
-                  <Link to="/routines/new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Routine
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </div>
+          <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Routines
+          </h1>
         </div>
+
         {/* Search and Filter Controls */}
         <div className="mb-10 flex flex-col gap-4 lg:flex-row">
           <div className="relative flex-1 group">
@@ -124,7 +106,9 @@ const RoutinesPage = () => {
                 onClick={() => setOrderBy("createdAt")}
                 className={cn(
                   "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
-                  orderBy === "createdAt" ? "shadow-md scale-[1.02]" : "opacity-60"
+                  orderBy === "createdAt"
+                    ? "shadow-md scale-[1.02]"
+                    : "opacity-60",
                 )}
               >
                 Recent
@@ -135,65 +119,80 @@ const RoutinesPage = () => {
                 onClick={() => setOrderBy("name")}
                 className={cn(
                   "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
-                  orderBy === "name" ? "shadow-md scale-[1.02]" : "opacity-60"
+                  orderBy === "name" ? "shadow-md scale-[1.02]" : "opacity-60",
                 )}
               >
                 A-Z
               </Button>
             </div>
+
+            {isAuthenticated && (
+              <Button
+                asChild
+                className="h-16 rounded-2xl px-6 font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all shrink-0"
+              >
+                <Link to="/routines/new">
+                  <Plus className="mr-2 h-5 w-5" />
+                  <span className="hidden sm:inline">New Routine</span>
+                  <span className="sm:hidden">New</span>
+                </Link>
+              </Button>
+            )}
           </div>
+        </div>
+
+        {/* Grid Area with Loading State */}
+        <div className="min-h-[400px]">
+          {isPending ? (
+            <RoutinesGridSkeleton />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
+                {filteredRoutines.map((routine) => (
+                  <RoutineQuickStartCard
+                    key={routine.id}
+                    routine={routine}
+                    onStartWorkout={startWorkoutFromRoutine}
+                  />
+                ))}
+              </div>
+
+              {/* Loading more indicator index scroll */}
+              {isFetchingNextPage && (
+                <div className="flex justify-center py-8">
+                  <span className="loading loading-spinner loading-lg"></span>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {filteredRoutines.length === 0 && (
+                <div className="py-20 text-center">
+                  <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
+                    <Search className="text-muted-foreground h-10 w-10 opacity-20" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    No routines found
+                  </h3>
+                  <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+                    {searchTerm
+                      ? "No routines match your current search"
+                      : "No routines available"}
+                  </p>
+                  {searchTerm && (
+                    <Button
+                      onClick={() => setSearchTerm("")}
+                      variant="outline"
+                      className="rounded-xl border-border/40 font-bold"
+                    >
+                      Clear search
+                    </Button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-
-      {/* Loading State */}
-      {isPending && <RoutinesPageSkeleton />}
-
-      {/* Routines Grid */}
-      {!isPending && (
-        <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
-            {filteredRoutines.map((routine) => (
-              <RoutineQuickStartCard
-                key={routine.id}
-                routine={routine}
-                onStartWorkout={startWorkoutFromRoutine}
-              />
-            ))}
-          </div>
-
-          {/* Loading more indicator */}
-          {isFetchingNextPage && (
-            <div className="flex justify-center py-8">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
-          )}
-
-        </>
-      )}
-
-      {/* Empty State */}
-      {!isPending && filteredRoutines.length === 0 && (
-        <div className="py-20 text-center">
-          <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
-            <Search className="text-muted-foreground h-10 w-10 opacity-20" />
-          </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">No routines found</h3>
-          <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-            {searchTerm
-              ? "No routines match your current search"
-              : "No routines available"}
-          </p>
-          {searchTerm && (
-            <Button
-              onClick={() => setSearchTerm("")}
-              variant="outline"
-              className="rounded-xl border-border/40 font-bold"
-            >
-              Clear search
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 };

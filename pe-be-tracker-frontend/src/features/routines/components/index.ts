@@ -5,4 +5,4 @@ export { RoutineInfoCard } from "./RoutineInfoCard/RoutineInfoCard";
 export { RoutineTemplatesCard } from "./RoutineTemplatesCard/RoutineTemplatesCard";
 export { RoutineDetailsLoadingState } from "./skeletons/RoutineDetailsLoadingState";
 export { RoutineDetailsPageSkeleton } from "./skeletons/RoutineDetailsPageSkeleton";
-export { RoutinesPageSkeleton } from "./skeletons/RoutinesPageSkeleton";
+export { RoutinesPageSkeleton, RoutinesGridSkeleton } from "./skeletons/RoutinesPageSkeleton";
