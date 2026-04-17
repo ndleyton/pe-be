@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Info, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   formatSetSummary,
@@ -13,6 +13,10 @@ import {
   parseDurationInputValue,
   resolveSetValueMode,
 } from "@/features/exercises/lib/setValue";
+import {
+  getRirDescription,
+  getRpeDescription,
+} from "@/features/exercises/lib/exerciseRow";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { formatDecimal, parseDecimalInput } from "@/utils/format";
 import { Button } from "@/shared/components/ui/button";
@@ -22,6 +26,20 @@ import {
   CardHeader,
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Slider } from "@/shared/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 
 type RoutineTemplatesCardProps = {
   canEdit: boolean;
@@ -74,6 +92,10 @@ export const RoutineTemplatesCard = ({
   const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>(
     () => buildDurationDrafts(editorTemplates),
   );
+  const [activeSetTarget, setActiveSetTarget] = useState<{
+    templateId: string;
+    setId: string;
+  } | null>(null);
 
   useEffect(() => {
     setDurationDrafts((current) => {
@@ -193,27 +215,27 @@ export const RoutineTemplatesCard = ({
                     data-testid={`change-routine-exercise-${templateIndex}`}
                     variant="outline"
                     size="sm"
+                    aria-label={`Change exercise ${templateIndex + 1}`}
                     onClick={() => onChangeExercise(template.id)}
-                    className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all text-xs"
+                    className="h-8 w-8 rounded-xl border-border/60 p-0 hover:bg-muted transition-all"
                   >
-                    <Pencil className="mr-2 h-3 w-3" />
-                    Change
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     data-testid={`remove-routine-template-${templateIndex}`}
                     variant="ghost"
                     size="sm"
+                    aria-label={`Remove exercise ${templateIndex + 1}`}
                     onClick={() => onRemoveTemplate(template.id)}
-                    className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-all text-xs"
+                    className="h-8 w-8 rounded-xl p-0 text-destructive hover:bg-destructive/10 hover:text-destructive transition-all"
                   >
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Remove
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               )}
             </div>
 
-            <div className={canEdit ? "space-y-3" : "flex flex-wrap gap-2 mt-2"}>
+            <div className={canEdit ? "space-y-3" : "mt-2 space-y-2"}>
               {template.set_templates.map((setTemplate, setIndex) =>
                 canEdit ? (
                   (() => {
@@ -245,16 +267,32 @@ export const RoutineTemplatesCard = ({
                               {formatSetSummary(setTemplate)}
                             </div>
                           </div>
-                          <Button
-                            data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRemoveSet(template.id, setTemplate.id)}
-                            className="h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-bold transition-all text-[10px] uppercase tracking-wider"
-                          >
-                            <Trash2 className="mr-1.5 h-3 w-3" />
-                            Remove
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              aria-label={`Edit set ${setIndex + 1} details`}
+                              onClick={() =>
+                                setActiveSetTarget({
+                                  templateId: template.id,
+                                  setId: setTemplate.id,
+                                })
+                              }
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              data-testid={`remove-routine-set-${templateIndex}-${setIndex}`}
+                              variant="ghost"
+                              size="sm"
+                              aria-label={`Remove set ${setIndex + 1}`}
+                              onClick={() => onRemoveSet(template.id, setTemplate.id)}
+                              className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-3">
@@ -404,10 +442,12 @@ export const RoutineTemplatesCard = ({
                 ) : (
                   <div
                     key={setTemplate.id}
-                    className="flex max-w-full items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
+                    className="flex w-full items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
                   >
-                    <span className="text-[10px] font-black text-primary opacity-40">{setIndex + 1}</span>
-                    <span className="min-w-0 break-words text-xs font-bold tracking-tight italic text-foreground opacity-90">
+                    <span className="mt-0.5 text-[10px] font-black text-primary opacity-40">
+                      {setIndex + 1}
+                    </span>
+                    <span className="min-w-0 break-words text-sm font-bold tracking-tight italic text-foreground opacity-90">
                       {formatSetSummary(setTemplate)}
                     </span>
                   </div>
@@ -431,6 +471,270 @@ export const RoutineTemplatesCard = ({
         ))
       )}
       </CardContent>
+
+      <TooltipProvider>
+        <Dialog
+          open={activeSetTarget !== null}
+          onOpenChange={(open) => !open && setActiveSetTarget(null)}
+        >
+          <DialogContent className="max-w-md">
+            {(() => {
+              if (!activeSetTarget) return null;
+              const template = editorTemplates.find(
+                (t) => t.id === activeSetTarget.templateId,
+              );
+              const setTemplate = template?.set_templates.find(
+                (s) => s.id === activeSetTarget.setId,
+              );
+              if (!setTemplate || !template) return null;
+
+              const setIndex = template.set_templates.indexOf(setTemplate);
+              const effortLabelId = `set-effort-label-active`;
+              const prefersTimeByDefault = prefersDurationForIntensityUnit(
+                setTemplate.intensity_unit_id,
+              );
+              const setValueMode = resolveSetValueMode(
+                setTemplate,
+                prefersTimeByDefault,
+              );
+
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Set {setIndex + 1} Details</DialogTitle>
+                    <DialogDescription>
+                      Configure coaching targets for this set template.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">
+                        Tracking
+                      </label>
+                      <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
+                        <button
+                          type="button"
+                          aria-pressed={setValueMode === "reps"}
+                          onClick={() =>
+                            onUpdateSet(template.id, setTemplate.id, {
+                              type: "reps",
+                            })
+                          }
+                          className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                            setValueMode === "reps"
+                              ? "bg-background text-foreground shadow"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Reps
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={setValueMode === "time"}
+                          onClick={() =>
+                            onUpdateSet(template.id, setTemplate.id, {
+                              type: "time",
+                            })
+                          }
+                          className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                            setValueMode === "time"
+                              ? "bg-background text-foreground shadow"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Time
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-stretch justify-center gap-8">
+                      {/* RPE Column */}
+                      <div
+                        className={`flex flex-col items-center min-w-0 ${
+                          setValueMode === "reps"
+                            ? "flex-1"
+                            : "w-full max-w-[240px]"
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between mb-2">
+                          <label
+                            id={effortLabelId}
+                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                          >
+                            RPE
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 opacity-50 cursor-help hover:opacity-100 transition-opacity" />
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                className="max-w-[200px] text-center"
+                              >
+                                Rate of Perceived Exertion: A scale from 0-10 to
+                                measure intentional intensity.
+                              </TooltipContent>
+                            </Tooltip>
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-[10px] text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              onUpdateSet(template.id, setTemplate.id, {
+                                rpe: null,
+                              })
+                            }
+                          >
+                            Clear
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-4 w-full">
+                          <div className="h-32 flex items-center justify-center w-full">
+                            <Slider
+                              orientation="vertical"
+                              value={[setTemplate.rpe ?? 0]}
+                              min={0}
+                              max={10}
+                              step={0.5}
+                              className="h-full"
+                              aria-labelledby={effortLabelId}
+                              onValueChange={(values) =>
+                                onUpdateSet(template.id, setTemplate.id, {
+                                  rpe: values[0] ?? null,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5 min-h-[40px]">
+                            <span className="text-xl font-black tabular-nums">
+                              {setTemplate.rpe == null ? "—" : setTemplate.rpe}
+                            </span>
+                            <span className="text-center text-[8px] font-medium text-muted-foreground leading-tight max-w-[100px]">
+                              {getRpeDescription(setTemplate.rpe)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* RIR Column */}
+                      {setValueMode === "reps" && (
+                        <>
+                          <div className="bg-border/30 w-px self-stretch" />
+                          <div className="flex-1 flex flex-col items-center min-w-0">
+                            <div className="flex w-full items-center justify-between mb-2">
+                              <label
+                                id="set-rir-label-active"
+                                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                              >
+                                RIR
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-3 w-3 opacity-50 cursor-help hover:opacity-100 transition-opacity" />
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    className="max-w-[200px] text-center"
+                                  >
+                                    Reps In Reserve: Target number of reps left
+                                    in the tank before failure.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto p-0 text-[10px] text-muted-foreground hover:text-foreground"
+                                onClick={() =>
+                                  onUpdateSet(template.id, setTemplate.id, {
+                                    rir: null,
+                                  })
+                                }
+                              >
+                                Clear
+                              </Button>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-4 w-full">
+                              <div className="h-32 flex items-center justify-center w-full">
+                                <Slider
+                                  orientation="vertical"
+                                  value={[
+                                    setTemplate.rir == null
+                                      ? 0
+                                      : 10 - setTemplate.rir,
+                                  ]}
+                                  min={0}
+                                  max={10}
+                                  step={0.5}
+                                  className="h-full"
+                                  aria-labelledby="set-rir-label-active"
+                                  aria-valuetext={
+                                    setTemplate.rir == null
+                                      ? "RIR not set"
+                                      : `RIR: ${setTemplate.rir} reps remaining`
+                                  }
+                                  onValueChange={(values) => {
+                                    const val = values[0] ?? 0;
+                                    onUpdateSet(template.id, setTemplate.id, {
+                                      rir: 10 - val,
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5 min-h-[40px]">
+                                <span className="text-xl font-black tabular-nums">
+                                  {setTemplate.rir == null
+                                    ? "—"
+                                    : setTemplate.rir}
+                                </span>
+                                <span className="text-center text-[8px] font-medium text-muted-foreground leading-tight max-w-[100px]">
+                                  {getRirDescription(setTemplate.rir)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor={`set-notes-${setTemplate.id}`}
+                        className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1"
+                      >
+                        Set-Specific Notes
+                      </label>
+                      <Textarea
+                        id={`set-notes-${setTemplate.id}`}
+                        placeholder="e.g. Pause at the bottom, explosive up..."
+                        value={setTemplate.notes}
+                        onChange={(e) =>
+                          onUpdateSet(template.id, setTemplate.id, {
+                            notes: e.target.value,
+                          })
+                        }
+                        className="min-h-[80px] rounded-xl bg-primary/5 border-primary/5 focus:border-primary/20 transition-all text-sm"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="glass"
+                        onClick={() => setActiveSetTarget(null)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
+      </TooltipProvider>
     </Card>
   );
 };

@@ -45,6 +45,8 @@ class SetTemplateBase(BaseModel):
     rpe: Optional[Decimal] = None
     rir: Optional[Decimal] = None
     intensity_unit_id: int
+    notes: Optional[str] = None
+    type: Optional[str] = None
 
 
 class SetTemplateCreate(SetTemplateBase):

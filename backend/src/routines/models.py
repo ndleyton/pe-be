@@ -147,6 +147,8 @@ class SetTemplate(Base):
         ForeignKey("exercise_templates.id", ondelete="CASCADE"),
         nullable=False,
     )
+    notes = Column(Text, nullable=True)
+    type = Column(String, nullable=True)
 
     # Relationships
     intensity_unit: Mapped["IntensityUnit"] = relationship(

@@ -5,6 +5,7 @@ export type SetSummaryInput = {
   duration_seconds?: number | null;
   intensity?: number | null;
   rpe?: number | null;
+  rir?: number | null;
   intensityUnitAbbreviation?: string | null;
 };
 
@@ -27,6 +28,7 @@ export const formatSetSummary = ({
   duration_seconds,
   intensity,
   rpe,
+  rir,
   intensityUnitAbbreviation,
 }: SetSummaryInput): string => {
   const parts: string[] = [];
@@ -50,6 +52,13 @@ export const formatSetSummary = ({
     const formatted = formatDecimal(rpe);
     if (formatted !== "-") {
       parts.push(`RPE ${formatted}`);
+    }
+  }
+
+  if (rir != null) {
+    const formatted = formatDecimal(rir);
+    if (formatted !== "-") {
+      parts.push(`RIR ${formatted}`);
     }
   }
 

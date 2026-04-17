@@ -21,6 +21,8 @@ export interface SetTemplate {
   rpe?: number | null;
   rir?: number | null;
   intensity_unit_id: number;
+  notes?: string | null;
+  type?: string | null;
   created_at: string;
   updated_at: string;
   intensity_unit?: IntensityUnit;
