@@ -11,6 +11,8 @@ import {
 
 const mockNavigate = vi.fn();
 const mockUseBlocker = vi.fn();
+let lastRoutineInfoCardProps: unknown;
+let lastRoutineTemplatesCardProps: unknown;
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>(
@@ -30,8 +32,14 @@ vi.mock("@/features/exercises/components", () => ({
 }));
 
 vi.mock("@/features/routines/components", () => ({
-  RoutineInfoCard: () => <div data-testid="routine-info-card" />,
-  RoutineTemplatesCard: () => <div data-testid="routine-templates-card" />,
+  RoutineInfoCard: (props: unknown) => {
+    lastRoutineInfoCardProps = props;
+    return <div data-testid="routine-info-card" />;
+  },
+  RoutineTemplatesCard: (props: unknown) => {
+    lastRoutineTemplatesCardProps = props;
+    return <div data-testid="routine-templates-card" />;
+  },
 }));
 
 vi.mock("@/features/routines/hooks", () => ({
@@ -47,6 +55,8 @@ const mockUseRoutineEditor = vi.mocked(useRoutineEditor);
 describe("CreateRoutinePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastRoutineInfoCardProps = undefined;
+    lastRoutineTemplatesCardProps = undefined;
 
     mockUseBlocker.mockReturnValue({ state: "unblocked" });
 
@@ -125,5 +135,33 @@ describe("CreateRoutinePage", () => {
     render(<CreateRoutinePage />);
 
     expect(mockNavigate).toHaveBeenCalledWith("/routines", { replace: true });
+  });
+
+  it("keeps the template editor read-only until authenticated intensity units finish loading", () => {
+    mockUseRoutineDetailsData.mockReturnValue({
+      availableIntensityUnits: [],
+      authInitialized: true,
+      canEdit: false,
+      editAccessMessage: null,
+      isAuthenticated: true,
+      routine: null,
+      routineError: null,
+      routinePending: false,
+      unitsPending: true,
+    });
+
+    render(<CreateRoutinePage />);
+
+    expect(screen.getByText(/preparing editor/i)).toBeInTheDocument();
+    expect(lastRoutineTemplatesCardProps).toEqual(
+      expect.objectContaining({
+        canEdit: false,
+      }),
+    );
+    expect(lastRoutineInfoCardProps).toEqual(
+      expect.objectContaining({
+        saveDisabled: true,
+      }),
+    );
   });
 });

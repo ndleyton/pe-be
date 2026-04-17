@@ -123,6 +123,8 @@ const CreateRoutinePage = () => {
     }
   };
 
+  const templatesEditable = !isAuthenticated || !unitsPending;
+
   return (
     <>
       <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
@@ -165,6 +167,17 @@ const CreateRoutinePage = () => {
             </Alert>
           )}
 
+          {isAuthenticated && unitsPending && (
+            <Alert className="rounded-2xl border-primary/20 bg-primary/5 backdrop-blur-md">
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">
+                Preparing editor
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                Loading intensity units before you add exercises to this routine.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-8">
             <RoutineInfoCard
               canEdit={true}
@@ -186,7 +199,10 @@ const CreateRoutinePage = () => {
               onSave={handleSave}
               onCancel={handleCancel}
               saveDisabled={
-                hasInvalidTemplates || !isAuthenticated || saveMutation.isPending
+                hasInvalidTemplates ||
+                !isAuthenticated ||
+                unitsPending ||
+                saveMutation.isPending
               }
               saveLabel={
                 saveMutation.isPending ? "Creating..." : "Create Routine"
@@ -210,7 +226,7 @@ const CreateRoutinePage = () => {
             </div>
 
             <RoutineTemplatesCard
-              canEdit={true}
+              canEdit={templatesEditable}
               editorTemplates={editorTemplates}
               onAddExercise={() => openExercisePicker({ mode: "add" })}
               onAddSet={addSetToTemplate}
