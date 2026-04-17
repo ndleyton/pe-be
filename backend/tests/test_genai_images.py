@@ -5,12 +5,52 @@ import pytest
 from src.genai.google_images import (
     REFERENCE_OPTION_SPECS,
     ReferenceOptionSpec,
+    _build_anchor_prompt,
+    _build_identity_block,
     _build_reference_prompt,
     _build_prompt,
+    _generate_anchored_image_async,
     _generate_image_async,
     _generate_reference_image_async,
     generate_exercise_phase_image,
+    generate_exercise_phase_pair,
 )
+
+
+# ---------------------------------------------------------------------------
+# _build_identity_block
+# ---------------------------------------------------------------------------
+
+
+def test_build_identity_block_full_context():
+    context = {
+        "name": "Squat",
+        "equipment": "Barbell",
+        "instructions": "Stand with feet shoulder-width apart.",
+        "category": "Legs",
+        "primary_muscles": ["Quads"],
+        "secondary_muscles": ["Glutes", "Hamstrings"],
+    }
+    block = _build_identity_block(context)
+    assert "Exercise: Squat." in block
+    assert "Equipment: Barbell." in block
+    assert "Category: Legs." in block
+    assert "Primary: Quads; Secondary: Glutes, Hamstrings" in block
+    assert "Stand with feet shoulder-width apart." in block
+
+
+def test_build_identity_block_empty_context():
+    block = _build_identity_block({})
+    assert "Exercise: Exercise." in block
+    assert "Equipment: Bodyweight only." in block
+    assert "Category: General." in block
+    assert "Primary: (unspecified)" in block
+    assert "No detailed instructions provided." in block
+
+
+# ---------------------------------------------------------------------------
+# _build_prompt (v4)
+# ---------------------------------------------------------------------------
 
 
 def test_build_prompt_full_context():
@@ -18,6 +58,8 @@ def test_build_prompt_full_context():
         "name": "Squat",
         "description": "A lower body exercise",
         "equipment": "Barbell",
+        "category": "Legs",
+        "instructions": "Bend at the knees.",
         "primary_muscles": ["Quads"],
         "secondary_muscles": ["Glutes", "Hamstrings"],
     }
@@ -28,14 +70,55 @@ def test_build_prompt_full_context():
     assert "Equipment: Barbell." in prompt
     assert "Description: A lower body exercise" in prompt
     assert "Render the Squat at the eccentric / bottom position." in prompt
+    # v4 style directives
+    assert "Instructional fitness illustration" in prompt
+    assert "accurate grip positions" in prompt
+    assert "Output only one image." in prompt
 
 
 def test_build_prompt_empty_context():
     prompt = _build_prompt({}, "start")
     assert "Exercise: Exercise." in prompt
     assert "Primary: (unspecified)" in prompt
-    assert "Equipment:" not in prompt
-    assert "Description: No extra description provided." in prompt
+    assert "Equipment: Bodyweight only." in prompt
+    # Empty description should not produce a description line
+    assert "Description:" not in prompt
+
+
+def test_build_prompt_no_description():
+    context = {
+        "name": "Push Up",
+        "equipment": "Bodyweight",
+    }
+    prompt = _build_prompt(context, "start")
+    assert "Description:" not in prompt
+
+
+# ---------------------------------------------------------------------------
+# _build_anchor_prompt
+# ---------------------------------------------------------------------------
+
+
+def test_build_anchor_prompt():
+    context = {
+        "name": "Bench Press",
+        "equipment": "Barbell",
+        "category": "Chest",
+        "primary_muscles": ["Pectorals"],
+    }
+    prompt = _build_anchor_prompt(context, "end / concentric")
+    assert "Exercise: Bench Press." in prompt
+    assert "Use the attached image as the visual reference." in prompt
+    assert "Preserve the EXACT same person" in prompt
+    assert "Phase: end / concentric." in prompt
+    assert "Render the Bench Press at the end / concentric position." in prompt
+    assert "grip/contact points must remain identical" in prompt
+    assert "Output only one image." in prompt
+
+
+# ---------------------------------------------------------------------------
+# _build_reference_prompt (unchanged, verify existing)
+# ---------------------------------------------------------------------------
 
 
 def test_build_reference_prompt_for_muscle_highlight_option():
@@ -86,6 +169,11 @@ def test_build_reference_prompt_for_minimal_outline_option():
     assert "viewing angle slightly" in prompt
     assert "same equipment and exercise setup" in prompt
     assert "Do not add labels or text." in prompt
+
+
+# ---------------------------------------------------------------------------
+# _generate_image_async tests
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -155,6 +243,125 @@ async def test_generate_exercise_phase_image_async(mock_async_gen):
     mock_async_gen.assert_called_once()
 
 
+# ---------------------------------------------------------------------------
+# _generate_anchored_image_async tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("src.genai.google_images.settings")
+@patch("src.genai.google_images._get_client")
+async def test_generate_anchored_image_async_success(mock_get_client, mock_settings):
+    mock_settings.EXERCISE_IMAGE_PHASE_MODEL = "phase-model"
+    mock_settings.GOOGLE_AI_KEY = "test_key"
+
+    mock_inline = MagicMock()
+    mock_inline.data = "base64anchored"
+    mock_inline.mime_type = "image/png"
+
+    mock_part = MagicMock()
+    mock_part.inline_data = mock_inline
+
+    mock_candidate = MagicMock()
+    mock_candidate.content.parts = [mock_part]
+
+    mock_client = MagicMock()
+    mock_client.aio.models.generate_content = AsyncMock(
+        return_value=MagicMock(candidates=[mock_candidate])
+    )
+    mock_get_client.return_value = mock_client
+
+    result = await _generate_anchored_image_async(
+        anchor_image_bytes=b"anchor_bytes",
+        anchor_mime_type="image/png",
+        prompt="Generate concentric phase",
+    )
+
+    mock_client.aio.models.generate_content.assert_called_once()
+    _, kwargs = mock_client.aio.models.generate_content.call_args
+    assert kwargs["model"] == "phase-model"
+    config = kwargs["config"]
+    assert config.response_modalities == ["IMAGE"]
+    # Should have text + image parts in contents
+    contents = kwargs["contents"]
+    assert len(contents) == 2
+
+    assert result.base64_data == "base64anchored"
+    assert result.mime_type == "image/png"
+
+
+# ---------------------------------------------------------------------------
+# generate_exercise_phase_pair tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("src.genai.google_images._generate_anchored_image_async")
+@patch("src.genai.google_images.generate_exercise_phase_image")
+async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
+    import base64
+
+    # First result (eccentric anchor)
+    first_result = MagicMock()
+    first_result.base64_data = base64.b64encode(b"eccentric_bytes").decode("ascii")
+    first_result.mime_type = "image/png"
+    mock_phase_gen.return_value = first_result
+
+    # Second result (concentric from anchor)
+    second_result = MagicMock()
+    mock_anchored_gen.return_value = second_result
+
+    context = {"name": "Bench Press", "equipment": "Barbell"}
+    eccentric, concentric = await generate_exercise_phase_pair(context)
+
+    # First image generated from scratch
+    mock_phase_gen.assert_called_once_with(context, "start / eccentric")
+
+    # Second image generated using anchor
+    mock_anchored_gen.assert_called_once()
+    _, kwargs = mock_anchored_gen.call_args
+    assert kwargs["anchor_image_bytes"] == b"eccentric_bytes"
+    assert kwargs["anchor_mime_type"] == "image/png"
+    assert "end / concentric" in kwargs["prompt"]
+    assert "Use the attached image as the visual reference" in kwargs["prompt"]
+
+    assert eccentric == first_result
+    assert concentric == second_result
+
+
+@pytest.mark.asyncio
+@patch("src.genai.google_images._generate_anchored_image_async")
+@patch("src.genai.google_images.generate_exercise_phase_image")
+async def test_generate_exercise_phase_pair_custom_labels(
+    mock_phase_gen, mock_anchored_gen
+):
+    import base64
+
+    first_result = MagicMock()
+    first_result.base64_data = base64.b64encode(b"first").decode("ascii")
+    first_result.mime_type = "image/png"
+    mock_phase_gen.return_value = first_result
+
+    second_result = MagicMock()
+    mock_anchored_gen.return_value = second_result
+
+    context = {"name": "Curl"}
+    await generate_exercise_phase_pair(
+        context,
+        first_phase_label="bottom",
+        second_phase_label="top",
+    )
+
+    mock_phase_gen.assert_called_once_with(context, "bottom")
+    _, kwargs = mock_anchored_gen.call_args
+    assert "top" in kwargs["prompt"]
+
+
+# ---------------------------------------------------------------------------
+# Reference image tests (unchanged)
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
 @patch("src.genai.google_images.settings")
 @patch("src.genai.google_images._get_client")
@@ -205,6 +412,11 @@ async def test_generate_reference_image_async_success(mock_get_client, mock_sett
 
     assert result.base64_data == "base64redrawn"
     assert result.mime_type == "image/png"
+
+
+# ---------------------------------------------------------------------------
+# Retry logic tests
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

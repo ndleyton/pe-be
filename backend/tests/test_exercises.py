@@ -577,20 +577,33 @@ async def test_generate_reference_image_options_falls_back_to_phase_generation(
         await db_session.commit()
         await db_session.refresh(exercise_type)
 
-        phase_calls: list[str] = []
+        pair_called = False
 
-        async def fake_generate_exercise_phase_image(*, context, phase_label):
-            phase_calls.append(phase_label)
-            return ExerciseImageResult(
+        async def fake_generate_exercise_phase_pair(
+            context,
+            *,
+            first_phase_label="start / eccentric",
+            second_phase_label="end / concentric",
+        ):
+            nonlocal pair_called
+            pair_called = True
+            eccentric = ExerciseImageResult(
                 model="test-phase-model",
                 mime_type="image/png",
                 base64_data="dGVzdA==",
-                prompt_summary=phase_label,
+                prompt_summary=first_phase_label,
             )
+            concentric = ExerciseImageResult(
+                model="test-phase-model",
+                mime_type="image/png",
+                base64_data="dGVzdA==",
+                prompt_summary=second_phase_label,
+            )
+            return eccentric, concentric
 
         monkeypatch.setattr(
-            "src.admin.exercise_image_service.generate_exercise_phase_image",
-            fake_generate_exercise_phase_image,
+            "src.admin.exercise_image_service.generate_exercise_phase_pair",
+            fake_generate_exercise_phase_pair,
         )
         monkeypatch.setattr(
             "src.admin.exercise_image_service._exercise_context",
@@ -607,7 +620,7 @@ async def test_generate_reference_image_options_falls_back_to_phase_generation(
 
         response = await generate_reference_image_options(db_session, exercise_type)
 
-        assert phase_calls == ["start / eccentric", "end / concentric"]
+        assert pair_called is True
         assert response.supports_revert_to_reference is False
         assert response.reference_images == []
         assert len(response.available_options) == 1

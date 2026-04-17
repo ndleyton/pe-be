@@ -106,10 +106,12 @@ class ReferenceImagePrepared:
     image_bytes: bytes
 
 
-def _build_prompt(context: Dict, phase_label: str) -> str:
+def _build_identity_block(context: Dict) -> str:
+    """Shared visual identity spec to anchor both phase images."""
     name = context.get("name", "Exercise")
-    description = (context.get("description") or "").strip()
     equipment = (context.get("equipment") or "").strip()
+    instructions = (context.get("instructions") or "").strip()
+    category = (context.get("category") or "").strip()
     primary: List[str] = context.get("primary_muscles") or []
     secondary: List[str] = context.get("secondary_muscles") or []
 
@@ -119,28 +121,73 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
     if secondary:
         muscles_line += "; Secondary: " + ", ".join(secondary)
 
-    style = (
-        "Create a simple instructional 2D line-art style image on a neutral background. "
-        "Clear human silhouette, no text, no logos, no background clutter. "
-        "High contrast outlines, minimal shading, clean anatomy hints. "
-        "Focus on correct joint alignment and body positioning."
-    )
-
-    phase_directive = f"Render the {name} at the {phase_label} position."
-    equipment_line = f"Equipment: {equipment}.\n" if equipment else ""
+    equipment_line = equipment or "Bodyweight only"
+    category_line = category or "General"
+    instructions_line = instructions or "No detailed instructions provided."
 
     return (
         f"Exercise: {name}.\n"
-        f"Phase: {phase_label}.\n"
+        f"Category: {category_line}.\n"
+        f"Equipment: {equipment_line}.\n"
         f"Muscles: {muscles_line}.\n"
-        f"{equipment_line}"
-        f"Description: {description or 'No extra description provided.'}\n\n"
-        f"{style}\n"
+        f"Instructions: {instructions_line}\n"
+    )
+
+
+def _build_prompt(context: Dict, phase_label: str) -> str:
+    name = context.get("name", "Exercise")
+    description = (context.get("description") or "").strip()
+
+    identity = _build_identity_block(context)
+
+    style = (
+        "Style: Instructional fitness illustration. "
+        "Use a gender-neutral athletic silhouette with medium build. "
+        "Flat neutral background. Strong black outlines, minimal shading. "
+        "Show the correct equipment for this specific exercise "
+        "with accurate grip positions, pad placements, and points of contact. "
+        "Camera angle: 3/4 front view, slightly above eye level. "
+        "Frame the full body to show posture and joint alignment clearly."
+    )
+
+    phase_directive = (
+        f"Phase: {phase_label}.\n"
+        f"Render the {name} at the {phase_label} position. "
+        f"Show correct joint angles and body positioning for this specific phase."
+    )
+
+    description_line = (
+        f"Description: {description}\n" if description else ""
+    )
+
+    return (
+        f"{identity}\n"
+        f"{description_line}"
+        f"{style}\n\n"
         f"{phase_directive}\n"
-        "Frame the full body as needed to show posture clearly. "
-        "If equipment is typical for this exercise (e.g., barbell, dumbbells, cable), "
-        "include a minimal representation. "
-        "Avoid captions and text. Output only an image."
+        "Do not add text, labels, captions, or watermarks beyond SynthID. "
+        "Output only one image."
+    )
+
+
+def _build_anchor_prompt(context: Dict, phase_label: str) -> str:
+    """Prompt for generating the second phase image using the first as reference."""
+    name = context.get("name", "Exercise")
+
+    identity = _build_identity_block(context)
+
+    return (
+        f"{identity}\n"
+        "Use the attached image as the visual reference. "
+        "Preserve the EXACT same person, body type, clothing, equipment, "
+        "art style, line weight, colour palette, camera angle, and framing. "
+        "Only the body position changes to show a different phase of the movement.\n\n"
+        f"Phase: {phase_label}.\n"
+        f"Render the {name} at the {phase_label} position. "
+        f"Show correct joint angles and body positioning for this specific phase. "
+        "The equipment and grip/contact points must remain identical to the reference.\n"
+        "Do not add text, labels, captions, or watermarks beyond SynthID. "
+        "Output only one image."
     )
 
 
@@ -359,11 +406,86 @@ async def _generate_reference_image_async(
     raise RuntimeError("Gemini reference image generation retry loop exhausted")
 
 
+async def _generate_anchored_image_async(
+    *,
+    anchor_image_bytes: bytes,
+    anchor_mime_type: str,
+    prompt: str,
+) -> ExerciseImageResult:
+    """Generate a phase image conditioned on an anchor/reference image."""
+    client = _get_client()
+    model_name = settings.EXERCISE_IMAGE_PHASE_MODEL
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = await client.aio.models.generate_content(
+                model=model_name,
+                contents=[
+                    types.Part.from_text(text=prompt),
+                    types.Part.from_bytes(
+                        data=anchor_image_bytes,
+                        mime_type=anchor_mime_type,
+                    ),
+                ],
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                ),
+            )
+            return _extract_inline_result(response, prompt, model_name)
+        except Exception as exc:
+            is_retryable = False
+            if hasattr(exc, "code") and exc.code == 429:
+                is_retryable = True
+            elif "429" in str(exc) or "resourceexhausted" in str(exc).lower():
+                is_retryable = True
+
+            if is_retryable and attempt < max_retries - 1:
+                wait_time = 15 * (attempt + 1)
+                logger.warning(
+                    "Gemini API rate limit hit, retrying in %ds... (attempt %d/%d)",
+                    wait_time,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(wait_time)
+                continue
+            raise
+
+    raise RuntimeError("Gemini anchored image generation retry loop exhausted")
+
+
 async def generate_exercise_phase_image(
     context: Dict, phase_label: str
 ) -> ExerciseImageResult:
     prompt = _build_prompt(context, phase_label)
     return await _generate_image_async(prompt)
+
+
+async def generate_exercise_phase_pair(
+    context: Dict,
+    *,
+    first_phase_label: str = "start / eccentric",
+    second_phase_label: str = "end / concentric",
+) -> tuple[ExerciseImageResult, ExerciseImageResult]:
+    """Generate a consistent pair: first phase from text, second from anchor.
+
+    The first image is generated from scratch. The second image uses the first
+    as a visual reference so that equipment, style, and body type are consistent.
+    """
+    # Step 1: generate anchor image (first phase)
+    first_result = await generate_exercise_phase_image(context, first_phase_label)
+
+    # Step 2: generate second phase using anchor
+    anchor_bytes = decode_generated_image(first_result)
+    anchor_mime = first_result.mime_type or DEFAULT_MIME
+    second_prompt = _build_anchor_prompt(context, second_phase_label)
+
+    second_result = await _generate_anchored_image_async(
+        anchor_image_bytes=anchor_bytes,
+        anchor_mime_type=anchor_mime,
+        prompt=second_prompt,
+    )
+    return first_result, second_result
 
 
 async def generate_reference_image_variant(
