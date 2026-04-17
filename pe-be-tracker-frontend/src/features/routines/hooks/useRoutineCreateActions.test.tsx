@@ -1,4 +1,4 @@
-import React from "react";
+import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
@@ -49,15 +49,12 @@ describe("useRoutineCreateActions", () => {
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
   });
 
-  const wrapperProps = {
-    children: React.createElement("div"),
-  };
 
   const TestWrapper = ({
     children,
     queryClient = createTestQueryClient(),
   }: {
-    children: React.ReactNode;
+    children: ReactNode;
     queryClient?: QueryClient;
   }) => (
     <QueryClientProvider client={queryClient}>
