@@ -119,7 +119,10 @@ def test_build_anchor_prompt():
     assert "Do NOT reproduce the start / eccentric pose" in prompt
     assert "Target phase: end / concentric." in prompt
     assert "Render the Bench Press at the end / concentric position." in prompt
-    assert "If the output looks like the same pose as the reference, it is incorrect." in prompt
+    assert (
+        "If the output looks like the same pose as the reference, it is incorrect."
+        in prompt
+    )
     assert "grip/contact points must remain identical" in prompt
     assert "Output only one image." in prompt
 
@@ -417,12 +420,14 @@ async def test_generate_exercise_phase_pair_retries_when_anchor_is_duplicated(
 
     first_call = mock_anchored_gen.await_args_list[0].kwargs
     second_call = mock_anchored_gen.await_args_list[1].kwargs
-    assert "Previous attempt stayed too close to the reference pose." not in first_call[
-        "prompt"
-    ]
-    assert "Previous attempt stayed too close to the reference pose." in second_call[
-        "prompt"
-    ]
+    assert (
+        "Previous attempt stayed too close to the reference pose."
+        not in first_call["prompt"]
+    )
+    assert (
+        "Previous attempt stayed too close to the reference pose."
+        in second_call["prompt"]
+    )
 
 
 # ---------------------------------------------------------------------------
