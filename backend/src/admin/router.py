@@ -191,6 +191,15 @@ async def generate_exercise_type_images(
             detail=f"Gemini API error: {exc}",
         ) from exc
     except Exception as exc:
+        if (
+            (hasattr(exc, "code") and exc.code == 429)
+            or "429" in str(exc)
+            or "resourceexhausted" in str(exc).lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
         logger.exception("Unexpected error during image generation: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -334,6 +343,15 @@ async def generate_reference_options(
             detail=f"Gemini API error: {exc}",
         ) from exc
     except Exception as exc:
+        if (
+            (hasattr(exc, "code") and exc.code == 429)
+            or "429" in str(exc)
+            or "resourceexhausted" in str(exc).lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
         logger.exception("Unexpected error during image generation: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

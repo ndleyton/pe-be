@@ -593,10 +593,6 @@ async def _generate_phase_fallback_image_options(
             )
             existing = existing_candidates.get(generation_key)
 
-            # Skip if this specific candidate already exists on disk
-            if existing and _candidate_file_exists(existing.storage_path):
-                continue
-
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
 
