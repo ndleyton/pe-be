@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.genai.google_images import (
+    ExerciseImageResult,
     REFERENCE_OPTION_SPECS,
     ReferenceOptionSpec,
     _build_anchor_prompt,
@@ -106,12 +107,19 @@ def test_build_anchor_prompt():
         "category": "Chest",
         "primary_muscles": ["Pectorals"],
     }
-    prompt = _build_anchor_prompt(context, "end / concentric")
+    prompt = _build_anchor_prompt(
+        context,
+        "start / eccentric",
+        "end / concentric",
+    )
     assert "Exercise: Bench Press." in prompt
     assert "Use the attached image as the visual reference." in prompt
-    assert "Preserve the EXACT same person" in prompt
-    assert "Phase: end / concentric." in prompt
+    assert "source of truth for person identity" in prompt
+    assert "The attached image shows the start / eccentric phase." in prompt
+    assert "Do NOT reproduce the start / eccentric pose" in prompt
+    assert "Target phase: end / concentric." in prompt
     assert "Render the Bench Press at the end / concentric position." in prompt
+    assert "If the output looks like the same pose as the reference, it is incorrect." in prompt
     assert "grip/contact points must remain identical" in prompt
     assert "Output only one image." in prompt
 
@@ -301,14 +309,20 @@ async def test_generate_anchored_image_async_success(mock_get_client, mock_setti
 async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
     import base64
 
-    # First result (eccentric anchor)
-    first_result = MagicMock()
-    first_result.base64_data = base64.b64encode(b"eccentric_bytes").decode("ascii")
-    first_result.mime_type = "image/png"
+    first_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"eccentric_bytes").decode("ascii"),
+        prompt_summary="start",
+    )
     mock_phase_gen.return_value = first_result
 
-    # Second result (concentric from anchor)
-    second_result = MagicMock()
+    second_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"concentric_bytes").decode("ascii"),
+        prompt_summary="end",
+    )
     mock_anchored_gen.return_value = second_result
 
     context = {"name": "Bench Press", "equipment": "Barbell"}
@@ -323,6 +337,7 @@ async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
     assert kwargs["anchor_image_bytes"] == b"eccentric_bytes"
     assert kwargs["anchor_mime_type"] == "image/png"
     assert "end / concentric" in kwargs["prompt"]
+    assert "start / eccentric" in kwargs["prompt"]
     assert "Use the attached image as the visual reference" in kwargs["prompt"]
 
     assert eccentric == first_result
@@ -337,12 +352,20 @@ async def test_generate_exercise_phase_pair_custom_labels(
 ):
     import base64
 
-    first_result = MagicMock()
-    first_result.base64_data = base64.b64encode(b"first").decode("ascii")
-    first_result.mime_type = "image/png"
+    first_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"first").decode("ascii"),
+        prompt_summary="bottom",
+    )
     mock_phase_gen.return_value = first_result
 
-    second_result = MagicMock()
+    second_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"second").decode("ascii"),
+        prompt_summary="top",
+    )
     mock_anchored_gen.return_value = second_result
 
     context = {"name": "Curl"}
@@ -355,6 +378,51 @@ async def test_generate_exercise_phase_pair_custom_labels(
     mock_phase_gen.assert_called_once_with(context, "bottom")
     _, kwargs = mock_anchored_gen.call_args
     assert "top" in kwargs["prompt"]
+    assert "bottom" in kwargs["prompt"]
+
+
+@pytest.mark.asyncio
+@patch("src.genai.google_images._generate_anchored_image_async")
+@patch("src.genai.google_images.generate_exercise_phase_image")
+async def test_generate_exercise_phase_pair_retries_when_anchor_is_duplicated(
+    mock_phase_gen, mock_anchored_gen
+):
+    import base64
+
+    first_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"same-image").decode("ascii"),
+        prompt_summary="start",
+    )
+    retry_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"different-image").decode("ascii"),
+        prompt_summary="end",
+    )
+
+    mock_phase_gen.return_value = first_result
+    mock_anchored_gen.side_effect = [first_result, retry_result]
+
+    eccentric, concentric = await generate_exercise_phase_pair(
+        {"name": "Bench Press"},
+        first_phase_label="start / eccentric",
+        second_phase_label="end / concentric",
+    )
+
+    assert eccentric == first_result
+    assert concentric == retry_result
+    assert mock_anchored_gen.await_count == 2
+
+    first_call = mock_anchored_gen.await_args_list[0].kwargs
+    second_call = mock_anchored_gen.await_args_list[1].kwargs
+    assert "Previous attempt stayed too close to the reference pose." not in first_call[
+        "prompt"
+    ]
+    assert "Previous attempt stayed too close to the reference pose." in second_call[
+        "prompt"
+    ]
 
 
 # ---------------------------------------------------------------------------

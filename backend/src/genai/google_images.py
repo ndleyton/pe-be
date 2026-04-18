@@ -168,22 +168,40 @@ def _build_prompt(context: Dict, phase_label: str) -> str:
     )
 
 
-def _build_anchor_prompt(context: Dict, phase_label: str) -> str:
+def _build_anchor_prompt(
+    context: Dict,
+    source_phase_label: str,
+    target_phase_label: str,
+    *,
+    retry_emphasis: bool = False,
+) -> str:
     """Prompt for generating the second phase image using the first as reference."""
     name = context.get("name", "Exercise")
 
     identity = _build_identity_block(context)
 
+    retry_block = ""
+    if retry_emphasis:
+        retry_block = (
+            "\nPrevious attempt stayed too close to the reference pose. "
+            "Push the pose change farther so the result reads as a distinct second keyframe."
+        )
+
     return (
         f"{identity}\n"
         "Use the attached image as the visual reference. "
-        "Preserve the EXACT same person, body type, clothing, equipment, "
-        "art style, line weight, colour palette, camera angle, and framing. "
-        "Only the body position changes to show a different phase of the movement.\n\n"
-        f"Phase: {phase_label}.\n"
-        f"Render the {name} at the {phase_label} position. "
-        f"Show correct joint angles and body positioning for this specific phase. "
-        "The equipment and grip/contact points must remain identical to the reference.\n"
+        "Treat it as the source of truth for person identity, body type, clothing, "
+        "equipment, art style, line weight, colour palette, camera angle, and framing. "
+        f"The attached image shows the {source_phase_label} phase. "
+        f"Do NOT reproduce the {source_phase_label} pose from the reference. "
+        f"Instead, render the {target_phase_label} phase as a distinctly different moment in the movement.\n\n"
+        f"Target phase: {target_phase_label}.\n"
+        f"Render the {name} at the {target_phase_label} position. "
+        "Show clearly different joint angles, limb placement, and body/equipment displacement "
+        "from the reference while keeping the same exercise setup. "
+        "If the output looks like the same pose as the reference, it is incorrect. "
+        "The equipment and grip/contact points must remain identical to the reference."
+        f"{retry_block}\n"
         "Do not add text, labels, captions, or watermarks beyond SynthID. "
         "Output only one image."
     )
@@ -476,13 +494,37 @@ async def generate_exercise_phase_pair(
     # Step 2: generate second phase using anchor
     anchor_bytes = decode_generated_image(first_result)
     anchor_mime = first_result.mime_type or DEFAULT_MIME
-    second_prompt = _build_anchor_prompt(context, second_phase_label)
+    second_result: ExerciseImageResult | None = None
+    max_anchor_attempts = 2
 
-    second_result = await _generate_anchored_image_async(
-        anchor_image_bytes=anchor_bytes,
-        anchor_mime_type=anchor_mime,
-        prompt=second_prompt,
-    )
+    for attempt in range(max_anchor_attempts):
+        second_prompt = _build_anchor_prompt(
+            context,
+            first_phase_label,
+            second_phase_label,
+            retry_emphasis=attempt > 0,
+        )
+        second_result = await _generate_anchored_image_async(
+            anchor_image_bytes=anchor_bytes,
+            anchor_mime_type=anchor_mime,
+            prompt=second_prompt,
+        )
+        if decode_generated_image(second_result) != anchor_bytes:
+            break
+
+        logger.warning(
+            "Anchored phase generation repeated the anchor image for '%s' "
+            "(source phase '%s', target phase '%s', attempt %d/%d)",
+            context.get("name", "Exercise"),
+            first_phase_label,
+            second_phase_label,
+            attempt + 1,
+            max_anchor_attempts,
+        )
+
+    if second_result is None:
+        raise RuntimeError("Anchored phase generation did not return a result")
+
     return first_result, second_result
 
 
