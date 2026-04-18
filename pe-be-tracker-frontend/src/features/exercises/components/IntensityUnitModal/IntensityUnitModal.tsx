@@ -37,6 +37,9 @@ const UNIT_DESCRIPTIONS: Record<string, string> = {
 const getUnitDescription = (unit: IntensityUnit | GuestIntensityUnit) =>
   UNIT_DESCRIPTIONS[unit.abbreviation.toLowerCase()] ?? "Used to track effort";
 
+const getDisplayAbbreviation = (abbreviation: string) =>
+  abbreviation.toUpperCase();
+
 const IntensityUnitOption = ({
   unit,
   onSelect,
@@ -51,11 +54,11 @@ const IntensityUnitOption = ({
       "group border-border/70 bg-card hover:border-primary/40 hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
     )}
-    aria-label={`Select ${unit.name} (${unit.abbreviation})`}
+    aria-label={`Select ${unit.name} (${getDisplayAbbreviation(unit.abbreviation)})`}
   >
     <div className="bg-muted text-foreground group-hover:bg-primary/10 flex min-h-11 min-w-11 items-center justify-center rounded-xl px-2.5">
-      <span className="text-sm font-semibold tracking-tight">
-        {unit.abbreviation}
+      <span className="text-sm font-semibold uppercase tracking-tight">
+        {getDisplayAbbreviation(unit.abbreviation)}
       </span>
     </div>
     <div className="min-w-0">
@@ -93,6 +96,7 @@ const IntensityUnitModal = ({
       <DialogContent
         className="max-h-[85vh] overflow-y-auto border-border/40 sm:max-w-md"
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onClick={(event) => event.stopPropagation()}
         data-testid="intensity-unit-modal"
       >
         <DialogHeader className="pr-8">

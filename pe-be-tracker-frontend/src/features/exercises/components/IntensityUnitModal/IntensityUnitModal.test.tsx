@@ -98,6 +98,7 @@ describe("IntensityUnitModal", () => {
     expect(
       screen.getByRole("button", { name: /select bodyweight \(bw\)/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText("BW")).toBeInTheDocument();
     expect(screen.getByText("Bodyweight")).toBeInTheDocument();
     expect(screen.getByText("Your own body weight")).toBeInTheDocument();
     expect(screen.getByText("Metric load")).toBeInTheDocument();
@@ -251,6 +252,6 @@ describe("IntensityUnitModal", () => {
     ).toHaveAttribute("aria-label", "Select Bodyweight (BW)");
     expect(
       screen.getByRole("button", { name: /select kilograms \(kg\)/i }),
-    ).toHaveAttribute("aria-label", "Select Kilograms (kg)");
+    ).toHaveAttribute("aria-label", "Select Kilograms (KG)");
   });
 });
