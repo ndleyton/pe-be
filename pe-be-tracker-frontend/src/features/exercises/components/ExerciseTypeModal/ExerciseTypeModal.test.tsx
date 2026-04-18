@@ -190,6 +190,46 @@ describe("ExerciseTypeModal", () => {
     });
   });
 
+  it("clears the search input after selecting an exercise type", async () => {
+    mockGuestStore = {
+      ...mockGuestStore,
+      exerciseTypes: [
+        makeExerciseType({ id: 1, name: "Squats" }),
+        makeExerciseType({ id: 2, name: "Bench Press" }),
+      ],
+    };
+
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "squ");
+
+    await waitFor(() => {
+      expect(screen.getByText("Squats")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /squats/i }));
+
+    expect(mockOnSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, name: "Squats" }),
+    );
+    expect(searchInput).toHaveValue("");
+
+    await waitFor(() => {
+      expect(screen.getByText("Bench Press")).toBeInTheDocument();
+    });
+  });
+
   it("reveals more guest exercise types when the modal list is scrolled", async () => {
     mockGuestStore = {
       ...mockGuestStore,
