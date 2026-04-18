@@ -213,7 +213,7 @@ describe("ExerciseTypeDetailsPage", () => {
     await userEvent.click(
       screen.getByRole("combobox", { name: /default intensity unit/i }),
     );
-    await userEvent.click(await screen.findByRole("option", { name: "lb - Pounds" }));
+    await userEvent.click(await screen.findByRole("option", { name: "LB - Pounds" }));
     await userEvent.click(
       screen.getByRole("button", { name: "Latissimus Dorsi" }),
     );

@@ -50,6 +50,9 @@ const ExerciseTypeMore = ({
   const intensityUnits: Array<IntensityUnit | GuestIntensityUnit> =
     isAuthenticated ? serverIntensityUnits : GUEST_INTENSITY_UNITS;
 
+  const getDisplayAbbreviation = (abbreviation: string) =>
+    abbreviation.toUpperCase();
+
 
   return (
     <div className="space-y-4 p-4">
@@ -87,9 +90,11 @@ const ExerciseTypeMore = ({
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted hover:bg-accent text-muted-foreground"
                 }`}
-                aria-label={`Select ${unit.name} (${unit.abbreviation})`}
+                aria-label={`Select ${unit.name} (${getDisplayAbbreviation(unit.abbreviation)})`}
               >
-                <span className="font-medium">{unit.abbreviation}</span>
+                <span className="font-medium uppercase">
+                  {getDisplayAbbreviation(unit.abbreviation)}
+                </span>
                 <span className="block text-xs opacity-75">{unit.name}</span>
               </button>
             ))}

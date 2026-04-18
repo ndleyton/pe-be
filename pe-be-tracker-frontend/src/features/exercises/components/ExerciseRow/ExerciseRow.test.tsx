@@ -365,6 +365,27 @@ describe("ExerciseRow", () => {
     expect(addSetButton).toBeInTheDocument();
   });
 
+  it("does not toggle the row when clicking inside the settings dialog", async () => {
+    const user = userEvent.setup();
+    const toggleExpand = vi.fn();
+
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        isExpanded={false}
+        onToggleExpand={toggleExpand}
+      />,
+    );
+
+    await user.click(
+      screen.getAllByTestId("more-vertical-icon")[0].closest("button")!,
+    );
+
+    await user.click(screen.getByTestId("change-unit-button"));
+
+    expect(toggleExpand).not.toHaveBeenCalled();
+  });
+
   it("can update exercise notes", async () => {
     const user = userEvent.setup();
     render(<ExerciseRow {...defaultProps} isExpanded={true} />);

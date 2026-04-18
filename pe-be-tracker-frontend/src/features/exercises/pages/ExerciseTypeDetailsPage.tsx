@@ -87,6 +87,8 @@ const ExerciseTypeDetailsPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isSuperuser = Boolean(useAuthStore((state) => state.user?.is_superuser));
   const currentUserId = currentUser?.id ?? null;
+  const getDisplayAbbreviation = (abbreviation: string) =>
+    abbreviation.toUpperCase();
 
   const {
     data: exerciseType,
@@ -670,7 +672,7 @@ const ExerciseTypeDetailsPage = () => {
                     placeholder="Select a unit"
                     aria-label={
                       selectedIntensityUnit
-                        ? `${selectedIntensityUnit.abbreviation} - ${selectedIntensityUnit.name}`
+                        ? `${getDisplayAbbreviation(selectedIntensityUnit.abbreviation)} - ${selectedIntensityUnit.name}`
                         : "None"
                     }
                   />
@@ -679,7 +681,7 @@ const ExerciseTypeDetailsPage = () => {
                   <SelectItem value="none">None</SelectItem>
                   {intensityUnits.map((unit: IntensityUnit) => (
                     <SelectItem key={unit.id} value={String(unit.id)}>
-                      {unit.abbreviation} - {unit.name}
+                      {getDisplayAbbreviation(unit.abbreviation)} - {unit.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

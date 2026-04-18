@@ -1,3 +1,5 @@
+import type { MouseEvent } from "react";
+
 import { ChevronRight, ExternalLink, MoreVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -49,6 +51,23 @@ export const ExerciseRowHeader = ({
     typeof exercise.exercise_type.id === "number" &&
     (exercise.exercise_type.status ?? "released") === "released";
 
+  const handleHeaderClick = (
+    event: MouseEvent<HTMLDivElement>,
+  ) => {
+    const target = event.target;
+
+    if (
+      target instanceof Element &&
+      target.closest(
+        '[data-slot="dialog-content"], [data-slot="dialog-overlay"]',
+      )
+    ) {
+      return;
+    }
+
+    onToggleExpand();
+  };
+
   return (
     <div
       role="button"
@@ -57,7 +76,7 @@ export const ExerciseRowHeader = ({
         "flex items-center justify-between transition-colors rounded-lg",
         "cursor-pointer select-none"
       )}
-      onClick={onToggleExpand}
+      onClick={handleHeaderClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
