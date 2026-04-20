@@ -375,3 +375,46 @@ async def test_create_workout_from_public_routine_allows_nonreleased_exercise_ty
         .where(Exercise.workout_id == workout.id)
     )
     assert res.scalar() == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_workout_from_routine_increments_times_used(
+    db_session: AsyncSession,
+):
+    """The routine.times_used should be incremented upon usage."""
+    wt = WorkoutType(name="Incr Test", description="desc")
+    db_session.add(wt)
+    await db_session.flush()
+
+    user = User(
+        email="incr@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    routine = Routine(name="Incr Routine", workout_type_id=wt.id, creator_id=user.id)
+    db_session.add(routine)
+    await db_session.commit()
+
+    assert routine.times_used == 0
+
+    # Usage 1
+    await routine_service.create_workout_from_routine(db_session, user.id, routine.id)
+    await db_session.refresh(routine)
+    assert routine.times_used == 1
+
+    # Bypass the 10-second rate limit by deleting the recent workout
+    from src.workouts.models import Workout
+    from sqlalchemy import delete
+    await db_session.execute(delete(Workout))
+    await db_session.commit()
+
+    # Usage 2
+    await routine_service.create_workout_from_routine(db_session, user.id, routine.id)
+    await db_session.refresh(routine)
+    assert routine.times_used == 2

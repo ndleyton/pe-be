@@ -19,7 +19,7 @@ from src.users.models import User
 router = APIRouter(tags=["routines"])
 
 MAX_ROUTINE_LIMIT = 500
-ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name", "author", "category"}
+ALLOWED_SORT_KEYS = {"createdAt", "updatedAt", "name", "author", "category", "timesUsed"}
 
 
 @router.get("/", response_model=List[RoutineRead])
