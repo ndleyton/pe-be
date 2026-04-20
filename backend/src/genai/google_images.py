@@ -546,9 +546,10 @@ async def generate_exercise_phase_pair(
             prompt=second_prompt,
             seed=attempt_seed,
         )
-        if _normalized_image_fingerprint(
-            decode_generated_image(second_result)
-        ) != anchor_fingerprint:
+        if (
+            _normalized_image_fingerprint(decode_generated_image(second_result))
+            != anchor_fingerprint
+        ):
             break
 
         logger.warning(
@@ -564,7 +565,10 @@ async def generate_exercise_phase_pair(
     if second_result is None:
         raise RuntimeError("Anchored phase generation did not return a result")
 
-    if _normalized_image_fingerprint(decode_generated_image(second_result)) == anchor_fingerprint:
+    if (
+        _normalized_image_fingerprint(decode_generated_image(second_result))
+        == anchor_fingerprint
+    ):
         raise RuntimeError(
             "Anchored phase generation produced the same image as the anchor after retries"
         )
