@@ -2,11 +2,10 @@ import { useState, type SVGProps } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin, Github, Code2, Heart } from "lucide-react";
+import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin, Code2, Heart } from "lucide-react";
 
 const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -93,8 +92,8 @@ const AboutPage = () => {
         {/* Profile Card */}
         <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition-all hover:border-primary/20 group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
           <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start text-left">
-            <div className="relative shrink-0 transition-transform duration-500 group-hover:scale-[1.05]">
-              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-primary to-primary-foreground opacity-20 blur-lg group-hover:opacity-40 transition-opacity duration-500" />
+            <div className="relative shrink-0">
+              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-primary to-primary-foreground opacity-25 blur-xl" />
               <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl bg-accent border border-border/50 text-primary-foreground shadow-xl">
                 {!imageError ? (
                   <picture>
