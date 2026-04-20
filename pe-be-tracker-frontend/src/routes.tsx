@@ -13,7 +13,6 @@ import {
   RoutinesPageSkeleton,
 } from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
-import AboutPageSkeleton from "@/features/about/components/skeletons/AboutPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -21,6 +20,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 // These pages are not lazy loaded as they are core pages
 import MyWorkoutsPage from "./features/workouts/pages/MyWorkoutsPage";
 import ChatPage from "./features/chat/pages/ChatPage";
+import AboutPage from "./features/about/pages/AboutPage";
 
 // Lazy load other components with error boundaries
 const WorkoutPage = lazy(() => import("./features/workouts/pages/WorkoutPage"));
@@ -43,7 +43,6 @@ const CreateRoutinePage = lazy(
   () => import("./features/routines/pages/CreateRoutinePage"),
 );
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
-const AboutPage = lazy(() => import("./features/about/pages/AboutPage"));
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
@@ -113,10 +112,6 @@ const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
 
 const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<RoutineDetailsLoadingState />}>{children}</Suspense>
-);
-
-const AboutPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<AboutPageSkeleton />}>{children}</Suspense>
 );
 
 const routes: RouteObject[] = [
@@ -221,11 +216,7 @@ const routes: RouteObject[] = [
       },
       {
         path: "about",
-        element: (
-          <AboutPageWrapper>
-            <AboutPage />
-          </AboutPageWrapper>
-        ),
+        element: <AboutPage />,
       },
       {
         path: "*",
