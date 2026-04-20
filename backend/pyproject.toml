@@ -12,6 +12,7 @@ dependencies = [
     "sqlalchemy>=2.0.29,<3",
     "alembic>=1.13.1,<2",
     "fastapi-users[sqlalchemy, oauth]>=14,<15",
+    "pyjwt>=2.10.1,<2.11",
     "python-dotenv>=1.0.1,<2",
     "asyncpg>=0.29.0,<0.30",
     "pydantic>=2.7.0,<3",
