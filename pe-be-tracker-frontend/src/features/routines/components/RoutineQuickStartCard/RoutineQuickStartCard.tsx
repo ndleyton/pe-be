@@ -50,7 +50,7 @@ export const RoutineQuickStartCard = ({
   };
 
   return (
-    <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex min-h-[14.5rem] h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-2", className)}>
+    <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex min-h-[17rem] h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-2", className)}>
       <CardHeader className="min-h-[5.25rem] pb-3">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
