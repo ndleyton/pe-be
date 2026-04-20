@@ -411,6 +411,7 @@ async def test_create_workout_from_routine_increments_times_used(
     # Bypass the 10-second rate limit by deleting the recent workout
     from src.workouts.models import Workout
     from sqlalchemy import delete
+
     await db_session.execute(delete(Workout))
     await db_session.commit()
 
