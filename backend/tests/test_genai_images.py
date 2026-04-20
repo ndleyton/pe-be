@@ -319,7 +319,6 @@ TINY_PNG_BLUE_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR4nGN
 async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
 
     red_bytes = base64.b64decode(TINY_PNG_RED_B64)
-    blue_bytes = base64.b64decode(TINY_PNG_BLUE_B64)
 
     first_result = ExerciseImageResult(
         model="phase-model",
