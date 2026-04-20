@@ -430,6 +430,34 @@ async def test_generate_exercise_phase_pair_retries_when_anchor_is_duplicated(
     )
 
 
+@pytest.mark.asyncio
+@patch("src.genai.google_images._generate_anchored_image_async")
+@patch("src.genai.google_images.generate_exercise_phase_image")
+async def test_generate_exercise_phase_pair_raises_when_anchor_stays_identical(
+    mock_phase_gen, mock_anchored_gen
+):
+    import base64
+
+    first_result = ExerciseImageResult(
+        model="phase-model",
+        mime_type="image/png",
+        base64_data=base64.b64encode(b"same-image").decode("ascii"),
+        prompt_summary="start",
+    )
+
+    mock_phase_gen.return_value = first_result
+    mock_anchored_gen.side_effect = [first_result, first_result]
+
+    with pytest.raises(RuntimeError, match="same image as the anchor"):
+        await generate_exercise_phase_pair(
+            {"name": "Bench Press"},
+            first_phase_label="start / eccentric",
+            second_phase_label="end / concentric",
+        )
+
+    assert mock_anchored_gen.await_count == 2
+
+
 # ---------------------------------------------------------------------------
 # Reference image tests (unchanged)
 # ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import logging
 from dataclasses import dataclass
 from io import BytesIO
@@ -11,7 +12,7 @@ from urllib.request import Request, urlopen
 
 from google import genai
 from google.genai import types
-from PIL import Image, ImageSequence
+from PIL import Image, ImageSequence, UnidentifiedImageError
 
 from src.core.config import settings
 from src.exercises.image_assets import (
@@ -261,6 +262,30 @@ def _inline_data_to_bytes(data: bytes | str) -> bytes:
     return base64.b64decode(data)
 
 
+def _normalized_image_fingerprint(data: bytes | str) -> str:
+    """Return a metadata-insensitive fingerprint for visual comparison."""
+    raw_bytes = _inline_data_to_bytes(data)
+    try:
+        with Image.open(BytesIO(raw_bytes)) as image:
+            if getattr(image, "is_animated", False):
+                frame = next(ImageSequence.Iterator(image)).copy()
+            else:
+                frame = image.copy()
+
+        if frame.mode != "RGBA":
+            frame = frame.convert("RGBA")
+
+        pixel_hash = hashlib.sha256(frame.tobytes()).hexdigest()
+        return f"{frame.width}x{frame.height}:{pixel_hash}"
+    except UnidentifiedImageError:
+        return f"raw:{hashlib.sha256(raw_bytes).hexdigest()}"
+
+
+def _stable_seed(*parts: str) -> int:
+    payload = "\u241f".join(str(part) for part in parts).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(payload).digest()[:4], "big") or 1
+
+
 def _extract_inline_result(
     response, prompt: str, model_name: str
 ) -> ExerciseImageResult:
@@ -306,6 +331,7 @@ async def _generate_image_async(prompt: str) -> ExerciseImageResult:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
+                    seed=_stable_seed(model_name, prompt),
                 ),
             )
             return _extract_inline_result(response, prompt, model_name)
@@ -393,6 +419,7 @@ async def _generate_reference_image_async(
                 ],
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
+                    seed=_stable_seed(model_name, prompt, option.key),
                 ),
             )
             return _extract_inline_result(
@@ -427,6 +454,7 @@ async def _generate_anchored_image_async(
     anchor_image_bytes: bytes,
     anchor_mime_type: str,
     prompt: str,
+    seed: int | None = None,
 ) -> ExerciseImageResult:
     """Generate a phase image conditioned on an anchor/reference image."""
     client = _get_client()
@@ -445,6 +473,7 @@ async def _generate_anchored_image_async(
                 ],
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
+                    seed=seed if seed is not None else _stable_seed(model_name, prompt),
                 ),
             )
             return _extract_inline_result(response, prompt, model_name)
@@ -493,11 +522,18 @@ async def generate_exercise_phase_pair(
 
     # Step 2: generate second phase using anchor
     anchor_bytes = decode_generated_image(first_result)
+    anchor_fingerprint = _normalized_image_fingerprint(anchor_bytes)
     anchor_mime = first_result.mime_type or DEFAULT_MIME
     second_result: ExerciseImageResult | None = None
     max_anchor_attempts = 2
 
     for attempt in range(max_anchor_attempts):
+        attempt_seed = _stable_seed(
+            context.get("name", "Exercise"),
+            first_phase_label,
+            second_phase_label,
+            str(attempt),
+        )
         second_prompt = _build_anchor_prompt(
             context,
             first_phase_label,
@@ -508,8 +544,11 @@ async def generate_exercise_phase_pair(
             anchor_image_bytes=anchor_bytes,
             anchor_mime_type=anchor_mime,
             prompt=second_prompt,
+            seed=attempt_seed,
         )
-        if decode_generated_image(second_result) != anchor_bytes:
+        if _normalized_image_fingerprint(
+            decode_generated_image(second_result)
+        ) != anchor_fingerprint:
             break
 
         logger.warning(
@@ -524,6 +563,11 @@ async def generate_exercise_phase_pair(
 
     if second_result is None:
         raise RuntimeError("Anchored phase generation did not return a result")
+
+    if _normalized_image_fingerprint(decode_generated_image(second_result)) == anchor_fingerprint:
+        raise RuntimeError(
+            "Anchored phase generation produced the same image as the anchor after retries"
+        )
 
     return first_result, second_result
 
