@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import { useState, useEffect, type SVGProps } from "react";
 import {
   Card,
   CardContent,
@@ -6,7 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, ExternalLink } from "lucide-react";
+import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin } from "lucide-react";
+import { AboutPageSkeleton } from "../components/skeletons/AboutPageSkeleton";
 
 const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -31,117 +32,161 @@ const LinkedInIcon = (props: SVGProps<SVGSVGElement>) => (
 );
 
 const AboutPage = () => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate a brief loading state for "progressive" feel
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <AboutPageSkeleton />;
+  }
+
   return (
-    <div className="mx-auto max-w-3xl space-y-8 p-6 sm:p-8">
-      <div className="space-y-2 text-center">
-        <h1 className="from-primary to-primary/80 bg-gradient-to-r bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+    <div className="mx-auto max-w-5xl px-4 py-12 text-center sm:p-8 animate-in fade-in duration-700">
+      <div className="mb-12 text-center sm:mb-16">
+        <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-6xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
           About Me
         </h1>
-        <p className="text-muted-foreground">Full-Stack Software Engineer</p>
+        <p className="mt-4 text-muted-foreground font-medium tracking-wide uppercase text-xs sm:text-sm">
+          Full-Stack Software Engineer
+        </p>
       </div>
 
-      <Card className="border-border/50 overflow-hidden shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Nicolas Leyton</CardTitle>
-          <CardDescription className="text-base">
-            Nicolas Leyton is a Full-Stack Software Engineer eager to help
-            clients achieve their goals through technology.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="via-border/50 my-4 h-px bg-gradient-to-r from-transparent to-transparent" />
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            When I'm not coding, you can find me working out, bouldering or
-            taking pictures (never at the same time).
-          </p>
-        </CardContent>
-      </Card>
+      <div className="mx-auto max-w-3xl space-y-12">
+        {/* Profile Card */}
+        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition-all hover:border-primary/20 group">
+          <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start text-left">
+            <div className="relative shrink-0">
+              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-primary to-primary-foreground opacity-20 blur-lg group-hover:opacity-40 transition-opacity" />
+              <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-accent border border-border/50 text-primary-foreground shadow-xl">
+                <span className="text-4xl font-black text-primary">NL</span>
+              </div>
+            </div>
+            <div className="space-y-6 w-full">
+              <div className="space-y-2 text-center sm:text-left">
+                <CardTitle className="text-3xl font-black tracking-tight">Nicolas Leyton</CardTitle>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-muted-foreground">
+                   <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/20 transition-colors hover:bg-primary/20">
+                     <MapPin className="h-3 w-3" />
+                     Santiago, CL
+                   </div>
+                </div>
+              </div>
+              <div className="prose prose-neutral dark:prose-invert">
+                <p className="text-foreground/80 leading-relaxed text-lg italic">
+                  "Nicolas Leyton is a Full-Stack Software Engineer eager to help
+                  clients achieve their goals through technology."
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center sm:justify-start gap-4 text-muted-foreground text-sm font-medium">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4 text-primary" />
+                    Working out
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    Bouldering
+                  </div>
+                  <div className="flex items-center gap-2 transition-colors hover:text-primary">
+                    <Camera className="h-4 w-4 text-primary" />
+                    Photography
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">Get In Touch</CardTitle>
-          <CardDescription>
-            Feel free to reach out for collaboration or just to say hi
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        {/* Get In Touch Grid */}
+        <div className="space-y-6">
+          <div className="text-left px-2">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">Get In Touch</h2>
+            <p className="text-muted-foreground font-medium">Feel free to reach out for collaboration</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <a
               href="mailto:ndleyton@uc.cl"
-              className="group hover:bg-accent/50 -mx-3 flex items-center gap-4 rounded-lg p-3 transition-colors"
+              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
-              <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">
-                <Mail className="h-5 w-5" />
+              <div className="bg-primary/10 text-primary flex h-14 w-14 items-center justify-center rounded-2xl group-hover:scale-110 transition-transform shadow-inner">
+                <Mail className="h-7 w-7" />
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="font-medium">Email</h3>
-                <p className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-lg">Email</h3>
+                <p className="text-muted-foreground text-xs opacity-70 group-hover:opacity-100 transition-opacity">
                   ndleyton@uc.cl
                 </p>
               </div>
-              <ExternalLink className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+              <ExternalLink className="absolute top-4 right-4 text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-60" />
             </a>
 
             <a
               href="https://github.com/ndleyton"
               target="_blank"
               rel="noopener noreferrer"
-              className="group hover:bg-accent/50 -mx-3 flex items-center gap-4 rounded-lg p-3 transition-colors"
+              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
-              <div className="bg-primary/10 text-foreground flex h-10 w-10 items-center justify-center rounded-full">
-                <GitHubIcon className="h-5 w-5" />
+              <div className="bg-primary/10 text-foreground flex h-14 w-14 items-center justify-center rounded-2xl group-hover:scale-110 transition-transform shadow-inner">
+                <GitHubIcon className="h-7 w-7" />
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="font-medium">GitHub</h3>
-                <p className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-lg">GitHub</h3>
+                <p className="text-muted-foreground text-xs opacity-70 group-hover:opacity-100 transition-opacity">
                   @ndleyton
                 </p>
               </div>
-              <ExternalLink className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+              <ExternalLink className="absolute top-4 right-4 text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-60" />
             </a>
 
             <a
               href="https://www.linkedin.com/in/nicolas-d-leyton/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group hover:bg-accent/50 -mx-3 flex items-center gap-4 rounded-lg p-3 transition-colors"
+              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
-              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full text-[#0A66C2]">
-                <LinkedInIcon className="h-5 w-5" />
+              <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-2xl text-[#0A66C2] group-hover:scale-110 transition-transform shadow-inner">
+                <LinkedInIcon className="h-7 w-7" />
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="font-medium">LinkedIn</h3>
-                <p className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-lg">LinkedIn</h3>
+                <p className="text-muted-foreground text-xs opacity-70 group-hover:opacity-100 transition-opacity">
                   Nicolas Leyton
                 </p>
               </div>
-              <ExternalLink className="text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+              <ExternalLink className="absolute top-4 right-4 text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-60" />
             </a>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">About This App</CardTitle>
-          <CardDescription>
-            Personal Exercise Tracker - Built with modern web technologies
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-left">
-          <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
-            <div className="space-y-3">
-              <p className="text-muted-foreground">
+        {/* App Info Card */}
+        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-lg backdrop-blur-md transition-all hover:border-primary/20">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="text-2xl font-black tracking-tight">About This App</CardTitle>
+            <CardDescription className="text-base font-medium">
+              Personal Exercise Tracker - Built with modern web technologies
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 text-left">
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
+              <p className="text-muted-foreground leading-relaxed text-base">
                 This fitness tracking application is designed to help users
                 monitor their exercise routines, track progress, and seamlessly
                 consult with the latest AI models to help them achieve their
-                goals. Built by Nicolas Leyton. You can reach out for
-                implementation questions at ndleyton@uc.cl or on LinkedIn.
+                goals.
               </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["React 19", "TypeScript", "FastAPI", "PostgreSQL", "Gemini AI", "Tailwind v4"].map((tech) => (
+                  <span key={tech} className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-xs font-bold transition-all hover:bg-primary/20">
+                    {tech}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
