@@ -50,8 +50,8 @@ export const RoutineQuickStartCard = ({
   };
 
   return (
-    <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex min-h-[17rem] h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-2", className)}>
-      <CardHeader className="min-h-[5.25rem] pb-3">
+    <Card className={cn("bg-card/90 border-border/40 hover:bg-card relative flex py-4 min-h-[14rem] sm:min-h-[15.5rem] h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group gap-1", className)}>
+      <CardHeader className="min-h-[5.25rem] pb-1.5">
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
             <ClipboardList className="h-5 w-5" />
@@ -67,9 +67,9 @@ export const RoutineQuickStartCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0 pb-4">
+      <CardContent className="flex flex-1 flex-col pt-0 pb-3">
         <div className="flex-1" />
-        <div className="space-y-1 mb-3">
+        <div className="space-y-1 mb-2">
           {exerciseNamesPreview.slice(0, 3).map((name: string, i: number) => (
             <div key={i} className="text-muted-foreground text-[11px] font-medium leading-tight flex items-center gap-1.5">
               <div className="h-1 w-1 rounded-full bg-primary/30" />
