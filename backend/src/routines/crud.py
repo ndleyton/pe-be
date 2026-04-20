@@ -261,6 +261,8 @@ async def get_visible_routines_summary(
             query = query.order_by(Routine.author.asc().nullslast(), Routine.id.asc())
         elif order_by == "category":
             query = query.order_by(Routine.category.asc().nullslast(), Routine.id.asc())
+        elif order_by == "timesUsed":
+            query = query.order_by(Routine.times_used.desc(), Routine.id.asc())
         else:
             # Default to createdAt
             query = query.order_by(Routine.created_at.desc(), Routine.id.asc())
@@ -304,6 +306,7 @@ async def get_visible_routines_summary(
                     "category": r.category,
                     "created_at": r.created_at,
                     "updated_at": r.updated_at,
+                    "times_used": r.times_used,
                     "exercise_count": counts["exercise_count"],
                     "set_count": counts["set_count"],
                     "exercise_names_preview": previews,

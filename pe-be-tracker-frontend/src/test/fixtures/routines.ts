@@ -59,6 +59,7 @@ export const makeRoutine = (
   is_readonly: false,
   created_at: DEFAULT_TIMESTAMP,
   updated_at: DEFAULT_TIMESTAMP,
+  times_used: 0,
   exercise_templates: [makeRoutineExerciseTemplate()],
   ...overrides,
 });
@@ -77,6 +78,7 @@ export const makeRoutineSummary = (
     is_readonly: false,
     created_at: DEFAULT_TIMESTAMP,
     updated_at: DEFAULT_TIMESTAMP,
+    times_used: 0,
     exercise_count: 3,
     set_count: 9,
     exercise_names_preview: ["Push-ups", "Rows", "Squats"],

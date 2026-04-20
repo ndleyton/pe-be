@@ -52,6 +52,7 @@ export interface RoutineBase {
   category?: string | null;
   created_at: string;
   updated_at: string;
+  times_used: number;
 }
 
 export type RoutineReference = Pick<RoutineBase, "id">;

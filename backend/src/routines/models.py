@@ -41,6 +41,10 @@ class Routine(Base):
             "visibility",
             desc("created_at"),
         ),
+        Index(
+            "ix_recipes_times_used_desc",
+            desc("times_used"),
+        ),
     )
 
     name = Column(String, nullable=False)
@@ -55,6 +59,7 @@ class Routine(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    times_used = Column(Integer, default=0, nullable=False, server_default="0")
 
     # Visibility as an enum (private, public, link_only)
     # Use lowercase member names so SQLAlchemy binds names that match DB labels.

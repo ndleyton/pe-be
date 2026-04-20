@@ -115,6 +115,7 @@ class RoutineRead(RoutineBase):
     is_readonly: bool
     created_at: datetime
     updated_at: datetime
+    times_used: int
     exercise_templates: List[ExerciseTemplateRead] = []
     model_config = ConfigDict(from_attributes=True)
 
@@ -128,6 +129,7 @@ class RoutineSummary(RoutineBase):
     is_readonly: bool
     created_at: datetime
     updated_at: datetime
+    times_used: int
     exercise_count: int
     set_count: int
     exercise_names_preview: List[str]
