@@ -16,6 +16,7 @@ from google.genai import errors
 from src.admin.exercise_image_service import (
     apply_reference_or_option,
     build_image_options_response,
+    _exercise_context,
     generate_reference_image_options,
 )
 from src.admin.schemas import (
@@ -30,7 +31,7 @@ from src.users.models import User
 from src.exercises.service import ExerciseTypeService
 from src.exercises.schemas import ExerciseTypeRead, ExerciseTypeReleaseRequest
 from src.genai.google_images import (
-    generate_exercise_phase_image,
+    generate_exercise_phase_pair,
 )
 from src.routines.schemas import RoutineRead, AdminRoutineCreate
 from src.routines.service import routine_service
@@ -155,34 +156,15 @@ async def generate_exercise_type_images(
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
-    # Collect muscles by primary/secondary
-    primary_muscles: List[str] = []
-    secondary_muscles: List[str] = []
-    for em in exercise_type.exercise_muscles or []:
-        if getattr(em, "is_primary", False):
-            primary_muscles.append(em.muscle.name)
-        else:
-            secondary_muscles.append(em.muscle.name)
-
-    # Build shared context for prompts
-    context = {
-        "name": exercise_type.name,
-        "description": exercise_type.description or "",
-        "primary_muscles": primary_muscles,
-        "secondary_muscles": secondary_muscles,
-    }
+    # Build the shared prompt context used by the image generation pipeline.
+    context = _exercise_context(exercise_type)
 
     try:
-        # Generate both images (eccentric/start and concentric/end) concurrently
-        import asyncio
-
-        eccentric, concentric = await asyncio.gather(
-            generate_exercise_phase_image(
-                context=context, phase_label="start / eccentric"
-            ),
-            generate_exercise_phase_image(
-                context=context, phase_label="end / concentric"
-            ),
+        # Generate images sequentially (anchor-then-edit for consistency)
+        eccentric, concentric = await generate_exercise_phase_pair(
+            context,
+            first_phase_label="start / eccentric",
+            second_phase_label="end / concentric",
         )
     except errors.ClientError as exc:
         if exc.code == 429:
@@ -196,6 +178,15 @@ async def generate_exercise_type_images(
             detail=f"Gemini API error: {exc}",
         ) from exc
     except Exception as exc:
+        if (
+            (hasattr(exc, "code") and exc.code == 429)
+            or "429" in str(exc)
+            or "resourceexhausted" in str(exc).lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
         logger.exception("Unexpected error during image generation: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -339,6 +330,15 @@ async def generate_reference_options(
             detail=f"Gemini API error: {exc}",
         ) from exc
     except Exception as exc:
+        if (
+            (hasattr(exc, "code") and exc.code == 429)
+            or "429" in str(exc)
+            or "resourceexhausted" in str(exc).lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini API quota exceeded. Please wait a minute and try again.",
+            ) from exc
         logger.exception("Unexpected error during image generation: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

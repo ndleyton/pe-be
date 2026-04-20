@@ -28,14 +28,14 @@ from src.genai.google_images import (
     REFERENCE_PIPELINE_KEY,
     REFERENCE_PROMPT_VERSION,
     decode_generated_image,
-    generate_exercise_phase_image,
+    generate_exercise_phase_pair,
     generate_reference_image_variant,
 )
 
 REFERENCE_OPTION_SOURCE = "reference_redraw"
 PHASE_FALLBACK_OPTION_SOURCE = "phase_generated"
 PHASE_FALLBACK_PIPELINE_KEY = "phase_fallback_v1"
-PHASE_FALLBACK_PROMPT_VERSION = "v3"
+PHASE_FALLBACK_PROMPT_VERSION = "v5"
 PHASE_FALLBACK_OPTION_KEY = "phase-generated"
 PHASE_FALLBACK_OPTION_LABEL = "Generated Phase Pair"
 PHASE_FALLBACK_OPTION_DESCRIPTION = (
@@ -554,55 +554,45 @@ async def _generate_phase_fallback_image_options(
         for candidate in await _load_candidates_by_keys(session, all_potential_keys)
     }
 
-    pending_jobs: list[
-        tuple[int, str, str, str, str, ExerciseImageCandidate | None]
-    ] = []
-    for source_image_index, source_image_url, phase_label in PHASE_FALLBACK_IMAGES:
-        generation_key = _build_generation_key(
-            exercise_type_id=exercise_type.id,
-            source_image_url=source_image_url,
-            source_image_index=source_image_index,
-            option_key=PHASE_FALLBACK_OPTION_KEY,
-            pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
-            prompt_version=PHASE_FALLBACK_PROMPT_VERSION,
-            model_name=model_name,
-        )
-        storage_path = _storage_path_for_candidate(
-            exercise_type.id,
-            PHASE_FALLBACK_OPTION_KEY,
-            source_image_index,
-            generation_key,
-        )
-        existing = existing_candidates.get(generation_key)
-        if existing and _candidate_file_exists(existing.storage_path):
-            continue
-        pending_jobs.append(
-            (
-                source_image_index,
-                source_image_url,
-                phase_label,
-                generation_key,
-                storage_path,
-                existing,
-            )
-        )
+    # Check if all candidates already exist on disk
+    all_exist = True
+    for gen_key in all_potential_keys:
+        existing = existing_candidates.get(gen_key)
+        if not existing or not _candidate_file_exists(existing.storage_path):
+            all_exist = False
+            break
 
-    if pending_jobs:
-        results = await asyncio.gather(
-            *[
-                generate_exercise_phase_image(context=context, phase_label=phase_label)
-                for _, _, phase_label, _, _, _ in pending_jobs
-            ]
+    if not all_exist:
+        # Generate the pair sequentially (anchor-then-edit)
+        eccentric_result, concentric_result = await generate_exercise_phase_pair(
+            context,
+            first_phase_label="start / eccentric",
+            second_phase_label="end / concentric",
         )
+        phase_results = [eccentric_result, concentric_result]
 
         for (
             source_image_index,
             source_image_url,
             _phase_label,
-            generation_key,
-            storage_path,
-            existing,
-        ), result in zip(pending_jobs, results, strict=True):
+        ), result in zip(PHASE_FALLBACK_IMAGES, phase_results, strict=True):
+            generation_key = _build_generation_key(
+                exercise_type_id=exercise_type.id,
+                source_image_url=source_image_url,
+                source_image_index=source_image_index,
+                option_key=PHASE_FALLBACK_OPTION_KEY,
+                pipeline_key=PHASE_FALLBACK_PIPELINE_KEY,
+                prompt_version=PHASE_FALLBACK_PROMPT_VERSION,
+                model_name=model_name,
+            )
+            storage_path = _storage_path_for_candidate(
+                exercise_type.id,
+                PHASE_FALLBACK_OPTION_KEY,
+                source_image_index,
+                generation_key,
+            )
+            existing = existing_candidates.get(generation_key)
+
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
 

@@ -313,6 +313,11 @@ const EditableRoutineSetRow = memo(
                     duration_seconds: null,
                   });
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
+                }}
                 placeholder="0"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
               />
@@ -340,6 +345,11 @@ const EditableRoutineSetRow = memo(
                   intensity: parseDecimalInput(event.target.value),
                 })
               }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
               placeholder="0.0"
               className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
             />
