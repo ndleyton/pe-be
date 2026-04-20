@@ -222,7 +222,11 @@ class RoutineService:
         session.add(workout)
 
         # Increment routine usage count
-        routine.times_used += 1
+        await session.execute(
+            update(Routine)
+            .where(Routine.id == routine.id)
+            .values(times_used=Routine.times_used + 1)
+        )
 
         for exercise_template in routine.exercise_templates:
             exercise = Exercise(
