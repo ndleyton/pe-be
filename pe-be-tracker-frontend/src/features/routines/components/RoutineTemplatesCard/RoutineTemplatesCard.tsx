@@ -292,6 +292,16 @@ const EditableRoutineSetRow = memo(
                     (event.currentTarget as HTMLInputElement).blur();
                   }
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  } else if (event.key === "Escape") {
+                    setDurationDraft(
+                      formatDurationInputValue(setTemplate.duration_seconds),
+                    );
+                    event.currentTarget.blur();
+                  }
+                }}
                 placeholder="00:00"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
               />
@@ -312,6 +322,11 @@ const EditableRoutineSetRow = memo(
                         : Number.parseInt(nextValue, 10),
                     duration_seconds: null,
                   });
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
                 }}
                 placeholder="0"
                 className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
@@ -340,6 +355,11 @@ const EditableRoutineSetRow = memo(
                   intensity: parseDecimalInput(event.target.value),
                 })
               }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
               placeholder="0.0"
               className="h-10 rounded-xl border-primary/5 bg-primary/5 text-center font-semibold transition-all focus:border-primary/20"
             />
