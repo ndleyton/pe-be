@@ -221,6 +221,9 @@ class RoutineService:
         )
         session.add(workout)
 
+        # Increment routine usage count
+        routine.times_used += 1
+
         for exercise_template in routine.exercise_templates:
             exercise = Exercise(
                 timestamp=datetime.now(timezone.utc),
