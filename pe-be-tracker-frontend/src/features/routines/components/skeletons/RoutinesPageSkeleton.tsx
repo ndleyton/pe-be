@@ -6,7 +6,7 @@ type RoutinesPageSkeletonProps = {
 };
 
 const RoutineQuickStartCardSkeleton = () => (
-  <Card className="bg-card/40 border-border/20 relative flex h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border p-6 shadow-md backdrop-blur-sm">
+  <Card className="bg-card/40 border-border/20 relative flex min-h-[15.5rem] sm:min-h-[17rem] h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border py-4 px-6 shadow-md backdrop-blur-sm">
     <div className="flex items-center gap-4 mb-4">
       <Skeleton className="h-12 w-12 rounded-xl" />
       <div className="flex-1">
