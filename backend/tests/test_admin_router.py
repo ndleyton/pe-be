@@ -1,9 +1,11 @@
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.main import app
+from src.core.config import settings
 from src.users.router import current_active_user
 from src.users.models import User
 from src.routines.models import Routine
@@ -109,8 +111,6 @@ async def test_admin_generate_images_guards_and_import_status(
     async_client: AsyncClient, db_session: AsyncSession, monkeypatch
 ):
     # Ensure GOOGLE_AI_KEY empty so we get 400 when admin
-    from src.core.config import settings
-
     # Non-admin -> 403
     user = User(
         email="g-na@example.com",
@@ -186,6 +186,100 @@ async def test_admin_generate_images_guards_and_import_status(
         import_resp = await async_client.post("/api/v1/admin/import-exercises")
         assert import_resp.status_code in (200, 500)
     finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_admin_generate_images_passes_full_identity_context(
+    async_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
+    admin = User(
+        email="context-admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    db_session.add(admin)
+    await db_session.flush()
+
+    exercise_type = SimpleNamespace(
+        name="Bench Press",
+        description="Chest press",
+        equipment="Barbell",
+        category="Compound",
+        instructions="Lower under control",
+        exercise_muscles=[
+            SimpleNamespace(
+                is_primary=True,
+                muscle=SimpleNamespace(name="Pectorals"),
+            ),
+            SimpleNamespace(
+                is_primary=False,
+                muscle=SimpleNamespace(name="Triceps"),
+            ),
+        ],
+    )
+
+    captured = {}
+
+    async def override_admin():
+        return admin
+
+    async def fake_get_exercise_type(session, exercise_type_id, user):
+        return exercise_type
+
+    async def fake_generate_exercise_phase_pair(
+        context,
+        *,
+        first_phase_label="start / eccentric",
+        second_phase_label="end / concentric",
+    ):
+        captured["context"] = context
+        captured["first_phase_label"] = first_phase_label
+        captured["second_phase_label"] = second_phase_label
+        return (
+            SimpleNamespace(
+                model="phase-model",
+                mime_type="image/png",
+                base64_data="eccentric",
+                prompt_summary="start",
+            ),
+            SimpleNamespace(
+                model="phase-model",
+                mime_type="image/png",
+                base64_data="concentric",
+                prompt_summary="end",
+            ),
+        )
+
+    app.dependency_overrides[current_active_user] = override_admin
+    original_key = settings.GOOGLE_AI_KEY
+    settings.GOOGLE_AI_KEY = "test-key"
+    monkeypatch.setattr(
+        "src.admin.router.ExerciseTypeService.get_exercise_type",
+        fake_get_exercise_type,
+    )
+    monkeypatch.setattr(
+        "src.admin.router.generate_exercise_phase_pair",
+        fake_generate_exercise_phase_pair,
+    )
+
+    try:
+        resp = await async_client.post("/api/v1/admin/exercise-types/1/generate-images")
+        assert resp.status_code == 200, resp.text
+        assert captured["first_phase_label"] == "start / eccentric"
+        assert captured["second_phase_label"] == "end / concentric"
+        assert captured["context"]["name"] == "Bench Press"
+        assert captured["context"]["description"] == "Chest press"
+        assert captured["context"]["equipment"] == "Barbell"
+        assert captured["context"]["category"] == "Compound"
+        assert captured["context"]["instructions"] == "Lower under control"
+        assert captured["context"]["primary_muscles"] == ["Pectorals"]
+        assert captured["context"]["secondary_muscles"] == ["Triceps"]
+    finally:
+        settings.GOOGLE_AI_KEY = original_key
         app.dependency_overrides.pop(current_active_user, None)
 
 

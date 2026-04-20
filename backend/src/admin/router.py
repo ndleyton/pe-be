@@ -16,6 +16,7 @@ from google.genai import errors
 from src.admin.exercise_image_service import (
     apply_reference_or_option,
     build_image_options_response,
+    _exercise_context,
     generate_reference_image_options,
 )
 from src.admin.schemas import (
@@ -155,22 +156,8 @@ async def generate_exercise_type_images(
     if not exercise_type:
         raise HTTPException(status_code=404, detail="Exercise type not found")
 
-    # Collect muscles by primary/secondary
-    primary_muscles: List[str] = []
-    secondary_muscles: List[str] = []
-    for em in exercise_type.exercise_muscles or []:
-        if getattr(em, "is_primary", False):
-            primary_muscles.append(em.muscle.name)
-        else:
-            secondary_muscles.append(em.muscle.name)
-
-    # Build shared context for prompts
-    context = {
-        "name": exercise_type.name,
-        "description": exercise_type.description or "",
-        "primary_muscles": primary_muscles,
-        "secondary_muscles": secondary_muscles,
-    }
+    # Build the shared prompt context used by the image generation pipeline.
+    context = _exercise_context(exercise_type)
 
     try:
         # Generate images sequentially (anchor-then-edit for consistency)

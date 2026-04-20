@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -193,8 +194,8 @@ def test_build_reference_prompt_for_minimal_outline_option():
 async def test_generate_image_async_success(mock_get_client, mock_settings):
     mock_settings.GOOGLE_AI_KEY = "test_key"
     mock_inline = MagicMock()
-    mock_inline.data = "base64encodedimage"
-    mock_inline.mime_type = "image/jpeg"
+    mock_inline.data = TINY_PNG_RED_B64
+    mock_inline.mime_type = "image/png"
 
     mock_part = MagicMock()
     mock_part.inline_data = mock_inline
@@ -215,8 +216,8 @@ async def test_generate_image_async_success(mock_get_client, mock_settings):
     config = kwargs["config"]
     assert config.response_modalities == ["IMAGE"]
 
-    assert result.base64_data == "base64encodedimage"
-    assert result.mime_type == "image/jpeg"
+    assert result.base64_data == TINY_PNG_RED_B64
+    assert result.mime_type == "image/png"
     assert result.prompt_summary == "My test prompt"
 
 
@@ -267,7 +268,7 @@ async def test_generate_anchored_image_async_success(mock_get_client, mock_setti
     mock_settings.GOOGLE_AI_KEY = "test_key"
 
     mock_inline = MagicMock()
-    mock_inline.data = "base64anchored"
+    mock_inline.data = TINY_PNG_BLUE_B64
     mock_inline.mime_type = "image/png"
 
     mock_part = MagicMock()
@@ -282,8 +283,9 @@ async def test_generate_anchored_image_async_success(mock_get_client, mock_setti
     )
     mock_get_client.return_value = mock_client
 
+    red_bytes = base64.b64decode(TINY_PNG_RED_B64)
     result = await _generate_anchored_image_async(
-        anchor_image_bytes=b"anchor_bytes",
+        anchor_image_bytes=red_bytes,
         anchor_mime_type="image/png",
         prompt="Generate concentric phase",
     )
@@ -297,7 +299,7 @@ async def test_generate_anchored_image_async_success(mock_get_client, mock_setti
     contents = kwargs["contents"]
     assert len(contents) == 2
 
-    assert result.base64_data == "base64anchored"
+    assert result.base64_data == TINY_PNG_BLUE_B64
     assert result.mime_type == "image/png"
 
 
@@ -306,16 +308,23 @@ async def test_generate_anchored_image_async_success(mock_get_client, mock_setti
 # ---------------------------------------------------------------------------
 
 
+# Valid tiny PNGs (8x8) to exercise the Pillow-normalized fingerprint path
+TINY_PNG_RED_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR4nGP8z8DwnwEPYMInOXwUAAASWwIOH0pJXQAAAABJRU5ErkJggg=="
+TINY_PNG_BLUE_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR4nGNkYPj/nwEPYMInOXwUAAAQXQIOZWZ6QQAAAABJRU5ErkJggg=="
+
+
 @pytest.mark.asyncio
 @patch("src.genai.google_images._generate_anchored_image_async")
 @patch("src.genai.google_images.generate_exercise_phase_image")
 async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
-    import base64
+
+    red_bytes = base64.b64decode(TINY_PNG_RED_B64)
+    blue_bytes = base64.b64decode(TINY_PNG_BLUE_B64)
 
     first_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"eccentric_bytes").decode("ascii"),
+        base64_data=TINY_PNG_RED_B64,
         prompt_summary="start",
     )
     mock_phase_gen.return_value = first_result
@@ -323,7 +332,7 @@ async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
     second_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"concentric_bytes").decode("ascii"),
+        base64_data=TINY_PNG_BLUE_B64,
         prompt_summary="end",
     )
     mock_anchored_gen.return_value = second_result
@@ -337,7 +346,7 @@ async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
     # Second image generated using anchor
     mock_anchored_gen.assert_called_once()
     _, kwargs = mock_anchored_gen.call_args
-    assert kwargs["anchor_image_bytes"] == b"eccentric_bytes"
+    assert kwargs["anchor_image_bytes"] == red_bytes
     assert kwargs["anchor_mime_type"] == "image/png"
     assert "end / concentric" in kwargs["prompt"]
     assert "start / eccentric" in kwargs["prompt"]
@@ -353,12 +362,10 @@ async def test_generate_exercise_phase_pair(mock_phase_gen, mock_anchored_gen):
 async def test_generate_exercise_phase_pair_custom_labels(
     mock_phase_gen, mock_anchored_gen
 ):
-    import base64
-
     first_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"first").decode("ascii"),
+        base64_data=TINY_PNG_RED_B64,
         prompt_summary="bottom",
     )
     mock_phase_gen.return_value = first_result
@@ -366,7 +373,7 @@ async def test_generate_exercise_phase_pair_custom_labels(
     second_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"second").decode("ascii"),
+        base64_data=TINY_PNG_BLUE_B64,
         prompt_summary="top",
     )
     mock_anchored_gen.return_value = second_result
@@ -390,18 +397,16 @@ async def test_generate_exercise_phase_pair_custom_labels(
 async def test_generate_exercise_phase_pair_retries_when_anchor_is_duplicated(
     mock_phase_gen, mock_anchored_gen
 ):
-    import base64
-
     first_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"same-image").decode("ascii"),
+        base64_data=TINY_PNG_RED_B64,
         prompt_summary="start",
     )
     retry_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"different-image").decode("ascii"),
+        base64_data=TINY_PNG_BLUE_B64,
         prompt_summary="end",
     )
 
@@ -436,12 +441,10 @@ async def test_generate_exercise_phase_pair_retries_when_anchor_is_duplicated(
 async def test_generate_exercise_phase_pair_raises_when_anchor_stays_identical(
     mock_phase_gen, mock_anchored_gen
 ):
-    import base64
-
     first_result = ExerciseImageResult(
         model="phase-model",
         mime_type="image/png",
-        base64_data=base64.b64encode(b"same-image").decode("ascii"),
+        base64_data=TINY_PNG_RED_B64,
         prompt_summary="start",
     )
 
@@ -472,11 +475,11 @@ async def test_generate_reference_image_async_success(mock_get_client, mock_sett
 
     # Mocking normalization result
     mock_prepared = MagicMock()
-    mock_prepared.image_bytes = b"refbytes"
+    mock_prepared.image_bytes = base64.b64decode(TINY_PNG_RED_B64)
     mock_prepared.mime_type = "image/png"
 
     mock_inline = MagicMock()
-    mock_inline.data = "base64redrawn"
+    mock_inline.data = TINY_PNG_BLUE_B64
     mock_inline.mime_type = "image/png"
 
     mock_part = MagicMock()
@@ -511,7 +514,7 @@ async def test_generate_reference_image_async_success(mock_get_client, mock_sett
     config = kwargs["config"]
     assert config.response_modalities == ["IMAGE"]
 
-    assert result.base64_data == "base64redrawn"
+    assert result.base64_data == TINY_PNG_BLUE_B64
     assert result.mime_type == "image/png"
 
 
