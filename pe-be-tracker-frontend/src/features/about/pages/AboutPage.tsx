@@ -70,10 +70,8 @@ const AboutPage = () => {
           <CardContent className="px-0 pb-0 text-left">
             <div className="prose prose-neutral dark:prose-invert max-w-none">
               <p className="text-muted-foreground leading-relaxed text-lg">
-                This fitness tracking application is designed to help users
-                monitor their exercise routines, track progress, and seamlessly
-                consult with the latest AI models to help them achieve their
-                goals.
+                Personal Bestie is designed to help users log their workouts,
+                track progress, and get new routines all seamlessly with the help of AI.
               </p>
               <div className="mt-8">
                 <h4 className="text-sm font-bold uppercase tracking-wider text-foreground/50 mb-3 ml-1">Powered by</h4>
@@ -96,7 +94,7 @@ const AboutPage = () => {
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-primary to-primary-foreground opacity-25 blur-xl" />
               <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl bg-accent border border-border/50 text-primary-foreground shadow-xl">
                 {!imageError ? (
-                  <picture>
+                  <picture className="block h-full w-full">
                     <source srcSet="/profile.avif" type="image/avif" />
                     <source srcSet="/profile.webp" type="image/webp" />
                     <img
@@ -116,16 +114,16 @@ const AboutPage = () => {
               <div className="space-y-2 text-center sm:text-left">
                 <CardTitle className="text-3xl font-black tracking-tight">Nicolas Leyton</CardTitle>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-muted-foreground">
-                   <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/20 transition-colors hover:bg-primary/20">
-                     <MapPin className="h-3 w-3" />
-                     Santiago, CL
-                   </div>
+                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/20 transition-colors hover:bg-primary/20">
+                    <MapPin className="h-3 w-3" />
+                    Santiago, CL
+                  </div>
                 </div>
               </div>
               <div className="prose prose-neutral dark:prose-invert">
                 <p className="text-foreground/80 leading-relaxed text-lg italic">
-                  "Nicolas Leyton is a Full-Stack Software Engineer eager to help
-                  clients achieve their goals through technology."
+                  "Nicolas Leyton is a product focused Full-Stack Software Engineer
+                  with experience all throughout the stack and industry."
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center sm:justify-start gap-4 text-muted-foreground text-sm font-medium">
                   <div className="flex items-center gap-2">
@@ -150,12 +148,12 @@ const AboutPage = () => {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both">
           <div className="text-left px-2">
             <h2 className="text-2xl font-black tracking-tight text-foreground">Get In Touch</h2>
-            <p className="text-muted-foreground font-medium">Feel free to reach out for collaboration</p>
+            <p className="text-muted-foreground font-medium">Feel free to reach out for collaboration or requests</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <a
               href="mailto:ndleyton@uc.cl"
-              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
+              className="group relative bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
               <div className="bg-primary/10 text-primary flex h-14 w-14 items-center justify-center rounded-2xl group-hover:scale-110 transition-transform shadow-inner">
                 <Mail className="h-7 w-7" />
@@ -173,7 +171,7 @@ const AboutPage = () => {
               href="https://github.com/ndleyton"
               target="_blank"
               rel="noopener noreferrer"
-              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
+              className="group relative bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
               <div className="bg-primary/10 text-foreground flex h-14 w-14 items-center justify-center rounded-2xl group-hover:scale-110 transition-transform shadow-inner">
                 <GitHubIcon className="h-7 w-7" />
@@ -191,7 +189,7 @@ const AboutPage = () => {
               href="https://www.linkedin.com/in/nicolas-d-leyton/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
+              className="group relative bg-card/40 border-border/20 hover:bg-accent/40 hover:border-primary/30 flex flex-col items-center gap-4 rounded-3xl border p-8 transition-all hover:scale-[1.02] shadow-sm hover:shadow-xl backdrop-blur-sm"
             >
               <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-2xl text-[#0A66C2] group-hover:scale-110 transition-transform shadow-inner">
                 <LinkedInIcon className="h-7 w-7" />
