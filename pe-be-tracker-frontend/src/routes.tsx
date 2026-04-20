@@ -13,6 +13,7 @@ import {
   RoutinesPageSkeleton,
 } from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
+import AboutPageSkeleton from "@/features/about/components/skeletons/AboutPageSkeleton";
 
 import AppLayout from "./layouts/AppLayout";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -112,6 +113,10 @@ const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
 
 const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<RoutineDetailsLoadingState />}>{children}</Suspense>
+);
+
+const AboutPageWrapper = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<AboutPageSkeleton />}>{children}</Suspense>
 );
 
 const routes: RouteObject[] = [
@@ -217,9 +222,9 @@ const routes: RouteObject[] = [
       {
         path: "about",
         element: (
-          <PageWrapper>
+          <AboutPageWrapper>
             <AboutPage />
-          </PageWrapper>
+          </AboutPageWrapper>
         ),
       },
       {

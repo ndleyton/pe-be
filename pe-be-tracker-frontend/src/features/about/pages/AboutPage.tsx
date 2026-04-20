@@ -1,4 +1,4 @@
-import { useState, useEffect, type SVGProps } from "react";
+import { useState, type SVGProps } from "react";
 import {
   Card,
   CardContent,
@@ -6,8 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin } from "lucide-react";
-import { AboutPageSkeleton } from "../components/skeletons/AboutPageSkeleton";
+import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin, Github, Code2, Heart } from "lucide-react";
 
 const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -32,37 +31,81 @@ const LinkedInIcon = (props: SVGProps<SVGSVGElement>) => (
 );
 
 const AboutPage = () => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate a brief loading state for "progressive" feel
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
-    return <AboutPageSkeleton />;
-  }
+  const [imageError, setImageError] = useState(false);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 text-center sm:p-8 animate-in fade-in duration-700">
-      <div className="mb-12 text-center sm:mb-16">
+      <div className="mb-12 text-center sm:mb-16 animate-in fade-in slide-in-from-top-8 duration-1000">
         <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-6xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-          About Me
+          About
         </h1>
         <p className="mt-4 text-muted-foreground font-medium tracking-wide uppercase text-xs sm:text-sm">
-          Full-Stack Software Engineer
+          The project and the developer
         </p>
       </div>
 
       <div className="mx-auto max-w-3xl space-y-12">
+        {/* App Info Card */}
+        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-lg backdrop-blur-md transition-all hover:border-primary/20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
+          <CardHeader className="px-0 pt-0 text-left">
+            <div className="flex items-center justify-between gap-4 mb-2">
+              <CardTitle className="text-3xl font-black tracking-tight">PersonalBestie</CardTitle>
+              <a
+                href="https://github.com/ndleyton/pe-be"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]"
+              >
+                <GitHubIcon className="h-4 w-4" />
+                GitHub
+              </a>
+            </div>
+            <div className="flex items-center gap-2 text-primary font-bold text-sm mb-6">
+              <Code2 className="h-4 w-4" />
+              <span>Open Source</span>
+              <span className="text-muted-foreground/40 mx-1">•</span>
+              <Heart className="h-4 w-4 fill-current text-rose-500" />
+              <span className="text-rose-500">Built for you</span>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 text-left">
+            <div className="prose prose-neutral dark:prose-invert max-w-none">
+              <p className="text-muted-foreground leading-relaxed text-lg">
+                This fitness tracking application is designed to help users
+                monitor their exercise routines, track progress, and seamlessly
+                consult with the latest AI models to help them achieve their
+                goals.
+              </p>
+              <div className="mt-8">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-foreground/50 mb-3 ml-1">Powered by</h4>
+                <div className="flex flex-wrap gap-2">
+                  {["React 19", "TypeScript", "FastAPI", "PostgreSQL", "Gemini AI", "Tailwind v4"].map((tech) => (
+                    <span key={tech} className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-xs font-bold transition-all hover:bg-primary/20">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Profile Card */}
-        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition-all hover:border-primary/20 group">
+        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition-all hover:border-primary/20 group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
           <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start text-left">
             <div className="relative shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-primary to-primary-foreground opacity-20 blur-lg group-hover:opacity-40 transition-opacity" />
-              <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-accent border border-border/50 text-primary-foreground shadow-xl">
-                <span className="text-4xl font-black text-primary">NL</span>
+              <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl bg-accent border border-border/50 text-primary-foreground shadow-xl transition-transform duration-500 group-hover:scale-[1.03]">
+                {!imageError ? (
+                  <img
+                    src="/profile.jpg"
+                    alt="Nicolas Leyton"
+                    className="h-full w-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <span className="text-4xl font-black text-primary">NL</span>
+                )}
               </div>
             </div>
             <div className="space-y-6 w-full">
@@ -100,7 +143,7 @@ const AboutPage = () => {
         </Card>
 
         {/* Get In Touch Grid */}
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both">
           <div className="text-left px-2">
             <h2 className="text-2xl font-black tracking-tight text-foreground">Get In Touch</h2>
             <p className="text-muted-foreground font-medium">Feel free to reach out for collaboration</p>
@@ -159,33 +202,6 @@ const AboutPage = () => {
             </a>
           </div>
         </div>
-
-        {/* App Info Card */}
-        <Card className="bg-card/40 border-border/20 overflow-hidden rounded-3xl border p-8 shadow-lg backdrop-blur-md transition-all hover:border-primary/20">
-          <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-2xl font-black tracking-tight">About This App</CardTitle>
-            <CardDescription className="text-base font-medium">
-              Personal Exercise Tracker - Built with modern web technologies
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-0 pb-0 text-left">
-            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
-              <p className="text-muted-foreground leading-relaxed text-base">
-                This fitness tracking application is designed to help users
-                monitor their exercise routines, track progress, and seamlessly
-                consult with the latest AI models to help them achieve their
-                goals.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {["React 19", "TypeScript", "FastAPI", "PostgreSQL", "Gemini AI", "Tailwind v4"].map((tech) => (
-                  <span key={tech} className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-xs font-bold transition-all hover:bg-primary/20">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
