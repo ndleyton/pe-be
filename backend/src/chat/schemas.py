@@ -84,8 +84,33 @@ class ChatRoutineCreatedEvent(BaseModel):
     routine: ChatRoutineEventRoutine
 
 
+class ChatExerciseSubstitutionSource(BaseModel):
+    id: int
+    name: str
+
+
+class ChatExerciseSubstitutionItem(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    equipment: Optional[str] = None
+    category: Optional[str] = None
+    match_reason: Literal["same_primary_muscle", "same_primary_muscle_group"]
+    muscles: List[str] = Field(default_factory=list)
+
+
+class ChatExerciseSubstitutionsEvent(BaseModel):
+    type: Literal["exercise_substitutions_recommended"]
+    title: Optional[str] = None
+    strategy: str
+    source_exercise: ChatExerciseSubstitutionSource
+    substitutions: List[ChatExerciseSubstitutionItem] = Field(default_factory=list)
+
+
 ChatEvent = Annotated[
-    ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent,
+    ChatWorkoutCreatedEvent
+    | ChatRoutineCreatedEvent
+    | ChatExerciseSubstitutionsEvent,
     Field(discriminator="type"),
 ]
 

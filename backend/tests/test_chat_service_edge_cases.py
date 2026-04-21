@@ -171,6 +171,14 @@ async def test_parse_workout_and_save_no_db(chat_service_no_db):
 
 
 @pytest.mark.asyncio
+async def test_recommend_exercise_substitutions_no_db(chat_service_no_db):
+    result = await chat_service_no_db._recommend_exercise_substitutions(
+        exercise_type_id=12
+    )
+    assert result == "Failed to recommend substitutions: no database session available."
+
+
+@pytest.mark.asyncio
 @patch("src.workouts.service.WorkoutService.create_workout_from_parsed")
 async def test_parse_workout_and_save_exception(mock_create, chat_service_with_db):
     mock_create.side_effect = Exception("DB save failed")

@@ -30,6 +30,9 @@ from src.chat.llm_client import (
     ToolDefinition,
 )
 from src.chat.schemas import (
+    ChatExerciseSubstitutionItem,
+    ChatExerciseSubstitutionSource,
+    ChatExerciseSubstitutionsEvent,
     ChatRoutineCreatedEvent,
     ChatRoutineEventRoutine,
     ChatMessage,
@@ -41,8 +44,10 @@ from src.chat.schemas import (
 )
 from src.core.config import settings
 from src.exercises.crud import (
+    get_exercise_type_by_id,
     get_exercise_type_stats,
     get_exercise_types,
+    get_similar_exercise_types as get_similar_exercise_type_matches,
     get_intensity_units,
 )
 from src.exercises.intensity_units import (
@@ -73,6 +78,18 @@ class LastExercisePerformanceArgs(BaseModel):
 
 class WorkoutSummaryByDateArgs(BaseModel):
     workout_date: str
+
+
+class ExerciseSubstitutionArgs(BaseModel):
+    exercise_name: str | None = Field(default=None, min_length=1)
+    exercise_type_id: int | None = Field(default=None, ge=1)
+    limit: int = Field(default=3, ge=1, le=3)
+
+    @model_validator(mode="after")
+    def validate_source(self) -> "ExerciseSubstitutionArgs":
+        if self.exercise_name is None and self.exercise_type_id is None:
+            raise ValueError("exercise_name or exercise_type_id is required")
+        return self
 
 
 class PersonalizedRoutineSetArgs(BaseModel):
@@ -260,6 +277,8 @@ class ChatService:
             return "I created a routine for you. You can review it below."
         if isinstance(latest_event, ChatWorkoutCreatedEvent):
             return "I logged your workout. You can open it below."
+        if isinstance(latest_event, ChatExerciseSubstitutionsEvent):
+            return "I found grounded substitutions for you. You can review them below."
         return None
 
     @classmethod
@@ -310,8 +329,11 @@ class ChatService:
         self._llm_client = llm_client
         self._workout_saved_this_request = False
         self._routine_created_this_request = False
+        self._exercise_substitutions_generated_this_request = False
         self._pending_chat_events: list[
-            ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent
+            ChatWorkoutCreatedEvent
+            | ChatRoutineCreatedEvent
+            | ChatExerciseSubstitutionsEvent
         ] = []
 
     @classmethod
@@ -614,6 +636,41 @@ class ChatService:
             ),
         )
 
+    @staticmethod
+    def _build_exercise_substitutions_event(
+        source_exercise: Any,
+        suggestions: list[dict[str, Any]],
+        *,
+        strategy: str,
+    ) -> ChatExerciseSubstitutionsEvent:
+        return ChatExerciseSubstitutionsEvent(
+            type="exercise_substitutions_recommended",
+            title="Recommended substitutions",
+            strategy=strategy,
+            source_exercise=ChatExerciseSubstitutionSource(
+                id=source_exercise.id,
+                name=source_exercise.name,
+            ),
+            substitutions=[
+                ChatExerciseSubstitutionItem(
+                    id=item["exercise_type"].id,
+                    name=item["exercise_type"].name,
+                    description=item["exercise_type"].description,
+                    equipment=item["exercise_type"].equipment,
+                    category=item["exercise_type"].category,
+                    match_reason=item["match_reason"],
+                    muscles=[
+                        exercise_muscle.muscle.name
+                        for exercise_muscle in getattr(
+                            item["exercise_type"], "exercise_muscles", []
+                        )
+                        if getattr(exercise_muscle, "muscle", None) is not None
+                    ],
+                )
+                for item in suggestions
+            ],
+        )
+
     async def _get_last_exercise_performance(self, exercise_name: str) -> str:
         if not self.session:
             return "Database session not available."
@@ -747,6 +804,83 @@ class ChatService:
             exercises,
         )
 
+    async def _recommend_exercise_substitutions(
+        self,
+        *,
+        exercise_name: str | None = None,
+        exercise_type_id: int | None = None,
+        limit: int = 3,
+    ) -> str:
+        if self._exercise_substitutions_generated_this_request:
+            return (
+                "SUBSTITUTIONS ALREADY RECOMMENDED. Exercise substitutions have already "
+                "been generated in this conversation turn. No action taken."
+            )
+
+        if not self.session:
+            return "Failed to recommend substitutions: no database session available."
+
+        try:
+            if exercise_type_id is not None:
+                source_exercise = await get_exercise_type_by_id(
+                    self.session,
+                    exercise_type_id,
+                    user_id=self.user_id,
+                )
+                if source_exercise is None:
+                    return f"Failed to recommend substitutions: exercise type {exercise_type_id} was not found."
+            else:
+                resolved_exercise = await self._resolve_exercise_type(exercise_name or "")
+                source_exercise = await get_exercise_type_by_id(
+                    self.session,
+                    resolved_exercise.id,
+                    user_id=self.user_id,
+                )
+                if source_exercise is None:
+                    return (
+                        f"Failed to recommend substitutions: exercise type "
+                        f"'{exercise_name}' was not found."
+                    )
+
+            suggestions, strategy = await get_similar_exercise_type_matches(
+                self.session,
+                source_exercise,
+                limit=limit,
+            )
+
+            if not suggestions:
+                if strategy == "no_primary_muscle":
+                    return (
+                        f"No grounded substitutions are available for {source_exercise.name} "
+                        "because it does not have a primary muscle assigned yet."
+                    )
+                return f"No grounded substitutions are available for {source_exercise.name} yet."
+
+            self._exercise_substitutions_generated_this_request = True
+            self._pending_chat_events.append(
+                self._build_exercise_substitutions_event(
+                    source_exercise,
+                    suggestions,
+                    strategy=strategy,
+                )
+            )
+
+            candidate_summaries = []
+            for suggestion in suggestions:
+                exercise_type = suggestion["exercise_type"]
+                candidate_summaries.append(
+                    f"{exercise_type.name} ({suggestion['match_reason']})"
+                )
+
+            return (
+                "GROUNDED SUBSTITUTIONS READY. "
+                f"Source exercise: '{source_exercise.name}'. "
+                f"Candidates: {', '.join(candidate_summaries)}. "
+                "Only recommend exercises from this list."
+            )
+        except Exception as exc:
+            return f"Failed to recommend substitutions: {exc}"
+
     async def _parse_workout_and_save(self, **kwargs) -> str:
         if self._workout_saved_this_request:
             return (
@@ -870,6 +1004,19 @@ class ChatService:
 
         return [
             ToolDefinition(
+                name="recommend_exercise_substitutions",
+                handler=self._recommend_exercise_substitutions,
+                args_model=ExerciseSubstitutionArgs,
+                description=(
+                    "Use this tool when the user asks for alternatives, substitutions, "
+                    "or swaps for a specific exercise and you need grounded exercise "
+                    "recommendations from the database. Provide either exercise_type_id "
+                    "or exercise_name. If you recommend specific exercises, call this "
+                    "tool instead of answering from memory. Only mention exercises from "
+                    "the returned grounded list."
+                ),
+            ),
+            ToolDefinition(
                 name="get_last_exercise_performance",
                 handler=self._get_last_exercise_performance,
                 args_model=LastExercisePerformanceArgs,
@@ -944,6 +1091,9 @@ class ChatService:
 Routine creation policy:
 - Only create or save a routine when the user explicitly asks for creation or saving.
 - If the user wants advice only, respond in prose and do not call create_personalized_routine.
+- When the user asks for exercise alternatives, substitutions, or swaps for a specific exercise, call recommend_exercise_substitutions.
+- If you mention specific exercise recommendations in a substitution answer, they must come from recommend_exercise_substitutions.
+- Do not invent exercise names or recommend exercises that are not present in the tool output.
 - Before calling create_personalized_routine, gather enough context to avoid a low-quality routine:
   - goal or training focus
   - equipment constraints or gym/home context
@@ -1053,6 +1203,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
         self._workout_saved_this_request = False
         self._routine_created_this_request = False
+        self._exercise_substitutions_generated_this_request = False
         self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []

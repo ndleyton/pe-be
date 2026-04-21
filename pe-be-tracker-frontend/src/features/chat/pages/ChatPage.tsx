@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
+import { Bot, Dumbbell, ImagePlus, MessageCircle, Tag, Wrench, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { config } from "@/app/config/env";
 import { type Workout } from "@/features/workouts";
@@ -58,7 +58,31 @@ interface RoutineCreatedEvent {
   routine: RoutineWidgetData;
 }
 
-type ChatEvent = WorkoutCreatedEvent | RoutineCreatedEvent;
+interface ExerciseSubstitutionItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  equipment?: string | null;
+  category?: string | null;
+  matchReason: "same_primary_muscle" | "same_primary_muscle_group";
+  muscles: string[];
+}
+
+interface ExerciseSubstitutionsEvent {
+  type: "exercise_substitutions_recommended";
+  title?: string;
+  strategy: string;
+  sourceExercise: {
+    id: number;
+    name: string;
+  };
+  substitutions: ExerciseSubstitutionItem[];
+}
+
+type ChatEvent =
+  | WorkoutCreatedEvent
+  | RoutineCreatedEvent
+  | ExerciseSubstitutionsEvent;
 
 interface ChatMessage {
   id: string;
@@ -120,10 +144,40 @@ interface ChatApiRoutineCreatedEvent {
   };
 }
 
+interface ChatApiExerciseSubstitutionItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  equipment?: string | null;
+  category?: string | null;
+  match_reason: "same_primary_muscle" | "same_primary_muscle_group";
+  muscles: string[];
+}
+
+interface ChatApiExerciseSubstitutionsEvent {
+  type: "exercise_substitutions_recommended";
+  title?: string | null;
+  strategy: string;
+  source_exercise: {
+    id: number;
+    name: string;
+  };
+  substitutions: ChatApiExerciseSubstitutionItem[];
+}
+
 interface ChatResponse {
   message: string;
   conversation_id: number;
-  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>;
+  events?: Array<
+    | ChatApiWorkoutCreatedEvent
+    | ChatApiRoutineCreatedEvent
+    | ChatApiExerciseSubstitutionsEvent
+  >;
+}
+
+interface ChatPageLocationState {
+  seedPrompt?: string;
+  autoSendSeedPrompt?: boolean;
 }
 
 const MAX_ATTACHMENTS = 4;
@@ -177,8 +231,35 @@ const parseRoutineCreatedEvent = (
   };
 };
 
+const parseExerciseSubstitutionsEvent = (
+  event: ChatApiExerciseSubstitutionsEvent,
+): ExerciseSubstitutionsEvent => {
+  return {
+    type: "exercise_substitutions_recommended",
+    title: event.title ?? undefined,
+    strategy: event.strategy,
+    sourceExercise: {
+      id: event.source_exercise.id,
+      name: event.source_exercise.name,
+    },
+    substitutions: event.substitutions.map((substitution) => ({
+      id: substitution.id,
+      name: substitution.name,
+      description: substitution.description,
+      equipment: substitution.equipment,
+      category: substitution.category,
+      matchReason: substitution.match_reason,
+      muscles: substitution.muscles,
+    })),
+  };
+};
+
 const extractChatEvents = (
-  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>,
+  events?: Array<
+    | ChatApiWorkoutCreatedEvent
+    | ChatApiRoutineCreatedEvent
+    | ChatApiExerciseSubstitutionsEvent
+  >,
 ): ChatEvent[] =>
   (events ?? []).reduce<ChatEvent[]>((acc, event) => {
     if (event.type === "workout_created") {
@@ -187,6 +268,10 @@ const extractChatEvents = (
     }
     if (event.type === "routine_created") {
       acc.push(parseRoutineCreatedEvent(event));
+      return acc;
+    }
+    if (event.type === "exercise_substitutions_recommended") {
+      acc.push(parseExerciseSubstitutionsEvent(event));
       return acc;
     }
     return acc;
@@ -274,6 +359,90 @@ const ChatRoutineWidget = ({ event }: { event: RoutineCreatedEvent }) => {
   );
 };
 
+const substitutionReasonLabel: Record<ExerciseSubstitutionItem["matchReason"], string> = {
+  same_primary_muscle: "Same primary muscle",
+  same_primary_muscle_group: "Same muscle group",
+};
+
+const ChatExerciseSubstitutionsWidget = ({
+  event,
+}: {
+  event: ExerciseSubstitutionsEvent;
+}) => {
+  return (
+    <div className="bg-background/70 border-border/40 mt-3 rounded-2xl border p-3">
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <MessageCircle className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.16em]">
+            {event.title ?? "Recommended substitutions"}
+          </p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            Alternatives to {event.sourceExercise.name}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3">
+        {event.substitutions.map((substitution) => (
+          <Link
+            key={substitution.id}
+            to={`${NAV_PATHS.EXERCISES}/${substitution.id}`}
+            className="rounded-2xl border border-border/40 p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  {substitution.name}
+                </p>
+                <p className="text-muted-foreground mt-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  {substitutionReasonLabel[substitution.matchReason]}
+                </p>
+              </div>
+            </div>
+
+            {substitution.description ? (
+              <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                {substitution.description}
+              </p>
+            ) : null}
+
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              {substitution.equipment ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
+                  <Wrench className="h-3 w-3" />
+                  <span className="capitalize">{substitution.equipment}</span>
+                </span>
+              ) : null}
+              {substitution.category ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
+                  <Tag className="h-3 w-3" />
+                  <span className="capitalize">{substitution.category}</span>
+                </span>
+              ) : null}
+            </div>
+
+            {substitution.muscles.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {substitution.muscles.slice(0, 3).map((muscle) => (
+                  <span
+                    key={muscle}
+                    className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary/80"
+                  >
+                    {muscle}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const uploadChatAttachment = async (
   file: File,
 ): Promise<UploadedAttachment> => {
@@ -339,6 +508,7 @@ const sendChatMessage = async (
 
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -349,6 +519,10 @@ const ChatPage = () => {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const seededPromptHandledRef = useRef(false);
+  const routeState = location.state as ChatPageLocationState | null;
+  const seededPrompt = routeState?.seedPrompt?.trim() ?? "";
+  const autoSendSeedPrompt = routeState?.autoSendSeedPrompt === true;
 
   const examplePrompts = useMemo(
     () => [
@@ -620,6 +794,21 @@ const ChatPage = () => {
     }, 100);
   };
 
+  useEffect(() => {
+    if (
+      !autoSendSeedPrompt ||
+      !seededPrompt ||
+      seededPromptHandledRef.current ||
+      messages.length > 0
+    ) {
+      return;
+    }
+
+    seededPromptHandledRef.current = true;
+    setInputValue(seededPrompt);
+    void processMessage(seededPrompt);
+  }, [autoSendSeedPrompt, messages.length, seededPrompt, processMessage]);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     void handleSendMessage();
@@ -758,6 +947,14 @@ const ChatPage = () => {
       }
       if (event.type === "routine_created") {
         return <ChatRoutineWidget key={`${message.id}-widget-${index}`} event={event} />;
+      }
+      if (event.type === "exercise_substitutions_recommended") {
+        return (
+          <ChatExerciseSubstitutionsWidget
+            key={`${message.id}-widget-${index}`}
+            event={event}
+          />
+        );
       }
       return null;
     });

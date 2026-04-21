@@ -38,7 +38,9 @@ describe("ChatPage", () => {
     });
   });
 
-  const renderChatPage = () => {
+  const renderChatPage = (
+    initialEntries: Array<string | { pathname: string; state?: unknown }> = ["/chat"],
+  ) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -53,7 +55,7 @@ describe("ChatPage", () => {
 
     return render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>
           <ChatPage />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -159,6 +161,63 @@ describe("ChatPage", () => {
     );
   });
 
+  it("renders a substitution widget when the assistant returns grounded exercise substitutions", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "Here are a few grounded options.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "exercise_substitutions_recommended",
+            title: "Recommended substitutions",
+            strategy: "same_primary_muscle_then_group_by_times_used",
+            source_exercise: {
+              id: 12,
+              name: "Lat Pulldown",
+            },
+            substitutions: [
+              {
+                id: 21,
+                name: "Chest-Supported Row",
+                description: "Machine back exercise",
+                equipment: "machine",
+                category: "strength",
+                match_reason: "same_primary_muscle",
+                muscles: ["Latissimus Dorsi"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "What can I do instead of lat pulldown?",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Here are a few grounded options."),
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Alternatives to Lat Pulldown")).toBeInTheDocument();
+    expect(screen.getByText("Chest-Supported Row")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /chest-supported row/i }),
+    ).toHaveAttribute("href", "/exercise-types/21");
+  });
+
   it("surfaces backend chat error details instead of a generic fallback", async () => {
     mockPost.mockRejectedValueOnce({
       response: {
@@ -222,6 +281,71 @@ describe("ChatPage", () => {
           "Chat is available for logged-in users. Please sign in to continue.",
         ),
       ).toBeInTheDocument();
+    });
+  });
+
+  it("auto-sends a seeded grounded substitution prompt from route state", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "I found grounded substitutions for you.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "exercise_substitutions_recommended",
+            title: "Recommended substitutions",
+            strategy: "same_primary_muscle_then_group_by_times_used",
+            source_exercise: {
+              id: 12,
+              name: "Lat Pulldown",
+            },
+            substitutions: [
+              {
+                id: 21,
+                name: "Chest-Supported Row",
+                description: null,
+                equipment: "machine",
+                category: "strength",
+                match_reason: "same_primary_muscle",
+                muscles: [],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    renderChatPage([
+      {
+        pathname: "/chat",
+        state: {
+          seedPrompt:
+            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+          autoSendSeedPrompt: true,
+        },
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockPost.mock.calls[0][0]).toBe("/chat");
+    expect(mockPost.mock.calls[0][1]).toEqual({
+      messages: [
+        {
+          role: "user",
+          content:
+            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+          parts: [
+            {
+              type: "text",
+              text:
+                "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+            },
+          ],
+        },
+      ],
+      conversation_id: undefined,
     });
   });
 });
