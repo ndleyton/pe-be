@@ -35,6 +35,7 @@ from src.exercises.muscle_group_mapping import (  # noqa: E402
     KNOWN_MUSCLE_GROUPS,
     get_muscle_group_for_muscle,
 )
+from src.exercises.thumbnail_keys import determine_thumbnail_key  # noqa: E402
 
 
 async def get_import_db_connection():
@@ -270,6 +271,18 @@ async def extract_and_transform_exercises():
             primary_muscles = row.get("primary_muscles", []) or []
             secondary_muscles = row.get("secondary_muscles", []) or []
             all_muscles = set(primary_muscles + secondary_muscles)
+            exercise_type["thumbnail_key"] = determine_thumbnail_key(
+                exercise_name=exercise_type["name"],
+                category=exercise_type["category"],
+                muscle_group_names=[
+                    get_muscle_group_for_muscle(muscle_name)
+                    for muscle_name in all_muscles
+                ],
+                primary_muscle_group_names=[
+                    get_muscle_group_for_muscle(muscle_name)
+                    for muscle_name in primary_muscles
+                ],
+            )
 
             for muscle_name in all_muscles:
                 try:
@@ -456,13 +469,14 @@ async def import_exercises_to_database(data: Dict[str, Any]):
             await conn.execute(
                 """
                 INSERT INTO exercise_types
-                (external_id, name, description, images_url, reference_images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+                (external_id, name, description, thumbnail_key, images_url, reference_images_url, instructions, equipment, category, default_intensity_unit, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
                 ON CONFLICT (external_id) DO NOTHING
             """,
                 exercise_type["external_id"],
                 exercise_type["name"],
                 exercise_type["description"],
+                exercise_type["thumbnail_key"],
                 exercise_type["images_url"],
                 exercise_type["reference_images_url"],
                 exercise_type["instructions"],

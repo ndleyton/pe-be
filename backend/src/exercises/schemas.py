@@ -152,6 +152,7 @@ class ExerciseTypeRead(BaseModel):
     released_at: Optional[datetime] = None
     reviewed_by: Optional[int] = None
     review_notes: Optional[str] = None
+    thumbnail_key: str
     images_url: Optional[str] = None
     reference_images_url: Optional[str] = None
     instructions: Optional[str] = None
