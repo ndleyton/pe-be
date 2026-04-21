@@ -1,0 +1,108 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadEnv } from "vite";
+
+import { renderExerciseTypesSitemap } from "./exerciseTypesSitemap.mjs";
+
+const cwd = fileURLToPath(new URL("..", import.meta.url));
+const mode = process.env.MODE || process.env.NODE_ENV || "production";
+const env = loadEnv(mode, cwd, "");
+const siteOrigin = env.APP_SITE_ORIGIN || "https://app.personalbestie.com";
+const isPlaceholderApiBaseUrl = (value) =>
+  value.includes("your-production-api-domain.com");
+
+const resolveSitemapApiBaseUrl = () => {
+  const candidates = [env.SITEMAP_API_BASE_URL, env.VITE_API_BASE_URL].filter(
+    (value) => typeof value === "string" && value.length > 0,
+  );
+
+  for (const candidate of candidates) {
+    if (isPlaceholderApiBaseUrl(candidate)) {
+      continue;
+    }
+
+    try {
+      return new URL(candidate).toString();
+    } catch {
+      return new URL(candidate, siteOrigin).toString();
+    }
+  }
+
+  return new URL("/api/v1", siteOrigin).toString();
+};
+
+const apiBaseUrl = resolveSitemapApiBaseUrl();
+const outputPath = resolve(cwd, "public", "exercise-types-sitemap.xml");
+const pageLimit = 1000;
+
+const fetchExerciseTypesPage = async (offset) => {
+  const apiRoot = new URL(apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`);
+  const requestUrl = new URL("exercises/exercise-types/", apiRoot);
+  requestUrl.searchParams.set("released_only", "true");
+  requestUrl.searchParams.set("order_by", "name");
+  requestUrl.searchParams.set("offset", String(offset));
+  requestUrl.searchParams.set("limit", String(pageLimit));
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(requestUrl, {
+      headers: {
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `[sitemap] Failed to fetch exercise types (${response.status} ${response.statusText}) from ${requestUrl.toString()}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error(
+        `[sitemap] Fetch timed out after 15s for ${requestUrl.toString()}`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const fetchAllExerciseTypes = async () => {
+  const collected = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchExerciseTypesPage(offset);
+    const pageItems = Array.isArray(page.data) ? page.data : [];
+
+    collected.push(...pageItems);
+
+    if (page.next_cursor == null) {
+      return collected;
+    }
+
+    offset = page.next_cursor;
+  }
+};
+
+const main = async () => {
+  const exerciseTypes = await fetchAllExerciseTypes();
+  const xml = renderExerciseTypesSitemap(exerciseTypes, { siteOrigin });
+
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, xml, "utf8");
+
+  console.log(
+    `[sitemap] Wrote ${exerciseTypes.length} exercise type URLs to ${outputPath}`,
+  );
+};
+
+await main();
