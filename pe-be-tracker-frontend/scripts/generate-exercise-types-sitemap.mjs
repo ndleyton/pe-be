@@ -59,7 +59,7 @@ const fetchExerciseTypesPage = async (offset) => {
   }
 };
 
-const fetchAllExerciseTypesWithImages = async () => {
+const fetchAllExerciseTypes = async () => {
   const collected = [];
   let offset = 0;
 
@@ -67,12 +67,7 @@ const fetchAllExerciseTypesWithImages = async () => {
     const page = await fetchExerciseTypesPage(offset);
     const pageItems = Array.isArray(page.data) ? page.data : [];
 
-    collected.push(
-      ...pageItems.filter(
-        (exerciseType) =>
-          Array.isArray(exerciseType.images) && exerciseType.images.length > 0,
-      ),
-    );
+    collected.push(...pageItems);
 
     if (page.next_cursor == null) {
       return collected;
@@ -83,7 +78,7 @@ const fetchAllExerciseTypesWithImages = async () => {
 };
 
 const main = async () => {
-  const exerciseTypes = await fetchAllExerciseTypesWithImages();
+  const exerciseTypes = await fetchAllExerciseTypes();
   const xml = renderExerciseTypesSitemap(exerciseTypes, { siteOrigin });
 
   await mkdir(dirname(outputPath), { recursive: true });
