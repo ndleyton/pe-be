@@ -5,15 +5,46 @@ import { loadEnv } from "vite";
 
 import { renderExerciseTypesSitemap } from "./exerciseTypesSitemap.mjs";
 
-const cwd = fileURLToPath(new URL("..", import.meta.url));
+const resolveProjectRoot = () => {
+  try {
+    return fileURLToPath(new URL("..", import.meta.url));
+  } catch {
+    return process.cwd();
+  }
+};
+
+const cwd = resolveProjectRoot();
 const mode = process.env.MODE || process.env.NODE_ENV || "production";
 const env = loadEnv(mode, cwd, "");
-const siteOrigin = env.APP_SITE_ORIGIN || "https://app.personalbestie.com";
+export const DEFAULT_SITE_ORIGIN = "https://app.personalbestie.com";
+const siteOrigin = env.APP_SITE_ORIGIN || DEFAULT_SITE_ORIGIN;
 const isPlaceholderApiBaseUrl = (value) =>
   value.includes("your-production-api-domain.com");
 
-const resolveSitemapApiBaseUrl = () => {
-  const candidates = [env.SITEMAP_API_BASE_URL, env.VITE_API_BASE_URL].filter(
+export const normalizeApiBaseUrl = (value) => {
+  const normalized = new URL(value).toString();
+  const parsed = new URL(normalized);
+
+  if (!parsed.pathname.startsWith("/api/")) {
+    parsed.pathname = parsed.pathname.endsWith("/")
+      ? `${parsed.pathname}api/v1/`
+      : `${parsed.pathname}/api/v1/`;
+  } else if (!parsed.pathname.endsWith("/")) {
+    parsed.pathname = `${parsed.pathname}/`;
+  }
+
+  parsed.search = "";
+  parsed.hash = "";
+
+  return parsed.toString();
+};
+
+export const resolveSitemapApiBaseUrl = ({
+  sitemapApiBaseUrl,
+  apiBaseUrl,
+  siteOrigin: fallbackSiteOrigin = DEFAULT_SITE_ORIGIN,
+} = {}) => {
+  const candidates = [sitemapApiBaseUrl, apiBaseUrl].filter(
     (value) => typeof value === "string" && value.length > 0,
   );
 
@@ -23,21 +54,25 @@ const resolveSitemapApiBaseUrl = () => {
     }
 
     try {
-      return new URL(candidate).toString();
+      return normalizeApiBaseUrl(candidate);
     } catch {
-      return new URL(candidate, siteOrigin).toString();
+      return normalizeApiBaseUrl(new URL(candidate, fallbackSiteOrigin).toString());
     }
   }
 
-  return new URL("/api/v1", siteOrigin).toString();
+  return null;
 };
 
-const apiBaseUrl = resolveSitemapApiBaseUrl();
+const apiBaseUrl = resolveSitemapApiBaseUrl({
+  sitemapApiBaseUrl: env.SITEMAP_API_BASE_URL,
+  apiBaseUrl: env.VITE_API_BASE_URL,
+  siteOrigin,
+});
 const outputPath = resolve(cwd, "public", "exercise-types-sitemap.xml");
 const pageLimit = 1000;
 
 const fetchExerciseTypesPage = async (offset) => {
-  const apiRoot = new URL(apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`);
+  const apiRoot = new URL(apiBaseUrl);
   const requestUrl = new URL("exercises/exercise-types/", apiRoot);
   requestUrl.searchParams.set("released_only", "true");
   requestUrl.searchParams.set("order_by", "name");
@@ -93,7 +128,17 @@ const fetchAllExerciseTypes = async () => {
   }
 };
 
+export const shouldGenerateSitemap = ({ apiBaseUrl: configuredApiBaseUrl }) =>
+  typeof configuredApiBaseUrl === "string" && configuredApiBaseUrl.length > 0;
+
 const main = async () => {
+  if (!shouldGenerateSitemap({ apiBaseUrl })) {
+    console.log(
+      `[sitemap] Skipping exercise types sitemap generation; set SITEMAP_API_BASE_URL or VITE_API_BASE_URL to refresh ${outputPath}`,
+    );
+    return;
+  }
+
   const exerciseTypes = await fetchAllExerciseTypes();
   const xml = renderExerciseTypesSitemap(exerciseTypes, { siteOrigin });
 
@@ -105,4 +150,10 @@ const main = async () => {
   );
 };
 
-await main();
+const invokedScriptUrl = process.argv[1]
+  ? new URL(process.argv[1], "file:").href
+  : null;
+
+if (invokedScriptUrl === import.meta.url) {
+  await main();
+}

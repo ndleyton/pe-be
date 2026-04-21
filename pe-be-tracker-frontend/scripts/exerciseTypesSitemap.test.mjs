@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { escapeXml, renderExerciseTypesSitemap, toSitemapDate } from "./exerciseTypesSitemap.mjs";
+import {
+  normalizeApiBaseUrl,
+  resolveSitemapApiBaseUrl,
+  shouldGenerateSitemap,
+} from "./generate-exercise-types-sitemap.mjs";
+import {
+  escapeXml,
+  renderExerciseTypesSitemap,
+  toSitemapDate,
+} from "./exerciseTypesSitemap.mjs";
 
 describe("exerciseTypesSitemap", () => {
   it("escapes XML special characters", () => {
@@ -32,5 +41,35 @@ describe("exerciseTypesSitemap", () => {
     expect(xml).toContain("<lastmod>2026-04-20</lastmod>");
     expect(xml).not.toContain("xmlns:image=");
     expect(xml).not.toContain("<image:image>");
+  });
+
+  it("normalizes bare API origins to the backend API root", () => {
+    expect(normalizeApiBaseUrl("http://localhost:8000")).toBe(
+      "http://localhost:8000/api/v1/",
+    );
+    expect(normalizeApiBaseUrl("http://backend:8000/")).toBe(
+      "http://backend:8000/api/v1/",
+    );
+  });
+
+  it("preserves explicit API roots when resolving sitemap fetch URLs", () => {
+    expect(
+      resolveSitemapApiBaseUrl({
+        apiBaseUrl: "http://localhost:8000/api/v1",
+      }),
+    ).toBe("http://localhost:8000/api/v1/");
+    expect(
+      resolveSitemapApiBaseUrl({
+        apiBaseUrl: "http://localhost:8000",
+      }),
+    ).toBe("http://localhost:8000/api/v1/");
+  });
+
+  it("does not fall back to the production app origin", () => {
+    expect(resolveSitemapApiBaseUrl({})).toBeNull();
+    expect(shouldGenerateSitemap({ apiBaseUrl: null })).toBe(false);
+    expect(
+      shouldGenerateSitemap({ apiBaseUrl: "http://localhost:8000/api/v1/" }),
+    ).toBe(true);
   });
 });
