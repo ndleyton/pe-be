@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { MessageCircle, Tag, Wrench } from "lucide-react";
+import { Tag, Wrench } from "lucide-react";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Button } from "@/shared/components/ui/button";
 import type {
   SimilarExercise,
   SimilarExercisesStrategy,
@@ -13,12 +12,19 @@ const matchReasonLabel: Record<SimilarExercise["match_reason"], string> = {
   same_primary_muscle_group: "Same muscle group",
 };
 
+const helperCopyForStrategy = (strategy: SimilarExercisesStrategy) => {
+  if (strategy === "same_primary_muscle_then_group_by_times_used") {
+    return "Popular alternatives that hit the same primary muscle, with nearby backfills when needed.";
+  }
+
+  return "Popular alternatives that hit the same primary muscle.";
+};
+
 interface SimilarExercisesSectionProps {
   suggestions: SimilarExercise[];
   strategy: SimilarExercisesStrategy;
   isLoading: boolean;
   hasError: boolean;
-  onAskPersonalBestie: () => void;
 }
 
 export const SimilarExercisesSection = ({
@@ -26,7 +32,6 @@ export const SimilarExercisesSection = ({
   strategy,
   isLoading,
   hasError,
-  onAskPersonalBestie,
 }: SimilarExercisesSectionProps) => {
   if (
     !isLoading &&
@@ -37,24 +42,13 @@ export const SimilarExercisesSection = ({
     return null;
   }
 
-  const helperCopy = "Popular exercises that hit the same primary muscles";
-
   return (
     <section className="bg-card border-border/20 mt-8 rounded-2xl border p-6 text-left shadow-md">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Alternatives</h2>
-          <p className="text-muted-foreground text-sm">{helperCopy}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-xl"
-          onClick={onAskPersonalBestie}
-        >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          Ask personal bestie
-        </Button>
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Similar exercises</h2>
+        <p className="text-muted-foreground text-sm">
+          {helperCopyForStrategy(strategy)}
+        </p>
       </div>
 
       {isLoading ? (
@@ -77,7 +71,7 @@ export const SimilarExercisesSection = ({
 
       {!isLoading && hasError ? (
         <p className="text-muted-foreground mt-6 text-sm">
-          Couldn&apos;t load alternatives right now.
+          Couldn&apos;t load similar exercises right now.
         </p>
       ) : null}
 
