@@ -8,15 +8,31 @@ import { renderExerciseTypesSitemap } from "./exerciseTypesSitemap.mjs";
 const cwd = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.env.MODE || process.env.NODE_ENV || "production";
 const env = loadEnv(mode, cwd, "");
-
-const apiBaseUrl = env.VITE_API_BASE_URL;
-if (!apiBaseUrl) {
-  throw new Error(
-    "[sitemap] Missing required environment variable: VITE_API_BASE_URL",
-  );
-}
-
 const siteOrigin = env.APP_SITE_ORIGIN || "https://app.personalbestie.com";
+const isPlaceholderApiBaseUrl = (value) =>
+  value.includes("your-production-api-domain.com");
+
+const resolveSitemapApiBaseUrl = () => {
+  const candidates = [env.SITEMAP_API_BASE_URL, env.VITE_API_BASE_URL].filter(
+    (value) => typeof value === "string" && value.length > 0,
+  );
+
+  for (const candidate of candidates) {
+    if (isPlaceholderApiBaseUrl(candidate)) {
+      continue;
+    }
+
+    try {
+      return new URL(candidate).toString();
+    } catch {
+      return new URL(candidate, siteOrigin).toString();
+    }
+  }
+
+  return new URL("/api/v1", siteOrigin).toString();
+};
+
+const apiBaseUrl = resolveSitemapApiBaseUrl();
 const outputPath = resolve(cwd, "public", "exercise-types-sitemap.xml");
 const pageLimit = 1000;
 
