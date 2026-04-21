@@ -38,9 +38,7 @@ describe("ChatPage", () => {
     });
   });
 
-  const renderChatPage = (
-    initialEntries: Array<string | { pathname: string; state?: unknown }> = ["/chat"],
-  ) => {
+  const renderChatPage = () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -55,7 +53,7 @@ describe("ChatPage", () => {
 
     return render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter>
           <ChatPage />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -225,23 +223,5 @@ describe("ChatPage", () => {
         ),
       ).toBeInTheDocument();
     });
-  });
-
-  it("seeds the input from route state when arriving from another screen", async () => {
-    renderChatPage([
-      {
-        pathname: "/chat",
-        state: {
-          seedPrompt:
-            "Suggest 2-3 alternatives to Bench Press. Keep the same primary muscle if possible.",
-        },
-      },
-    ]);
-
-    expect(
-      await screen.findByDisplayValue(
-        "Suggest 2-3 alternatives to Bench Press. Keep the same primary muscle if possible.",
-      ),
-    ).toBeInTheDocument();
   });
 });

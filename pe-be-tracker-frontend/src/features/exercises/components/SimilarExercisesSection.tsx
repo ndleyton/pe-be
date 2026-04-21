@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
-import { MessageCircle, Tag, Wrench } from "lucide-react";
+import { Tag, Wrench } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import type {
   SimilarExercise,
@@ -26,7 +25,6 @@ interface SimilarExercisesSectionProps {
   strategy: SimilarExercisesStrategy;
   isLoading: boolean;
   hasError: boolean;
-  onAskPersonalBestie: () => void;
 }
 
 export const SimilarExercisesSection = ({
@@ -34,7 +32,6 @@ export const SimilarExercisesSection = ({
   strategy,
   isLoading,
   hasError,
-  onAskPersonalBestie,
 }: SimilarExercisesSectionProps) => {
   if (!isLoading && !hasError && suggestions.length === 0 && strategy === "no_primary_muscle") {
     return null;
@@ -42,22 +39,11 @@ export const SimilarExercisesSection = ({
 
   return (
     <section className="bg-card border-border/20 mt-8 rounded-2xl border p-6 text-left shadow-md">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Similar exercises</h2>
-          <p className="text-muted-foreground text-sm">
-            {helperCopyForStrategy(strategy)}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-xl"
-          onClick={onAskPersonalBestie}
-        >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          Ask personal bestie
-        </Button>
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Similar exercises</h2>
+        <p className="text-muted-foreground text-sm">
+          {helperCopyForStrategy(strategy)}
+        </p>
       </div>
 
       {isLoading ? (

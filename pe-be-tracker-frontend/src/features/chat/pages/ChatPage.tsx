@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { config } from "@/app/config/env";
 import { type Workout } from "@/features/workouts";
@@ -124,10 +124,6 @@ interface ChatResponse {
   message: string;
   conversation_id: number;
   events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>;
-}
-
-interface ChatPageLocationState {
-  seedPrompt?: string;
 }
 
 const MAX_ATTACHMENTS = 4;
@@ -343,7 +339,6 @@ const sendChatMessage = async (
 
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const location = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -354,8 +349,6 @@ const ChatPage = () => {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const routeState = location.state as ChatPageLocationState | null;
-  const seededPrompt = routeState?.seedPrompt?.trim() ?? "";
 
   const examplePrompts = useMemo(
     () => [
@@ -431,14 +424,6 @@ const ChatPage = () => {
 
     return () => clearTimeout(timer);
   }, [messages, isLoading]);
-
-  useEffect(() => {
-    if (!seededPrompt || messages.length > 0) {
-      return;
-    }
-
-    setInputValue((current) => current.trim() || seededPrompt);
-  }, [messages.length, seededPrompt]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
