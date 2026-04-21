@@ -243,10 +243,10 @@ describe("SideDrawer", () => {
       });
 
       expect(
-        screen.queryByRole("button", { name: /sign out/i }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", { name: /about/i }),
+      ).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /about/i }),
+        screen.queryByRole("button", { name: /sign out/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -396,7 +396,7 @@ describe("SideDrawer", () => {
       expect(mockCloseDrawer).toHaveBeenCalled();
     });
 
-    it("should focus first navigation link when drawer opens", () => {
+    it("should focus the first footer action when drawer opens", () => {
       // Ensure non-authenticated state for this test
       mockIsAuthenticated.mockReturnValue(false);
 
@@ -406,10 +406,10 @@ describe("SideDrawer", () => {
         </TestWrapper>,
       );
 
-      const signInButton = screen.getByRole("button", {
-        name: /sign in with google/i,
+      const aboutButton = screen.getByRole("button", {
+        name: /about/i,
       });
-      expect(signInButton).toHaveFocus();
+      expect(aboutButton).toHaveFocus();
     });
 
     it("should not close drawer when other keys are pressed", () => {

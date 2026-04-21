@@ -79,17 +79,17 @@ const SideDrawer = () => {
         </div>
         <div className="mt-auto border-t pt-4">
           <div className="space-y-2">
+            <NavLink to="/about" className="w-full">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={closeDrawer}
+              >
+                About
+              </Button>
+            </NavLink>
             {isAuthenticated ? (
               <>
-                <NavLink to="/about" className="w-full">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={closeDrawer}
-                  >
-                    About
-                  </Button>
-                </NavLink>
                 <Button
                   variant="destructive"
                   className="w-full justify-start"

@@ -59,13 +59,13 @@ const DesktopSidebar = () => {
           <FirstWorkoutCTA />
         </div>
         <div className="border-t p-4">
-          {isAuthenticated ? (
-            <div className="space-y-2">
-              <NavLink to="/about" className="w-full">
-                <Button variant="ghost" className="w-full justify-start">
-                  About
-                </Button>
-              </NavLink>
+          <div className="space-y-2">
+            <NavLink to="/about" className="w-full">
+              <Button variant="ghost" className="w-full justify-start">
+                About
+              </Button>
+            </NavLink>
+            {isAuthenticated ? (
               <Button
                 variant="destructive"
                 className="w-full justify-start"
@@ -73,12 +73,12 @@ const DesktopSidebar = () => {
               >
                 Sign Out
               </Button>
-            </div>
-          ) : initialized ? (
-            <Button onClick={googleSignIn} className="w-full">
-              Sign In with Google
-            </Button>
-          ) : null}
+            ) : initialized ? (
+              <Button onClick={googleSignIn} className="w-full">
+                Sign In with Google
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
     </aside>
