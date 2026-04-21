@@ -1,6 +1,6 @@
 # RFC 0002: Chat Image Input Support for Gemini
 
-- Status: Proposed
+- Status: Done
 - Date: 2026-03-12
 - Owners: Backend, Frontend
 
