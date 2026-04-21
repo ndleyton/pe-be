@@ -1,4 +1,4 @@
-# RFC 0002: Single-VPS Deployment with Hosted Frontend
+# RFC 0003: Single-VPS Deployment with Hosted Frontend
 
 - Status: Done
 - Date: 2026-03-26

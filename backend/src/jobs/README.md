@@ -2,7 +2,7 @@
 
 This package contains backend-owned CLI jobs that are intended to run outside the FastAPI request lifecycle.
 
-The design follows [RFC 0003](../../docs/rfcs/0003-backend-cron-jobs-on-vps.md):
+The design follows [RFC 0004](../../docs/rfcs/0004-backend-cron-jobs-on-vps.md):
 
 - job logic lives in the backend codebase
 - scheduling is external to the API process
@@ -171,4 +171,4 @@ Implementation guidelines:
 
 This package does not own scheduling.
 
-Per RFC 0003, jobs here are intended to be triggered by external VPS scheduling, with `systemd` timers as the preferred production mechanism and host `cron` as a fallback.
+Per RFC 0004, jobs here are intended to be triggered by external VPS scheduling, with `systemd` timers as the preferred production mechanism and host `cron` as a fallback.

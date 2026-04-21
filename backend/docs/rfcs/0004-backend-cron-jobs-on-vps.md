@@ -1,4 +1,4 @@
-# RFC 0003: Backend Cron Jobs on a VPS
+# RFC 0004: Backend Cron Jobs on a VPS
 
 - Status: Done
 - Date: 2026-03-26
