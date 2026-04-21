@@ -57,7 +57,10 @@ export const RoutineQuickStartCard = ({
             <ClipboardList className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-base font-black leading-tight tracking-tight break-words">
+            <CardTitle
+              className="text-base font-black leading-tight tracking-tight break-words line-clamp-2"
+              title={routine.name}
+            >
               {routine.name}
             </CardTitle>
             <CardDescription className="text-xs font-medium opacity-70">

@@ -68,4 +68,19 @@ describe("RoutineQuickStartCard", () => {
 
     expect(screen.getByText("+5 more")).toBeInTheDocument();
   });
+
+  it("clamps long routine names so card height stays bounded on narrow layouts", () => {
+    render(
+      <RoutineQuickStartCard
+        routine={makeRoutineSummary({
+          name: "Very Long Upper Body Push and Pull Hybrid Session",
+        })}
+        onStartWorkout={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Very Long Upper Body Push and Pull Hybrid Session"),
+    ).toHaveClass("line-clamp-2");
+  });
 });
