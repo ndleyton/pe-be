@@ -715,8 +715,7 @@ async def get_similar_exercise_types(
             await session.execute(
                 select(ExerciseType.id)
                 .where(
-                    ExerciseType.status
-                    == ExerciseType.ExerciseTypeStatus.released,
+                    ExerciseType.status == ExerciseType.ExerciseTypeStatus.released,
                     ExerciseType.id != exercise_type.id,
                     ExerciseType.exercise_muscles.any(
                         and_(
@@ -742,16 +741,13 @@ async def get_similar_exercise_types(
                 await session.execute(
                     select(ExerciseType.id)
                     .where(
-                        ExerciseType.status
-                        == ExerciseType.ExerciseTypeStatus.released,
+                        ExerciseType.status == ExerciseType.ExerciseTypeStatus.released,
                         ExerciseType.id.not_in(excluded_ids),
                         ExerciseType.exercise_muscles.any(
                             and_(
                                 ExerciseMuscle.is_primary.is_(True),
                                 ExerciseMuscle.muscle.has(
-                                    Muscle.muscle_group_id.in_(
-                                        primary_muscle_group_ids
-                                    )
+                                    Muscle.muscle_group_id.in_(primary_muscle_group_ids)
                                 ),
                             )
                         ),

@@ -189,7 +189,9 @@ class ExerciseTypeService:
             kwargs["user_id"] = user.id
             kwargs["is_admin"] = bool(getattr(user, "is_superuser", False))
 
-        exercise_type = await get_exercise_type_by_id(session, exercise_type_id, **kwargs)
+        exercise_type = await get_exercise_type_by_id(
+            session, exercise_type_id, **kwargs
+        )
         if exercise_type is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
