@@ -2,6 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useUIStore, useAuthStore } from "@/stores";
 import { navItems, type NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -79,17 +80,17 @@ const SideDrawer = () => {
         </div>
         <div className="mt-auto border-t pt-4">
           <div className="space-y-2">
-            {isAuthenticated ? (
-              <>
-                <NavLink to="/about" className="w-full">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={closeDrawer}
-                  >
-                    About
-                  </Button>
-                </NavLink>
+            <NavLink to="/about" className="w-full">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={closeDrawer}
+              >
+                About
+              </Button>
+            </NavLink>
+            <div className="min-h-9">
+              {isAuthenticated ? (
                 <Button
                   variant="destructive"
                   className="w-full justify-start"
@@ -100,12 +101,14 @@ const SideDrawer = () => {
                 >
                   Sign Out
                 </Button>
-              </>
-            ) : initialized ? (
-              <Button onClick={googleSignIn} className="w-full">
-                Sign In with Google
-              </Button>
-            ) : null}
+              ) : initialized ? (
+                <Button onClick={googleSignIn} className="w-full">
+                  Sign In with Google
+                </Button>
+              ) : (
+                <Skeleton className="h-9 w-full" />
+              )}
+            </div>
           </div>
         </div>
       </SheetContent>

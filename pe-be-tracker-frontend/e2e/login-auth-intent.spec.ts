@@ -97,7 +97,7 @@ test.describe("Login Auth Intent", () => {
 
     await page.waitForURL("**/about");
     await expect(
-      page.getByRole("heading", { name: "About Me" }),
+      page.getByRole("heading", { name: "About" }),
     ).toBeVisible();
     expect(authorizeCount).toBe(0);
   });

@@ -128,11 +128,11 @@ describe("DesktopSidebar", () => {
       render(<DesktopSidebar />);
 
       expect(
-        screen.getByRole("button", { name: /sign in with google/i }),
+        screen.getByRole("button", { name: /about/i }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /about/i }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", { name: /sign in with google/i }),
+      ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /sign out/i }),
       ).not.toBeInTheDocument();
