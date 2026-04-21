@@ -1,11 +1,22 @@
 import { useState, type SVGProps } from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, ExternalLink, Camera, Dumbbell, MapPin, Code2, Heart, Brain } from "lucide-react";
+import {
+  Mail,
+  ExternalLink,
+  Camera,
+  Dumbbell,
+  MapPin,
+  Code2,
+  Heart,
+  Brain,
+  ArrowLeft,
+} from "lucide-react";
 
 const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -34,6 +45,15 @@ const AboutPage = () => {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 text-center sm:p-8 animate-in fade-in duration-700">
+      <div className="mb-6 flex justify-start">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm font-bold text-foreground/80 shadow-sm backdrop-blur-sm transition-all hover:border-primary/30 hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to PersonalBestie
+        </Link>
+      </div>
       <div className="mb-12 text-center sm:mb-16 animate-in fade-in slide-in-from-top-8 duration-1000">
         <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-6xl text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
           About
