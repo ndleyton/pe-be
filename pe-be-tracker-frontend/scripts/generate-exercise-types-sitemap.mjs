@@ -28,18 +28,35 @@ const fetchExerciseTypesPage = async (offset) => {
   requestUrl.searchParams.set("offset", String(offset));
   requestUrl.searchParams.set("limit", String(pageLimit));
 
-  const response = await fetch(requestUrl, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(
-      `[sitemap] Failed to fetch exercise types (${response.status} ${response.statusText}) from ${requestUrl.toString()}`,
-    );
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  return response.json();
+  try {
+    const response = await fetch(requestUrl, {
+      headers: {
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `[sitemap] Failed to fetch exercise types (${response.status} ${response.statusText}) from ${requestUrl.toString()}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error(
+        `[sitemap] Fetch timed out after 15s for ${requestUrl.toString()}`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 const fetchAllExerciseTypesWithImages = async () => {
