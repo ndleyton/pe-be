@@ -1,6 +1,6 @@
 # RFC 0002: Single-VPS Deployment with Hosted Frontend
 
-- Status: Proposed
+- Status: Done
 - Date: 2026-03-26
 - Owners: Platform / Full Stack
 

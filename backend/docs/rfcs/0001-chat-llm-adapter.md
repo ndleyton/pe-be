@@ -1,6 +1,6 @@
 # RFC 0001: Provider-Normalized Chat Tool Calling
 
-- Status: Accepted
+- Status: Done
 - Date: 2026-03-10
 - Owners: Backend
 

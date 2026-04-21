@@ -1,6 +1,6 @@
 # RFC 0004: Caching High-Traffic GET Requests on the VPS
 
-- Status: Proposed
+- Status: Done
 - Date: 2026-04-07
 - Owners: Backend / Platform
 
