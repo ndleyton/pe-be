@@ -2,6 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useAuthStore } from "@/stores";
 import { navItems, NavItem } from "@/shared/navigation/navItems";
 import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import HomeLogo from "../HomeLogo";
 import { useGoogleSignIn } from "@/features/auth/hooks";
 import { useHomeNavigation, useNavigation } from "@/shared/hooks";
@@ -65,19 +66,23 @@ const DesktopSidebar = () => {
                 About
               </Button>
             </NavLink>
-            {isAuthenticated ? (
-              <Button
-                variant="destructive"
-                className="w-full justify-start"
-                onClick={signOut}
-              >
-                Sign Out
-              </Button>
-            ) : initialized ? (
-              <Button onClick={googleSignIn} className="w-full">
-                Sign In with Google
-              </Button>
-            ) : null}
+            <div className="min-h-9">
+              {isAuthenticated ? (
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={signOut}
+                >
+                  Sign Out
+                </Button>
+              ) : initialized ? (
+                <Button onClick={googleSignIn} className="w-full">
+                  Sign In with Google
+                </Button>
+              ) : (
+                <Skeleton className="h-9 w-full" />
+              )}
+            </div>
           </div>
         </div>
       </div>
