@@ -31,6 +31,7 @@ export const makeExerciseType = (
   usage_count: 10,
   default_intensity_unit: 1,
   times_used: 10,
+  primary_muscle: null,
   ...overrides,
 });
 

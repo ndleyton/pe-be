@@ -195,6 +195,24 @@ export interface UpdateExerciseTypeData {
   muscle_ids?: number[];
 }
 
+export type SimilarExerciseMatchReason =
+  | "same_primary_muscle"
+  | "same_primary_muscle_group";
+
+export type SimilarExercisesStrategy =
+  | "same_primary_muscle_then_group_by_times_used"
+  | "no_primary_muscle";
+
+export interface SimilarExercise {
+  exercise_type: ExerciseType;
+  match_reason: SimilarExerciseMatchReason;
+}
+
+export interface SimilarExercisesResponse {
+  data: SimilarExercise[];
+  strategy: SimilarExercisesStrategy;
+}
+
 // Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
   orderBy: "usage" | "name" = "usage",
@@ -234,6 +252,19 @@ export const getMuscleGroups = async (): Promise<MuscleGroup[]> => {
 
 export const getMuscles = async (): Promise<Muscle[]> => {
   const response = await api.get(endpoints.muscles);
+  return response.data;
+};
+
+export const getSimilarExerciseTypes = async (
+  exerciseTypeId: number | string,
+  limit: number = 3,
+): Promise<SimilarExercisesResponse> => {
+  const params = new URLSearchParams({
+    limit: String(limit),
+  });
+  const response = await api.get(
+    `${endpoints.similarExerciseTypes(exerciseTypeId)}?${params.toString()}`,
+  );
   return response.data;
 };
 

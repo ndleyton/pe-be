@@ -1,4 +1,4 @@
-from typing import Optional, List, TYPE_CHECKING, Any
+from typing import Optional, List, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
 from pydantic import (
     ConfigDict,
@@ -146,6 +146,7 @@ class ExerciseTypeRead(BaseModel):
     default_intensity_unit: Optional[int]
     times_used: int
     muscles: List[MuscleRead] = []
+    primary_muscle: Optional[MuscleRead] = None
     owner_id: Optional[int] = None
     status: ExerciseTypeModel.ExerciseTypeStatus
     review_requested_at: Optional[datetime] = None
@@ -176,29 +177,38 @@ class ExerciseTypeRead(BaseModel):
                     result[key] = value
 
             # Extract muscles from exercise_muscles relationship
+            serialized_muscles = []
+            primary_muscle = None
+
             if data.exercise_muscles:
-                result["muscles"] = [
-                    {
-                        "id": em.muscle.id,
-                        "name": em.muscle.name,
-                        "muscle_group_id": em.muscle.muscle_group_id,
+                for exercise_muscle in data.exercise_muscles:
+                    if not (
+                        hasattr(exercise_muscle, "muscle")
+                        and exercise_muscle.muscle
+                        and hasattr(exercise_muscle.muscle, "muscle_group")
+                        and exercise_muscle.muscle.muscle_group
+                    ):
+                        continue
+
+                    serialized_muscle = {
+                        "id": exercise_muscle.muscle.id,
+                        "name": exercise_muscle.muscle.name,
+                        "muscle_group_id": exercise_muscle.muscle.muscle_group_id,
                         "muscle_group": {
-                            "id": em.muscle.muscle_group.id,
-                            "name": em.muscle.muscle_group.name,
-                            "created_at": em.muscle.muscle_group.created_at,
-                            "updated_at": em.muscle.muscle_group.updated_at,
+                            "id": exercise_muscle.muscle.muscle_group.id,
+                            "name": exercise_muscle.muscle.muscle_group.name,
+                            "created_at": exercise_muscle.muscle.muscle_group.created_at,
+                            "updated_at": exercise_muscle.muscle.muscle_group.updated_at,
                         },
-                        "created_at": em.muscle.created_at,
-                        "updated_at": em.muscle.updated_at,
+                        "created_at": exercise_muscle.muscle.created_at,
+                        "updated_at": exercise_muscle.muscle.updated_at,
                     }
-                    for em in data.exercise_muscles
-                    if hasattr(em, "muscle")
-                    and em.muscle
-                    and hasattr(em.muscle, "muscle_group")
-                    and em.muscle.muscle_group
-                ]
-            else:
-                result["muscles"] = []
+                    serialized_muscles.append(serialized_muscle)
+                    if primary_muscle is None and exercise_muscle.is_primary:
+                        primary_muscle = serialized_muscle
+
+            result["muscles"] = serialized_muscles
+            result["primary_muscle"] = primary_muscle
 
             return result
 
@@ -303,3 +313,21 @@ class PaginatedExerciseTypesResponse(BaseModel):
     data: List[ExerciseTypeRead]
     next_cursor: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class SimilarExerciseSuggestion(BaseModel):
+    """Schema for one similar exercise suggestion."""
+
+    exercise_type: ExerciseTypeRead
+    match_reason: Literal["same_primary_muscle", "same_primary_muscle_group"]
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SimilarExerciseTypesResponse(BaseModel):
+    """Schema for similar exercise suggestions."""
+
+    data: List[SimilarExerciseSuggestion]
+    strategy: Literal[
+        "same_primary_muscle_then_group_by_times_used",
+        "no_primary_muscle",
+    ]

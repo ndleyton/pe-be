@@ -27,6 +27,7 @@ from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeRead,
     ExerciseTypeCreate,
+    SimilarExerciseTypesResponse,
     ExerciseTypeUpdate,
     IntensityUnitRead,
     MuscleRead,
@@ -295,6 +296,25 @@ async def get_exercise_type(
 
     with tracer.start_as_current_span("exercise_types.serialize"):
         return ExerciseTypeRead.model_validate(exercise_type)
+
+
+@exercise_types_router.get(
+    "/{exercise_type_id}/similar",
+    response_model=SimilarExerciseTypesResponse,
+)
+async def get_similar_exercise_types(
+    exercise_type_id: int,
+    limit: int = Query(default=3, ge=1, le=10),
+    user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get deterministic similar exercise suggestions for an exercise type."""
+    return await ExerciseTypeService.get_similar_exercise_types(
+        session,
+        exercise_type_id,
+        limit=limit,
+        user=user,
+    )
 
 
 @exercise_types_router.get(

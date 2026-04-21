@@ -23,4 +23,5 @@ export interface ExerciseType {
   review_notes?: string | null;
   images?: string[];
   muscles?: Muscle[];
+  primary_muscle?: Muscle | null;
 }

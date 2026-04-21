@@ -677,6 +677,117 @@ async def get_exercise_type_by_id(
     return result.unique().scalar_one_or_none()
 
 
+async def get_similar_exercise_types(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+    *,
+    limit: int = 3,
+) -> tuple[list[dict[str, Any]], str]:
+    """Get released exercise types similar to the provided exercise type."""
+    primary_muscle_ids = sorted(
+        {
+            exercise_muscle.muscle_id
+            for exercise_muscle in exercise_type.exercise_muscles
+            if exercise_muscle.is_primary and exercise_muscle.muscle_id is not None
+        }
+    )
+    primary_muscle_group_ids = sorted(
+        {
+            exercise_muscle.muscle.muscle_group_id
+            for exercise_muscle in exercise_type.exercise_muscles
+            if exercise_muscle.is_primary
+            and exercise_muscle.muscle is not None
+            and exercise_muscle.muscle.muscle_group_id is not None
+        }
+    )
+
+    if not primary_muscle_ids:
+        return [], "no_primary_muscle"
+
+    sort_columns = (
+        desc(ExerciseType.times_used),
+        ExerciseType.name.asc(),
+        ExerciseType.id.asc(),
+    )
+
+    primary_match_ids = (
+        (
+            await session.execute(
+                select(ExerciseType.id)
+                .where(
+                    ExerciseType.status
+                    == ExerciseType.ExerciseTypeStatus.released,
+                    ExerciseType.id != exercise_type.id,
+                    ExerciseType.exercise_muscles.any(
+                        and_(
+                            ExerciseMuscle.is_primary.is_(True),
+                            ExerciseMuscle.muscle_id.in_(primary_muscle_ids),
+                        )
+                    ),
+                )
+                .order_by(*sort_columns)
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    backfill_ids: list[int] = []
+    remaining = limit - len(primary_match_ids)
+    if remaining > 0 and primary_muscle_group_ids:
+        excluded_ids = [exercise_type.id, *primary_match_ids]
+        backfill_ids = (
+            (
+                await session.execute(
+                    select(ExerciseType.id)
+                    .where(
+                        ExerciseType.status
+                        == ExerciseType.ExerciseTypeStatus.released,
+                        ExerciseType.id.not_in(excluded_ids),
+                        ExerciseType.exercise_muscles.any(
+                            and_(
+                                ExerciseMuscle.is_primary.is_(True),
+                                ExerciseMuscle.muscle.has(
+                                    Muscle.muscle_group_id.in_(
+                                        primary_muscle_group_ids
+                                    )
+                                ),
+                            )
+                        ),
+                    )
+                    .order_by(*sort_columns)
+                    .limit(remaining)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    ordered_ids = [*primary_match_ids, *backfill_ids]
+    hydrated_matches = await _hydrate_exercise_types_by_ids(
+        session,
+        ordered_ids,
+        released_only=True,
+    )
+    primary_match_id_set = set(primary_match_ids)
+
+    return (
+        [
+            {
+                "exercise_type": similar_exercise_type,
+                "match_reason": (
+                    "same_primary_muscle"
+                    if similar_exercise_type.id in primary_match_id_set
+                    else "same_primary_muscle_group"
+                ),
+            }
+            for similar_exercise_type in hydrated_matches
+        ],
+        "same_primary_muscle_then_group_by_times_used",
+    )
+
+
 async def create_exercise_type(
     session: AsyncSession,
     exercise_type_create: ExerciseTypeCreate,
