@@ -18,7 +18,7 @@ from src.exercises.models import (
     Muscle,
     MuscleGroup,
 )
-from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate, ExerciseTypeUpdate
 from src.users.models import User
 from src.workouts.models import Workout, WorkoutType
 
@@ -732,7 +732,13 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
         biceps.id,
         back.id,
     }
-    assert all(item.is_primary is False for item in created.exercise_muscles)
+    primary_by_muscle_id = {
+        item.muscle.id: item.is_primary for item in created.exercise_muscles
+    }
+    assert primary_by_muscle_id == {
+        biceps.id: True,
+        back.id: False,
+    }
 
     duplicate = await crud.create_exercise_type(
         db_session,
@@ -750,6 +756,50 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
 
     assert duplicate.id == created.id
     assert count == 1
+
+
+async def test_update_exercise_type_replaces_muscles_and_honors_explicit_primary(
+    db_session,
+):
+    back = await _seed_muscle_group(db_session, "Back Primary Update")
+    lats = await _seed_muscle(db_session, "Lats Primary Update", back.id)
+    rhomboids = await _seed_muscle(db_session, "Rhomboids Primary Update", back.id)
+    rear_delts = await _seed_muscle(db_session, "Rear Delts Primary Update", back.id)
+    exercise_type = await _seed_exercise_type(db_session, "Rows Primary Update")
+    await db_session.commit()
+
+    created = await crud.update_exercise_type(
+        db_session,
+        exercise_type,
+        ExerciseTypeUpdate(
+            muscle_ids=[lats.id, rhomboids.id],
+            primary_muscle_id=rhomboids.id,
+        ),
+    )
+
+    created_flags = {
+        item.muscle.id: item.is_primary for item in created.exercise_muscles
+    }
+    assert created_flags == {
+        lats.id: False,
+        rhomboids.id: True,
+    }
+
+    updated = await crud.update_exercise_type(
+        db_session,
+        created,
+        ExerciseTypeUpdate(
+            muscle_ids=[rear_delts.id, lats.id],
+        ),
+    )
+
+    updated_flags = {
+        item.muscle.id: item.is_primary for item in updated.exercise_muscles
+    }
+    assert updated_flags == {
+        rear_delts.id: True,
+        lats.id: False,
+    }
 
 
 async def test_exercise_type_visibility_filters_by_user_and_status(db_session):

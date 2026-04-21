@@ -361,12 +361,14 @@ async def test_get_similar_exercise_types_route_uses_service(monkeypatch):
         18,
         limit=3,
         session=object(),
+        user=None,
     )
 
     assert result == fake_response
     fake_service.assert_awaited_once()
     assert fake_service.await_args.args[1] == 18
     assert fake_service.await_args.kwargs["limit"] == 3
+    assert fake_service.await_args.kwargs["user"] is None
 
 
 @pytest.mark.asyncio

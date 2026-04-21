@@ -150,6 +150,8 @@ async def _replace_exercise_type_muscles(
     session: AsyncSession,
     exercise_type: ExerciseType,
     muscle_ids: Optional[list[int]],
+    *,
+    primary_muscle_id: Optional[int] = None,
 ) -> None:
     if muscle_ids is None:
         return
@@ -163,13 +165,24 @@ async def _replace_exercise_type_muscles(
     if not muscle_ids:
         return
 
-    muscles = await _load_muscles_by_ids(session, muscle_ids)
-    for muscle in muscles:
+    unique_muscle_ids = list(dict.fromkeys(muscle_ids))
+    muscles = await _load_muscles_by_ids(session, unique_muscle_ids)
+    muscles_by_id = {muscle.id: muscle for muscle in muscles}
+    resolved_primary_muscle_id = (
+        primary_muscle_id if primary_muscle_id is not None else unique_muscle_ids[0]
+    )
+
+    if resolved_primary_muscle_id not in muscles_by_id:
+        raise ValueError(
+            f"Primary muscle ID {resolved_primary_muscle_id} must be one of the provided muscle IDs"
+        )
+
+    for muscle_id in unique_muscle_ids:
         session.add(
             ExerciseMuscle(
                 exercise_type=exercise_type,
-                muscle=muscle,
-                is_primary=False,
+                muscle=muscles_by_id[muscle_id],
+                is_primary=muscle_id == resolved_primary_muscle_id,
             )
         )
 
@@ -825,6 +838,7 @@ async def create_exercise_type(
             session,
             exercise_type,
             exercise_type_create.muscle_ids,
+            primary_muscle_id=exercise_type_create.primary_muscle_id,
         )
         await session.commit()
         await session.refresh(exercise_type)
@@ -879,11 +893,17 @@ async def update_exercise_type(
     """Update an existing exercise type and reload relationships."""
     update_data = exercise_type_update.model_dump(exclude_unset=True)
     muscle_ids = update_data.pop("muscle_ids", None)
+    primary_muscle_id = update_data.pop("primary_muscle_id", None)
 
     for field, value in update_data.items():
         setattr(exercise_type, field, value)
 
-    await _replace_exercise_type_muscles(session, exercise_type, muscle_ids)
+    await _replace_exercise_type_muscles(
+        session,
+        exercise_type,
+        muscle_ids,
+        primary_muscle_id=primary_muscle_id,
+    )
 
     try:
         await session.commit()
@@ -891,8 +911,10 @@ async def update_exercise_type(
         await session.rollback()
         raise
 
+    session.expire(exercise_type, ["exercise_muscles"])
     result = await session.execute(
         select(ExerciseType)
+        .execution_options(populate_existing=True)
         .options(_exercise_type_relationship_option())
         .where(ExerciseType.id == exercise_type.id)
     )

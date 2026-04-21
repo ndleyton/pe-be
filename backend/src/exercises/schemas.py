@@ -68,6 +68,10 @@ class ExerciseTypeCreate(BaseModel):
         default=None,
         description="List of muscle IDs to associate with this exercise type (optional)",
     )
+    primary_muscle_id: Optional[int] = Field(
+        default=None,
+        description="Primary muscle ID for the associated muscles",
+    )
 
     @field_validator("name", mode="before")
     @classmethod
@@ -78,6 +82,16 @@ class ExerciseTypeCreate(BaseModel):
         if not v:
             raise ValueError("Name cannot be empty")
         return v
+
+    @model_validator(mode="after")
+    def validate_primary_muscle_id(self):
+        if self.primary_muscle_id is None:
+            return self
+        if not self.muscle_ids:
+            raise ValueError("primary_muscle_id requires muscle_ids")
+        if self.primary_muscle_id not in self.muscle_ids:
+            raise ValueError("primary_muscle_id must be included in muscle_ids")
+        return self
 
 
 class ExerciseTypeUpdate(BaseModel):
@@ -97,6 +111,10 @@ class ExerciseTypeUpdate(BaseModel):
         default=None,
         description="Full replacement list of muscle IDs for this exercise type",
     )
+    primary_muscle_id: Optional[int] = Field(
+        default=None,
+        description="Primary muscle ID for the replacement muscle list",
+    )
 
     @field_validator("name", mode="before")
     @classmethod
@@ -107,6 +125,16 @@ class ExerciseTypeUpdate(BaseModel):
         if not v:
             raise ValueError("Name cannot be empty")
         return v
+
+    @model_validator(mode="after")
+    def validate_primary_muscle_id(self):
+        if self.primary_muscle_id is None:
+            return self
+        if self.muscle_ids is None:
+            raise ValueError("primary_muscle_id requires muscle_ids")
+        if self.primary_muscle_id not in self.muscle_ids:
+            raise ValueError("primary_muscle_id must be included in muscle_ids")
+        return self
 
 
 class ExerciseTypeReleaseRequest(BaseModel):
