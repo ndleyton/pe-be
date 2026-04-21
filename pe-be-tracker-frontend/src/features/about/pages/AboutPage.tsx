@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Mail, ExternalLink, User, Camera, Dumbbell, MapPin, Code2, Heart } from "lucide-react";
+import { Mail, ExternalLink, Camera, Dumbbell, MapPin, Code2, Heart, Brain } from "lucide-react";
 
 const GitHubIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -70,8 +70,9 @@ const AboutPage = () => {
           <CardContent className="px-0 pb-0 text-left">
             <div className="prose prose-neutral dark:prose-invert max-w-none">
               <p className="text-muted-foreground leading-relaxed text-lg">
-                Personal Bestie is designed to help users log their workouts,
-                track progress, and get new routines all seamlessly with the help of AI.
+                Personal Bestie helps users log workouts, follow routines,
+                visualize progress, and get AI-assisted coaching grounded in
+                their real training history.
               </p>
               <div className="mt-8">
                 <h4 className="text-sm font-bold uppercase tracking-wider text-foreground/50 mb-3 ml-1">Powered by</h4>
@@ -122,8 +123,9 @@ const AboutPage = () => {
               </div>
               <div className="prose prose-neutral dark:prose-invert">
                 <p className="text-foreground/80 leading-relaxed text-lg italic">
-                  "Nicolas Leyton is a product focused Full-Stack Software Engineer
-                  with experience all throughout the stack and industry."
+                  "Nicolas Leyton is a product-focused software engineer with
+                  backend-heavy full-stack experience across consumer tech,
+                  insurtech, and AI-powered products."
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center sm:justify-start gap-4 text-muted-foreground text-sm font-medium">
                   <div className="flex items-center gap-2">
@@ -131,8 +133,8 @@ const AboutPage = () => {
                     Working out
                   </div>
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    Bouldering
+                    <Brain className="h-4 w-4 text-primary" />
+                    AI products
                   </div>
                   <div className="flex items-center gap-2 transition-colors hover:text-primary">
                     <Camera className="h-4 w-4 text-primary" />
