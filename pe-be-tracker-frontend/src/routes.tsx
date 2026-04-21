@@ -80,61 +80,27 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Wrapper component for pages with suspense
-const PageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
-);
+const withSuspense = (
+  element: ReactNode,
+  fallback: ReactNode = <LoadingFallback />,
+) => <Suspense fallback={fallback}>{element}</Suspense>;
 
-// Wrapper component for ExerciseTypesPage with custom fallback
-const ExerciseTypesPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<ExerciseTypesPageSkeleton />}>{children}</Suspense>
-);
-
-// Wrapper component for ExerciseTypeDetailsPage with custom fallback
-const ExerciseTypeDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<ExerciseTypeDetailsLoadingState />}>{children}</Suspense>
-);
-
-// Wrapper component for ProfilePage with custom fallback
-const ProfilePageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<ProfilePageSkeleton />}>{children}</Suspense>
-);
-
-// Wrapper component for WorkoutPage with custom fallback
-const WorkoutPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<WorkoutPageSkeleton />}>{children}</Suspense>
-);
-
-// Wrapper component for routines page with custom fallback
-const RoutinesPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<RoutinesPageSkeleton />}>{children}</Suspense>
-);
-
-const RoutineDetailsPageWrapper = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<RoutineDetailsLoadingState />}>{children}</Suspense>
-);
-
-const routes: RouteObject[] = [
+const publicRoutes: RouteObject[] = [
   {
     path: "/login",
     element: <LoginPage />,
   },
+  ...["/auth/complete", "/oauth/callback"].map((path) => ({
+    path,
+    element: withSuspense(<OAuthCallbackPage />),
+  })),
   {
-    path: "/auth/complete",
-    element: (
-      <PageWrapper>
-        <OAuthCallbackPage />
-      </PageWrapper>
-    ),
+    path: "/about",
+    element: <AboutPage />,
   },
-  {
-    path: "/oauth/callback",
-    element: (
-      <PageWrapper>
-        <OAuthCallbackPage />
-      </PageWrapper>
-    ),
-  },
+];
+
+const appRoutes: RouteObject[] = [
   {
     element: <AppLayout />,
     children: [
@@ -148,59 +114,40 @@ const routes: RouteObject[] = [
       },
       {
         path: "workouts/:workoutId",
-        element: (
-          <WorkoutPageWrapper>
-            <WorkoutPage />
-          </WorkoutPageWrapper>
-        ),
+        element: withSuspense(<WorkoutPage />, <WorkoutPageSkeleton />),
       },
       {
         path: "exercise-types",
-        element: (
-          <ExerciseTypesPageWrapper>
-            <ExerciseTypesPage />
-          </ExerciseTypesPageWrapper>
+        element: withSuspense(
+          <ExerciseTypesPage />,
+          <ExerciseTypesPageSkeleton />,
         ),
       },
       {
         path: "exercise-types/:exerciseTypeId",
-        element: (
-          <ExerciseTypeDetailsPageWrapper>
-            <ExerciseTypeDetailsPage />
-          </ExerciseTypeDetailsPageWrapper>
+        element: withSuspense(
+          <ExerciseTypeDetailsPage />,
+          <ExerciseTypeDetailsLoadingState />,
         ),
       },
       {
         path: "exercise-types/:exerciseTypeId/admin-images",
-        element: (
-          <PageWrapper>
-            <ExerciseTypeImageAdminPage />
-          </PageWrapper>
-        ),
+        element: withSuspense(<ExerciseTypeImageAdminPage />),
       },
       {
         path: "routines",
-        element: (
-          <RoutinesPageWrapper>
-            <RoutinesPage />
-          </RoutinesPageWrapper>
-        ),
+        element: withSuspense(<RoutinesPage />, <RoutinesPageSkeleton />),
       },
       {
         path: "routines/:routineId",
-        element: (
-          <RoutineDetailsPageWrapper>
-            <RoutineDetailsPage />
-          </RoutineDetailsPageWrapper>
+        element: withSuspense(
+          <RoutineDetailsPage />,
+          <RoutineDetailsLoadingState />,
         ),
       },
       {
         path: "routines/new",
-        element: (
-          <RoutinesPageWrapper>
-            <CreateRoutinePage />
-          </RoutinesPageWrapper>
-        ),
+        element: withSuspense(<CreateRoutinePage />, <RoutinesPageSkeleton />),
       },
       {
         path: "chat",
@@ -208,15 +155,7 @@ const routes: RouteObject[] = [
       },
       {
         path: "profile",
-        element: (
-          <ProfilePageWrapper>
-            <ProfilePage />
-          </ProfilePageWrapper>
-        ),
-      },
-      {
-        path: "about",
-        element: <AboutPage />,
+        element: withSuspense(<ProfilePage />, <ProfilePageSkeleton />),
       },
       {
         path: "*",
@@ -225,5 +164,7 @@ const routes: RouteObject[] = [
     ],
   },
 ];
+
+const routes: RouteObject[] = [...publicRoutes, ...appRoutes];
 
 export default routes;

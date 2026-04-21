@@ -186,4 +186,31 @@ describe("routes", () => {
       screen.getByRole("link", { name: /ai chat/i }),
     ).toHaveAttribute("href", "/chat");
   });
+
+  it("renders the about page for unauthenticated users", async () => {
+    mockAuthState.isAuthenticated = false;
+
+    const router = createMemoryRouter(routes, {
+      initialEntries: ["/about"],
+    });
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /^about$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/the project and the developer/i),
+    ).toBeInTheDocument();
+  });
 });
