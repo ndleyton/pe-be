@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://www.personalbestie.com/sitemap.xml
+Sitemap: https://app.personalbestie.com/exercise-types-sitemap.xml
