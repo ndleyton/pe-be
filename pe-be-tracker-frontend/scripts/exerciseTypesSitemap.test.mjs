@@ -52,6 +52,11 @@ describe("exerciseTypesSitemap", () => {
     );
   });
 
+  it("preserves a bare /api path without duplicating the segment", () => {
+    expect(normalizeApiBaseUrl("http://host/api")).toBe("http://host/api/");
+    expect(normalizeApiBaseUrl("http://host/api/")).toBe("http://host/api/");
+  });
+
   it("preserves explicit API roots when resolving sitemap fetch URLs", () => {
     expect(
       resolveSitemapApiBaseUrl({

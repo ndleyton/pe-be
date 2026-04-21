@@ -24,12 +24,19 @@ const isPlaceholderApiBaseUrl = (value) =>
 export const normalizeApiBaseUrl = (value) => {
   const normalized = new URL(value).toString();
   const parsed = new URL(normalized);
+  const trimmedPathname = parsed.pathname.replace(/\/+$/, "");
 
-  if (!parsed.pathname.startsWith("/api/")) {
-    parsed.pathname = parsed.pathname.endsWith("/")
-      ? `${parsed.pathname}api/v1/`
-      : `${parsed.pathname}/api/v1/`;
-  } else if (!parsed.pathname.endsWith("/")) {
+  if (trimmedPathname === "" || trimmedPathname === "/") {
+    parsed.pathname = "/api/v1/";
+  } else if (trimmedPathname === "/api") {
+    parsed.pathname = "/api/";
+  } else if (!trimmedPathname.startsWith("/api/")) {
+    parsed.pathname = `${trimmedPathname}/api/v1/`;
+  } else {
+    parsed.pathname = trimmedPathname;
+  }
+
+  if (!parsed.pathname.endsWith("/")) {
     parsed.pathname = `${parsed.pathname}/`;
   }
 
