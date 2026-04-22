@@ -18,7 +18,7 @@ from src.exercises.models import (
     Muscle,
     MuscleGroup,
 )
-from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate
+from src.exercises.schemas import ExerciseCreate, ExerciseTypeCreate, ExerciseTypeUpdate
 from src.users.models import User
 from src.workouts.models import Workout, WorkoutType
 
@@ -204,6 +204,140 @@ async def test_get_muscles_orders_by_group_then_name(db_session):
         ("Chest Crud", "Bench"),
         ("Chest Crud", "Cable Fly"),
     ]
+
+
+async def test_get_similar_exercise_types_prefers_same_primary_muscle_then_group(
+    db_session,
+):
+    back = await _seed_muscle_group(db_session, "Back Similar")
+    lats = await _seed_muscle(db_session, "Lats Similar", back.id)
+    rhomboids = await _seed_muscle(db_session, "Rhomboids Similar", back.id)
+    rear_delts = await _seed_muscle(db_session, "Rear Delts Similar", back.id)
+
+    current = await _seed_exercise_type(
+        db_session,
+        "Current Row Similar",
+        times_used=40,
+    )
+    top_primary = await _seed_exercise_type(
+        db_session,
+        "Chest Supported Row Similar",
+        times_used=200,
+    )
+    second_primary = await _seed_exercise_type(
+        db_session,
+        "Neutral Grip Pulldown Similar",
+        times_used=150,
+    )
+    backfill = await _seed_exercise_type(
+        db_session,
+        "Face Pull Similar",
+        times_used=175,
+    )
+    hidden_candidate = await _seed_exercise_type(
+        db_session,
+        "Owner Draft Similar",
+        times_used=500,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    other_group = await _seed_exercise_type(
+        db_session,
+        "Leg Press Similar",
+        times_used=999,
+    )
+
+    db_session.add_all(
+        [
+            ExerciseMuscle(
+                exercise_type_id=current.id,
+                muscle_id=lats.id,
+                is_primary=True,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=top_primary.id,
+                muscle_id=lats.id,
+                is_primary=True,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=second_primary.id,
+                muscle_id=lats.id,
+                is_primary=True,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=backfill.id,
+                muscle_id=rhomboids.id,
+                is_primary=True,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=hidden_candidate.id,
+                muscle_id=lats.id,
+                is_primary=True,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=other_group.id,
+                muscle_id=rear_delts.id,
+                is_primary=False,
+            ),
+        ]
+    )
+    await db_session.commit()
+    current = await crud.get_exercise_type_by_id(db_session, current.id, is_admin=True)
+
+    suggestions, strategy = await crud.get_similar_exercise_types(
+        db_session,
+        current,
+        limit=3,
+    )
+
+    assert strategy == "same_primary_muscle_then_group_by_times_used"
+    assert [item["exercise_type"].name for item in suggestions] == [
+        "Chest Supported Row Similar",
+        "Neutral Grip Pulldown Similar",
+        "Face Pull Similar",
+    ]
+    assert [item["match_reason"] for item in suggestions] == [
+        "same_primary_muscle",
+        "same_primary_muscle",
+        "same_primary_muscle_group",
+    ]
+
+
+async def test_get_similar_exercise_types_returns_no_primary_strategy_when_missing_primary(
+    db_session,
+):
+    chest = await _seed_muscle_group(db_session, "Chest Similar No Primary")
+    pecs = await _seed_muscle(db_session, "Pecs Similar No Primary", chest.id)
+    current = await _seed_exercise_type(db_session, "Current Press No Primary")
+    candidate = await _seed_exercise_type(
+        db_session,
+        "Bench Press No Primary",
+        times_used=250,
+    )
+    db_session.add_all(
+        [
+            ExerciseMuscle(
+                exercise_type_id=current.id,
+                muscle_id=pecs.id,
+                is_primary=False,
+            ),
+            ExerciseMuscle(
+                exercise_type_id=candidate.id,
+                muscle_id=pecs.id,
+                is_primary=True,
+            ),
+        ]
+    )
+    await db_session.commit()
+    current = await crud.get_exercise_type_by_id(db_session, current.id, is_admin=True)
+
+    suggestions, strategy = await crud.get_similar_exercise_types(
+        db_session,
+        current,
+        limit=3,
+    )
+
+    assert suggestions == []
+    assert strategy == "no_primary_muscle"
 
 
 async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session):
@@ -598,7 +732,13 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
         biceps.id,
         back.id,
     }
-    assert all(item.is_primary is False for item in created.exercise_muscles)
+    primary_by_muscle_id = {
+        item.muscle.id: item.is_primary for item in created.exercise_muscles
+    }
+    assert primary_by_muscle_id == {
+        biceps.id: True,
+        back.id: False,
+    }
 
     duplicate = await crud.create_exercise_type(
         db_session,
@@ -616,6 +756,50 @@ async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session
 
     assert duplicate.id == created.id
     assert count == 1
+
+
+async def test_update_exercise_type_replaces_muscles_and_honors_explicit_primary(
+    db_session,
+):
+    back = await _seed_muscle_group(db_session, "Back Primary Update")
+    lats = await _seed_muscle(db_session, "Lats Primary Update", back.id)
+    rhomboids = await _seed_muscle(db_session, "Rhomboids Primary Update", back.id)
+    rear_delts = await _seed_muscle(db_session, "Rear Delts Primary Update", back.id)
+    exercise_type = await _seed_exercise_type(db_session, "Rows Primary Update")
+    await db_session.commit()
+
+    created = await crud.update_exercise_type(
+        db_session,
+        exercise_type,
+        ExerciseTypeUpdate(
+            muscle_ids=[lats.id, rhomboids.id],
+            primary_muscle_id=rhomboids.id,
+        ),
+    )
+
+    created_flags = {
+        item.muscle.id: item.is_primary for item in created.exercise_muscles
+    }
+    assert created_flags == {
+        lats.id: False,
+        rhomboids.id: True,
+    }
+
+    updated = await crud.update_exercise_type(
+        db_session,
+        created,
+        ExerciseTypeUpdate(
+            muscle_ids=[rear_delts.id, lats.id],
+        ),
+    )
+
+    updated_flags = {
+        item.muscle.id: item.is_primary for item in updated.exercise_muscles
+    }
+    assert updated_flags == {
+        rear_delts.id: True,
+        lats.id: False,
+    }
 
 
 async def test_exercise_type_visibility_filters_by_user_and_status(db_session):

@@ -7,3 +7,4 @@ export { ExerciseTypeCard } from "./ExerciseTypeCard";
 export { ProgressiveOverloadChart } from "./ProgressiveOverloadChart";
 export { LastWorkoutInfo } from "./LastWorkoutInfo";
 export { PersonalBestInfo } from "./PersonalBestInfo";
+export { SimilarExercisesSection } from "./SimilarExercisesSection";

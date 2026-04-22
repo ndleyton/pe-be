@@ -23,6 +23,8 @@ import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import type { Muscle } from "@/shared/types";
+import { SimilarExercisesSection } from "@/features/exercises/components";
+import { useSimilarExercises } from "@/features/exercises/hooks";
 
 const ProgressiveOverloadChart = lazy(() =>
   import("@/features/exercises/components/ProgressiveOverloadChart/ProgressiveOverloadChart").then(
@@ -119,6 +121,11 @@ const ExerciseTypeDetailsPage = () => {
     enabled: !!exerciseTypeId && !!exerciseType && isAuthenticated,
     retry: 1,
   });
+  const {
+    similarExercises,
+    isLoading: isLoadingSimilarExercises,
+    error: similarExercisesError,
+  } = useSimilarExercises(exerciseTypeId);
 
   const { data: intensityUnits = [], error: intensityUnitsError } = useQuery({
     queryKey: ["intensityUnits"],
@@ -988,6 +995,15 @@ const ExerciseTypeDetailsPage = () => {
           ) : null}
         </div>
       </div>
+
+      {exerciseType ? (
+        <SimilarExercisesSection
+          suggestions={similarExercises.data}
+          strategy={similarExercises.strategy}
+          isLoading={isLoadingSimilarExercises}
+          hasError={Boolean(similarExercisesError)}
+        />
+      ) : null}
     </div>
   );
 };

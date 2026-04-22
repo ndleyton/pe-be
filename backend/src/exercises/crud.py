@@ -150,6 +150,8 @@ async def _replace_exercise_type_muscles(
     session: AsyncSession,
     exercise_type: ExerciseType,
     muscle_ids: Optional[list[int]],
+    *,
+    primary_muscle_id: Optional[int] = None,
 ) -> None:
     if muscle_ids is None:
         return
@@ -163,13 +165,24 @@ async def _replace_exercise_type_muscles(
     if not muscle_ids:
         return
 
-    muscles = await _load_muscles_by_ids(session, muscle_ids)
-    for muscle in muscles:
+    unique_muscle_ids = list(dict.fromkeys(muscle_ids))
+    muscles = await _load_muscles_by_ids(session, unique_muscle_ids)
+    muscles_by_id = {muscle.id: muscle for muscle in muscles}
+    resolved_primary_muscle_id = (
+        primary_muscle_id if primary_muscle_id is not None else unique_muscle_ids[0]
+    )
+
+    if resolved_primary_muscle_id not in muscles_by_id:
+        raise ValueError(
+            f"Primary muscle ID {resolved_primary_muscle_id} must be one of the provided muscle IDs"
+        )
+
+    for muscle_id in unique_muscle_ids:
         session.add(
             ExerciseMuscle(
                 exercise_type=exercise_type,
-                muscle=muscle,
-                is_primary=False,
+                muscle=muscles_by_id[muscle_id],
+                is_primary=muscle_id == resolved_primary_muscle_id,
             )
         )
 
@@ -677,6 +690,113 @@ async def get_exercise_type_by_id(
     return result.unique().scalar_one_or_none()
 
 
+async def get_similar_exercise_types(
+    session: AsyncSession,
+    exercise_type: ExerciseType,
+    *,
+    limit: int = 3,
+) -> tuple[list[dict[str, Any]], str]:
+    """Get released exercise types similar to the provided exercise type."""
+    primary_muscle_ids = sorted(
+        {
+            exercise_muscle.muscle_id
+            for exercise_muscle in exercise_type.exercise_muscles
+            if exercise_muscle.is_primary and exercise_muscle.muscle_id is not None
+        }
+    )
+    primary_muscle_group_ids = sorted(
+        {
+            exercise_muscle.muscle.muscle_group_id
+            for exercise_muscle in exercise_type.exercise_muscles
+            if exercise_muscle.is_primary
+            and exercise_muscle.muscle is not None
+            and exercise_muscle.muscle.muscle_group_id is not None
+        }
+    )
+
+    if not primary_muscle_ids:
+        return [], "no_primary_muscle"
+
+    sort_columns = (
+        desc(ExerciseType.times_used),
+        ExerciseType.name.asc(),
+        ExerciseType.id.asc(),
+    )
+
+    primary_match_ids = (
+        (
+            await session.execute(
+                select(ExerciseType.id)
+                .where(
+                    ExerciseType.status == ExerciseType.ExerciseTypeStatus.released,
+                    ExerciseType.id != exercise_type.id,
+                    ExerciseType.exercise_muscles.any(
+                        and_(
+                            ExerciseMuscle.is_primary.is_(True),
+                            ExerciseMuscle.muscle_id.in_(primary_muscle_ids),
+                        )
+                    ),
+                )
+                .order_by(*sort_columns)
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    backfill_ids: list[int] = []
+    remaining = limit - len(primary_match_ids)
+    if remaining > 0 and primary_muscle_group_ids:
+        excluded_ids = [exercise_type.id, *primary_match_ids]
+        backfill_ids = (
+            (
+                await session.execute(
+                    select(ExerciseType.id)
+                    .where(
+                        ExerciseType.status == ExerciseType.ExerciseTypeStatus.released,
+                        ExerciseType.id.not_in(excluded_ids),
+                        ExerciseType.exercise_muscles.any(
+                            and_(
+                                ExerciseMuscle.is_primary.is_(True),
+                                ExerciseMuscle.muscle.has(
+                                    Muscle.muscle_group_id.in_(primary_muscle_group_ids)
+                                ),
+                            )
+                        ),
+                    )
+                    .order_by(*sort_columns)
+                    .limit(remaining)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    ordered_ids = [*primary_match_ids, *backfill_ids]
+    hydrated_matches = await _hydrate_exercise_types_by_ids(
+        session,
+        ordered_ids,
+        released_only=True,
+    )
+    primary_match_id_set = set(primary_match_ids)
+
+    return (
+        [
+            {
+                "exercise_type": similar_exercise_type,
+                "match_reason": (
+                    "same_primary_muscle"
+                    if similar_exercise_type.id in primary_match_id_set
+                    else "same_primary_muscle_group"
+                ),
+            }
+            for similar_exercise_type in hydrated_matches
+        ],
+        "same_primary_muscle_then_group_by_times_used",
+    )
+
+
 async def create_exercise_type(
     session: AsyncSession,
     exercise_type_create: ExerciseTypeCreate,
@@ -718,6 +838,7 @@ async def create_exercise_type(
             session,
             exercise_type,
             exercise_type_create.muscle_ids,
+            primary_muscle_id=exercise_type_create.primary_muscle_id,
         )
         await session.commit()
         await session.refresh(exercise_type)
@@ -772,11 +893,17 @@ async def update_exercise_type(
     """Update an existing exercise type and reload relationships."""
     update_data = exercise_type_update.model_dump(exclude_unset=True)
     muscle_ids = update_data.pop("muscle_ids", None)
+    primary_muscle_id = update_data.pop("primary_muscle_id", None)
 
     for field, value in update_data.items():
         setattr(exercise_type, field, value)
 
-    await _replace_exercise_type_muscles(session, exercise_type, muscle_ids)
+    await _replace_exercise_type_muscles(
+        session,
+        exercise_type,
+        muscle_ids,
+        primary_muscle_id=primary_muscle_id,
+    )
 
     try:
         await session.commit()
@@ -784,8 +911,10 @@ async def update_exercise_type(
         await session.rollback()
         raise
 
+    session.expire(exercise_type, ["exercise_muscles"])
     result = await session.execute(
         select(ExerciseType)
+        .execution_options(populate_existing=True)
         .options(_exercise_type_relationship_option())
         .where(ExerciseType.id == exercise_type.id)
     )

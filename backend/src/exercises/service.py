@@ -11,6 +11,7 @@ from src.exercises.crud import (
     create_exercise,
     get_exercise_types,
     get_exercise_type_by_id,
+    get_similar_exercise_types,
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
@@ -34,6 +35,7 @@ from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
     ExerciseTypeReleaseRequest,
+    SimilarExerciseTypesResponse,
     ExerciseTypeUpdate,
     PaginatedExerciseTypesResponse,
 )
@@ -173,6 +175,37 @@ class ExerciseTypeService:
         if released_only:
             kwargs["released_only"] = True
         return await get_exercise_type_by_id(session, exercise_type_id, **kwargs)
+
+    @staticmethod
+    async def get_similar_exercise_types(
+        session: AsyncSession,
+        exercise_type_id: int,
+        *,
+        limit: int = 3,
+        user: Optional["User"] = None,
+    ) -> SimilarExerciseTypesResponse:
+        kwargs = {}
+        if user is not None:
+            kwargs["user_id"] = user.id
+            kwargs["is_admin"] = bool(getattr(user, "is_superuser", False))
+
+        exercise_type = await get_exercise_type_by_id(
+            session, exercise_type_id, **kwargs
+        )
+        if exercise_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Exercise type with ID {exercise_type_id} not found",
+            )
+
+        suggestions, strategy = await get_similar_exercise_types(
+            session,
+            exercise_type,
+            limit=limit,
+        )
+        return SimilarExerciseTypesResponse.model_validate(
+            {"data": suggestions, "strategy": strategy}
+        )
 
     @staticmethod
     async def get_exercise_type_statistics(

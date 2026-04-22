@@ -19,7 +19,7 @@ from src.admin.exercise_image_service import (
     generate_reference_image_options,
 )
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
-from src.exercises.schemas import ExerciseTypeRead
+from src.exercises.schemas import ExerciseTypeRead, SimilarExerciseTypesResponse
 from src.genai.google_images import (
     ExerciseImageResult,
     REFERENCE_OPTION_SPECS,
@@ -279,6 +279,7 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
         updated_at="2026-03-24T10:00:00+00:00",
         exercise_muscles=[
             SimpleNamespace(
+                is_primary=True,
                 muscle=SimpleNamespace(
                     id=3,
                     name="Pectorals",
@@ -291,7 +292,7 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
                         created_at="2026-03-24T10:00:00+00:00",
                         updated_at="2026-03-24T10:00:00+00:00",
                     ),
-                )
+                ),
             )
         ],
     )
@@ -308,6 +309,66 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
     assert result.id == 275
     assert result.muscles[0].name == "Pectorals"
     assert result.muscles[0].muscle_group.name == "Chest"
+    assert result.primary_muscle is not None
+    assert result.primary_muscle.name == "Pectorals"
+
+
+@pytest.mark.asyncio
+async def test_get_similar_exercise_types_route_uses_service(monkeypatch):
+    from src.exercises import router as exercises_router
+
+    fake_response = SimilarExerciseTypesResponse.model_validate(
+        {
+            "data": [
+                {
+                    "exercise_type": {
+                        "id": 18,
+                        "name": "Chest-Supported Row",
+                        "description": "Back exercise",
+                        "default_intensity_unit": None,
+                        "times_used": 42,
+                        "muscles": [],
+                        "primary_muscle": None,
+                        "owner_id": None,
+                        "status": "released",
+                        "review_requested_at": None,
+                        "released_at": None,
+                        "reviewed_by": None,
+                        "review_notes": None,
+                        "images_url": None,
+                        "reference_images_url": None,
+                        "instructions": None,
+                        "equipment": "machine",
+                        "category": "strength",
+                        "created_at": "2026-04-20T10:00:00+00:00",
+                        "updated_at": "2026-04-20T10:00:00+00:00",
+                    },
+                    "match_reason": "same_primary_muscle",
+                }
+            ],
+            "strategy": "same_primary_muscle_then_group_by_times_used",
+        }
+    )
+    fake_service = AsyncMock(return_value=fake_response)
+
+    monkeypatch.setattr(
+        exercises_router.ExerciseTypeService,
+        "get_similar_exercise_types",
+        fake_service,
+    )
+
+    result = await exercises_router.get_similar_exercise_types(
+        18,
+        limit=3,
+        session=object(),
+        user=None,
+    )
+
+    assert result == fake_response
+    fake_service.assert_awaited_once()
+    assert fake_service.await_args.args[1] == 18
+    assert fake_service.await_args.kwargs["limit"] == 3
+    assert fake_service.await_args.kwargs["user"] is None
 
 
 @pytest.mark.asyncio

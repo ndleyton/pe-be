@@ -4,6 +4,7 @@ import {
   getExercisesInWorkout,
   getMuscles,
   getMuscleGroups,
+  getSimilarExerciseTypes,
 } from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
 import api from "@/shared/api/client";
@@ -237,6 +238,56 @@ describe("exercises API - pagination", () => {
         "/exercises/exercise-types/?order_by=usage&offset=0&limit=100&muscle_group_id=7",
       );
       expect(result.data).toEqual(mockExerciseTypes);
+    });
+  });
+
+  describe("getSimilarExerciseTypes", () => {
+    it("should call the dedicated similar-exercises endpoint", async () => {
+      const similarExercises = {
+        data: [
+          {
+            exercise_type: makeExerciseType({
+              id: 7,
+              name: "Chest-Supported Row",
+            }),
+            match_reason: "same_primary_muscle" as const,
+          },
+        ],
+        strategy: "same_primary_muscle_then_group_by_times_used" as const,
+      };
+
+      mockApi.get.mockResolvedValueOnce({ data: similarExercises });
+
+      const result = await getSimilarExerciseTypes(12);
+
+      expect(mockApi.get).toHaveBeenCalledWith(
+        endpoints.similarExerciseTypes(12) + "?limit=3",
+      );
+      expect(result).toEqual(similarExercises);
+    });
+
+    it("should pass an explicit limit through the query string", async () => {
+      const similarExercises = {
+        data: [
+          {
+            exercise_type: makeExerciseType({
+              id: 7,
+              name: "Chest-Supported Row",
+            }),
+            match_reason: "same_primary_muscle" as const,
+          },
+        ],
+        strategy: "same_primary_muscle_then_group_by_times_used" as const,
+      };
+
+      mockApi.get.mockResolvedValueOnce({ data: similarExercises });
+
+      const result = await getSimilarExerciseTypes(12, 5);
+
+      expect(mockApi.get).toHaveBeenCalledWith(
+        endpoints.similarExerciseTypes(12) + "?limit=5",
+      );
+      expect(result).toEqual(similarExercises);
     });
   });
 

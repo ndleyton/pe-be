@@ -10,10 +10,15 @@ import {
   getIntensityUnits,
   getMuscles,
   getExerciseTypeStats,
+  getSimilarExerciseTypes,
   releaseExerciseType,
   requestExerciseTypeEvaluation,
   updateExerciseType,
 } from "@/features/exercises/api";
+
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}));
 
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual<
@@ -26,6 +31,7 @@ vi.mock("@/features/exercises/api", async () => {
     getIntensityUnits: vi.fn(),
     getMuscles: vi.fn(),
     getExerciseTypeStats: vi.fn(),
+    getSimilarExerciseTypes: vi.fn(),
     updateExerciseType: vi.fn(),
     requestExerciseTypeEvaluation: vi.fn(),
     releaseExerciseType: vi.fn(),
@@ -63,7 +69,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useParams: () => ({ exerciseTypeId: "12" }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -71,6 +77,7 @@ const mockGetExerciseTypeById = vi.mocked(getExerciseTypeById);
 const mockGetIntensityUnits = vi.mocked(getIntensityUnits);
 const mockGetMuscles = vi.mocked(getMuscles);
 const mockGetExerciseTypeStats = vi.mocked(getExerciseTypeStats);
+const mockGetSimilarExerciseTypes = vi.mocked(getSimilarExerciseTypes);
 const mockUpdateExerciseType = vi.mocked(updateExerciseType);
 const mockRequestExerciseTypeEvaluation = vi.mocked(requestExerciseTypeEvaluation);
 const mockReleaseExerciseType = vi.mocked(releaseExerciseType);
@@ -90,6 +97,7 @@ describe("ExerciseTypeDetailsPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockReset();
     mockAuthState.isAuthenticated = true;
     mockAuthState.user = { id: 1, is_superuser: true };
     mockGetIntensityUnits.mockResolvedValue([
@@ -114,6 +122,10 @@ describe("ExerciseTypeDetailsPage", () => {
       personalBest: null,
       totalSets: 0,
       intensityUnit: { id: 1, name: "Pounds", abbreviation: "lb" },
+    });
+    mockGetSimilarExerciseTypes.mockResolvedValue({
+      data: [],
+      strategy: "same_primary_muscle_then_group_by_times_used",
     });
     mockUpdateExerciseType.mockImplementation(async (_id, updates) =>
       makeExerciseType({
@@ -325,5 +337,54 @@ describe("ExerciseTypeDetailsPage", () => {
     expect(
       screen.getByText(/lie on the bench and press the bar up/i),
     ).toBeInTheDocument();
+  });
+
+  it("renders similar exercises without a chat CTA", async () => {
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Lat Pulldown",
+        muscles: [
+          makeMuscle({
+            id: 77,
+            name: "Latissimus Dorsi",
+            muscle_group: makeMuscleGroup({ id: 101, name: "Back" }),
+          }),
+        ],
+        images: [],
+      }),
+    );
+    mockGetSimilarExerciseTypes.mockResolvedValue({
+      data: [
+        {
+          exercise_type: makeExerciseType({
+            id: 99,
+            name: "Chest-Supported Row",
+            equipment: "machine",
+            category: "strength",
+            muscles: [
+              makeMuscle({
+                id: 78,
+                name: "Latissimus Dorsi",
+                muscle_group: makeMuscleGroup({ id: 101, name: "Back" }),
+              }),
+            ],
+          }),
+          match_reason: "same_primary_muscle",
+        },
+      ],
+      strategy: "same_primary_muscle_then_group_by_times_used",
+    });
+
+    render(<ExerciseTypeDetailsPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /alternatives/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Chest-Supported Row")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /ask personal bestie/i }),
+    ).not.toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
