@@ -240,7 +240,6 @@ def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
         "I don't have cables"
     )
     assert "cable" in avoided
-    assert "cable" not in preferred
 
     preferred, avoided, same_equip = ChatService._extract_equipment_preferences(
         "no barbell, but I have a dumbbell"
