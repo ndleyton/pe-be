@@ -12,14 +12,6 @@ const matchReasonLabel: Record<SimilarExercise["match_reason"], string> = {
   same_primary_muscle_group: "Same muscle group",
 };
 
-const helperCopyForStrategy = (strategy: SimilarExercisesStrategy) => {
-  if (strategy === "same_primary_muscle_then_group_by_times_used") {
-    return "Popular alternatives that hit the same primary muscle, with nearby backfills when needed.";
-  }
-
-  return "Popular alternatives that hit the same primary muscle.";
-};
-
 interface SimilarExercisesSectionProps {
   suggestions: SimilarExercise[];
   strategy: SimilarExercisesStrategy;
@@ -37,13 +29,16 @@ export const SimilarExercisesSection = ({
     return null;
   }
 
+  const helperCopy =
+    strategy === "same_primary_muscle_then_group_by_times_used"
+      ? "Popular alternatives that hit the same primary muscles"
+      : "Popular alternatives that hit the same primary muscle.";
+
   return (
     <section className="bg-card border-border/20 mt-8 rounded-2xl border p-6 text-left shadow-md">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Similar exercises</h2>
-        <p className="text-muted-foreground text-sm">
-          {helperCopyForStrategy(strategy)}
-        </p>
+        <p className="text-muted-foreground text-sm">{helperCopy}</p>
       </div>
 
       {isLoading ? (
