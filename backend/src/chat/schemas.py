@@ -108,9 +108,7 @@ class ChatExerciseSubstitutionsEvent(BaseModel):
 
 
 ChatEvent = Annotated[
-    ChatWorkoutCreatedEvent
-    | ChatRoutineCreatedEvent
-    | ChatExerciseSubstitutionsEvent,
+    ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent | ChatExerciseSubstitutionsEvent,
     Field(discriminator="type"),
 ]
 

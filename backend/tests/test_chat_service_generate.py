@@ -493,9 +493,7 @@ async def test_generate_response_returns_exercise_substitution_event(
                     equipment="machine",
                     category="strength",
                     exercise_muscles=[
-                        SimpleNamespace(
-                            muscle=SimpleNamespace(name="Latissimus Dorsi")
-                        )
+                        SimpleNamespace(muscle=SimpleNamespace(name="Latissimus Dorsi"))
                     ],
                 ),
                 "match_reason": "same_primary_muscle",

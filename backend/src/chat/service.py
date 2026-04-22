@@ -830,7 +830,9 @@ class ChatService:
                 if source_exercise is None:
                     return f"Failed to recommend substitutions: exercise type {exercise_type_id} was not found."
             else:
-                resolved_exercise = await self._resolve_exercise_type(exercise_name or "")
+                resolved_exercise = await self._resolve_exercise_type(
+                    exercise_name or ""
+                )
                 source_exercise = await get_exercise_type_by_id(
                     self.session,
                     resolved_exercise.id,
