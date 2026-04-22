@@ -124,6 +124,17 @@ export interface ChatApiMessage {
   parts?: ChatApiPart[];
 }
 
+export interface ExerciseSubstitutionChatIntent {
+  kind: "exercise_substitutions";
+  exerciseTypeId: number;
+  exerciseTypeName: string;
+}
+
+export interface ChatPageLocationState {
+  chatIntent?: ExerciseSubstitutionChatIntent;
+  autoStartChatIntent?: boolean;
+}
+
 export type ChatEvent =
   | WorkoutCreatedEvent
   | RoutineCreatedEvent

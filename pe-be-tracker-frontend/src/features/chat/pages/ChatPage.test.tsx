@@ -297,14 +297,7 @@ describe("ChatPage", () => {
     });
   });
 
-  it("auto-sends a seeded substitution request, then lets the user answer a follow-up before widgets appear", async () => {
-    mockPost.mockResolvedValueOnce({
-      data: {
-        message: "What equipment do you have available, or what do you want to avoid?",
-        conversation_id: 12,
-        events: [],
-      },
-    });
+  it("starts a substitution handoff with a local assistant follow-up, then sends a grounded request after the user answers", async () => {
     mockPost.mockResolvedValueOnce({
       data: {
         message: "I found grounded substitutions for you.",
@@ -339,35 +332,17 @@ describe("ChatPage", () => {
       {
         pathname: "/chat",
         state: {
-          seedPrompt:
-            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
-          autoSendSeedPrompt: true,
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: true,
         },
       },
     ]);
 
-    await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledTimes(1);
-    });
-
-    expect(mockPost.mock.calls[0][0]).toBe("/chat");
-    expect(mockPost.mock.calls[0][1]).toEqual({
-      messages: [
-        {
-          role: "user",
-          content:
-            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
-          parts: [
-            {
-              type: "text",
-              text:
-                "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
-            },
-          ],
-        },
-      ],
-      conversation_id: undefined,
-    });
+    expect(mockPost).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith(
       {
         pathname: "/chat",
@@ -377,16 +352,19 @@ describe("ChatPage", () => {
       {
         replace: true,
         state: {
-          seedPrompt:
-            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
-          autoSendSeedPrompt: false,
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: false,
         },
       },
     );
 
     expect(
       await screen.findByText(
-        "What equipment do you have available, or what do you want to avoid?",
+        "I can help with alternatives to Lat Pulldown. What equipment do you have available, or what do you want to avoid?",
       ),
     ).toBeInTheDocument();
 
@@ -399,8 +377,30 @@ describe("ChatPage", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledTimes(2);
+      expect(mockPost).toHaveBeenCalledTimes(1);
     });
+
+    expect(mockPost.mock.calls[0][0]).toBe("/chat");
+    expect(mockPost.mock.calls[0][1]).toEqual({
+      messages: [
+        {
+          role: "user",
+          content: expect.stringContaining(
+            '"exercise_type_id":12',
+          ),
+          parts: [
+            {
+              type: "text",
+              text: expect.stringContaining('"exercise_type_id":12'),
+            },
+          ],
+        },
+      ],
+      conversation_id: undefined,
+    });
+    expect(mockPost.mock.calls[0][1].messages[0].content).toContain(
+      '"context_notes":"I only have cables."',
+    );
 
     expect(
       await screen.findByText("Alternatives to Lat Pulldown"),

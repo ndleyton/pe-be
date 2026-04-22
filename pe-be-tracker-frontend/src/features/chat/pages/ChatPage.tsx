@@ -22,11 +22,13 @@ import {
   type TextMessagePart,
   type ImageMessagePart,
   type UIMessagePart,
+  type ChatPageLocationState,
   type ChatApiMessage,
   type ChatApiPart,
   type ChatApiWorkoutCreatedEvent,
   type ChatApiRoutineCreatedEvent,
   type ChatApiExerciseSubstitutionsEvent,
+  type ExerciseSubstitutionChatIntent,
 } from "../types";
 import {
   normalizeChatCopy,
@@ -42,11 +44,6 @@ interface ChatResponse {
     | ChatApiRoutineCreatedEvent
     | ChatApiExerciseSubstitutionsEvent
   >;
-}
-
-interface ChatPageLocationState {
-  seedPrompt?: string;
-  autoSendSeedPrompt?: boolean;
 }
 
 interface PendingAttachment {
@@ -68,6 +65,26 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/jpeg",
   "image/webp",
 ] as const;
+const SUBSTITUTION_FOLLOW_UP_QUESTION = (exerciseTypeName: string) =>
+  `I can help with alternatives to ${exerciseTypeName}. What equipment do you have available, or what do you want to avoid?`;
+const buildGroundedSubstitutionRequest = (
+  intent: ExerciseSubstitutionChatIntent,
+  contextNotes: string,
+) => {
+  const serializedContext = JSON.stringify({
+    exercise_type_id: intent.exerciseTypeId,
+    exercise_type_name: intent.exerciseTypeName,
+    context_notes: contextNotes,
+  });
+
+  return [
+    "Use the grounded exercise substitution flow for this request.",
+    `Exercise context: ${serializedContext}`,
+    "The required follow-up question has already been asked and answered.",
+    "Call recommend_exercise_substitutions with the provided exercise_type_id and the user's answer as context_notes.",
+    "Only recommend exercises returned by that tool, then respond conversationally about those grounded options.",
+  ].join("\n");
+};
 
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
@@ -101,6 +118,8 @@ const ChatPage = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | undefined>();
+  const [pendingSubstitutionIntent, setPendingSubstitutionIntent] =
+    useState<ExerciseSubstitutionChatIntent | null>(null);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
     [],
   );
@@ -109,8 +128,8 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seededPromptHandledRef = useRef(false);
   const routeState = location.state as ChatPageLocationState | null;
-  const seededPrompt = routeState?.seedPrompt?.trim() ?? "";
-  const autoSendSeedPrompt = routeState?.autoSendSeedPrompt === true;
+  const chatIntent = routeState?.chatIntent;
+  const autoStartChatIntent = routeState?.autoStartChatIntent === true;
 
   const examplePrompts = useMemo(
     () => [
@@ -204,6 +223,7 @@ const ChatPage = () => {
   const buildUserParts = async (
     messageContent: string,
     attachments: PendingAttachment[],
+    apiTextOverride?: string,
   ): Promise<{ uiParts: UIMessagePart[]; apiParts: ChatApiPart[] }> => {
     const uploadedAttachments = await Promise.all(
       attachments.map((attachment) => uploadChatAttachment(attachment.file)),
@@ -218,6 +238,7 @@ const ChatPage = () => {
     }));
 
     const textPart = messageContent.trim();
+    const apiText = apiTextOverride?.trim() ?? textPart;
     const textUiParts: UIMessagePart[] = textPart
       ? [{ type: "text", text: textPart }]
       : [];
@@ -227,7 +248,7 @@ const ChatPage = () => {
         type: "image" as const,
         attachment_id: attachment.attachment_id,
       })),
-      ...(textPart ? [{ type: "text" as const, text: textPart }] : []),
+      ...(apiText ? [{ type: "text" as const, text: apiText }] : []),
     ];
 
     return {
@@ -282,9 +303,18 @@ const ChatPage = () => {
     }
 
     try {
+      const substitutionIntentForMessage = pendingSubstitutionIntent;
+      const apiMessageContent = substitutionIntentForMessage
+        ? buildGroundedSubstitutionRequest(
+            substitutionIntentForMessage,
+            trimmedMessage,
+          )
+        : undefined;
+      const requestContent = (apiMessageContent ?? trimmedMessage) || undefined;
       const { uiParts, apiParts } = await buildUserParts(
         trimmedMessage,
         attachmentsSnapshot,
+        apiMessageContent,
       );
 
       setMessages((prev) => [
@@ -300,16 +330,23 @@ const ChatPage = () => {
 
       clearPendingAttachments();
 
-      chatMutation.mutate({
-        messages: [
-          {
-            role: "user",
-            content: trimmedMessage || undefined,
-            parts: apiParts.length > 0 ? apiParts : undefined,
-          },
-        ],
-        conversationId,
-      });
+      try {
+        await chatMutation.mutateAsync({
+          messages: [
+            {
+              role: "user",
+              content: requestContent,
+              parts: apiParts.length > 0 ? apiParts : undefined,
+            },
+          ],
+          conversationId,
+        });
+        if (substitutionIntentForMessage) {
+          setPendingSubstitutionIntent(null);
+        }
+      } catch {
+        // Mutation errors are handled by the configured mutation callbacks.
+      }
     } catch (error) {
       setAttachmentError(
         extractErrorMessage(
@@ -325,6 +362,7 @@ const ChatPage = () => {
     conversationId,
     isAuthenticated,
     isLoading,
+    pendingSubstitutionIntent,
     pendingAttachments,
   ]);
 
@@ -391,8 +429,8 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (
-      !autoSendSeedPrompt ||
-      !seededPrompt ||
+      !autoStartChatIntent ||
+      !chatIntent ||
       seededPromptHandledRef.current ||
       messages.length > 0
     ) {
@@ -400,8 +438,25 @@ const ChatPage = () => {
     }
 
     seededPromptHandledRef.current = true;
-    setInputValue(seededPrompt);
-    void processMessage(seededPrompt);
+    setPendingSubstitutionIntent(chatIntent);
+    const followUpQuestion = SUBSTITUTION_FOLLOW_UP_QUESTION(
+      chatIntent.exerciseTypeName,
+    );
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-assistant-intent`,
+        role: "assistant",
+        content: followUpQuestion,
+        parts: [
+          {
+            type: "text",
+            text: followUpQuestion,
+          },
+        ],
+        timestamp: new Date(),
+      },
+    ]);
     navigate(
       {
         pathname: location.pathname,
@@ -411,20 +466,19 @@ const ChatPage = () => {
       {
         replace: true,
         state: routeState
-          ? { ...routeState, autoSendSeedPrompt: false }
+          ? { ...routeState, autoStartChatIntent: false }
           : routeState,
       },
     );
   }, [
-    autoSendSeedPrompt,
+    autoStartChatIntent,
+    chatIntent,
     location.hash,
     location.pathname,
     location.search,
     messages.length,
     navigate,
-    processMessage,
     routeState,
-    seededPrompt,
   ]);
 
   const handleSubmit = (event: React.FormEvent) => {
