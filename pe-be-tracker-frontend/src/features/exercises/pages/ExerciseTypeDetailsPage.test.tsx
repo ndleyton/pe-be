@@ -399,7 +399,7 @@ describe("ExerciseTypeDetailsPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/chat", {
       state: {
         seedPrompt:
-          "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+          "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
         autoSendSeedPrompt: true,
       },
     });

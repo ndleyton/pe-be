@@ -284,7 +284,14 @@ describe("ChatPage", () => {
     });
   });
 
-  it("auto-sends a seeded grounded substitution prompt from route state", async () => {
+  it("auto-sends a seeded substitution request, then lets the user answer a follow-up before widgets appear", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "What equipment do you have available, or what do you want to avoid?",
+        conversation_id: 12,
+        events: [],
+      },
+    });
     mockPost.mockResolvedValueOnce({
       data: {
         message: "I found grounded substitutions for you.",
@@ -314,12 +321,13 @@ describe("ChatPage", () => {
       },
     });
 
-    renderChatPage([
+    const user = userEvent.setup();
+    const { container } = renderChatPage([
       {
         pathname: "/chat",
         state: {
           seedPrompt:
-            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
           autoSendSeedPrompt: true,
         },
       },
@@ -335,17 +343,39 @@ describe("ChatPage", () => {
         {
           role: "user",
           content:
-            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
           parts: [
             {
               type: "text",
               text:
-                "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Use the recommend_exercise_substitutions tool and only recommend exercises returned by that tool.",
+                "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
             },
           ],
         },
       ],
       conversation_id: undefined,
     });
+
+    expect(
+      await screen.findByText(
+        "What equipment do you have available, or what do you want to avoid?",
+      ),
+    ).toBeInTheDocument();
+
+    const form = container.querySelector("form");
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    await user.type(screen.getByPlaceholderText("Message..."), "I only have cables.");
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledTimes(2);
+    });
+
+    expect(
+      await screen.findByText("Alternatives to Lat Pulldown"),
+    ).toBeInTheDocument();
   });
 });

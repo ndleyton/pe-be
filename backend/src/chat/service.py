@@ -83,6 +83,7 @@ class WorkoutSummaryByDateArgs(BaseModel):
 class ExerciseSubstitutionArgs(BaseModel):
     exercise_name: str | None = Field(default=None, min_length=1)
     exercise_type_id: int | None = Field(default=None, ge=1)
+    context_notes: str | None = None
     limit: int = Field(default=3, ge=1, le=3)
 
     @model_validator(mode="after")
@@ -248,6 +249,18 @@ class PersonalizedRoutineArgs(BaseModel):
 
 class ChatService:
     _LOOKUP_TOKEN_RE = re.compile(r"[^a-z0-9]+")
+    _KNOWN_EQUIPMENT_KEYWORDS: ClassVar[dict[str, set[str]]] = {
+        "machine": {"machine", "machines"},
+        "cable": {"cable", "cables"},
+        "barbell": {"barbell", "barbells", "olympic bar"},
+        "dumbbell": {"dumbbell", "dumbbells", "db"},
+        "kettlebell": {"kettlebell", "kettlebells", "kb"},
+        "bodyweight": {"bodyweight", "body weight", "bw"},
+        "band": {"band", "bands", "resistance band", "resistance bands"},
+        "smith machine": {"smith machine", "smith"},
+        "bench": {"bench", "benches"},
+        "pull-up bar": {"pull-up bar", "pull up bar", "pullup bar"},
+    }
 
     @staticmethod
     def _is_provider_busy_error(error_message: str) -> bool:
@@ -339,6 +352,100 @@ class ChatService:
     @classmethod
     def _normalize_lookup_value(cls, value: str) -> str:
         return cls._LOOKUP_TOKEN_RE.sub(" ", value.strip().casefold()).strip()
+
+    @classmethod
+    def _extract_equipment_preferences(
+        cls,
+        context_notes: str | None,
+    ) -> tuple[set[str], set[str], bool]:
+        if not context_notes:
+            return set(), set(), False
+
+        normalized = f" {cls._normalize_lookup_value(context_notes)} "
+        preferred: set[str] = set()
+        avoided: set[str] = set()
+        same_equipment_requested = any(
+            phrase in normalized
+            for phrase in (
+                " same equipment ",
+                " similar equipment ",
+                " same setup ",
+                " same machine ",
+            )
+        )
+
+        for canonical, aliases in cls._KNOWN_EQUIPMENT_KEYWORDS.items():
+            if any(f" {alias} " in normalized for alias in aliases):
+                preferred.add(canonical)
+            if any(
+                phrase in normalized
+                for phrase in (
+                    f" no {canonical} ",
+                    f" without {canonical} ",
+                    f" avoid {canonical} ",
+                    f" dont have {canonical} ",
+                    f" don't have {canonical} ",
+                )
+            ) or any(
+                f" no {alias} " in normalized
+                or f" without {alias} " in normalized
+                or f" avoid {alias} " in normalized
+                or f" dont have {alias} " in normalized
+                or f" don't have {alias} " in normalized
+                for alias in aliases
+            ):
+                avoided.add(canonical)
+
+        if " home " in normalized:
+            preferred.update({"bodyweight", "dumbbell", "kettlebell", "band"})
+            avoided.add("machine")
+
+        return preferred, avoided, same_equipment_requested
+
+    @classmethod
+    def _rerank_substitution_suggestions(
+        cls,
+        suggestions: list[dict[str, Any]],
+        *,
+        source_exercise: Any,
+        context_notes: str | None,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if not context_notes:
+            return suggestions[:limit]
+
+        preferred_equipment, avoided_equipment, same_equipment_requested = (
+            cls._extract_equipment_preferences(context_notes)
+        )
+        source_equipment = cls._normalize_lookup_value(
+            getattr(source_exercise, "equipment", "") or ""
+        )
+
+        def score(item_with_index: tuple[int, dict[str, Any]]) -> tuple[int, int]:
+            index, item = item_with_index
+            candidate_equipment = cls._normalize_lookup_value(
+                getattr(item["exercise_type"], "equipment", "") or ""
+            )
+            candidate_score = 0
+
+            if candidate_equipment:
+                for preferred in preferred_equipment:
+                    if preferred in candidate_equipment:
+                        candidate_score += 20
+                for avoided in avoided_equipment:
+                    if avoided in candidate_equipment:
+                        candidate_score -= 40
+                if (
+                    same_equipment_requested
+                    and source_equipment
+                    and candidate_equipment == source_equipment
+                ):
+                    candidate_score += 30
+
+            return (candidate_score, -index)
+
+        reranked = sorted(enumerate(suggestions), key=score, reverse=True)
+        return [item for _, item in reranked[:limit]]
 
     @classmethod
     def _normalize_compact_lookup_value(cls, value: str) -> str:
@@ -809,6 +916,7 @@ class ChatService:
         *,
         exercise_name: str | None = None,
         exercise_type_id: int | None = None,
+        context_notes: str | None = None,
         limit: int = 3,
     ) -> str:
         if self._exercise_substitutions_generated_this_request:
@@ -847,6 +955,12 @@ class ChatService:
             suggestions, strategy = await get_similar_exercise_type_matches(
                 self.session,
                 source_exercise,
+                limit=max(limit, 8),
+            )
+            suggestions = self._rerank_substitution_suggestions(
+                suggestions,
+                source_exercise=source_exercise,
+                context_notes=context_notes,
                 limit=limit,
             )
 
@@ -1013,9 +1127,11 @@ class ChatService:
                     "Use this tool when the user asks for alternatives, substitutions, "
                     "or swaps for a specific exercise and you need grounded exercise "
                     "recommendations from the database. Provide either exercise_type_id "
-                    "or exercise_name. If you recommend specific exercises, call this "
-                    "tool instead of answering from memory. Only mention exercises from "
-                    "the returned grounded list."
+                    "or exercise_name. Pass context_notes when the user gives equipment "
+                    "constraints or preferences so the grounded list can be reranked. "
+                    "If you recommend specific exercises, call this tool instead of "
+                    "answering from memory. Only mention exercises from the returned "
+                    "grounded list."
                 ),
             ),
             ToolDefinition(
@@ -1094,6 +1210,8 @@ Routine creation policy:
 - Only create or save a routine when the user explicitly asks for creation or saving.
 - If the user wants advice only, respond in prose and do not call create_personalized_routine.
 - When the user asks for exercise alternatives, substitutions, or swaps for a specific exercise, call recommend_exercise_substitutions.
+- For exercise substitutions, ask one brief follow-up question about equipment or constraints before calling recommend_exercise_substitutions unless the user already gave that context.
+- When the user answers the follow-up question, pass their answer in context_notes to recommend_exercise_substitutions so the grounded list can be reranked.
 - If you mention specific exercise recommendations in a substitution answer, they must come from recommend_exercise_substitutions.
 - Do not invent exercise names or recommend exercises that are not present in the tool output.
 - Before calling create_personalized_routine, gather enough context to avoid a low-quality routine:
