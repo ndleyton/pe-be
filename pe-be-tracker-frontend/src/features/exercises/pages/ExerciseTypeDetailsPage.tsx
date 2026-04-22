@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag } from "lucide-react";
 import Fade from "embla-carousel-fade";
+import { toast } from "sonner";
 import {
   getExerciseTypeById,
   getIntensityUnits,
@@ -23,6 +24,7 @@ import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import type { Muscle } from "@/shared/types";
+import { NAV_PATHS } from "@/shared/navigation/constants";
 import { SimilarExercisesSection } from "@/features/exercises/components";
 import { useSimilarExercises } from "@/features/exercises/hooks";
 
@@ -434,6 +436,27 @@ const ExerciseTypeDetailsPage = () => {
   const selectedIntensityUnit = intensityUnits.find(
     (unit) => unit.id === editValues.defaultIntensityUnitId,
   );
+  const handleAskPersonalBestie = () => {
+    if (!exerciseType) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Only signed-in users can use Personal Bestie.");
+      return;
+    }
+
+    navigate(NAV_PATHS.CHAT, {
+      state: {
+        chatIntent: {
+          kind: "exercise_substitutions",
+          exerciseTypeId: exerciseType.id,
+          exerciseTypeName: exerciseType.name,
+        },
+        autoStartChatIntent: true,
+      },
+    });
+  };
 
   return (
     <div className="mx-auto max-w-4xl p-4 text-center md:p-6 lg:p-8">
@@ -1002,6 +1025,7 @@ const ExerciseTypeDetailsPage = () => {
           strategy={similarExercises.strategy}
           isLoading={isLoadingSimilarExercises}
           hasError={Boolean(similarExercisesError)}
+          onAskPersonalBestie={handleAskPersonalBestie}
         />
       ) : null}
     </div>

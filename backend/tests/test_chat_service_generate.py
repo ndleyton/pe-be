@@ -447,6 +447,175 @@ async def test_generate_response_returns_routine_created_event(
 
 
 @pytest.mark.asyncio
+@patch("src.chat.service.get_similar_exercise_type_matches")
+@patch("src.chat.service.get_exercise_type_by_id")
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_returns_exercise_substitution_event(
+    mock_get_llm,
+    mock_get_exercise_type_by_id,
+    mock_get_similar_exercise_type_matches,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+
+    mock_tool_call_response = MagicMock()
+    mock_tool_call = MagicMock()
+    mock_tool_call.name = "recommend_exercise_substitutions"
+    mock_tool_call.call_id = "call_sub_123"
+    mock_tool_call.args = {
+        "exercise_type_id": 12,
+        "limit": 3,
+    }
+    mock_tool_call_response.tool_calls = [mock_tool_call]
+    mock_tool_call_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_text_response = MagicMock()
+    mock_text_response.tool_calls = []
+    mock_text_response.message = ConversationMessage(
+        role="assistant", content="Here are a few grounded options."
+    )
+
+    mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_text_response]
+    mock_get_llm.return_value = mock_llm
+
+    mock_get_exercise_type_by_id.return_value = SimpleNamespace(
+        id=12,
+        name="Lat Pulldown",
+    )
+    mock_get_similar_exercise_type_matches.return_value = (
+        [
+            {
+                "exercise_type": SimpleNamespace(
+                    id=21,
+                    name="Chest-Supported Row",
+                    description="Machine back exercise",
+                    equipment="machine",
+                    category="strength",
+                    exercise_muscles=[
+                        SimpleNamespace(muscle=SimpleNamespace(name="Latissimus Dorsi"))
+                    ],
+                ),
+                "match_reason": "same_primary_muscle",
+            },
+            {
+                "exercise_type": SimpleNamespace(
+                    id=22,
+                    name="Seated Cable Row",
+                    description="Cable row variation",
+                    equipment="cable",
+                    category="strength",
+                    exercise_muscles=[
+                        SimpleNamespace(muscle=SimpleNamespace(name="Rhomboids"))
+                    ],
+                ),
+                "match_reason": "same_primary_muscle_group",
+            },
+        ],
+        "same_primary_muscle_then_group_by_times_used",
+    )
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [{"role": "user", "content": "What can I do instead of lat pulldown?"}],
+            save_to_db=False,
+        )
+
+    assert result["message"] == "Here are a few grounded options."
+    assert result["events"] == [
+        {
+            "type": "exercise_substitutions_recommended",
+            "title": "Recommended substitutions",
+            "strategy": "same_primary_muscle_then_group_by_times_used",
+            "source_exercise": {
+                "id": 12,
+                "name": "Lat Pulldown",
+            },
+            "substitutions": [
+                {
+                    "id": 21,
+                    "name": "Chest-Supported Row",
+                    "description": "Machine back exercise",
+                    "equipment": "machine",
+                    "category": "strength",
+                    "match_reason": "same_primary_muscle",
+                    "muscles": ["Latissimus Dorsi"],
+                },
+                {
+                    "id": 22,
+                    "name": "Seated Cable Row",
+                    "description": "Cable row variation",
+                    "equipment": "cable",
+                    "category": "strength",
+                    "match_reason": "same_primary_muscle_group",
+                    "muscles": ["Rhomboids"],
+                },
+            ],
+        }
+    ]
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_similar_exercise_type_matches")
+@patch("src.chat.service.get_exercise_type_by_id")
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_uses_clean_fallback_for_substitution_event(
+    mock_get_llm,
+    mock_get_exercise_type_by_id,
+    mock_get_similar_exercise_type_matches,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+
+    mock_tool_call_response = MagicMock()
+    mock_tool_call = MagicMock()
+    mock_tool_call.name = "recommend_exercise_substitutions"
+    mock_tool_call.call_id = "call_sub_456"
+    mock_tool_call.args = {"exercise_type_id": 12}
+    mock_tool_call_response.tool_calls = [mock_tool_call]
+    mock_tool_call_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_empty_text_response = MagicMock()
+    mock_empty_text_response.tool_calls = []
+    mock_empty_text_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_empty_text_response]
+    mock_get_llm.return_value = mock_llm
+    mock_get_exercise_type_by_id.return_value = SimpleNamespace(
+        id=12,
+        name="Lat Pulldown",
+    )
+    mock_get_similar_exercise_type_matches.return_value = (
+        [
+            {
+                "exercise_type": SimpleNamespace(
+                    id=21,
+                    name="Chest-Supported Row",
+                    description=None,
+                    equipment="machine",
+                    category="strength",
+                    exercise_muscles=[],
+                ),
+                "match_reason": "same_primary_muscle",
+            }
+        ],
+        "same_primary_muscle_then_group_by_times_used",
+    )
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [{"role": "user", "content": "Give me substitutions for lat pulldown"}],
+            save_to_db=False,
+        )
+
+    assert result["message"] == (
+        "I found grounded substitutions for you. You can review them below."
+    )
+    assert result["events"][0]["type"] == "exercise_substitutions_recommended"
+
+
+@pytest.mark.asyncio
 @patch("src.chat.service.routine_service.create_routine_admin")
 @patch("src.chat.service.get_intensity_units")
 @patch("src.chat.service.get_exercise_types")

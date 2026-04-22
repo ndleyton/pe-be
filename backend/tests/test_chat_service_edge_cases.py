@@ -171,6 +171,84 @@ async def test_parse_workout_and_save_no_db(chat_service_no_db):
 
 
 @pytest.mark.asyncio
+async def test_recommend_exercise_substitutions_no_db(chat_service_no_db):
+    result = await chat_service_no_db._recommend_exercise_substitutions(
+        exercise_type_id=12
+    )
+    assert result == "Failed to recommend substitutions: no database session available."
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_similar_exercise_type_matches")
+@patch("src.chat.service.get_exercise_type_by_id")
+async def test_recommend_exercise_substitutions_reranks_by_context_notes(
+    mock_get_exercise_type_by_id,
+    mock_get_similar_exercise_type_matches,
+    chat_service_with_db,
+):
+    mock_get_exercise_type_by_id.return_value = SimpleNamespace(
+        id=12,
+        name="Lat Pulldown",
+        equipment="machine",
+    )
+    mock_get_similar_exercise_type_matches.return_value = (
+        [
+            {
+                "exercise_type": SimpleNamespace(
+                    id=21,
+                    name="Chest-Supported Row",
+                    equipment="machine",
+                    description=None,
+                    category="strength",
+                    exercise_muscles=[],
+                ),
+                "match_reason": "same_primary_muscle",
+            },
+            {
+                "exercise_type": SimpleNamespace(
+                    id=22,
+                    name="Seated Cable Row",
+                    equipment="cable",
+                    description=None,
+                    category="strength",
+                    exercise_muscles=[],
+                ),
+                "match_reason": "same_primary_muscle_group",
+            },
+        ],
+        "same_primary_muscle_then_group_by_times_used",
+    )
+
+    result = await chat_service_with_db._recommend_exercise_substitutions(
+        exercise_type_id=12,
+        context_notes="I only have access to cables right now.",
+        limit=2,
+    )
+
+    assert (
+        "Candidates: Seated Cable Row (same_primary_muscle_group), Chest-Supported Row (same_primary_muscle)."
+        in result
+    )
+    assert (
+        chat_service_with_db._pending_chat_events[0].substitutions[0].name
+        == "Seated Cable Row"
+    )
+
+
+def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
+    preferred, avoided, same_equip = ChatService._extract_equipment_preferences(
+        "I don't have cables"
+    )
+    assert "cable" in avoided
+
+    preferred, avoided, same_equip = ChatService._extract_equipment_preferences(
+        "no barbell, but I have a dumbbell"
+    )
+    assert "barbell" in avoided
+    assert "dumbbell" in preferred
+
+
+@pytest.mark.asyncio
 @patch("src.workouts.service.WorkoutService.create_workout_from_parsed")
 async def test_parse_workout_and_save_exception(mock_create, chat_service_with_db):
     mock_create.side_effect = Exception("DB save failed")

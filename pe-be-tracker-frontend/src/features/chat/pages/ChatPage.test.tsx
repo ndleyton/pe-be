@@ -6,12 +6,24 @@ import { MemoryRouter } from "react-router-dom";
 
 import ChatPage from "./ChatPage";
 
-const { mockPost, mockAuthState } = vi.hoisted(() => ({
+const { mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
   mockPost: vi.fn(),
+  mockNavigate: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
   },
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock("@/shared/api/client", () => ({
   default: {
@@ -32,13 +44,16 @@ describe("ChatPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
+    mockNavigate.mockReset();
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
     });
   });
 
-  const renderChatPage = () => {
+  const renderChatPage = (
+    initialEntries: Array<string | { pathname: string; state?: unknown }> = ["/chat"],
+  ) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -53,7 +68,7 @@ describe("ChatPage", () => {
 
     return render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>
           <ChatPage />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -159,6 +174,63 @@ describe("ChatPage", () => {
     );
   });
 
+  it("renders a substitution widget when the assistant returns grounded exercise substitutions", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "Here are a few grounded options.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "exercise_substitutions_recommended",
+            title: "Recommended substitutions",
+            strategy: "same_primary_muscle_then_group_by_times_used",
+            source_exercise: {
+              id: 12,
+              name: "Lat Pulldown",
+            },
+            substitutions: [
+              {
+                id: 21,
+                name: "Chest-Supported Row",
+                description: "Machine back exercise",
+                equipment: "machine",
+                category: "strength",
+                match_reason: "same_primary_muscle",
+                muscles: ["Latissimus Dorsi"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "What can I do instead of lat pulldown?",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Here are a few grounded options."),
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Alternatives to Lat Pulldown")).toBeInTheDocument();
+    expect(screen.getByText("Chest-Supported Row")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /chest-supported row/i }),
+    ).toHaveAttribute("href", "/exercise-types/21");
+  });
+
   it("surfaces backend chat error details instead of a generic fallback", async () => {
     mockPost.mockRejectedValueOnce({
       response: {
@@ -223,5 +295,115 @@ describe("ChatPage", () => {
         ),
       ).toBeInTheDocument();
     });
+  });
+
+  it("starts a substitution handoff with a local assistant follow-up, then sends a grounded request after the user answers", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "I found grounded substitutions for you.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "exercise_substitutions_recommended",
+            title: "Recommended substitutions",
+            strategy: "same_primary_muscle_then_group_by_times_used",
+            source_exercise: {
+              id: 12,
+              name: "Lat Pulldown",
+            },
+            substitutions: [
+              {
+                id: 21,
+                name: "Chest-Supported Row",
+                description: null,
+                equipment: "machine",
+                category: "strength",
+                match_reason: "same_primary_muscle",
+                muscles: [],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage([
+      {
+        pathname: "/chat",
+        state: {
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: true,
+        },
+      },
+    ]);
+
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      {
+        pathname: "/chat",
+        search: "",
+        hash: "",
+      },
+      {
+        replace: true,
+        state: {
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: false,
+        },
+      },
+    );
+
+    expect(
+      await screen.findByText(
+        "I can help with alternatives to Lat Pulldown. What equipment do you have available, or what do you want to avoid?",
+      ),
+    ).toBeInTheDocument();
+
+    const form = container.querySelector("form");
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+
+    await user.type(screen.getByPlaceholderText("Message..."), "I only have cables.");
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockPost.mock.calls[0][0]).toBe("/chat");
+    expect(mockPost.mock.calls[0][1]).toEqual({
+      messages: [
+        {
+          role: "user",
+          content: expect.stringContaining(
+            '"exercise_type_id":12',
+          ),
+          parts: [
+            {
+              type: "text",
+              text: expect.stringContaining('"exercise_type_id":12'),
+            },
+          ],
+        },
+      ],
+      conversation_id: undefined,
+    });
+    expect(mockPost.mock.calls[0][1].messages[0].content).toContain(
+      '"context_notes":"I only have cables."',
+    );
+
+    expect(
+      await screen.findByText("Alternatives to Lat Pulldown"),
+    ).toBeInTheDocument();
   });
 });

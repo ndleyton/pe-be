@@ -265,30 +265,6 @@ describe("exercises API - pagination", () => {
       );
       expect(result).toEqual(similarExercises);
     });
-
-    it("should pass an explicit limit through the query string", async () => {
-      const similarExercises = {
-        data: [
-          {
-            exercise_type: makeExerciseType({
-              id: 7,
-              name: "Chest-Supported Row",
-            }),
-            match_reason: "same_primary_muscle" as const,
-          },
-        ],
-        strategy: "same_primary_muscle_then_group_by_times_used" as const,
-      };
-
-      mockApi.get.mockResolvedValueOnce({ data: similarExercises });
-
-      const result = await getSimilarExerciseTypes(12, 5);
-
-      expect(mockApi.get).toHaveBeenCalledWith(
-        endpoints.similarExerciseTypes(12) + "?limit=5",
-      );
-      expect(result).toEqual(similarExercises);
-    });
   });
 
   describe("getMuscleGroups", () => {

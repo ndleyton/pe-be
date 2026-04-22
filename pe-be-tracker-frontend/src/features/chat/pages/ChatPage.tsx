@@ -1,72 +1,49 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { config } from "@/app/config/env";
-import { type Workout } from "@/features/workouts";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
-import { NAV_PATHS } from "@/shared/navigation/constants";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useAuthStore } from "@/stores";
-import { formatDisplayDate, parseWorkoutDuration } from "@/utils/date";
 
-interface TextMessagePart {
-  type: "text";
-  text: string;
-}
+import {
+  ChatWorkoutWidget,
+  ChatRoutineWidget,
+  ChatExerciseSubstitutionsWidget,
+} from "../components";
+import {
+  type ChatMessage,
+  type TextMessagePart,
+  type ImageMessagePart,
+  type UIMessagePart,
+  type ChatPageLocationState,
+  type ChatApiMessage,
+  type ChatApiPart,
+  type ChatApiWorkoutCreatedEvent,
+  type ChatApiRoutineCreatedEvent,
+  type ChatApiExerciseSubstitutionsEvent,
+  type ExerciseSubstitutionChatIntent,
+} from "../types";
+import {
+  normalizeChatCopy,
+  extractChatEvents,
+  extractErrorMessage,
+} from "../utils";
 
-interface ImageMessagePart {
-  type: "image";
-  attachment_id: number;
-  mime_type?: string;
-  filename?: string;
-  url: string;
-}
-
-type UIMessagePart = TextMessagePart | ImageMessagePart;
-
-type WorkoutWidgetData = Pick<
-  Workout,
-  "id" | "name" | "notes" | "start_time" | "end_time"
->;
-
-interface RoutineWidgetData {
-  id: number;
-  name: string;
-  description?: string | null;
-  workout_type_id: number;
-  exercise_count: number;
-  set_count: number;
-}
-
-interface WorkoutCreatedEvent {
-  type: "workout_created";
-  title?: string;
-  ctaLabel?: string;
-  workout: WorkoutWidgetData;
-}
-
-interface RoutineCreatedEvent {
-  type: "routine_created";
-  title?: string;
-  ctaLabel?: string;
-  routine: RoutineWidgetData;
-}
-
-type ChatEvent = WorkoutCreatedEvent | RoutineCreatedEvent;
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  parts?: UIMessagePart[];
-  events?: ChatEvent[];
-  timestamp: Date;
+interface ChatResponse {
+  message: string;
+  conversation_id: number;
+  events?: Array<
+    | ChatApiWorkoutCreatedEvent
+    | ChatApiRoutineCreatedEvent
+    | ChatApiExerciseSubstitutionsEvent
+  >;
 }
 
 interface PendingAttachment {
@@ -81,51 +58,6 @@ interface UploadedAttachment {
   filename: string;
 }
 
-interface ChatApiPart {
-  type: "text" | "image";
-  text?: string;
-  attachment_id?: number;
-}
-
-interface ChatApiMessage {
-  role: string;
-  content?: string;
-  parts?: ChatApiPart[];
-}
-
-interface ChatApiWorkoutCreatedEvent {
-  type: "workout_created";
-  title?: string | null;
-  cta_label?: string | null;
-  workout: {
-    id: Workout["id"];
-    name: string | null;
-    notes: string | null;
-    start_time: string;
-    end_time: string | null;
-  };
-}
-
-interface ChatApiRoutineCreatedEvent {
-  type: "routine_created";
-  title?: string | null;
-  cta_label?: string | null;
-  routine: {
-    id: number;
-    name: string;
-    description?: string | null;
-    workout_type_id: number;
-    exercise_count: number;
-    set_count: number;
-  };
-}
-
-interface ChatResponse {
-  message: string;
-  conversation_id: number;
-  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>;
-}
-
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = [
@@ -133,146 +65,29 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/jpeg",
   "image/webp",
 ] as const;
+const SUBSTITUTION_FOLLOW_UP_QUESTION = (exerciseTypeName: string) =>
+  `I can help with alternatives to ${exerciseTypeName}. What equipment do you have available, or what do you want to avoid?`;
+const buildGroundedSubstitutionRequest = (
+  intent: ExerciseSubstitutionChatIntent,
+  contextNotes: string,
+) => {
+  const serializedContext = JSON.stringify({
+    exercise_type_id: intent.exerciseTypeId,
+    exercise_type_name: intent.exerciseTypeName,
+    context_notes: contextNotes,
+  });
+
+  return [
+    "Use the grounded exercise substitution flow for this request.",
+    `Exercise context: ${serializedContext}`,
+    "The required follow-up question has already been asked and answered.",
+    "Call recommend_exercise_substitutions with the provided exercise_type_id and the user's answer as context_notes.",
+    "Only recommend exercises returned by that tool, then respond conversationally about those grounded options.",
+  ].join("\n");
+};
 
 const buildAttachmentUrl = (attachmentId: number) =>
   `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
-
-const normalizeChatCopy = (message: string) =>
-  message
-    .replace(/with Gemini/gi, "with the AI coach")
-    .replace(/\bGemini\b/gi, "AI coach");
-
-const parseWorkoutCreatedEvent = (
-  event: ChatApiWorkoutCreatedEvent,
-): WorkoutCreatedEvent => {
-  return {
-    type: "workout_created",
-    title: event.title ?? undefined,
-    ctaLabel: event.cta_label ?? undefined,
-    workout: {
-      id: event.workout.id,
-      name: event.workout.name,
-      notes: event.workout.notes,
-      start_time: event.workout.start_time,
-      end_time: event.workout.end_time,
-    },
-  };
-};
-
-const parseRoutineCreatedEvent = (
-  event: ChatApiRoutineCreatedEvent,
-): RoutineCreatedEvent => {
-  return {
-    type: "routine_created",
-    title: event.title ?? undefined,
-    ctaLabel: event.cta_label ?? undefined,
-    routine: {
-      id: event.routine.id,
-      name: event.routine.name,
-      description: event.routine.description,
-      workout_type_id: event.routine.workout_type_id,
-      exercise_count: event.routine.exercise_count,
-      set_count: event.routine.set_count,
-    },
-  };
-};
-
-const extractChatEvents = (
-  events?: Array<ChatApiWorkoutCreatedEvent | ChatApiRoutineCreatedEvent>,
-): ChatEvent[] =>
-  (events ?? []).reduce<ChatEvent[]>((acc, event) => {
-    if (event.type === "workout_created") {
-      acc.push(parseWorkoutCreatedEvent(event));
-      return acc;
-    }
-    if (event.type === "routine_created") {
-      acc.push(parseRoutineCreatedEvent(event));
-      return acc;
-    }
-    return acc;
-  }, []);
-
-const ChatWorkoutWidget = ({ event }: { event: WorkoutCreatedEvent }) => {
-  const workoutPath = `${NAV_PATHS.WORKOUTS}/${event.workout.id}`;
-  const startedAt = formatDisplayDate(event.workout.start_time, {
-    includeTime: false,
-    includeTimezone: false,
-  });
-  const duration = parseWorkoutDuration(
-    event.workout.start_time,
-    event.workout.end_time,
-  ).durationText;
-
-  return (
-    <div className="bg-background/70 border-border/40 mt-3 rounded-2xl border p-3">
-      <div className="flex items-start gap-3">
-        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-          <Dumbbell className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.16em]">
-            {event.title ?? "Workout created"}
-          </p>
-          <p className="text-foreground mt-1 text-sm font-semibold">
-            {event.workout.name || "Traditional Strength Training"}
-          </p>
-          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-            {startedAt && <span>{startedAt}</span>}
-            <span>{duration}</span>
-          </div>
-        </div>
-      </div>
-
-      {event.workout.notes && (
-        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-          {event.workout.notes}
-        </p>
-      )}
-
-      <Button asChild variant="secondary" size="sm" className="mt-3 w-full">
-        <Link to={workoutPath}>{event.ctaLabel ?? "Open workout"}</Link>
-      </Button>
-    </div>
-  );
-};
-
-const ChatRoutineWidget = ({ event }: { event: RoutineCreatedEvent }) => {
-  const routinePath = `${NAV_PATHS.ROUTINES}/${event.routine.id}`;
-  const exerciseLabel = `${event.routine.exercise_count} exercise${event.routine.exercise_count === 1 ? "" : "s"}`;
-  const setLabel = `${event.routine.set_count} set${event.routine.set_count === 1 ? "" : "s"}`;
-
-  return (
-    <div className="bg-background/70 border-border/40 mt-3 rounded-2xl border p-3">
-      <div className="flex items-start gap-3">
-        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-          <Dumbbell className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.16em]">
-            {event.title ?? "Routine created"}
-          </p>
-          <p className="text-foreground mt-1 text-sm font-semibold">
-            {event.routine.name}
-          </p>
-          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-            <span>{exerciseLabel}</span>
-            <span>{setLabel}</span>
-          </div>
-        </div>
-      </div>
-
-      {event.routine.description && (
-        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-          {event.routine.description}
-        </p>
-      )}
-
-      <Button asChild variant="secondary" size="sm" className="mt-3 w-full">
-        <Link to={routinePath}>{event.ctaLabel ?? "View routine"}</Link>
-      </Button>
-    </div>
-  );
-};
 
 const uploadChatAttachment = async (
   file: File,
@@ -282,48 +97,6 @@ const uploadChatAttachment = async (
 
   const response = await api.post(endpoints.chatAttachments, formData);
   return response.data;
-};
-
-const extractErrorMessage = (error: unknown, fallback: string): string => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error &&
-    typeof error.response === "object" &&
-    error.response !== null &&
-    "data" in error.response &&
-    typeof error.response.data === "object" &&
-    error.response.data !== null &&
-    "detail" in error.response.data
-  ) {
-    const { detail } = error.response.data;
-
-    if (typeof detail === "string") {
-      return detail;
-    }
-
-    if (Array.isArray(detail)) {
-      const message = detail
-        .map((item) => {
-          if (
-            typeof item === "object" &&
-            item !== null &&
-            "msg" in item &&
-            typeof item.msg === "string"
-          ) {
-            return item.msg;
-          }
-          return null;
-        })
-        .find((value): value is string => Boolean(value));
-
-      if (message) {
-        return message;
-      }
-    }
-  }
-
-  return fallback;
 };
 
 const sendChatMessage = async (
@@ -339,16 +112,24 @@ const sendChatMessage = async (
 
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | undefined>();
+  const [pendingSubstitutionIntent, setPendingSubstitutionIntent] =
+    useState<ExerciseSubstitutionChatIntent | null>(null);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
     [],
   );
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const seededPromptHandledRef = useRef(false);
+  const routeState = location.state as ChatPageLocationState | null;
+  const chatIntent = routeState?.chatIntent;
+  const autoStartChatIntent = routeState?.autoStartChatIntent === true;
 
   const examplePrompts = useMemo(
     () => [
@@ -429,7 +210,7 @@ const ChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const clearPendingAttachments = () => {
+  const clearPendingAttachments = useCallback(() => {
     pendingAttachments.forEach((attachment) => {
       URL.revokeObjectURL(attachment.previewUrl);
     });
@@ -437,11 +218,12 @@ const ChatPage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
+  }, [pendingAttachments]);
 
   const buildUserParts = async (
     messageContent: string,
     attachments: PendingAttachment[],
+    apiTextOverride?: string,
   ): Promise<{ uiParts: UIMessagePart[]; apiParts: ChatApiPart[] }> => {
     const uploadedAttachments = await Promise.all(
       attachments.map((attachment) => uploadChatAttachment(attachment.file)),
@@ -456,6 +238,7 @@ const ChatPage = () => {
     }));
 
     const textPart = messageContent.trim();
+    const apiText = apiTextOverride?.trim() ?? textPart;
     const textUiParts: UIMessagePart[] = textPart
       ? [{ type: "text", text: textPart }]
       : [];
@@ -465,7 +248,7 @@ const ChatPage = () => {
         type: "image" as const,
         attachment_id: attachment.attachment_id,
       })),
-      ...(textPart ? [{ type: "text" as const, text: textPart }] : []),
+      ...(apiText ? [{ type: "text" as const, text: apiText }] : []),
     ];
 
     return {
@@ -474,7 +257,7 @@ const ChatPage = () => {
     };
   };
 
-  const processMessage = async (messageContent: string) => {
+  const processMessage = useCallback(async (messageContent: string) => {
     const trimmedMessage = messageContent.trim();
     if ((!trimmedMessage && pendingAttachments.length === 0) || isLoading) {
       return;
@@ -520,9 +303,18 @@ const ChatPage = () => {
     }
 
     try {
+      const substitutionIntentForMessage = pendingSubstitutionIntent;
+      const apiMessageContent = substitutionIntentForMessage
+        ? buildGroundedSubstitutionRequest(
+            substitutionIntentForMessage,
+            trimmedMessage,
+          )
+        : undefined;
+      const requestContent = (apiMessageContent ?? trimmedMessage) || undefined;
       const { uiParts, apiParts } = await buildUserParts(
         trimmedMessage,
         attachmentsSnapshot,
+        apiMessageContent,
       );
 
       setMessages((prev) => [
@@ -538,16 +330,23 @@ const ChatPage = () => {
 
       clearPendingAttachments();
 
-      chatMutation.mutate({
-        messages: [
-          {
-            role: "user",
-            content: trimmedMessage || undefined,
-            parts: apiParts.length > 0 ? apiParts : undefined,
-          },
-        ],
-        conversationId,
-      });
+      try {
+        await chatMutation.mutateAsync({
+          messages: [
+            {
+              role: "user",
+              content: requestContent,
+              parts: apiParts.length > 0 ? apiParts : undefined,
+            },
+          ],
+          conversationId,
+        });
+        if (substitutionIntentForMessage) {
+          setPendingSubstitutionIntent(null);
+        }
+      } catch {
+        // Mutation errors are handled by the configured mutation callbacks.
+      }
     } catch (error) {
       setAttachmentError(
         extractErrorMessage(
@@ -557,7 +356,15 @@ const ChatPage = () => {
       );
       setIsLoading(false);
     }
-  };
+  }, [
+    chatMutation,
+    clearPendingAttachments,
+    conversationId,
+    isAuthenticated,
+    isLoading,
+    pendingSubstitutionIntent,
+    pendingAttachments,
+  ]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -619,6 +426,60 @@ const ChatPage = () => {
       await processMessage(prompt);
     }, 100);
   };
+
+  useEffect(() => {
+    if (
+      !autoStartChatIntent ||
+      !chatIntent ||
+      seededPromptHandledRef.current ||
+      messages.length > 0
+    ) {
+      return;
+    }
+
+    seededPromptHandledRef.current = true;
+    setPendingSubstitutionIntent(chatIntent);
+    const followUpQuestion = SUBSTITUTION_FOLLOW_UP_QUESTION(
+      chatIntent.exerciseTypeName,
+    );
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-assistant-intent`,
+        role: "assistant",
+        content: followUpQuestion,
+        parts: [
+          {
+            type: "text",
+            text: followUpQuestion,
+          },
+        ],
+        timestamp: new Date(),
+      },
+    ]);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      {
+        replace: true,
+        state: routeState
+          ? { ...routeState, autoStartChatIntent: false }
+          : routeState,
+      },
+    );
+  }, [
+    autoStartChatIntent,
+    chatIntent,
+    location.hash,
+    location.pathname,
+    location.search,
+    messages.length,
+    navigate,
+    routeState,
+  ]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -758,6 +619,14 @@ const ChatPage = () => {
       }
       if (event.type === "routine_created") {
         return <ChatRoutineWidget key={`${message.id}-widget-${index}`} event={event} />;
+      }
+      if (event.type === "exercise_substitutions_recommended") {
+        return (
+          <ChatExerciseSubstitutionsWidget
+            key={`${message.id}-widget-${index}`}
+            event={event}
+          />
+        );
       }
       return null;
     });
