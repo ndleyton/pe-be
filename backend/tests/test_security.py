@@ -90,3 +90,85 @@ async def test_traced_jwt_strategy_stops_on_invalid_token(monkeypatch):
     assert spans[0].attributes["auth.jwt.valid"] is False
     assert user_manager.parsed_ids == []
     assert user_manager.requested_ids == []
+
+
+@pytest.mark.asyncio
+async def test_traced_google_oauth2_records_token_exchange_span(monkeypatch):
+    spans: list[_SpanStub] = []
+    current_span_attributes: list[dict[str, object]] = []
+    client = security.TracedGoogleOAuth2("client-id", "client-secret")
+
+    monkeypatch.setattr(
+        security,
+        "traced_span",
+        lambda name, *, attributes=None: _capture_span(
+            spans, name, attributes=attributes
+        ),
+    )
+    monkeypatch.setattr(
+        security,
+        "set_current_span_attributes",
+        lambda attributes: current_span_attributes.append(dict(attributes or {})),
+    )
+    async def _fake_get_access_token(self, code, redirect_uri, code_verifier=None):
+        return {
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "expires_at": 123,
+            "id_token": "id-token",
+        }
+
+    monkeypatch.setattr(
+        security.GoogleOAuth2,
+        "get_access_token",
+        _fake_get_access_token,
+    )
+
+    token = await client.get_access_token(
+        "code",
+        "https://api.example.com/callback",
+        "verifier",
+    )
+
+    assert token["access_token"] == "access-token"
+    assert [span.name for span in spans] == ["auth.oauth.google.exchange_token"]
+    assert spans[0].attributes["auth.oauth.provider"] == "google"
+    assert spans[0].attributes["auth.oauth.phase"] == "access_token"
+    assert spans[0].attributes["auth.oauth.pkce"] is True
+    assert current_span_attributes[-1]["auth.oauth.id_token_present"] is True
+
+
+@pytest.mark.asyncio
+async def test_traced_google_oauth2_records_profile_span(monkeypatch):
+    spans: list[_SpanStub] = []
+    current_span_attributes: list[dict[str, object]] = []
+    client = security.TracedGoogleOAuth2("client-id", "client-secret")
+
+    monkeypatch.setattr(
+        security,
+        "traced_span",
+        lambda name, *, attributes=None: _capture_span(
+            spans, name, attributes=attributes
+        ),
+    )
+    monkeypatch.setattr(
+        security,
+        "set_current_span_attributes",
+        lambda attributes: current_span_attributes.append(dict(attributes or {})),
+    )
+
+    async def _fake_get_profile(self, token):
+        return {
+            "emailAddresses": [{"value": "user@example.com"}],
+            "resourceName": "people/123",
+        }
+
+    monkeypatch.setattr(security.GoogleOAuth2, "get_profile", _fake_get_profile)
+
+    profile = await client.get_profile("token")
+
+    assert profile["resourceName"] == "people/123"
+    assert [span.name for span in spans] == ["auth.oauth.google.fetch_profile"]
+    assert spans[0].attributes["auth.oauth.provider"] == "google"
+    assert spans[0].attributes["auth.oauth.phase"] == "profile"
+    assert current_span_attributes[-1]["auth.oauth.google.profile.email_count"] == 1

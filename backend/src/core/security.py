@@ -16,7 +16,7 @@ from httpx_oauth.clients.google import GoogleOAuth2
 
 from src.core.config import settings
 from src.core.dependencies import get_user_db
-from src.core.observability import traced_span
+from src.core.observability import set_current_span_attributes, traced_span
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,52 @@ GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
 FRONTEND_URL = settings.FRONTEND_URL
 FRONTEND_POST_LOGIN_PATH = settings.FRONTEND_POST_LOGIN_PATH
 
+
+class TracedGoogleOAuth2(GoogleOAuth2):
+    """Add provider-specific spans around Google OAuth network calls."""
+
+    async def get_access_token(
+        self, code: str, redirect_uri: str, code_verifier: Optional[str] = None
+    ):
+        attributes = {
+            "auth.oauth.provider": self.name,
+            "auth.oauth.phase": "access_token",
+            "auth.oauth.redirect_uri": redirect_uri,
+            "auth.oauth.pkce": code_verifier is not None,
+        }
+        set_current_span_attributes(attributes)
+        with traced_span("auth.oauth.google.exchange_token", attributes=attributes):
+            token = await super().get_access_token(code, redirect_uri, code_verifier)
+        set_current_span_attributes(
+            {
+                "auth.oauth.refresh_token_present": token.get("refresh_token")
+                is not None,
+                "auth.oauth.expires_at_present": token.get("expires_at") is not None,
+                "auth.oauth.id_token_present": token.get("id_token") is not None,
+            }
+        )
+        return token
+
+    async def get_profile(self, token: str):
+        attributes = {
+            "auth.oauth.provider": self.name,
+            "auth.oauth.phase": "profile",
+        }
+        set_current_span_attributes(attributes)
+        with traced_span("auth.oauth.google.fetch_profile", attributes=attributes):
+            profile = await super().get_profile(token)
+        set_current_span_attributes(
+            {
+                "auth.oauth.google.profile.email_count": len(
+                    profile.get("emailAddresses", [])
+                ),
+            }
+        )
+        return profile
+
+
 # Google OAuth client
-google_oauth_client = GoogleOAuth2(
+google_oauth_client = TracedGoogleOAuth2(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
 )
