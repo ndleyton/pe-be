@@ -112,6 +112,18 @@ export interface ChatApiExerciseSubstitutionsEvent {
   substitutions: ChatApiExerciseSubstitutionItem[];
 }
 
+export interface ChatApiPart {
+  type: "text" | "image";
+  text?: string;
+  attachment_id?: number;
+}
+
+export interface ChatApiMessage {
+  role: string;
+  content?: string;
+  parts?: ChatApiPart[];
+}
+
 export type ChatEvent =
   | WorkoutCreatedEvent
   | RoutineCreatedEvent

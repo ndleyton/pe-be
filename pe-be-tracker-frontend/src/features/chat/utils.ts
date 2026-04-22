@@ -1,4 +1,3 @@
-import { type Workout } from "@/features/workouts";
 import {
   ChatApiWorkoutCreatedEvent,
   ChatApiRoutineCreatedEvent,

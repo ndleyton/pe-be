@@ -19,8 +19,9 @@ import {
 } from "../components";
 import {
   type ChatMessage,
+  type TextMessagePart,
+  type ImageMessagePart,
   type UIMessagePart,
-  type ChatEvent,
   type ChatApiMessage,
   type ChatApiPart,
   type ChatApiWorkoutCreatedEvent,
