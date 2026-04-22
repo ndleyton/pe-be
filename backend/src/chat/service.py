@@ -374,26 +374,25 @@ class ChatService:
             )
         )
 
+        avoidance_prefixes = ["no", "without", "avoid", "dont have", "don't have"]
+        normalized_avoidance_prefixes = [
+            cls._normalize_lookup_value(prefix) for prefix in avoidance_prefixes
+        ]
+
         for canonical, aliases in cls._KNOWN_EQUIPMENT_KEYWORDS.items():
             if any(f" {alias} " in normalized for alias in aliases):
                 preferred.add(canonical)
-            if any(
-                phrase in normalized
-                for phrase in (
-                    f" no {canonical} ",
-                    f" without {canonical} ",
-                    f" avoid {canonical} ",
-                    f" dont have {canonical} ",
-                    f" don't have {canonical} ",
-                )
-            ) or any(
-                f" no {alias} " in normalized
-                or f" without {alias} " in normalized
-                or f" avoid {alias} " in normalized
-                or f" dont have {alias} " in normalized
-                or f" don't have {alias} " in normalized
+
+            canonical_avoided = any(
+                f" {prefix} {canonical} " in normalized
+                for prefix in normalized_avoidance_prefixes
+            )
+            alias_avoided = any(
+                f" {prefix} {alias} " in normalized
+                for prefix in normalized_avoidance_prefixes
                 for alias in aliases
-            ):
+            )
+            if canonical_avoided or alias_avoided:
                 avoided.add(canonical)
 
         if " home " in normalized:

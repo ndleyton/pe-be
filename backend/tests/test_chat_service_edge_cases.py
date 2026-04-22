@@ -225,8 +225,28 @@ async def test_recommend_exercise_substitutions_reranks_by_context_notes(
         limit=2,
     )
 
-    assert "Candidates: Seated Cable Row (same_primary_muscle_group), Chest-Supported Row (same_primary_muscle)." in result
-    assert chat_service_with_db._pending_chat_events[0].substitutions[0].name == "Seated Cable Row"
+    assert (
+        "Candidates: Seated Cable Row (same_primary_muscle_group), Chest-Supported Row (same_primary_muscle)."
+        in result
+    )
+    assert (
+        chat_service_with_db._pending_chat_events[0].substitutions[0].name
+        == "Seated Cable Row"
+    )
+
+
+def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
+    preferred, avoided, same_equip = ChatService._extract_equipment_preferences(
+        "I don't have cables"
+    )
+    assert "cable" in avoided
+    assert "cable" not in preferred
+
+    preferred, avoided, same_equip = ChatService._extract_equipment_preferences(
+        "no barbell, but I have a dumbbell"
+    )
+    assert "barbell" in avoided
+    assert "dumbbell" in preferred
 
 
 @pytest.mark.asyncio

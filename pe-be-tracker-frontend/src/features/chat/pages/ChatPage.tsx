@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Bot, Dumbbell, ImagePlus, MessageCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { config } from "@/app/config/env";
 import api from "@/shared/api/client";
@@ -96,6 +96,7 @@ const sendChatMessage = async (
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -190,7 +191,7 @@ const ChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const clearPendingAttachments = () => {
+  const clearPendingAttachments = useCallback(() => {
     pendingAttachments.forEach((attachment) => {
       URL.revokeObjectURL(attachment.previewUrl);
     });
@@ -198,7 +199,7 @@ const ChatPage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
+  }, [pendingAttachments]);
 
   const buildUserParts = async (
     messageContent: string,
@@ -235,7 +236,7 @@ const ChatPage = () => {
     };
   };
 
-  const processMessage = async (messageContent: string) => {
+  const processMessage = useCallback(async (messageContent: string) => {
     const trimmedMessage = messageContent.trim();
     if ((!trimmedMessage && pendingAttachments.length === 0) || isLoading) {
       return;
@@ -318,7 +319,14 @@ const ChatPage = () => {
       );
       setIsLoading(false);
     }
-  };
+  }, [
+    chatMutation,
+    clearPendingAttachments,
+    conversationId,
+    isAuthenticated,
+    isLoading,
+    pendingAttachments,
+  ]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -394,7 +402,30 @@ const ChatPage = () => {
     seededPromptHandledRef.current = true;
     setInputValue(seededPrompt);
     void processMessage(seededPrompt);
-  }, [autoSendSeedPrompt, messages.length, seededPrompt, processMessage]);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      {
+        replace: true,
+        state: routeState
+          ? { ...routeState, autoSendSeedPrompt: false }
+          : routeState,
+      },
+    );
+  }, [
+    autoSendSeedPrompt,
+    location.hash,
+    location.pathname,
+    location.search,
+    messages.length,
+    navigate,
+    processMessage,
+    routeState,
+    seededPrompt,
+  ]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

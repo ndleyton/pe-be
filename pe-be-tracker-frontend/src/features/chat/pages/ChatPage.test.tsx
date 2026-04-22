@@ -6,12 +6,24 @@ import { MemoryRouter } from "react-router-dom";
 
 import ChatPage from "./ChatPage";
 
-const { mockPost, mockAuthState } = vi.hoisted(() => ({
+const { mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
   mockPost: vi.fn(),
+  mockNavigate: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
   },
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock("@/shared/api/client", () => ({
   default: {
@@ -32,6 +44,7 @@ describe("ChatPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
+    mockNavigate.mockReset();
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -355,6 +368,21 @@ describe("ChatPage", () => {
       ],
       conversation_id: undefined,
     });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      {
+        pathname: "/chat",
+        search: "",
+        hash: "",
+      },
+      {
+        replace: true,
+        state: {
+          seedPrompt:
+            "I want grounded substitutions for the exercise type Lat Pulldown (id 12). Ask me exactly one brief follow-up question about equipment or constraints before recommending anything. After I answer, use the recommend_exercise_substitutions tool with my answer as context_notes and only recommend exercises returned by that tool.",
+          autoSendSeedPrompt: false,
+        },
+      },
+    );
 
     expect(
       await screen.findByText(
