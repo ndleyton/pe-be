@@ -379,7 +379,7 @@ describe("ExerciseTypeDetailsPage", () => {
     render(<ExerciseTypeDetailsPage />);
 
     expect(
-      await screen.findByRole("heading", { name: /similar exercises/i }),
+      await screen.findByRole("heading", { name: /alternatives/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("Chest-Supported Row")).toBeInTheDocument();
     expect(
