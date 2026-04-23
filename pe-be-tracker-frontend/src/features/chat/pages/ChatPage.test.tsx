@@ -4,9 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
+import {
+  ACTIVE_CHAT_SESSION_KEY,
+  persistActiveChatSession,
+  readActiveChatSession,
+} from "../lib/chatSession";
 import ChatPage from "./ChatPage";
 
-const { mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
+const { mockGet, mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
   mockPost: vi.fn(),
   mockNavigate: vi.fn(),
   mockAuthState: {
@@ -27,7 +33,7 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("@/shared/api/client", () => ({
   default: {
-    get: vi.fn().mockRejectedValue(new Error("Unauthorized")),
+    get: mockGet,
     post: mockPost,
     put: vi.fn(),
     delete: vi.fn(),
@@ -45,6 +51,8 @@ describe("ChatPage", () => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = true;
     mockNavigate.mockReset();
+    mockGet.mockRejectedValue(new Error("Unauthorized"));
+    sessionStorage.clear();
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -405,5 +413,218 @@ describe("ChatPage", () => {
     expect(
       await screen.findByText("Alternatives to Lat Pulldown"),
     ).toBeInTheDocument();
+  });
+
+  it("restores the saved UI thread from sessionStorage and skips seeded prompt autostart", async () => {
+    persistActiveChatSession({
+      conversationId: 12,
+      messages: [
+        {
+          id: "assistant-restored",
+          role: "assistant",
+          content: "I created a routine for you.",
+          parts: [
+            {
+              type: "text",
+              text: "I created a routine for you.",
+            },
+          ],
+          events: [
+            {
+              type: "routine_created",
+              title: "Routine created",
+              ctaLabel: "View routine",
+              routine: {
+                id: 77,
+                name: "Beginner Full Body",
+                description: "Built for three gym days per week.",
+                workout_type_id: 4,
+                exercise_count: 6,
+                set_count: 18,
+              },
+            },
+          ],
+          timestamp: new Date("2024-01-02T18:00:00.000Z"),
+        },
+      ],
+    });
+    expect(readActiveChatSession()?.messages).toHaveLength(1);
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        id: 12,
+        title: null,
+        created_at: "2024-01-02T18:00:00Z",
+        updated_at: "2024-01-02T18:05:00Z",
+        is_active: true,
+        messages: [],
+      },
+    });
+
+    renderChatPage([
+      {
+        pathname: "/chat",
+        state: {
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: true,
+        },
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Restoring chat")).not.toBeInTheDocument();
+    });
+
+    expect(
+      await screen.findByText("I created a routine for you."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Beginner Full Body")).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText(
+        "I can help with alternatives to Lat Pulldown. What equipment do you have available, or what do you want to avoid?",
+      ),
+    ).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith("/chat/conversations/12");
+    });
+  });
+
+  it("restores the conversation from the backend when only the saved conversation id is available", async () => {
+    sessionStorage.setItem(
+      ACTIVE_CHAT_SESSION_KEY,
+      JSON.stringify({
+        conversationId: 12,
+        messages: [],
+      }),
+    );
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        id: 12,
+        title: null,
+        created_at: "2024-01-02T18:00:00Z",
+        updated_at: "2024-01-02T18:05:00Z",
+        is_active: true,
+        messages: [
+          {
+            id: 201,
+            role: "user",
+            content: "Check this form",
+            created_at: "2024-01-02T18:00:00Z",
+            parts: [
+              {
+                id: 1,
+                type: "image",
+                attachment_id: 99,
+                mime_type: "image/png",
+                filename: "form-check.png",
+              },
+              {
+                id: 2,
+                type: "text",
+                text: "Check this form",
+              },
+            ],
+          },
+          {
+            id: 202,
+            role: "assistant",
+            content: "Looks solid.",
+            created_at: "2024-01-02T18:01:00Z",
+            parts: [
+              {
+                id: 3,
+                type: "text",
+                text: "Looks solid.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    renderChatPage();
+
+    expect(await screen.findByText("Looks solid.")).toBeInTheDocument();
+    expect(screen.getByText("Check this form")).toBeInTheDocument();
+    expect(screen.getByAltText("form-check.png")).toHaveAttribute(
+      "src",
+      expect.stringContaining("/chat/attachments/99"),
+    );
+  });
+
+  it("clears the saved session when the stored conversation no longer exists", async () => {
+    sessionStorage.setItem(
+      ACTIVE_CHAT_SESSION_KEY,
+      JSON.stringify({
+        conversationId: 12,
+        messages: [],
+      }),
+    );
+
+    mockGet.mockRejectedValueOnce({
+      response: {
+        status: 404,
+      },
+    });
+
+    renderChatPage();
+
+    expect(
+      await screen.findByText("Meet Personal Bestie"),
+    ).toBeInTheDocument();
+    expect(sessionStorage.getItem(ACTIVE_CHAT_SESSION_KEY)).toBeNull();
+  });
+
+  it("starts a brand-new chat when the reset button is pressed", async () => {
+    persistActiveChatSession({
+      conversationId: 12,
+      messages: [
+        {
+          id: "assistant-restored",
+          role: "assistant",
+          content: "Welcome back.",
+          parts: [
+            {
+              type: "text",
+              text: "Welcome back.",
+            },
+          ],
+          timestamp: new Date("2024-01-02T18:00:00.000Z"),
+        },
+      ],
+    });
+    expect(readActiveChatSession()?.messages).toHaveLength(1);
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        id: 12,
+        title: null,
+        created_at: "2024-01-02T18:00:00Z",
+        updated_at: "2024-01-02T18:05:00Z",
+        is_active: true,
+        messages: [],
+      },
+    });
+
+    const user = userEvent.setup();
+    renderChatPage();
+
+    await waitFor(() => {
+      expect(screen.queryByText("Restoring chat")).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText("Welcome back.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+
+    expect(screen.queryByText("Welcome back.")).not.toBeInTheDocument();
+    expect(screen.getByText("Meet Personal Bestie")).toBeInTheDocument();
+    expect(sessionStorage.getItem(ACTIVE_CHAT_SESSION_KEY)).toBeNull();
   });
 });
