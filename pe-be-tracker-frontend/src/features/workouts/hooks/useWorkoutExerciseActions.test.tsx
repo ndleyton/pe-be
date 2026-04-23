@@ -131,10 +131,9 @@ describe("useWorkoutExerciseActions", () => {
       expect(vi.mocked(api.patch)).toHaveBeenCalledWith("/workouts/123", {
         end_time: expect.any(String),
       });
+      expect(closeFinishModal).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/workouts");
     });
-
-    expect(closeFinishModal).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith("/workouts");
   });
 
   it("adds a guest exercise without going through the server mutation flow", () => {
