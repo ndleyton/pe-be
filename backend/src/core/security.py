@@ -43,14 +43,16 @@ class TracedGoogleOAuth2(GoogleOAuth2):
         set_current_span_attributes(attributes)
         with traced_span("auth.oauth.google.exchange_token", attributes=attributes):
             token = await super().get_access_token(code, redirect_uri, code_verifier)
-        set_current_span_attributes(
-            {
-                "auth.oauth.refresh_token_present": token.get("refresh_token")
-                is not None,
-                "auth.oauth.expires_at_present": token.get("expires_at") is not None,
-                "auth.oauth.id_token_present": token.get("id_token") is not None,
-            }
-        )
+            set_current_span_attributes(
+                {
+                    "auth.oauth.refresh_token_present": token.get("refresh_token")
+                    is not None,
+                    "auth.oauth.expires_at_present": token.get("expires_at")
+                    is not None,
+                    "auth.oauth.id_token_present": token.get("id_token")
+                    is not None,
+                }
+            )
         return token
 
     async def get_profile(self, token: str):
@@ -61,13 +63,13 @@ class TracedGoogleOAuth2(GoogleOAuth2):
         set_current_span_attributes(attributes)
         with traced_span("auth.oauth.google.fetch_profile", attributes=attributes):
             profile = await super().get_profile(token)
-        set_current_span_attributes(
-            {
-                "auth.oauth.google.profile.email_count": len(
-                    profile.get("emailAddresses", [])
-                ),
-            }
-        )
+            set_current_span_attributes(
+                {
+                    "auth.oauth.google.profile.email_count": len(
+                        profile.get("emailAddresses", [])
+                    ),
+                }
+            )
         return profile
 
 
