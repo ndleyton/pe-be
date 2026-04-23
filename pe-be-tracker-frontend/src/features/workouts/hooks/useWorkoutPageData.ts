@@ -189,7 +189,14 @@ export const useWorkoutPageData = ({
   ]);
 
   useEffect(() => {
-    if (!routine || !workoutId || exercises.length !== 0 || isAuthenticated) {
+    if (
+      !routine
+      || !workoutId
+      || exercises.length !== 0
+      || isAuthenticated
+      || !guestHydrated
+      || !guestWorkout
+    ) {
       return;
     }
 
@@ -197,6 +204,8 @@ export const useWorkoutPageData = ({
   }, [
     exercises.length,
     guestCreateExercisesFromRoutine,
+    guestHydrated,
+    guestWorkout,
     isAuthenticated,
     routine,
     workoutId,

@@ -181,4 +181,39 @@ describe("useWorkoutPageData", () => {
       endTime: guestWorkout.end_time,
     });
   });
+
+  it("waits for guest hydration before creating exercises from the routine", async () => {
+    mockAuthState.isAuthenticated = false;
+    mockGuestState.hydrated = false;
+    const guestWorkout = makeGuestWorkout({
+      id: "guest-123",
+      exercises: [],
+    });
+    const routine = makeRoutine({ id: 44, name: "Push Day" });
+
+    const { rerender } = renderHook(
+      () =>
+        useWorkoutPageData({
+          pathname: "/workouts/guest-123",
+          routeState: { routine },
+          workoutId: "guest-123",
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    );
+
+    expect(mockCreateExercisesFromRoutine).not.toHaveBeenCalled();
+
+    mockGuestState.hydrated = true;
+    mockGuestState.workouts = [guestWorkout];
+    rerender();
+
+    await waitFor(() => {
+      expect(mockCreateExercisesFromRoutine).toHaveBeenCalledWith(
+        routine,
+        "guest-123",
+      );
+    });
+  });
 });
