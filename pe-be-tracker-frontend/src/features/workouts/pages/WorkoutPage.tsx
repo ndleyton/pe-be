@@ -1,36 +1,20 @@
-import { Suspense, useCallback, useEffect, useRef, useState, lazy } from "react";
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/shared/api/client";
-import {
-  getExercisesInWorkout,
-  Exercise,
-  type ExerciseType,
-  createExercise,
-  getExerciseTypes,
-  type CreateExerciseData,
-} from "@/features/exercises/api";
+import { Suspense, useEffect, useRef, useState, lazy } from "react";
+import { useLocation, useParams, Link } from "react-router-dom";
+
 import { ExerciseList } from "@/features/exercises/components";
-import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
-import { type Workout } from "@/features/workouts/types";
-import type { Routine } from "@/features/routines/types";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { endpoints } from "@/shared/api/endpoints";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
-import {
-  useGuestStore,
-  useAuthStore,
-  useUIStore,
-  GuestExerciseType,
-} from "@/stores";
-import { getCurrentUTCTimestamp } from "@/utils/date";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import { useAppBackNavigation } from "@/shared/hooks";
+import {
+  WorkoutPageLocationState,
+  useWorkoutPageData,
+} from "@/features/workouts/hooks/useWorkoutPageData";
+import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
 
-// Lazy load heavy components
 const FinishWorkoutModal = lazy(() =>
   import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
 );
@@ -50,89 +34,60 @@ const preloadSaveRoutineModal = createIntentPreload(() =>
 const ExerciseTypeModal = lazy(() =>
   import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
 );
-const preloadExerciseTypeModal = createIntentPreload(() =>
-  import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
-);
-const MAX_EXERCISE_IMAGE_PRELOADS = 4;
-
-interface WorkoutPageLocationState {
-  routine?: Routine;
-  scrollToBottomOnLoad?: boolean;
-  knownEmptyExercises?: boolean;
-}
-
-const getErrorStatus = (error: unknown): number | null => {
-  if (typeof error !== "object" || error === null || !("response" in error)) {
-    return null;
-  }
-
-  const response = (error as { response?: { status?: unknown } }).response;
-  return typeof response?.status === "number" ? response.status : null;
-};
-
-const isNetworkError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return (
-    error.message.includes("Network Error")
-    || error.message.includes("Failed to fetch")
-  );
-};
-
-const updateWorkoutEndTime = async (workoutId: string) => {
-  const response = await api.patch(endpoints.workoutById(workoutId), {
-    end_time: getCurrentUTCTimestamp(),
-  });
-  return response.data;
-};
-
-// Fetch a single workout by ID (for authenticated users)
-const fetchWorkout = async (workoutId: string): Promise<Workout> => {
-  const response = await api.get(endpoints.workoutById(workoutId));
-  return response.data as Workout;
-};
 
 const WorkoutPage = () => {
   const { workoutId } = useParams();
-  const navigate = useNavigate();
   const goBack = useAppBackNavigation("/workouts");
   const location = useLocation();
-  const queryClient = useQueryClient();
-
-  // Get state from stores
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authInitialized = useAuthStore((state) => state.initialized);
-  const guestHydrated = useGuestStore((state) => state.hydrated);
-  const guestWorkout = useGuestStore((state) =>
-    state.workouts.find((workout) => workout.id === workoutId),
-  );
-  const guestAddExercise = useGuestStore((state) => state.addExercise);
-  const guestCreateExercisesFromRoutine = useGuestStore(
-    (state) => state.createExercisesFromRoutine,
-  );
-  const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
-  const guestUpdateExercise = useGuestStore((state) => state.updateExercise);
-  const guestUpdateWorkout = useGuestStore((state) => state.updateWorkout);
-
-  // Get workout timer state and actions from UI store
-  const syncWorkoutTimer = useUIStore((state) => state.syncWorkoutTimer);
-
   const routeState = location.state as WorkoutPageLocationState | null;
-  const routine = routeState?.routine;
-  const shouldScrollToBottomOnLoad = Boolean(routeState?.scrollToBottomOnLoad);
+
+  const {
+    exercises,
+    hasValidWorkout,
+    isAuthenticated,
+    listStatus,
+    recoveryMessage,
+    refetchWorkout,
+    serverWorkout,
+    shouldScrollToBottomOnLoad,
+    showLoadingTitle,
+    showNotFound,
+    showRecoverableWorkoutError,
+    workoutEndTime,
+    workoutFetching,
+    workoutName,
+    workoutTypeId,
+  } = useWorkoutPageData({
+    pathname: location.pathname,
+    routeState,
+    workoutId,
+  });
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [knownEmptyExercisesLatched, setKnownEmptyExercisesLatched] = useState(
-    () => Boolean(routeState?.knownEmptyExercises),
-  );
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
-  const preloadedExerciseImagesRef = useRef<Set<string>>(new Set());
+
+  const {
+    addExerciseMutation,
+    finishWorkoutMutation,
+    generateRecapMutation,
+    handleExerciseDelete,
+    handleExerciseUpdate,
+    handleFinishWorkout,
+    handleRegenerateRecap,
+    handleSelectExerciseType,
+    warmExerciseTypeModal,
+  } = useWorkoutExerciseActions({
+    exercises,
+    isAuthenticated,
+    onFinishModalClose: () => setShowFinishModal(false),
+    serverWorkout,
+    showFinishModal,
+    workoutId,
+  });
 
   const scrollWorkoutPageToBottom = (behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
@@ -150,463 +105,6 @@ const WorkoutPage = () => {
     });
   };
 
-  // Fetch workout details (only when authenticated)
-  const {
-    data: serverWorkout,
-    error: workoutError,
-    isPending: workoutPending,
-    refetch: refetchWorkout,
-    isFetching: workoutFetching,
-  } = useQuery({
-    queryKey: ["workout", workoutId],
-    queryFn: () => fetchWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated,
-  });
-
-  const deleteExerciseMutation = useMutation({
-    // request is done in ExerciseRow. This mutation
-    // only updates cache optimistically and handles invalidation.
-    mutationFn: async (_exerciseId: number | string) => {
-      return;
-    },
-    onMutate: async (exerciseId) => {
-      await queryClient.cancelQueries({ queryKey: ["exercises", workoutId] });
-      const prev = queryClient.getQueryData<Exercise[]>([
-        "exercises",
-        workoutId,
-      ]);
-      // Optimistically remove from list
-      queryClient.setQueryData(
-        ["exercises", workoutId],
-        (old: Exercise[] | undefined) => {
-          if (!old) return old;
-          return old.filter((e) => String(e.id) !== String(exerciseId));
-        },
-      );
-      return { prev };
-    },
-    onError: (_err, _exerciseId, ctx) => {
-      if (ctx?.prev) {
-        queryClient.setQueryData(["exercises", workoutId], ctx.prev);
-      }
-    },
-    onSettled: (_data, _err, exerciseId) => {
-      queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-      // Clean up potential detail caches (if any exist)
-      queryClient.removeQueries({
-        queryKey: ["exercise", exerciseId],
-        exact: true,
-      });
-      queryClient.removeQueries({
-        queryKey: ["exerciseSets", "byExercise", exerciseId],
-      });
-    },
-  });
-
-  const handleExerciseDelete = useCallback((exerciseId: number | string) => {
-    if (isAuthenticated) {
-      deleteExerciseMutation.mutate(exerciseId);
-    } else {
-      guestDeleteExercise(String(exerciseId));
-    }
-  }, [deleteExerciseMutation, guestDeleteExercise, isAuthenticated]);
-
-  // Fetch exercises for this workout (only when authenticated)
-  const {
-    data: serverExercises,
-    isLoading: exercisesLoading,
-    error: exercisesError,
-  } = useQuery({
-    queryKey: ["exercises", workoutId],
-    queryFn: () => getExercisesInWorkout(workoutId as string),
-    enabled: !!workoutId && isAuthenticated, // Only fetch when authenticated
-  });
-
-  // Use guest data if not authenticated, server data if authenticated
-  const exercises: Exercise[] = isAuthenticated
-    ? Array.isArray(serverExercises)
-      ? serverExercises
-      : []
-    : ((guestWorkout?.exercises ?? []) as unknown as Exercise[]);
-
-  useEffect(() => {
-    const imageUrls = exercises
-      .slice(0, MAX_EXERCISE_IMAGE_PRELOADS)
-      .map((exercise) => exercise.exercise_type.images?.[0])
-      .filter((imageUrl): imageUrl is string => Boolean(imageUrl))
-      .filter((imageUrl) => !preloadedExerciseImagesRef.current.has(imageUrl));
-
-    if (imageUrls.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-    const browserWindow = window as Window &
-      typeof globalThis & {
-        requestIdleCallback?: (
-          callback: IdleRequestCallback,
-          options?: IdleRequestOptions,
-        ) => number;
-        cancelIdleCallback?: (handle: number) => void;
-      };
-
-    const preloadImages = () => {
-      if (cancelled) {
-        return;
-      }
-
-      imageUrls.forEach((imageUrl) => {
-        const img = new window.Image();
-        img.src = imageUrl;
-        preloadedExerciseImagesRef.current.add(imageUrl);
-      });
-    };
-
-    if (typeof browserWindow.requestIdleCallback === "function") {
-      const idleId = browserWindow.requestIdleCallback(preloadImages, {
-        timeout: 1500,
-      });
-
-      return () => {
-        cancelled = true;
-        browserWindow.cancelIdleCallback?.(idleId);
-      };
-    }
-
-    const timeoutId = window.setTimeout(preloadImages, 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [exercises]);
-
-  const finishWorkoutMutation = useMutation({
-    mutationFn: (id: string) => updateWorkoutEndTime(id),
-    onSuccess: (updatedWorkout, id) => {
-      queryClient.setQueryData(["workout", id], updatedWorkout);
-      queryClient.setQueryData(
-        ["workouts"],
-        (
-          current:
-            | { data: Workout[]; next_cursor?: number | null }
-            | undefined,
-        ) => {
-          if (!current?.data) {
-            return current;
-          }
-
-          return {
-            ...current,
-            data: current.data.map((workout) =>
-              String(workout.id) === String(updatedWorkout.id)
-                ? updatedWorkout
-                : workout,
-            ),
-          };
-        },
-      );
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      setShowFinishModal(false);
-      navigate("/workouts");
-    },
-    onError: (error) => {
-      console.error("Failed to finish workout:", error);
-      setShowFinishModal(false);
-    },
-  });
-
-  const generateRecapMutation = useMutation({
-    mutationFn: (id: string) => api.post(endpoints.workoutRecap(id)),
-    onSuccess: (response, id) => {
-      // Update workout query data with the new recap
-      queryClient.setQueryData(["workout", id], response.data);
-    },
-  });
-
-  const handleRegenerateRecap = useCallback(() => {
-    if (workoutId && isAuthenticated) {
-      generateRecapMutation.mutate(workoutId);
-    }
-  }, [workoutId, isAuthenticated, generateRecapMutation]);
-
-  // Trigger AI recap generation when the finish modal opens,
-  // but only if we have exercises and are authenticated.
-  useEffect(() => {
-    if (
-      showFinishModal &&
-      workoutId &&
-      isAuthenticated &&
-      exercises.length > 0 &&
-      !serverWorkout?.recap &&
-      !generateRecapMutation.isPending &&
-      !generateRecapMutation.isSuccess
-    ) {
-      generateRecapMutation.mutate(workoutId);
-    }
-  }, [
-    showFinishModal,
-    workoutId,
-    isAuthenticated,
-    exercises.length,
-    serverWorkout?.recap,
-    generateRecapMutation.isPending,
-    generateRecapMutation.isSuccess,
-  ]);
-
-  // Keep the timer aligned to the active workout lifecycle.
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (!serverWorkout) return;
-      syncWorkoutTimer({
-        id: serverWorkout.id,
-        startTime: serverWorkout.start_time,
-        endTime: serverWorkout.end_time,
-      });
-      return;
-    }
-
-    if (!guestHydrated || !guestWorkout) return;
-
-    syncWorkoutTimer({
-      id: guestWorkout.id,
-      startTime: guestWorkout.start_time,
-      endTime: guestWorkout.end_time,
-    });
-  }, [
-    serverWorkout,
-    isAuthenticated,
-    guestWorkout,
-    guestHydrated,
-    syncWorkoutTimer,
-  ]);
-
-  // Guest-only hydration from navigation state.
-  // Authenticated routine starts are created server-side before navigation.
-  useEffect(() => {
-    if (routine && workoutId && exercises?.length === 0) {
-      if (isAuthenticated) {
-        // No-op: authenticated users should already receive a populated workout.
-      } else {
-        // Guest users create workout exercises locally from the routine template.
-        guestCreateExercisesFromRoutine(routine, workoutId);
-      }
-    }
-  }, [
-    routine,
-    workoutId,
-    exercises.length,
-    isAuthenticated,
-    guestCreateExercisesFromRoutine,
-  ]);
-
-  useEffect(() => {
-    if (!routeState?.knownEmptyExercises) {
-      return;
-    }
-
-    setKnownEmptyExercisesLatched(true);
-
-    const { knownEmptyExercises: _ignored, ...restState } = routeState;
-    navigate(location.pathname, {
-      replace: true,
-      state: Object.keys(restState).length > 0 ? restState : null,
-    });
-  }, [location.pathname, navigate, routeState]);
-
-  useEffect(() => {
-    if (
-      knownEmptyExercisesLatched
-      && isAuthenticated
-      && !exercisesLoading
-    ) {
-      setKnownEmptyExercisesLatched(false);
-    }
-  }, [exercisesLoading, isAuthenticated, knownEmptyExercisesLatched]);
-
-
-
-  type AddExercisePayload = {
-    data: CreateExerciseData;
-    exerciseType: ExerciseType;
-  };
-
-  type AddExerciseMutationContext = {
-    prev?: Exercise[];
-    hadPrev: boolean;
-    optimisticId: string;
-    exerciseType: ExerciseType;
-  };
-
-  // Optimistic create; replace optimistic entry with server response
-  const addExerciseMutation = useMutation({
-    mutationFn: ({ data }: AddExercisePayload) => createExercise(data),
-    onMutate: async ({ data, exerciseType }: AddExercisePayload) => {
-      const exercisesQueryKey = ["exercises", workoutId] as const;
-      await queryClient.cancelQueries({ queryKey: ["exercises", workoutId] });
-      const prev = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
-      const hadPrev = prev !== undefined;
-      const now = new Date().toISOString();
-      const optimisticId = `optimistic-${now}-${exerciseType.id}`;
-      const optimisticExercise: Exercise = {
-        id: optimisticId,
-        timestamp: data.timestamp ?? now,
-        notes: data.notes ?? null,
-        exercise_type_id: data.exercise_type_id,
-        workout_id: data.workout_id,
-        created_at: now,
-        updated_at: now,
-        exercise_type: exerciseType,
-        exercise_sets: [],
-      };
-
-      queryClient.setQueryData(
-        exercisesQueryKey,
-        (old: Exercise[] | undefined) =>
-          old ? [...old, optimisticExercise] : [optimisticExercise],
-      );
-
-      return { prev, hadPrev, optimisticId, exerciseType };
-    },
-    onError: (_err, _vars, ctx?: AddExerciseMutationContext) => {
-      if (!ctx) return;
-
-      const exercisesQueryKey = ["exercises", workoutId] as const;
-
-      queryClient.setQueryData(
-        exercisesQueryKey,
-        (old: Exercise[] | undefined) =>
-          old?.filter(
-            (exercise) => String(exercise.id) !== String(ctx.optimisticId),
-          ) ?? old,
-      );
-
-      if (ctx.hadPrev) {
-        queryClient.setQueryData(exercisesQueryKey, ctx.prev);
-      } else {
-        const current = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
-        if (!current || current.length === 0) {
-          queryClient.removeQueries({
-            queryKey: exercisesQueryKey,
-            exact: true,
-          });
-        }
-      }
-    },
-    onSuccess: (createdExercise, _vars, ctx) => {
-      if (!ctx) return;
-      const mergedExercise: Exercise = {
-        ...createdExercise,
-        exercise_type:
-          createdExercise.exercise_type ?? ctx.exerciseType,
-        exercise_sets: createdExercise.exercise_sets ?? [],
-      };
-      queryClient.setQueryData(
-        ["exercises", workoutId],
-        (old: Exercise[] | undefined) => {
-          if (!old) return [mergedExercise];
-          return old.map((exercise) =>
-            String(exercise.id) === String(ctx.optimisticId)
-              ? mergedExercise
-              : exercise,
-          );
-        },
-      );
-    },
-    onSettled: () => {
-      if (workoutId) {
-        queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-      }
-    },
-  });
-
-  const handleSelectExerciseType = useCallback((
-    exerciseType: ExerciseType | GuestExerciseType,
-  ) => {
-    setShowAddExerciseModal(false);
-    if (!workoutId) return;
-
-    const timestamp = new Date().toISOString();
-
-    if (isAuthenticated) {
-      addExerciseMutation.mutate({
-        data: {
-          exercise_type_id: Number(exerciseType.id),
-          workout_id: Number(workoutId),
-          timestamp,
-          notes: null,
-        },
-        exerciseType: exerciseType as ExerciseType,
-      });
-    } else {
-      // Guest mode: update local store directly (final update, not optimistic)
-      const guestType = exerciseType as GuestExerciseType; // modal returns guest type in guest mode
-      guestAddExercise({
-        exercise_type_id: String(guestType.id),
-        workout_id: String(workoutId),
-        timestamp,
-        notes: null,
-        exercise_type: guestType,
-      });
-    }
-  }, [addExerciseMutation, guestAddExercise, isAuthenticated, workoutId]);
-
-  // Handle exercise updates (sets added/modified)
-  const handleExerciseUpdate = useCallback((
-    updatedExercise: Exercise,
-    shouldInvalidateQuery: boolean = false,
-  ) => {
-    if (isAuthenticated && shouldInvalidateQuery) {
-      // Only invalidate query when necessary (e.g., for structural changes, not notes)
-      queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-    } else if (isAuthenticated) {
-      // For optimistic updates (like notes), just update the query data directly
-      queryClient.setQueryData(
-        ["exercises", workoutId],
-        (oldData: Exercise[] | undefined) => {
-          if (!oldData) return oldData;
-          return oldData.map((exercise) =>
-            exercise.id === updatedExercise.id ? updatedExercise : exercise,
-          );
-        },
-      );
-    } else {
-      // For guest mode, update the local exercise data
-      // Convert ExerciseSet[] to GuestExerciseSet[] by ensuring all IDs are strings
-      const guestExerciseSets = updatedExercise.exercise_sets.map((set) => ({
-        ...set,
-        id: String(set.id),
-        exercise_id: String(set.exercise_id),
-      }));
-
-      guestUpdateExercise(String(updatedExercise.id), {
-        exercise_sets: guestExerciseSets,
-      });
-    }
-    }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
-
-  const handleFinishWorkout = useCallback(() => {
-    if (workoutId) {
-      if (isAuthenticated) {
-        finishWorkoutMutation.mutate(workoutId);
-      } else {
-        // For guest mode, update the workout end time
-        guestUpdateWorkout(workoutId, {
-          end_time: getCurrentUTCTimestamp(),
-        });
-        setShowFinishModal(false);
-        navigate("/workouts");
-      }
-    } else {
-      console.error("No workoutId available");
-    }
-  }, [
-    finishWorkoutMutation,
-    guestUpdateWorkout,
-    isAuthenticated,
-    navigate,
-    workoutId,
-  ]);
-
   const handleCancelFinish = () => {
     setShowFinishModal(false);
   };
@@ -615,39 +113,6 @@ const WorkoutPage = () => {
     setShowSaveRoutineModal(true);
   };
 
-  const warmExerciseTypeModal = useCallback(() => {
-    preloadExerciseTypeModal();
-
-    if (!isAuthenticated) {
-      return;
-    }
-
-    void queryClient.prefetchInfiniteQuery({
-      queryKey: ["exerciseTypes", "modal", "usage"],
-      queryFn: ({ pageParam }) =>
-        getExerciseTypes(
-          "usage",
-          pageParam as number | undefined,
-          EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        ),
-      getNextPageParam: (lastPage: { next_cursor?: number | null }) =>
-        lastPage?.next_cursor ?? undefined,
-      initialPageParam: undefined as number | undefined,
-    });
-  }, [isAuthenticated, queryClient]);
-
-  // Determine workout name based on authentication state
-  const workoutName = isAuthenticated
-    ? (serverWorkout?.name ?? null)
-    : (guestWorkout?.name ?? null);
-  const workoutTypeId = isAuthenticated
-    ? (serverWorkout?.workout_type_id ?? null)
-    : (guestWorkout?.workout_type_id ?? null);
-  const hasValidWorkout = isAuthenticated
-    ? Boolean(serverWorkout)
-    : guestHydrated && Boolean(guestWorkout);
-
-  // Warn user on navigation/back while workout in progress
   useEffect(() => {
     if (!hasValidWorkout) {
       return;
@@ -660,42 +125,23 @@ const WorkoutPage = () => {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
 
-    // Preload heavy components after a small delay to improve perceived performance
-    const preloadTimeout = setTimeout(() => {
+    const preloadTimeout = window.setTimeout(() => {
       preloadFinishWorkoutModal();
       preloadSaveRoutineModal();
     }, 2000);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      clearTimeout(preloadTimeout);
+      window.clearTimeout(preloadTimeout);
     };
   }, [hasValidWorkout]);
 
-  // Keep the route shell mounted and let the exercise section own its loading UI.
-  const workoutErrorStatus = getErrorStatus(workoutError);
-  const pagePending = !authInitialized || (isAuthenticated && workoutPending);
-  const showNotFound = !workoutId
-    || (authInitialized && !isAuthenticated && guestHydrated && !guestWorkout)
-    || (isAuthenticated
-      && (workoutErrorStatus === 403 || workoutErrorStatus === 404));
-  const showRecoverableWorkoutError =
-    isAuthenticated && Boolean(workoutError) && !showNotFound;
-  const listPending =
-    pagePending
-    || (isAuthenticated && exercisesLoading && !knownEmptyExercisesLatched);
-  const listStatus: "pending" | "success" | "error" = listPending
-    ? "pending"
-    : isAuthenticated && exercisesError
-      ? "error"
-      : "success";
-  const showLoadingTitle = pagePending && !workoutName;
-
   useEffect(() => {
-    if (listStatus !== "success" || didHandleRouteScrollRef.current) return;
+    if (listStatus !== "success" || didHandleRouteScrollRef.current) {
+      return;
+    }
 
-    const end_time = isAuthenticated ? serverWorkout?.end_time : guestWorkout?.end_time;
-    const isInProgress = !end_time;
+    const isInProgress = !workoutEndTime;
 
     if (shouldScrollToBottomOnLoad || isInProgress) {
       didHandleRouteScrollRef.current = true;
@@ -710,7 +156,7 @@ const WorkoutPage = () => {
         followUpScrollTimers.forEach((timerId) => window.clearTimeout(timerId));
       };
     }
-  }, [listStatus, shouldScrollToBottomOnLoad, isAuthenticated, serverWorkout?.end_time, guestWorkout?.end_time]);
+  }, [listStatus, shouldScrollToBottomOnLoad, workoutEndTime]);
 
   useEffect(() => {
     const prevCount = previousExerciseCountRef.current;
@@ -725,10 +171,6 @@ const WorkoutPage = () => {
   }
 
   if (showRecoverableWorkoutError) {
-    const recoveryMessage = isNetworkError(workoutError)
-      ? "Check your connection and try again."
-      : "This may be temporary. Try again or go back to your workouts.";
-
     return (
       <div className="mx-auto max-w-5xl p-4 text-center">
         <div className="bg-card text-card-foreground mx-auto mt-4 max-w-2xl rounded-lg p-6 shadow-lg">
@@ -778,7 +220,7 @@ const WorkoutPage = () => {
           ) : workoutName ? (
             `${workoutName}`
           ) : (
-            `Workout`
+            "Workout"
           )}
         </h2>
       </div>
@@ -786,7 +228,6 @@ const WorkoutPage = () => {
       <div className="space-y-6">
         {!showLoadingTitle && serverWorkout?.end_time && serverWorkout?.recap && (
           <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-card/50 p-5 shadow-xl backdrop-blur-md transition-all duration-500 hover:border-primary/40 text-left mb-6">
-            {/* Subtle background glow */}
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-2xl group-hover:opacity-50 transition-opacity duration-1000 animate-pulse" />
 
             <div className="relative">
@@ -872,7 +313,10 @@ const WorkoutPage = () => {
           <ExerciseTypeModal
             isOpen={showAddExerciseModal}
             onClose={() => setShowAddExerciseModal(false)}
-            onSelect={handleSelectExerciseType}
+            onSelect={(exerciseType) => {
+              setShowAddExerciseModal(false);
+              handleSelectExerciseType(exerciseType);
+            }}
           />
         </Suspense>
       ) : null}
