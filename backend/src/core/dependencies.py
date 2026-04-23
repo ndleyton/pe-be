@@ -93,9 +93,10 @@ class AppSQLAlchemyUserDatabase(SQLAlchemyUserDatabase):
         oauth_account,
         update_dict: dict[str, Any],
     ):
+        provider = update_dict.get("oauth_name") or oauth_account.oauth_name
         with traced_span(
             "auth.oauth.update_account",
-            attributes={"auth.oauth.provider": update_dict.get("oauth_name")},
+            attributes={"auth.oauth.provider": provider},
         ):
             for key, value in update_dict.items():
                 setattr(oauth_account, key, value)

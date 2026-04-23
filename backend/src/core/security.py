@@ -49,8 +49,7 @@ class TracedGoogleOAuth2(GoogleOAuth2):
                     is not None,
                     "auth.oauth.expires_at_present": token.get("expires_at")
                     is not None,
-                    "auth.oauth.id_token_present": token.get("id_token")
-                    is not None,
+                    "auth.oauth.id_token_present": token.get("id_token") is not None,
                 }
             )
         return token

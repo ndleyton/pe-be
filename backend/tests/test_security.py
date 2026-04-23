@@ -110,6 +110,7 @@ async def test_traced_google_oauth2_records_token_exchange_span(monkeypatch):
         "set_current_span_attributes",
         lambda attributes: current_span_attributes.append(dict(attributes or {})),
     )
+
     async def _fake_get_access_token(self, code, redirect_uri, code_verifier=None):
         return {
             "access_token": "access-token",
