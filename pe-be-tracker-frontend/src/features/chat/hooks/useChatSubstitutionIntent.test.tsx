@@ -61,7 +61,7 @@ describe("useChatSubstitutionIntent", () => {
     vi.clearAllMocks();
   });
 
-  it("does not auto-seed when a restored conversation already has messages", () => {
+  it("does not auto-seed when a restored conversation already has messages and still consumes the route flag", async () => {
     const { result, navigate } = renderSubstitutionIntentHook({
       autoStartChatIntent: true,
       initialMessages: [
@@ -82,7 +82,23 @@ describe("useChatSubstitutionIntent", () => {
 
     expect(result.current.pendingSubstitutionIntent).toBeNull();
     expect(result.current.messages).toHaveLength(1);
-    expect(navigate).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith(
+        {
+          pathname: "/chat",
+          search: "",
+          hash: "",
+        },
+        {
+          replace: true,
+          state: {
+            chatIntent: baseIntent,
+            autoStartChatIntent: false,
+          },
+        },
+      );
+    });
   });
 
   it("seeds the follow-up prompt and clears the route auto-start flag", async () => {

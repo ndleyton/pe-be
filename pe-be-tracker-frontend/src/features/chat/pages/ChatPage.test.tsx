@@ -483,7 +483,24 @@ describe("ChatPage", () => {
       await screen.findByText("I created a routine for you."),
     ).toBeInTheDocument();
     expect(screen.getByText("Beginner Full Body")).toBeInTheDocument();
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      {
+        pathname: "/chat",
+        search: "",
+        hash: "",
+      },
+      {
+        replace: true,
+        state: {
+          chatIntent: {
+            kind: "exercise_substitutions",
+            exerciseTypeId: 12,
+            exerciseTypeName: "Lat Pulldown",
+          },
+          autoStartChatIntent: false,
+        },
+      },
+    );
     expect(
       screen.queryByText(
         "I can help with alternatives to Lat Pulldown. What equipment do you have available, or what do you want to avoid?",

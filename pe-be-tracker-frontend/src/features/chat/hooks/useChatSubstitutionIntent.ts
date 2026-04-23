@@ -53,6 +53,22 @@ export const useChatSubstitutionIntent = ({
     useState<ExerciseSubstitutionChatIntent | null>(null);
   const seededIntentKeyRef = useRef<string | null>(null);
 
+  const consumeAutoStartIntent = useCallback(() => {
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      {
+        replace: true,
+        state: routeState
+          ? { ...routeState, autoStartChatIntent: false }
+          : routeState,
+      },
+    );
+  }, [location.hash, location.pathname, location.search, navigate, routeState]);
+
   const clearPendingSubstitutionIntent = useCallback(() => {
     setPendingSubstitutionIntent(null);
   }, []);
@@ -67,9 +83,14 @@ export const useChatSubstitutionIntent = ({
       !restorationResolved ||
       !nextIntent ||
       !seedKey ||
-      seededIntentKeyRef.current === seedKey ||
-      messages.length > 0
+      seededIntentKeyRef.current === seedKey
     ) {
+      return;
+    }
+
+    if (messages.length > 0) {
+      seededIntentKeyRef.current = seedKey;
+      consumeAutoStartIntent();
       return;
     }
 
@@ -96,22 +117,11 @@ export const useChatSubstitutionIntent = ({
       },
     ]);
 
-    navigate(
-      {
-        pathname: location.pathname,
-        search: location.search,
-        hash: location.hash,
-      },
-      {
-        replace: true,
-        state: routeState
-          ? { ...routeState, autoStartChatIntent: false }
-          : routeState,
-      },
-    );
+    consumeAutoStartIntent();
   }, [
     autoStartChatIntent,
     chatIntent,
+    consumeAutoStartIntent,
     location.hash,
     location.pathname,
     location.search,
