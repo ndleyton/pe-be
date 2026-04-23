@@ -36,8 +36,7 @@ export const config = {
   isDevelopment: environment === "development",
   isProduction: environment === "production",
   isTest: import.meta.env.MODE === "test",
-  sentryEnabled:
-    import.meta.env.MODE !== "test" && !!import.meta.env.VITE_SENTRY_DSN,
+  sentryEnabled: import.meta.env.MODE !== "test" && !!import.meta.env.VITE_SENTRY_DSN,
 } as const;
 
 // Validate required environment variables early to fail fast

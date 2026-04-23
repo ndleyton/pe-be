@@ -8,6 +8,7 @@ import {
   getExercisesInWorkout,
   type Exercise,
 } from "@/features/exercises/api";
+import { normalizeExerciseClientKeys } from "@/features/exercises/lib/exerciseRow";
 import type { Routine } from "@/features/routines/types";
 import { useAuthStore, useGuestStore, useUIStore } from "@/stores";
 import type { Workout } from "../types";
@@ -73,6 +74,7 @@ export const useWorkoutPageData = ({
     () => Boolean(routeState?.knownEmptyExercises),
   );
   const preloadedExerciseImagesRef = useRef<Set<string>>(new Set());
+  const previousExercisesRef = useRef<Exercise[]>([]);
 
   const {
     data: serverWorkout,
@@ -96,15 +98,23 @@ export const useWorkoutPageData = ({
     enabled: !!workoutId && isAuthenticated,
   });
 
-  const exercises: Exercise[] = useMemo(
-    () =>
-      isAuthenticated
-        ? Array.isArray(serverExercises)
-          ? serverExercises
-          : []
-        : ((guestWorkout?.exercises ?? []) as unknown as Exercise[]),
-    [guestWorkout?.exercises, isAuthenticated, serverExercises],
-  );
+  const exercises: Exercise[] = useMemo(() => {
+    return isAuthenticated
+      ? Array.isArray(serverExercises)
+        ? normalizeExerciseClientKeys(
+            serverExercises,
+            previousExercisesRef.current,
+          )
+        : []
+      : normalizeExerciseClientKeys(
+          (guestWorkout?.exercises ?? []) as unknown as Exercise[],
+          previousExercisesRef.current,
+        );
+  }, [guestWorkout?.exercises, isAuthenticated, serverExercises]);
+
+  useEffect(() => {
+    previousExercisesRef.current = exercises;
+  }, [exercises]);
 
   useEffect(() => {
     const imageUrls = exercises

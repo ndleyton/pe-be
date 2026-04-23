@@ -37,12 +37,176 @@ export const formatIntensityInputValue = (
   return formatted === "-" ? "" : formatted;
 };
 
+export const getExerciseClientKey = (
+  exercise: Pick<Exercise, "id" | "client_key">,
+): string => exercise.client_key ?? String(exercise.id);
+
+export const getExerciseSetClientKey = (set: ExerciseSet): string =>
+  set.client_key ?? String(set.id);
+
+const areStringArraysEqual = (
+  left: string[] | undefined,
+  right: string[] | undefined,
+) =>
+  left === right
+  || (
+    Array.isArray(left)
+    && Array.isArray(right)
+    && left.length === right.length
+    && left.every((value, index) => value === right[index])
+  );
+
+const areExerciseTypesEquivalent = (
+  left: Exercise["exercise_type"],
+  right: Exercise["exercise_type"],
+) =>
+  left.id === right.id
+  && left.name === right.name
+  && left.description === right.description
+  && left.equipment === right.equipment
+  && left.instructions === right.instructions
+  && left.category === right.category
+  && left.created_at === right.created_at
+  && left.updated_at === right.updated_at
+  && left.usage_count === right.usage_count
+  && left.default_intensity_unit === right.default_intensity_unit
+  && left.times_used === right.times_used
+  && left.owner_id === right.owner_id
+  && left.status === right.status
+  && left.review_requested_at === right.review_requested_at
+  && left.released_at === right.released_at
+  && left.reviewed_by === right.reviewed_by
+  && left.review_notes === right.review_notes
+  && areStringArraysEqual(left.muscle_groups, right.muscle_groups)
+  && areStringArraysEqual(left.images, right.images);
+
+const areExerciseSetsEquivalent = (
+  left: ExerciseSet[],
+  right: ExerciseSet[],
+) =>
+  left.length === right.length
+  && left.every((leftSet, index) => {
+    const rightSet = right[index];
+    return (
+      leftSet.id === rightSet.id
+      && leftSet.reps === rightSet.reps
+      && leftSet.duration_seconds === rightSet.duration_seconds
+      && leftSet.intensity === rightSet.intensity
+      && leftSet.rpe === rightSet.rpe
+      && leftSet.rir === rightSet.rir
+      && leftSet.intensity_unit_id === rightSet.intensity_unit_id
+      && leftSet.exercise_id === rightSet.exercise_id
+      && leftSet.rest_time_seconds === rightSet.rest_time_seconds
+      && leftSet.done === rightSet.done
+      && leftSet.notes === rightSet.notes
+      && leftSet.type === rightSet.type
+      && leftSet.created_at === rightSet.created_at
+      && leftSet.updated_at === rightSet.updated_at
+      && leftSet.deleted_at === rightSet.deleted_at
+    );
+  });
+
+const areExercisesEquivalent = (
+  left: Exercise,
+  right: Exercise,
+  normalizedRightSets: ExerciseSet[],
+) =>
+  left.id === right.id
+  && left.timestamp === right.timestamp
+  && left.notes === right.notes
+  && left.exercise_type_id === right.exercise_type_id
+  && left.workout_id === right.workout_id
+  && left.created_at === right.created_at
+  && left.updated_at === right.updated_at
+  && areExerciseTypesEquivalent(left.exercise_type, right.exercise_type)
+  && areExerciseSetsEquivalent(left.exercise_sets, normalizedRightSets);
+
+export const normalizeExerciseClientKeys = (
+  exercises: Exercise[],
+  previousExercises: Exercise[] = [],
+): Exercise[] => {
+  const previousExercisesById = new Map<string, Exercise>();
+
+  previousExercises.forEach((exercise) => {
+    previousExercisesById.set(String(exercise.id), exercise);
+  });
+
+  return exercises.map((exercise) => {
+    const previousExercise = previousExercisesById.get(String(exercise.id));
+    const normalizedExercise = {
+      ...exercise,
+      client_key: exercise.client_key
+        ?? previousExercise?.client_key
+        ?? String(exercise.id),
+      exercise_sets: normalizeExerciseSetClientKeys(
+        exercise.exercise_sets,
+        previousExercise?.exercise_sets,
+      ),
+    };
+
+    if (
+      previousExercise
+      && areExercisesEquivalent(
+        previousExercise,
+        normalizedExercise,
+        normalizedExercise.exercise_sets,
+      )
+    ) {
+      return previousExercise;
+    }
+
+    return normalizedExercise;
+  });
+};
+
+export const normalizeExerciseSetClientKeys = (
+  sets: ExerciseSet[],
+  previousSets: ExerciseSet[] = [],
+): ExerciseSet[] => {
+  const previousSetsById = new Map<string, ExerciseSet>();
+
+  previousSets.forEach((set) => {
+    previousSetsById.set(String(set.id), set);
+  });
+
+  return sets.map((set) => {
+    const previousSet = previousSetsById.get(String(set.id));
+    const normalizedSet = {
+      ...set,
+      client_key: set.client_key ?? previousSet?.client_key ?? String(set.id),
+    };
+
+    if (
+      previousSet
+      && previousSet.id === normalizedSet.id
+      && previousSet.reps === normalizedSet.reps
+      && previousSet.duration_seconds === normalizedSet.duration_seconds
+      && previousSet.intensity === normalizedSet.intensity
+      && previousSet.rpe === normalizedSet.rpe
+      && previousSet.rir === normalizedSet.rir
+      && previousSet.intensity_unit_id === normalizedSet.intensity_unit_id
+      && previousSet.exercise_id === normalizedSet.exercise_id
+      && previousSet.rest_time_seconds === normalizedSet.rest_time_seconds
+      && previousSet.done === normalizedSet.done
+      && previousSet.notes === normalizedSet.notes
+      && previousSet.type === normalizedSet.type
+      && previousSet.created_at === normalizedSet.created_at
+      && previousSet.updated_at === normalizedSet.updated_at
+      && previousSet.deleted_at === normalizedSet.deleted_at
+    ) {
+      return previousSet;
+    }
+
+    return normalizedSet;
+  });
+};
+
 export const buildIntensityInputs = (
   sets: ExerciseSet[],
   displayUnitId?: number,
 ): Record<string, string> =>
   sets.reduce<Record<string, string>>((acc, set) => {
-    acc[String(set.id)] = formatIntensityInputValue(
+    acc[getExerciseSetClientKey(set)] = formatIntensityInputValue(
       convertIntensityValue(set.intensity, set.intensity_unit_id, displayUnitId) ??
         set.intensity,
     );
@@ -51,7 +215,7 @@ export const buildIntensityInputs = (
 
 export const buildRepsInputs = (sets: ExerciseSet[]): Record<string, string> =>
   sets.reduce<Record<string, string>>((acc, set) => {
-    acc[String(set.id)] =
+    acc[getExerciseSetClientKey(set)] =
       set.reps === null || set.reps === undefined ? "" : String(set.reps);
     return acc;
   }, {});
@@ -60,7 +224,7 @@ export const buildDurationInputs = (
   sets: ExerciseSet[],
 ): Record<string, string> =>
   sets.reduce<Record<string, string>>((acc, set) => {
-    acc[String(set.id)] = formatDurationInputValue(set.duration_seconds);
+    acc[getExerciseSetClientKey(set)] = formatDurationInputValue(set.duration_seconds);
     return acc;
   }, {});
 

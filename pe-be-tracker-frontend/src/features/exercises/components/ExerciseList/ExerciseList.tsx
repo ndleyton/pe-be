@@ -1,5 +1,6 @@
 import { memo, useCallback, useState } from "react";
 import { Exercise } from "@/features/exercises/api";
+import { getExerciseClientKey } from "@/features/exercises/lib/exerciseRow";
 import { Dumbbell } from "lucide-react";
 import ExerciseRow from "../ExerciseRow";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
@@ -61,17 +62,21 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
 
       {exercises.length > 0 && (
         <div className="space-y-4">
-          {exercises.map((exercise) => (
-            <ExerciseRow
-              key={exercise.id}
-              exercise={exercise}
-              workoutId={workoutId}
-              onExerciseUpdate={onExerciseUpdate}
-              onExerciseDelete={onExerciseDelete}
-              isExpanded={expandedIds.has(exercise.id)}
-              onToggleExpand={handleToggleExpand}
-            />
-          ))}
+          {exercises.map((exercise) => {
+            const exerciseKey = getExerciseClientKey(exercise);
+
+            return (
+              <ExerciseRow
+                key={exerciseKey}
+                exercise={exercise}
+                workoutId={workoutId}
+                onExerciseUpdate={onExerciseUpdate}
+                onExerciseDelete={onExerciseDelete}
+                isExpanded={expandedIds.has(exerciseKey)}
+                onToggleExpand={handleToggleExpand}
+              />
+            );
+          })}
         </div>
       )}
     </div>

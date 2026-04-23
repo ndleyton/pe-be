@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -103,6 +103,11 @@ export const useWorkoutExerciseActions = ({
       });
     },
   });
+  const deleteExerciseMutateRef = useRef(deleteExerciseMutation.mutate);
+
+  useEffect(() => {
+    deleteExerciseMutateRef.current = deleteExerciseMutation.mutate;
+  }, [deleteExerciseMutation.mutate]);
 
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id),
@@ -181,6 +186,7 @@ export const useWorkoutExerciseActions = ({
       const optimisticId = `optimistic-${now}-${exerciseType.id}`;
       const optimisticExercise: Exercise = {
         id: optimisticId,
+        client_key: optimisticId,
         timestamp: data.timestamp ?? now,
         notes: data.notes ?? null,
         exercise_type_id: data.exercise_type_id,
@@ -233,6 +239,7 @@ export const useWorkoutExerciseActions = ({
 
       const mergedExercise: Exercise = {
         ...createdExercise,
+        client_key: ctx.optimisticId,
         exercise_type: createdExercise.exercise_type ?? ctx.exerciseType,
         exercise_sets: createdExercise.exercise_sets ?? [],
       };
@@ -261,12 +268,12 @@ export const useWorkoutExerciseActions = ({
 
   const handleExerciseDelete = useCallback((exerciseId: number | string) => {
     if (isAuthenticated) {
-      deleteExerciseMutation.mutate(exerciseId);
+      deleteExerciseMutateRef.current(exerciseId);
       return;
     }
 
     guestDeleteExercise(String(exerciseId));
-  }, [deleteExerciseMutation, guestDeleteExercise, isAuthenticated]);
+  }, [guestDeleteExercise, isAuthenticated]);
 
   const handleRegenerateRecap = useCallback(() => {
     if (workoutId && isAuthenticated) {

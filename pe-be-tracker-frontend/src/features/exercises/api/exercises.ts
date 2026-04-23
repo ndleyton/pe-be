@@ -16,6 +16,7 @@ export interface IntensityUnit {
 
 export interface ExerciseSet {
   id: number | string;
+  client_key?: string;
   reps: number | null;
   duration_seconds?: number | null;
   intensity: number | null;
@@ -34,6 +35,7 @@ export interface ExerciseSet {
 
 export interface Exercise {
   id: number | string;
+  client_key?: string;
   timestamp: string | null;
   notes: string | null;
   exercise_type_id: number | string;

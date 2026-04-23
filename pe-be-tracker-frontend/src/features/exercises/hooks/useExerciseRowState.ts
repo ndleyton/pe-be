@@ -10,6 +10,7 @@ import {
   buildDurationInputs,
   buildIntensityInputs,
   buildRepsInputs,
+  getExerciseSetClientKey,
 } from "@/features/exercises/lib/exerciseRow";
 import {
   resolveExerciseDisplayIntensityUnit,
@@ -21,6 +22,20 @@ import {
 } from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
+
+const areStringRecordValuesEqual = (
+  left: Record<string, string>,
+  right: Record<string, string>,
+) => {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every((key) => left[key] === right[key]);
+};
 
 export const useExerciseRowState = ({
   exercise,
@@ -67,9 +82,28 @@ export const useExerciseRowState = ({
   const debouncedSetRirValue = useDebounce(setRirValue, 1000);
 
   useEffect(() => {
-    setIntensityInputs(buildIntensityInputs(exerciseSets, currentIntensityUnit.id));
-    setRepsInputs(buildRepsInputs(exerciseSets));
-    setDurationInputs(buildDurationInputs(exerciseSets));
+    const nextIntensityInputs = buildIntensityInputs(
+      exerciseSets,
+      currentIntensityUnit.id,
+    );
+    const nextRepsInputs = buildRepsInputs(exerciseSets);
+    const nextDurationInputs = buildDurationInputs(exerciseSets);
+
+    setIntensityInputs((currentIntensityInputs) =>
+      areStringRecordValuesEqual(currentIntensityInputs, nextIntensityInputs)
+        ? currentIntensityInputs
+        : nextIntensityInputs,
+    );
+    setRepsInputs((currentRepsInputs) =>
+      areStringRecordValuesEqual(currentRepsInputs, nextRepsInputs)
+        ? currentRepsInputs
+        : nextRepsInputs,
+    );
+    setDurationInputs((currentDurationInputs) =>
+      areStringRecordValuesEqual(currentDurationInputs, nextDurationInputs)
+        ? currentDurationInputs
+        : nextDurationInputs,
+    );
   }, [currentIntensityUnit.id, exerciseSets]);
 
   useEffect(() => {
@@ -87,7 +121,7 @@ export const useExerciseRowState = ({
     }
 
     const currentSet = exerciseSets.find(
-      (set) => String(set.id) === String(activeSetId),
+      (set) => getExerciseSetClientKey(set) === String(activeSetId),
     );
 
     if (!currentSet) {

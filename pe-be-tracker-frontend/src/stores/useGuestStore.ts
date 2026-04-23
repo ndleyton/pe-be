@@ -50,6 +50,7 @@ export interface GuestIntensityUnit {
 
 export interface GuestExerciseSet {
   id: string;
+  client_key?: string;
   reps: number | null;
   duration_seconds?: number | null;
   intensity: number | null;
@@ -68,6 +69,7 @@ export interface GuestExerciseSet {
 
 export interface GuestExercise {
   id: string;
+  client_key?: string;
   timestamp: string | null;
   notes: string | null;
   exercise_type_id: string;
@@ -226,6 +228,7 @@ export const useGuestStore = create<GuestStore>()(
         const newExercise: GuestExercise = {
           ...exercise,
           id,
+          client_key: exercise.client_key ?? id,
           exercise_sets: [],
           created_at: now,
           updated_at: now,
