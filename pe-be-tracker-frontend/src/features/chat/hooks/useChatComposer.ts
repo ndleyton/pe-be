@@ -233,6 +233,7 @@ export const useChatComposer = ({
             timestamp: new Date(),
           },
         ]);
+        clearPendingAttachments();
 
         guestResponseTimeoutRef.current = window.setTimeout(() => {
           setMessages((current) => [
@@ -319,6 +320,7 @@ export const useChatComposer = ({
       clearGuestResponseTimeout,
       clearPendingAttachments,
       clearPendingSubstitutionIntent,
+      clearPendingAttachments,
       conversationId,
       isAuthenticated,
       isLoading,

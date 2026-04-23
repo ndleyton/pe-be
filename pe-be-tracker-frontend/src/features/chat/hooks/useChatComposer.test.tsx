@@ -217,4 +217,41 @@ describe("useChatComposer", () => {
     );
     expect(mockSendChatMessage).not.toHaveBeenCalled();
   });
+
+  it("clears pending attachments after a signed-out send", async () => {
+    vi.useFakeTimers();
+
+    const { result } = renderComposer({ isAuthenticated: false });
+    const file = new File(["png"], "form.png", { type: "image/png" });
+    const event = {
+      target: {
+        files: [file],
+        value: "form.png",
+      },
+    } as unknown as ChangeEvent<HTMLInputElement>;
+
+    act(() => {
+      result.current.handleFileChange(event);
+    });
+
+    expect(result.current.pendingAttachments).toHaveLength(1);
+    expect(result.current.canSubmitMessage).toBe(true);
+
+    await act(async () => {
+      await result.current.handleSubmitMessage();
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        content: "",
+        parts: [],
+      }),
+    );
+    expect(result.current.pendingAttachments).toHaveLength(0);
+    expect(result.current.canSubmitMessage).toBe(false);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+    expect(mockSendChatMessage).not.toHaveBeenCalled();
+  });
 });
