@@ -39,7 +39,7 @@ export const formatIntensityInputValue = (
 
 export const getExerciseClientKey = (
   exercise: Pick<Exercise, "id" | "client_key">,
-): string => exercise.client_key ?? String(exercise.id);
+): string | number => exercise.client_key ?? exercise.id;
 
 export const getExerciseSetClientKey = (set: ExerciseSet): string =>
   set.client_key ?? String(set.id);
@@ -139,7 +139,7 @@ export const normalizeExerciseClientKeys = (
         ?? previousExercise?.client_key
         ?? String(exercise.id),
       exercise_sets: normalizeExerciseSetClientKeys(
-        exercise.exercise_sets,
+        exercise.exercise_sets ?? [],
         previousExercise?.exercise_sets,
       ),
     };
@@ -160,7 +160,7 @@ export const normalizeExerciseClientKeys = (
 };
 
 export const normalizeExerciseSetClientKeys = (
-  sets: ExerciseSet[],
+  sets: ExerciseSet[] | undefined,
   previousSets: ExerciseSet[] = [],
 ): ExerciseSet[] => {
   const previousSetsById = new Map<string, ExerciseSet>();
@@ -169,7 +169,7 @@ export const normalizeExerciseSetClientKeys = (
     previousSetsById.set(String(set.id), set);
   });
 
-  return sets.map((set) => {
+  return (sets ?? []).map((set) => {
     const previousSet = previousSetsById.get(String(set.id));
     const normalizedSet = {
       ...set,

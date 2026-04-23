@@ -152,6 +152,7 @@ vi.mock("lucide-react", async () => {
 describe("ExerciseRow", () => {
   const mockExerciseSet1: ExerciseSet = {
     id: 1,
+    client_key: "1",
     reps: 10,
     duration_seconds: null,
     intensity: 50.5,
@@ -165,6 +166,7 @@ describe("ExerciseRow", () => {
 
   const mockExerciseSet2: ExerciseSet = {
     id: 2,
+    client_key: "2",
     reps: 12,
     duration_seconds: null,
     intensity: 55.0,
