@@ -135,7 +135,6 @@ const ChatPage = () => {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [conversationRestorationResolved, setConversationRestorationResolved] =
     useState(!isAuthenticated);
-  const [isRestoringConversation, setIsRestoringConversation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seededPromptHandledRef = useRef(false);
@@ -468,7 +467,6 @@ const ChatPage = () => {
       activeConversationIdRef.current = undefined;
       clearActiveChatSession();
       setConversationRestorationResolved(true);
-      setIsRestoringConversation(false);
       return;
     }
 
@@ -488,7 +486,6 @@ const ChatPage = () => {
     let cancelled = false;
     const restoreConversation = async () => {
       try {
-        setIsRestoringConversation(true);
         const conversation = await getConversation(storedSession.conversationId);
 
         if (cancelled) {
@@ -527,7 +524,6 @@ const ChatPage = () => {
         }
       } finally {
         if (!cancelled) {
-          setIsRestoringConversation(false);
           setConversationRestorationResolved(true);
         }
       }
@@ -902,12 +898,6 @@ const ChatPage = () => {
                   ></div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {isRestoringConversation && conversationRestorationResolved && messages.length > 0 && (
-            <div className="text-muted-foreground px-2 py-1 text-center text-xs">
-              Syncing saved conversation...
             </div>
           )}
 
