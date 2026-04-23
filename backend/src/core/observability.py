@@ -7,6 +7,7 @@ from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from pydantic import BaseModel
 from opentelemetry.sdk.metrics import MeterProvider
@@ -29,6 +30,7 @@ from src.core.database import engine
 _configured = False
 _sqlalchemy_instrumentor = SQLAlchemyInstrumentor()
 _fastapi_instrumentor = FastAPIInstrumentor()
+_httpx_instrumentor = HTTPXClientInstrumentor()
 _tracer = trace.get_tracer(__name__)
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -186,6 +188,7 @@ def configure_observability(app: FastAPI) -> None:
             excluded_urls=_excluded_urls(),
             server_request_hook=_server_request_hook,
         )
+        _httpx_instrumentor.instrument(tracer_provider=tracer_provider)
 
     if metrics_enabled:
         metric_reader = PeriodicExportingMetricReader(
