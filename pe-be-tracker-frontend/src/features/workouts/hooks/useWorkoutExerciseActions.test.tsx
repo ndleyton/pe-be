@@ -4,6 +4,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  makeExercise,
   makeExerciseType,
   makeWorkout,
 } from "@/test/fixtures";
@@ -166,5 +167,28 @@ describe("useWorkoutExerciseActions", () => {
       }),
     );
     expect(mockCreateExercise).not.toHaveBeenCalled();
+  });
+
+  it("does not retrigger recap generation after a failed attempt while the finish modal stays open", async () => {
+    vi.mocked(api.post).mockRejectedValue(new Error("Recap failed"));
+
+    renderHook(
+      () =>
+        useWorkoutExerciseActions({
+          exercises: [makeExercise({ id: 1 })],
+          isAuthenticated: true,
+          onFinishModalClose: vi.fn(),
+          serverWorkout: makeWorkout({ id: 123, recap: null }),
+          showFinishModal: true,
+          workoutId: "123",
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledTimes(1);
+    });
   });
 });

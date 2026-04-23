@@ -155,11 +155,13 @@ export const useWorkoutExerciseActions = ({
       && !serverWorkout?.recap
       && !generateRecapMutation.isPending
       && !generateRecapMutation.isSuccess
+      && !generateRecapMutation.isError
     ) {
       generateRecapMutation.mutate(workoutId);
     }
   }, [
     exercises.length,
+    generateRecapMutation.isError,
     generateRecapMutation.isPending,
     generateRecapMutation.isSuccess,
     isAuthenticated,
