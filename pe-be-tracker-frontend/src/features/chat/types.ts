@@ -177,6 +177,12 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface PendingAttachment {
+  localId: string;
+  file: File;
+  previewUrl: string;
+}
+
 export interface PersistedChatMessage
   extends Omit<ChatMessage, "timestamp"> {
   timestamp: string;
