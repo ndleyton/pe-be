@@ -116,6 +116,7 @@ async def setup_database():
         # Drop in case a previous interrupted session left stale tables
         await conn.run_sync(Base.metadata.drop_all)
         await conn.execute(text("DROP TYPE IF EXISTS recipe_visibility CASCADE"))
+        await conn.execute(text("DROP TYPE IF EXISTS workout_visibility CASCADE"))
         await conn.execute(text("DROP TYPE IF EXISTS exercise_type_status CASCADE"))
 
     async with test_engine.begin() as conn:

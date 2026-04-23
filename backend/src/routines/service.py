@@ -9,12 +9,16 @@ from datetime import datetime, timezone
 from src.routines import crud
 from src.routines.schemas import (
     AdminRoutineCreate,
+    ExerciseTemplateCreate,
     RoutineCreate,
     RoutineRead,
     RoutineUpdate,
     RoutineSummary,
+    SetTemplateCreate,
 )
+from src.workouts import crud as workouts_crud
 from src.workouts.models import Workout
+from src.workouts.schemas import SaveWorkoutAsRoutineRequest
 from src.routines.models import Routine
 from src.exercises.intensity_units import normalize_intensity_for_storage
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
@@ -70,6 +74,56 @@ class RoutineService:
         """Create a new routine."""
         routine = await crud.create_routine(session, routine_data, user_id)
         return RoutineRead.model_validate(routine)
+
+    async def clone_public_workout_to_private_routine(
+        self,
+        session: AsyncSession,
+        source_workout_id: int,
+        user_id: int,
+        clone_request: SaveWorkoutAsRoutineRequest | None = None,
+    ) -> RoutineRead:
+        """Clone a public completed workout into a new private routine."""
+        source_workout = await workouts_crud.get_public_completed_workout_by_id(
+            session, source_workout_id
+        )
+        if source_workout is None:
+            raise LookupError("Workout not found")
+
+        routine_name = (
+            clone_request.name
+            if clone_request and clone_request.name
+            else source_workout.name or f"Workout {source_workout.id}"
+        )
+
+        routine_data = RoutineCreate(
+            name=routine_name,
+            description=clone_request.description if clone_request else None,
+            workout_type_id=source_workout.workout_type_id,
+            visibility=Routine.RoutineVisibility.private,
+            exercise_templates=[
+                ExerciseTemplateCreate(
+                    exercise_type_id=exercise.exercise_type_id,
+                    notes=None,
+                    set_templates=[
+                        SetTemplateCreate(
+                            reps=exercise_set.reps,
+                            duration_seconds=exercise_set.duration_seconds,
+                            intensity=exercise_set.intensity,
+                            rpe=exercise_set.rpe,
+                            rir=exercise_set.rir,
+                            intensity_unit_id=exercise_set.intensity_unit_id,
+                            notes=None,
+                            type=exercise_set.type,
+                        )
+                        for exercise_set in exercise.exercise_sets
+                        if exercise_set.deleted_at is None
+                    ],
+                )
+                for exercise in source_workout.exercises
+                if exercise.deleted_at is None
+            ],
+        )
+        return await self.create_routine(session, routine_data, user_id)
 
     async def create_routine_admin(
         self, session: AsyncSession, routine_data: AdminRoutineCreate, user_id: int

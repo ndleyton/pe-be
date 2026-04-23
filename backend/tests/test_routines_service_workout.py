@@ -1,13 +1,16 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
+from datetime import datetime, timezone
 
 from sqlalchemy import select, func
 from src.routines.service import routine_service
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.exercises.models import Exercise
-from src.workouts.models import WorkoutType
+from src.exercise_sets.models import ExerciseSet
+from src.workouts.models import Workout, WorkoutType
+from src.workouts.schemas import SaveWorkoutAsRoutineRequest
 from src.users.models import User
 
 
@@ -256,6 +259,175 @@ async def test_create_workout_from_routine_preserves_source_unit_when_no_intensi
     assert created_set.intensity_unit_id == lbs.id
     assert created_set.canonical_intensity_unit_id == lbs.id
     assert created_set.canonical_intensity_unit.id == lbs.id
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_clone_public_workout_to_private_routine_strips_sensitive_fields(
+    db_session: AsyncSession,
+):
+    workout_type = WorkoutType(name="Clone Source", description="desc")
+    kg = IntensityUnit(name="Kilograms", abbreviation="kg")
+    db_session.add_all([workout_type, kg])
+    await db_session.flush()
+
+    exercise_type = ExerciseType(
+        name="Clone Exercise",
+        description="x",
+        default_intensity_unit=kg.id,
+    )
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    owner = User(
+        email="clone-owner@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    viewer = User(
+        email="clone-viewer@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add_all([owner, viewer])
+    await db_session.flush()
+
+    source_workout = Workout(
+        name="Public Push Day",
+        notes="Private workout note",
+        recap="Sensitive recap",
+        start_time=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 20, 13, 0, tzinfo=timezone.utc),
+        workout_type_id=workout_type.id,
+        owner_id=owner.id,
+        visibility=Workout.WorkoutVisibility.public,
+    )
+    db_session.add(source_workout)
+    await db_session.flush()
+
+    exercise = Exercise(
+        timestamp=source_workout.start_time,
+        notes="Private exercise note",
+        exercise_type_id=exercise_type.id,
+        workout_id=source_workout.id,
+    )
+    db_session.add(exercise)
+    await db_session.flush()
+
+    db_session.add(
+        ExerciseSet(
+            reps=8,
+            duration_seconds=90,
+            intensity=Decimal("100.0"),
+            rpe=Decimal("8.5"),
+            rir=Decimal("1.5"),
+            intensity_unit_id=kg.id,
+            canonical_intensity=Decimal("100.00000"),
+            canonical_intensity_unit_id=kg.id,
+            exercise_id=exercise.id,
+            rest_time_seconds=180,
+            done=True,
+            notes="Private set note",
+            type="working",
+        )
+    )
+    await db_session.commit()
+
+    routine = await routine_service.clone_public_workout_to_private_routine(
+        db_session,
+        source_workout_id=source_workout.id,
+        user_id=viewer.id,
+        clone_request=SaveWorkoutAsRoutineRequest(
+            name="Viewer Routine",
+            description="Reusable copy",
+        ),
+    )
+
+    assert routine.name == "Viewer Routine"
+    assert routine.description == "Reusable copy"
+    assert routine.creator_id == viewer.id
+    assert routine.visibility == Routine.RoutineVisibility.private
+    assert routine.workout_type_id == workout_type.id
+    assert len(routine.exercise_templates) == 1
+
+    cloned_exercise = routine.exercise_templates[0]
+    assert cloned_exercise.exercise_type_id == exercise_type.id
+    assert cloned_exercise.notes is None
+    assert len(cloned_exercise.set_templates) == 1
+
+    cloned_set = cloned_exercise.set_templates[0]
+    assert cloned_set.reps == 8
+    assert cloned_set.duration_seconds == 90
+    assert cloned_set.intensity == Decimal("100.0")
+    assert cloned_set.rpe == Decimal("8.5")
+    assert cloned_set.rir == Decimal("1.5")
+    assert cloned_set.intensity_unit_id == kg.id
+    assert cloned_set.type == "working"
+    assert cloned_set.notes is None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_clone_public_workout_to_private_routine_rejects_private_or_open_source(
+    db_session: AsyncSession,
+):
+    workout_type = WorkoutType(name="Clone Guard", description="desc")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    owner = User(
+        email="clone-guard-owner@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    viewer = User(
+        email="clone-guard-viewer@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add_all([owner, viewer])
+    await db_session.flush()
+
+    private_workout = Workout(
+        name="Private Workout",
+        start_time=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 20, 13, 0, tzinfo=timezone.utc),
+        workout_type_id=workout_type.id,
+        owner_id=owner.id,
+        visibility=Workout.WorkoutVisibility.private,
+    )
+    open_public_workout = Workout(
+        name="Open Workout",
+        start_time=datetime(2026, 4, 20, 14, 0, tzinfo=timezone.utc),
+        end_time=None,
+        workout_type_id=workout_type.id,
+        owner_id=owner.id,
+        visibility=Workout.WorkoutVisibility.public,
+    )
+    db_session.add_all([private_workout, open_public_workout])
+    await db_session.commit()
+
+    with pytest.raises(LookupError, match="Workout not found"):
+        await routine_service.clone_public_workout_to_private_routine(
+            db_session,
+            source_workout_id=private_workout.id,
+            user_id=viewer.id,
+        )
+
+    with pytest.raises(LookupError, match="Workout not found"):
+        await routine_service.clone_public_workout_to_private_routine(
+            db_session,
+            source_workout_id=open_public_workout.id,
+            user_id=viewer.id,
+        )
 
 
 @pytest.mark.integration

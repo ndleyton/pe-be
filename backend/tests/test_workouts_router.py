@@ -247,3 +247,57 @@ async def test_get_exercises_in_workout_handles_not_found_and_success(
     found = await async_client.get(f"{settings.API_PREFIX}/workouts/8/exercises")
     assert found.status_code == 200
     assert found.json()[0]["id"] == 1
+
+
+async def test_save_public_workout_as_routine_returns_created_routine(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
+    now = datetime(2026, 3, 12, 12, 0, tzinfo=timezone.utc).isoformat()
+    created_routine = {
+        "id": 21,
+        "name": "Copied Routine",
+        "description": "Reusable copy",
+        "workout_type_id": 4,
+        "creator_id": 123,
+        "visibility": "private",
+        "is_readonly": False,
+        "author": None,
+        "category": None,
+        "created_at": now,
+        "updated_at": now,
+        "times_used": 0,
+        "exercise_templates": [],
+    }
+
+    fake_clone = AsyncMock(return_value=created_routine)
+    monkeypatch.setattr(
+        "src.workouts.router.routine_service.clone_public_workout_to_private_routine",
+        fake_clone,
+    )
+
+    response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/14/save-as-routine",
+        json={"name": "Copied Routine", "description": "Reusable copy"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["id"] == 21
+    assert body["visibility"] == "private"
+    fake_clone.assert_awaited_once()
+
+
+async def test_save_public_workout_as_routine_returns_404_for_missing_source(
+    async_client: AsyncClient, monkeypatch, override_workout_user
+):
+    monkeypatch.setattr(
+        "src.workouts.router.routine_service.clone_public_workout_to_private_routine",
+        AsyncMock(side_effect=LookupError("Workout not found")),
+    )
+
+    response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/404/save-as-routine"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Workout not found"
