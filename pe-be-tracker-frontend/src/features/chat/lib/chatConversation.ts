@@ -23,7 +23,7 @@ const parseTimestamp = (value: string): Date => {
 const parseConversationParts = (
   message: ConversationMessageResponse,
 ): ChatMessage["parts"] => {
-  if (!message.parts.length) {
+  if (!message.parts?.length) {
     return message.content
       ? [{ type: "text", text: message.content } satisfies TextMessagePart]
       : [];

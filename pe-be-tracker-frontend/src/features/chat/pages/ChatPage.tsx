@@ -127,6 +127,7 @@ const ChatPage = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | undefined>();
+  const [conversationNotFound, setConversationNotFound] = useState(false);
   const [pendingSubstitutionIntent, setPendingSubstitutionIntent] =
     useState<ExerciseSubstitutionChatIntent | null>(null);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
@@ -248,6 +249,7 @@ const ChatPage = () => {
     setIsLoading(false);
     setAttachmentError(null);
     setPendingSubstitutionIntent(null);
+    setConversationNotFound(false);
   }, [clearPendingAttachments]);
 
   const buildUserParts = async (
@@ -458,6 +460,9 @@ const ChatPage = () => {
   };
 
   const handleStartNewChat = () => {
+    if (isLoading) {
+      return;
+    }
     resetConversationState();
   };
 
@@ -520,6 +525,7 @@ const ChatPage = () => {
             || activeConversationIdRef.current === storedSession.conversationId
           )
         ) {
+          setConversationNotFound(true);
           resetConversationState();
         }
       } finally {
@@ -553,8 +559,12 @@ const ChatPage = () => {
       return;
     }
 
-    if (!isAuthenticated || !conversationId || messages.length === 0) {
+    if (!isAuthenticated || conversationNotFound) {
       clearActiveChatSession();
+      return;
+    }
+
+    if (!conversationId || messages.length === 0) {
       return;
     }
 
@@ -567,6 +577,7 @@ const ChatPage = () => {
     conversationRestorationResolved,
     isAuthenticated,
     messages,
+    conversationNotFound,
   ]);
 
   useEffect(() => {
@@ -793,7 +804,7 @@ const ChatPage = () => {
           variant="outline"
           className="rounded-xl"
           onClick={handleStartNewChat}
-          disabled={messages.length === 0 && !conversationId}
+          disabled={isLoading || (messages.length === 0 && !conversationId)}
         >
           New chat
         </Button>
