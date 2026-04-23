@@ -79,6 +79,7 @@ class Workout(Base):
         SAEnum(WorkoutVisibility, name="workout_visibility"),
         nullable=False,
         default=WorkoutVisibility.private,
+        server_default=WorkoutVisibility.private.value,
     )
 
     # Relationships
