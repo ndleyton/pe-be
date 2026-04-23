@@ -116,12 +116,40 @@ export interface ChatApiPart {
   type: "text" | "image";
   text?: string;
   attachment_id?: number;
+  mime_type?: string;
+  filename?: string;
 }
 
 export interface ChatApiMessage {
   role: string;
   content?: string;
   parts?: ChatApiPart[];
+}
+
+export interface ConversationMessagePartResponse {
+  id: number;
+  type: "text" | "image";
+  text?: string | null;
+  attachment_id?: number | null;
+  mime_type?: string | null;
+  filename?: string | null;
+}
+
+export interface ConversationMessageResponse {
+  id: number;
+  role: string;
+  content: string;
+  parts: ConversationMessagePartResponse[];
+  created_at: string;
+}
+
+export interface ConversationResponse {
+  id: number;
+  title?: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  messages?: ConversationMessageResponse[] | null;
 }
 
 export interface ExerciseSubstitutionChatIntent {
@@ -147,4 +175,9 @@ export interface ChatMessage {
   parts?: UIMessagePart[];
   events?: ChatEvent[];
   timestamp: Date;
+}
+
+export interface PersistedChatMessage
+  extends Omit<ChatMessage, "timestamp"> {
+  timestamp: string;
 }

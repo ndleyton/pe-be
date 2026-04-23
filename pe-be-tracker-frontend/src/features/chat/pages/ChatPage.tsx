@@ -5,13 +5,22 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { config } from "@/app/config/env";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useAuthStore } from "@/stores";
 
+import { buildAttachmentUrl } from "../lib/chatAttachments";
+import { normalizeChatCopy } from "../lib/chatCopy";
+import { mapConversationToChatMessages } from "../lib/chatConversation";
+import { extractErrorMessage } from "../lib/chatErrors";
+import { extractChatEvents } from "../lib/chatEvents";
+import {
+  clearActiveChatSession,
+  persistActiveChatSession,
+  readActiveChatSession,
+} from "../lib/chatSession";
 import {
   ChatWorkoutWidget,
   ChatRoutineWidget,
@@ -29,12 +38,8 @@ import {
   type ChatApiRoutineCreatedEvent,
   type ChatApiExerciseSubstitutionsEvent,
   type ExerciseSubstitutionChatIntent,
+  type ConversationResponse,
 } from "../types";
-import {
-  normalizeChatCopy,
-  extractChatEvents,
-  extractErrorMessage,
-} from "../utils";
 
 interface ChatResponse {
   message: string;
@@ -86,9 +91,6 @@ const buildGroundedSubstitutionRequest = (
   ].join("\n");
 };
 
-const buildAttachmentUrl = (attachmentId: number) =>
-  `${config.apiBaseUrl}${endpoints.chatAttachmentById(attachmentId)}`;
-
 const uploadChatAttachment = async (
   file: File,
 ): Promise<UploadedAttachment> => {
@@ -110,6 +112,13 @@ const sendChatMessage = async (
   return response.data;
 };
 
+const getConversation = async (
+  conversationId: number,
+): Promise<ConversationResponse> => {
+  const response = await api.get(endpoints.chatConversationById(conversationId));
+  return response.data;
+};
+
 const ChatPage = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
@@ -124,9 +133,14 @@ const ChatPage = () => {
     [],
   );
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [conversationRestorationResolved, setConversationRestorationResolved] =
+    useState(!isAuthenticated);
+  const [isRestoringConversation, setIsRestoringConversation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seededPromptHandledRef = useRef(false);
+  const conversationRestoreAttemptedRef = useRef(false);
+  const activeConversationIdRef = useRef<number | undefined>(undefined);
   const routeState = location.state as ChatPageLocationState | null;
   const chatIntent = routeState?.chatIntent;
   const autoStartChatIntent = routeState?.autoStartChatIntent === true;
@@ -150,7 +164,8 @@ const ChatPage = () => {
       conversationId?: number;
     }) => sendChatMessage(chatMessages, convId),
     onSuccess: (response) => {
-      if (response.conversation_id && !conversationId) {
+      if (response.conversation_id && response.conversation_id !== conversationId) {
+        activeConversationIdRef.current = response.conversation_id;
         setConversationId(response.conversation_id);
       }
 
@@ -199,6 +214,10 @@ const ChatPage = () => {
   });
 
   useEffect(() => {
+    activeConversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -219,6 +238,18 @@ const ChatPage = () => {
       fileInputRef.current.value = "";
     }
   }, [pendingAttachments]);
+
+  const resetConversationState = useCallback(() => {
+    activeConversationIdRef.current = undefined;
+    clearPendingAttachments();
+    clearActiveChatSession();
+    setMessages([]);
+    setConversationId(undefined);
+    setInputValue("");
+    setIsLoading(false);
+    setAttachmentError(null);
+    setPendingSubstitutionIntent(null);
+  }, [clearPendingAttachments]);
 
   const buildUserParts = async (
     messageContent: string,
@@ -427,8 +458,124 @@ const ChatPage = () => {
     }, 100);
   };
 
+  const handleStartNewChat = () => {
+    resetConversationState();
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      conversationRestoreAttemptedRef.current = false;
+      activeConversationIdRef.current = undefined;
+      clearActiveChatSession();
+      setConversationRestorationResolved(true);
+      setIsRestoringConversation(false);
+      return;
+    }
+
+    if (conversationRestoreAttemptedRef.current) {
+      return;
+    }
+
+    conversationRestoreAttemptedRef.current = true;
+    setConversationRestorationResolved(false);
+    const storedSession = readActiveChatSession();
+
+    if (!storedSession?.conversationId) {
+      setConversationRestorationResolved(true);
+      return;
+    }
+
+    let cancelled = false;
+    const restoreConversation = async () => {
+      try {
+        setIsRestoringConversation(true);
+        const conversation = await getConversation(storedSession.conversationId);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (storedSession.messages.length === 0) {
+          activeConversationIdRef.current = conversation.id;
+          setMessages(mapConversationToChatMessages(conversation));
+          setConversationId(conversation.id);
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const status =
+          typeof error === "object"
+          && error !== null
+          && "response" in error
+          && typeof error.response === "object"
+          && error.response !== null
+          && "status" in error.response
+          && typeof error.response.status === "number"
+            ? error.response.status
+            : null;
+
+        if (
+          status === 404
+          && (
+            activeConversationIdRef.current === undefined
+            || activeConversationIdRef.current === storedSession.conversationId
+          )
+        ) {
+          resetConversationState();
+        }
+      } finally {
+        if (!cancelled) {
+          setIsRestoringConversation(false);
+          setConversationRestorationResolved(true);
+        }
+      }
+    };
+
+    if (storedSession.messages.length > 0) {
+      activeConversationIdRef.current = storedSession.conversationId;
+      setMessages(storedSession.messages);
+      setConversationId(storedSession.conversationId);
+      setConversationRestorationResolved(true);
+      void restoreConversation();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void restoreConversation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, resetConversationState]);
+
+  useEffect(() => {
+    if (!conversationRestorationResolved) {
+      return;
+    }
+
+    if (!isAuthenticated || !conversationId || messages.length === 0) {
+      clearActiveChatSession();
+      return;
+    }
+
+    persistActiveChatSession({
+      conversationId,
+      messages,
+    });
+  }, [
+    conversationId,
+    conversationRestorationResolved,
+    isAuthenticated,
+    messages,
+  ]);
+
   useEffect(() => {
     if (
+      !conversationRestorationResolved ||
       !autoStartChatIntent ||
       !chatIntent ||
       seededPromptHandledRef.current ||
@@ -473,6 +620,7 @@ const ChatPage = () => {
   }, [
     autoStartChatIntent,
     chatIntent,
+    conversationRestorationResolved,
     location.hash,
     location.pathname,
     location.search,
@@ -644,11 +792,32 @@ const ChatPage = () => {
           </h1>
           <p className="text-muted-foreground text-xs">Text + image coaching</p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-xl"
+          onClick={handleStartNewChat}
+          disabled={messages.length === 0 && !conversationId}
+        >
+          New chat
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <div className="mx-auto max-w-4xl">
-          {messages.length === 0 && (
+          {isAuthenticated && !conversationRestorationResolved && (
+            <div className="px-4 py-8 text-center">
+              <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                <Bot className="text-primary h-8 w-8" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">Restoring chat</h3>
+              <p className="text-muted-foreground text-sm">
+                Loading your latest conversation for this session.
+              </p>
+            </div>
+          )}
+
+          {conversationRestorationResolved && messages.length === 0 && (
             <div className="px-4 py-8 text-center">
               <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
                 <Bot className="text-primary h-8 w-8" />
@@ -733,6 +902,12 @@ const ChatPage = () => {
                   ></div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {isRestoringConversation && conversationRestorationResolved && messages.length > 0 && (
+            <div className="text-muted-foreground px-2 py-1 text-center text-xs">
+              Syncing saved conversation...
             </div>
           )}
 
