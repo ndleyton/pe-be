@@ -3,6 +3,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 
 from src.core.config import settings
 import src.exercise_sets.crud as exercise_sets_crud
@@ -36,6 +38,17 @@ from tests.test_exercises_crud import (
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+class _Orig(Exception):
+    def __init__(self, pgcode=None):
+        super().__init__("db error")
+        if pgcode is not None:
+            self.pgcode = pgcode
+
+
+def _integrity_error(pgcode=None) -> IntegrityError:
+    return IntegrityError("INSERT", {}, _Orig(pgcode=pgcode))
 
 
 class _FakeTrace:
@@ -137,6 +150,37 @@ async def test_workout_service_crud_wrappers_forward_calls(monkeypatch):
     fake_update_workout.assert_awaited_once_with(session, 10, workout_update, 7)
     fake_get_workout_types.assert_awaited_once_with(session)
     fake_create_workout_type.assert_awaited_once_with(session, workout_type_create)
+
+
+@pytest.mark.parametrize(
+    ("side_effect", "status_code", "detail_fragment"),
+    [
+        (ValueError("Workout type with name 'Strength' already exists"), 400, "already exists"),
+        (_integrity_error("23505"), status.HTTP_400_BAD_REQUEST, "already exists"),
+        (
+            _integrity_error(),
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "database constraint",
+        ),
+    ],
+)
+async def test_create_new_workout_type_maps_errors(
+    monkeypatch, side_effect, status_code, detail_fragment
+):
+    monkeypatch.setattr(
+        workouts_service,
+        "create_workout_type",
+        AsyncMock(side_effect=side_effect),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await WorkoutTypeService.create_new_workout_type(
+            object(),
+            WorkoutTypeCreate(name="Strength", description="Heavy"),
+        )
+
+    assert exc_info.value.status_code == status_code
+    assert detail_fragment in exc_info.value.detail
 
 
 async def test_remove_workout_is_idempotent_and_rolls_back_on_failure():
