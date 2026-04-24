@@ -79,10 +79,10 @@ async def get_workout_by_id(
 
 
 async def get_public_completed_workout_by_id(
-    session: AsyncSession, workout_id: int
+    session: AsyncSession, workout_id: int, owner_id: int | None = None
 ) -> Optional[Workout]:
     """Get a public completed workout by ID with the fixed detail graph loaded."""
-    result = await session.execute(
+    stmt = (
         select(Workout)
         .options(
             joinedload(
@@ -98,6 +98,9 @@ async def get_public_completed_workout_by_id(
             Workout.end_time.is_not(None),
         )
     )
+    if owner_id is not None:
+        stmt = stmt.where(Workout.owner_id == owner_id)
+    result = await session.execute(stmt)
     return result.unique().scalar_one_or_none()
 
 

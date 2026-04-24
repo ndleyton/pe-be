@@ -43,6 +43,12 @@ const CreateRoutinePage = lazy(
   () => import("./features/routines/pages/CreateRoutinePage"),
 );
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
+const PublicProfilePage = lazy(
+  () => import("./features/profile/pages/PublicProfilePage"),
+);
+const PublicActivityPage = lazy(
+  () => import("./features/profile/pages/PublicActivityPage"),
+);
 
 // Enhanced loading component with reduced CLS and accessibility
 const LoadingFallback = () => (
@@ -156,6 +162,14 @@ const appRoutes: RouteObject[] = [
       {
         path: "profile",
         element: withSuspense(<ProfilePage />, <ProfilePageSkeleton />),
+      },
+      {
+        path: "u/:username",
+        element: withSuspense(<PublicProfilePage />, <ProfilePageSkeleton />),
+      },
+      {
+        path: "u/:username/activities/:workoutId",
+        element: withSuspense(<PublicActivityPage />, <WorkoutPageSkeleton />),
       },
       {
         path: "*",

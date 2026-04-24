@@ -84,4 +84,5 @@ class Workout(Base):
 
     # Relationships
     owner: Mapped["User"] = relationship(back_populates="workouts")
+    workout_type: Mapped["WorkoutType"] = relationship("WorkoutType", lazy="joined")
     exercises: Mapped[List["Exercise"]] = relationship(back_populates="workout")

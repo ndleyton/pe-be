@@ -3,7 +3,7 @@ from typing import List, Optional, TYPE_CHECKING
 from src.workouts.models import Workout
 from src.routines.models import Routine
 
-from sqlalchemy import Integer, String, ForeignKey
+from sqlalchemy import Boolean, Index, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from fastapi_users_db_sqlalchemy import (
     SQLAlchemyBaseUserTable,
@@ -37,8 +37,15 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     """User model for application users"""
 
     __tablename__ = "users"
+    __table_args__ = (Index("ix_users_username_unique", "username", unique=True),)
 
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    username: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_profile_public: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     # Relationships
     oauth_accounts: Mapped[List[OAuthAccount]] = relationship(

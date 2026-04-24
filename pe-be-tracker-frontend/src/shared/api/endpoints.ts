@@ -53,6 +53,16 @@ export const endpoints = {
     googleAuthorize: "/auth/google/authorize",
   },
 
+  // Public profiles
+  publicProfile: (username: string) => `/profiles/${username}`,
+  publicProfileActivities: (username: string) => `/profiles/${username}/activities`,
+  publicProfileActivity: (username: string, workoutId: string | number) =>
+    `/profiles/${username}/activities/${workoutId}`,
+  savePublicProfileActivityAsRoutine: (
+    username: string,
+    workoutId: string | number,
+  ) => `/profiles/${username}/activities/${workoutId}/save-as-routine`,
+
   admin: {
     exerciseTypeReviewQueue: "/admin/exercise-types/review-queue",
     releaseExerciseType: (id: string | number) =>
