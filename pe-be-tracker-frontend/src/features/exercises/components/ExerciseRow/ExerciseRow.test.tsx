@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import ExerciseRow from "./ExerciseRow";
@@ -883,43 +883,54 @@ describe("ExerciseRow", () => {
   });
 
   it("flushes debounced set updates by server id on unmount", async () => {
-    const user = userEvent.setup();
-    const exerciseWithStableClientKey: Exercise = {
-      ...mockExercise,
-      exercise_sets: [
-        {
-          ...mockExerciseSet1,
-          id: 999,
-          client_key: "temp-999",
-        },
-      ],
-    };
+    vi.useFakeTimers();
+    try {
+      const exerciseWithStableClientKey: Exercise = {
+        ...mockExercise,
+        exercise_sets: [
+          {
+            ...mockExerciseSet1,
+            id: 999,
+            client_key: "temp-999",
+          },
+        ],
+      };
 
-    const { container, unmount } = render(
-      <ExerciseRow
-        {...defaultProps}
-        exercise={exerciseWithStableClientKey}
-      />,
-    );
+      const { container, unmount } = render(
+        <ExerciseRow
+          {...defaultProps}
+          exercise={exerciseWithStableClientKey}
+        />,
+      );
 
-    const repsInputs = Array.from(
-      container.querySelectorAll('input[inputmode="numeric"]'),
-    ) as HTMLInputElement[];
-    const repsInput = repsInputs[0];
+      const repsInputs = Array.from(
+        container.querySelectorAll('input[inputmode="numeric"]'),
+      ) as HTMLInputElement[];
+      const repsInput = repsInputs[0];
 
-    await user.clear(repsInput);
-    await user.type(repsInput, "15");
-    await user.keyboard("{Enter}");
+      fireEvent.change(repsInput, { target: { value: "15" } });
+      fireEvent.blur(repsInput);
 
-    vi.clearAllMocks();
-    unmount();
+      vi.clearAllMocks();
 
-    await waitFor(() => {
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      act(() => {
+        unmount();
+      });
+
+      act(() => {
+        vi.runOnlyPendingTimers();
+      });
+
       expect(updateExerciseSet).toHaveBeenCalledWith(999, {
         reps: 15,
         duration_seconds: null,
       });
-    });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("restores the saved reps value on Escape", async () => {
