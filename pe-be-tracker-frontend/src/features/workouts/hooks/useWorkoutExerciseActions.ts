@@ -331,7 +331,9 @@ export const useWorkoutExerciseActions = ({
           }
 
           return oldData.map((exercise) =>
-            exercise.id === updatedExercise.id ? updatedExercise : exercise,
+            String(exercise.id) === String(updatedExercise.id)
+              ? updatedExercise
+              : exercise,
           );
         },
       );
