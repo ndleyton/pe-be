@@ -22,6 +22,16 @@ const preloadExerciseTypeModal = createIntentPreload(() =>
   import("@/features/exercises/components/ExerciseTypeModal/ExerciseTypeModal"),
 );
 
+let optimisticExerciseIdCounter = 0;
+
+const createOptimisticExerciseId = (
+  timestamp: string,
+  exerciseTypeId: ExerciseType["id"],
+) => {
+  optimisticExerciseIdCounter += 1;
+  return `optimistic-${timestamp}-${exerciseTypeId}-${optimisticExerciseIdCounter}`;
+};
+
 const updateWorkoutEndTime = async (workoutId: string) => {
   const response = await api.patch(endpoints.workoutById(workoutId), {
     end_time: getCurrentUTCTimestamp(),
@@ -183,7 +193,7 @@ export const useWorkoutExerciseActions = ({
       const prev = queryClient.getQueryData<Exercise[]>(exercisesQueryKey);
       const hadPrev = prev !== undefined;
       const now = new Date().toISOString();
-      const optimisticId = `optimistic-${now}-${exerciseType.id}`;
+      const optimisticId = createOptimisticExerciseId(now, exerciseType.id);
       const optimisticExercise: Exercise = {
         id: optimisticId,
         client_key: optimisticId,
