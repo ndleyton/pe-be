@@ -121,9 +121,13 @@ export const useExerciseSetActions = ({
 
   useEffect(() => {
     return () => {
-      Object.values(pendingUpdatesRef.current).forEach((update) => {
+      Object.entries(pendingUpdatesRef.current).forEach(([setClientKey, update]) => {
         clearTimeout(update.timeout);
-        void updateExerciseSet(update.serverSetId, update.data).catch((error) => {
+        const serverSetId = exerciseSetsRef.current.find(
+          (set) => getExerciseSetClientKey(set) === setClientKey,
+        )?.id ?? update.serverSetId;
+
+        void updateExerciseSet(serverSetId, update.data).catch((error) => {
           console.error("Failed to flush update on unmount:", error);
         });
       });
@@ -154,6 +158,11 @@ export const useExerciseSetActions = ({
   ) => {
     const key = String(setClientKey);
 
+    const resolveServerSetId = () =>
+      exerciseSetsRef.current.find(
+        (set) => getExerciseSetClientKey(set) === key,
+      )?.id ?? pendingUpdatesRef.current[key]?.serverSetId ?? serverSetId;
+
     if (pendingUpdatesRef.current[key]) {
       clearTimeout(pendingUpdatesRef.current[key].timeout);
       pendingUpdatesRef.current[key].data = {
@@ -172,7 +181,7 @@ export const useExerciseSetActions = ({
     pendingUpdatesRef.current[key].timeout = setTimeout(async () => {
       try {
         const finalData = pendingUpdatesRef.current[key].data;
-        await updateExerciseSet(serverSetId, finalData);
+        await updateExerciseSet(resolveServerSetId(), finalData);
       } catch (error) {
         console.error("Failed to update exercise set:", error);
         invalidateExerciseQuery();
@@ -455,6 +464,10 @@ export const useExerciseSetActions = ({
             : set,
         ),
       );
+      const pendingUpdate = pendingUpdatesRef.current[tempId];
+      if (pendingUpdate) {
+        pendingUpdate.serverSetId = createdSet.id;
+      }
     } catch (error) {
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
