@@ -80,6 +80,26 @@ const areExerciseTypesEquivalent = (
   && areStringArraysEqual(left.muscle_groups, right.muscle_groups)
   && areStringArraysEqual(left.images, right.images);
 
+const areExerciseSetsContentEqual = (
+  left: ExerciseSet,
+  right: ExerciseSet,
+) =>
+  left.id === right.id
+  && left.reps === right.reps
+  && left.duration_seconds === right.duration_seconds
+  && left.intensity === right.intensity
+  && left.rpe === right.rpe
+  && left.rir === right.rir
+  && left.intensity_unit_id === right.intensity_unit_id
+  && left.exercise_id === right.exercise_id
+  && left.rest_time_seconds === right.rest_time_seconds
+  && left.done === right.done
+  && left.notes === right.notes
+  && left.type === right.type
+  && left.created_at === right.created_at
+  && left.updated_at === right.updated_at
+  && left.deleted_at === right.deleted_at;
+
 const areExerciseSetsEquivalent = (
   left: ExerciseSet[],
   right: ExerciseSet[],
@@ -87,23 +107,7 @@ const areExerciseSetsEquivalent = (
   left.length === right.length
   && left.every((leftSet, index) => {
     const rightSet = right[index];
-    return (
-      leftSet.id === rightSet.id
-      && leftSet.reps === rightSet.reps
-      && leftSet.duration_seconds === rightSet.duration_seconds
-      && leftSet.intensity === rightSet.intensity
-      && leftSet.rpe === rightSet.rpe
-      && leftSet.rir === rightSet.rir
-      && leftSet.intensity_unit_id === rightSet.intensity_unit_id
-      && leftSet.exercise_id === rightSet.exercise_id
-      && leftSet.rest_time_seconds === rightSet.rest_time_seconds
-      && leftSet.done === rightSet.done
-      && leftSet.notes === rightSet.notes
-      && leftSet.type === rightSet.type
-      && leftSet.created_at === rightSet.created_at
-      && leftSet.updated_at === rightSet.updated_at
-      && leftSet.deleted_at === rightSet.deleted_at
-    );
+    return areExerciseSetsContentEqual(leftSet, rightSet);
   });
 
 const areExercisesEquivalent = (
@@ -178,21 +182,7 @@ export const normalizeExerciseSetClientKeys = (
 
     if (
       previousSet
-      && previousSet.id === normalizedSet.id
-      && previousSet.reps === normalizedSet.reps
-      && previousSet.duration_seconds === normalizedSet.duration_seconds
-      && previousSet.intensity === normalizedSet.intensity
-      && previousSet.rpe === normalizedSet.rpe
-      && previousSet.rir === normalizedSet.rir
-      && previousSet.intensity_unit_id === normalizedSet.intensity_unit_id
-      && previousSet.exercise_id === normalizedSet.exercise_id
-      && previousSet.rest_time_seconds === normalizedSet.rest_time_seconds
-      && previousSet.done === normalizedSet.done
-      && previousSet.notes === normalizedSet.notes
-      && previousSet.type === normalizedSet.type
-      && previousSet.created_at === normalizedSet.created_at
-      && previousSet.updated_at === normalizedSet.updated_at
-      && previousSet.deleted_at === normalizedSet.deleted_at
+      && areExerciseSetsContentEqual(previousSet, normalizedSet)
     ) {
       return previousSet;
     }
