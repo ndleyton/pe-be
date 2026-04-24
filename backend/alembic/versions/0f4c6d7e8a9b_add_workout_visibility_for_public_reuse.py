@@ -32,7 +32,8 @@ def upgrade() -> None:
     WORKOUT_VISIBILITY_ENUM.create(connection, checkfirst=True)
 
     columns = {column["name"] for column in inspector.get_columns("workouts")}
-    if "visibility" not in columns:
+    added_visibility_column = "visibility" not in columns
+    if added_visibility_column:
         op.add_column(
             "workouts",
             sa.Column(
@@ -42,9 +43,15 @@ def upgrade() -> None:
                 server_default="private",
             ),
         )
-
-    op.execute("UPDATE workouts SET visibility = 'private' WHERE visibility IS NULL")
-    op.alter_column("workouts", "visibility", server_default=None)
+        op.execute(
+            "UPDATE workouts SET visibility = 'private' WHERE visibility IS NULL"
+        )
+        op.alter_column(
+            "workouts",
+            "visibility",
+            existing_type=WORKOUT_VISIBILITY_ENUM,
+            server_default=None,
+        )
 
     indexes = {index["name"] for index in inspector.get_indexes("workouts")}
     if WORKOUTS_PUBLIC_INDEX not in indexes:
