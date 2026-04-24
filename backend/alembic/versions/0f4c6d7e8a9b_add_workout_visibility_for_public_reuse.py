@@ -50,7 +50,7 @@ def upgrade() -> None:
     if WORKOUTS_PUBLIC_INDEX not in indexes:
         op.execute(
             f"CREATE INDEX IF NOT EXISTS {WORKOUTS_PUBLIC_INDEX} "
-            "ON workouts (owner_id, visibility, end_time DESC)"
+            "ON workouts (owner_id, visibility, end_time DESC, id DESC)"
         )
 
 
