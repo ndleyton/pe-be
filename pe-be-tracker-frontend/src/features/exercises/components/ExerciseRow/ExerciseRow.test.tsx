@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import ExerciseRow from "./ExerciseRow";
@@ -152,6 +152,7 @@ vi.mock("lucide-react", async () => {
 describe("ExerciseRow", () => {
   const mockExerciseSet1: ExerciseSet = {
     id: 1,
+    client_key: "1",
     reps: 10,
     duration_seconds: null,
     intensity: 50.5,
@@ -165,6 +166,7 @@ describe("ExerciseRow", () => {
 
   const mockExerciseSet2: ExerciseSet = {
     id: 2,
+    client_key: "2",
     reps: 12,
     duration_seconds: null,
     intensity: 55.0,
@@ -878,6 +880,57 @@ describe("ExerciseRow", () => {
         exercise_sets: [{ ...mockExerciseSet1, reps: null }, mockExerciseSet2],
       });
     });
+  });
+
+  it("flushes debounced set updates by server id on unmount", async () => {
+    vi.useFakeTimers();
+    try {
+      const exerciseWithStableClientKey: Exercise = {
+        ...mockExercise,
+        exercise_sets: [
+          {
+            ...mockExerciseSet1,
+            id: 999,
+            client_key: "temp-999",
+          },
+        ],
+      };
+
+      const { container, unmount } = render(
+        <ExerciseRow
+          {...defaultProps}
+          exercise={exerciseWithStableClientKey}
+        />,
+      );
+
+      const repsInputs = Array.from(
+        container.querySelectorAll('input[inputmode="numeric"]'),
+      ) as HTMLInputElement[];
+      const repsInput = repsInputs[0];
+
+      fireEvent.change(repsInput, { target: { value: "15" } });
+      fireEvent.blur(repsInput);
+
+      vi.clearAllMocks();
+
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      act(() => {
+        unmount();
+      });
+
+      act(() => {
+        vi.runOnlyPendingTimers();
+      });
+
+      expect(updateExerciseSet).toHaveBeenCalledWith(999, {
+        reps: 15,
+        duration_seconds: null,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("restores the saved reps value on Escape", async () => {

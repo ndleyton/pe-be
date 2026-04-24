@@ -196,6 +196,7 @@ const ExerciseTypeDetailsPage = () => {
       const optimisticId = `optimistic-${now}-${exerciseType.id}`;
       const optimisticExercise: Exercise = {
         id: optimisticId,
+        client_key: optimisticId,
         timestamp: now,
         notes: null,
         exercise_type_id: exerciseType.id,

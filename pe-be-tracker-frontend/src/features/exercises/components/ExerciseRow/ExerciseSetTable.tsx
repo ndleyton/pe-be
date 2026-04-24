@@ -6,6 +6,7 @@ import {
   calculateIsPersonalBest,
   EXERCISE_SETS_GRID_CLASSES,
   formatIntensityInputValue,
+  getExerciseSetClientKey,
   getRirDescription,
   getRpeDescription,
 } from "@/features/exercises/lib/exerciseRow";
@@ -134,6 +135,8 @@ const ExerciseSetRow = memo(({
   onToggleSetCompletion,
   onOpenSetOptions,
 }: ExerciseSetRowProps) => {
+  const setKey = getExerciseSetClientKey(set);
+
   return (
     <div
       className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
@@ -165,7 +168,7 @@ const ExerciseSetRow = memo(({
           value={intensityValue}
           data-testid="intensity-input"
           onChange={(event) =>
-            onSetWeightInputValue(set.id, event.target.value)
+            onSetWeightInputValue(setKey, event.target.value)
           }
           onBlur={(event) => {
             const parsedValue = parseDecimalInput(
@@ -173,24 +176,24 @@ const ExerciseSetRow = memo(({
             );
 
             if (parsedValue === null) {
-              onSetWeightInputValue(set.id, savedIntensityValue);
+              onSetWeightInputValue(setKey, savedIntensityValue);
               return;
             }
 
             if (parsedValue === savedDisplayIntensity) {
               onSetWeightInputValue(
-                set.id,
+                setKey,
                 formatIntensityInputValue(parsedValue),
               );
               return;
             }
 
             onSetWeightInputValue(
-              set.id,
+              setKey,
               formatIntensityInputValue(parsedValue),
             );
             onUpdateSetField(
-              set.id,
+              setKey,
               "weight",
               parsedValue,
               currentIntensityUnitId,
@@ -204,7 +207,7 @@ const ExerciseSetRow = memo(({
 
             if (event.key === "Escape") {
               event.preventDefault();
-              onSetWeightInputValue(set.id, savedIntensityValue);
+              onSetWeightInputValue(setKey, savedIntensityValue);
               (event.currentTarget as HTMLInputElement).blur();
             }
           }}
@@ -224,7 +227,7 @@ const ExerciseSetRow = memo(({
             onChange={(event) => {
               const { value } = event.target;
               if (canUpdateDurationInputValue(value)) {
-                onSetDurationInputValue(set.id, value);
+                onSetDurationInputValue(setKey, value);
               }
             }}
             onBlur={(event) => {
@@ -236,11 +239,11 @@ const ExerciseSetRow = memo(({
                 parsedValue === null &&
                 event.currentTarget.value.trim() !== ""
               ) {
-                onSetDurationInputValue(set.id, savedDurationValue);
+                onSetDurationInputValue(setKey, savedDurationValue);
                 return;
               }
 
-              onUpdateSetField(set.id, "duration_seconds", parsedValue);
+              onUpdateSetField(setKey, "duration_seconds", parsedValue);
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -250,7 +253,7 @@ const ExerciseSetRow = memo(({
 
               if (event.key === "Escape") {
                 event.preventDefault();
-                onSetDurationInputValue(set.id, savedDurationValue);
+                onSetDurationInputValue(setKey, savedDurationValue);
                 (event.currentTarget as HTMLInputElement).blur();
               }
             }}
@@ -264,7 +267,7 @@ const ExerciseSetRow = memo(({
             variant="outline"
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
-            onClick={() => onDecrementReps(set.id)}
+            onClick={() => onDecrementReps(setKey)}
             disabled={set.done}
           >
             <Minus className="h-3 w-3" />
@@ -276,7 +279,7 @@ const ExerciseSetRow = memo(({
             onChange={(event) => {
               const { value } = event.target;
               if (value === "" || /^\d+$/.test(value)) {
-                onSetRepsInputValue(set.id, value);
+                onSetRepsInputValue(setKey, value);
               }
             }}
             onBlur={(event) => {
@@ -286,11 +289,11 @@ const ExerciseSetRow = memo(({
                   : Number.parseInt(event.currentTarget.value, 10);
 
               if (parsedValue === null || !Number.isNaN(parsedValue)) {
-                onUpdateSetField(set.id, "reps", parsedValue);
+                onUpdateSetField(setKey, "reps", parsedValue);
                 return;
               }
 
-              onSetRepsInputValue(set.id, savedRepsValue);
+              onSetRepsInputValue(setKey, savedRepsValue);
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -300,7 +303,7 @@ const ExerciseSetRow = memo(({
 
               if (event.key === "Escape") {
                 event.preventDefault();
-                onSetRepsInputValue(set.id, savedRepsValue);
+                onSetRepsInputValue(setKey, savedRepsValue);
                 event.currentTarget.value = savedRepsValue;
                 (event.currentTarget as HTMLInputElement).blur();
               }
@@ -312,7 +315,7 @@ const ExerciseSetRow = memo(({
             variant="outline"
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
-            onClick={() => onIncrementReps(set.id)}
+            onClick={() => onIncrementReps(setKey)}
             disabled={set.done}
           >
             <Plus className="h-3 w-3" />
@@ -339,7 +342,7 @@ const ExerciseSetRow = memo(({
               : "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
             : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
             }`}
-          onClick={() => onToggleSetCompletion(set.id)}
+          onClick={() => onToggleSetCompletion(setKey)}
         >
           <span className="sr-only">
             {isPR
@@ -379,7 +382,7 @@ const ExerciseSetRow = memo(({
           aria-label={`Open options for set ${index + 1}`}
           aria-haspopup="dialog"
           onClick={() =>
-            onOpenSetOptions(set.id, set.notes || "", set.rpe ?? null, set.rir ?? null)
+            onOpenSetOptions(setKey, set.notes || "", set.rpe ?? null, set.rir ?? null)
           }
         >
           <MoreVertical className="h-4 w-4" />
@@ -418,6 +421,7 @@ const SetOptionsDialogContent = ({
   onDeleteSet,
   onCloseSetOptions,
 }: SetOptionsDialogContentProps) => {
+  const activeSetKey = getExerciseSetClientKey(activeSet);
   const setValueMode = resolveSetValueMode(activeSet, prefersTimeByDefault);
   const effortLabelId = `set-effort-label-active`;
 
@@ -438,7 +442,7 @@ const SetOptionsDialogContent = ({
             <button
               type="button"
               aria-pressed={setValueMode === "reps"}
-              onClick={() => onSetValueModeChange(activeSet.id, "reps")}
+              onClick={() => onSetValueModeChange(activeSetKey, "reps")}
               disabled={activeSet.done}
               className={`rounded-md px-3 py-1.5 text-sm transition-colors ${setValueMode === "reps"
                 ? "bg-background text-foreground shadow"
@@ -450,7 +454,7 @@ const SetOptionsDialogContent = ({
             <button
               type="button"
               aria-pressed={setValueMode === "time"}
-              onClick={() => onSetValueModeChange(activeSet.id, "time")}
+              onClick={() => onSetValueModeChange(activeSetKey, "time")}
               disabled={activeSet.done}
               className={`rounded-md px-3 py-1.5 text-sm transition-colors ${setValueMode === "time"
                 ? "bg-background text-foreground shadow"
@@ -590,13 +594,13 @@ const SetOptionsDialogContent = ({
         </div>
         <div>
           <label
-            htmlFor={`set-notes-${activeSet.id}`}
+            htmlFor={`set-notes-${activeSetKey}`}
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             Notes for Set {activeSetIndex + 1}
           </label>
           <Textarea
-            id={`set-notes-${activeSet.id}`}
+            id={`set-notes-${activeSetKey}`}
             placeholder="Add notes for this set..."
             value={setNotesValue}
             onChange={(event) =>
@@ -610,7 +614,7 @@ const SetOptionsDialogContent = ({
             variant="outline"
             className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
             onClick={() => {
-              void onDeleteSet(activeSet.id);
+              void onDeleteSet(activeSetKey);
               onCloseSetOptions();
             }}
           >
@@ -674,7 +678,7 @@ export const ExerciseSetTable = memo(({
 
   const memoizedSetRows = useMemo(() => {
     return exerciseSets.map((set, index) => {
-      const setKey = String(set.id);
+      const setKey = getExerciseSetClientKey(set);
       const savedDisplayIntensity = convertIntensityValue(
         set.intensity,
         set.intensity_unit_id,
@@ -749,7 +753,7 @@ export const ExerciseSetTable = memo(({
         {memoizedSetRows.map((rowData) => {
           return (
             <ExerciseSetRow
-              key={rowData.set.id}
+              key={getExerciseSetClientKey(rowData.set)}
               {...rowData}
               currentIntensityUnitId={currentIntensityUnitId}
               onSetWeightInputValue={onSetWeightInputValue}
@@ -771,7 +775,9 @@ export const ExerciseSetTable = memo(({
       >
         <DialogContent>
           {(() => {
-            const activeSetIndex = exerciseSets.findIndex(s => String(s.id) === String(activeSetId));
+            const activeSetIndex = exerciseSets.findIndex(
+              (set) => getExerciseSetClientKey(set) === String(activeSetId),
+            );
             const activeSet = exerciseSets[activeSetIndex];
             if (!activeSet) return null;
 

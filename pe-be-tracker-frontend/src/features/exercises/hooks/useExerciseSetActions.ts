@@ -11,6 +11,8 @@ import {
   type UpdateExerciseSetData,
 } from "@/features/exercises/api";
 import {
+  getExerciseSetClientKey,
+  normalizeExerciseSetClientKeys,
   sortExerciseSets,
   toGuestExerciseSets,
   type ExerciseRowProps,
@@ -24,6 +26,13 @@ import { type SetValueMode } from "@/features/exercises/lib/setValue";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps" | "duration_seconds";
+
+const areExerciseSetsShallowEqual = (
+  left: ExerciseSet[],
+  right: ExerciseSet[],
+) =>
+  left.length === right.length &&
+  left.every((set, index) => set === right[index]);
 
 export const useExerciseSetActions = ({
   exercise,
@@ -41,15 +50,30 @@ export const useExerciseSetActions = ({
     exercise.id.startsWith("optimistic-");
 
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>(
-    sortExerciseSets(exercise.exercise_sets || []),
+    normalizeExerciseSetClientKeys(sortExerciseSets(exercise.exercise_sets || [])),
   );
   const exerciseSetsRef = useRef(exerciseSets);
   const latestExerciseRef = useRef(exercise);
 
   useEffect(() => {
-    const normalizedExerciseSets = sortExerciseSets(exercise.exercise_sets || []);
-    exerciseSetsRef.current = normalizedExerciseSets;
-    setExerciseSets(normalizedExerciseSets);
+    const normalizedExerciseSets = normalizeExerciseSetClientKeys(
+      sortExerciseSets(exercise.exercise_sets || []),
+      exerciseSetsRef.current,
+    );
+    setExerciseSets((currentExerciseSets) => {
+      if (
+        areExerciseSetsShallowEqual(
+          currentExerciseSets,
+          normalizedExerciseSets,
+        )
+      ) {
+        exerciseSetsRef.current = currentExerciseSets;
+        return currentExerciseSets;
+      }
+
+      exerciseSetsRef.current = normalizedExerciseSets;
+      return normalizedExerciseSets;
+    });
   }, [exercise.exercise_sets]);
 
   useEffect(() => {
@@ -66,6 +90,7 @@ export const useExerciseSetActions = ({
       {
         timeout: ReturnType<typeof setTimeout>;
         data: UpdateExerciseSetData;
+        serverSetId: string | number;
       }
     >
   >({});
@@ -96,9 +121,13 @@ export const useExerciseSetActions = ({
 
   useEffect(() => {
     return () => {
-      Object.entries(pendingUpdatesRef.current).forEach(([setId, update]) => {
+      Object.entries(pendingUpdatesRef.current).forEach(([setClientKey, update]) => {
         clearTimeout(update.timeout);
-        void updateExerciseSet(setId, update.data).catch((error) => {
+        const serverSetId = exerciseSetsRef.current.find(
+          (set) => getExerciseSetClientKey(set) === setClientKey,
+        )?.id ?? update.serverSetId;
+
+        void updateExerciseSet(serverSetId, update.data).catch((error) => {
           console.error("Failed to flush update on unmount:", error);
         });
       });
@@ -123,10 +152,16 @@ export const useExerciseSetActions = ({
   }, [publishExerciseUpdate]);
 
   const queueSetUpdate = (
-    setId: string | number,
+    setClientKey: string | number,
+    serverSetId: string | number,
     data: UpdateExerciseSetData,
   ) => {
-    const key = String(setId);
+    const key = String(setClientKey);
+
+    const resolveServerSetId = () =>
+      exerciseSetsRef.current.find(
+        (set) => getExerciseSetClientKey(set) === key,
+      )?.id ?? pendingUpdatesRef.current[key]?.serverSetId ?? serverSetId;
 
     if (pendingUpdatesRef.current[key]) {
       clearTimeout(pendingUpdatesRef.current[key].timeout);
@@ -134,17 +169,19 @@ export const useExerciseSetActions = ({
         ...pendingUpdatesRef.current[key].data,
         ...data,
       };
+      pendingUpdatesRef.current[key].serverSetId = serverSetId;
     } else {
       pendingUpdatesRef.current[key] = {
         timeout: setTimeout(() => undefined, 0),
         data,
+        serverSetId,
       };
     }
 
     pendingUpdatesRef.current[key].timeout = setTimeout(async () => {
       try {
         const finalData = pendingUpdatesRef.current[key].data;
-        await updateExerciseSet(setId, finalData);
+        await updateExerciseSet(resolveServerSetId(), finalData);
       } catch (error) {
         console.error("Failed to update exercise set:", error);
         invalidateExerciseQuery();
@@ -161,7 +198,7 @@ export const useExerciseSetActions = ({
     displayUnitId?: number,
   ) => {
     const currentSet = exerciseSetsRef.current.find(
-      (set) => String(set.id) === String(setId),
+      (set) => getExerciseSetClientKey(set) === String(setId),
     );
     if (!currentSet) {
       return;
@@ -183,7 +220,7 @@ export const useExerciseSetActions = ({
           : { duration_seconds: value, reps: null };
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
-        String(set.id) === String(setId)
+        getExerciseSetClientKey(set) === String(setId)
           ? {
               ...set,
               ...localFieldUpdates,
@@ -203,12 +240,12 @@ export const useExerciseSetActions = ({
           ? { reps: value, duration_seconds: null }
           : { duration_seconds: value, reps: null };
 
-    queueSetUpdate(setId, updateData);
+    queueSetUpdate(setId, currentSet.id, updateData);
   }, [applyLocalExerciseSets, isAuthenticated]);
 
   const incrementReps = useCallback((setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
-      (set) => String(set.id) === String(setId),
+      (set) => getExerciseSetClientKey(set) === String(setId),
     );
     const nextReps = (currentSet?.reps || 0) + 1;
     updateSetField(setId, "reps", nextReps);
@@ -216,7 +253,7 @@ export const useExerciseSetActions = ({
 
   const decrementReps = useCallback((setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
-      (set) => String(set.id) === String(setId),
+      (set) => getExerciseSetClientKey(set) === String(setId),
     );
     const nextReps = Math.max((currentSet?.reps || 0) - 1, 0);
     updateSetField(setId, "reps", nextReps);
@@ -227,7 +264,7 @@ export const useExerciseSetActions = ({
     mode: SetValueMode,
   ) => {
     const currentSet = exerciseSetsRef.current.find(
-      (set) => String(set.id) === String(setId),
+      (set) => getExerciseSetClientKey(set) === String(setId),
     );
     if (!currentSet) {
       return;
@@ -247,7 +284,7 @@ export const useExerciseSetActions = ({
 
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
-        String(set.id) === String(setId)
+        getExerciseSetClientKey(set) === String(setId)
           ? {
               ...set,
               ...updates,
@@ -260,12 +297,12 @@ export const useExerciseSetActions = ({
       return;
     }
 
-    queueSetUpdate(setId, updates);
+    queueSetUpdate(setId, currentSet.id, updates);
   }, [applyLocalExerciseSets, isAuthenticated]);
 
   const toggleSetCompletion = useCallback(async (setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
-      (set) => String(set.id) === String(setId),
+      (set) => getExerciseSetClientKey(set) === String(setId),
     );
     if (!currentSet) {
       return;
@@ -273,7 +310,7 @@ export const useExerciseSetActions = ({
 
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
-        String(set.id) === String(setId)
+        getExerciseSetClientKey(set) === String(setId)
           ? {
               ...set,
               done: !set.done,
@@ -287,7 +324,7 @@ export const useExerciseSetActions = ({
     }
 
     try {
-      await updateExerciseSet(setId, { done: !currentSet.done });
+      await updateExerciseSet(currentSet.id, { done: !currentSet.done });
     } catch (error) {
       console.error("Failed to toggle exercise set completion:", error);
       invalidateExerciseQuery();
@@ -298,9 +335,16 @@ export const useExerciseSetActions = ({
     setId: string | number,
     updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir">,
   ) => {
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => getExerciseSetClientKey(set) === String(setId),
+    );
+    if (!currentSet) {
+      return;
+    }
+
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.map((set) =>
-        String(set.id) === String(setId)
+        getExerciseSetClientKey(set) === String(setId)
           ? {
               ...set,
               ...updates,
@@ -314,7 +358,7 @@ export const useExerciseSetActions = ({
     }
 
     try {
-      await updateExerciseSet(setId, updates);
+      await updateExerciseSet(currentSet.id, updates);
     } catch (error) {
       console.error("Failed to update exercise set options:", error);
       invalidateExerciseQuery();
@@ -322,8 +366,17 @@ export const useExerciseSetActions = ({
   }, [applyLocalExerciseSets, isAuthenticated, invalidateExerciseQuery]);
 
   const deleteSet = useCallback(async (setId: string | number) => {
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => getExerciseSetClientKey(set) === String(setId),
+    );
+    if (!currentSet) {
+      return;
+    }
+
     applyLocalExerciseSets((currentExerciseSets) =>
-      currentExerciseSets.filter((set) => String(set.id) !== String(setId)),
+      currentExerciseSets.filter(
+        (set) => getExerciseSetClientKey(set) !== String(setId),
+      ),
     );
 
     if (!isAuthenticated) {
@@ -331,7 +384,7 @@ export const useExerciseSetActions = ({
     }
 
     try {
-      await deleteExerciseSet(setId);
+      await deleteExerciseSet(currentSet.id);
     } catch (error) {
       console.error("Failed to delete exercise set:", error);
       invalidateExerciseQuery();
@@ -359,6 +412,7 @@ export const useExerciseSetActions = ({
     );
     const optimisticSet: ExerciseSet = {
       id: tempId,
+      client_key: tempId,
       reps: nextReps,
       duration_seconds: nextDurationSeconds,
       intensity: nextIntensity,
@@ -402,9 +456,18 @@ export const useExerciseSetActions = ({
       const createdSet = await createExerciseSet(payload);
       applyLocalExerciseSets((existingExerciseSets) =>
         existingExerciseSets.map((set) =>
-          String(set.id) === String(tempId) ? createdSet : set,
+          getExerciseSetClientKey(set) === String(tempId)
+            ? {
+                ...createdSet,
+                client_key: set.client_key ?? tempId,
+              }
+            : set,
         ),
       );
+      const pendingUpdate = pendingUpdatesRef.current[tempId];
+      if (pendingUpdate) {
+        pendingUpdate.serverSetId = createdSet.id;
+      }
     } catch (error) {
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();

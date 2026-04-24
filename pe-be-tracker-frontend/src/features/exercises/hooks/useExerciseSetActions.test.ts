@@ -258,6 +258,74 @@ describe("useExerciseSetActions", () => {
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
 
+  it("flushes queued optimistic set edits with the reconciled server id", async () => {
+    let resolveCreateExerciseSet: (
+      createdSet: ReturnType<typeof makeExerciseSet>,
+    ) => void = () => undefined;
+    mockCreateExerciseSet.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreateExerciseSet = resolve;
+        }),
+    );
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [
+        makeExerciseSet({
+          id: 1,
+          exercise_id: 123,
+          reps: 10,
+          intensity: 50,
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExerciseSetActions({
+        exercise,
+      }),
+    );
+
+    act(() => {
+      void result.current.addSet(2);
+    });
+
+    const optimisticSetKey = result.current.exerciseSets[1].client_key;
+    expect(optimisticSetKey).toMatch(/^temp-/);
+
+    act(() => {
+      result.current.updateSetField(optimisticSetKey!, "reps", 12);
+    });
+
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreateExerciseSet(
+        makeExerciseSet({
+          id: 999,
+          reps: 10,
+          intensity: 50,
+          intensity_unit_id: 2,
+          exercise_id: 123,
+        }),
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(mockUpdateExerciseSet).toHaveBeenCalledWith(999, {
+      reps: 12,
+      duration_seconds: null,
+    });
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalledWith(
+      optimisticSetKey,
+      expect.anything(),
+    );
+  });
+
   it("preserves duration_seconds when seeding a new set from a duration-based prior set", async () => {
     mockCreateExerciseSet.mockResolvedValue(
       makeExerciseSet({

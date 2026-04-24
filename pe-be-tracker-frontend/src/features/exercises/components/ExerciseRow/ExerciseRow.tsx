@@ -1,7 +1,10 @@
 import { memo, useCallback, useState } from "react";
 
 import { useExerciseRowState, useExerciseSetActions, useExerciseTypeStats } from "@/features/exercises/hooks";
-import type { ExerciseRowProps } from "@/features/exercises/lib/exerciseRow";
+import {
+  getExerciseClientKey,
+  type ExerciseRowProps,
+} from "@/features/exercises/lib/exerciseRow";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui";
 import { cn } from "@/lib/utils";
 import { ExerciseRowHeader } from "./ExerciseRowHeader";
@@ -24,6 +27,7 @@ const ExerciseRow = ({
 }: ExerciseRowProps) => {
   const [isExpandedInternal, setIsExpandedInternal] = useState(false);
   const isControlled = isExpandedProp !== undefined;
+  const exerciseKey = getExerciseClientKey(exercise);
 
   const isExpanded = isExpandedProp ?? isExpandedInternal;
 
@@ -82,16 +86,16 @@ const ExerciseRow = ({
   const handleExpandedChange = useCallback((nextExpanded: boolean) => {
     if (isControlled) {
       if (nextExpanded !== isExpanded) {
-        onToggleExpand?.(exercise.id);
+        onToggleExpand?.(exerciseKey);
       }
       return;
     }
 
     setIsExpandedInternal(nextExpanded);
     if (nextExpanded !== isExpanded) {
-      onToggleExpand?.(exercise.id);
+      onToggleExpand?.(exerciseKey);
     }
-  }, [exercise.id, isControlled, isExpanded, onToggleExpand]);
+  }, [exerciseKey, isControlled, isExpanded, onToggleExpand]);
 
   const handleToggleExpand = useCallback(() => {
     handleExpandedChange(!isExpanded);
@@ -112,7 +116,6 @@ const ExerciseRow = ({
     >
           <AccordionItem value="images" className="border-none">
         <Card
-          key={exercise.id}
           className={cn(
             "mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border-border/5 border-t-4 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 transition-all duration-300 hover:shadow-xl",
             isExpanded
@@ -138,7 +141,7 @@ const ExerciseRow = ({
           <AccordionContent className="p-0">
             <div className="px-4 pb-2 pt-2">
               <Textarea
-                id={`notes-${exercise.id}`}
+                id={`notes-${exerciseKey}`}
                 aria-label="Exercise notes"
                 placeholder="Add exercise notes..."
                 value={exerciseNotesValue}

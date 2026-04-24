@@ -139,8 +139,9 @@ const DeferredPostHogProvider = ({ children }: { children: ReactNode }) => {
 
 export const AppProviders = ({ children }: { children: ReactNode }) => {
   // Only render PostHogProvider if PostHog is properly configured and not in test mode
-  const isPostHogConfigured =
-    !config.isTest && config.posthogApiKey && config.posthogHost;
+  const isPostHogConfigured = Boolean(
+    config.posthogApiKey && config.posthogHost && !config.isTest,
+  );
   const isAutomatedBrowser =
     typeof navigator !== "undefined" && navigator.webdriver;
   const shouldShowReactQueryDevtools =
