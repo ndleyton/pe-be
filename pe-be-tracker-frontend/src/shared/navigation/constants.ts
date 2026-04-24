@@ -4,6 +4,7 @@
  */
 export const NAV_KEYS = {
   WORKOUTS: "workouts",
+  ROUTINES: "routines",
   EXERCISES: "exercises",
   PROFILE: "profile",
   CHAT: "chat",

@@ -34,7 +34,10 @@ export const navigationSections: NavigationSection[] = [
   createSection({
     key: NAV_KEYS.WORKOUTS,
     rootPath: NAV_PATHS.WORKOUTS,
-    prefixes: [NAV_PATHS.WORKOUTS, NAV_PATHS.ROUTINES],
+  }),
+  createSection({
+    key: NAV_KEYS.ROUTINES,
+    rootPath: NAV_PATHS.ROUTINES,
   }),
   createSection({
     key: NAV_KEYS.EXERCISES,

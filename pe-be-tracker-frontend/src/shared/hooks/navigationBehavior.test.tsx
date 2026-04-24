@@ -18,6 +18,7 @@ import { useNavigation } from "./useNavigation";
 
 const defaultLastVisitedPaths = {
   workouts: NAV_PATHS.WORKOUTS,
+  routines: NAV_PATHS.ROUTINES,
   exercises: NAV_PATHS.EXERCISES,
   profile: NAV_PATHS.PROFILE,
   chat: NAV_PATHS.CHAT,
@@ -95,13 +96,13 @@ describe("navigation behavior", () => {
     useAppHistoryStore.getState().reset();
   });
 
-  it("restores the remembered workouts section path, including routines", async () => {
+  it("restores the remembered workouts section path", async () => {
     const user = userEvent.setup();
 
     useNavigationStore.setState({
       lastVisitedPaths: {
         ...defaultLastVisitedPaths,
-        workouts: "/routines/9",
+        workouts: "/workouts/7",
       },
     });
 
@@ -109,6 +110,32 @@ describe("navigation behavior", () => {
       initialEntries: ["/chat"],
       navKey: NAV_KEYS.WORKOUTS,
       fallbackPath: NAV_PATHS.WORKOUTS,
+    });
+
+    expect(screen.getByRole("link", { name: /section nav/i })).toHaveAttribute(
+      "href",
+      "/workouts/7",
+    );
+
+    await user.click(screen.getByRole("link", { name: /section nav/i }));
+
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/workouts/7");
+  });
+
+  it("restores the remembered routines path", async () => {
+    const user = userEvent.setup();
+
+    useNavigationStore.setState({
+      lastVisitedPaths: {
+        ...defaultLastVisitedPaths,
+        routines: "/routines/9",
+      },
+    });
+
+    renderHarness({
+      initialEntries: ["/chat"],
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
     });
 
     expect(screen.getByRole("link", { name: /section nav/i })).toHaveAttribute(
@@ -121,14 +148,30 @@ describe("navigation behavior", () => {
     expect(screen.getByTestId("pathname")).toHaveTextContent("/routines/9");
   });
 
-  it("treats routines as part of the workouts section for active state", () => {
+  it("treats routines as an active section on deep routes", () => {
     renderHarness({
       initialEntries: ["/routines/9"],
-      navKey: NAV_KEYS.WORKOUTS,
-      fallbackPath: NAV_PATHS.WORKOUTS,
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
     });
 
     expect(screen.getByTestId("active")).toHaveTextContent("true");
+  });
+
+  it("resets an active deep routines tab press to the section root", async () => {
+    const user = userEvent.setup();
+
+    renderHarness({
+      initialEntries: ["/routines/9"],
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
+    });
+
+    await user.click(screen.getByRole("link", { name: /section nav/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/routines");
+    });
   });
 
   it("resets an active deep tab press to the section root", async () => {

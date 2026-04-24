@@ -19,6 +19,7 @@ export const useNavigationStore = create<NavigationStore>()(
     (set, get) => ({
       lastVisitedPaths: {
         workouts: NAV_PATHS.WORKOUTS,
+        routines: NAV_PATHS.ROUTINES,
         exercises: NAV_PATHS.EXERCISES,
         profile: NAV_PATHS.PROFILE,
         chat: NAV_PATHS.CHAT,
