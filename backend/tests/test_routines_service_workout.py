@@ -335,6 +335,24 @@ async def test_clone_public_workout_to_private_routine_strips_sensitive_fields(
             type="working",
         )
     )
+    db_session.add(
+        ExerciseSet(
+            reps=99,
+            intensity_unit_id=kg.id,
+            exercise_id=exercise.id,
+            done=True,
+            deleted_at=datetime(2026, 4, 20, 13, 30, tzinfo=timezone.utc),
+            type="working",
+        )
+    )
+    deleted_exercise = Exercise(
+        timestamp=source_workout.start_time,
+        notes="Deleted exercise note",
+        exercise_type_id=exercise_type.id,
+        workout_id=source_workout.id,
+        deleted_at=datetime(2026, 4, 20, 13, 45, tzinfo=timezone.utc),
+    )
+    db_session.add(deleted_exercise)
     await db_session.commit()
 
     routine = await routine_service.clone_public_workout_to_private_routine(

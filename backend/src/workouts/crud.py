@@ -85,9 +85,11 @@ async def get_public_completed_workout_by_id(
     result = await session.execute(
         select(Workout)
         .options(
-            joinedload(Workout.exercises).joinedload(Exercise.exercise_type),
-            joinedload(Workout.exercises)
-            .joinedload(Exercise.exercise_sets)
+            joinedload(
+                Workout.exercises.and_(Exercise.deleted_at.is_(None))
+            ).joinedload(Exercise.exercise_type),
+            joinedload(Workout.exercises.and_(Exercise.deleted_at.is_(None)))
+            .joinedload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
             .joinedload(ExerciseSet.intensity_unit),
         )
         .where(
