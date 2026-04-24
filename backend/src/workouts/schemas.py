@@ -152,6 +152,23 @@ class AddExerciseRequest(BaseModel):
 # The response can reuse the existing WorkoutRead schema, so no extra response model is declared.
 
 
+class SaveWorkoutAsRoutineRequest(BaseModel):
+    """Optional overrides when cloning a public workout into a routine."""
+
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_optional_name(cls, v):
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Name cannot be empty")
+        return v
+
+
 class PaginatedWorkouts(BaseModel):
     data: List[WorkoutRead]
     next_cursor: Optional[int] = Field(

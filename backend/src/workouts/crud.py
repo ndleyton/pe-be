@@ -3,10 +3,13 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from src.core.errors import DomainValidationError
 from src.workouts.models import Workout, WorkoutType
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
+from src.exercises.models import Exercise
+from src.exercise_sets.models import ExerciseSet
 
 
 def _get_constraint_name(error: IntegrityError) -> Optional[str]:
@@ -73,6 +76,29 @@ async def get_workout_by_id(
         select(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
     )
     return result.scalar_one_or_none()
+
+
+async def get_public_completed_workout_by_id(
+    session: AsyncSession, workout_id: int
+) -> Optional[Workout]:
+    """Get a public completed workout by ID with the fixed detail graph loaded."""
+    result = await session.execute(
+        select(Workout)
+        .options(
+            joinedload(
+                Workout.exercises.and_(Exercise.deleted_at.is_(None))
+            ).joinedload(Exercise.exercise_type),
+            joinedload(Workout.exercises.and_(Exercise.deleted_at.is_(None)))
+            .joinedload(Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None)))
+            .joinedload(ExerciseSet.intensity_unit),
+        )
+        .where(
+            Workout.id == workout_id,
+            Workout.visibility == Workout.WorkoutVisibility.public,
+            Workout.end_time.is_not(None),
+        )
+    )
+    return result.unique().scalar_one_or_none()
 
 
 async def get_user_workouts(

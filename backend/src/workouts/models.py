@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, TYPE_CHECKING
 
 from sqlalchemy import (
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Index,
     desc,
 )
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
@@ -34,6 +36,10 @@ class Workout(Base):
 
     __tablename__ = "workouts"
 
+    class WorkoutVisibility(str, Enum):
+        private = "private"
+        public = "public"
+
     __table_args__ = (
         CheckConstraint(
             "end_time IS NULL OR start_time IS NULL OR end_time >= start_time",
@@ -44,6 +50,13 @@ class Workout(Base):
             "ix_workouts_owner_id_start_time_desc",
             "owner_id",
             desc("start_time"),
+        ),
+        Index(
+            "ix_workouts_owner_visibility_end_time_desc",
+            "owner_id",
+            "visibility",
+            desc("end_time"),
+            desc("id"),
         ),
     )
 
@@ -62,6 +75,11 @@ class Workout(Base):
         nullable=False,
     )
     recap = Column(Text)
+    visibility = Column(
+        SAEnum(WorkoutVisibility, name="workout_visibility"),
+        nullable=False,
+        default=WorkoutVisibility.private,
+    )
 
     # Relationships
     owner: Mapped["User"] = relationship(back_populates="workouts")

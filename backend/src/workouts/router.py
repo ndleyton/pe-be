@@ -19,12 +19,15 @@ from src.workouts.schemas import (
     WorkoutTypeCreate,
     AddExerciseRequest,
     PaginatedWorkouts,
+    SaveWorkoutAsRoutineRequest,
 )
 from src.workouts.service import (
     WorkoutService,
     WorkoutTypeService,
 )
 from src.core.database import get_async_session
+from src.routines.schemas import RoutineRead
+from src.routines.service import routine_service
 from src.users.router import current_active_user
 from src.users.models import User
 from src.exercises.service import ExerciseService
@@ -248,3 +251,26 @@ async def generate_workout_recap(
         raise HTTPException(status_code=404, detail="Workout not found")
 
     return await WorkoutService.get_workout(session, workout_id, user.id)
+
+
+@router.post(
+    "/{workout_id}/save-as-routine",
+    response_model=RoutineRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def save_public_workout_as_routine(
+    workout_id: int,
+    save_request: SaveWorkoutAsRoutineRequest | None = None,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Clone a public completed workout into a new private routine."""
+    try:
+        return await routine_service.clone_public_workout_to_private_routine(
+            session,
+            source_workout_id=workout_id,
+            user_id=user.id,
+            clone_request=save_request,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
