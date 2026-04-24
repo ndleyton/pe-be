@@ -90,6 +90,7 @@ export const useExerciseSetActions = ({
       {
         timeout: ReturnType<typeof setTimeout>;
         data: UpdateExerciseSetData;
+        serverSetId: string | number;
       }
     >
   >({});
@@ -120,9 +121,9 @@ export const useExerciseSetActions = ({
 
   useEffect(() => {
     return () => {
-      Object.entries(pendingUpdatesRef.current).forEach(([setId, update]) => {
+      Object.values(pendingUpdatesRef.current).forEach((update) => {
         clearTimeout(update.timeout);
-        void updateExerciseSet(setId, update.data).catch((error) => {
+        void updateExerciseSet(update.serverSetId, update.data).catch((error) => {
           console.error("Failed to flush update on unmount:", error);
         });
       });
@@ -159,10 +160,12 @@ export const useExerciseSetActions = ({
         ...pendingUpdatesRef.current[key].data,
         ...data,
       };
+      pendingUpdatesRef.current[key].serverSetId = serverSetId;
     } else {
       pendingUpdatesRef.current[key] = {
         timeout: setTimeout(() => undefined, 0),
         data,
+        serverSetId,
       };
     }
 

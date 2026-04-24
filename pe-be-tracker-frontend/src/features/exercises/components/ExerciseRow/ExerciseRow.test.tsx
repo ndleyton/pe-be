@@ -882,6 +882,46 @@ describe("ExerciseRow", () => {
     });
   });
 
+  it("flushes debounced set updates by server id on unmount", async () => {
+    const user = userEvent.setup();
+    const exerciseWithStableClientKey: Exercise = {
+      ...mockExercise,
+      exercise_sets: [
+        {
+          ...mockExerciseSet1,
+          id: 999,
+          client_key: "temp-999",
+        },
+      ],
+    };
+
+    const { container, unmount } = render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={exerciseWithStableClientKey}
+      />,
+    );
+
+    const repsInputs = Array.from(
+      container.querySelectorAll('input[inputmode="numeric"]'),
+    ) as HTMLInputElement[];
+    const repsInput = repsInputs[0];
+
+    await user.clear(repsInput);
+    await user.type(repsInput, "15");
+    await user.keyboard("{Enter}");
+
+    vi.clearAllMocks();
+    unmount();
+
+    await waitFor(() => {
+      expect(updateExerciseSet).toHaveBeenCalledWith(999, {
+        reps: 15,
+        duration_seconds: null,
+      });
+    });
+  });
+
   it("restores the saved reps value on Escape", async () => {
     const user = userEvent.setup();
     const { container } = render(<ExerciseRow {...defaultProps} />);
