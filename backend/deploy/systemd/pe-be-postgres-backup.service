@@ -1,0 +1,12 @@
+[Unit]
+Description=PE Backend Postgres dump backup
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/pe-be
+EnvironmentFile=-/srv/pe-be/backend/.env.production
+EnvironmentFile=-/root/.config/pe-be-backup.env
+TimeoutStartSec=900
+ExecStart=/srv/pe-be/backend/deploy/backups/create-postgres-dump.sh
