@@ -1,6 +1,6 @@
 from sqlalchemy import Select, and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from src.exercises.models import Exercise
 from src.exercise_sets.models import ExerciseSet
@@ -53,8 +53,8 @@ async def get_public_activity_summaries(
         public_completed_workouts_stmt(user_id)
         .options(
             joinedload(Workout.workout_type),
-            joinedload(Workout.exercises).joinedload(Exercise.exercise_type),
-            joinedload(Workout.exercises).joinedload(Exercise.exercise_sets),
+            selectinload(Workout.exercises).joinedload(Exercise.exercise_type),
+            selectinload(Workout.exercises).selectinload(Exercise.exercise_sets),
         )
         .order_by(desc(Workout.end_time), desc(Workout.id))
         .limit(limit)
@@ -79,7 +79,7 @@ async def get_public_activity_summaries(
         )
 
     result = await session.execute(stmt)
-    workouts = result.unique().scalars().all()
+    workouts = result.scalars().all()
 
     summaries: list[tuple[Workout, int, int, list[str]]] = []
     for workout in workouts:
