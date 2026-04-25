@@ -44,9 +44,11 @@ def upgrade() -> None:
         )
         op.alter_column("users", "is_profile_public", server_default=None)
 
-    indexes = {index["name"] for index in inspector.get_indexes("users")}
-    if "ix_users_username_unique" not in indexes:
-        op.create_index("ix_users_username_unique", "users", ["username"], unique=True)
+    op.execute("DROP INDEX IF EXISTS ix_users_username_unique")
+    op.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username_unique "
+        "ON users (lower(username))"
+    )
 
 
 def downgrade() -> None:

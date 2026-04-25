@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from src.users.crud import (
     get_user_by_id,
@@ -8,11 +9,33 @@ from src.users.crud import (
     delete_user,
 )
 from src.users.models import User
-from src.users.schemas import UserUpdate
+from src.users.schemas import UserCreate, UserUpdate
 from src.users.service import UserService
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+async def test_user_create_normalizes_username():
+    user = UserCreate(
+        email="new@example.com",
+        password="password123",
+        username=" Jane_Doe-1 ",
+    )
+
+    assert user.username == "jane_doe-1"
+
+
+@pytest.mark.parametrize("username", ["ab", "bad name", "bad.name", "bad/name"])
+async def test_user_create_rejects_invalid_username(username):
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreate(
+            email="new@example.com",
+            password="password123",
+            username=username,
+        )
+
+    assert "Username" in str(exc_info.value)
 
 
 class _CreatePayload:
