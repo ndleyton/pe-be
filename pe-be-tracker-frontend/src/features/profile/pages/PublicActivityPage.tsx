@@ -6,21 +6,29 @@ import {
   getPublicActivity,
   savePublicActivityAsRoutine,
 } from "@/features/profile/api";
+import type { PublicExerciseSet } from "@/features/profile/types";
 import { useAuthStore } from "@/stores";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 
-const setLabel = (set: {
-  reps?: number | null;
-  duration_seconds?: number | null;
-  intensity?: number | null;
-  intensity_unit?: { abbreviation: string } | null;
-}) => {
+const formatPublicDecimal = (value: string | number): string => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return String(value);
+  }
+  return String(numericValue);
+};
+
+const setLabel = (set: PublicExerciseSet) => {
   const parts = [];
   if (set.reps != null) parts.push(`${set.reps} reps`);
   if (set.duration_seconds != null) parts.push(`${set.duration_seconds}s`);
   if (set.intensity != null) {
-    parts.push(`${set.intensity} ${set.intensity_unit?.abbreviation ?? ""}`.trim());
+    parts.push(
+      `${formatPublicDecimal(set.intensity)} ${
+        set.intensity_unit?.abbreviation ?? ""
+      }`.trim(),
+    );
   }
   return parts.join(" · ") || "Set";
 };

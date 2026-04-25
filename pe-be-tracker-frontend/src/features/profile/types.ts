@@ -1,5 +1,7 @@
 import type { Routine } from "@/features/routines/types";
 
+export type PublicDecimalValue = string | number | null;
+
 export interface PublicProfile {
   username: string;
   display_name?: string | null;
@@ -35,9 +37,9 @@ export interface PublicIntensityUnit {
 export interface PublicExerciseSet {
   reps?: number | null;
   duration_seconds?: number | null;
-  intensity?: number | null;
-  rpe?: number | null;
-  rir?: number | null;
+  intensity?: PublicDecimalValue;
+  rpe?: PublicDecimalValue;
+  rir?: PublicDecimalValue;
   intensity_unit?: PublicIntensityUnit | null;
   type?: string | null;
 }

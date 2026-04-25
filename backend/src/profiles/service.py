@@ -125,7 +125,9 @@ class ProfileService:
             for workout, exercise_count, set_count, names in rows
         ]
         next_cursor = activities[-1].id if len(activities) == limit else None
-        return PaginatedPublicWorkoutActivities(data=activities, next_cursor=next_cursor)
+        return PaginatedPublicWorkoutActivities(
+            data=activities, next_cursor=next_cursor
+        )
 
     async def get_public_activity(
         self, session: AsyncSession, username: str, workout_id: int

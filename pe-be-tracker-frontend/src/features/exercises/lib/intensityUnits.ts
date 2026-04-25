@@ -60,7 +60,7 @@ export const areIntensityUnitsCompatible = (
 };
 
 export const convertIntensityValue = (
-  value: number | null | undefined,
+  value: string | number | null | undefined,
   sourceUnitId: number | null | undefined,
   targetUnitId: number | null | undefined,
 ): number | null => {
@@ -68,8 +68,13 @@ export const convertIntensityValue = (
     return null;
   }
 
+  const numericValue = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
   if (!sourceUnitId || !targetUnitId || sourceUnitId === targetUnitId) {
-    return value;
+    return numericValue;
   }
 
   const sourceDefinition = getIntensityUnitDefinition(sourceUnitId);
@@ -80,10 +85,10 @@ export const convertIntensityValue = (
     !targetDefinition ||
     sourceDefinition.family !== targetDefinition.family
   ) {
-    return value;
+    return numericValue;
   }
 
-  const baseValue = value * sourceDefinition.toBaseFactor;
+  const baseValue = numericValue * sourceDefinition.toBaseFactor;
   return roundToThreeDecimals(baseValue / targetDefinition.toBaseFactor);
 };
 
