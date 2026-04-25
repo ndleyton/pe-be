@@ -81,10 +81,11 @@ class RoutineService:
         source_workout_id: int,
         user_id: int,
         clone_request: SaveWorkoutAsRoutineRequest | None = None,
+        source_owner_id: int | None = None,
     ) -> RoutineRead:
         """Clone a public completed workout into a new private routine."""
         source_workout = await workouts_crud.get_public_completed_workout_by_id(
-            session, source_workout_id
+            session, source_workout_id, owner_id=source_owner_id
         )
         if source_workout is None:
             raise LookupError("Workout not found")
