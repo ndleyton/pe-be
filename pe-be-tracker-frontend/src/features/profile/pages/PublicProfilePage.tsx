@@ -6,14 +6,20 @@ import { getPublicActivities, getPublicProfile } from "@/features/profile/api";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 
-const formatDate = (value?: string | null) =>
+const formatDateValue = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+
+const formatProfileDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(value))
+    ? formatDateValue(value)
     : "No activity yet";
+
+const formatActivityDate = (value?: string | null) =>
+  value ? formatDateValue(value) : "—";
 
 const PublicProfilePage = () => {
   const { username = "" } = useParams();
@@ -96,7 +102,7 @@ const PublicProfilePage = () => {
             <CalendarDays className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-black">
-                {formatDate(profile.last_public_activity_at)}
+                {formatProfileDate(profile.last_public_activity_at)}
               </p>
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Latest activity
@@ -126,7 +132,7 @@ const PublicProfilePage = () => {
                       {activity.name || activity.workout_type.name}
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {formatDate(activity.end_time)}
+                      {formatActivityDate(activity.end_time)}
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
                       {activity.exercise_names_preview.join(", ")}
