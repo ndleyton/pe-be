@@ -40,7 +40,9 @@ class User(SQLAlchemyBaseUserTable[int], Base):
 
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     username: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    __table_args__ = (Index("ix_users_username_unique", func.lower(username), unique=True),)
+    __table_args__ = (
+        Index("ix_users_username_unique", func.lower(username), unique=True),
+    )
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_profile_public: Mapped[bool] = mapped_column(
