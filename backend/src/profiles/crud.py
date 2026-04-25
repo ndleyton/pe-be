@@ -83,9 +83,18 @@ async def get_public_activity_summaries(
 
     summaries: list[tuple[Workout, int, int, list[str]]] = []
     for workout in workouts:
-        active_exercises = [
-            exercise for exercise in workout.exercises if exercise.deleted_at is None
-        ]
+        active_exercises = sorted(
+            (
+                exercise
+                for exercise in workout.exercises
+                if exercise.deleted_at is None
+            ),
+            key=lambda exercise: (
+                exercise.timestamp is None,
+                exercise.timestamp,
+                exercise.id,
+            ),
+        )
         sets_total = sum(
             1
             for exercise in active_exercises

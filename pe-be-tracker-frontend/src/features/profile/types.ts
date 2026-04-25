@@ -43,6 +43,7 @@ export interface PublicExerciseSet {
 }
 
 export interface PublicWorkoutExercise {
+  id: number;
   exercise_type: {
     id: number;
     name: string;

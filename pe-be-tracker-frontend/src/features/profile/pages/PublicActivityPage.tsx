@@ -131,14 +131,14 @@ const PublicActivityPage = () => {
       <section className="space-y-4">
         {activity.exercises.map((exercise) => (
           <div
-            key={exercise.exercise_type.id}
+            key={exercise.id}
             className="rounded-lg border border-border p-4"
           >
             <h2 className="font-black">{exercise.exercise_type.name}</h2>
             <div className="mt-3 space-y-2">
               {exercise.sets.map((set, index) => (
                 <div
-                  key={`${exercise.exercise_type.id}-${index}`}
+                  key={`${exercise.id}-${index}`}
                   className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm"
                 >
                   <span className="font-bold">Set {index + 1}</span>

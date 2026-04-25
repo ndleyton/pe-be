@@ -80,6 +80,7 @@ def _activity_detail(workout: Workout) -> PublicWorkoutActivityRead:
         ]
         exercises.append(
             PublicWorkoutExerciseRead(
+                id=exercise.id,
                 exercise_type=exercise.exercise_type,
                 sets=sets,
             )

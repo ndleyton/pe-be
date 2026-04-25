@@ -62,6 +62,7 @@ class PublicExerciseSetRead(BaseModel):
 
 
 class PublicWorkoutExerciseRead(BaseModel):
+    id: int
     exercise_type: PublicExerciseTypeRead
     sets: List[PublicExerciseSetRead]
 
