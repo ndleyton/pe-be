@@ -102,7 +102,7 @@ def _activity_detail(workout: Workout) -> PublicWorkoutActivityRead:
 
 
 class ProfileService:
-    def _me_read(self, user: User) -> ProfileMeRead:
+    async def get_my_profile(self, user: User) -> ProfileMeRead:
         return ProfileMeRead(
             username=user.username,
             display_name=user.name,
@@ -110,9 +110,6 @@ class ProfileService:
             avatar_url=user.avatar_url,
             is_profile_public=user.is_profile_public,
         )
-
-    async def get_my_profile(self, user: User) -> ProfileMeRead:
-        return self._me_read(user)
 
     async def update_my_profile(
         self,
@@ -156,7 +153,7 @@ class ProfileService:
             await session.rollback()
             raise
         await session.refresh(db_user)
-        return self._me_read(db_user)
+        return await self.get_my_profile(db_user)
 
     async def get_public_profile(
         self, session: AsyncSession, username: str

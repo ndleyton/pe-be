@@ -234,3 +234,5 @@ async def test_my_profile_update_rejects_username_collision(
         app.dependency_overrides.pop(current_active_user, None)
 
     assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Username is already taken"

@@ -7,6 +7,7 @@ from pydantic import field_validator
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 40
 
 
 def normalize_username(value: object) -> str | None:
@@ -17,6 +18,10 @@ def normalize_username(value: object) -> str | None:
     if len(username) < USERNAME_MIN_LENGTH:
         raise ValueError(
             f"Username must be at least {USERNAME_MIN_LENGTH} characters long"
+        )
+    if len(username) > USERNAME_MAX_LENGTH:
+        raise ValueError(
+            f"Username must be at most {USERNAME_MAX_LENGTH} characters long"
         )
     if not USERNAME_PATTERN.fullmatch(username):
         raise ValueError(

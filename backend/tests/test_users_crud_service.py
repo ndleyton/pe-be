@@ -26,7 +26,10 @@ async def test_user_create_normalizes_username():
     assert user.username == "jane_doe-1"
 
 
-@pytest.mark.parametrize("username", ["ab", "bad name", "bad.name", "bad/name"])
+@pytest.mark.parametrize(
+    "username",
+    ["ab", "bad name", "bad.name", "bad/name", "a" * 41],
+)
 async def test_user_create_rejects_invalid_username(username):
     with pytest.raises(ValidationError) as exc_info:
         UserCreate(
