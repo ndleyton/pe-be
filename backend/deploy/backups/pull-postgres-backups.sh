@@ -15,7 +15,7 @@ chmod 700 "$LOCAL_BACKUP_DIR"
 rsync \
   --archive \
   --compress \
-  --partial \
+  --partial-dir=.rsync-partial \
   --prune-empty-dirs \
   --include 'pe-be-postgres-*.dump' \
   --include 'pe-be-postgres-*.dump.gpg' \
