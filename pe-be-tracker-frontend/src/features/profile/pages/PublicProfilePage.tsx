@@ -75,7 +75,11 @@ const PublicProfilePage = () => {
             <h1 className="truncate text-3xl font-black tracking-tight">
               {profile.display_name || `@${profile.username}`}
             </h1>
-            <p className="text-sm font-bold text-muted-foreground">@{profile.username}</p>
+            {profile.display_name ? (
+              <p className="text-sm font-bold text-muted-foreground">
+                @{profile.username}
+              </p>
+            ) : null}
             {profile.bio ? (
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
                 {profile.bio}
