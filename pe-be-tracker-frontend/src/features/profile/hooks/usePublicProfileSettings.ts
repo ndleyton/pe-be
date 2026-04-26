@@ -16,15 +16,52 @@ const shouldRetryProfileSettings = (failureCount: number, error: unknown) => {
   return failureCount < 3;
 };
 
+const cleanValidationMessage = (message: string): string =>
+  message.replace(/^Value error,\s*/i, "").trim();
+
+const getValidationDetailMessage = (detail: unknown): string | null => {
+  if (typeof detail === "string") {
+    return cleanValidationMessage(detail);
+  }
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (typeof item === "string") return cleanValidationMessage(item);
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>;
+          if (typeof record.msg === "string") {
+            return cleanValidationMessage(record.msg);
+          }
+          if (typeof record.detail === "string") {
+            return cleanValidationMessage(record.detail);
+          }
+        }
+        return null;
+      })
+      .filter((message): message is string => Boolean(message));
+    return messages.length > 0 ? messages.join(" ") : null;
+  }
+
+  if (detail && typeof detail === "object") {
+    const record = detail as Record<string, unknown>;
+    if (typeof record.msg === "string") return cleanValidationMessage(record.msg);
+    if (typeof record.detail === "string") {
+      return cleanValidationMessage(record.detail);
+    }
+  }
+
+  return null;
+};
+
 const getProfileMutationErrorMessage = (error: unknown): string | null => {
   if (!error) {
     return null;
   }
   if (axios.isAxiosError(error)) {
     return (
-      (typeof error.response?.data?.detail === "string"
-        ? error.response.data.detail
-        : null) ?? "Could not update public profile."
+      getValidationDetailMessage(error.response?.data?.detail) ??
+      "Could not update public profile."
     );
   }
   return "Could not update public profile.";

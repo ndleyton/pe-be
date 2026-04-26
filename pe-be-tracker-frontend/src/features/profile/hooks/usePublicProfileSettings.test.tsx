@@ -128,6 +128,42 @@ describe("usePublicProfileSettings", () => {
     );
   });
 
+  it("derives mutation error messages from FastAPI validation arrays", async () => {
+    mockGetMyProfile.mockResolvedValue({
+      username: null,
+      is_profile_public: false,
+    });
+    mockUpdateMyProfile.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail: [
+            {
+              loc: ["body", "username"],
+              msg: "Value error, Username must be at least 3 characters long",
+              type: "value_error",
+            },
+          ],
+        },
+      },
+    });
+
+    const { result } = renderHook(() => usePublicProfileSettings(true), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.setUsername("55"));
+    act(() => result.current.createProfile());
+
+    await waitFor(() =>
+      expect(result.current.errorMessage).toBe(
+        "Username must be at least 3 characters long",
+      ),
+    );
+  });
+
   it("creates a public profile from the local username", async () => {
     mockGetMyProfile.mockResolvedValue({
       username: null,
