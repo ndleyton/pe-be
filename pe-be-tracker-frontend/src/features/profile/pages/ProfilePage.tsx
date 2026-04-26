@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/features/auth/components";
-import { getMyProfile, updateMyProfile } from "@/features/profile/api";
+import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { useAuthStore, useGuestStore } from "@/stores";
@@ -28,66 +28,26 @@ const PublicProfileSettings = ({
 }: {
   enabled: boolean;
 }) => {
-  const queryClient = useQueryClient();
-  const [username, setUsername] = useState("");
-
   const {
-    data: profile,
+    createProfile,
     error,
+    errorMessage,
     isLoading,
-  } = useQuery({
-    queryKey: ["profile-me"],
-    queryFn: getMyProfile,
-    enabled,
-    retry: (failureCount, error: unknown) => {
-      if (
-        axios.isAxiosError(error) &&
-        (error.response?.status === 401 || error.response?.status === 403)
-      ) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-  });
-
-  useEffect(() => {
-    if (profile?.username) {
-      setUsername(profile.username);
-    }
-  }, [profile?.username]);
-
-  const mutation = useMutation({
-    mutationFn: updateMyProfile,
-    onSuccess: (updatedProfile) => {
-      queryClient.setQueryData(["profile-me"], updatedProfile);
-      setUsername(updatedProfile.username ?? "");
-    },
-  });
+    isPending,
+    profile,
+    setUsernameFocused,
+    setUsername,
+    toggleVisibility,
+    username,
+  } = usePublicProfileSettings(enabled);
 
   if (!enabled) {
     return null;
   }
 
-  const mutationError = mutation.error;
-  const errorMessage = axios.isAxiosError(mutationError)
-    ? mutationError.response?.data?.detail ?? "Could not update public profile."
-    : mutationError
-      ? "Could not update public profile."
-      : null;
-
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    mutation.mutate({
-      username,
-      is_profile_public: true,
-    });
-  };
-
-  const handleVisibilityToggle = () => {
-    if (!profile) return;
-    mutation.mutate({
-      is_profile_public: !profile.is_profile_public,
-    });
+    createProfile();
   };
 
   return (
@@ -117,8 +77,8 @@ const PublicProfileSettings = ({
             <Button
               type="button"
               size="sm"
-              onClick={handleVisibilityToggle}
-              disabled={mutation.isPending}
+              onClick={toggleVisibility}
+              disabled={isPending}
             >
               {profile.is_profile_public ? "Make private" : "Make public"}
             </Button>
@@ -135,18 +95,20 @@ const PublicProfileSettings = ({
             <Input
               value={username}
               onChange={(event) => setUsername(event.target.value)}
+              onBlur={() => setUsernameFocused(false)}
+              onFocus={() => setUsernameFocused(true)}
               placeholder="choose-a-username"
               aria-label="Public username"
               autoCapitalize="none"
               autoCorrect="off"
-              disabled={mutation.isPending}
+              disabled={isPending}
             />
             <p className="text-xs font-medium text-muted-foreground">
               Use 3+ letters, numbers, underscores, or hyphens.
             </p>
           </div>
-          <Button type="submit" size="sm" disabled={mutation.isPending}>
-            {mutation.isPending ? "Creating..." : "Create public profile"}
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? "Creating..." : "Create public profile"}
           </Button>
         </form>
       )}
