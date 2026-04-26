@@ -2,22 +2,9 @@
 set -euo pipefail
 
 BACKUP_CONFIG_FILE="${BACKUP_CONFIG_FILE:-/root/.config/pe-be-backup.env}"
-
-if [[ -f "$BACKUP_CONFIG_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$BACKUP_CONFIG_FILE"
-  set +a
-fi
-
 APP_DIR="${APP_DIR:-/srv/pe-be}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/backend/.env.production}"
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/pe-be/postgres}"
-LOCAL_RETENTION_DAYS="${LOCAL_RETENTION_DAYS:-3}"
-ENCRYPTION_MODE="${ENCRYPTION_MODE:-gpg-passphrase}"
-PASSPHRASE_FILE="${PASSPHRASE_FILE:-/root/.config/pe-be-backup-passphrase}"
-GPG_RECIPIENT="${GPG_RECIPIENT:-}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing env file: $ENV_FILE" >&2
@@ -28,6 +15,19 @@ set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
+
+if [[ -f "$BACKUP_CONFIG_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$BACKUP_CONFIG_FILE"
+  set +a
+fi
+
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/pe-be/postgres}"
+LOCAL_RETENTION_DAYS="${LOCAL_RETENTION_DAYS:-3}"
+ENCRYPTION_MODE="${ENCRYPTION_MODE:-gpg-passphrase}"
+PASSPHRASE_FILE="${PASSPHRASE_FILE:-/root/.config/pe-be-backup-passphrase}"
+GPG_RECIPIENT="${GPG_RECIPIENT:-}"
 
 : "${POSTGRES_DB:?POSTGRES_DB is required in $ENV_FILE}"
 : "${POSTGRES_USER:?POSTGRES_USER is required in $ENV_FILE}"
