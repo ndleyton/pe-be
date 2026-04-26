@@ -78,6 +78,8 @@ Schedule the pull with launchd, cron, or any local scheduler. Pulling is preferr
 
 ## Restore Check
 
+**Note:** Ensure your local `pg_restore` client is at least Postgres 17 (matching the production `postgres:17-alpine` image) to avoid "unsupported version" errors when reading the custom-format dump.
+
 Decrypt a backup:
 
 ```bash
