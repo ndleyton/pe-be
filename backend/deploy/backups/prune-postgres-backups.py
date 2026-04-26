@@ -5,7 +5,7 @@ import argparse
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -24,7 +24,7 @@ def parse_backup(path: Path) -> Backup | None:
         return None
 
     created_at = datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(
-        tzinfo=UTC
+        tzinfo=timezone.utc
     )
     return Backup(path=path, created_at=created_at)
 
@@ -71,7 +71,7 @@ def main() -> int:
         print("No backup files found.")
         return 0
 
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     recent_floor = now - timedelta(days=args.keep_daily)
 
     keep: set[Path] = set()
