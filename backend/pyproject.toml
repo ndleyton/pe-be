@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "FastAPI backend for fitness tracker app"
 authors = [{ name = "Nicolas Leyton", email = "ndleyton@uc.cl" }]
 maintainers = [{ name = "Nicolas Leyton", email = "ndleyton@uc.cl" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 readme = "README.md"
 dependencies = [
     "fastapi>=0.110.0,<1",
