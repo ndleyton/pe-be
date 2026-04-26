@@ -158,9 +158,7 @@ async def test_save_public_activity_as_private_routine(
     assert body["exercise_templates"][0]["set_templates"][0]["reps"] == 5
 
 
-async def test_my_profile_read_and_update(
-    async_client: AsyncClient, db_session
-):
+async def test_my_profile_read_and_update(async_client: AsyncClient, db_session):
     user = User(
         email="profile-owner@example.com",
         hashed_password="x",
