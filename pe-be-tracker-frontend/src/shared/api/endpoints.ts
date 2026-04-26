@@ -54,6 +54,7 @@ export const endpoints = {
   },
 
   // Public profiles
+  profileMe: "/profiles/me",
   publicProfile: (username: string) => `/profiles/${username}`,
   publicProfileActivities: (username: string) => `/profiles/${username}/activities`,
   publicProfileActivity: (username: string, workoutId: string | number) =>

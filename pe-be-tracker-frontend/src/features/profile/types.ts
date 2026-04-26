@@ -11,6 +11,22 @@ export interface PublicProfile {
   last_public_activity_at?: string | null;
 }
 
+export interface ProfileMe {
+  username?: string | null;
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  is_profile_public: boolean;
+}
+
+export interface ProfileMeUpdate {
+  username?: string | null;
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  is_profile_public?: boolean;
+}
+
 export interface PublicWorkoutType {
   id: number;
   name: string;

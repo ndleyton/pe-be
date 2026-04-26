@@ -3,8 +3,31 @@ from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic import field_validator
 
 from src.routines.schemas import RoutineRead
+from src.users.schemas import normalize_username
+
+
+class ProfileMeRead(BaseModel):
+    username: Optional[str] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_profile_public: bool
+
+
+class ProfileMeUpdate(BaseModel):
+    username: Optional[str] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_profile_public: Optional[bool] = None
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def validate_username(cls, value):
+        return normalize_username(value)
 
 
 class PublicProfileRead(BaseModel):

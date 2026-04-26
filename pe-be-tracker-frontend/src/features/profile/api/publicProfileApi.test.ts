@@ -5,12 +5,15 @@ import {
   getPublicActivities,
   getPublicActivity,
   getPublicProfile,
+  getMyProfile,
   savePublicActivityAsRoutine,
+  updateMyProfile,
 } from "@/features/profile/api";
 
 vi.mock("@/shared/api/client", () => ({
   default: {
     get: vi.fn(),
+    patch: vi.fn(),
     post: vi.fn(),
   },
 }));
@@ -30,6 +33,30 @@ describe("public profile api", () => {
     });
 
     expect(api.get).toHaveBeenCalledWith("/profiles/jane");
+  });
+
+  it("reads and updates current profile settings", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { username: null, is_profile_public: false },
+    });
+    vi.mocked(api.patch).mockResolvedValueOnce({
+      data: { username: "jane", is_profile_public: true },
+    });
+
+    await expect(getMyProfile()).resolves.toMatchObject({
+      is_profile_public: false,
+    });
+    await expect(
+      updateMyProfile({ username: "Jane", is_profile_public: true }),
+    ).resolves.toMatchObject({
+      username: "jane",
+    });
+
+    expect(api.get).toHaveBeenCalledWith("/profiles/me");
+    expect(api.patch).toHaveBeenCalledWith("/profiles/me", {
+      username: "Jane",
+      is_profile_public: true,
+    });
   });
 
   it("reads activities and activity detail", async () => {

@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/features/auth/components";
+import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WeekTracking } from "@/shared/components/WeekTracking";
 import { useAuthStore, useGuestStore } from "@/stores";
@@ -13,10 +15,110 @@ import {
 import { ModeToggle } from "@/shared/components/theme/mode-toggle";
 import { Dumbbell, Check, Timer, Sparkles, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
   const { data } = await getMyWorkouts(undefined, 100);
   return data;
+};
+
+const PublicProfileSettings = ({
+  enabled,
+}: {
+  enabled: boolean;
+}) => {
+  const {
+    createProfile,
+    error,
+    errorMessage,
+    isLoading,
+    isPending,
+    profile,
+    setUsernameFocused,
+    setUsername,
+    toggleVisibility,
+    username,
+  } = usePublicProfileSettings(enabled);
+
+  if (!enabled) {
+    return null;
+  }
+
+  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    createProfile();
+  };
+
+  return (
+    <div className="text-left">
+      <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">
+        Public Profile
+      </label>
+      {isLoading ? (
+        <p className="mt-2 text-sm font-semibold text-muted-foreground">
+          Loading public profile settings...
+        </p>
+      ) : error ? (
+        <p className="mt-2 text-sm font-semibold text-destructive">
+          Failed to load public profile settings.
+        </p>
+      ) : profile?.username ? (
+        <div className="mt-2 space-y-3">
+          <div>
+            <p className="text-lg font-black text-foreground">@{profile.username}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {profile.is_profile_public
+                ? "Your profile is visible to anyone with the link."
+                : "Your username is reserved, but your profile is private."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={toggleVisibility}
+              disabled={isPending}
+            >
+              {profile.is_profile_public ? "Make private" : "Make public"}
+            </Button>
+            {profile.is_profile_public ? (
+              <Button asChild type="button" size="sm" variant="outline">
+                <Link to={`/u/${profile.username}`}>View public profile</Link>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <form className="mt-2 space-y-3" onSubmit={handleCreate}>
+          <div className="space-y-2">
+            <Input
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              onBlur={() => setUsernameFocused(false)}
+              onFocus={() => setUsernameFocused(true)}
+              placeholder="choose-a-username"
+              aria-label="Public username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isPending}
+            />
+            <p className="text-xs font-medium text-muted-foreground">
+              Use 3+ letters, numbers, underscores, or hyphens.
+            </p>
+          </div>
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? "Creating..." : "Create public profile"}
+          </Button>
+        </form>
+      )}
+      {errorMessage ? (
+        <p className="mt-2 text-sm font-semibold text-destructive">
+          {errorMessage}
+        </p>
+      ) : null}
+    </div>
+  );
 };
 
 const ProfilePage = () => {
@@ -181,6 +283,8 @@ const ProfilePage = () => {
                 isAuthenticated ? "bg-primary animate-pulse" : "bg-muted-foreground/30"
               )} />
             </div>
+
+            <PublicProfileSettings enabled={!loading && isAuthenticated} />
 
             {!isAuthenticated && (
               <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-5 text-left">
