@@ -156,3 +156,83 @@ async def test_save_public_activity_as_private_routine(
     assert body["exercise_templates"][0]["notes"] is None
     assert body["exercise_templates"][0]["set_templates"][0]["notes"] is None
     assert body["exercise_templates"][0]["set_templates"][0]["reps"] == 5
+
+
+async def test_my_profile_read_and_update(
+    async_client: AsyncClient, db_session
+):
+    user = User(
+        email="profile-owner@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    async def _override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = _override_user
+    try:
+        get_response = await async_client.get(f"{settings.API_PREFIX}/profiles/me")
+        assert get_response.status_code == 200
+        assert get_response.json()["username"] is None
+
+        patch_response = await async_client.patch(
+            f"{settings.API_PREFIX}/profiles/me",
+            json={
+                "username": "Profile_Owner",
+                "display_name": "Profile Owner",
+                "bio": "Training notes",
+                "is_profile_public": True,
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert patch_response.status_code == 200, patch_response.text
+    body = patch_response.json()
+    assert body["username"] == "profile_owner"
+    assert body["display_name"] == "Profile Owner"
+    assert body["bio"] == "Training notes"
+    assert body["is_profile_public"] is True
+
+
+async def test_my_profile_update_rejects_username_collision(
+    async_client: AsyncClient, db_session
+):
+    existing_user = User(
+        email="profile-existing@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+        username="taken",
+    )
+    viewer = User(
+        email="profile-viewer@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add_all([existing_user, viewer])
+    await db_session.commit()
+    await db_session.refresh(viewer)
+
+    async def _override_user():
+        return viewer
+
+    app.dependency_overrides[current_active_user] = _override_user
+    try:
+        response = await async_client.patch(
+            f"{settings.API_PREFIX}/profiles/me",
+            json={"username": "Taken"},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert response.status_code == 409

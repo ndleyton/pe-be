@@ -1,8 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from src.profiles import crud
 from src.profiles.schemas import (
     PaginatedPublicWorkoutActivities,
+    ProfileMeRead,
+    ProfileMeUpdate,
     PublicExerciseSetRead,
     PublicProfileRead,
     PublicWorkoutActivityRead,
@@ -14,9 +17,19 @@ from src.profiles.schemas import (
 from src.routines.service import routine_service
 from src.workouts.schemas import SaveWorkoutAsRoutineRequest
 from src.workouts.models import Workout
+from src.users.models import User
+from sqlalchemy import func, select
 
 
 class ProfileNotFoundError(LookupError):
+    pass
+
+
+class ProfileConflictError(ValueError):
+    pass
+
+
+class ProfileValidationError(ValueError):
     pass
 
 
@@ -89,6 +102,62 @@ def _activity_detail(workout: Workout) -> PublicWorkoutActivityRead:
 
 
 class ProfileService:
+    def _me_read(self, user: User) -> ProfileMeRead:
+        return ProfileMeRead(
+            username=user.username,
+            display_name=user.name,
+            bio=user.bio,
+            avatar_url=user.avatar_url,
+            is_profile_public=user.is_profile_public,
+        )
+
+    async def get_my_profile(self, user: User) -> ProfileMeRead:
+        return self._me_read(user)
+
+    async def update_my_profile(
+        self,
+        session: AsyncSession,
+        user: User,
+        profile_update: ProfileMeUpdate,
+    ) -> ProfileMeRead:
+        db_user = await session.get(User, user.id)
+        if db_user is None:
+            raise ProfileNotFoundError("Profile not found")
+
+        update_data = profile_update.model_dump(exclude_unset=True)
+
+        if "username" in update_data and update_data["username"] is not None:
+            result = await session.execute(
+                select(User.id).where(
+                    func.lower(User.username) == update_data["username"],
+                    User.id != db_user.id,
+                )
+            )
+            if result.scalar_one_or_none() is not None:
+                raise ProfileConflictError("Username is already taken")
+
+        next_username = update_data.get("username", db_user.username)
+        next_is_public = update_data.get("is_profile_public", db_user.is_profile_public)
+        if next_is_public and not next_username:
+            raise ProfileValidationError("Username is required for a public profile")
+
+        for field, value in update_data.items():
+            if field == "display_name":
+                db_user.name = value
+            else:
+                setattr(db_user, field, value)
+
+        try:
+            await session.commit()
+        except IntegrityError as exc:
+            await session.rollback()
+            raise ProfileConflictError("Username is already taken") from exc
+        except Exception:
+            await session.rollback()
+            raise
+        await session.refresh(db_user)
+        return self._me_read(db_user)
+
     async def get_public_profile(
         self, session: AsyncSession, username: str
     ) -> PublicProfileRead:

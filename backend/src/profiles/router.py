@@ -4,16 +4,46 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_async_session
 from src.profiles.schemas import (
     PaginatedPublicWorkoutActivities,
+    ProfileMeRead,
+    ProfileMeUpdate,
     PublicProfileRead,
     PublicWorkoutActivityRead,
     SavePublicWorkoutAsRoutineRequest,
     SavePublicWorkoutAsRoutineResponse,
 )
-from src.profiles.service import ProfileNotFoundError, profile_service
+from src.profiles.service import (
+    ProfileConflictError,
+    ProfileNotFoundError,
+    ProfileValidationError,
+    profile_service,
+)
 from src.users.models import User
 from src.users.router import current_active_user
 
 router = APIRouter(tags=["profiles"])
+
+
+@router.get("/me", response_model=ProfileMeRead)
+async def get_my_profile(
+    viewer: User = Depends(current_active_user),
+):
+    return await profile_service.get_my_profile(viewer)
+
+
+@router.patch("/me", response_model=ProfileMeRead)
+async def update_my_profile(
+    profile_update: ProfileMeUpdate,
+    viewer: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        return await profile_service.update_my_profile(session, viewer, profile_update)
+    except ProfileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Profile not found") from exc
+    except ProfileConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProfileValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{username}", response_model=PublicProfileRead)

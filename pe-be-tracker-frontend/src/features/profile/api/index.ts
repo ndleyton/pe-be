@@ -2,10 +2,24 @@ import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 import type {
   PaginatedPublicWorkoutActivities,
+  ProfileMe,
+  ProfileMeUpdate,
   PublicProfile,
   PublicWorkoutActivity,
   SavePublicWorkoutAsRoutineResult,
 } from "@/features/profile/types";
+
+export const getMyProfile = async (): Promise<ProfileMe> => {
+  const response = await api.get(endpoints.profileMe);
+  return response.data;
+};
+
+export const updateMyProfile = async (
+  update: ProfileMeUpdate,
+): Promise<ProfileMe> => {
+  const response = await api.patch(endpoints.profileMe, update);
+  return response.data;
+};
 
 export const getPublicProfile = async (
   username: string,
