@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import { getMyProfile, updateMyProfile } from "@/features/profile/api";
+import type { ProfileMeUpdate } from "@/features/profile/types";
 
 export const PROFILE_ME_QUERY_KEY = ["profile-me"] as const;
 
@@ -70,7 +71,7 @@ const getProfileMutationErrorMessage = (error: unknown): string | null => {
 export const usePublicProfileSettings = (enabled: boolean) => {
   const queryClient = useQueryClient();
   const hasInitializedUsername = useRef(false);
-  const [username, setUsername] = useState("");
+  const [username, setUsernameState] = useState("");
   const [isUsernameFocused, setUsernameFocused] = useState(false);
 
   const {
@@ -91,23 +92,29 @@ export const usePublicProfileSettings = (enabled: boolean) => {
       !isUsernameFocused &&
       username === ""
     ) {
-      setUsername(profile.username);
+      setUsernameState(profile.username);
       hasInitializedUsername.current = true;
     }
   }, [isUsernameFocused, profile?.username, username]);
 
+  const setUsername = useCallback((value: string) => {
+    setUsernameState(value.trim());
+  }, []);
+
   const mutation = useMutation({
-    mutationFn: updateMyProfile,
+    mutationFn: (profileUpdate: ProfileMeUpdate) => updateMyProfile(profileUpdate),
     onSuccess: (updatedProfile) => {
       queryClient.setQueryData(PROFILE_ME_QUERY_KEY, updatedProfile);
-      setUsername(updatedProfile.username ?? "");
+      setUsernameState(updatedProfile.username ?? "");
       hasInitializedUsername.current = true;
     },
   });
 
   const createProfile = useCallback(() => {
+    const trimmedUsername = username.trim();
+    setUsernameState(trimmedUsername);
     mutation.mutate({
-      username,
+      username: trimmedUsername,
       is_profile_public: true,
     });
   }, [mutation, username]);

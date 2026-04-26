@@ -4,7 +4,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getMyProfile, updateMyProfile } from "@/features/profile/api";
-import { usePublicProfileSettings } from "./usePublicProfileSettings";
+import {
+  PROFILE_ME_QUERY_KEY,
+  usePublicProfileSettings,
+} from "./usePublicProfileSettings";
 
 vi.mock("@/features/profile/api", () => ({
   getMyProfile: vi.fn(),
@@ -27,9 +30,11 @@ const createWrapper = () => {
     },
   });
 
-  return ({ children }: { children: ReactNode }) => (
+  const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+
+  return { queryClient, wrapper };
 };
 
 const deferred = <T,>() => {
@@ -51,8 +56,9 @@ describe("usePublicProfileSettings", () => {
     const pendingProfile = deferred<Awaited<ReturnType<typeof getMyProfile>>>();
     mockGetMyProfile.mockReturnValue(pendingProfile.promise);
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     expect(result.current.isLoading).toBe(true);
@@ -64,13 +70,14 @@ describe("usePublicProfileSettings", () => {
       is_profile_public: false,
     });
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.username).toBe("jane"));
 
-    act(() => result.current.setUsername("jane-lifts"));
+    act(() => result.current.setUsername(" jane-lifts "));
 
     expect(result.current.username).toBe("jane-lifts");
   });
@@ -79,8 +86,9 @@ describe("usePublicProfileSettings", () => {
     const pendingProfile = deferred<Awaited<ReturnType<typeof getMyProfile>>>();
     mockGetMyProfile.mockReturnValue(pendingProfile.promise);
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     act(() => result.current.setUsernameFocused(true));
@@ -114,8 +122,9 @@ describe("usePublicProfileSettings", () => {
       response: { data: { detail: "Username is already taken" } },
     });
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -148,8 +157,9 @@ describe("usePublicProfileSettings", () => {
       },
     });
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -174,13 +184,14 @@ describe("usePublicProfileSettings", () => {
       is_profile_public: true,
     });
 
+    const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    act(() => result.current.setUsername("jane"));
+    act(() => result.current.setUsername(" jane "));
     act(() => result.current.createProfile());
 
     await waitFor(() =>
@@ -189,11 +200,14 @@ describe("usePublicProfileSettings", () => {
           username: "jane",
           is_profile_public: true,
         }),
-        expect.anything(),
       ),
     );
     await waitFor(() => expect(result.current.profile?.username).toBe("jane"));
     expect(result.current.username).toBe("jane");
+    expect(queryClient.getQueryData(PROFILE_ME_QUERY_KEY)).toEqual({
+      username: "jane",
+      is_profile_public: true,
+    });
   });
 
   it("toggles existing profile visibility", async () => {
@@ -206,8 +220,9 @@ describe("usePublicProfileSettings", () => {
       is_profile_public: true,
     });
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => usePublicProfileSettings(true), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.profile?.username).toBe("jane"));
@@ -219,7 +234,6 @@ describe("usePublicProfileSettings", () => {
         expect.objectContaining({
           is_profile_public: true,
         }),
-        expect.anything(),
       ),
     );
     await waitFor(() =>

@@ -199,6 +199,37 @@ async def test_my_profile_read_and_update(async_client: AsyncClient, db_session)
     assert body["is_profile_public"] is True
 
 
+async def test_my_profile_update_rejects_public_profile_without_username(
+    async_client: AsyncClient, db_session
+):
+    user = User(
+        email="profile-public-missing-username@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    async def _override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = _override_user
+    try:
+        response = await async_client.patch(
+            f"{settings.API_PREFIX}/profiles/me",
+            json={"is_profile_public": True},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["detail"] == "Username is required for a public profile"
+
+
 async def test_my_profile_update_rejects_username_collision(
     async_client: AsyncClient, db_session
 ):
