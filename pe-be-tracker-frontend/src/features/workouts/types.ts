@@ -6,6 +6,7 @@ export interface Workout {
   end_time: string | null;
   workout_type_id: number;
   recap?: string | null;
+  visibility?: 'private' | 'public';
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ export interface UpdateWorkoutData {
   name?: string | null;
   notes?: string | null;
   end_time?: string | null;
+  visibility?: 'private' | 'public';
 }
 
 // Cursor-based paginated response wrapper

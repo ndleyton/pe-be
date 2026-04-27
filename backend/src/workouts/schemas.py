@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import field_validator, model_validator, ConfigDict, BaseModel, Field
@@ -47,6 +47,7 @@ class WorkoutUpdate(WorkoutBase):
     """Schema for updating workouts"""
 
     workout_type_id: Optional[int] = None
+    visibility: Optional[Literal["private", "public"]] = None
 
 
 class WorkoutRead(WorkoutBase):
@@ -54,6 +55,7 @@ class WorkoutRead(WorkoutBase):
 
     id: int
     owner_id: int
+    visibility: Literal["private", "public"]
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

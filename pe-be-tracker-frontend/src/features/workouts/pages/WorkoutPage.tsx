@@ -1,19 +1,22 @@
 import { Suspense, useEffect, useRef, useState, lazy } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Share2 } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import { useAppBackNavigation } from "@/shared/hooks";
+import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
 import {
   WorkoutPageLocationState,
   useWorkoutPageData,
 } from "@/features/workouts/hooks/useWorkoutPageData";
 import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
+import { useWorkoutShare } from "@/features/workouts/hooks/useWorkoutShare";
 
 const FinishWorkoutModal = lazy(() =>
   import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
@@ -40,6 +43,7 @@ const WorkoutPage = () => {
   const goBack = useAppBackNavigation("/workouts");
   const location = useLocation();
   const routeState = location.state as WorkoutPageLocationState | null;
+  const queryClient = useQueryClient();
 
   const {
     exercises,
@@ -112,6 +116,18 @@ const WorkoutPage = () => {
   const handleSaveRoutine = () => {
     setShowSaveRoutineModal(true);
   };
+
+  const { profile } = usePublicProfileSettings(isAuthenticated);
+
+  const showShareButton = profile?.is_profile_public && workoutEndTime;
+
+  const workoutShare = useWorkoutShare({
+    profile,
+    workoutId,
+    serverWorkout,
+    workoutName,
+    queryClient,
+  });
 
   useEffect(() => {
     if (!hasValidWorkout) {
@@ -223,6 +239,17 @@ const WorkoutPage = () => {
             "Workout"
           )}
         </h2>
+        {showShareButton && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300 ml-auto shrink-0"
+            aria-label="Share workout"
+            onClick={workoutShare.share}
+          >
+            <Share2 className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <div className="space-y-6">

@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BookmarkPlus } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, BookmarkPlus, Check, Share2 } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import {
   getPublicActivity,
@@ -35,7 +37,36 @@ const setLabel = (set: PublicExerciseSet) => {
 
 const PublicActivityPage = () => {
   const { username = "", workoutId = "" } = useParams();
+  const [hasCopied, setHasCopied] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setHasCopied(true);
+      toast.success("Workout link copied to clipboard!");
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => {
+        setHasCopied(false);
+        timerRef.current = null;
+      }, 2000);
+    } catch (err) {
+      toast.error("Failed to share workout.");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const activityQuery = useQuery({
@@ -82,18 +113,32 @@ const PublicActivityPage = () => {
           </h1>
           <p className="text-sm font-bold text-muted-foreground">@{username}</p>
         </div>
-        <Button
-          type="button"
-          onClick={() =>
-            isAuthenticated
-              ? saveMutation.mutate()
-              : navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)
-          }
-          disabled={saveMutation.isPending}
-        >
-          <BookmarkPlus className="mr-2 h-4 w-4" />
-          {saveMutation.isPending ? "Saving..." : "Save routine"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleShare}
+          >
+            {hasCopied ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : (
+              <Share2 className="mr-2 h-4 w-4" />
+            )}
+            {hasCopied ? "Copied!" : "Share workout"}
+          </Button>
+          <Button
+            type="button"
+            onClick={() =>
+              isAuthenticated
+                ? saveMutation.mutate()
+                : navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)
+            }
+            disabled={saveMutation.isPending}
+          >
+            <BookmarkPlus className="mr-2 h-4 w-4" />
+            {saveMutation.isPending ? "Saving..." : "Save routine"}
+          </Button>
+        </div>
       </div>
 
       {saveMutation.error ? (
@@ -137,20 +182,41 @@ const PublicActivityPage = () => {
       </div>
 
       <section className="space-y-4">
-        {activity.exercises.map((exercise) => (
+        {activity.exercises.map((exercise, exerciseIndex) => (
           <div
             key={exercise.id}
-            className="rounded-lg border border-border p-4"
+            className="rounded-2xl border border-border/40 bg-muted/20 p-4 shadow-sm transition-all hover:bg-muted/30"
           >
-            <h2 className="font-black">{exercise.exercise_type.name}</h2>
-            <div className="mt-3 space-y-2">
-              {exercise.sets.map((set, index) => (
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/10 pb-4">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-background text-xl font-black shadow-inner">
+                  {exerciseIndex + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words text-lg font-black leading-tight tracking-tight">
+                    {exercise.exercise_type.name}
+                  </h2>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                      {exercise.sets.length} set{exercise.sets.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 space-y-2">
+              {exercise.sets.map((set, setIndex) => (
                 <div
-                  key={`${exercise.id}-${index}`}
-                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm"
+                  key={`${exercise.id}-${setIndex}`}
+                  className="flex w-full items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 shadow-lg shadow-primary/5 backdrop-blur-sm"
                 >
-                  <span className="font-bold">Set {index + 1}</span>
-                  <span className="text-muted-foreground">{setLabel(set)}</span>
+                  <span className="mt-0.5 text-[10px] font-black text-primary opacity-40">
+                    {setIndex + 1}
+                  </span>
+                  <span className="min-w-0 break-words text-sm font-bold tracking-tight italic text-foreground opacity-90">
+                    {setLabel(set)}
+                  </span>
                 </div>
               ))}
             </div>

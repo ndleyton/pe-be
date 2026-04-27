@@ -131,7 +131,7 @@ async def create_workout(
     session: AsyncSession, workout_create: WorkoutCreate, user_id: int
 ) -> Workout:
     """Create a new workout"""
-    workout = Workout(**workout_create.dict(), owner_id=user_id)
+    workout = Workout(**workout_create.dict(exclude_unset=True), owner_id=user_id)
     session.add(workout)
     try:
         await session.commit()
