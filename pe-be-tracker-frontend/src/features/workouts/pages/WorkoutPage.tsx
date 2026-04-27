@@ -6,7 +6,6 @@ import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ArrowLeft, Sparkles, Share2 } from "lucide-react";
-import { toast } from "sonner";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -17,7 +16,7 @@ import {
   useWorkoutPageData,
 } from "@/features/workouts/hooks/useWorkoutPageData";
 import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
-import { updateWorkout } from "@/features/workouts";
+import { useWorkoutShare } from "@/features/workouts/hooks/useWorkoutShare";
 
 const FinishWorkoutModal = lazy(() =>
   import("@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal"),
@@ -122,37 +121,13 @@ const WorkoutPage = () => {
 
   const showShareButton = profile?.is_profile_public && workoutEndTime;
 
-  const handleShare = async () => {
-    if (!profile?.username || !workoutId) return;
-
-    if (serverWorkout?.visibility !== "public") {
-      try {
-        await updateWorkout(workoutId, { visibility: "public" });
-        await queryClient.invalidateQueries({ queryKey: ["workout", workoutId] });
-      } catch (err) {
-        console.error("Failed to update workout visibility:", err);
-        toast.error("Could not set workout to public.");
-        return;
-      }
-    }
-
-    const url = `${window.location.origin}/u/${profile.username}/activities/${workoutId}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Workout: ${workoutName || "Workout"}`,
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Workout link copied to clipboard!");
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        toast.error("Failed to share workout.");
-      }
-    }
-  };
+  const workoutShare = useWorkoutShare({
+    profile,
+    workoutId,
+    serverWorkout,
+    workoutName,
+    queryClient,
+  });
 
   useEffect(() => {
     if (!hasValidWorkout) {
@@ -270,7 +245,7 @@ const WorkoutPage = () => {
             size="icon"
             className="rounded-full bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all duration-300 ml-auto shrink-0"
             aria-label="Share workout"
-            onClick={handleShare}
+            onClick={workoutShare.share}
           >
             <Share2 className="h-5 w-5" />
           </Button>
