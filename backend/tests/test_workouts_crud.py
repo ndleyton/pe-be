@@ -5,7 +5,13 @@ import pytest
 from src.core.errors import DomainValidationError
 from src.users.models import User
 from src.workouts import crud
-from src.workouts.schemas import WorkoutCreate, WorkoutTypeCreate, WorkoutUpdate
+from src.workouts.models import Workout
+from src.workouts.schemas import (
+    WorkoutCreate,
+    WorkoutRead,
+    WorkoutTypeCreate,
+    WorkoutUpdate,
+)
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -152,6 +158,10 @@ async def test_get_user_workouts_keyset_pagination_and_latest_by_start_time(db_s
 
 
 async def test_create_workout_success_and_integrity_mappings(db_session):
+    assert "visibility" not in WorkoutCreate.model_fields
+    assert "visibility" in WorkoutUpdate.model_fields
+    assert WorkoutRead.model_fields["visibility"].is_required()
+
     owner = await _seed_user(db_session, "workout-create@example.com")
     workout_type = await _seed_workout_type(db_session, "Create Type")
     owner_id = owner.id
@@ -170,6 +180,7 @@ async def test_create_workout_success_and_integrity_mappings(db_session):
     assert created.id is not None
     assert created.owner_id == owner_id
     assert created.start_time.tzinfo == timezone.utc
+    assert created.visibility == Workout.WorkoutVisibility.private
 
     with pytest.raises(DomainValidationError) as invalid_type:
         await crud.create_workout(

@@ -13,7 +13,6 @@ class WorkoutBase(BaseModel):
     end_time: Optional[datetime] = None
     workout_type_id: int
     recap: Optional[str] = None
-    visibility: Optional[Literal["private", "public"]] = None
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
@@ -48,6 +47,7 @@ class WorkoutUpdate(WorkoutBase):
     """Schema for updating workouts"""
 
     workout_type_id: Optional[int] = None
+    visibility: Optional[Literal["private", "public"]] = None
 
 
 class WorkoutRead(WorkoutBase):
@@ -55,6 +55,7 @@ class WorkoutRead(WorkoutBase):
 
     id: int
     owner_id: int
+    visibility: Literal["private", "public"]
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

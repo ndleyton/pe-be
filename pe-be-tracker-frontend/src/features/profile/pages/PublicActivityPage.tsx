@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BookmarkPlus, Check, Share2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import {
   getPublicActivity,
@@ -37,16 +38,33 @@ const setLabel = (set: PublicExerciseSet) => {
 const PublicActivityPage = () => {
   const { username = "", workoutId = "" } = useParams();
   const [hasCopied, setHasCopied] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setHasCopied(true);
-      setTimeout(() => setHasCopied(false), 2000);
+      toast.success("Workout link copied to clipboard!");
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => {
+        setHasCopied(false);
+        timerRef.current = null;
+      }, 2000);
     } catch (err) {
-      console.error("Failed to copy link", err);
+      toast.error("Failed to share workout.");
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
