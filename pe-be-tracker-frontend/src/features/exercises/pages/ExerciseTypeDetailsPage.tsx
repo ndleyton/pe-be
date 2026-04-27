@@ -474,7 +474,7 @@ const ExerciseTypeDetailsPage = () => {
               aria-label="Go back"
               onClick={handleBack}
             >
-                <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -616,10 +616,10 @@ const ExerciseTypeDetailsPage = () => {
                 </Button>
               ) : null}
               {canRequestEvaluation ? (
-              <Button
-                variant="glass"
-                className="w-full rounded-xl sm:w-auto"
-                onClick={() => requestEvaluationMutation.mutate()}
+                <Button
+                  variant="glass"
+                  className="w-full rounded-xl sm:w-auto"
+                  onClick={() => requestEvaluationMutation.mutate()}
                 >
                   {requestEvaluationMutation.isPending
                     ? "Requesting..."
@@ -787,11 +787,10 @@ const ExerciseTypeDetailsPage = () => {
                               <button
                                 key={muscle.id}
                                 type="button"
-                                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5"
-                                }`}
+                                className={`rounded-full border px-3 py-1 text-sm transition-colors ${isSelected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5"
+                                  }`}
                                 aria-pressed={isSelected}
                                 onClick={() =>
                                   setEditValues((current) => ({
@@ -1003,20 +1002,6 @@ const ExerciseTypeDetailsPage = () => {
               </p>
             )}
           </div>
-
-          {stats?.totalSets ? (
-            <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
-              <h2 className="mb-4 text-lg font-semibold">Usage Statistics</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <div className="bg-muted/50 rounded-xl p-5">
-                  <div className="text-muted-foreground mb-1 text-sm font-medium">
-                    Total Sets
-                  </div>
-                  <div className="text-2xl font-bold">{stats.totalSets}</div>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 
