@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import field_validator, model_validator, ConfigDict, BaseModel, Field
@@ -13,6 +13,7 @@ class WorkoutBase(BaseModel):
     end_time: Optional[datetime] = None
     workout_type_id: int
     recap: Optional[str] = None
+    visibility: Optional[Literal["private", "public"]] = None
 
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
