@@ -12,6 +12,7 @@ import type { PublicExerciseSet } from "@/features/profile/types";
 import { useAuthStore } from "@/stores";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
+import PublicActivityPageSkeleton from "@/features/profile/components/skeletons/PublicActivityPageSkeleton";
 
 const formatPublicDecimal = (value: string | number): string => {
   const numericValue = Number(value);
@@ -81,7 +82,7 @@ const PublicActivityPage = () => {
   });
 
   if (activityQuery.isPending) {
-    return <div className="mx-auto max-w-4xl px-4 py-8">Loading workout...</div>;
+    return <PublicActivityPageSkeleton />;
   }
 
   if (activityQuery.error || !activityQuery.data) {

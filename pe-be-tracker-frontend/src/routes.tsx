@@ -8,6 +8,7 @@ import OAuthCallbackPage from "./features/auth/pages/OAuthCallbackPage";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
+import PublicActivityPageSkeleton from "@/features/profile/components/skeletons/PublicActivityPageSkeleton";
 import {
   RoutineDetailsLoadingState,
   RoutinesPageSkeleton,
@@ -169,7 +170,7 @@ const appRoutes: RouteObject[] = [
       },
       {
         path: "u/:username/activities/:workoutId",
-        element: withSuspense(<PublicActivityPage />, <WorkoutPageSkeleton />),
+        element: withSuspense(<PublicActivityPage />, <PublicActivityPageSkeleton />),
       },
       {
         path: "*",
