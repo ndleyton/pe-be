@@ -25,6 +25,7 @@ def _workout_payload(workout_id: int, owner_id: int = 123) -> dict:
         "owner_id": owner_id,
         "created_at": now,
         "updated_at": now,
+        "visibility": "private",
     }
 
 
