@@ -5,6 +5,8 @@ import { CalendarDays, Dumbbell, ListChecks } from "lucide-react";
 import { getPublicActivities, getPublicProfile } from "@/features/profile/api";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
+import PublicProfilePageSkeleton from "@/features/profile/components/skeletons/PublicProfilePageSkeleton";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 const formatDateValue = (value: string) =>
   new Intl.DateTimeFormat(undefined, {
@@ -37,7 +39,7 @@ const PublicProfilePage = () => {
   });
 
   if (profileQuery.isPending) {
-    return <div className="mx-auto max-w-4xl px-4 py-8">Loading profile...</div>;
+    return <PublicProfilePageSkeleton />;
   }
 
   if (profileQuery.error || !profileQuery.data) {
@@ -119,7 +121,20 @@ const PublicProfilePage = () => {
       <section>
         <h2 className="mb-4 text-xl font-black tracking-tight">Recent activity</h2>
         {activitiesQuery.isPending ? (
-          <p className="text-sm text-muted-foreground">Loading activity...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-border p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-32 rounded-xl" />
+                    <Skeleton className="h-4 w-24 rounded-full" />
+                    <Skeleton className="mt-2 h-4 w-64 rounded-full" />
+                  </div>
+                  <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : activities.length === 0 ? (
           <p className="text-sm text-muted-foreground">No public workouts yet.</p>
         ) : (
