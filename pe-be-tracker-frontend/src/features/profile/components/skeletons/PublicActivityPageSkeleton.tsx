@@ -1,16 +1,22 @@
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const PublicActivityPageSkeleton = () => (
-  <div className="mx-auto min-h-screen max-w-4xl px-4 py-8 text-left">
-    <div className="mb-6 flex items-center gap-3">
-      <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-9 w-64 max-w-full rounded-xl" />
-        <Skeleton className="h-4 w-24 rounded-full" />
+  <div
+    className="mx-auto min-h-screen max-w-4xl px-4 py-6 sm:py-8 text-left"
+    aria-busy="true"
+    aria-live="polite"
+  >
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-9 w-64 max-w-full rounded-xl" />
+          <Skeleton className="h-4 w-24 rounded-full" />
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2 hidden sm:flex">
-        <Skeleton className="h-10 w-32 rounded-md" />
-        <Skeleton className="h-10 w-32 rounded-md" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-10 flex-1 sm:w-24 sm:flex-none rounded-md" />
+        <Skeleton className="h-10 flex-1 sm:w-32 sm:flex-none rounded-md" />
       </div>
     </div>
 
@@ -31,7 +37,7 @@ export const PublicActivityPageSkeleton = () => (
         >
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/10 pb-4">
             <div className="flex min-w-0 items-start gap-4">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+              <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-xl" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-6 w-48 max-w-full rounded-xl" />
                 <Skeleton className="mt-1.5 h-4 w-16 rounded-full" />

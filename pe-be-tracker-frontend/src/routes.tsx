@@ -9,6 +9,7 @@ import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
 import PublicActivityPageSkeleton from "@/features/profile/components/skeletons/PublicActivityPageSkeleton";
+import PublicProfilePageSkeleton from "@/features/profile/components/skeletons/PublicProfilePageSkeleton";
 import {
   RoutineDetailsLoadingState,
   RoutinesPageSkeleton,
@@ -166,7 +167,7 @@ const appRoutes: RouteObject[] = [
       },
       {
         path: "u/:username",
-        element: withSuspense(<PublicProfilePage />, <ProfilePageSkeleton />),
+        element: withSuspense(<PublicProfilePage />, <PublicProfilePageSkeleton />),
       },
       {
         path: "u/:username/activities/:workoutId",
