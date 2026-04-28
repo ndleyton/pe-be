@@ -328,7 +328,7 @@ Initial recommended defaults:
 - maximum candidate image storage per user: 100 MB
 - strip EXIF and metadata before storage
 - normalize orientation
-- optionally transcode accepted uploads to WebP or JPEG for storage
+- defer resizing and format normalization to publish time
 
 These should be configurable by environment variables, for example:
 
@@ -336,6 +336,42 @@ These should be configurable by environment variables, for example:
 - `EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE`
 - `EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER`
 - `EXERCISE_IMAGE_UPLOAD_MAX_PIXELS`
+- `EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX`
+- `EXERCISE_IMAGE_PUBLISHED_FORMAT`
+
+### Image transformations
+
+There are two separate image-processing moments: upload-time sanitization and publish-time normalization.
+
+Upload-time behavior:
+
+- decode the uploaded image to verify it is a real JPEG, PNG, or WebP
+- reject images that exceed byte, dimension, or decoded-pixel limits
+- normalize orientation based on image metadata
+- strip EXIF and other metadata before writing the stored reference file
+- preserve the uploaded image's visual content and aspect ratio
+- preserve the source format where practical after sanitization
+- do not resize valid uploaded references solely to save space in phase 1
+- do not apply AI generation, stylistic changes, background removal, cropping, or compression-heavy transformation during upload
+
+Publish-time behavior for direct uploaded images:
+
+- create a published derivative from the sanitized uploaded reference
+- normalize to a standard maximum size while preserving aspect ratio
+- do not upscale smaller images
+- strip metadata from the published derivative
+- encode the published derivative as WebP
+- write the derivative under `published/...`
+- keep the uploaded reference under `uploads/...` for review history and future regeneration
+
+Recommended initial published-size policy:
+
+- `EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX=1600`
+- `EXERCISE_IMAGE_PUBLISHED_FORMAT=webp`
+- resize only when the longest edge exceeds that value
+- use deterministic output paths so re-publishing the same asset is idempotent
+
+AI image generation remains a separate admin action. If an admin chooses the generated/polished path, the uploaded reference is used as source material for the existing generation flow; direct publish does not call Gemini.
 
 ### Review and release flow
 
