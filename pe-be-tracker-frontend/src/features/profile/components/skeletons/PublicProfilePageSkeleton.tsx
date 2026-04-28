@@ -1,7 +1,11 @@
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const PublicProfilePageSkeleton = () => (
-  <div className="mx-auto min-h-screen max-w-4xl px-4 py-8 text-left">
+  <div
+    className="mx-auto min-h-screen max-w-4xl px-4 py-8 text-left"
+    aria-busy="true"
+    aria-live="polite"
+  >
     <header className="mb-8 border-b border-border pb-6">
       <div className="flex items-start gap-4">
         <Skeleton className="h-16 w-16 rounded-lg shrink-0" />
