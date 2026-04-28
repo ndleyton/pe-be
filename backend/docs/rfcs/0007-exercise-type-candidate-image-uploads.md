@@ -481,6 +481,18 @@ Recommended image backup mechanism:
 - create a pull script, or extend the existing pull script, to sync `/var/backups/pe-be/exercise-images`
 - document restore as: restore Postgres dump, restore `exercise_images_data`, then run an integrity check for missing referenced files
 
+Restore integrity check:
+
+- after restoring the Postgres dump and the `exercise_images_data` volume archive produced by `backend/deploy/backups/create-exercise-images-archive.sh`, run a non-interactive check script such as `backend/deploy/backups/restore-exercise-images-check.sh` or `python -m src.jobs.restore_exercise_images_check`
+- the restore runbook should place this check immediately after restoring the image archive and before returning the service to normal traffic; the runbook should reference `pe-be-exercise-images-backup.service`, `pe-be-exercise-images-backup.timer`, and the exercise-image pull script so operators use the matching archive source
+- the check must query `exercise_image_candidates` for critical rows, at minimum rows with `asset_kind='uploaded_reference'` and `status='active'`, and verify each `storage_path` exists under the restored `EXERCISE_IMAGE_STORAGE_DIR`
+- the check should also verify active published/generated references that the product serves publicly, including paths from `ExerciseType.images_url` and active or promoted generated image candidate rows
+- missing files for critical rows are restore failures; the script must exit non-zero and emit a remediation report listing the missing storage keys, affected table names, row IDs, exercise type IDs, asset kinds, and statuses
+- missing files for non-critical rows, such as `status in ('rejected', 'deleted', 'abandoned')` after the configured retention window, are warnings only; the restore may proceed, but the report should flag the system for post-restore reconciliation
+- the check must scan the restored filesystem under `uploads/`, `generated/`, and `published/` for files that are not referenced by any database row or image URL field; orphan files should be left untouched during restore and recorded for later cleanup by the exercise-image cleanup job or a dedicated orphan cleanup command
+- if critical failures exist, do not mark the restore complete until the operator either restores the missing files from another archive or deliberately updates/removes the affected database references
+- if only warnings or orphan files exist, allow the restore to succeed and record the reconciliation follow-up in the deployment notes
+
 This keeps the backup model simple and consistent with the current VPS. Object storage remains a delivery/offload option, not the first backup mechanism.
 
 ## Object Storage As A Delivery Option

@@ -80,22 +80,28 @@ def sanitize_image_upload(
 
 
 def _save_format_for_mime_type(mime_type: str) -> str:
-    return {
+    save_format = {
         "image/png": "PNG",
         "image/jpeg": "JPEG",
         "image/webp": "WEBP",
-    }[mime_type]
+    }.get(mime_type)
+    if save_format is None:
+        raise ImageUploadValidationError(f"Unsupported image MIME type: {mime_type}")
+    return save_format
 
 
 def _extension_for_mime_type(mime_type: str) -> str:
-    return {
+    extension = {
         "image/png": "png",
         "image/jpeg": "jpg",
         "image/webp": "webp",
-    }[mime_type]
+    }.get(mime_type)
+    if extension is None:
+        raise ImageUploadValidationError(f"Unsupported image MIME type: {mime_type}")
+    return extension
 
 
 def _prepare_image_for_format(image: Image.Image, mime_type: str) -> Image.Image:
     if mime_type == "image/jpeg" and image.mode not in ("RGB", "L"):
         return image.convert("RGB")
-    return image.copy()
+    return image

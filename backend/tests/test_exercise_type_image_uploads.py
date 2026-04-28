@@ -213,7 +213,10 @@ async def test_delete_uploaded_candidate_image_marks_deleted_and_removes_referen
             f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
-        asset_id = upload.json()["id"]
+        assert upload.status_code == 201, upload.text
+        upload_payload = upload.json()
+        assert "id" in upload_payload
+        asset_id = upload_payload["id"]
         delete_response = await async_client.delete(
             f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/{asset_id}"
         )
@@ -277,7 +280,10 @@ async def test_reupload_after_delete_revives_existing_generation_key(
             f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
-        asset_id = upload.json()["id"]
+        assert upload.status_code == 201, upload.text
+        upload_payload = upload.json()
+        assert "id" in upload_payload
+        asset_id = upload_payload["id"]
         delete_response = await async_client.delete(
             f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/{asset_id}"
         )
