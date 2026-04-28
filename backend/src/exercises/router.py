@@ -1,6 +1,15 @@
 import re
 from typing import List, Optional
-from fastapi import Depends, APIRouter, status, Query, HTTPException, Request
+from fastapi import (
+    Depends,
+    APIRouter,
+    status,
+    Query,
+    HTTPException,
+    Request,
+    File,
+    UploadFile,
+)
 from fastapi.responses import FileResponse
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +30,15 @@ from src.core.observability import (
     traced_model_dump_many,
     traced_model_validate_many,
 )
-from src.exercises.image_assets import storage_path_for_relative_url
+from src.exercises.image_assets import (
+    resolve_exercise_image_url,
+    storage_path_for_relative_url,
+)
+from src.exercises.image_upload_service import (
+    delete_candidate_image,
+    list_exercise_type_images,
+    upload_candidate_image,
+)
 from src.exercises.schemas import (
     ExerciseRead,
     ExerciseCreate,
@@ -34,6 +51,8 @@ from src.exercises.schemas import (
     MuscleGroupRead,
     ExerciseTypeStats,
     PaginatedExerciseTypesResponse,
+    ExerciseTypeImageRead,
+    ExerciseTypeImagesResponse,
 )
 from src.exercises.service import (
     ExerciseService,
@@ -124,6 +143,26 @@ async def get_exercise_image_asset(
         if exercise_type is None:
             raise HTTPException(status_code=404, detail="Exercise image not found")
 
+    uploaded_match = re.match(
+        r"^uploads/exercise-type-candidates/user-\d+/exercise-type-(\d+)/",
+        image_path,
+    )
+    if uploaded_match:
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required for uploaded exercise images",
+            )
+        exercise_type = await ExerciseTypeService.get_exercise_type(
+            session,
+            int(uploaded_match.group(1)),
+            user=user,
+        )
+        if exercise_type is None or (
+            not user.is_superuser and exercise_type.owner_id != user.id
+        ):
+            raise HTTPException(status_code=404, detail="Exercise image not found")
+
     try:
         file_path = storage_path_for_relative_url(image_path)
     except ValueError as exc:
@@ -132,7 +171,20 @@ async def get_exercise_image_asset(
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="Exercise image not found")
 
-    return FileResponse(path=file_path)
+    cache_control = (
+        "public, max-age=31536000, immutable"
+        if image_path.startswith("published/")
+        else "private, no-store"
+        if image_path.startswith("uploads/")
+        else "private, max-age=300"
+    )
+    return FileResponse(
+        path=file_path,
+        headers={
+            "Cache-Control": cache_control,
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/", response_model=ExerciseRead, status_code=status.HTTP_201_CREATED)
@@ -359,6 +411,100 @@ async def create_exercise_type(
     )
     await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
     return created_exercise_type
+
+
+@exercise_types_router.post(
+    "/{exercise_type_id}/images",
+    response_model=ExerciseTypeImageRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_exercise_type_image(
+    exercise_type_id: int,
+    file: UploadFile = File(...),
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Upload a private reference image for an exercise type candidate."""
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session,
+        exercise_type_id,
+        user=user,
+    )
+    if exercise_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise type with ID {exercise_type_id} not found",
+        )
+
+    candidate = await upload_candidate_image(
+        session,
+        exercise_type,
+        user=user,
+        filename=file.filename or "upload",
+        content_type=file.content_type or "",
+        data=await file.read(),
+    )
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return ExerciseTypeImageRead(
+        id=candidate.id,
+        asset_kind=candidate.asset_kind,
+        status=candidate.status,
+        url=resolve_exercise_image_url(candidate.storage_path),
+        mime_type=candidate.mime_type,
+        original_filename=candidate.original_filename,
+        created_at=candidate.created_at,
+        deleted_at=candidate.deleted_at,
+    )
+
+
+@exercise_types_router.get(
+    "/{exercise_type_id}/images",
+    response_model=ExerciseTypeImagesResponse,
+)
+async def get_exercise_type_images(
+    exercise_type_id: int,
+    user: User | None = Depends(current_optional_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """List exercise type images visible to the caller."""
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session,
+        exercise_type_id,
+        user=user,
+    )
+    if exercise_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise type with ID {exercise_type_id} not found",
+        )
+
+    return await list_exercise_type_images(session, exercise_type, user=user)
+
+
+@exercise_types_router.delete(
+    "/{exercise_type_id}/images/{asset_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_exercise_type_image(
+    exercise_type_id: int,
+    asset_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Mark an uploaded exercise type candidate image deleted."""
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session,
+        exercise_type_id,
+        user=user,
+    )
+    if exercise_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise type with ID {exercise_type_id} not found",
+        )
+
+    await delete_candidate_image(session, exercise_type, asset_id=asset_id, user=user)
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
 
 
 @exercise_types_router.patch("/{exercise_type_id}", response_model=ExerciseTypeRead)

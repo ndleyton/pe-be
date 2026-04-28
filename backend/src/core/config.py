@@ -95,6 +95,31 @@ class Settings(BaseSettings):
         validation_alias="JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED",
         description="Enable the scheduled chat attachment cleanup job",
     )
+    JOB_EXERCISE_IMAGE_CLEANUP_ENABLED: bool = Field(
+        True,
+        validation_alias="JOB_EXERCISE_IMAGE_CLEANUP_ENABLED",
+        description="Enable the scheduled exercise image cleanup job",
+    )
+    EXERCISE_IMAGE_CLEANUP_BATCH_SIZE: int = Field(
+        25,
+        validation_alias="EXERCISE_IMAGE_CLEANUP_BATCH_SIZE",
+        description="Max exercise image candidate rows to clean up per sweep",
+    )
+    EXERCISE_IMAGE_DELETED_RETENTION_DAYS: int = Field(
+        7,
+        validation_alias="EXERCISE_IMAGE_DELETED_RETENTION_DAYS",
+        description="Retention for deleted exercise image uploads before cleanup",
+    )
+    EXERCISE_IMAGE_REJECTED_RETENTION_DAYS: int = Field(
+        90,
+        validation_alias="EXERCISE_IMAGE_REJECTED_RETENTION_DAYS",
+        description="Retention for rejected or abandoned exercise images before cleanup",
+    )
+    EXERCISE_IMAGE_ORPHAN_GRACE_HOURS: int = Field(
+        24,
+        validation_alias="EXERCISE_IMAGE_ORPHAN_GRACE_HOURS",
+        description="Grace period before removing upload files with no database row",
+    )
     JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED: bool = Field(
         True,
         validation_alias="JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED",
@@ -188,6 +213,41 @@ class Settings(BaseSettings):
         20,
         validation_alias="EXERCISE_IMAGE_REFERENCE_TIMEOUT_SECONDS",
         description="Timeout for downloading reference exercise images",
+    )
+    EXERCISE_IMAGE_UPLOAD_MAX_BYTES: int = Field(
+        5 * 1024 * 1024,
+        validation_alias="EXERCISE_IMAGE_UPLOAD_MAX_BYTES",
+        description="Max accepted exercise type candidate upload size in bytes",
+    )
+    EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE: int = Field(
+        4,
+        validation_alias="EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE",
+        description="Max active uploaded reference images per candidate exercise type",
+    )
+    EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER: int = Field(
+        100 * 1024 * 1024,
+        validation_alias="EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER",
+        description="Max bytes of active exercise image uploads per user",
+    )
+    EXERCISE_IMAGE_UPLOAD_MAX_PIXELS: int = Field(
+        16_000_000,
+        validation_alias="EXERCISE_IMAGE_UPLOAD_MAX_PIXELS",
+        description="Max decoded pixels for exercise type candidate uploads",
+    )
+    EXERCISE_IMAGE_UPLOAD_ALLOWED_MIME_TYPES: tuple[str, ...] = Field(
+        ("image/png", "image/jpeg", "image/webp"),
+        validation_alias="EXERCISE_IMAGE_UPLOAD_ALLOWED_MIME_TYPES",
+        description="Allowed MIME types for exercise type candidate uploads",
+    )
+    EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX: int = Field(
+        1600,
+        validation_alias="EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX",
+        description="Max longest edge for directly published uploaded exercise images",
+    )
+    EXERCISE_IMAGE_PUBLISHED_FORMAT: str = Field(
+        "webp",
+        validation_alias="EXERCISE_IMAGE_PUBLISHED_FORMAT",
+        description="Output format for directly published uploaded exercise images",
     )
 
     @computed_field

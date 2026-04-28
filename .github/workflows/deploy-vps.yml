@@ -75,8 +75,17 @@ jobs:
 
           # Scheduled jobs
           JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=${{ secrets.JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED || 'true' }}
+          JOB_EXERCISE_IMAGE_CLEANUP_ENABLED=${{ secrets.JOB_EXERCISE_IMAGE_CLEANUP_ENABLED || 'true' }}
           JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED || 'true' }}
           JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS || '24' }}
+          EXERCISE_IMAGE_UPLOAD_MAX_BYTES=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_BYTES || '5242880' }}
+          EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE || '4' }}
+          EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER || '104857600' }}
+          EXERCISE_IMAGE_UPLOAD_MAX_PIXELS=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_PIXELS || '16000000' }}
+          EXERCISE_IMAGE_CLEANUP_BATCH_SIZE=${{ secrets.EXERCISE_IMAGE_CLEANUP_BATCH_SIZE || '25' }}
+          EXERCISE_IMAGE_DELETED_RETENTION_DAYS=${{ secrets.EXERCISE_IMAGE_DELETED_RETENTION_DAYS || '7' }}
+          EXERCISE_IMAGE_REJECTED_RETENTION_DAYS=${{ secrets.EXERCISE_IMAGE_REJECTED_RETENTION_DAYS || '90' }}
+          EXERCISE_IMAGE_ORPHAN_GRACE_HOURS=${{ secrets.EXERCISE_IMAGE_ORPHAN_GRACE_HOURS || '24' }}
 
           # OpenTelemetry
           OTEL_ENABLED=${{ secrets.OTEL_ENABLED || 'false' }}
@@ -170,12 +179,14 @@ jobs:
           # Install or refresh the backend job timer units with the actual deploy path.
           install_systemd_unit backend/deploy/systemd/pe-be-chat-attachment-cleanup.service
           install_systemd_unit backend/deploy/systemd/pe-be-chat-attachment-cleanup.timer
+          install_systemd_unit backend/deploy/systemd/pe-be-exercise-image-cleanup.service
+          install_systemd_unit backend/deploy/systemd/pe-be-exercise-image-cleanup.timer
           install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.service
           install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.timer
 
           sudo systemctl daemon-reload
-          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-close-stale-open-workouts.timer
-          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-close-stale-open-workouts.timer
+          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer
+          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer
 
           echo ""
           echo "Deployment complete."

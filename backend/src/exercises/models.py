@@ -239,6 +239,17 @@ class ExerciseImageCandidate(Base):
 
     __tablename__ = "exercise_image_candidates"
 
+    class AssetKind(str, Enum):
+        uploaded_reference = "uploaded_reference"
+        generated_candidate = "generated_candidate"
+
+    class AssetStatus(str, Enum):
+        active = "active"
+        rejected = "rejected"
+        deleted = "deleted"
+        abandoned = "abandoned"
+        promoted = "promoted"
+
     __table_args__ = (
         UniqueConstraint("generation_key"),
         UniqueConstraint("storage_path"),
@@ -267,6 +278,21 @@ class ExerciseImageCandidate(Base):
     prompt_summary = Column(Text, nullable=True)
     mime_type = Column(String(64), nullable=False, server_default="image/png")
     storage_path = Column(String(512), nullable=False)
+    asset_kind = Column(
+        String(64),
+        nullable=False,
+        default=AssetKind.generated_candidate.value,
+        server_default=AssetKind.generated_candidate.value,
+    )
+    status = Column(
+        String(32),
+        nullable=False,
+        default=AssetStatus.active.value,
+        server_default=AssetStatus.active.value,
+    )
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    original_filename = Column(String(255), nullable=True)
+    sha256 = Column(String(64), nullable=True)
 
     exercise_type: Mapped["ExerciseType"] = relationship(
         "ExerciseType", back_populates="image_candidates"
