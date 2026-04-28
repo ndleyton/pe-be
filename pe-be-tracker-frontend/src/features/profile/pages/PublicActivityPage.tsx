@@ -87,7 +87,7 @@ const PublicActivityPage = () => {
 
   if (activityQuery.error || !activityQuery.data) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:py-8">
         <Alert variant="destructive">
           <AlertTitle>Workout unavailable</AlertTitle>
           <AlertDescription>
@@ -101,31 +101,34 @@ const PublicActivityPage = () => {
   const activity = activityQuery.data;
 
   return (
-    <div className="mx-auto min-h-screen max-w-4xl px-4 py-8 text-left">
-      <div className="mb-6 flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" aria-label="Back to profile">
-          <Link to={`/u/${username}`}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-3xl font-black tracking-tight">
-            {activity.name || activity.workout_type.name}
-          </h1>
-          <p className="text-sm font-bold text-muted-foreground">@{username}</p>
+    <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 sm:py-8 text-left">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button asChild variant="ghost" size="icon" aria-label="Back to profile" className="shrink-0">
+            <Link to={`/u/${username}`}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+              {activity.name || activity.workout_type.name}
+            </h1>
+            <p className="text-sm font-bold text-muted-foreground">@{username}</p>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex items-center gap-2 sm:shrink-0">
           <Button
             type="button"
             variant="outline"
             onClick={handleShare}
+            className="flex-1 sm:flex-initial"
           >
             {hasCopied ? (
               <Check className="mr-2 h-4 w-4" />
             ) : (
               <Share2 className="mr-2 h-4 w-4" />
             )}
-            {hasCopied ? "Copied!" : "Share workout"}
+            <span className="sm:inline">{hasCopied ? "Copied!" : "Share"}</span>
           </Button>
           <Button
             type="button"
@@ -135,9 +138,12 @@ const PublicActivityPage = () => {
                 : navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)
             }
             disabled={saveMutation.isPending}
+            className="flex-1 sm:flex-initial"
           >
             <BookmarkPlus className="mr-2 h-4 w-4" />
-            {saveMutation.isPending ? "Saving..." : "Save routine"}
+            <span className="sm:inline">
+              {saveMutation.isPending ? "Saving..." : "Save routine"}
+            </span>
           </Button>
         </div>
       </div>
@@ -190,7 +196,7 @@ const PublicActivityPage = () => {
           >
             <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/10 pb-4">
               <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-background text-xl font-black shadow-inner">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-background text-lg sm:text-xl font-black shadow-inner">
                   {exerciseIndex + 1}
                 </div>
                 <div className="min-w-0 flex-1">
