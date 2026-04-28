@@ -20,6 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
+    tables = inspector.get_table_names()
+    if "exercise_image_candidates" not in tables:
+        return
+
     columns = {
         column["name"] for column in inspector.get_columns("exercise_image_candidates")
     }
@@ -75,43 +79,29 @@ def upgrade() -> None:
         """
     )
 
-    inspector = sa.inspect(connection)
-    indexes = {
-        index["name"] for index in inspector.get_indexes("exercise_image_candidates")
-    }
-    if "ix_exercise_image_candidates_kind_status_type" not in indexes:
-        op.create_index(
-            "ix_exercise_image_candidates_kind_status_type",
-            "exercise_image_candidates",
-            ["asset_kind", "status", "exercise_type_id"],
-            unique=False,
-        )
-    if "ix_exercise_image_candidates_upload_hash" not in indexes:
-        op.create_index(
-            "ix_exercise_image_candidates_upload_hash",
-            "exercise_image_candidates",
-            ["exercise_type_id", "asset_kind", "status", "sha256"],
-            unique=False,
-        )
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_exercise_image_candidates_kind_status_type
+        ON exercise_image_candidates (asset_kind, status, exercise_type_id)
+        """
+    )
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_exercise_image_candidates_upload_hash
+        ON exercise_image_candidates (exercise_type_id, asset_kind, status, sha256)
+        """
+    )
 
 
 def downgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
+    tables = inspector.get_table_names()
+    if "exercise_image_candidates" not in tables:
+        return
 
-    indexes = {
-        index["name"] for index in inspector.get_indexes("exercise_image_candidates")
-    }
-    if "ix_exercise_image_candidates_upload_hash" in indexes:
-        op.drop_index(
-            "ix_exercise_image_candidates_upload_hash",
-            table_name="exercise_image_candidates",
-        )
-    if "ix_exercise_image_candidates_kind_status_type" in indexes:
-        op.drop_index(
-            "ix_exercise_image_candidates_kind_status_type",
-            table_name="exercise_image_candidates",
-        )
+    op.execute("DROP INDEX IF EXISTS ix_exercise_image_candidates_upload_hash")
+    op.execute("DROP INDEX IF EXISTS ix_exercise_image_candidates_kind_status_type")
 
     columns = {
         column["name"] for column in inspector.get_columns("exercise_image_candidates")
