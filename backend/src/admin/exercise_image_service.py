@@ -139,7 +139,9 @@ def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -
     target_path.write_bytes(source_path.read_bytes())
 
 
-def _publish_uploaded_reference(source_relative_path: str, target_relative_path: str) -> None:
+def _publish_uploaded_reference(
+    source_relative_path: str, target_relative_path: str
+) -> None:
     source_path = storage_path_for_relative_url(source_relative_path)
     target_path = storage_path_for_relative_url(target_relative_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)

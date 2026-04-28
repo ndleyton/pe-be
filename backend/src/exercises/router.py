@@ -414,7 +414,7 @@ async def create_exercise_type(
 
 
 @exercise_types_router.post(
-    "/{exercise_type_id}/images",
+    "/{exercise_type_id}/images/",
     response_model=ExerciseTypeImageRead,
     status_code=status.HTTP_201_CREATED,
 )
@@ -458,7 +458,7 @@ async def upload_exercise_type_image(
 
 
 @exercise_types_router.get(
-    "/{exercise_type_id}/images",
+    "/{exercise_type_id}/images/",
     response_model=ExerciseTypeImagesResponse,
 )
 async def get_exercise_type_images(

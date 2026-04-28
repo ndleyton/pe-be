@@ -17,7 +17,7 @@ export const endpoints = {
   exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
   exerciseTypeImages: (id: string | number) =>
-    `/exercises/exercise-types/${id}/images`,
+    `/exercises/exercise-types/${id}/images/`,
   exerciseTypeImageById: (id: string | number, assetId: string | number) =>
     `/exercises/exercise-types/${id}/images/${assetId}`,
   similarExerciseTypes: (id: string | number) =>

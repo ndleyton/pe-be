@@ -55,7 +55,7 @@ async def test_owner_uploads_candidate_image_and_private_asset_is_authorized(
     app.dependency_overrides[current_active_user] = override_user
     try:
         response = await async_client.post(
-            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images",
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
     finally:
@@ -146,11 +146,11 @@ async def test_upload_duplicate_file_reuses_active_candidate_row(
     app.dependency_overrides[current_active_user] = override_user
     try:
         first = await async_client.post(
-            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images",
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
         second = await async_client.post(
-            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images",
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
     finally:
@@ -210,7 +210,7 @@ async def test_delete_uploaded_candidate_image_marks_deleted_and_removes_referen
     app.dependency_overrides[current_active_user] = override_user
     try:
         upload = await async_client.post(
-            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images",
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
             files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
         )
         asset_id = upload.json()["id"]
@@ -236,3 +236,78 @@ async def test_delete_uploaded_candidate_image_marks_deleted_and_removes_referen
     assert row.deleted_at is not None
     await db_session.refresh(exercise_type)
     assert json.loads(exercise_type.reference_images_url) == []
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_reupload_after_delete_revives_existing_generation_key(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
+        str(tmp_path),
+    )
+    user = User(
+        email="candidate-image-reupload@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Reupload Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    async def override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = override_user
+    try:
+        upload = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
+        )
+        asset_id = upload.json()["id"]
+        delete_response = await async_client.delete(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/{asset_id}"
+        )
+        reupload = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference-again.png", TINY_PNG_RED, "image/png")},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert upload.status_code == 201, upload.text
+    assert delete_response.status_code == 204, delete_response.text
+    assert reupload.status_code == 201, reupload.text
+    assert reupload.json()["id"] == asset_id
+
+    row = (
+        (
+            await db_session.execute(
+                select(ExerciseImageCandidate).where(
+                    ExerciseImageCandidate.id == asset_id
+                )
+            )
+        )
+        .scalars()
+        .one()
+    )
+    assert row.status == "active"
+    assert row.deleted_at is None
+    assert row.original_filename == "reference-again.png"
+    assert (tmp_path / row.storage_path).is_file()
+
+    await db_session.refresh(exercise_type)
+    assert json.loads(exercise_type.reference_images_url) == [row.storage_path]

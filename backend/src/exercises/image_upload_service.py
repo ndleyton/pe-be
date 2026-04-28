@@ -20,6 +20,7 @@ from src.exercises.image_candidate_repository import (
     get_active_uploaded_references,
     get_all_upload_storage_paths,
     get_cleanup_eligible_candidates,
+    get_image_candidate_by_generation_key,
     get_uploaded_reference_by_id,
     sum_active_upload_bytes_for_user,
 )
@@ -160,7 +161,10 @@ async def upload_candidate_image(
 
     owner_id = exercise_type.owner_id or user.id
     current_bytes = await sum_active_upload_bytes_for_user(session, owner_id=owner_id)
-    if current_bytes + len(sanitized.data) > settings.EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER:
+    if (
+        current_bytes + len(sanitized.data)
+        > settings.EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exercise image upload storage quota exceeded",
@@ -171,26 +175,33 @@ async def upload_candidate_image(
         user_id=owner_id,
         sha256=sha256,
     )
-    candidate = ExerciseImageCandidate(
-        exercise_type_id=exercise_type.id,
+    candidate = await get_image_candidate_by_generation_key(
+        session,
         generation_key=generation_key,
-        pipeline_key=UPLOAD_PIPELINE_KEY,
-        option_key=UPLOAD_OPTION_KEY,
-        option_label=UPLOAD_OPTION_LABEL,
-        option_description="User uploaded reference image.",
-        source_image_index=active_count,
-        source_image_url="",
-        model_name=UPLOAD_MODEL_NAME,
-        prompt_version=UPLOAD_PROMPT_VERSION,
-        prompt_summary=None,
-        mime_type=sanitized.mime_type,
-        storage_path=f"pending/{generation_key}.{sanitized.extension}",
-        asset_kind=ExerciseImageCandidate.AssetKind.uploaded_reference.value,
-        status=ExerciseImageCandidate.AssetStatus.active.value,
-        original_filename=(filename or "upload")[:255],
-        sha256=sha256,
     )
-    session.add(candidate)
+    if candidate is None:
+        candidate = ExerciseImageCandidate(
+            generation_key=generation_key,
+            storage_path=f"pending/{generation_key}.{sanitized.extension}",
+        )
+        session.add(candidate)
+
+    candidate.exercise_type_id = exercise_type.id
+    candidate.pipeline_key = UPLOAD_PIPELINE_KEY
+    candidate.option_key = UPLOAD_OPTION_KEY
+    candidate.option_label = UPLOAD_OPTION_LABEL
+    candidate.option_description = "User uploaded reference image."
+    candidate.source_image_index = active_count
+    candidate.source_image_url = ""
+    candidate.model_name = UPLOAD_MODEL_NAME
+    candidate.prompt_version = UPLOAD_PROMPT_VERSION
+    candidate.prompt_summary = None
+    candidate.mime_type = sanitized.mime_type
+    candidate.asset_kind = ExerciseImageCandidate.AssetKind.uploaded_reference.value
+    candidate.status = ExerciseImageCandidate.AssetStatus.active.value
+    candidate.deleted_at = None
+    candidate.original_filename = (filename or "upload")[:255]
+    candidate.sha256 = sha256
     await session.flush()
 
     storage_path = _storage_path_for_upload(
@@ -234,7 +245,9 @@ async def list_exercise_type_images(
             )
             for image in parse_image_url_list(exercise_type.images_url)
         ]
-        return ExerciseTypeImagesResponse(exercise_type_id=exercise_type.id, images=images)
+        return ExerciseTypeImagesResponse(
+            exercise_type_id=exercise_type.id, images=images
+        )
 
     if user is None or (not user.is_superuser and exercise_type.owner_id != user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
@@ -261,8 +274,13 @@ async def delete_candidate_image(
         exercise_type_id=exercise_type.id,
         asset_id=asset_id,
     )
-    if candidate is None or candidate.status != ExerciseImageCandidate.AssetStatus.active.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    if (
+        candidate is None
+        or candidate.status != ExerciseImageCandidate.AssetStatus.active.value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
+        )
 
     now = datetime.now(timezone.utc)
     candidate.status = ExerciseImageCandidate.AssetStatus.deleted.value

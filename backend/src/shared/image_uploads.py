@@ -52,7 +52,9 @@ def sanitize_image_upload(
             if width <= 0 or height <= 0:
                 raise ImageUploadValidationError("Uploaded file is not a valid image")
             if width > max_edge_px or height > max_edge_px:
-                raise ImageUploadValidationError("Uploaded image dimensions are too large")
+                raise ImageUploadValidationError(
+                    "Uploaded image dimensions are too large"
+                )
             if width * height > max_pixels:
                 raise ImageUploadValidationError("Uploaded image has too many pixels")
 

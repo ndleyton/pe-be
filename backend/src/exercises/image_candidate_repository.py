@@ -30,6 +30,19 @@ async def get_active_uploaded_reference_by_hash(
     return result.scalar_one_or_none()
 
 
+async def get_image_candidate_by_generation_key(
+    session: AsyncSession,
+    *,
+    generation_key: str,
+) -> ExerciseImageCandidate | None:
+    result = await session.execute(
+        select(ExerciseImageCandidate).where(
+            ExerciseImageCandidate.generation_key == generation_key
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_active_uploaded_references(
     session: AsyncSession,
     *,
@@ -118,13 +131,9 @@ async def get_cleanup_eligible_candidates(
         .where(
             ExerciseImageCandidate.status.in_((deleted, rejected, abandoned)),
             or_(
-                (
-                    ExerciseImageCandidate.status == deleted
-                )
+                (ExerciseImageCandidate.status == deleted)
                 & (ExerciseImageCandidate.deleted_at <= deleted_before),
-                (
-                    ExerciseImageCandidate.status.in_((rejected, abandoned))
-                )
+                (ExerciseImageCandidate.status.in_((rejected, abandoned)))
                 & (ExerciseImageCandidate.updated_at <= rejected_before),
             ),
         )
