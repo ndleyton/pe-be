@@ -11,11 +11,11 @@ Allow users to attach images when creating or submitting exercise type candidate
 The recommendation is:
 
 1. Accept candidate images through a dedicated authenticated upload endpoint.
-2. Store uploaded bytes as app-owned files under the existing exercise image storage volume, not in PostgreSQL.
+2. Store uploaded bytes as app-owned files under the existing exercise-image storage volume, not in PostgreSQL.
 3. Reuse the same storage principles already used by chat attachments and generated exercise images: generated storage keys, decoded-image validation, database metadata, owner/admin authorization, and systemd cleanup.
 4. Persist candidate-image metadata in a first-class exercise-domain table and reference those assets from candidate `exercise_types.reference_images_url`.
-5. On admin release, promote approved images into the existing published exercise image path used by released exercise types.
-6. Add quota, cleanup, backup, and observability controls before exposing uploads broadly.
+5. On admin release, promote approved images into the existing published exercise-image path used by released exercise types.
+6. Put quota, cleanup, backup, and observability controls in place before exposing uploads broadly.
 7. Treat S3-compatible object storage as an optional delivery and backend-offload layer, not as a required storage-capacity fix for the initial rollout.
 
 This fits the current deployment, where generated exercise images are stored on the VPS in the Docker volume mounted at `/app/.exercise_images` and served by the backend through `/api/v1/exercises/assets/...`.
@@ -41,18 +41,18 @@ The production Compose stack in [`docker-compose.prod.yml`](../../../docker-comp
 
 So repository deploys do not erase generated exercise images, but those images still live on the same small VPS as Docker, PostgreSQL, Caddy, logs, and backups.
 
-### Current exercise image behavior
+### Current Exercise Image Behavior
 
-The app already has an exercise image pipeline:
+The app already has an exercise-image pipeline:
 
-- `ExerciseType.images_url` stores the active image set as JSON text.
-- `ExerciseType.reference_images_url` stores preserved source/reference images.
-- `ExerciseImageCandidate` stores generated image candidates and their storage paths.
-- [`backend/src/exercises/image_assets.py`](../../src/exercises/image_assets.py) resolves relative paths to URLs and filesystem paths.
-- [`backend/src/admin/exercise_image_service.py`](../../src/admin/exercise_image_service.py) writes generated candidates under `generated/...` and publishes selected images under `published/...`.
-- [`backend/src/exercises/router.py`](../../src/exercises/router.py) serves exercise image assets through the API.
+- `ExerciseType.images_url` holds the active image set as JSON text.
+- `ExerciseType.reference_images_url` preserves source/reference image paths.
+- `ExerciseImageCandidate` tracks generated image candidates and their storage paths.
+- [`backend/src/exercises/image_assets.py`](../../src/exercises/image_assets.py) resolves relative paths into URLs and filesystem paths.
+- [`backend/src/admin/exercise_image_service.py`](../../src/admin/exercise_image_service.py) writes generated candidates under `generated/...` and promotes selected images into `published/...`.
+- [`backend/src/exercises/router.py`](../../src/exercises/router.py) serves exercise-image assets through the API.
 
-Today, candidate exercise type creation does not accept uploaded images. User-created exercise types start as `candidate`, can be moved to `in_review`, and can later be released by an admin.
+Today, candidate exercise-type creation does not accept uploaded images. User-created exercise types start as `candidate`, can be moved to `in_review`, and can later be released by an admin.
 
 ### Existing upload behavior to reuse
 
@@ -88,7 +88,7 @@ Exercise type candidate images should reuse that pattern. The RFC does not propo
 
 ## Decision
 
-Add uploaded candidate images as a new asset type in the existing exercise image domain.
+Introduce uploaded candidate images as a new asset type in the existing exercise-image domain.
 
 ### Storage layout
 
@@ -113,7 +113,7 @@ Rules:
 - uploaded files are stored per candidate exercise type in phase 1; the upload store is not content-addressed
 - if two users upload the same 5 MB reference image, the backend stores two physical files under different candidate-owned paths
 - generated candidates remain private unless explicitly published
-- published images remain readable through the existing public exercise image path
+- published images remain readable through the existing public exercise-image path
 - paths stored in the database are always relative to `EXERCISE_IMAGE_STORAGE_DIR`
 
 ### Data model
@@ -132,7 +132,7 @@ The current table is generated-image-specific, so reuse should be explicit rathe
 Recommended additions:
 
 - `asset_kind`: `uploaded_reference` | `generated_candidate`
-- `status`: `active` | `rejected` | `deleted` | `promoted`
+- `status`: `active` | `rejected` | `deleted` | `abandoned` | `promoted`
 - `deleted_at`
 - `original_filename`
 - `sha256`
@@ -185,7 +185,7 @@ Fields that are not needed for the first version:
 Why not add a new table:
 
 - a new table is semantically clean, but it creates another exercise-image asset model with overlapping storage, ownership, cleanup, and review behavior
-- the current code already has an exercise image candidate table and admin review endpoints; extending that table keeps the feature closer to existing patterns
+- the current code already has an exercise-image candidate table and admin-review endpoints; extending that table keeps the feature closer to existing patterns
 - the main cost of reuse is a small migration to relax generated-only assumptions and add upload metadata
 
 Rejected alternative schema:
@@ -246,7 +246,7 @@ Recommended boundaries:
 - `src/exercises/image_assets.py`
   - exercise-image storage path resolution
   - path traversal protection
-  - URL resolution for relative exercise image paths
+  - URL resolution for relative exercise-image paths
   - filesystem read/write/copy/delete helpers for `EXERCISE_IMAGE_STORAGE_DIR`
   - no candidate-review business rules
 
@@ -279,14 +279,18 @@ Recommended boundaries:
 
 - `src/jobs/exercise_image_cleanup.py`
   - standalone cleanup CLI using the same managed job pattern as chat attachment cleanup
-  - deletes stale files for rows marked deleted and orphaned uploaded files that are no longer referenced by rows
+  - determines cleanup eligibility from both row status and age
+  - deletes files for rows with `status in ('deleted', 'rejected', 'abandoned')` only after the status-specific retention window has elapsed
+  - leaves `status='active'` and `status='promoted'` rows untouched, so published/promoted files are protected by design
+  - purges orphaned uploaded files only when their filesystem creation time is older than the configured grace window, avoiding deletion of files from in-flight upload operations
+  - follows the race-safe grace-period pattern in `src/jobs/chat_attachment_cleanup.py`, where chat cleanup combines an orphaned-row condition with an age threshold before deleting files
   - emits counts and reclaimed bytes
 
 The core rule: `asset_kind` controls behavior. Upload services create and manage `uploaded_reference`; generation services create and manage `generated_candidate`; publishing copies either kind into `published/...` and updates `ExerciseType.images_url`.
 
 ### Backend API
 
-Add authenticated endpoints under the exercise type resource.
+Expose authenticated endpoints under the exercise-type resource.
 
 Recommended endpoints:
 
@@ -386,14 +390,17 @@ Required controls before broad rollout:
 
 ### Cleanup job
 
-Add a host `systemd` timer following the existing job pattern in RFC 0004.
+Install a host `systemd` timer following the existing job pattern in RFC 0004.
 
 Recommended behavior:
 
-- delete physical files for assets soft-deleted more than 7 days ago
-- delete uploaded assets whose database row no longer exists
-- delete rejected or abandoned candidate uploads older than 3 months
+- delete physical files only when both status and age make the asset eligible
+- remove files for rows with `status='deleted'` after 7 days
+- remove files for rows with `status in ('rejected', 'abandoned')` after 3 months
 - optionally prune generated candidates that are not current, not published, and older than 30 days
+- never delete files for rows with `status='active'`
+- never delete files for rows with `status='promoted'`; published/promoted files are protected by design
+- purge uploaded files whose database rows were removed only when the filesystem creation time is older than the configured grace window, so in-flight uploads are not removed by a concurrent cleanup run
 - emit counts and reclaimed bytes
 
 This should be implemented as a standalone backend CLI and installed by `deploy-vps.yml` the same way chat attachment cleanup and stale workout closure are installed.
@@ -402,6 +409,7 @@ The implementation should mirror `src/jobs/chat_attachment_cleanup.py` closely:
 
 - job enable flag in settings
 - configurable retention and batch size
+- combined lifecycle-plus-time cleanup windows; chat cleanup uses "orphaned and older than threshold", while exercise image cleanup uses "eligible status and older than threshold"
 - `run_managed_job(...)` for locking and observability
 - service-owned transaction handling
 - non-interactive CLI entrypoint that can run through `docker compose -f docker-compose.prod.yml run --rm backend ...`
@@ -428,13 +436,13 @@ Current backup foundation:
 
 Recommended image backup mechanism:
 
-- add `backend/deploy/backups/create-exercise-images-archive.sh`
+- create `backend/deploy/backups/create-exercise-images-archive.sh`
 - archive the Docker volume by mounting `exercise_images_data` read-only into a short-lived container or by reading the resolved Docker volume path on the host
 - write encrypted archives to `/var/backups/pe-be/exercise-images`
 - reuse the same passphrase/config convention as the Postgres backup flow unless there is a reason to separate keys
-- add `pe-be-exercise-images-backup.service` and `pe-be-exercise-images-backup.timer`
+- install `pe-be-exercise-images-backup.service` and `pe-be-exercise-images-backup.timer`
 - run the image backup shortly after the Postgres dump so database metadata and files are reasonably close in time
-- add a pull script or extend the existing pull script to sync `/var/backups/pe-be/exercise-images`
+- create a pull script, or extend the existing pull script, to sync `/var/backups/pe-be/exercise-images`
 - document restore as: restore Postgres dump, restore `exercise_images_data`, then run an integrity check for missing referenced files
 
 This keeps the backup model simple and consistent with the current VPS. Object storage remains a delivery/offload option, not the first backup mechanism.
@@ -516,10 +524,10 @@ The current Caddy setup reverse proxies image requests to the backend and does n
 
 Changes needed for the current deploy workflow:
 
-- add any new upload-limit environment variables to `backend/.env.production.template`
-- add those variables to `.github/workflows/deploy-vps.yml`
+- define any new upload-limit environment variables in `backend/.env.production.template`
+- thread those variables through `.github/workflows/deploy-vps.yml`
 - keep using the existing `exercise_images_data` volume for first implementation
-- add a new cleanup systemd service and timer if cleanup is implemented in the same feature
+- install a new cleanup systemd service and timer if cleanup is implemented in the same feature
 - ensure `docker compose -f docker-compose.prod.yml run --rm backend ...` can run the cleanup CLI
 - document backup and restore before enabling the feature for regular users
 
@@ -581,19 +589,19 @@ Decision: defer. Keep local storage for now, but keep the storage abstraction an
 
 ## Rollout Plan
 
-1. Add a defensive migration that extends `exercise_image_candidates` with `asset_kind`, `status`, `deleted_at`, `original_filename`, and `sha256`.
+1. Introduce a defensive migration that extends `exercise_image_candidates` with `asset_kind`, `status`, `deleted_at`, `original_filename`, and `sha256`.
 2. Backfill existing rows as `asset_kind='generated_candidate'` and `status='active'`.
 3. Relax or populate generated-only fields for uploaded-reference rows without using misleading model metadata.
-4. Add shared image upload validation helpers, reusing the chat attachment approach for MIME detection, hashing, generated storage names, and file rollback on persistence failure.
-5. Add exercise image upload service and repository helpers that create `asset_kind='uploaded_reference'` rows, update `reference_images_url`, and enforce owner/admin authorization.
-6. Add upload/list/delete backend endpoints for candidate exercise type images.
+4. Extract shared image-upload validation helpers, reusing the chat attachment approach for MIME detection, hashing, generated storage names, and file rollback on persistence failure.
+5. Implement exercise-image upload service and repository helpers that create `asset_kind='uploaded_reference'` rows, update `ExerciseType.reference_images_url`, and enforce owner/admin authorization.
+6. Expose upload/list/delete backend endpoints for candidate exercise-type images.
 7. Update existing admin image option queries so generated-option behavior filters on `asset_kind='generated_candidate'`.
-8. Add admin review visibility for active uploaded-reference images and allow them to seed the existing generated image flow.
-9. Add direct publish support that normalizes approved uploaded references into `published/...` and updates `ExerciseType.images_url`.
-10. Add frontend candidate image picker, previews, upload progress, and removal.
-11. Add cleanup CLI and systemd timer for deleted rows and orphaned uploaded files.
-12. Add focused backend tests for migration assumptions, upload validation, authorization, row filtering by `asset_kind`, deletion, and publishing.
-13. Add relevant frontend tests for candidate image upload/removal and admin review rendering.
+8. Surface active uploaded-reference images in admin review and allow them to seed the existing generated-image flow.
+9. Enable direct publishing by normalizing approved uploaded references into `published/...` and updating `ExerciseType.images_url`.
+10. Build the frontend candidate-image picker with previews, upload progress, and removal.
+11. Deploy a cleanup CLI and systemd timer for deleted rows and orphaned uploaded files.
+12. Cover migration assumptions, upload validation, authorization, `asset_kind` filtering, deletion, and publishing with focused backend tests.
+13. Exercise candidate-image upload/removal and admin-review rendering in frontend tests.
 14. Extend the existing backup tooling and runbook to archive and restore `exercise_images_data`.
 15. Enable the feature for a small authenticated cohort.
 16. Revisit object storage only if public image delivery starts competing with API traffic or would materially benefit from a separate media origin.
