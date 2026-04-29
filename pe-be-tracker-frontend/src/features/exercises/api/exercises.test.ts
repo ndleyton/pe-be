@@ -263,7 +263,15 @@ describe("exercises API - pagination", () => {
       };
       mockApi.get.mockResolvedValueOnce({ data: payload });
 
-      await expect(getExerciseTypeImages(12)).resolves.toEqual(payload);
+      await expect(getExerciseTypeImages(12)).resolves.toEqual({
+        ...payload,
+        images: [
+          {
+            ...payload.images[0],
+            url: "http://localhost:8000/api/v1/exercises/assets/uploads/reference.png",
+          },
+        ],
+      });
 
       expect(mockApi.get).toHaveBeenCalledWith(
         endpoints.exerciseTypeImages(12),
@@ -286,7 +294,10 @@ describe("exercises API - pagination", () => {
       });
       mockApi.post.mockResolvedValueOnce({ data: payload });
 
-      await expect(uploadExerciseTypeImage(12, file)).resolves.toEqual(payload);
+      await expect(uploadExerciseTypeImage(12, file)).resolves.toEqual({
+        ...payload,
+        url: "http://localhost:8000/api/v1/exercises/assets/uploads/reference.png",
+      });
 
       expect(mockApi.post).toHaveBeenCalledWith(
         endpoints.exerciseTypeImages(12),

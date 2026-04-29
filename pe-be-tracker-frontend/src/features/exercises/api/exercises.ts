@@ -1,4 +1,5 @@
 import api from "@/shared/api/client";
+import { resolveApiAssetUrl } from "@/shared/api/assets";
 import { endpoints } from "@/shared/api/endpoints";
 import { toUTCISOString } from "@/utils/date";
 import type { MuscleGroup, Muscle } from "@/shared/types";
@@ -231,6 +232,20 @@ export interface ExerciseTypeImagesResponse {
   images: ExerciseTypeImage[];
 }
 
+const normalizeExerciseTypeImage = (
+  image: ExerciseTypeImage,
+): ExerciseTypeImage => ({
+  ...image,
+  url: resolveApiAssetUrl(image.url),
+});
+
+const normalizeExerciseTypeImagesResponse = (
+  response: ExerciseTypeImagesResponse,
+): ExerciseTypeImagesResponse => ({
+  ...response,
+  images: response.images.map(normalizeExerciseTypeImage),
+});
+
 // Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
   orderBy: "usage" | "name" = "usage",
@@ -290,7 +305,7 @@ export const getExerciseTypeImages = async (
   exerciseTypeId: number | string,
 ): Promise<ExerciseTypeImagesResponse> => {
   const response = await api.get(endpoints.exerciseTypeImages(exerciseTypeId));
-  return response.data;
+  return normalizeExerciseTypeImagesResponse(response.data);
 };
 
 export const uploadExerciseTypeImage = async (
@@ -304,7 +319,7 @@ export const uploadExerciseTypeImage = async (
     endpoints.exerciseTypeImages(exerciseTypeId),
     formData,
   );
-  return response.data;
+  return normalizeExerciseTypeImage(response.data);
 };
 
 export const deleteExerciseTypeImage = async (
