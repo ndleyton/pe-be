@@ -12,6 +12,9 @@ import {
   getMuscles,
   getExerciseTypeStats,
   getSimilarExerciseTypes,
+  getExerciseTypeImages,
+  uploadExerciseTypeImage,
+  deleteExerciseTypeImage,
   releaseExerciseType,
   requestExerciseTypeEvaluation,
   updateExerciseType,
@@ -33,6 +36,9 @@ vi.mock("@/features/exercises/api", async () => {
     getMuscles: vi.fn(),
     getExerciseTypeStats: vi.fn(),
     getSimilarExerciseTypes: vi.fn(),
+    getExerciseTypeImages: vi.fn(),
+    uploadExerciseTypeImage: vi.fn(),
+    deleteExerciseTypeImage: vi.fn(),
     updateExerciseType: vi.fn(),
     requestExerciseTypeEvaluation: vi.fn(),
     releaseExerciseType: vi.fn(),
@@ -85,6 +91,9 @@ const mockGetIntensityUnits = vi.mocked(getIntensityUnits);
 const mockGetMuscles = vi.mocked(getMuscles);
 const mockGetExerciseTypeStats = vi.mocked(getExerciseTypeStats);
 const mockGetSimilarExerciseTypes = vi.mocked(getSimilarExerciseTypes);
+const mockGetExerciseTypeImages = vi.mocked(getExerciseTypeImages);
+const mockUploadExerciseTypeImage = vi.mocked(uploadExerciseTypeImage);
+const mockDeleteExerciseTypeImage = vi.mocked(deleteExerciseTypeImage);
 const mockUpdateExerciseType = vi.mocked(updateExerciseType);
 const mockRequestExerciseTypeEvaluation = vi.mocked(requestExerciseTypeEvaluation);
 const mockReleaseExerciseType = vi.mocked(releaseExerciseType);
@@ -135,6 +144,21 @@ describe("ExerciseTypeDetailsPage", () => {
       data: [],
       strategy: "same_primary_muscle_then_group_by_times_used",
     });
+    mockGetExerciseTypeImages.mockResolvedValue({
+      exercise_type_id: 12,
+      images: [],
+    });
+    mockUploadExerciseTypeImage.mockResolvedValue({
+      id: 101,
+      asset_kind: "uploaded_reference",
+      status: "active",
+      url: "/api/v1/exercises/assets/uploads/reference.png",
+      mime_type: "image/png",
+      original_filename: "reference.png",
+      created_at: "2026-04-29T00:00:00Z",
+      deleted_at: null,
+    });
+    mockDeleteExerciseTypeImage.mockResolvedValue(undefined);
     mockUpdateExerciseType.mockImplementation(async (_id, updates) =>
       makeExerciseType({
         id: 12,
@@ -322,6 +346,77 @@ describe("ExerciseTypeDetailsPage", () => {
       screen.getByText(/non-released exercise types can be reviewed and updated before release/i),
     ).toBeInTheDocument();
   });
+
+  it("lets the owner upload reference images while the exercise type is a candidate", async () => {
+    mockAuthState.user = { id: 7, is_superuser: false };
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Owner Curl",
+        status: "candidate",
+        owner_id: 7,
+        images: [],
+      }),
+    );
+
+    render(<ExerciseTypeDetailsPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /reference images/i }),
+    ).toBeInTheDocument();
+
+    const file = new File(["fake-image"], "reference.png", {
+      type: "image/png",
+    });
+    await userEvent.upload(screen.getByLabelText(/upload reference image/i), file);
+
+    await waitFor(() => {
+      expect(mockUploadExerciseTypeImage).toHaveBeenCalledWith(12, file);
+    });
+  });
+
+  it("does not show the upload panel to non-owner regular users", async () => {
+    mockAuthState.user = { id: 8, is_superuser: false };
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Private Curl",
+        status: "candidate",
+        owner_id: 7,
+        images: [],
+      }),
+    );
+
+    render(<ExerciseTypeDetailsPage />);
+
+    await screen.findByRole("heading", { name: /private curl/i });
+
+    expect(
+      screen.queryByRole("heading", { name: /reference images/i }),
+    ).not.toBeInTheDocument();
+    expect(mockGetExerciseTypeImages).not.toHaveBeenCalled();
+  });
+
+  it("lets admins upload reference images for exercise types in review", async () => {
+    mockAuthState.user = { id: 1, is_superuser: true };
+    mockGetExerciseTypeById.mockResolvedValue(
+      makeExerciseType({
+        id: 12,
+        name: "Reviewed Curl",
+        status: "in_review",
+        owner_id: 7,
+        images: [],
+      }),
+    );
+
+    render(<ExerciseTypeDetailsPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: /reference images/i }),
+    ).toBeInTheDocument();
+    expect(mockGetExerciseTypeImages).toHaveBeenCalledWith(12);
+  });
+
   it("displays equipment, category, and instructions", async () => {
     mockGetExerciseTypeById.mockResolvedValue(
       makeExerciseType({

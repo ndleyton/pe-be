@@ -215,6 +215,22 @@ export interface SimilarExercisesResponse {
   strategy: SimilarExercisesStrategy;
 }
 
+export interface ExerciseTypeImage {
+  id: number | null;
+  asset_kind: string;
+  status: string;
+  url: string;
+  mime_type: string | null;
+  original_filename: string | null;
+  created_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ExerciseTypeImagesResponse {
+  exercise_type_id: number;
+  images: ExerciseTypeImage[];
+}
+
 // Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
   orderBy: "usage" | "name" = "usage",
@@ -268,6 +284,34 @@ export const getSimilarExerciseTypes = async (
     `${endpoints.similarExerciseTypes(exerciseTypeId)}?${params.toString()}`,
   );
   return response.data;
+};
+
+export const getExerciseTypeImages = async (
+  exerciseTypeId: number | string,
+): Promise<ExerciseTypeImagesResponse> => {
+  const response = await api.get(endpoints.exerciseTypeImages(exerciseTypeId));
+  return response.data;
+};
+
+export const uploadExerciseTypeImage = async (
+  exerciseTypeId: number | string,
+  file: File,
+): Promise<ExerciseTypeImage> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post(
+    endpoints.exerciseTypeImages(exerciseTypeId),
+    formData,
+  );
+  return response.data;
+};
+
+export const deleteExerciseTypeImage = async (
+  exerciseTypeId: number | string,
+  assetId: number | string,
+): Promise<void> => {
+  await api.delete(endpoints.exerciseTypeImageById(exerciseTypeId, assetId));
 };
 
 // Create a new exercise type

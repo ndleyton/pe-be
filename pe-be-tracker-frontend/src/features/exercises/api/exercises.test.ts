@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getExerciseTypes,
   getExercisesInWorkout,
+  getExerciseTypeImages,
   getMuscles,
   getMuscleGroups,
   getSimilarExerciseTypes,
+  uploadExerciseTypeImage,
+  deleteExerciseTypeImage,
 } from "./exercises";
 import type { ExerciseType } from "@/features/exercises/types";
 import api from "@/shared/api/client";
@@ -238,6 +241,69 @@ describe("exercises API - pagination", () => {
         "/exercises/exercise-types/?order_by=usage&offset=0&limit=100&muscle_group_id=7",
       );
       expect(result.data).toEqual(mockExerciseTypes);
+    });
+  });
+
+  describe("exercise type images", () => {
+    it("fetches uploaded reference images using the trailing-slash collection endpoint", async () => {
+      const payload = {
+        exercise_type_id: 12,
+        images: [
+          {
+            id: 101,
+            asset_kind: "uploaded_reference",
+            status: "active",
+            url: "/api/v1/exercises/assets/uploads/reference.png",
+            mime_type: "image/png",
+            original_filename: "reference.png",
+            created_at: "2026-04-29T00:00:00Z",
+            deleted_at: null,
+          },
+        ],
+      };
+      mockApi.get.mockResolvedValueOnce({ data: payload });
+
+      await expect(getExerciseTypeImages(12)).resolves.toEqual(payload);
+
+      expect(mockApi.get).toHaveBeenCalledWith(
+        endpoints.exerciseTypeImages(12),
+      );
+    });
+
+    it("uploads an exercise type image as multipart form data", async () => {
+      const payload = {
+        id: 101,
+        asset_kind: "uploaded_reference",
+        status: "active",
+        url: "/api/v1/exercises/assets/uploads/reference.png",
+        mime_type: "image/png",
+        original_filename: "reference.png",
+        created_at: "2026-04-29T00:00:00Z",
+        deleted_at: null,
+      };
+      const file = new File(["fake-image"], "reference.png", {
+        type: "image/png",
+      });
+      mockApi.post.mockResolvedValueOnce({ data: payload });
+
+      await expect(uploadExerciseTypeImage(12, file)).resolves.toEqual(payload);
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        endpoints.exerciseTypeImages(12),
+        expect.any(FormData),
+      );
+      const formData = mockApi.post.mock.calls[0][1] as FormData;
+      expect(formData.get("file")).toBe(file);
+    });
+
+    it("deletes an uploaded exercise type image by asset id", async () => {
+      mockApi.delete.mockResolvedValueOnce({ data: undefined });
+
+      await expect(deleteExerciseTypeImage(12, 101)).resolves.toBeUndefined();
+
+      expect(mockApi.delete).toHaveBeenCalledWith(
+        endpoints.exerciseTypeImageById(12, 101),
+      );
     });
   });
 
