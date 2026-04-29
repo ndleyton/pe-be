@@ -32,6 +32,10 @@ async def test_owner_uploads_candidate_image_and_private_asset_is_authorized(
         "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
         str(tmp_path),
     )
+    monkeypatch.setattr(
+        "src.core.config.settings.IMAGE_URL_PREFIX",
+        "https://cdn.example.com/exercises",
+    )
     user = User(
         email="candidate-image-owner@example.com",
         hashed_password="x",
@@ -70,6 +74,7 @@ async def test_owner_uploads_candidate_image_and_private_asset_is_authorized(
     assert payload["status"] == "active"
     assert payload["mime_type"] == "image/png"
     assert payload["url"].startswith("/api/v1/exercises/assets/uploads/")
+    assert not payload["url"].startswith("https://cdn.example.com")
 
     row = (
         (
