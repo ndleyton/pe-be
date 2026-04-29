@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL.Image import DecompressionBombError
 
 
 @dataclass(frozen=True)
@@ -46,9 +47,7 @@ def sanitize_image_upload(
                     "Uploaded file content does not match MIME type"
                 )
 
-            image.load()
-            normalized = ImageOps.exif_transpose(image)
-            width, height = normalized.size
+            width, height = image.size
             if width <= 0 or height <= 0:
                 raise ImageUploadValidationError("Uploaded file is not a valid image")
             if width > max_edge_px or height > max_edge_px:
@@ -58,6 +57,8 @@ def sanitize_image_upload(
             if width * height > max_pixels:
                 raise ImageUploadValidationError("Uploaded image has too many pixels")
 
+            image.load()
+            normalized = ImageOps.exif_transpose(image)
             output = BytesIO()
             save_format = _save_format_for_mime_type(detected_mime_type)
             image_to_save = _prepare_image_for_format(normalized, detected_mime_type)
@@ -75,7 +76,7 @@ def sanitize_image_upload(
                 width=width,
                 height=height,
             )
-    except UnidentifiedImageError as exc:
+    except (UnidentifiedImageError, OSError, DecompressionBombError) as exc:
         raise ImageUploadValidationError("Uploaded file is not a valid image") from exc
 
 

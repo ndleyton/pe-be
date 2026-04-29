@@ -3,6 +3,7 @@ import json
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import event
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -494,3 +495,78 @@ async def test_direct_uploaded_reference_publish_uses_configured_format(
         f"published/exercise-type-{exercise_type.id}/uploaded/{upload.json()['id']}.png"
     ]
     assert (tmp_path / stored_paths[0]).read_bytes().startswith(b"\x89PNG")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_direct_uploaded_reference_publish_cleans_written_file_on_failure(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
+        str(tmp_path),
+    )
+    user = User(
+        email="candidate-image-publish-cleanup@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Cleanup Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    async def override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = override_user
+    try:
+        upload = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert upload.status_code == 201, upload.text
+    asset_id = upload.json()["id"]
+    await db_session.refresh(exercise_type)
+    published_path = (
+        f"published/exercise-type-{exercise_type.id}/uploaded/{asset_id}.webp"
+    )
+
+    def fail_after_images_url_set(target, value, oldvalue, initiator):
+        if value and "published/" in value:
+            raise RuntimeError("simulated post-publish failure")
+        return value
+
+    event.listen(
+        ExerciseType.images_url,
+        "set",
+        fail_after_images_url_set,
+        retval=True,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="simulated post-publish failure"):
+            await apply_reference_or_option(
+                db_session,
+                exercise_type,
+                option_key=None,
+                use_reference=True,
+            )
+    finally:
+        event.remove(ExerciseType.images_url, "set", fail_after_images_url_set)
+        await db_session.rollback()
+
+    assert not (tmp_path / published_path).exists()

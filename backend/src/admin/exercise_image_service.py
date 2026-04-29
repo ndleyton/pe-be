@@ -758,28 +758,42 @@ async def apply_reference_or_option(
             .all()
         )
         published_paths: list[str] = []
-        for reference_image in reference_images:
-            matching_upload = next(
-                (
-                    candidate
-                    for candidate in uploaded_references
-                    if candidate.storage_path == reference_image
-                ),
-                None,
-            )
-            if matching_upload is None:
-                published_paths.append(reference_image)
-                continue
+        published_paths_written: list[str] = []
+        try:
+            for reference_image in reference_images:
+                matching_upload = next(
+                    (
+                        candidate
+                        for candidate in uploaded_references
+                        if candidate.storage_path == reference_image
+                    ),
+                    None,
+                )
+                if matching_upload is None:
+                    published_paths.append(reference_image)
+                    continue
 
-            published_path = _published_storage_path_for_uploaded_reference(
-                exercise_type.id,
-                matching_upload.id,
-            )
-            _publish_uploaded_reference(matching_upload.storage_path, published_path)
-            matching_upload.status = ExerciseImageCandidate.AssetStatus.promoted.value
-            published_paths.append(published_path)
+                published_path = _published_storage_path_for_uploaded_reference(
+                    exercise_type.id,
+                    matching_upload.id,
+                )
+                _publish_uploaded_reference(matching_upload.storage_path, published_path)
+                published_paths_written.append(published_path)
+                matching_upload.status = (
+                    ExerciseImageCandidate.AssetStatus.promoted.value
+                )
+                published_paths.append(published_path)
 
-        exercise_type.images_url = _image_json(published_paths)
+            exercise_type.images_url = _image_json(published_paths)
+        except Exception:
+            for published_path in published_paths_written:
+                try:
+                    storage_path_for_relative_url(published_path).unlink(
+                        missing_ok=True
+                    )
+                except OSError:
+                    pass
+            raise
     else:
         candidates = await _load_candidates(session, exercise_type.id)
         option_candidates = [c for c in candidates if c.option_key == option_key]

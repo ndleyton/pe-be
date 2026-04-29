@@ -211,10 +211,10 @@ async def upload_candidate_image(
         extension=sanitized.extension,
     )
     file_path = storage_path_for_relative_url(storage_path)
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_bytes(sanitized.data)
 
     try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(sanitized.data)
         candidate.storage_path = storage_path
         candidate.source_image_url = storage_path
         _append_reference_image(exercise_type, storage_path)
