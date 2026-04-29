@@ -777,7 +777,9 @@ async def apply_reference_or_option(
                     exercise_type.id,
                     matching_upload.id,
                 )
-                _publish_uploaded_reference(matching_upload.storage_path, published_path)
+                _publish_uploaded_reference(
+                    matching_upload.storage_path, published_path
+                )
                 published_paths_written.append(published_path)
                 matching_upload.status = (
                     ExerciseImageCandidate.AssetStatus.promoted.value
