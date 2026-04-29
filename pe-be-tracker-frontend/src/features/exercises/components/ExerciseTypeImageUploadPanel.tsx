@@ -107,7 +107,8 @@ export const ExerciseTypeImageUploadPanel = ({
         <div>
           <h2 className="text-lg font-semibold">Reference Images</h2>
           <p className="text-muted-foreground text-sm">
-            Add images for review before this exercise type is released.
+            Private reference images for admin review. The final exercise image is
+            selected before release.
           </p>
         </div>
         <div>
