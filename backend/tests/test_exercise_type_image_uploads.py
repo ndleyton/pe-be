@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.exercises.image_candidate_repository import sum_active_upload_bytes_for_user
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.main import app
 from src.users.models import User
@@ -317,3 +318,111 @@ async def test_reupload_after_delete_revives_existing_generation_key(
 
     await db_session.refresh(exercise_type)
     assert json.loads(exercise_type.reference_images_url) == [row.storage_path]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_user_upload_byte_sum_counts_promoted_uploads(
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
+        str(tmp_path),
+    )
+    user = User(
+        email="candidate-image-quota@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Quota Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.flush()
+
+    active_path = (
+        "uploads/exercise-type-candidates/"
+        f"user-{user.id}/exercise-type-{exercise_type.id}/active.png"
+    )
+    promoted_path = (
+        "uploads/exercise-type-candidates/"
+        f"user-{user.id}/exercise-type-{exercise_type.id}/promoted.png"
+    )
+    deleted_path = (
+        "uploads/exercise-type-candidates/"
+        f"user-{user.id}/exercise-type-{exercise_type.id}/deleted.png"
+    )
+    for storage_path, contents in (
+        (active_path, b"active"),
+        (promoted_path, b"promoted"),
+        (deleted_path, b"deleted"),
+    ):
+        file_path = tmp_path / storage_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(contents)
+
+    db_session.add_all(
+        [
+            ExerciseImageCandidate(
+                exercise_type_id=exercise_type.id,
+                generation_key="active-upload",
+                pipeline_key="user_upload_v1",
+                option_key="uploaded-reference",
+                option_label="Uploaded Reference",
+                source_image_index=0,
+                source_image_url=active_path,
+                model_name="user-upload",
+                prompt_version="n/a",
+                mime_type="image/png",
+                storage_path=active_path,
+                asset_kind="uploaded_reference",
+                status="active",
+                sha256="a" * 64,
+            ),
+            ExerciseImageCandidate(
+                exercise_type_id=exercise_type.id,
+                generation_key="promoted-upload",
+                pipeline_key="user_upload_v1",
+                option_key="uploaded-reference",
+                option_label="Uploaded Reference",
+                source_image_index=1,
+                source_image_url=promoted_path,
+                model_name="user-upload",
+                prompt_version="n/a",
+                mime_type="image/png",
+                storage_path=promoted_path,
+                asset_kind="uploaded_reference",
+                status="promoted",
+                sha256="b" * 64,
+            ),
+            ExerciseImageCandidate(
+                exercise_type_id=exercise_type.id,
+                generation_key="deleted-upload",
+                pipeline_key="user_upload_v1",
+                option_key="uploaded-reference",
+                option_label="Uploaded Reference",
+                source_image_index=2,
+                source_image_url=deleted_path,
+                model_name="user-upload",
+                prompt_version="n/a",
+                mime_type="image/png",
+                storage_path=deleted_path,
+                asset_kind="uploaded_reference",
+                status="deleted",
+                sha256="c" * 64,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    assert await sum_active_upload_bytes_for_user(db_session, owner_id=user.id) == len(
+        b"active"
+    ) + len(b"promoted")

@@ -9,6 +9,7 @@ from src.exercises.models import ExerciseImageCandidate
 
 
 ACTIVE_STATUS = ExerciseImageCandidate.AssetStatus.active.value
+PROMOTED_STATUS = ExerciseImageCandidate.AssetStatus.promoted.value
 UPLOADED_REFERENCE = ExerciseImageCandidate.AssetKind.uploaded_reference.value
 GENERATED_CANDIDATE = ExerciseImageCandidate.AssetKind.generated_candidate.value
 
@@ -83,7 +84,7 @@ async def sum_active_upload_bytes_for_user(
     result = await session.execute(
         select(ExerciseImageCandidate.storage_path).where(
             ExerciseImageCandidate.asset_kind == UPLOADED_REFERENCE,
-            ExerciseImageCandidate.status == ACTIVE_STATUS,
+            ExerciseImageCandidate.status.in_((ACTIVE_STATUS, PROMOTED_STATUS)),
             ExerciseImageCandidate.exercise_type.has(owner_id=owner_id),
         )
     )
