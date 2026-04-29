@@ -297,7 +297,7 @@ Expose authenticated endpoints under the exercise-type resource.
 
 Recommended endpoints:
 
-- `POST /api/v1/exercises/exercise-types/{exercise_type_id}/images`
+- `POST /api/v1/exercises/exercise-types/{exercise_type_id}/images/`
   - multipart upload
   - allowed only for the owner while the type is `candidate`, or for admins
   - validates MIME type, size, dimensions, and image decodability
@@ -305,7 +305,7 @@ Recommended endpoints:
   - creates an `exercise_image_candidates` row with `asset_kind='uploaded_reference'`
   - updates `reference_images_url` with the uploaded relative path
 
-- `GET /api/v1/exercises/exercise-types/{exercise_type_id}/images`
+- `GET /api/v1/exercises/exercise-types/{exercise_type_id}/images/`
   - returns image metadata and resolved URLs
   - owner and admins can see candidate uploads
   - public callers only see released `images`
