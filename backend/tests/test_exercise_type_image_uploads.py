@@ -6,6 +6,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin.exercise_image_service import apply_reference_or_option
+from src.core.config import settings
 from src.exercises.image_candidate_repository import sum_active_upload_bytes_for_user
 from src.exercises.models import ExerciseImageCandidate, ExerciseType
 from src.main import app
@@ -426,3 +428,64 @@ async def test_user_upload_byte_sum_counts_promoted_uploads(
     assert await sum_active_upload_bytes_for_user(db_session, owner_id=user.id) == len(
         b"active"
     ) + len(b"promoted")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_direct_uploaded_reference_publish_uses_configured_format(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
+        str(tmp_path),
+    )
+    original_format = settings.EXERCISE_IMAGE_PUBLISHED_FORMAT
+    settings.EXERCISE_IMAGE_PUBLISHED_FORMAT = "png"
+    user = User(
+        email="candidate-image-publish-format@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Format Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    async def override_user():
+        return user
+
+    try:
+        app.dependency_overrides[current_active_user] = override_user
+        upload = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
+        )
+        assert upload.status_code == 201, upload.text
+        await db_session.refresh(exercise_type)
+
+        await apply_reference_or_option(
+            db_session,
+            exercise_type,
+            option_key=None,
+            use_reference=True,
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+        settings.EXERCISE_IMAGE_PUBLISHED_FORMAT = original_format
+
+    stored_paths = json.loads(exercise_type.images_url)
+    assert stored_paths == [
+        f"published/exercise-type-{exercise_type.id}/uploaded/{upload.json()['id']}.png"
+    ]
+    assert (tmp_path / stored_paths[0]).read_bytes().startswith(b"\x89PNG")

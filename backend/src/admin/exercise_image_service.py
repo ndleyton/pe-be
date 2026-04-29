@@ -49,6 +49,12 @@ PHASE_FALLBACK_IMAGES = (
     (0, "__phase__:start-eccentric", "start / eccentric"),
     (1, "__phase__:end-concentric", "end / concentric"),
 )
+PUBLISHED_UPLOAD_FORMATS = {
+    "webp": ("webp", "WEBP", {"quality": 90, "method": 6}),
+    "png": ("png", "PNG", {}),
+    "jpeg": ("jpg", "JPEG", {"quality": 90, "optimize": True}),
+    "jpg": ("jpg", "JPEG", {"quality": 90, "optimize": True}),
+}
 
 
 @dataclass(frozen=True)
@@ -116,7 +122,21 @@ def _published_storage_path_for_uploaded_reference(
     exercise_type_id: int,
     candidate_id: int,
 ) -> str:
-    return f"published/exercise-type-{exercise_type_id}/uploaded/{candidate_id}.webp"
+    extension, _, _ = _published_upload_format_settings()
+    return f"published/exercise-type-{exercise_type_id}/uploaded/{candidate_id}.{extension}"
+
+
+def _published_upload_format_settings() -> tuple[str, str, dict[str, object]]:
+    configured_format = settings.EXERCISE_IMAGE_PUBLISHED_FORMAT.strip().lower()
+    format_settings = PUBLISHED_UPLOAD_FORMATS.get(configured_format)
+    if format_settings is None:
+        supported = ", ".join(sorted(PUBLISHED_UPLOAD_FORMATS))
+        raise ValueError(
+            "Unsupported EXERCISE_IMAGE_PUBLISHED_FORMAT "
+            f"{settings.EXERCISE_IMAGE_PUBLISHED_FORMAT!r}. "
+            f"Supported values: {supported}."
+        )
+    return format_settings
 
 
 def _write_candidate_bytes(relative_path: str, image_bytes: bytes) -> None:
@@ -146,13 +166,16 @@ def _publish_uploaded_reference(
     target_path = storage_path_for_relative_url(target_relative_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     max_edge = settings.EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX
+    _, output_format, save_kwargs = _published_upload_format_settings()
 
     with Image.open(source_path) as image:
         normalized = ImageOps.exif_transpose(image)
         if max(normalized.size) > max_edge:
             normalized.thumbnail((max_edge, max_edge))
+        if output_format == "JPEG" and normalized.mode not in ("RGB", "L"):
+            normalized = normalized.convert("RGB")
         output = BytesIO()
-        normalized.save(output, format="WEBP", quality=90, method=6)
+        normalized.save(output, format=output_format, **save_kwargs)
         target_path.write_bytes(output.getvalue())
 
 
