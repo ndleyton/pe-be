@@ -87,8 +87,9 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        CREATE INDEX IF NOT EXISTS ix_exercise_image_candidates_upload_hash
-        ON exercise_image_candidates (exercise_type_id, asset_kind, status, sha256)
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_exercise_image_candidates_active_upload_hash
+        ON exercise_image_candidates (exercise_type_id, asset_kind, sha256)
+        WHERE status = 'active'
         """
     )
 
@@ -100,7 +101,7 @@ def downgrade() -> None:
     if "exercise_image_candidates" not in tables:
         return
 
-    op.execute("DROP INDEX IF EXISTS ix_exercise_image_candidates_upload_hash")
+    op.execute("DROP INDEX IF EXISTS uq_exercise_image_candidates_active_upload_hash")
     op.execute("DROP INDEX IF EXISTS ix_exercise_image_candidates_kind_status_type")
 
     columns = {

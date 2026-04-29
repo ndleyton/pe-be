@@ -150,6 +150,8 @@ Field purposes:
 - use it to avoid duplicate active upload rows for the same exercise type when the same file is submitted twice, such as a retry or double-click
 - do not use it to deduplicate physical files across different users or exercise type candidates in phase 1
 - use it during cleanup or integrity checks to verify that a stored file still matches its database row when needed
+- enforce the active-row rule with a Postgres partial unique index on `(exercise_type_id, asset_kind, sha256)` where `status='active'`; this permits a later retry after a prior row has moved to `deleted`, `rejected`, or another non-active lifecycle state while still preventing duplicate active upload rows for the same exercise type and file hash
+- keep the existing unique `storage_path` constraint unchanged, since phase 1 deliberately avoids physical deduplication and every persisted file path should identify exactly one row
 
 Physical deduplication is intentionally deferred. A content-addressed store such as `uploads/blobs/{sha256[:2]}/{sha256}.webp` would reduce duplicate bytes, but it also changes the lifecycle model:
 
@@ -165,7 +167,8 @@ Recommended compatibility rules:
 
 - existing generated rows default to `asset_kind='generated_candidate'`
 - uploaded rows use `asset_kind='uploaded_reference'`
-- uploaded rows still get a real `generation_key`, but that key is a deterministic hash over upload identity and file hash, not a model prompt
+- uploaded rows still get a real globally unique `generation_key`, but that key is a deterministic hash over scoped upload identity and file hash, not a model prompt; include `exercise_type_id`, uploader/owner identity, `sha256`, and the upload pipeline key in the hash input or use a readable scoped prefix such as `upload:{exercise_type_id}:{uploader_id}:{sha256}`
+- keep `UniqueConstraint("generation_key")` valid by ensuring uploaded-reference generation keys cannot collide across different users or exercise type candidates; if uploaded rows ever stop needing generation keys, make `generation_key` nullable for `asset_kind='uploaded_reference'` and replace the global unique constraint with a generated-candidate-specific uniqueness rule
 - uploaded rows use a stable `pipeline_key`, for example `user_upload_v1`
 - uploaded rows use a stable `option_key`, for example `uploaded-reference`
 - uploaded rows can set `source_image_url` to the stored relative upload path, since the upload itself is the source

@@ -259,6 +259,14 @@ class ExerciseImageCandidate(Base):
             "option_key",
             "source_image_index",
         ),
+        Index(
+            "uq_exercise_image_candidates_active_upload_hash",
+            "exercise_type_id",
+            "asset_kind",
+            "sha256",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
     )
 
     exercise_type_id = Column(
