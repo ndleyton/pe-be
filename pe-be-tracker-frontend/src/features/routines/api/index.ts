@@ -1,5 +1,11 @@
 import api from "@/shared/api/client";
-import { Routine, type RoutineVisibility, type RoutineSummary } from "@/features/routines/types";
+import {
+  Routine,
+  type RoutineProgram,
+  type RoutineProgramSummary,
+  type RoutineVisibility,
+  type RoutineSummary,
+} from "@/features/routines/types";
 import { endpoints } from "@/shared/api/endpoints";
 
 // Create/Update payload types for routines
@@ -72,6 +78,41 @@ export const getRoutines = async (
 
 export const getRoutine = async (id: number): Promise<Routine> => {
   const response = await api.get(endpoints.routineById(id));
+  return response.data;
+};
+
+export const getRoutinePrograms = async (
+  orderBy: "name" | "createdAt" | "timesUsed" = "createdAt",
+  cursor?: number | null,
+  limit: number = 100,
+): Promise<{ data: RoutineProgramSummary[]; next_cursor?: number | null }> => {
+  const currentOffset = cursor ?? 0;
+  const response = await api.get(endpoints.routineProgramsSummary, {
+    params: {
+      order_by: orderBy,
+      offset: currentOffset,
+      limit,
+    },
+  });
+  const items: RoutineProgramSummary[] = Array.isArray(response.data)
+    ? response.data
+    : [];
+  const next_cursor =
+    items.length < limit ? null : currentOffset + items.length;
+  return { data: items, next_cursor };
+};
+
+export const getRoutineProgram = async (
+  id: number | string,
+): Promise<RoutineProgram> => {
+  const response = await api.get(endpoints.routineProgramById(id));
+  return response.data;
+};
+
+export const cloneRoutineProgram = async (
+  id: number | string,
+): Promise<RoutineProgram> => {
+  const response = await api.post(endpoints.cloneRoutineProgram(id));
   return response.data;
 };
 

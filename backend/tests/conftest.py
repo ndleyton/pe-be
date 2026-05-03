@@ -44,6 +44,7 @@ import src.workouts.models  # noqa: F401
 import src.exercise_sets.models  # noqa: F401
 import src.users.models  # noqa: F401
 import src.routines.models  # noqa: F401
+import src.routine_programs.models  # noqa: F401
 import src.chat.models  # noqa: F401
 import src.sync.models  # noqa: F401
 
@@ -116,6 +117,9 @@ async def setup_database():
         # Drop in case a previous interrupted session left stale tables
         await conn.run_sync(Base.metadata.drop_all)
         await conn.execute(text("DROP TYPE IF EXISTS recipe_visibility CASCADE"))
+        await conn.execute(
+            text("DROP TYPE IF EXISTS routine_program_visibility CASCADE")
+        )
         await conn.execute(text("DROP TYPE IF EXISTS workout_visibility CASCADE"))
         await conn.execute(text("DROP TYPE IF EXISTS exercise_type_status CASCADE"))
 
@@ -157,6 +161,8 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
             "conversations",
             "workouts",
             "users",
+            "routine_program_days",
+            "routine_programs",
             "recipes",
             "sync_logs",
         ]:

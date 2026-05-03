@@ -1,14 +1,20 @@
 import { useMemo, useState } from "react";
-import { Search, ArrowLeft, Plus } from "lucide-react";
+import { Search, ArrowLeft, Plus, Layers3, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
-import { getRoutines } from "@/features/routines/api";
+import { getRoutinePrograms, getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
 import { RoutinesGridSkeleton } from "@/features/routines/components";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import { buildRoutineCollectionJsonLd } from "@/features/routines/lib/routineStructuredData";
-import type { RoutineSummary } from "@/features/routines/types";
-import { RoutineQuickStartCard } from "@/features/routines/components";
+import type {
+  RoutineProgramSummary,
+  RoutineSummary,
+} from "@/features/routines/types";
+import {
+  RoutineProgramCard,
+  RoutineQuickStartCard,
+} from "@/features/routines/components";
 import { useAuthStore } from "@/stores";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -21,6 +27,9 @@ import { cn } from "@/lib/utils";
 
 const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"programs" | "routines">(
+    "routines",
+  );
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -35,6 +44,19 @@ const RoutinesPage = () => {
     queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
+    enabled: activeTab === "routines",
+  });
+
+  const {
+    data: programs,
+    isPending: programsPending,
+    isFetchingNextPage: programsFetchingNextPage,
+    error: programsError,
+  } = useInfiniteScroll<RoutineProgramSummary>({
+    queryKey: ["routine-programs", orderBy, isAuthenticated ? "auth" : "guest"],
+    queryFn: (cursor, limit) => getRoutinePrograms(orderBy, cursor, limit),
+    limit: 100,
+    enabled: activeTab === "programs",
   });
 
   const filteredRoutines = useMemo(() => {
@@ -47,15 +69,29 @@ const RoutinesPage = () => {
           routine.description.toLowerCase().includes(searchTerm.toLowerCase())),
     );
   }, [routines, searchTerm]);
-  const routineListJsonLd = buildRoutineCollectionJsonLd(filteredRoutines);
+  const filteredPrograms = useMemo(() => {
+    if (!searchTerm) return programs;
 
-  if (error) {
+    return programs.filter(
+      (program) =>
+        program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (program.description &&
+          program.description.toLowerCase().includes(searchTerm.toLowerCase())),
+    );
+  }, [programs, searchTerm]);
+  const routineListJsonLd = buildRoutineCollectionJsonLd(filteredRoutines);
+  const activeError = activeTab === "routines" ? error : programsError;
+  const activePending = activeTab === "routines" ? isPending : programsPending;
+  const activeFetchingNextPage =
+    activeTab === "routines" ? isFetchingNextPage : programsFetchingNextPage;
+
+  if (activeError) {
     return (
       <div className="container mx-auto px-4 py-6">
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Error loading routines. Please try again.
+            Error loading {activeTab}. Please try again.
           </AlertDescription>
         </Alert>
       </div>
@@ -88,7 +124,7 @@ const RoutinesPage = () => {
           <div className="relative flex-1 group">
             <Input
               type="text"
-              placeholder="Search routines..."
+              placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-primary/30 bg-card/90 h-16 w-full rounded-2xl pr-14 pl-14 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-2xl backdrop-blur-md font-black text-xl placeholder:font-bold placeholder:text-muted-foreground/30"
@@ -99,6 +135,37 @@ const RoutinesPage = () => {
           </div>
 
           <div className="flex flex-row gap-2 sm:gap-4">
+            <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
+              <Button
+                variant={activeTab === "programs" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("programs")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-5 h-full transition-all",
+                  activeTab === "programs"
+                    ? "shadow-md scale-[1.02]"
+                    : "opacity-60",
+                )}
+              >
+                <Layers3 className="mr-1.5 h-4 w-4" />
+                Programs
+              </Button>
+              <Button
+                variant={activeTab === "routines" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("routines")}
+                className={cn(
+                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-5 h-full transition-all",
+                  activeTab === "routines"
+                    ? "shadow-md scale-[1.02]"
+                    : "opacity-60",
+                )}
+              >
+                <ClipboardList className="mr-1.5 h-4 w-4" />
+                Routines
+              </Button>
+            </div>
+
             <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
               <Button
                 variant={orderBy === "createdAt" ? "default" : "ghost"}
@@ -143,40 +210,50 @@ const RoutinesPage = () => {
 
         {/* Grid Area with Loading State */}
         <div className="min-h-[400px]">
-          {isPending ? (
+          {activePending ? (
             <RoutinesGridSkeleton />
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
-                {filteredRoutines.map((routine) => (
-                  <RoutineQuickStartCard
-                    key={routine.id}
-                    routine={routine}
-                    onStartWorkout={startWorkoutFromRoutine}
-                  />
-                ))}
-              </div>
+              {activeTab === "programs" ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
+                  {filteredPrograms.map((program) => (
+                    <RoutineProgramCard key={program.id} program={program} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
+                  {filteredRoutines.map((routine) => (
+                    <RoutineQuickStartCard
+                      key={routine.id}
+                      routine={routine}
+                      onStartWorkout={startWorkoutFromRoutine}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Loading more indicator index scroll */}
-              {isFetchingNextPage && (
+              {activeFetchingNextPage && (
                 <div className="flex justify-center py-8">
                   <span className="loading loading-spinner loading-lg"></span>
                 </div>
               )}
 
               {/* Empty State */}
-              {filteredRoutines.length === 0 && (
+              {(activeTab === "programs"
+                ? filteredPrograms.length === 0
+                : filteredRoutines.length === 0) && (
                 <div className="py-20 text-center">
                   <div className="bg-muted/30 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
                     <Search className="text-muted-foreground h-10 w-10 opacity-20" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">
-                    No routines found
+                    No {activeTab} found
                   </h3>
                   <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
                     {searchTerm
-                      ? "No routines match your current search"
-                      : "No routines available"}
+                      ? `No ${activeTab} match your current search`
+                      : `No ${activeTab} available`}
                   </p>
                   {searchTerm && (
                     <Button

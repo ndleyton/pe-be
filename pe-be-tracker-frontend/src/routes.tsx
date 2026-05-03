@@ -41,6 +41,9 @@ const RoutinesPage = lazy(
 const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
 );
+const RoutineProgramDetailsPage = lazy(
+  () => import("./features/routines/pages/RoutineProgramDetailsPage"),
+);
 const CreateRoutinePage = lazy(
   () => import("./features/routines/pages/CreateRoutinePage"),
 );
@@ -150,6 +153,13 @@ const appRoutes: RouteObject[] = [
         path: "routines/:routineId",
         element: withSuspense(
           <RoutineDetailsPage />,
+          <RoutineDetailsLoadingState />,
+        ),
+      },
+      {
+        path: "routine-programs/:programId",
+        element: withSuspense(
+          <RoutineProgramDetailsPage />,
           <RoutineDetailsLoadingState />,
         ),
       },

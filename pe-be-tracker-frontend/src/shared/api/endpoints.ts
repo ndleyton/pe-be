@@ -89,6 +89,12 @@ export const endpoints = {
   routineById: (id: string | number) => `/routines/${id}`,
   startWorkoutFromRoutine: (id: string | number) => `/routines/${id}/start`,
 
+  // Routine program endpoints
+  routinePrograms: "/routine-programs/",
+  routineProgramsSummary: "/routine-programs/summary",
+  routineProgramById: (id: string | number) => `/routine-programs/${id}`,
+  cloneRoutineProgram: (id: string | number) => `/routine-programs/${id}/clone`,
+
   // Chat endpoints
   chat: "/chat",
   chatConversationById: (id: string | number) => `/chat/conversations/${id}`,

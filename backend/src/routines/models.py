@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from src.users.models import User
     from src.workouts.models import WorkoutType
     from src.exercises.models import ExerciseType, IntensityUnit
+    from src.routine_programs.models import RoutineProgramDay
 
 
 class Routine(Base):
@@ -86,6 +87,9 @@ class Routine(Base):
     workout_type: Mapped["WorkoutType"] = relationship("WorkoutType", lazy="joined")
     exercise_templates: Mapped[List["ExerciseTemplate"]] = relationship(
         "ExerciseTemplate", back_populates="routine", cascade="all, delete-orphan"
+    )
+    program_days: Mapped[List["RoutineProgramDay"]] = relationship(
+        "RoutineProgramDay", back_populates="routine"
     )
 
 

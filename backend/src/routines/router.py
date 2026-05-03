@@ -162,6 +162,9 @@ async def delete_routine(
 ):
     """Delete a routine"""
     # Idempotent delete: 204 whether missing or not owned
-    await routine_service.delete_routine(
-        session, routine_id, user.id, is_superuser=user.is_superuser
-    )
+    try:
+        await routine_service.delete_routine(
+            session, routine_id, user.id, is_superuser=user.is_superuser
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

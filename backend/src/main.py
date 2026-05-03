@@ -17,6 +17,7 @@ from src.workouts.router import router as workouts_router
 from src.exercises.router import router as exercises_router
 from src.exercise_sets.router import router as exercise_sets_router
 from src.routines.router import router as routines_router
+from src.routine_programs.router import router as routine_programs_router
 from src.profiles.router import router as profiles_router
 from src.admin.router import router as admin_router
 from src.health.router import router as health_router
@@ -130,6 +131,11 @@ def create_app() -> FastAPI:
     )
     app.include_router(
         routines_router, prefix=f"{api_prefix}/routines", tags=["routines"]
+    )
+    app.include_router(
+        routine_programs_router,
+        prefix=f"{api_prefix}/routine-programs",
+        tags=["routine-programs"],
     )
     app.include_router(
         profiles_router, prefix=f"{api_prefix}/profiles", tags=["profiles"]

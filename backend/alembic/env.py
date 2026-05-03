@@ -32,6 +32,10 @@ from src.exercises.models import (  # noqa: F401
 )
 from src.exercise_sets.models import ExerciseSet  # noqa: F401
 from src.routines.models import Routine, ExerciseTemplate, SetTemplate  # noqa: F401
+from src.routine_programs.models import (  # noqa: F401
+    RoutineProgram,
+    RoutineProgramDay,
+)
 from src.chat.models import (  # noqa: F401
     ChatAttachment,
     Conversation,
