@@ -246,8 +246,18 @@ async def test_delete_uploaded_candidate_image_marks_deleted_and_removes_referen
     )
     assert row.status == "deleted"
     assert row.deleted_at is not None
+    assert (tmp_path / row.storage_path).is_file()
     await db_session.refresh(exercise_type)
     assert json.loads(exercise_type.reference_images_url) == []
+
+    app.dependency_overrides[current_optional_user] = override_user
+    try:
+        deleted_asset = await async_client.get(
+            f"/api/v1/exercises/assets/{row.storage_path}"
+        )
+    finally:
+        app.dependency_overrides.pop(current_optional_user, None)
+    assert deleted_asset.status_code == 404
 
 
 @pytest.mark.integration

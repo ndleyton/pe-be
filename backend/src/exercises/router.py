@@ -34,6 +34,11 @@ from src.exercises.image_assets import (
     resolve_exercise_image_url,
     storage_path_for_relative_url,
 )
+from src.exercises.image_candidate_repository import (
+    ACTIVE_STATUS,
+    PROMOTED_STATUS,
+    get_uploaded_reference_by_storage_path,
+)
 from src.exercises.image_upload_service import (
     delete_candidate_image,
     list_exercise_type_images,
@@ -153,13 +158,24 @@ async def get_exercise_image_asset(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required for uploaded exercise images",
             )
+        exercise_type_id = int(uploaded_match.group(1))
         exercise_type = await ExerciseTypeService.get_exercise_type(
             session,
-            int(uploaded_match.group(1)),
+            exercise_type_id,
             user=user,
         )
         if exercise_type is None or (
             not user.is_superuser and exercise_type.owner_id != user.id
+        ):
+            raise HTTPException(status_code=404, detail="Exercise image not found")
+        candidate = await get_uploaded_reference_by_storage_path(
+            session,
+            exercise_type_id=exercise_type_id,
+            storage_path=image_path,
+        )
+        if candidate is None or candidate.status not in (
+            ACTIVE_STATUS,
+            PROMOTED_STATUS,
         ):
             raise HTTPException(status_code=404, detail="Exercise image not found")
 

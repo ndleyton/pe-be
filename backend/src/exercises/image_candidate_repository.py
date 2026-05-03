@@ -117,6 +117,22 @@ async def get_uploaded_reference_by_id(
     return result.scalar_one_or_none()
 
 
+async def get_uploaded_reference_by_storage_path(
+    session: AsyncSession,
+    *,
+    exercise_type_id: int,
+    storage_path: str,
+) -> ExerciseImageCandidate | None:
+    result = await session.execute(
+        select(ExerciseImageCandidate).where(
+            ExerciseImageCandidate.exercise_type_id == exercise_type_id,
+            ExerciseImageCandidate.storage_path == storage_path,
+            ExerciseImageCandidate.asset_kind == UPLOADED_REFERENCE,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_cleanup_eligible_candidates(
     session: AsyncSession,
     *,
