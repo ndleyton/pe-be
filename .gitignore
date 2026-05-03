@@ -107,6 +107,7 @@ temp/
 *.tmp
 *.temp
 backend/.chat_attachments/
+backend/.exercise_images/
 
 # CI/CD artifacts
 *.tar.gz
