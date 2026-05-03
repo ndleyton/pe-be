@@ -73,6 +73,24 @@ from src.users.models import User
 router = APIRouter(tags=["exercises"])
 tracer = trace.get_tracer(__name__)
 assets_router = APIRouter(prefix="/assets", tags=["exercise-image-assets"])
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+
+
+async def _read_upload_file_limited(file: UploadFile, *, max_bytes: int) -> bytes:
+    data = bytearray()
+    while True:
+        remaining = max_bytes - len(data)
+        read_size = min(UPLOAD_READ_CHUNK_BYTES, max(remaining + 1, 1))
+        chunk = await file.read(read_size)
+        if not chunk:
+            break
+        if len(data) + len(chunk) > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image upload exceeds maximum size of {max_bytes} bytes",
+            )
+        data.extend(chunk)
+    return bytes(data)
 
 
 def _exercise_types_cache_key(
@@ -458,7 +476,10 @@ async def upload_exercise_type_image(
         user=user,
         filename=file.filename or "upload",
         content_type=file.content_type or "",
-        data=await file.read(),
+        data=await _read_upload_file_limited(
+            file,
+            max_bytes=settings.EXERCISE_IMAGE_UPLOAD_MAX_BYTES,
+        ),
     )
     await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
     return ExerciseTypeImageRead(

@@ -1,5 +1,6 @@
 import base64
 import json
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
@@ -181,6 +182,54 @@ async def test_upload_duplicate_file_reuses_active_candidate_row(
         .all()
     )
     assert len(rows) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_upload_rejects_oversized_file_before_service_read(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.core.config.settings.EXERCISE_IMAGE_UPLOAD_MAX_BYTES", 4)
+    upload_candidate_mock = AsyncMock()
+    monkeypatch.setattr(
+        "src.exercises.router.upload_candidate_image",
+        upload_candidate_mock,
+    )
+    user = User(
+        email="candidate-image-too-large@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Too Large Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    async def override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = override_user
+    try:
+        response = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference.png", b"12345", "image/png")},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert response.status_code == 413, response.text
+    assert response.json()["detail"] == "Image upload exceeds maximum size of 4 bytes"
+    upload_candidate_mock.assert_not_called()
 
 
 @pytest.mark.integration
