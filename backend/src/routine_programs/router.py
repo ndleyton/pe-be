@@ -93,7 +93,9 @@ async def get_program(
     return program
 
 
-@router.post("/", response_model=RoutineProgramRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=RoutineProgramRead, status_code=status.HTTP_201_CREATED
+)
 async def create_program(
     program_in: RoutineProgramCreate,
     user: User = Depends(current_active_user),

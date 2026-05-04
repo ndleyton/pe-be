@@ -21,7 +21,9 @@ class RoutineProgramService:
         limit: int,
     ) -> List[RoutineProgramRead]:
         programs = await crud.get_visible_programs(session, user_id, offset, limit)
-        hydrated = [await crud.hydrate_program(program, session) for program in programs]
+        hydrated = [
+            await crud.hydrate_program(program, session) for program in programs
+        ]
         return [RoutineProgramRead.model_validate(program) for program in hydrated]
 
     async def get_visible_programs_summary(

@@ -14,7 +14,9 @@ from src.users.router import current_active_user
 from src.workouts.models import WorkoutType
 
 
-async def _seed_user(db_session: AsyncSession, email: str, *, admin: bool = False) -> User:
+async def _seed_user(
+    db_session: AsyncSession, email: str, *, admin: bool = False
+) -> User:
     user = User(
         email=email,
         hashed_password="not-used",
@@ -298,7 +300,9 @@ async def test_clone_program_deep_clones_routines_and_increments_times_used(
     )
     cloned_template = result.scalar_one()
     result = await db_session.execute(
-        select(SetTemplate).where(SetTemplate.exercise_template_id == cloned_template.id)
+        select(SetTemplate).where(
+            SetTemplate.exercise_template_id == cloned_template.id
+        )
     )
     cloned_set = result.scalar_one()
     assert cloned_template.exercise_type_id == exercise_type.id

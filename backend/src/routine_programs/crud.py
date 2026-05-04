@@ -100,19 +100,15 @@ def _map_program_integrity_error(
     error_message = str(error.orig) if error.orig is not None else str(error)
     lowered = error_message.lower()
 
-    if (
-        constraint_name == "routine_program_days_routine_id_fkey"
-        or ("routine_id" in error_message and "foreign key constraint" in lowered)
+    if constraint_name == "routine_program_days_routine_id_fkey" or (
+        "routine_id" in error_message and "foreign key constraint" in lowered
     ):
         return DomainValidationError.invalid_reference(field="days.routine_id")
 
-    if (
-        constraint_name == "uq_routine_program_days_program_sort"
-        or (
-            "program_id" in error_message
-            and "sort_order" in error_message
-            and "unique" in lowered
-        )
+    if constraint_name == "uq_routine_program_days_program_sort" or (
+        "program_id" in error_message
+        and "sort_order" in error_message
+        and "unique" in lowered
     ):
         return DomainValidationError.invalid_range(
             message="Program day sort_order values must be unique",
@@ -253,7 +249,9 @@ async def _fetch_routine_previews(
     return previews
 
 
-async def _routine_summary_map(session: AsyncSession, routines: Sequence[Routine]) -> dict:
+async def _routine_summary_map(
+    session: AsyncSession, routines: Sequence[Routine]
+) -> dict:
     routine_ids = [routine.id for routine in routines]
     counts_by_routine = await _fetch_routine_counts(session, routine_ids)
     previews_by_routine = await _fetch_routine_previews(session, routine_ids)
@@ -306,9 +304,13 @@ async def get_visible_programs_summary(
             RoutineProgram.category.asc().nullslast(), RoutineProgram.id.asc()
         )
     elif order_by == "timesUsed":
-        query = query.order_by(RoutineProgram.times_used.desc(), RoutineProgram.id.asc())
+        query = query.order_by(
+            RoutineProgram.times_used.desc(), RoutineProgram.id.asc()
+        )
     else:
-        query = query.order_by(RoutineProgram.created_at.desc(), RoutineProgram.id.asc())
+        query = query.order_by(
+            RoutineProgram.created_at.desc(), RoutineProgram.id.asc()
+        )
 
     result = await session.execute(query.offset(offset).limit(limit))
     programs = result.scalars().all()
@@ -534,7 +536,9 @@ async def update_program(
     return await (
         get_any_program_by_id(session, program.id, populate_existing=True)
         if is_superuser
-        else get_user_program_by_id(session, program.id, user_id, populate_existing=True)
+        else get_user_program_by_id(
+            session, program.id, user_id, populate_existing=True
+        )
     )
 
 
