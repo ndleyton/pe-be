@@ -584,12 +584,15 @@ async def test_program_update_and_delete_cover_permission_and_superuser_paths(
 
     assert created is not None
     assert created.is_readonly is True
-    assert await program_crud.update_program(
-        db_session,
-        999_999,
-        RoutineProgramUpdate(name="Missing"),
-        owner.id,
-    ) is None
+    assert (
+        await program_crud.update_program(
+            db_session,
+            999_999,
+            RoutineProgramUpdate(name="Missing"),
+            owner.id,
+        )
+        is None
+    )
 
     with pytest.raises(PermissionError):
         await program_crud.update_program(
@@ -633,12 +636,13 @@ async def test_program_update_and_delete_cover_permission_and_superuser_paths(
     with pytest.raises(PermissionError):
         await program_crud.delete_program(db_session, created.id, owner.id)
 
-    assert await program_crud.delete_program(
-        db_session, 999_999, owner.id
-    ) is False
-    assert await program_crud.delete_program(
-        db_session, created.id, admin.id, is_superuser=True
-    ) is True
+    assert await program_crud.delete_program(db_session, 999_999, owner.id) is False
+    assert (
+        await program_crud.delete_program(
+            db_session, created.id, admin.id, is_superuser=True
+        )
+        is True
+    )
 
 
 @pytest.mark.integration
