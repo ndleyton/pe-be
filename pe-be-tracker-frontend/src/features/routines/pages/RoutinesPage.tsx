@@ -85,19 +85,6 @@ const RoutinesPage = () => {
   const activeFetchingNextPage =
     activeTab === "routines" ? isFetchingNextPage : programsFetchingNextPage;
 
-  if (activeError) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            Error loading {activeTab}. Please try again.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <RoutineStructuredData data={routineListJsonLd} />
@@ -210,7 +197,14 @@ const RoutinesPage = () => {
 
         {/* Grid Area with Loading State */}
         <div className="min-h-[400px]">
-          {activePending ? (
+          {activeError ? (
+            <Alert variant="destructive" className="text-left">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                Error loading {activeTab}. Please try again.
+              </AlertDescription>
+            </Alert>
+          ) : activePending ? (
             <RoutinesGridSkeleton />
           ) : (
             <>
