@@ -3,11 +3,20 @@ from decimal import Decimal
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.errors import DomainValidationError
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.main import app
+from src.routine_programs import crud as program_crud
 from src.routine_programs.models import RoutineProgram, RoutineProgramDay
+from src.routine_programs.schemas import (
+    AdminRoutineProgramCreate,
+    RoutineProgramCreate,
+    RoutineProgramDayCreate,
+    RoutineProgramUpdate,
+)
 from src.routines.models import ExerciseTemplate, Routine, SetTemplate
 from src.users.models import User
 from src.users.router import current_active_user
@@ -355,3 +364,389 @@ async def test_delete_routine_referenced_by_program_returns_conflict(
     assert response.status_code == 409, response.text
     assert response.json()["detail"] == "Routine is used by a routine program"
     assert await db_session.get(Routine, routine.id) is not None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_program_validation_rejects_duplicate_missing_and_inaccessible_days(
+    db_session: AsyncSession,
+):
+    workout_type, intensity_unit, exercise_type = await _seed_reference_data(db_session)
+    owner = await _seed_user(db_session, "program-validation-owner@example.com")
+    other = await _seed_user(db_session, "program-validation-other@example.com")
+    owned_public = await _seed_routine(
+        db_session,
+        owner=owner,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="Owned Public",
+        visibility=Routine.RoutineVisibility.public,
+    )
+    other_private = await _seed_routine(
+        db_session,
+        owner=other,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="Other Private",
+        visibility=Routine.RoutineVisibility.private,
+    )
+    await db_session.commit()
+
+    with pytest.raises(DomainValidationError) as duplicate_error:
+        await program_crud.create_program(
+            db_session,
+            RoutineProgramCreate(
+                name="Duplicate Sort",
+                days=[
+                    RoutineProgramDayCreate(
+                        routine_id=owned_public.id, day_label="A", sort_order=1
+                    ),
+                    RoutineProgramDayCreate(
+                        routine_id=owned_public.id, day_label="B", sort_order=1
+                    ),
+                ],
+            ),
+            owner.id,
+        )
+    assert duplicate_error.value.field == "days.sort_order"
+
+    with pytest.raises(DomainValidationError) as missing_error:
+        await program_crud.create_program(
+            db_session,
+            RoutineProgramCreate(
+                name="Missing Routine",
+                days=[
+                    RoutineProgramDayCreate(
+                        routine_id=999_999, day_label="Missing", sort_order=1
+                    )
+                ],
+            ),
+            owner.id,
+        )
+    assert missing_error.value.field == "days.routine_id"
+
+    with pytest.raises(DomainValidationError) as inaccessible_error:
+        await program_crud.create_program(
+            db_session,
+            RoutineProgramCreate(
+                name="Inaccessible Routine",
+                days=[
+                    RoutineProgramDayCreate(
+                        routine_id=other_private.id,
+                        day_label="Private",
+                        sort_order=1,
+                    )
+                ],
+            ),
+            owner.id,
+        )
+    assert inaccessible_error.value.field == "days.routine_id"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_program_crud_summary_sorting_filtering_and_empty_paths(
+    db_session: AsyncSession,
+):
+    workout_type, intensity_unit, exercise_type = await _seed_reference_data(db_session)
+    owner = await _seed_user(db_session, "program-summary-crud-owner@example.com")
+    routine = await _seed_routine(
+        db_session,
+        owner=owner,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="Summary Routine",
+        visibility=Routine.RoutineVisibility.public,
+    )
+
+    alpha = RoutineProgram(
+        name="Alpha",
+        creator_id=owner.id,
+        visibility=RoutineProgram.ProgramVisibility.public,
+        author="B Coach",
+        category="Hypertrophy",
+        times_used=3,
+    )
+    beta = RoutineProgram(
+        name="Beta",
+        creator_id=owner.id,
+        visibility=RoutineProgram.ProgramVisibility.public,
+        author="A Coach",
+        category="Strength",
+        times_used=9,
+    )
+    db_session.add_all([alpha, beta])
+    await db_session.flush()
+    db_session.add_all(
+        [
+            RoutineProgramDay(
+                program_id=alpha.id,
+                routine_id=routine.id,
+                day_label="Alpha Day",
+                sort_order=1,
+            ),
+            RoutineProgramDay(
+                program_id=beta.id,
+                routine_id=routine.id,
+                day_label="Beta Day",
+                sort_order=1,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    assert (
+        await program_crud.get_visible_programs_summary(
+            db_session, user_id=None, category="Missing"
+        )
+        == []
+    )
+
+    by_name = await program_crud.get_visible_programs_summary(
+        db_session, user_id=None, order_by="name"
+    )
+    assert [program["name"] for program in by_name] == ["Alpha", "Beta"]
+
+    by_author = await program_crud.get_visible_programs_summary(
+        db_session, user_id=None, order_by="author"
+    )
+    assert [program["author"] for program in by_author] == ["A Coach", "B Coach"]
+
+    by_category = await program_crud.get_visible_programs_summary(
+        db_session, user_id=None, order_by="category"
+    )
+    assert [program["category"] for program in by_category] == [
+        "Hypertrophy",
+        "Strength",
+    ]
+
+    by_times_used = await program_crud.get_visible_programs_summary(
+        db_session, user_id=None, order_by="timesUsed"
+    )
+    assert [program["times_used"] for program in by_times_used] == [9, 3]
+
+    by_updated = await program_crud.get_visible_programs_summary(
+        db_session, user_id=None, order_by="updatedAt", author="A Coach"
+    )
+    assert [program["name"] for program in by_updated] == ["Beta"]
+
+    visible_for_owner = await program_crud.get_visible_programs(
+        db_session, user_id=owner.id
+    )
+    assert {program.name for program in visible_for_owner} == {"Alpha", "Beta"}
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_program_update_and_delete_cover_permission_and_superuser_paths(
+    db_session: AsyncSession,
+):
+    workout_type, intensity_unit, exercise_type = await _seed_reference_data(db_session)
+    owner = await _seed_user(db_session, "program-update-owner@example.com")
+    admin = await _seed_user(db_session, "program-update-admin@example.com", admin=True)
+    first = await _seed_routine(
+        db_session,
+        owner=owner,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="First Routine",
+        visibility=Routine.RoutineVisibility.public,
+    )
+    second = await _seed_routine(
+        db_session,
+        owner=owner,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="Second Routine",
+        visibility=Routine.RoutineVisibility.public,
+    )
+
+    created = await program_crud.create_program(
+        db_session,
+        AdminRoutineProgramCreate(
+            name="Readonly Program",
+            visibility=RoutineProgram.ProgramVisibility.public,
+            is_readonly=True,
+            days=[
+                RoutineProgramDayCreate(
+                    routine_id=first.id, day_label="First", sort_order=1
+                )
+            ],
+        ),
+        owner.id,
+        is_admin=True,
+    )
+
+    assert created is not None
+    assert created.is_readonly is True
+    assert await program_crud.update_program(
+        db_session,
+        999_999,
+        RoutineProgramUpdate(name="Missing"),
+        owner.id,
+    ) is None
+
+    with pytest.raises(PermissionError):
+        await program_crud.update_program(
+            db_session,
+            created.id,
+            RoutineProgramUpdate(name="Blocked"),
+            owner.id,
+        )
+
+    updated = await program_crud.update_program(
+        db_session,
+        created.id,
+        RoutineProgramUpdate(
+            name="Admin Updated",
+            description="Updated description",
+            visibility=RoutineProgram.ProgramVisibility.link_only,
+            author="Updated Author",
+            category="Updated Category",
+            source_label="Updated Source",
+            days=[
+                RoutineProgramDayCreate(
+                    routine_id=second.id,
+                    day_label="Second",
+                    sort_order=1,
+                    week_number=2,
+                    phase_label="Phase A",
+                    notes="Day notes",
+                )
+            ],
+        ),
+        admin.id,
+        is_superuser=True,
+    )
+
+    assert updated is not None
+    assert updated.name == "Admin Updated"
+    assert updated.visibility == RoutineProgram.ProgramVisibility.link_only
+    assert updated.days[0].routine_id == second.id
+    assert updated.days[0].week_number == 2
+
+    with pytest.raises(PermissionError):
+        await program_crud.delete_program(db_session, created.id, owner.id)
+
+    assert await program_crud.delete_program(
+        db_session, 999_999, owner.id
+    ) is False
+    assert await program_crud.delete_program(
+        db_session, created.id, admin.id, is_superuser=True
+    ) is True
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_clone_program_reuses_single_cloned_routine_and_canonical_set_values(
+    db_session: AsyncSession,
+):
+    workout_type, intensity_unit, exercise_type = await _seed_reference_data(db_session)
+    owner = await _seed_user(db_session, "program-clone-reuse-owner@example.com")
+    viewer = await _seed_user(db_session, "program-clone-reuse-viewer@example.com")
+    routine = await _seed_routine(
+        db_session,
+        owner=owner,
+        workout_type=workout_type,
+        intensity_unit=intensity_unit,
+        exercise_type=exercise_type,
+        name="Repeated Routine",
+        visibility=Routine.RoutineVisibility.public,
+    )
+    result = await db_session.execute(
+        select(SetTemplate)
+        .join(ExerciseTemplate)
+        .where(ExerciseTemplate.routine_id == routine.id)
+    )
+    source_set = result.scalar_one()
+    source_set.canonical_intensity = Decimal("22.50000")
+    source_set.canonical_intensity_unit_id = intensity_unit.id
+
+    program = RoutineProgram(
+        name="Repeated Program",
+        creator_id=owner.id,
+        visibility=RoutineProgram.ProgramVisibility.public,
+    )
+    db_session.add(program)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            RoutineProgramDay(
+                program_id=program.id,
+                routine_id=routine.id,
+                day_label="Day A",
+                sort_order=1,
+            ),
+            RoutineProgramDay(
+                program_id=program.id,
+                routine_id=routine.id,
+                day_label="Day B",
+                sort_order=2,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    assert await program_crud.clone_program(db_session, 999_999, viewer.id) is None
+    cloned = await program_crud.clone_program(db_session, program.id, viewer.id)
+
+    assert cloned is not None
+    assert cloned.source_label == "Repeated Program"
+    assert len(cloned.days) == 2
+    cloned_routine_ids = {day.routine_id for day in cloned.days}
+    assert len(cloned_routine_ids) == 1
+
+    cloned_routine_id = cloned_routine_ids.pop()
+    result = await db_session.execute(
+        select(SetTemplate)
+        .join(ExerciseTemplate)
+        .where(ExerciseTemplate.routine_id == cloned_routine_id)
+    )
+    cloned_set = result.scalar_one()
+    assert cloned_set.canonical_intensity == Decimal("22.50000")
+    assert cloned_set.canonical_intensity_unit_id == intensity_unit.id
+
+
+def test_program_integrity_error_mapping_branches():
+    class OrigWithDiag:
+        def __init__(self, constraint_name: str):
+            self.diag = type("Diag", (), {"constraint_name": constraint_name})()
+
+        def __str__(self) -> str:
+            return self.diag.constraint_name
+
+    class OrigWithConstraint:
+        constraint_name = "fallback_constraint"
+
+        def __str__(self) -> str:
+            return "fallback"
+
+    fk_error = program_crud._map_program_integrity_error(
+        IntegrityError(
+            "statement",
+            {},
+            OrigWithDiag("routine_program_days_routine_id_fkey"),
+        )
+    )
+    assert fk_error is not None
+    assert fk_error.field == "days.routine_id"
+
+    unique_error = program_crud._map_program_integrity_error(
+        IntegrityError(
+            "statement",
+            {},
+            OrigWithDiag("uq_routine_program_days_program_sort"),
+        )
+    )
+    assert unique_error is not None
+    assert unique_error.field == "days.sort_order"
+
+    unknown_error = program_crud._map_program_integrity_error(
+        IntegrityError("statement", {}, OrigWithConstraint())
+    )
+    assert unknown_error is None
