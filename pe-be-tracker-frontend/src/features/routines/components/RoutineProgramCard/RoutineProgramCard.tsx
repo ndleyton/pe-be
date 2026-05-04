@@ -61,9 +61,9 @@ export const RoutineProgramCard = ({
       </CardHeader>
       <CardContent className="flex flex-1 flex-col pt-0 pb-3">
         <div className="mb-3 flex min-h-[3.75rem] flex-wrap content-end gap-1.5">
-          {previewLabels.map((label) => (
+          {previewLabels.map((label, index) => (
             <Badge
-              key={label}
+              key={`${label}-${index}`}
               variant="outline"
               className="max-w-full rounded-lg border-primary/15 bg-primary/5 px-2 py-1 text-[11px] font-bold"
             >

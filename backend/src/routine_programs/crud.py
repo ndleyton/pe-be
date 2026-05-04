@@ -589,21 +589,32 @@ async def _clone_routine(
         await session.flush()
 
         for set_template in exercise_template.set_templates:
-            source_unit = await session.get(IntensityUnit, set_template.intensity_unit_id)
-            canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
-                set_template.intensity,
-                source_unit,
-            )
-            canonical_intensity_unit_id = set_template.intensity_unit_id
-            if canonical_unit_key is not None:
-                canonical_unit = await session.execute(
-                    select(IntensityUnit).where(
-                        IntensityUnit.abbreviation.ilike(canonical_unit_key)
+            if (
+                set_template.canonical_intensity is not None
+                and set_template.canonical_intensity_unit_id is not None
+            ):
+                canonical_intensity = set_template.canonical_intensity
+                canonical_intensity_unit_id = set_template.canonical_intensity_unit_id
+            else:
+                source_unit = await session.get(
+                    IntensityUnit, set_template.intensity_unit_id
+                )
+                canonical_intensity, canonical_unit_key = (
+                    normalize_intensity_for_storage(
+                        set_template.intensity,
+                        source_unit,
                     )
                 )
-                canonical_intensity_unit_id = (
-                    canonical_unit.scalar_one_or_none() or source_unit
-                ).id
+                canonical_intensity_unit_id = set_template.intensity_unit_id
+                if canonical_unit_key is not None:
+                    canonical_unit = await session.execute(
+                        select(IntensityUnit).where(
+                            IntensityUnit.abbreviation.ilike(canonical_unit_key)
+                        )
+                    )
+                    canonical_intensity_unit_id = (
+                        canonical_unit.scalar_one_or_none() or source_unit
+                    ).id
 
             session.add(
                 SetTemplate(
@@ -614,11 +625,9 @@ async def _clone_routine(
                     rir=set_template.rir,
                     notes=set_template.notes,
                     type=set_template.type,
-                    canonical_intensity=set_template.canonical_intensity
-                    or canonical_intensity,
+                    canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template.intensity_unit_id,
-                    canonical_intensity_unit_id=set_template.canonical_intensity_unit_id
-                    or canonical_intensity_unit_id,
+                    canonical_intensity_unit_id=canonical_intensity_unit_id,
                     exercise_template_id=cloned_exercise.id,
                 )
             )
