@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PE-BE exercise image cleanup daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target

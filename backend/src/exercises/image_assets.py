@@ -11,12 +11,17 @@ def exercise_image_storage_dir() -> Path:
     return Path(settings.EXERCISE_IMAGE_STORAGE_DIR).expanduser().resolve()
 
 
+def resolve_exercise_image_asset_url(image_url: str) -> str:
+    prefix = f"{settings.API_PREFIX}/exercises/assets"
+    return f"{prefix.rstrip('/')}/{image_url.lstrip('/')}"
+
+
 def resolve_exercise_image_url(image_url: str) -> str:
     if image_url.startswith(("http://", "https://")):
         return image_url
 
-    if image_url.startswith(("generated/", "published/")):
-        prefix = f"{settings.API_PREFIX}/exercises/assets"
+    if image_url.startswith(("generated/", "published/", "uploads/")):
+        return resolve_exercise_image_asset_url(image_url)
     else:
         prefix = settings.IMAGE_URL_PREFIX or f"{settings.API_PREFIX}/exercises/assets"
 

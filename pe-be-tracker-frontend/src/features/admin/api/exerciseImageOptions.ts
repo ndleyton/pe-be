@@ -1,6 +1,7 @@
 import api from "@/shared/api/client";
 import { config } from "@/app/config/env";
 import { endpoints } from "@/shared/api/endpoints";
+import { resolveApiAssetUrl } from "@/shared/api/assets";
 
 export interface ExerciseImageOption {
   key: string;
@@ -33,32 +34,16 @@ export interface ExerciseImageOptionsResponse {
 const baseApiTimeout = Number.isFinite(config.apiTimeout) ? config.apiTimeout : 10000;
 const IMAGE_GENERATION_TIMEOUT_MS = Math.max(baseApiTimeout, 90000);
 
-const resolveAssetUrl = (url: string): string => {
-  if (!url) {
-    return url;
-  }
-
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-
-  const base = /^https?:\/\//i.test(config.apiBaseUrl)
-    ? config.apiBaseUrl
-    : window.location.origin;
-
-  return new URL(url, base).toString();
-};
-
 const normalizeImageOptionsResponse = (
   response: ExerciseImageOptionsResponse,
 ): ExerciseImageOptionsResponse => ({
   ...response,
-  current_images: response.current_images.map(resolveAssetUrl),
-  reference_images: response.reference_images.map(resolveAssetUrl),
+  current_images: response.current_images.map(resolveApiAssetUrl),
+  reference_images: response.reference_images.map(resolveApiAssetUrl),
   options: response.options.map((option) => ({
     ...option,
-    images: option.images.map(resolveAssetUrl),
-    source_images: option.source_images.map(resolveAssetUrl),
+    images: option.images.map(resolveApiAssetUrl),
+    source_images: option.source_images.map(resolveApiAssetUrl),
   })),
 });
 

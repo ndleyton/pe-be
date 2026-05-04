@@ -20,6 +20,7 @@ import {
   type IntensityUnit,
 } from "@/features/exercises/api";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
+import { ExerciseTypeImageUploadPanel } from "@/features/exercises/components/ExerciseTypeImageUploadPanel";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -408,6 +409,11 @@ const ExerciseTypeDetailsPage = () => {
     isSuperuser &&
     exerciseType.status === "released";
   const isEditable = canEditNonReleased || (canEditReleasedAsAdmin && isAdminEditingReleased);
+  const canUploadReferenceImages =
+    hasExerciseType &&
+    isAuthenticated &&
+    ((isSuperuser && exerciseType.status !== "released") ||
+      (isOwner && exerciseType.status === "candidate"));
   const canRequestEvaluation =
     hasExerciseType &&
     isAuthenticated &&
@@ -814,6 +820,10 @@ const ExerciseTypeDetailsPage = () => {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {canUploadReferenceImages ? (
+        <ExerciseTypeImageUploadPanel exerciseTypeId={exerciseType.id} />
       ) : null}
 
       <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2 lg:gap-8">

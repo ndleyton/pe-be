@@ -1,4 +1,5 @@
 import api from "@/shared/api/client";
+import { resolveApiAssetUrl } from "@/shared/api/assets";
 import { endpoints } from "@/shared/api/endpoints";
 import { toUTCISOString } from "@/utils/date";
 import type { MuscleGroup, Muscle } from "@/shared/types";
@@ -215,6 +216,36 @@ export interface SimilarExercisesResponse {
   strategy: SimilarExercisesStrategy;
 }
 
+export interface ExerciseTypeImage {
+  id: number | null;
+  asset_kind: string;
+  status: string;
+  url: string;
+  mime_type: string | null;
+  original_filename: string | null;
+  created_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ExerciseTypeImagesResponse {
+  exercise_type_id: number;
+  images: ExerciseTypeImage[];
+}
+
+const normalizeExerciseTypeImage = (
+  image: ExerciseTypeImage,
+): ExerciseTypeImage => ({
+  ...image,
+  url: resolveApiAssetUrl(image.url),
+});
+
+const normalizeExerciseTypeImagesResponse = (
+  response: ExerciseTypeImagesResponse,
+): ExerciseTypeImagesResponse => ({
+  ...response,
+  images: response.images.map(normalizeExerciseTypeImage),
+});
+
 // Get all exercise types with cursor-based pagination
 export const getExerciseTypes = async (
   orderBy: "usage" | "name" = "usage",
@@ -268,6 +299,34 @@ export const getSimilarExerciseTypes = async (
     `${endpoints.similarExerciseTypes(exerciseTypeId)}?${params.toString()}`,
   );
   return response.data;
+};
+
+export const getExerciseTypeImages = async (
+  exerciseTypeId: number | string,
+): Promise<ExerciseTypeImagesResponse> => {
+  const response = await api.get(endpoints.exerciseTypeImages(exerciseTypeId));
+  return normalizeExerciseTypeImagesResponse(response.data);
+};
+
+export const uploadExerciseTypeImage = async (
+  exerciseTypeId: number | string,
+  file: File,
+): Promise<ExerciseTypeImage> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post(
+    endpoints.exerciseTypeImages(exerciseTypeId),
+    formData,
+  );
+  return normalizeExerciseTypeImage(response.data);
+};
+
+export const deleteExerciseTypeImage = async (
+  exerciseTypeId: number | string,
+  assetId: number | string,
+): Promise<void> => {
+  await api.delete(endpoints.exerciseTypeImageById(exerciseTypeId, assetId));
 };
 
 // Create a new exercise type

@@ -16,6 +16,10 @@ export const endpoints = {
   // Exercise Types (nested under exercises)
   exerciseTypes: "/exercises/exercise-types/",
   exerciseTypeById: (id: string | number) => `/exercises/exercise-types/${id}`,
+  exerciseTypeImages: (id: string | number) =>
+    `/exercises/exercise-types/${id}/images/`,
+  exerciseTypeImageById: (id: string | number, assetId: string | number) =>
+    `/exercises/exercise-types/${id}/images/${assetId}`,
   similarExerciseTypes: (id: string | number) =>
     `/exercises/exercise-types/${id}/similar`,
   requestExerciseTypeEvaluation: (id: string | number) =>

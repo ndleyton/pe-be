@@ -3,14 +3,17 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from io import BytesIO
 from datetime import datetime, timezone
 from dataclasses import dataclass
 
 from fastapi import HTTPException, status
+from PIL import Image, ImageOps
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import settings
 from src.admin.schemas import (
     AdminExerciseImageOption,
     AdminExerciseImageOptionSpec,
@@ -46,6 +49,12 @@ PHASE_FALLBACK_IMAGES = (
     (0, "__phase__:start-eccentric", "start / eccentric"),
     (1, "__phase__:end-concentric", "end / concentric"),
 )
+PUBLISHED_UPLOAD_FORMATS = {
+    "webp": ("webp", "WEBP", {"quality": 90, "method": 6}),
+    "png": ("png", "PNG", {}),
+    "jpeg": ("jpg", "JPEG", {"quality": 90, "optimize": True}),
+    "jpg": ("jpg", "JPEG", {"quality": 90, "optimize": True}),
+}
 
 
 @dataclass(frozen=True)
@@ -109,6 +118,27 @@ def _published_storage_path_for_candidate(
     )
 
 
+def _published_storage_path_for_uploaded_reference(
+    exercise_type_id: int,
+    candidate_id: int,
+) -> str:
+    extension, _, _ = _published_upload_format_settings()
+    return f"published/exercise-type-{exercise_type_id}/uploaded/{candidate_id}.{extension}"
+
+
+def _published_upload_format_settings() -> tuple[str, str, dict[str, object]]:
+    configured_format = settings.EXERCISE_IMAGE_PUBLISHED_FORMAT.strip().lower()
+    format_settings = PUBLISHED_UPLOAD_FORMATS.get(configured_format)
+    if format_settings is None:
+        supported = ", ".join(sorted(PUBLISHED_UPLOAD_FORMATS))
+        raise ValueError(
+            "Unsupported EXERCISE_IMAGE_PUBLISHED_FORMAT "
+            f"{settings.EXERCISE_IMAGE_PUBLISHED_FORMAT!r}. "
+            f"Supported values: {supported}."
+        )
+    return format_settings
+
+
 def _write_candidate_bytes(relative_path: str, image_bytes: bytes) -> None:
     output_path = storage_path_for_relative_url(relative_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,6 +157,26 @@ def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -
     target_path = storage_path_for_relative_url(target_relative_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_bytes(source_path.read_bytes())
+
+
+def _publish_uploaded_reference(
+    source_relative_path: str, target_relative_path: str
+) -> None:
+    source_path = storage_path_for_relative_url(source_relative_path)
+    target_path = storage_path_for_relative_url(target_relative_path)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    max_edge = settings.EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX
+    _, output_format, save_kwargs = _published_upload_format_settings()
+
+    with Image.open(source_path) as image:
+        normalized = ImageOps.exif_transpose(image)
+        if max(normalized.size) > max_edge:
+            normalized.thumbnail((max_edge, max_edge))
+        if output_format == "JPEG" and normalized.mode not in ("RGB", "L"):
+            normalized = normalized.convert("RGB")
+        output = BytesIO()
+        normalized.save(output, format=output_format, **save_kwargs)
+        target_path.write_bytes(output.getvalue())
 
 
 def _exercise_context(exercise_type: ExerciseType) -> dict:
@@ -244,6 +294,18 @@ async def _load_candidates(
     result = await session.execute(
         select(ExerciseImageCandidate)
         .where(ExerciseImageCandidate.exercise_type_id == exercise_type_id)
+        .where(
+            ExerciseImageCandidate.asset_kind
+            == ExerciseImageCandidate.AssetKind.generated_candidate.value
+        )
+        .where(
+            ExerciseImageCandidate.status.in_(
+                (
+                    ExerciseImageCandidate.AssetStatus.active.value,
+                    ExerciseImageCandidate.AssetStatus.promoted.value,
+                )
+            )
+        )
         .order_by(
             ExerciseImageCandidate.option_key.asc(),
             ExerciseImageCandidate.source_image_index.asc(),
@@ -260,7 +322,15 @@ async def _load_candidates_by_keys(
         return []
     result = await session.execute(
         select(ExerciseImageCandidate).where(
-            ExerciseImageCandidate.generation_key.in_(generation_keys)
+            ExerciseImageCandidate.generation_key.in_(generation_keys),
+            ExerciseImageCandidate.asset_kind
+            == ExerciseImageCandidate.AssetKind.generated_candidate.value,
+            ExerciseImageCandidate.status.in_(
+                (
+                    ExerciseImageCandidate.AssetStatus.active.value,
+                    ExerciseImageCandidate.AssetStatus.promoted.value,
+                )
+            ),
         )
     )
     return result.scalars().all()
@@ -496,6 +566,10 @@ async def generate_reference_image_options(
                         "prompt_summary": result.prompt_summary,
                         "mime_type": result.mime_type,
                         "storage_path": storage_path,
+                        "asset_kind": (
+                            ExerciseImageCandidate.AssetKind.generated_candidate.value
+                        ),
+                        "status": ExerciseImageCandidate.AssetStatus.active.value,
                         "created_at": now,
                         "updated_at": now,
                     }
@@ -520,6 +594,8 @@ async def generate_reference_image_options(
                         "prompt_summary": excluded.prompt_summary,
                         "mime_type": excluded.mime_type,
                         "storage_path": excluded.storage_path,
+                        "asset_kind": excluded.asset_kind,
+                        "status": excluded.status,
                         "updated_at": excluded.updated_at,
                     },
                 )
@@ -622,6 +698,10 @@ async def _generate_phase_fallback_image_options(
                         prompt_summary=result.prompt_summary,
                         mime_type=result.mime_type,
                         storage_path=storage_path,
+                        asset_kind=(
+                            ExerciseImageCandidate.AssetKind.generated_candidate.value
+                        ),
+                        status=ExerciseImageCandidate.AssetStatus.active.value,
                     )
                 )
 
@@ -657,7 +737,65 @@ async def apply_reference_or_option(
         )
 
     if use_reference:
-        exercise_type.images_url = _image_json(reference_images)
+        uploaded_references = (
+            (
+                await session.execute(
+                    select(ExerciseImageCandidate).where(
+                        ExerciseImageCandidate.exercise_type_id == exercise_type.id,
+                        ExerciseImageCandidate.asset_kind
+                        == ExerciseImageCandidate.AssetKind.uploaded_reference.value,
+                        ExerciseImageCandidate.status.in_(
+                            (
+                                ExerciseImageCandidate.AssetStatus.active.value,
+                                ExerciseImageCandidate.AssetStatus.promoted.value,
+                            )
+                        ),
+                        ExerciseImageCandidate.storage_path.in_(reference_images),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        published_paths: list[str] = []
+        published_paths_written: list[str] = []
+        try:
+            for reference_image in reference_images:
+                matching_upload = next(
+                    (
+                        candidate
+                        for candidate in uploaded_references
+                        if candidate.storage_path == reference_image
+                    ),
+                    None,
+                )
+                if matching_upload is None:
+                    published_paths.append(reference_image)
+                    continue
+
+                published_path = _published_storage_path_for_uploaded_reference(
+                    exercise_type.id,
+                    matching_upload.id,
+                )
+                _publish_uploaded_reference(
+                    matching_upload.storage_path, published_path
+                )
+                published_paths_written.append(published_path)
+                matching_upload.status = (
+                    ExerciseImageCandidate.AssetStatus.promoted.value
+                )
+                published_paths.append(published_path)
+
+            exercise_type.images_url = _image_json(published_paths)
+        except Exception:
+            for published_path in published_paths_written:
+                try:
+                    storage_path_for_relative_url(published_path).unlink(
+                        missing_ok=True
+                    )
+                except OSError:
+                    pass
+            raise
     else:
         candidates = await _load_candidates(session, exercise_type.id)
         option_candidates = [c for c in candidates if c.option_key == option_key]
@@ -685,6 +823,7 @@ async def apply_reference_or_option(
                 candidate.generation_key,
             )
             _copy_relative_asset(candidate.storage_path, published_path)
+            candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
             published_paths.append(published_path)
         exercise_type.images_url = _image_json(published_paths)
 

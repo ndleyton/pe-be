@@ -1,5 +1,6 @@
 from typing import Optional, List, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
+import json
 from pydantic import (
     ConfigDict,
     field_validator,
@@ -143,6 +144,24 @@ class ExerciseTypeReleaseRequest(BaseModel):
     review_notes: Optional[str] = None
 
 
+class ExerciseTypeImageRead(BaseModel):
+    """Uploaded or published image metadata for an exercise type."""
+
+    id: int | None = None
+    asset_kind: str
+    status: str
+    url: str
+    mime_type: str | None = None
+    original_filename: str | None = None
+    created_at: datetime | None = None
+    deleted_at: datetime | None = None
+
+
+class ExerciseTypeImagesResponse(BaseModel):
+    exercise_type_id: int
+    images: list[ExerciseTypeImageRead]
+
+
 class MuscleGroupRead(BaseModel):
     """Schema for reading muscle group data"""
 
@@ -194,7 +213,11 @@ class ExerciseTypeRead(BaseModel):
     def extract_muscles_from_relationship(cls, data: Any) -> Any:
         """Extract muscles from exercise_muscles relationship"""
         if isinstance(data, dict):
-            return data
+            result = dict(data)
+            result["reference_images_url"] = cls._public_reference_images_json(
+                result.get("reference_images_url")
+            )
+            return result
 
         # Handle SQLAlchemy model objects
         if hasattr(data, "exercise_muscles") and hasattr(data, "__dict__"):
@@ -237,10 +260,22 @@ class ExerciseTypeRead(BaseModel):
 
             result["muscles"] = serialized_muscles
             result["primary_muscle"] = primary_muscle
+            result["reference_images_url"] = cls._public_reference_images_json(
+                result.get("reference_images_url")
+            )
 
             return result
 
         return data
+
+    @staticmethod
+    def _public_reference_images_json(raw_value: Any) -> str | None:
+        reference_images = [
+            image
+            for image in parse_image_url_list(raw_value)
+            if not image.startswith("uploads/")
+        ]
+        return json.dumps(reference_images) if reference_images else None
 
     @computed_field
     @property
