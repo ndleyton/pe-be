@@ -7,7 +7,7 @@ export { RoutineTemplatesCard } from "./RoutineTemplatesCard/RoutineTemplatesCar
 export { RoutineDetailsLoadingState } from "./skeletons/RoutineDetailsLoadingState";
 export {
   RoutineDetailsPageSkeleton,
+  RoutineProgramDetailsLoadingState,
   RoutineProgramDetailsPageSkeleton,
 } from "./skeletons/RoutineDetailsPageSkeleton";
-export { RoutineProgramDetailsLoadingState } from "./skeletons/RoutineProgramDetailsLoadingState";
 export { RoutinesPageSkeleton, RoutinesGridSkeleton } from "./skeletons/RoutinesPageSkeleton";
