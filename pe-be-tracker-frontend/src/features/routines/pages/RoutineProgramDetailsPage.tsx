@@ -16,7 +16,6 @@ import {
 } from "@/features/routines/api";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import type { RoutineProgramDay } from "@/features/routines/types";
-import { cn } from "@/lib/utils";
 import {
   Alert,
   AlertDescription,
@@ -27,9 +26,6 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/shared/components/ui/card";
 import { RoutineProgramDetailsPageSkeleton } from "@/features/routines/components";
 import { useAppBackNavigation } from "@/shared/hooks";

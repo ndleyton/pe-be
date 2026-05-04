@@ -12,6 +12,7 @@ import PublicActivityPageSkeleton from "@/features/profile/components/skeletons/
 import PublicProfilePageSkeleton from "@/features/profile/components/skeletons/PublicProfilePageSkeleton";
 import {
   RoutineDetailsLoadingState,
+  RoutineProgramDetailsLoadingState,
   RoutinesPageSkeleton,
 } from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
@@ -160,7 +161,7 @@ const appRoutes: RouteObject[] = [
         path: "routine-programs/:programId",
         element: withSuspense(
           <RoutineProgramDetailsPage />,
-          <RoutineDetailsLoadingState />,
+          <RoutineProgramDetailsLoadingState />,
         ),
       },
       {
