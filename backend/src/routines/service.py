@@ -183,8 +183,8 @@ class RoutineService:
         if not is_superuser:
             delete_query = delete_query.where(Routine.creator_id == user_id)
 
-        await session.execute(delete_query)
         try:
+            await session.execute(delete_query)
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()

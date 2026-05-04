@@ -234,7 +234,7 @@ async def admin_create_routine(
 
 
 @router.post(
-    "/routine-programs",
+    "/routine-programs/",
     response_model=RoutineProgramRead,
     status_code=status.HTTP_201_CREATED,
     summary="Admin: Create a new routine program",
