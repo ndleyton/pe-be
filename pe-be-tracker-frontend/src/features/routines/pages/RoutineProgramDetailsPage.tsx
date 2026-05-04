@@ -31,7 +31,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { RoutineDetailsPageSkeleton } from "@/features/routines/components";
+import { RoutineProgramDetailsPageSkeleton } from "@/features/routines/components";
 import { useAppBackNavigation } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
 
@@ -223,7 +223,7 @@ const RoutineProgramDetailsPage = () => {
   if (programQuery.isPending) {
     return (
       <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
-        <RoutineDetailsPageSkeleton />
+        <RoutineProgramDetailsPageSkeleton />
       </div>
     );
   }
