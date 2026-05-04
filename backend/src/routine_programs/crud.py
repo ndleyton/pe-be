@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from src.core.errors import DomainValidationError
 from src.exercises.intensity_units import normalize_intensity_for_storage
@@ -19,7 +19,7 @@ from src.routine_programs.schemas import (
 from src.routines.models import ExerciseTemplate, Routine, SetTemplate
 
 
-def _program_detail_query(*, populate_existing: bool = False):
+def _program_collection_query(*, populate_existing: bool = False):
     query = select(RoutineProgram).options(
         selectinload(RoutineProgram.days)
         .selectinload(RoutineProgramDay.routine)
@@ -29,6 +29,24 @@ def _program_detail_query(*, populate_existing: bool = False):
                     SetTemplate.intensity_unit
                 ),
                 selectinload(ExerciseTemplate.exercise_type),
+            )
+        )
+    )
+    if populate_existing:
+        query = query.execution_options(populate_existing=True)
+    return query
+
+
+def _program_detail_query(*, populate_existing: bool = False):
+    query = select(RoutineProgram).options(
+        joinedload(RoutineProgram.days)
+        .joinedload(RoutineProgramDay.routine)
+        .options(
+            joinedload(Routine.exercise_templates).options(
+                joinedload(ExerciseTemplate.set_templates).joinedload(
+                    SetTemplate.intensity_unit
+                ),
+                joinedload(ExerciseTemplate.exercise_type),
             )
         )
     )
@@ -375,7 +393,7 @@ async def get_visible_programs(
     offset: int = 0,
     limit: int = 100,
 ) -> list[RoutineProgram]:
-    query = _program_detail_query().order_by(RoutineProgram.created_at.desc())
+    query = _program_collection_query().order_by(RoutineProgram.created_at.desc())
     query = _apply_visibility_filter(query, user_id)
     result = await session.execute(query.offset(offset).limit(limit))
     return list(result.scalars().all())
@@ -392,7 +410,7 @@ async def get_program_by_id(
     )
     query = _apply_direct_read_filter(query, user_id)
     result = await session.execute(query)
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_user_program_by_id(
@@ -406,7 +424,7 @@ async def get_user_program_by_id(
             and_(RoutineProgram.id == program_id, RoutineProgram.creator_id == user_id)
         )
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_any_program_by_id(
@@ -419,7 +437,7 @@ async def get_any_program_by_id(
             RoutineProgram.id == program_id
         )
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def create_program(
@@ -501,7 +519,7 @@ async def update_program(
             )
             for day in target_days
         ],
-        user_id=user_id,
+        user_id=program.creator_id if is_superuser else user_id,
         visibility=target_visibility,
     )
 

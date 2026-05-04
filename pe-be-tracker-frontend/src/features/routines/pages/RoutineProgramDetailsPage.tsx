@@ -132,9 +132,9 @@ const DayRow = ({
 
           {preview.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {preview.map((name) => (
+              {preview.map((name, index) => (
                 <div
-                  key={name}
+                  key={`${name}-${index}`}
                   className="rounded-lg border border-border/40 bg-muted/30 px-2 py-1 text-[10px] font-bold text-foreground/70"
                 >
                   {name}

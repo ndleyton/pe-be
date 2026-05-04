@@ -563,7 +563,7 @@ async def test_program_update_and_delete_cover_permission_and_superuser_paths(
         intensity_unit=intensity_unit,
         exercise_type=exercise_type,
         name="Second Routine",
-        visibility=Routine.RoutineVisibility.public,
+        visibility=Routine.RoutineVisibility.private,
     )
 
     created = await program_crud.create_program(
