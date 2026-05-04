@@ -2,6 +2,7 @@ from collections import Counter
 from typing import List, Optional
 
 from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone
@@ -157,13 +158,37 @@ class RoutineService:
         is_superuser: bool = False,
     ) -> bool:
         """Delete a routine idempotently without leaking ownership details."""
+        from src.routine_programs.models import RoutineProgramDay
+
+        if not is_superuser:
+            owned_routine_id = (
+                await session.execute(
+                    select(Routine.id).where(
+                        Routine.id == routine_id, Routine.creator_id == user_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if owned_routine_id is None:
+                return True
+
+        reference_query = select(RoutineProgramDay.id).where(
+            RoutineProgramDay.routine_id == routine_id
+        )
+        reference_query = reference_query.limit(1)
+        referenced_day = (await session.execute(reference_query)).scalar_one_or_none()
+        if referenced_day is not None:
+            raise ValueError("Routine is used by a routine program")
+
         delete_query = delete(Routine).where(Routine.id == routine_id)
         if not is_superuser:
             delete_query = delete_query.where(Routine.creator_id == user_id)
 
-        await session.execute(delete_query)
         try:
+            await session.execute(delete_query)
             await session.commit()
+        except IntegrityError as exc:
+            await session.rollback()
+            raise ValueError("Routine is used by a routine program") from exc
         except Exception:
             await session.rollback()
             raise

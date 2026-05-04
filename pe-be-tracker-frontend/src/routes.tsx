@@ -12,6 +12,7 @@ import PublicActivityPageSkeleton from "@/features/profile/components/skeletons/
 import PublicProfilePageSkeleton from "@/features/profile/components/skeletons/PublicProfilePageSkeleton";
 import {
   RoutineDetailsLoadingState,
+  RoutineProgramDetailsLoadingState,
   RoutinesPageSkeleton,
 } from "@/features/routines/components";
 import WorkoutPageSkeleton from "@/features/workouts/components/skeletons/WorkoutPageSkeleton";
@@ -40,6 +41,9 @@ const RoutinesPage = lazy(
 );
 const RoutineDetailsPage = lazy(
   () => import("./features/routines/pages/RoutineDetailsPage"),
+);
+const RoutineProgramDetailsPage = lazy(
+  () => import("./features/routines/pages/RoutineProgramDetailsPage"),
 );
 const CreateRoutinePage = lazy(
   () => import("./features/routines/pages/CreateRoutinePage"),
@@ -151,6 +155,13 @@ const appRoutes: RouteObject[] = [
         element: withSuspense(
           <RoutineDetailsPage />,
           <RoutineDetailsLoadingState />,
+        ),
+      },
+      {
+        path: "routine-programs/:programId",
+        element: withSuspense(
+          <RoutineProgramDetailsPage />,
+          <RoutineProgramDetailsLoadingState />,
         ),
       },
       {

@@ -161,7 +161,14 @@ async def delete_routine(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Delete a routine"""
-    # Idempotent delete: 204 whether missing or not owned
-    await routine_service.delete_routine(
-        session, routine_id, user.id, is_superuser=user.is_superuser
-    )
+    # routine_service.delete_routine keeps deletes idempotent: it returns without
+    # raising for missing or not-owned routines scoped by user.is_superuser, so
+    # this endpoint returns 204 in those cases. Program-day references raise
+    # ValueError and are mapped to HTTPException(status_code=409); callers that
+    # delete routines used by programs should handle 409.
+    try:
+        await routine_service.delete_routine(
+            session, routine_id, user.id, is_superuser=user.is_superuser
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

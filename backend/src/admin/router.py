@@ -35,6 +35,8 @@ from src.genai.google_images import (
 )
 from src.routines.schemas import RoutineRead, AdminRoutineCreate
 from src.routines.service import routine_service
+from src.routine_programs.schemas import AdminRoutineProgramCreate, RoutineProgramRead
+from src.routine_programs.service import routine_program_service
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +231,22 @@ async def admin_create_routine(
         return await routine_service.create_routine_admin(session, routine_in, user.id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/routine-programs/",
+    response_model=RoutineProgramRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Admin: Create a new routine program",
+)
+async def admin_create_routine_program(
+    program_in: AdminRoutineProgramCreate,
+    user: User = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_async_session),
+) -> RoutineProgramRead:
+    return await routine_program_service.create_program_admin(
+        session, program_in, user.id
+    )
 
 
 @router.get(

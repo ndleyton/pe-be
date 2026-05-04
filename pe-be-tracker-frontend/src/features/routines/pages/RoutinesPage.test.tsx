@@ -66,4 +66,42 @@ describe("RoutinesPage", () => {
     expect(container.querySelector(".loading-spinner")).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
+
+  it("keeps the page shell mounted when routines fail to load", () => {
+    const failedRoutinesQuery = {
+      data: [],
+      isPending: false,
+      isFetched: true,
+      isFetchingNextPage: false,
+      hasMore: false,
+      error: new Error("Failed to load routines"),
+      refetch: vi.fn(),
+      reset: vi.fn(),
+    };
+    const programsQuery = {
+      data: [],
+      isPending: false,
+      isFetched: true,
+      isFetchingNextPage: false,
+      hasMore: false,
+      error: null,
+      refetch: vi.fn(),
+      reset: vi.fn(),
+    };
+    mockUseInfiniteScroll
+      .mockReturnValueOnce(failedRoutinesQuery)
+      .mockReturnValueOnce(programsQuery);
+
+    render(<RoutinesPage />);
+
+    expect(
+      screen.getByRole("heading", { name: /routines/i, level: 1 }),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search routines/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /programs/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /routines/i })).toBeInTheDocument();
+    expect(screen.getByText(/error loading routines/i)).toBeInTheDocument();
+  });
 });
