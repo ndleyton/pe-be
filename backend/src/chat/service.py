@@ -871,7 +871,7 @@ class ChatService:
                             exercise_names_preview=item.summary.get(
                                 "exercise_names_preview", []
                             ),
-                            score=item.score,
+                            score=round(item.score, 2),
                             reason=item.reason,
                         )
                         for item in ranked
@@ -950,7 +950,7 @@ class ChatService:
                             day_labels_preview=item.summary.get(
                                 "day_labels_preview", []
                             ),
-                            score=item.score,
+                            score=round(item.score, 2),
                             reason=item.reason,
                         )
                         for item in ranked
