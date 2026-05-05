@@ -282,6 +282,16 @@ async def test_visible_routines_summary_uses_stable_tiebreakers(
         gamma.id,
     ]
 
+    by_created_at_asc = await crud.get_visible_routines_summary(
+        db_session, user_id=None, offset=0, limit=10, order_by="createdAtAsc"
+    )
+    assert [routine["id"] for routine in by_created_at_asc] == [
+        alpha_first.id,
+        alpha_second.id,
+        gamma.id,
+        newest.id,
+    ]
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio

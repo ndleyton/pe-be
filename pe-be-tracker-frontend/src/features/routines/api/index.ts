@@ -58,7 +58,7 @@ export interface UpdateRoutineData {
 }
 
 export const getRoutines = async (
-  orderBy: "name" | "createdAt" = "createdAt",
+  orderBy: "name" | "createdAt" | "createdAtAsc" = "createdAt",
   cursor?: number | null,
   limit: number = 100,
 ): Promise<{ data: RoutineSummary[]; next_cursor?: number | null }> => {

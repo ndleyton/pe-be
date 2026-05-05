@@ -37,7 +37,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ["routines", "quickstart", 3, isAuthenticated],
     queryFn: async () => {
-      const result = await getRoutines("createdAt", 0, 3);
+      const result = await getRoutines("createdAtAsc", 0, 3);
       return result.data;
     },
   });

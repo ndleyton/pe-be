@@ -263,6 +263,8 @@ async def get_visible_routines_summary(
             query = query.order_by(Routine.category.asc().nullslast(), Routine.id.asc())
         elif order_by == "timesUsed":
             query = query.order_by(Routine.times_used.desc(), Routine.id.asc())
+        elif order_by == "createdAtAsc":
+            query = query.order_by(Routine.created_at.asc(), Routine.id.asc())
         else:
             # Default to createdAt
             query = query.order_by(Routine.created_at.desc(), Routine.id.asc())

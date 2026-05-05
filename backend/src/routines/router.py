@@ -21,6 +21,7 @@ router = APIRouter(tags=["routines"])
 MAX_ROUTINE_LIMIT = 500
 ALLOWED_SORT_KEYS = {
     "createdAt",
+    "createdAtAsc",
     "updatedAt",
     "name",
     "author",
