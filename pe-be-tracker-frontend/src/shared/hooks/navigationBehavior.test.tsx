@@ -42,6 +42,10 @@ const NavigationHarness = ({
   return (
     <div>
       <div data-testid="pathname">{location.pathname}</div>
+      <div data-testid="current-path">
+        {location.pathname}
+        {location.search}
+      </div>
       <div data-testid="active">{String(sectionNavigation.isActive)}</div>
       <Link to={sectionNavigation.href} onClick={sectionNavigation.handleClick}>
         Section nav
@@ -148,9 +152,47 @@ describe("navigation behavior", () => {
     expect(screen.getByTestId("pathname")).toHaveTextContent("/routines/9");
   });
 
+  it("restores the remembered routines view query", async () => {
+    const user = userEvent.setup();
+
+    useNavigationStore.setState({
+      lastVisitedPaths: {
+        ...defaultLastVisitedPaths,
+        routines: "/routines?view=programs",
+      },
+    });
+
+    renderHarness({
+      initialEntries: ["/chat"],
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
+    });
+
+    expect(screen.getByRole("link", { name: /section nav/i })).toHaveAttribute(
+      "href",
+      "/routines?view=programs",
+    );
+
+    await user.click(screen.getByRole("link", { name: /section nav/i }));
+
+    expect(screen.getByTestId("current-path")).toHaveTextContent(
+      "/routines?view=programs",
+    );
+  });
+
   it("treats routines as an active section on deep routes", () => {
     renderHarness({
       initialEntries: ["/routines/9"],
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
+    });
+
+    expect(screen.getByTestId("active")).toHaveTextContent("true");
+  });
+
+  it("treats routine program details as part of the routines section", () => {
+    renderHarness({
+      initialEntries: ["/routine-programs/9"],
       navKey: NAV_KEYS.ROUTINES,
       fallbackPath: NAV_PATHS.ROUTINES,
     });
@@ -163,6 +205,22 @@ describe("navigation behavior", () => {
 
     renderHarness({
       initialEntries: ["/routines/9"],
+      navKey: NAV_KEYS.ROUTINES,
+      fallbackPath: NAV_PATHS.ROUTINES,
+    });
+
+    await user.click(screen.getByRole("link", { name: /section nav/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/routines");
+    });
+  });
+
+  it("resets an active routine program tab press to the routines root", async () => {
+    const user = userEvent.setup();
+
+    renderHarness({
+      initialEntries: ["/routine-programs/9"],
       navKey: NAV_KEYS.ROUTINES,
       fallbackPath: NAV_PATHS.ROUTINES,
     });

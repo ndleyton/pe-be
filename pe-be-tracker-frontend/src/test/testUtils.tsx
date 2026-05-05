@@ -29,6 +29,7 @@ const createTestQueryClient = () =>
 
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
+  initialEntries?: string[];
 }
 
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
@@ -36,14 +37,16 @@ import { TooltipProvider } from "@/shared/components/ui/tooltip";
 const AllTheProviders = ({
   children,
   queryClient,
+  initialEntries,
 }: {
   children: React.ReactNode;
   queryClient: QueryClient;
+  initialEntries?: string[];
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={0}>
-        <MemoryRouter>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );
@@ -51,11 +54,17 @@ const AllTheProviders = ({
 
 const customRender = (
   ui: ReactElement,
-  { queryClient = createTestQueryClient(), ...options }: CustomRenderOptions = {},
+  {
+    queryClient = createTestQueryClient(),
+    initialEntries,
+    ...options
+  }: CustomRenderOptions = {},
 ) => {
   return render(ui, {
     wrapper: ({ children }) => (
-      <AllTheProviders queryClient={queryClient}>{children}</AllTheProviders>
+      <AllTheProviders queryClient={queryClient} initialEntries={initialEntries}>
+        {children}
+      </AllTheProviders>
     ),
     ...options,
   });

@@ -27,12 +27,13 @@ export const useNavigation = (navKey: NavKey) => {
 
   const activeSection = getNavigationSectionForPath(location.pathname);
   const isActive = activeSection?.key === navKey;
+  const currentPath = `${location.pathname}${location.search}${location.hash}`;
 
   useEffect(() => {
     if (section.matchesPath(location.pathname)) {
-      setLastVisitedPath(navKey, section.sanitizePath(location.pathname));
+      setLastVisitedPath(navKey, section.sanitizePath(currentPath));
     }
-  }, [location.pathname, navKey, section, setLastVisitedPath]);
+  }, [currentPath, location.pathname, navKey, section, setLastVisitedPath]);
 
   const targetPath = section.sanitizePath(
     getLastVisitedPath(navKey, section.rootPath),

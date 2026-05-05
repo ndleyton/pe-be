@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useLocation } from "react-router-dom";
 
 import { render } from "@/test/testUtils";
 import RoutinesPage from "./RoutinesPage";
@@ -38,6 +40,20 @@ vi.mock("@/stores", () => ({
 
 const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 const mockUseStartWorkoutFromRoutine = vi.mocked(useStartWorkoutFromRoutine);
+
+const RoutinesPageWithLocation = () => {
+  const location = useLocation();
+
+  return (
+    <>
+      <RoutinesPage />
+      <div data-testid="location">
+        {location.pathname}
+        {location.search}
+      </div>
+    </>
+  );
+};
 
 describe("RoutinesPage", () => {
   beforeEach(() => {
@@ -103,5 +119,56 @@ describe("RoutinesPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /routines/i })).toBeInTheDocument();
     expect(screen.getByText(/error loading routines/i)).toBeInTheDocument();
+  });
+
+  it("selects the programs view from the URL query", () => {
+    mockUseInfiniteScroll.mockReturnValue({
+      data: [],
+      isPending: false,
+      isFetched: true,
+      isFetchingNextPage: false,
+      hasMore: false,
+      error: null,
+      refetch: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    render(<RoutinesPage />, {
+      initialEntries: ["/routines?view=programs"],
+    });
+
+    expect(screen.getByPlaceholderText(/search programs/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no programs available/i),
+    ).toBeInTheDocument();
+    expect(mockUseInfiniteScroll).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ enabled: true }),
+    );
+  });
+
+  it("writes the selected view to the URL query", async () => {
+    const user = userEvent.setup();
+    mockUseInfiniteScroll.mockReturnValue({
+      data: [],
+      isPending: false,
+      isFetched: true,
+      isFetchingNextPage: false,
+      hasMore: false,
+      error: null,
+      refetch: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    render(<RoutinesPageWithLocation />, {
+      initialEntries: ["/routines?view=routines"],
+    });
+
+    await user.click(screen.getByRole("button", { name: /programs/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/routines?view=programs",
+    );
+    expect(screen.getByPlaceholderText(/search programs/i)).toBeInTheDocument();
   });
 });

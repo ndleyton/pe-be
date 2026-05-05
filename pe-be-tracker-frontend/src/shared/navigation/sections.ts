@@ -8,8 +8,13 @@ export interface NavigationSection {
   sanitizePath: (pathname?: string | null) => string;
 }
 
-const matchesPrefix = (pathname: string, prefix: string) =>
-  pathname === prefix || pathname.startsWith(`${prefix}/`);
+const getPathnamePart = (path: string) => path.split(/[?#]/, 1)[0];
+
+const matchesPrefix = (path: string, prefix: string) => {
+  const pathname = getPathnamePart(path);
+
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+};
 
 const createSection = ({
   key,
@@ -23,7 +28,7 @@ const createSection = ({
   key,
   rootPath,
   matchesPath: (pathname) => prefixes.some((prefix) => matchesPrefix(pathname, prefix)),
-  isRootPath: (pathname) => pathname === rootPath,
+  isRootPath: (pathname) => getPathnamePart(pathname) === rootPath,
   sanitizePath: (pathname) =>
     pathname && prefixes.some((prefix) => matchesPrefix(pathname, prefix))
       ? pathname
@@ -38,6 +43,7 @@ export const navigationSections: NavigationSection[] = [
   createSection({
     key: NAV_KEYS.ROUTINES,
     rootPath: NAV_PATHS.ROUTINES,
+    prefixes: [NAV_PATHS.ROUTINES, NAV_PATHS.ROUTINE_PROGRAMS],
   }),
   createSection({
     key: NAV_KEYS.EXERCISES,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search, ArrowLeft, Plus, Layers3, ClipboardList } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutinePrograms, getRoutines } from "@/features/routines/api";
 import { RoutineStructuredData } from "@/features/routines/components/RoutineStructuredData/RoutineStructuredData";
@@ -25,15 +25,27 @@ import {
 } from "@/shared/components/ui/alert";
 import { cn } from "@/lib/utils";
 
+type RoutinesView = "programs" | "routines";
+
+const getRoutinesView = (view: string | null): RoutinesView =>
+  view === "programs" ? "programs" : "routines";
+
 const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"programs" | "routines">(
-    "routines",
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = getRoutinesView(searchParams.get("view"));
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const handleBack = useAppBackNavigation("/workouts");
+
+  const setActiveTab = (view: RoutinesView) => {
+    setSearchParams((currentParams) => {
+      const nextParams = new URLSearchParams(currentParams);
+      nextParams.set("view", view);
+      return nextParams;
+    });
+  };
 
   const {
     data: routines,

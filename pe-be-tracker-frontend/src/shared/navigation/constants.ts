@@ -22,6 +22,7 @@ export const NAV_PATHS = {
   LOGIN: "/login",
   WORKOUTS: "/workouts",
   ROUTINES: "/routines",
+  ROUTINE_PROGRAMS: "/routine-programs",
   EXERCISES: "/exercise-types",
   PROFILE: "/profile",
   CHAT: "/chat",
