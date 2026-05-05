@@ -182,6 +182,121 @@ describe("ChatPage", () => {
     );
   });
 
+  it("renders routine recommendation widgets from grounded chat events", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "I found a strong existing routine.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "routine_recommended",
+            title: "Recommended routine",
+            query: "beginner full body routine",
+            recommendations: [
+              {
+                id: 42,
+                name: "Beginner Full Body A",
+                description: "A simple full-body strength routine.",
+                author: "Personal Bestie",
+                category: "Beginner",
+                exercise_count: 6,
+                set_count: 18,
+                exercise_names_preview: ["Squat", "Bench Press", "Lat Pulldown"],
+                score: 0.86,
+                reason: "Matches beginner, full-body, and gym equipment intent.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "Recommend a beginner full body routine",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.getByText("I found a strong existing routine.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Beginner Full Body A")).toBeInTheDocument();
+    expect(screen.getByText("Beginner · Personal Bestie")).toBeInTheDocument();
+    expect(screen.getByText("6 exercises")).toBeInTheDocument();
+    expect(screen.getByText("18 sets")).toBeInTheDocument();
+    expect(screen.getByText("Squat, Bench Press, Lat Pulldown")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View routine" })).toHaveAttribute(
+      "href",
+      "/routines/42",
+    );
+  });
+
+  it("renders routine program recommendation widgets from grounded chat events", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        message: "I found a strong existing program.",
+        conversation_id: 12,
+        events: [
+          {
+            type: "routine_program_recommended",
+            title: "Recommended program",
+            query: "four day upper lower split",
+            recommendations: [
+              {
+                id: 12,
+                name: "Upper Lower 4 Day",
+                description: "Four ordered routine days.",
+                author: "Personal Bestie",
+                category: "Hypertrophy",
+                source_label: "Library",
+                day_count: 4,
+                routine_count: 4,
+                day_labels_preview: ["Upper 1", "Lower 1", "Upper 2", "Lower 2"],
+                score: 0.91,
+                reason: "Matches 4-day and upper/lower split intent.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const user = userEvent.setup();
+    const { container } = renderChatPage();
+    const form = container.querySelector("form");
+
+    if (!form) {
+      throw new Error("Expected chat form to be rendered");
+    }
+    await user.type(
+      screen.getByPlaceholderText("Message..."),
+      "Do you have a 4-day upper lower split?",
+    );
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.getByText("I found a strong existing program.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Upper Lower 4 Day")).toBeInTheDocument();
+    expect(screen.getByText("Hypertrophy · Personal Bestie · Library")).toBeInTheDocument();
+    expect(screen.getByText("4 days")).toBeInTheDocument();
+    expect(screen.getByText("4 routines")).toBeInTheDocument();
+    expect(screen.getByText("Upper 1, Lower 1, Upper 2, Lower 2")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View program" })).toHaveAttribute(
+      "href",
+      "/routine-programs/12",
+    );
+  });
+
   it("renders a substitution widget when the assistant returns grounded exercise substitutions", async () => {
     mockPost.mockResolvedValueOnce({
       data: {

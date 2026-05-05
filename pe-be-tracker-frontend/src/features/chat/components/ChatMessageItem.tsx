@@ -2,6 +2,8 @@ import { Bot } from "lucide-react";
 
 import { ChatExerciseSubstitutionsWidget } from "./ChatExerciseSubstitutionsWidget";
 import { ChatMessageBody } from "./ChatMessageBody";
+import { ChatRoutineProgramRecommendationsWidget } from "./ChatRoutineProgramRecommendationsWidget";
+import { ChatRoutineRecommendationsWidget } from "./ChatRoutineRecommendationsWidget";
 import { ChatRoutineWidget } from "./ChatRoutineWidget";
 import { ChatWorkoutWidget } from "./ChatWorkoutWidget";
 import { type ChatMessage } from "../types";
@@ -21,6 +23,22 @@ const renderMessageWidget = (message: ChatMessage) => {
     }
     if (event.type === "routine_created") {
       return <ChatRoutineWidget key={`${message.id}-widget-${index}`} event={event} />;
+    }
+    if (event.type === "routine_recommended") {
+      return (
+        <ChatRoutineRecommendationsWidget
+          key={`${message.id}-widget-${index}`}
+          event={event}
+        />
+      );
+    }
+    if (event.type === "routine_program_recommended") {
+      return (
+        <ChatRoutineProgramRecommendationsWidget
+          key={`${message.id}-widget-${index}`}
+          event={event}
+        />
+      );
     }
     if (event.type === "exercise_substitutions_recommended") {
       return (

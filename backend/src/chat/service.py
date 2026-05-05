@@ -29,12 +29,17 @@ from src.chat.llm_client import (
     LLMClient,
     ToolDefinition,
 )
+from src.chat.recommendations import RecommendationFilters, rank_recommendations
 from src.chat.schemas import (
     ChatExerciseSubstitutionItem,
     ChatExerciseSubstitutionSource,
     ChatExerciseSubstitutionsEvent,
     ChatRoutineCreatedEvent,
     ChatRoutineEventRoutine,
+    ChatRoutineProgramRecommendationItem,
+    ChatRoutineProgramRecommendedEvent,
+    ChatRoutineRecommendationItem,
+    ChatRoutineRecommendedEvent,
     ChatMessage,
     ChatMessagePart,
     ChatWorkoutCreatedEvent,
@@ -56,6 +61,8 @@ from src.exercises.intensity_units import (
 )
 from src.exercises.crud import get_exercises_for_workout
 from src.exercises.set_display import format_set_summary
+from src.routine_programs.crud import get_visible_programs_summary
+from src.routines.crud import get_visible_routines_summary
 from src.routines.models import Routine
 from src.routines.schemas import (
     AdminRoutineCreate,
@@ -91,6 +98,21 @@ class ExerciseSubstitutionArgs(BaseModel):
         if self.exercise_name is None and self.exercise_type_id is None:
             raise ValueError("exercise_name or exercise_type_id is required")
         return self
+
+
+class RoutineRecommendationArgs(BaseModel):
+    query: str = Field(..., min_length=1)
+    goal: str | None = None
+    experience_level: str | None = None
+    equipment: str | None = None
+    days_per_week: int | None = Field(default=None, ge=1, le=7)
+    session_length_minutes: int | None = Field(default=None, ge=1, le=300)
+    constraints: str | None = None
+    limit: int = Field(default=3, ge=1, le=3)
+
+
+class RoutineProgramRecommendationArgs(RoutineRecommendationArgs):
+    pass
 
 
 class PersonalizedRoutineSetArgs(BaseModel):
@@ -292,6 +314,11 @@ class ChatService:
             return "I logged your workout. You can open it below."
         if isinstance(latest_event, ChatExerciseSubstitutionsEvent):
             return "I found grounded substitutions for you. You can review them below."
+        if isinstance(
+            latest_event,
+            (ChatRoutineRecommendedEvent, ChatRoutineProgramRecommendedEvent),
+        ):
+            return "I found grounded library recommendations for you. You can review them below."
         return None
 
     @classmethod
@@ -346,6 +373,8 @@ class ChatService:
         self._pending_chat_events: list[
             ChatWorkoutCreatedEvent
             | ChatRoutineCreatedEvent
+            | ChatRoutineRecommendedEvent
+            | ChatRoutineProgramRecommendedEvent
             | ChatExerciseSubstitutionsEvent
         ] = []
 
@@ -777,6 +806,176 @@ class ChatService:
             ],
         )
 
+    @staticmethod
+    def _recommendation_filters_from_args(
+        args: RoutineRecommendationArgs,
+    ) -> RecommendationFilters:
+        return RecommendationFilters(
+            query=args.query,
+            goal=args.goal,
+            experience_level=args.experience_level,
+            equipment=args.equipment,
+            days_per_week=args.days_per_week,
+            session_length_minutes=args.session_length_minutes,
+            constraints=args.constraints,
+        )
+
+    async def _recommend_existing_routines(self, **kwargs) -> str:
+        try:
+            args = RoutineRecommendationArgs(**kwargs)
+            if not self.session:
+                return "Failed to recommend routines: no database session available."
+
+            summaries = await get_visible_routines_summary(
+                self.session,
+                None,
+                limit=100,
+                order_by="timesUsed",
+            )
+            ranked = rank_recommendations(
+                summaries,
+                self._recommendation_filters_from_args(args),
+                preview_key="exercise_names_preview",
+                limit=args.limit,
+            )
+
+            if not ranked:
+                return (
+                    "NO STRONG ROUTINE MATCH FOUND. No public browseable routine "
+                    "matched the request with enough confidence. Ask one short "
+                    "follow-up question or offer to create a custom routine if the "
+                    "user wants one."
+                )
+
+            if ranked[0].score >= 0.75:
+                ranked = ranked[:1]
+
+            self._pending_chat_events.append(
+                ChatRoutineRecommendedEvent(
+                    type="routine_recommended",
+                    title=(
+                        "Recommended routine"
+                        if len(ranked) == 1
+                        else "Recommended routines"
+                    ),
+                    query=args.query,
+                    recommendations=[
+                        ChatRoutineRecommendationItem(
+                            id=item.summary["id"],
+                            name=item.summary["name"],
+                            description=item.summary.get("description"),
+                            author=item.summary.get("author"),
+                            category=item.summary.get("category"),
+                            exercise_count=item.summary.get("exercise_count", 0),
+                            set_count=item.summary.get("set_count", 0),
+                            exercise_names_preview=item.summary.get(
+                                "exercise_names_preview", []
+                            ),
+                            score=item.score,
+                            reason=item.reason,
+                        )
+                        for item in ranked
+                    ],
+                )
+            )
+
+            candidates = ", ".join(
+                f"{item.summary['name']} (id={item.summary['id']}, score={item.score})"
+                for item in ranked
+            )
+            if ranked[0].score >= 0.75:
+                return (
+                    "GROUNDED ROUTINE RECOMMENDATION READY. Found a strong existing "
+                    f"public routine match: {candidates}. Do not call "
+                    "create_personalized_routine unless the user explicitly rejects "
+                    "this match and asks for a custom routine."
+                )
+            return (
+                "GROUNDED ROUTINE RECOMMENDATIONS READY. Public routine candidates: "
+                f"{candidates}. Only recommend routines from this list."
+            )
+        except Exception as exc:
+            return f"Failed to recommend routines: {exc}"
+
+    async def _recommend_existing_routine_programs(self, **kwargs) -> str:
+        try:
+            args = RoutineProgramRecommendationArgs(**kwargs)
+            if not self.session:
+                return "Failed to recommend routine programs: no database session available."
+
+            summaries = await get_visible_programs_summary(
+                self.session,
+                None,
+                limit=100,
+                order_by="timesUsed",
+            )
+            ranked = rank_recommendations(
+                summaries,
+                self._recommendation_filters_from_args(args),
+                preview_key="day_labels_preview",
+                limit=args.limit,
+                is_program=True,
+            )
+
+            if not ranked:
+                return (
+                    "NO STRONG ROUTINE PROGRAM MATCH FOUND. No public browseable "
+                    "routine program matched the request with enough confidence. Ask "
+                    "one short follow-up question or explain that chat can create one "
+                    "workout routine at a time if the user wants custom creation."
+                )
+
+            if ranked[0].score >= 0.75:
+                ranked = ranked[:1]
+
+            self._pending_chat_events.append(
+                ChatRoutineProgramRecommendedEvent(
+                    type="routine_program_recommended",
+                    title=(
+                        "Recommended program"
+                        if len(ranked) == 1
+                        else "Recommended programs"
+                    ),
+                    query=args.query,
+                    recommendations=[
+                        ChatRoutineProgramRecommendationItem(
+                            id=item.summary["id"],
+                            name=item.summary["name"],
+                            description=item.summary.get("description"),
+                            author=item.summary.get("author"),
+                            category=item.summary.get("category"),
+                            source_label=item.summary.get("source_label"),
+                            day_count=item.summary.get("day_count", 0),
+                            routine_count=item.summary.get("routine_count", 0),
+                            day_labels_preview=item.summary.get(
+                                "day_labels_preview", []
+                            ),
+                            score=item.score,
+                            reason=item.reason,
+                        )
+                        for item in ranked
+                    ],
+                )
+            )
+
+            candidates = ", ".join(
+                f"{item.summary['name']} (id={item.summary['id']}, score={item.score})"
+                for item in ranked
+            )
+            if ranked[0].score >= 0.75:
+                return (
+                    "GROUNDED ROUTINE PROGRAM RECOMMENDATION READY. Found a strong "
+                    f"existing public program match: {candidates}. Do not call "
+                    "create_personalized_routine unless the user explicitly asks for "
+                    "a custom single routine instead."
+                )
+            return (
+                "GROUNDED ROUTINE PROGRAM RECOMMENDATIONS READY. Public program "
+                f"candidates: {candidates}. Only recommend programs from this list."
+            )
+        except Exception as exc:
+            return f"Failed to recommend routine programs: {exc}"
+
     async def _get_last_exercise_performance(self, exercise_name: str) -> str:
         if not self.session:
             return "Database session not available."
@@ -1161,6 +1360,31 @@ class ChatService:
                 ),
             ),
             ToolDefinition(
+                name="recommend_existing_routines",
+                handler=self._recommend_existing_routines,
+                args_model=RoutineRecommendationArgs,
+                description=(
+                    "Use this tool when the user asks to recommend, suggest, find, "
+                    "show, or choose a routine/template from the library. Pass user "
+                    "intent fields such as goal, experience_level, equipment, "
+                    "session_length_minutes, days_per_week, and constraints when "
+                    "available. Do not pass internal IDs. The tool returns only "
+                    "grounded public routine matches; do not invent routine names."
+                ),
+            ),
+            ToolDefinition(
+                name="recommend_existing_routine_programs",
+                handler=self._recommend_existing_routine_programs,
+                args_model=RoutineProgramRecommendationArgs,
+                description=(
+                    "Use this tool when the user asks for a multi-day routine "
+                    "program, split, weekly plan, or ordered routine collection from "
+                    "the library. Pass days_per_week when provided. Do not pass "
+                    "internal IDs. The tool returns only grounded public program "
+                    "matches; do not invent program names."
+                ),
+            ),
+            ToolDefinition(
                 name="create_personalized_routine",
                 handler=self._create_personalized_routine,
                 args_model=PersonalizedRoutineArgs,
@@ -1207,7 +1431,11 @@ class ChatService:
         return """
 Routine creation policy:
 - Only create or save a routine when the user explicitly asks for creation or saving.
-- If the user wants advice only, respond in prose and do not call create_personalized_routine.
+- If the user asks to recommend, suggest, find, show, choose, or asks what routine they should use, call recommend_existing_routines or recommend_existing_routine_programs before discussing specific library items.
+- For multi-day splits, weekly plans, or programs, call recommend_existing_routine_programs before falling back to single-routine creation limits.
+- If a strong existing routine or program match is returned, explain why it fits and do not call create_personalized_routine.
+- If no suitable existing routine or program is found, ask one short follow-up or offer custom creation; do not call create_personalized_routine unless the user explicitly agrees.
+- If the user wants general programming advice only, respond in prose and do not call create_personalized_routine.
 - When the user asks for exercise alternatives, substitutions, or swaps for a specific exercise, call recommend_exercise_substitutions.
 - For exercise substitutions, ask one brief follow-up question about equipment or constraints before calling recommend_exercise_substitutions unless the user already gave that context.
 - When the user answers the follow-up question, pass their answer in context_notes to recommend_exercise_substitutions so the grounded list can be reranked.
@@ -1224,7 +1452,7 @@ Routine creation policy:
 - Do not put RPE or RIR into intensity_unit.
 - intensity_unit is the quantitative load or time domain, and can be omitted when the exercise's default unit should apply.
 - If intensity_unit is omitted, omit the field entirely; do not send an empty string.
-- If the user asks for a multi-day split, explain that you can create one workout routine at a time in this phase.
+- If the user asks to create a multi-day split and no program recommendation fits, explain that you can create one workout routine at a time in this phase and offer to start with the first day.
 - Do not call create_personalized_routine more than once per request.
 """.strip()
 

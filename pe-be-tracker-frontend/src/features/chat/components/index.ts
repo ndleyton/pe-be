@@ -2,6 +2,8 @@ export * from "./ChatComposer";
 export * from "./ChatEmptyState";
 export * from "./ChatWorkoutWidget";
 export * from "./ChatRoutineWidget";
+export * from "./ChatRoutineRecommendationsWidget";
+export * from "./ChatRoutineProgramRecommendationsWidget";
 export * from "./ChatExerciseSubstitutionsWidget";
 export * from "./ChatHeader";
 export * from "./ChatMessageBody";

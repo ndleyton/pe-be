@@ -179,6 +179,149 @@ async def test_recommend_exercise_substitutions_no_db(chat_service_no_db):
 
 
 @pytest.mark.asyncio
+async def test_recommend_existing_routines_no_db(chat_service_no_db):
+    result = await chat_service_no_db._recommend_existing_routines(
+        query="beginner full body routine"
+    )
+    assert result == "Failed to recommend routines: no database session available."
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_visible_routines_summary")
+async def test_recommend_existing_routines_emits_grounded_event(
+    mock_get_summaries, chat_service_with_db
+):
+    mock_get_summaries.return_value = [
+        {
+            "id": 42,
+            "name": "Beginner Full Body A",
+            "description": "A beginner full body gym strength routine.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Beginner",
+            "times_used": 10,
+            "exercise_count": 6,
+            "set_count": 18,
+            "exercise_names_preview": ["Squat", "Bench Press", "Lat Pulldown"],
+        },
+        {
+            "id": 99,
+            "name": "Advanced Arms",
+            "description": "Arm isolation work.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Advanced",
+            "times_used": 1,
+            "exercise_count": 5,
+            "set_count": 15,
+            "exercise_names_preview": ["Curl"],
+        },
+    ]
+
+    result = await chat_service_with_db._recommend_existing_routines(
+        query="recommend a beginner full body routine",
+        goal="strength",
+        experience_level="beginner",
+    )
+
+    assert "GROUNDED ROUTINE RECOMMENDATION READY" in result
+    assert chat_service_with_db._pending_chat_events[0].model_dump(mode="json") == {
+        "type": "routine_recommended",
+        "title": "Recommended routine",
+        "query": "recommend a beginner full body routine",
+        "recommendations": [
+            {
+                "id": 42,
+                "name": "Beginner Full Body A",
+                "description": "A beginner full body gym strength routine.",
+                "author": "Personal Bestie",
+                "category": "Beginner",
+                "exercise_count": 6,
+                "set_count": 18,
+                "exercise_names_preview": [
+                    "Squat",
+                    "Bench Press",
+                    "Lat Pulldown",
+                ],
+                "score": 1.0,
+                "reason": "Name match; category match; description match.",
+            }
+        ],
+    }
+    mock_get_summaries.assert_awaited_once_with(
+        chat_service_with_db.session,
+        None,
+        limit=100,
+        order_by="timesUsed",
+    )
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_visible_routines_summary")
+async def test_recommend_existing_routines_returns_no_event_for_low_confidence(
+    mock_get_summaries, chat_service_with_db
+):
+    mock_get_summaries.return_value = [
+        {
+            "id": 42,
+            "name": "Advanced Arms",
+            "description": "Arm isolation work.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Advanced",
+            "times_used": 1,
+            "exercise_count": 5,
+            "set_count": 15,
+            "exercise_names_preview": ["Curl"],
+        }
+    ]
+
+    result = await chat_service_with_db._recommend_existing_routines(
+        query="beginner full body routine"
+    )
+
+    assert "NO STRONG ROUTINE MATCH FOUND" in result
+    assert chat_service_with_db._pending_chat_events == []
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_visible_programs_summary")
+async def test_recommend_existing_routine_programs_emits_grounded_event(
+    mock_get_summaries, chat_service_with_db
+):
+    mock_get_summaries.return_value = [
+        {
+            "id": 12,
+            "name": "Upper Lower 4 Day",
+            "description": "Four day upper lower hypertrophy split.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Hypertrophy",
+            "source_label": "Library",
+            "times_used": 9,
+            "day_count": 4,
+            "routine_count": 4,
+            "day_labels_preview": ["Upper 1", "Lower 1", "Upper 2", "Lower 2"],
+        }
+    ]
+
+    result = await chat_service_with_db._recommend_existing_routine_programs(
+        query="do you have a 4 day upper lower split",
+        days_per_week=4,
+    )
+
+    assert "GROUNDED ROUTINE PROGRAM RECOMMENDATION READY" in result
+    event = chat_service_with_db._pending_chat_events[0].model_dump(mode="json")
+    assert event["type"] == "routine_program_recommended"
+    assert event["recommendations"][0]["id"] == 12
+    assert event["recommendations"][0]["day_count"] == 4
+
+
+@pytest.mark.asyncio
 @patch("src.chat.service.get_similar_exercise_type_matches")
 @patch("src.chat.service.get_exercise_type_by_id")
 async def test_recommend_exercise_substitutions_reranks_by_context_notes(

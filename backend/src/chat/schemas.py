@@ -84,6 +84,49 @@ class ChatRoutineCreatedEvent(BaseModel):
     routine: ChatRoutineEventRoutine
 
 
+class ChatRoutineRecommendationItem(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    author: Optional[str] = None
+    category: Optional[str] = None
+    exercise_count: int
+    set_count: int
+    exercise_names_preview: List[str] = Field(default_factory=list)
+    score: float
+    reason: str
+
+
+class ChatRoutineRecommendedEvent(BaseModel):
+    type: Literal["routine_recommended"]
+    title: Optional[str] = None
+    query: str
+    recommendations: List[ChatRoutineRecommendationItem] = Field(default_factory=list)
+
+
+class ChatRoutineProgramRecommendationItem(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    author: Optional[str] = None
+    category: Optional[str] = None
+    source_label: Optional[str] = None
+    day_count: int
+    routine_count: int
+    day_labels_preview: List[str] = Field(default_factory=list)
+    score: float
+    reason: str
+
+
+class ChatRoutineProgramRecommendedEvent(BaseModel):
+    type: Literal["routine_program_recommended"]
+    title: Optional[str] = None
+    query: str
+    recommendations: List[ChatRoutineProgramRecommendationItem] = Field(
+        default_factory=list
+    )
+
+
 class ChatExerciseSubstitutionSource(BaseModel):
     id: int
     name: str
@@ -108,7 +151,11 @@ class ChatExerciseSubstitutionsEvent(BaseModel):
 
 
 ChatEvent = Annotated[
-    ChatWorkoutCreatedEvent | ChatRoutineCreatedEvent | ChatExerciseSubstitutionsEvent,
+    ChatWorkoutCreatedEvent
+    | ChatRoutineCreatedEvent
+    | ChatRoutineRecommendedEvent
+    | ChatRoutineProgramRecommendedEvent
+    | ChatExerciseSubstitutionsEvent,
     Field(discriminator="type"),
 ]
 
