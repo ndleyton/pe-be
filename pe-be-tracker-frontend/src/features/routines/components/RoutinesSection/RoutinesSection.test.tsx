@@ -69,6 +69,7 @@ describe("RoutinesSection", () => {
     expect(
       screen.getByRole("link", { name: /browse all routines/i }),
     ).toBeVisible();
+    expect(mockGetRoutines).toHaveBeenCalledWith("createdAtAsc", 0, 3);
   });
 
   it("stays collapsed by default and hides the browse link", async () => {
