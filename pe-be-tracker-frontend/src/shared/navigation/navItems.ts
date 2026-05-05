@@ -1,4 +1,4 @@
-import { BookOpen, Home, User, MessageCircle, Search } from "lucide-react";
+import { ClipboardList, Home, User, MessageCircle, Search } from "lucide-react";
 import type { ComponentType } from "react";
 import { NAV_KEYS, NAV_PATHS, type NavKey } from "./constants";
 
@@ -19,7 +19,7 @@ export const navItems: NavItem[] = [
   {
     to: NAV_PATHS.ROUTINES,
     key: NAV_KEYS.ROUTINES,
-    icon: BookOpen,
+    icon: ClipboardList,
     label: "Routines",
   },
   {
