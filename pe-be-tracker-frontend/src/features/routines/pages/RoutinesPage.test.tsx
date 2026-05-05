@@ -121,6 +121,27 @@ describe("RoutinesPage", () => {
     expect(screen.getByText(/error loading routines/i)).toBeInTheDocument();
   });
 
+  it("places routine creation inside the search control for authenticated users", () => {
+    mockUseInfiniteScroll.mockReturnValue({
+      data: [],
+      isPending: false,
+      isFetched: true,
+      isFetchingNextPage: false,
+      hasMore: false,
+      error: null,
+      refetch: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    render(<RoutinesPage />);
+
+    expect(screen.getByPlaceholderText(/search routines/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /create routine/i })).toHaveAttribute(
+      "href",
+      "/routines/new",
+    );
+  });
+
   it("selects the programs view from the URL query", () => {
     mockUseInfiniteScroll.mockReturnValue({
       data: [],

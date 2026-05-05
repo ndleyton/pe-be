@@ -126,11 +126,26 @@ const RoutinesPage = () => {
               placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-primary/30 bg-card/90 h-16 w-full rounded-2xl pr-14 pl-14 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-2xl backdrop-blur-md font-black text-xl placeholder:font-bold placeholder:text-muted-foreground/30"
+              className={cn(
+                "border-primary/30 bg-card/90 h-16 w-full rounded-2xl pl-14 shadow-md transition-all hover:bg-card hover:border-primary/50 focus:border-primary/60 focus:ring-8 focus:ring-primary/5 focus:shadow-2xl backdrop-blur-md font-black text-base placeholder:font-bold placeholder:text-muted-foreground/30 sm:text-xl",
+                isAuthenticated ? "pr-20 sm:pr-44" : "pr-14",
+              )}
             />
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5 z-10">
               <Search className="text-primary group-focus-within:text-primary h-6 w-6 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
             </div>
+            {isAuthenticated && (
+              <Button
+                asChild
+                aria-label="Create routine"
+                className="absolute inset-y-2 right-2 h-auto rounded-xl px-3 font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all sm:px-4"
+              >
+                <Link to="/routines/new">
+                  <Plus className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">New Routine</span>
+                </Link>
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-row gap-2 sm:gap-4">
@@ -192,18 +207,6 @@ const RoutinesPage = () => {
               </Button>
             </div>
 
-            {isAuthenticated && (
-              <Button
-                asChild
-                className="h-16 rounded-2xl px-6 font-bold bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all shrink-0"
-              >
-                <Link to="/routines/new">
-                  <Plus className="mr-2 h-5 w-5" />
-                  <span className="hidden sm:inline">New Routine</span>
-                  <span className="sm:hidden">New</span>
-                </Link>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -221,7 +224,7 @@ const RoutinesPage = () => {
           ) : (
             <>
               {activeTab === "programs" ? (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 place-items-center sm:place-items-start">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                   {filteredPrograms.map((program) => (
                     <RoutineProgramCard key={program.id} program={program} />
                   ))}
