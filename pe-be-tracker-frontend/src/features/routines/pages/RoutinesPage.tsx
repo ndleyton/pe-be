@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 type RoutinesView = "programs" | "routines";
 
 const getRoutinesView = (view: string | null): RoutinesView =>
-  view === "programs" ? "programs" : "routines";
+  view === "routines" ? "routines" : "programs";
 
 const RoutinesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
