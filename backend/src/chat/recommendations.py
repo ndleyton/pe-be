@@ -153,7 +153,7 @@ def _score_candidate(
     preview_overlap = query_tokens & preview_tokens
     if preview_overlap:
         raw_score += min(3.0, 1.0 * len(preview_overlap))
-        reasons.append("exercise preview match")
+        reasons.append("program preview match" if is_program else "exercise preview match")
 
     if str(summary.get("visibility", "")).endswith("public"):
         raw_score += 0.5
@@ -223,7 +223,7 @@ def _score_candidate(
 
     return RankedRecommendation(
         summary=summary,
-        score=round(score, 2),
+        score=score,
         reason="; ".join(reasons[:3]).capitalize() + ".",
     )
 
