@@ -87,12 +87,13 @@ export const RoutinesPageSkeleton = ({
       <div className="relative flex-1">
         <Skeleton className="h-16 w-full rounded-2xl shadow-md" />
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-        <div className="flex items-center gap-1 rounded-2xl p-1 h-16">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex flex-1 items-center gap-1 rounded-2xl p-1 h-16 sm:flex-none">
           <Skeleton className="h-full w-24 sm:w-32 rounded-xl" />
           <Skeleton className="h-full w-24 sm:w-32 rounded-xl" />
         </div>
-        <div className="flex items-center gap-1 rounded-2xl p-1 h-16">
+        <Skeleton className="h-16 w-[7.5rem] shrink-0 rounded-2xl shadow-lg sm:hidden" />
+        <div className="hidden items-center gap-1 rounded-2xl p-1 h-16 sm:flex">
           <Skeleton className="h-full w-24 sm:w-28 rounded-xl" />
           <Skeleton className="h-full w-24 sm:w-28 rounded-xl" />
         </div>

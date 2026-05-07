@@ -23,6 +23,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type RoutinesView = "programs" | "routines";
@@ -148,8 +155,8 @@ const RoutinesPage = () => {
             )}
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-4">
-            <div className="flex min-w-0 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16 sm:flex-none">
               <Button
                 variant={activeTab === "programs" ? "default" : "ghost"}
                 size="sm"
@@ -180,7 +187,25 @@ const RoutinesPage = () => {
               </Button>
             </div>
 
-            <div className="flex min-w-0 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16">
+            <Select
+              value={orderBy}
+              onValueChange={(value: "createdAt" | "name") => setOrderBy(value)}
+            >
+              <SelectTrigger
+                aria-label="Sort routines"
+                className="border-border/40 bg-card/60 flex h-16 w-[7.5rem] shrink-0 rounded-2xl px-4 text-left text-xs font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm transition-all focus:ring-primary/10 sm:hidden"
+              >
+                <SelectValue aria-label={orderBy === "createdAt" ? "Recent" : "A-Z"}>
+                  {orderBy === "createdAt" ? "Recent" : "A-Z"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl">
+                <SelectItem value="createdAt">Recent</SelectItem>
+                <SelectItem value="name">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="hidden min-w-0 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16 sm:flex">
               <Button
                 variant={orderBy === "createdAt" ? "default" : "ghost"}
                 size="sm"
@@ -208,7 +233,6 @@ const RoutinesPage = () => {
                 A-Z
               </Button>
             </div>
-
           </div>
         </div>
 
