@@ -261,6 +261,40 @@ async def test_recommend_existing_routines_emits_grounded_event(
 
 @pytest.mark.asyncio
 @patch("src.chat.service.get_visible_routines_summary")
+async def test_recommend_existing_routines_is_idempotent_per_request(
+    mock_get_summaries, chat_service_with_db
+):
+    mock_get_summaries.return_value = [
+        {
+            "id": 42,
+            "name": "Beginner Full Body A",
+            "description": "A beginner full body gym strength routine.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Beginner",
+            "times_used": 10,
+            "exercise_count": 6,
+            "set_count": 18,
+            "exercise_names_preview": ["Squat", "Bench Press", "Lat Pulldown"],
+        }
+    ]
+
+    first = await chat_service_with_db._recommend_existing_routines(
+        query="recommend a beginner full body routine"
+    )
+    second = await chat_service_with_db._recommend_existing_routines(
+        query="recommend a beginner full body routine"
+    )
+
+    assert "GROUNDED ROUTINE RECOMMENDATION READY" in first
+    assert "ROUTINES ALREADY RECOMMENDED" in second
+    assert len(chat_service_with_db._pending_chat_events) == 1
+    mock_get_summaries.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_visible_routines_summary")
 async def test_recommend_existing_routines_returns_no_event_for_low_confidence(
     mock_get_summaries, chat_service_with_db
 ):
@@ -343,6 +377,43 @@ async def test_recommend_existing_routine_programs_emits_grounded_event(
     assert event["recommendations"][0]["id"] == 12
     assert event["recommendations"][0]["day_count"] == 4
     assert "program preview match" in event["recommendations"][0]["reason"].lower()
+
+
+@pytest.mark.asyncio
+@patch("src.chat.service.get_visible_programs_summary")
+async def test_recommend_existing_routine_programs_is_idempotent_per_request(
+    mock_get_summaries, chat_service_with_db
+):
+    mock_get_summaries.return_value = [
+        {
+            "id": 12,
+            "name": "Upper Lower 4 Day",
+            "description": "Four day upper lower hypertrophy split.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Hypertrophy",
+            "source_label": "Library",
+            "times_used": 9,
+            "day_count": 4,
+            "routine_count": 4,
+            "day_labels_preview": ["Upper 1", "Lower 1", "Upper 2", "Lower 2"],
+        }
+    ]
+
+    first = await chat_service_with_db._recommend_existing_routine_programs(
+        query="do you have a 4 day upper lower split",
+        days_per_week=4,
+    )
+    second = await chat_service_with_db._recommend_existing_routine_programs(
+        query="do you have a 4 day upper lower split",
+        days_per_week=4,
+    )
+
+    assert "GROUNDED ROUTINE PROGRAM RECOMMENDATION READY" in first
+    assert "ROUTINE PROGRAMS ALREADY RECOMMENDED" in second
+    assert len(chat_service_with_db._pending_chat_events) == 1
+    mock_get_summaries.assert_awaited_once()
 
 
 @pytest.mark.asyncio

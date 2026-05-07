@@ -370,6 +370,8 @@ class ChatService:
         self._workout_saved_this_request = False
         self._routine_created_this_request = False
         self._exercise_substitutions_generated_this_request = False
+        self._existing_routines_generated_this_request = False
+        self._existing_routine_programs_generated_this_request = False
         self._pending_chat_events: list[
             ChatWorkoutCreatedEvent
             | ChatRoutineCreatedEvent
@@ -821,6 +823,12 @@ class ChatService:
         )
 
     async def _recommend_existing_routines(self, **kwargs) -> str:
+        if self._existing_routines_generated_this_request:
+            return (
+                "ROUTINES ALREADY RECOMMENDED. Existing routine recommendations have "
+                "already been generated in this conversation turn. No action taken."
+            )
+
         try:
             args = RoutineRecommendationArgs(**kwargs)
             if not self.session:
@@ -850,6 +858,7 @@ class ChatService:
             if ranked[0].score >= 0.75:
                 ranked = ranked[:1]
 
+            self._existing_routines_generated_this_request = True
             self._pending_chat_events.append(
                 ChatRoutineRecommendedEvent(
                     type="routine_recommended",
@@ -898,6 +907,13 @@ class ChatService:
             return f"Failed to recommend routines: {exc}"
 
     async def _recommend_existing_routine_programs(self, **kwargs) -> str:
+        if self._existing_routine_programs_generated_this_request:
+            return (
+                "ROUTINE PROGRAMS ALREADY RECOMMENDED. Existing routine program "
+                "recommendations have already been generated in this conversation "
+                "turn. No action taken."
+            )
+
         try:
             args = RoutineProgramRecommendationArgs(**kwargs)
             if not self.session:
@@ -928,6 +944,7 @@ class ChatService:
             if ranked[0].score >= 0.75:
                 ranked = ranked[:1]
 
+            self._existing_routine_programs_generated_this_request = True
             self._pending_chat_events.append(
                 ChatRoutineProgramRecommendedEvent(
                     type="routine_program_recommended",
@@ -1551,6 +1568,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         self._workout_saved_this_request = False
         self._routine_created_this_request = False
         self._exercise_substitutions_generated_this_request = False
+        self._existing_routines_generated_this_request = False
+        self._existing_routine_programs_generated_this_request = False
         self._pending_chat_events = []
         conversation = None
         persisted_history: list[ChatMessage] = []
