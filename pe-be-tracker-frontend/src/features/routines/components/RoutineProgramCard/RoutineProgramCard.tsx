@@ -4,7 +4,9 @@ import { Link } from "react-router-dom";
 import type { RoutineProgramSummary } from "@/features/routines/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import {
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -22,13 +24,12 @@ export const RoutineProgramCard = ({
 }: RoutineProgramCardProps) => {
   const previewLabels = program.day_labels_preview.slice(0, 4);
   const hiddenDayCount = Math.max(0, program.day_count - previewLabels.length);
+  const hideAuthorPrefix = program.author?.trim().toLowerCase() === "classic";
 
   return (
-    <Link
-      to={`/routine-programs/${program.id}`}
-      aria-label={`Open program ${program.name}`}
+    <Card
       className={cn(
-        "bg-card/90 border-border/40 hover:bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border py-4 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        "bg-card/90 border-border/40 hover:bg-card relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border py-4 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/5",
         className,
       )}
     >
@@ -56,7 +57,7 @@ export const RoutineProgramCard = ({
             </div>
             {program.author ? (
               <p className="text-left text-[10px] font-black uppercase tracking-widest text-primary/60">
-                By {program.author}
+                {hideAuthorPrefix ? program.author : `By ${program.author}`}
               </p>
             ) : (
               <CardDescription className="text-left text-xs font-bold opacity-70">
@@ -89,17 +90,22 @@ export const RoutineProgramCard = ({
           ) : null}
         </div>
 
-        <div className="flex text-left text-xs font-bold text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-primary" />
-            <span>{program.routine_count} routines</span>
+        <div className="mt-auto space-y-4">
+          <div className="flex text-left text-xs font-bold text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-primary" />
+              <span>{program.routine_count} routines</span>
+            </div>
           </div>
-        </div>
 
-        <div className="text-primary text-left text-sm font-bold">
-          Open Program
+          <Button
+            asChild
+            className="h-11 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/10"
+          >
+            <Link to={`/routine-programs/${program.id}`}>Open Program</Link>
+          </Button>
         </div>
       </CardContent>
-    </Link>
+    </Card>
   );
 };
