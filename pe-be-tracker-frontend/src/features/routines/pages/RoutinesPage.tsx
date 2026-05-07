@@ -23,6 +23,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type RoutinesView = "programs" | "routines";
@@ -101,7 +108,7 @@ const RoutinesPage = () => {
     <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <RoutineStructuredData data={routineListJsonLd} />
 
-      <div className="mx-auto">
+      <div className="mx-auto min-w-0">
         <div className="mb-8 text-center sm:mb-10 relative">
           <Button
             variant="ghost"
@@ -120,7 +127,7 @@ const RoutinesPage = () => {
 
         {/* Search and Filter Controls */}
         <div className="mb-10 flex flex-col gap-4 lg:flex-row">
-          <div className="relative flex-1 group">
+          <div className="relative min-w-0 flex-1 group">
             <Input
               type="text"
               placeholder={`Search ${activeTab}...`}
@@ -148,16 +155,16 @@ const RoutinesPage = () => {
             )}
           </div>
 
-          <div className="flex flex-row gap-2 sm:gap-4">
-            <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16 sm:flex-none">
               <Button
                 variant={activeTab === "programs" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTab("programs")}
                 className={cn(
-                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-5 h-full transition-all",
+                  "min-w-0 flex-1 rounded-xl px-3 text-[10px] font-bold uppercase tracking-wider h-full transition-all sm:px-5",
                   activeTab === "programs"
-                    ? "shadow-md scale-[1.02]"
+                    ? "shadow-md sm:scale-[1.02]"
                     : "opacity-60",
                 )}
               >
@@ -169,9 +176,9 @@ const RoutinesPage = () => {
                 size="sm"
                 onClick={() => setActiveTab("routines")}
                 className={cn(
-                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-5 h-full transition-all",
+                  "min-w-0 flex-1 rounded-xl px-3 text-[10px] font-bold uppercase tracking-wider h-full transition-all sm:px-5",
                   activeTab === "routines"
-                    ? "shadow-md scale-[1.02]"
+                    ? "shadow-md sm:scale-[1.02]"
                     : "opacity-60",
                 )}
               >
@@ -180,15 +187,33 @@ const RoutinesPage = () => {
               </Button>
             </div>
 
-            <div className="flex flex-1 items-center gap-1 rounded-2xl bg-accent/50 p-1 border border-border/40 shadow-sm backdrop-blur-sm h-16 sm:w-auto sm:flex-none">
+            <Select
+              value={orderBy}
+              onValueChange={(value: "createdAt" | "name") => setOrderBy(value)}
+            >
+              <SelectTrigger
+                aria-label="Sort routines"
+                className="border-border/40 bg-card/60 flex h-16 w-[7.5rem] shrink-0 rounded-2xl px-4 text-left text-xs font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm transition-all focus:ring-primary/10 sm:hidden"
+              >
+                <SelectValue aria-label={orderBy === "createdAt" ? "Recent" : "A-Z"}>
+                  {orderBy === "createdAt" ? "Recent" : "A-Z"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl">
+                <SelectItem value="createdAt">Recent</SelectItem>
+                <SelectItem value="name">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="hidden min-w-0 items-center gap-1 rounded-2xl border border-border/40 bg-accent/50 p-1 shadow-sm backdrop-blur-sm h-16 sm:flex">
               <Button
                 variant={orderBy === "createdAt" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setOrderBy("createdAt")}
                 className={cn(
-                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
+                  "min-w-0 flex-1 rounded-xl px-3 text-[10px] font-bold uppercase tracking-wider h-full transition-all sm:px-6",
                   orderBy === "createdAt"
-                    ? "shadow-md scale-[1.02]"
+                    ? "shadow-md sm:scale-[1.02]"
                     : "opacity-60",
                 )}
               >
@@ -199,14 +224,15 @@ const RoutinesPage = () => {
                 size="sm"
                 onClick={() => setOrderBy("name")}
                 className={cn(
-                  "flex-1 sm:flex-none rounded-xl font-bold text-[10px] uppercase tracking-wider px-3 sm:px-6 h-full transition-all",
-                  orderBy === "name" ? "shadow-md scale-[1.02]" : "opacity-60",
+                  "min-w-0 flex-1 rounded-xl px-3 text-[10px] font-bold uppercase tracking-wider h-full transition-all sm:px-6",
+                  orderBy === "name"
+                    ? "shadow-md sm:scale-[1.02]"
+                    : "opacity-60",
                 )}
               >
                 A-Z
               </Button>
             </div>
-
           </div>
         </div>
 
@@ -220,7 +246,7 @@ const RoutinesPage = () => {
               </AlertDescription>
             </Alert>
           ) : activePending ? (
-            <RoutinesGridSkeleton />
+            <RoutinesGridSkeleton variant={activeTab} />
           ) : (
             <>
               {activeTab === "programs" ? (

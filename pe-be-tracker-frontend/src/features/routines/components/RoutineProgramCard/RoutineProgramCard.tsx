@@ -24,6 +24,7 @@ export const RoutineProgramCard = ({
 }: RoutineProgramCardProps) => {
   const previewLabels = program.day_labels_preview.slice(0, 4);
   const hiddenDayCount = Math.max(0, program.day_count - previewLabels.length);
+  const hideAuthorPrefix = program.author?.trim().toLowerCase() === "classic";
 
   return (
     <Card
@@ -54,11 +55,17 @@ export const RoutineProgramCard = ({
                 </Badge>
               ) : null}
             </div>
-            <CardDescription className="text-left text-xs font-bold opacity-70">
-              {program.day_count} day{program.day_count !== 1 ? "s" : ""} •{" "}
-              {program.exercise_count} exercise
-              {program.exercise_count !== 1 ? "s" : ""}
-            </CardDescription>
+            {program.author ? (
+              <p className="text-left text-[10px] font-black uppercase tracking-widest text-primary/60">
+                {hideAuthorPrefix ? program.author : `By ${program.author}`}
+              </p>
+            ) : (
+              <CardDescription className="text-left text-xs font-bold opacity-70">
+                {program.day_count} day{program.day_count !== 1 ? "s" : ""} •{" "}
+                {program.exercise_count} exercise
+                {program.exercise_count !== 1 ? "s" : ""}
+              </CardDescription>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -83,19 +90,21 @@ export const RoutineProgramCard = ({
           ) : null}
         </div>
 
-        <div className="flex text-left text-xs font-bold text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-primary" />
-            <span>{program.routine_count} routines</span>
+        <div className="mt-auto space-y-4">
+          <div className="flex text-left text-xs font-bold text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-primary" />
+              <span>{program.routine_count} routines</span>
+            </div>
           </div>
-        </div>
 
-        <Button
-          asChild
-          className="h-11 rounded-xl text-sm font-bold shadow-lg shadow-primary/10"
-        >
-          <Link to={`/routine-programs/${program.id}`}>Open Program</Link>
-        </Button>
+          <Button
+            asChild
+            className="h-11 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/10"
+          >
+            <Link to={`/routine-programs/${program.id}`}>Open Program</Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
