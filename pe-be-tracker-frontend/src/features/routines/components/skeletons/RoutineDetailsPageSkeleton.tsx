@@ -81,13 +81,17 @@ const RoutineTemplatesCardSkeleton = () => (
 );
 
 export const RoutineProgramDetailsPageSkeleton = () => (
-  <div className="space-y-6 text-left" aria-busy="true" aria-live="polite">
+  <div
+    className="space-y-5 text-left sm:space-y-6"
+    aria-busy="true"
+    aria-live="polite"
+  >
     {/* Header Skeleton */}
-    <div className="mb-8 flex items-center gap-4">
-      <Skeleton className="h-10 w-10 rounded-full" />
+    <div className="mb-5 flex items-start gap-3 sm:mb-8 sm:items-center sm:gap-4">
+      <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
       <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-full max-w-[16rem] rounded-xl" />
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Skeleton className="h-8 w-full max-w-[16rem] rounded-xl sm:h-9" />
           <Skeleton className="h-5 w-16 rounded-lg" />
         </div>
         <Skeleton className="h-3 w-28 rounded-full" />
@@ -95,29 +99,32 @@ export const RoutineProgramDetailsPageSkeleton = () => (
     </div>
 
     {/* Overview Section */}
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <Skeleton className="ml-1 h-3 w-24 rounded-full" />
-      <Card className="overflow-hidden rounded-3xl border border-border/40 bg-card/20 shadow-xl backdrop-blur-xl">
+      <Card className="overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-lg backdrop-blur-xl sm:rounded-3xl sm:bg-card/20 sm:shadow-xl">
         <CardContent className="p-0">
           <div className="flex flex-col sm:flex-row sm:items-stretch">
-            <div className="min-w-0 flex-1 p-6 sm:p-8">
+            <div className="min-w-0 flex-1 px-4 py-4 sm:px-8 sm:py-6">
               <div className="space-y-3">
                 <Skeleton className="h-4 w-full rounded-full" />
                 <Skeleton className="h-4 w-3/4 rounded-full" />
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-8 sm:flex sm:flex-wrap sm:gap-4">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex flex-col gap-2">
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border/30 bg-background/40 p-3 sm:border-0 sm:bg-transparent sm:p-0"
+                  >
                     <Skeleton className="h-2.5 w-12 rounded-full" />
-                    <Skeleton className="h-7 w-10 rounded-lg" />
+                    <Skeleton className="mt-2 h-6 w-10 rounded-lg sm:h-7" />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center justify-center border-t border-border/10 bg-primary/5 p-6 sm:w-64 sm:border-l sm:border-t-0">
-              <Skeleton className="h-14 w-full rounded-2xl" />
+            <div className="flex shrink-0 items-center justify-center border-t border-border/10 p-4 sm:w-64 sm:border-l sm:border-t-0 sm:p-6">
+              <Skeleton className="h-12 w-full rounded-xl sm:h-14 sm:rounded-2xl" />
             </div>
           </div>
         </CardContent>
@@ -125,34 +132,36 @@ export const RoutineProgramDetailsPageSkeleton = () => (
     </div>
 
     {/* Schedule Section */}
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between px-1">
         <Skeleton className="h-3 w-32 rounded-full" />
         <Skeleton className="h-5 w-16 rounded-lg" />
       </div>
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card/40 p-4 sm:flex-row"
+            className="flex gap-3 rounded-2xl border border-border/40 bg-card/60 p-3 sm:gap-4 sm:p-4"
           >
-            <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+            <Skeleton className="h-10 w-10 shrink-0 rounded-xl sm:h-12 sm:w-12" />
             <div className="min-w-0 flex-1 space-y-3">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <Skeleton className="h-6 w-full max-w-[12rem] rounded-xl" />
-                  <Skeleton className="h-5 w-16 rounded-lg" />
-                </div>
+              <div className="flex items-start justify-between gap-3">
+                <Skeleton className="h-5 w-full max-w-[12rem] rounded-xl sm:h-6" />
                 <div className="hidden shrink-0 gap-2 sm:flex">
                   <Skeleton className="h-8 w-20 rounded-xl" />
                   <Skeleton className="h-8 w-24 rounded-xl" />
                 </div>
               </div>
+              <Skeleton className="h-4 w-16 rounded-lg" />
               <Skeleton className="h-4 w-48 rounded-full" />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Skeleton className="h-6 w-20 rounded-lg" />
                 <Skeleton className="h-6 w-20 rounded-lg" />
                 <Skeleton className="h-6 w-20 rounded-lg" />
+              </div>
+              <div className="flex gap-2 sm:hidden">
+                <Skeleton className="h-10 flex-1 rounded-xl" />
+                <Skeleton className="h-10 flex-1 rounded-xl" />
               </div>
             </div>
           </div>
