@@ -123,7 +123,7 @@ export const RoutineProgramDetailsPageSkeleton = () => (
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center justify-center border-t border-border/10 bg-muted/20 p-4 sm:w-64 sm:border-l sm:border-t-0 sm:bg-muted/10 sm:p-6">
+            <div className="flex shrink-0 items-center justify-center border-t border-border/10 p-4 sm:w-64 sm:border-l sm:border-t-0 sm:p-6">
               <Skeleton className="h-12 w-full rounded-xl sm:h-14 sm:rounded-2xl" />
             </div>
           </div>
