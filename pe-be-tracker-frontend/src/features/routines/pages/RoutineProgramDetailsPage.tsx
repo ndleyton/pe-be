@@ -317,9 +317,10 @@ const RoutineProgramDetailsPage = () => {
                 {canClone ? (
                   <div className="flex shrink-0 items-center justify-center border-t border-border/10 bg-muted/20 p-4 sm:w-64 sm:border-l sm:border-t-0 sm:bg-muted/10 sm:p-6">
                     <Button
+                      variant="outline"
                       onClick={() => cloneMutation.mutate()}
                       disabled={cloneMutation.isPending}
-                      className="h-12 w-full rounded-xl px-6 text-xs font-black uppercase tracking-widest shadow-sm transition-all hover:scale-[1.01] hover:shadow-md active:scale-95 sm:h-14 sm:rounded-2xl sm:px-8 sm:text-sm"
+                      className="h-12 w-full rounded-xl border-primary/20 bg-background/60 px-6 text-xs font-black uppercase tracking-widest text-primary shadow-none transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary active:scale-95 sm:h-14 sm:rounded-2xl sm:px-8 sm:text-sm"
                     >
                       <Copy className="mr-2 h-5 w-5" />
                       {cloneMutation.isPending ? "Saving..." : "Save Program"}
