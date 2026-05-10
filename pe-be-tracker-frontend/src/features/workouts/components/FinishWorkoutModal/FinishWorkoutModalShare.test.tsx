@@ -4,6 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { makeExerciseForSummary } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
 import * as imageHelpers from "./lib/workoutSummaryImage";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 vi.mock("./lib/workoutSummaryImage", () => ({
   createWorkoutSummaryFile: vi.fn(),
@@ -93,18 +101,14 @@ describe("FinishWorkoutModal Share", () => {
     const mockFile = new File([""], "test.png", { type: "image/png" });
     vi.mocked(imageHelpers.createWorkoutSummaryFile).mockResolvedValue(mockFile);
     vi.mocked(navigator.share).mockRejectedValue(new Error("Share failed"));
-    // Mock alert
-    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
 
     render(<FinishWorkoutModal isOpen={true} exercises={mockExercises} onConfirm={vi.fn()} onCancel={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /share/i }));
 
-    expect(alertMock).toHaveBeenCalledWith("Failed to share workout summary. Downloading instead.");
+    expect(toast.error).toHaveBeenCalledWith("Failed to share workout summary. Downloading instead.");
     // It calls handleDownload which eventually calls downloadWorkoutSummaryImage
     expect(imageHelpers.downloadWorkoutSummaryImage).toHaveBeenCalled();
-
-    alertMock.mockRestore();
   });
 
   it("should NOT fall back to download when navigator.share fails with AbortError", async () => {
