@@ -5,19 +5,15 @@ import {
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
-import { toPng } from "html-to-image";
-import { Download, RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList, Share2 } from "lucide-react";
 import { useUIStore } from "@/stores";
+import { toast } from "sonner";
+import {
+  createWorkoutSummaryFile,
+  downloadWorkoutSummaryImage,
+  buildWorkoutSummaryFilename,
+} from "./lib/workoutSummaryImage";
 
-const LAYOUT_STABILIZATION_DELAY_MS = 50;
-const DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK = 1;
-const MIN_EXPORT_PIXEL_RATIO = 2;
-const DEFAULT_EXPORT_BACKGROUND = "#ffffff";
-const DATE_LABEL_LOCALE = "en-US";
-const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = {
-  month: "short",
-  day: "2-digit",
-};
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -56,6 +52,7 @@ const FinishWorkoutModal = ({
     state.getFormattedWorkoutTime(),
   );
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Preload logo as data URL to avoid CORS/taint issues in html2canvas
   useEffect(() => {
@@ -90,78 +87,55 @@ const FinishWorkoutModal = ({
 
   const handleDownload = async () => {
     const node = downloadAreaRef.current;
-    if (!node) return;
+    if (!node || isExporting) return;
+
+    setIsExporting(true);
     try {
-      // Ensure layout and any async assets are fully ready
-      await new Promise(requestAnimationFrame);
-      await new Promise(requestAnimationFrame);
-      await new Promise((resolve) =>
-        setTimeout(resolve, LAYOUT_STABILIZATION_DELAY_MS),
-      );
-
-      const rect = node.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        throw new Error("Share area has zero size");
-      }
-
-      // Ensure fonts are loaded to prevent baseline/centering shifts
-      if ("fonts" in document && (document as any).fonts?.ready) {
-        await (document as any).fonts.ready;
-      }
-
-      // Resolve background to match Tailwind's bg-background (theme-aware)
-      let resolvedBackground: string | undefined;
-      try {
-        const nodeBg = window.getComputedStyle(node).backgroundColor;
-        if (
-          nodeBg &&
-          nodeBg !== "rgba(0, 0, 0, 0)" &&
-          nodeBg !== "transparent"
-        ) {
-          resolvedBackground = nodeBg;
-        } else {
-          const rootStyles = window.getComputedStyle(document.documentElement);
-          const varBg = rootStyles.getPropertyValue("--background").trim();
-          if (varBg) {
-            resolvedBackground = varBg;
-          }
-        }
-      } catch (error) {
-        console.warn(
-          "Could not resolve computed background color; defaulting to white.",
-          error,
-        );
-      }
-
-      const image = await toPng(node, {
-        backgroundColor: resolvedBackground || DEFAULT_EXPORT_BACKGROUND,
-        cacheBust: true,
-        filter: (domNode) =>
-          !(domNode instanceof Element) ||
-          domNode.getAttribute("data-export-ignore") !== "true",
-        pixelRatio: Math.max(
-          window.devicePixelRatio || DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK,
-          MIN_EXPORT_PIXEL_RATIO,
-        ),
-      });
-
-      // Build filename: "Workout Summary {Mon DD}.png"
-      const now = new Date();
-      const label = new Intl.DateTimeFormat(
-        DATE_LABEL_LOCALE,
-        DATE_LABEL_OPTIONS,
-      ).format(now);
-      const filename = `Workout Summary ${label}.png`;
-
-      const link = document.createElement("a");
-      link.href = image;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const file = await createWorkoutSummaryFile(node, buildWorkoutSummaryFilename());
+      downloadWorkoutSummaryImage(file);
     } catch (error) {
       console.error("Error downloading workout summary:", error);
-      alert("Failed to download workout summary.");
+      toast.error("Failed to download workout summary.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const node = downloadAreaRef.current;
+    if (!node || isExporting) return;
+
+    setIsExporting(true);
+    let file: File | undefined;
+    try {
+      const filename = buildWorkoutSummaryFilename();
+      file = await createWorkoutSummaryFile(node, filename);
+      const shareData = {
+        title: workoutName ?? "Workout Summary",
+        text: "Workout summary from Personal Bestie",
+        files: [file],
+      };
+
+      if (navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        downloadWorkoutSummaryImage(file);
+      }
+    } catch (error) {
+      // Don't show error if user cancelled
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+      console.error("Error sharing workout summary:", error);
+
+      if (file) {
+        toast.error("Failed to share workout summary. Downloading instead.");
+        downloadWorkoutSummaryImage(file);
+      } else {
+        toast.error("Failed to share workout summary.");
+      }
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -223,25 +197,39 @@ const FinishWorkoutModal = ({
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-2 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
-                <div aria-hidden="true" className="size-9" />
-                <h3 className="text-foreground break-words text-center text-2xl leading-tight font-black tracking-tight">
+              <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                <div className="flex" data-export-ignore="true">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleShare}
+                    disabled={isExporting}
+                    className="h-8 gap-1.5 rounded-full bg-primary/10 px-3 text-primary hover:bg-primary/20 transition-all active:scale-95"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-black uppercase tracking-wider">Share</span>
+                  </Button>
+                </div>
+                <h3 className="text-foreground break-words text-center text-xl leading-tight font-black tracking-tight px-1">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
                   </span>
                 </h3>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDownload}
-                  data-export-ignore="true"
-                  aria-label="Download workout summary image"
-                  title="Download image"
-                  className="text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                <div className="flex" data-export-ignore="true">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDownload}
+                    disabled={isExporting}
+                    aria-label="Download workout summary image"
+                    title="Download image"
+                    className="h-8 w-8 text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10 transition-all active:scale-95"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
               <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
               <div className="grid gap-2">
