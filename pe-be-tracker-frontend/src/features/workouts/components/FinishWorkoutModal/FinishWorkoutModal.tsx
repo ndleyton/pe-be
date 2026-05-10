@@ -5,7 +5,6 @@ import {
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
 import AnatomicalImage from "./AnatomicalImage";
-import { toPng } from "html-to-image";
 import { Download, RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList, Share2 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { toast } from "sonner";
@@ -15,15 +14,6 @@ import {
   buildWorkoutSummaryFilename,
 } from "./lib/workoutSummaryImage";
 
-const LAYOUT_STABILIZATION_DELAY_MS = 50;
-const DEFAULT_DEVICE_PIXEL_RATIO_FALLBACK = 1;
-const MIN_EXPORT_PIXEL_RATIO = 2;
-const DEFAULT_EXPORT_BACKGROUND = "#ffffff";
-const DATE_LABEL_LOCALE = "en-US";
-const DATE_LABEL_OPTIONS: Intl.DateTimeFormatOptions = {
-  month: "short",
-  day: "2-digit",
-};
 
 interface Exercise {
   exercise_type: ExerciseTypeWithMuscles | { name: string };
@@ -116,9 +106,10 @@ const FinishWorkoutModal = ({
     if (!node || isExporting) return;
 
     setIsExporting(true);
+    let file: File | undefined;
     try {
       const filename = buildWorkoutSummaryFilename();
-      const file = await createWorkoutSummaryFile(node, filename);
+      file = await createWorkoutSummaryFile(node, filename);
       const shareData = {
         title: workoutName ?? "Workout Summary",
         text: "Workout summary from Personal Bestie",
@@ -136,9 +127,13 @@ const FinishWorkoutModal = ({
         return;
       }
       console.error("Error sharing workout summary:", error);
-      toast.error("Failed to share workout summary. Downloading instead.");
-      // Fallback to download on other errors if we have the node
-      handleDownload();
+
+      if (file) {
+        toast.error("Failed to share workout summary. Downloading instead.");
+        downloadWorkoutSummaryImage(file);
+      } else {
+        toast.error("Failed to share workout summary.");
+      }
     } finally {
       setIsExporting(false);
     }
