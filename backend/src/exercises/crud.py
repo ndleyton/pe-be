@@ -113,7 +113,8 @@ def _exercise_type_relationship_option(deep: bool = False):
     This eliminates the need for 4-way joins in the database for taxonomy metadata.
 
     If deep=True, we perform deep eager loading. This is useful for detail paths
-    where we want to ensure data is present without relying on the cache.
+    where we want to guarantee data consistency for serialization without
+    requiring the caller to explicitly warm the TaxonomyCache first.
     """
     if deep:
         return (
@@ -886,6 +887,8 @@ async def create_exercise_type(
         if existing is None:
             raise
 
+        # Use deep loading to ensure taxonomy data is present for the response
+        # even if the TaxonomyCache hasn't been warmed by the caller.
         result = await session.execute(
             select(ExerciseType)
             .options(_exercise_type_relationship_option(deep=True))
@@ -921,6 +924,8 @@ async def update_exercise_type(
         raise
 
     session.expire(exercise_type, ["exercise_muscles"])
+    # Use deep loading to ensure taxonomy data is present for the response
+    # even if the TaxonomyCache hasn't been warmed by the caller.
     result = await session.execute(
         select(ExerciseType)
         .execution_options(populate_existing=True)
