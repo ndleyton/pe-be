@@ -1,11 +1,19 @@
-import { Suspense, useEffect, useRef, useState, lazy } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  lazy,
+  type KeyboardEvent,
+} from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
+import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, Sparkles, Share2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2 } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -16,6 +24,7 @@ import {
   useWorkoutPageData,
 } from "@/features/workouts/hooks/useWorkoutPageData";
 import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
+import { useWorkoutNameUpdate } from "@/features/workouts/hooks/useWorkoutNameUpdate";
 import { useWorkoutShare } from "@/features/workouts/hooks/useWorkoutShare";
 
 const FinishWorkoutModal = lazy(() =>
@@ -54,6 +63,7 @@ const WorkoutPage = () => {
     refetchWorkout,
     serverWorkout,
     shouldScrollToBottomOnLoad,
+    showEmptyWorkoutIntentLoading,
     showLoadingTitle,
     showNotFound,
     showRecoverableWorkoutError,
@@ -70,9 +80,12 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [isEditingWorkoutName, setIsEditingWorkoutName] = useState(false);
+  const [workoutNameDraft, setWorkoutNameDraft] = useState("");
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
+  const workoutNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     addExerciseMutation,
@@ -120,6 +133,17 @@ const WorkoutPage = () => {
   const { profile } = usePublicProfileSettings(isAuthenticated);
 
   const showShareButton = profile?.is_profile_public && workoutEndTime;
+  const displayWorkoutName = workoutName || "Workout";
+  const pageInteractionsPending = showLoadingTitle;
+  const workoutNameInputWidth = Math.max(
+    workoutNameDraft.length || displayWorkoutName.length,
+    7,
+  ) + 1;
+
+  const updateWorkoutNameMutation = useWorkoutNameUpdate({
+    isAuthenticated,
+    workoutId,
+  });
 
   const workoutShare = useWorkoutShare({
     profile,
@@ -128,6 +152,69 @@ const WorkoutPage = () => {
     workoutName,
     queryClient,
   });
+
+  useEffect(() => {
+    if (!isEditingWorkoutName) {
+      setWorkoutNameDraft(workoutName ?? "");
+    }
+  }, [isEditingWorkoutName, workoutName]);
+
+  useEffect(() => {
+    if (!isEditingWorkoutName) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      workoutNameInputRef.current?.focus();
+      workoutNameInputRef.current?.select();
+    });
+  }, [isEditingWorkoutName]);
+
+  const handleStartWorkoutNameEdit = () => {
+    if (showLoadingTitle || updateWorkoutNameMutation.isPending) {
+      return;
+    }
+
+    setWorkoutNameDraft(workoutName ?? "");
+    setIsEditingWorkoutName(true);
+  };
+
+  const handleCancelWorkoutNameEdit = () => {
+    setWorkoutNameDraft(workoutName ?? "");
+    setIsEditingWorkoutName(false);
+  };
+
+  const handleCommitWorkoutName = () => {
+    if (!isEditingWorkoutName) {
+      return;
+    }
+
+    const nextName = workoutNameDraft.trim() || null;
+    const currentName = workoutName?.trim() || null;
+    setIsEditingWorkoutName(false);
+
+    if (nextName === currentName || !workoutId) {
+      setWorkoutNameDraft(workoutName ?? "");
+      return;
+    }
+
+    updateWorkoutNameMutation.mutate(nextName);
+  };
+
+  const handleWorkoutNameKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleCommitWorkoutName();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleCancelWorkoutNameEdit();
+    }
+  };
 
   useEffect(() => {
     if (!hasValidWorkout) {
@@ -224,21 +311,63 @@ const WorkoutPage = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-          {showLoadingTitle ? (
-            <>
-              <span className="sr-only">Loading workout</span>
-              <Skeleton
-                aria-hidden="true"
-                className="h-10 w-48 rounded-xl md:w-60"
+        <div className="flex min-w-0 flex-1 items-center">
+          <h2
+            className="flex w-fit items-center gap-1.5 min-w-0 max-w-full text-3xl font-black tracking-tight"
+            aria-label={
+              showLoadingTitle ? "Loading workout" : displayWorkoutName
+            }
+          >
+            {showLoadingTitle ? (
+              <>
+                <span className="sr-only">Loading workout</span>
+                <Skeleton
+                  aria-hidden="true"
+                  className="h-10 w-48 rounded-xl md:w-60"
+                />
+              </>
+            ) : isEditingWorkoutName ? (
+              <input
+                ref={workoutNameInputRef}
+                type="text"
+                value={workoutNameDraft}
+                placeholder="Workout"
+                aria-label="Workout name"
+                aria-busy={updateWorkoutNameMutation.isPending}
+                onBlur={handleCommitWorkoutName}
+                onChange={(event) => setWorkoutNameDraft(event.target.value)}
+                onKeyDown={handleWorkoutNameKeyDown}
+                className="max-w-full rounded-md border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-foreground outline-none ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+                style={{
+                  width: `${workoutNameInputWidth}ch`,
+                }}
               />
-            </>
-          ) : workoutName ? (
-            `${workoutName}`
-          ) : (
-            "Workout"
-          )}
-        </h2>
+            ) : (
+              <span
+                onClick={handleStartWorkoutNameEdit}
+                className="cursor-pointer text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent transition-all duration-200 hover:opacity-70"
+              >
+                {displayWorkoutName}
+              </span>
+            )}
+            {!showLoadingTitle && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-full text-muted-foreground transition-all duration-300 hover:bg-primary/10 hover:text-primary"
+                aria-label="Edit workout name"
+                disabled={
+                  isEditingWorkoutName || updateWorkoutNameMutation.isPending
+                }
+                onClick={handleStartWorkoutNameEdit}
+              >
+                <SquarePen className="h-4 w-4" />
+              </Button>
+            )}
+          </h2>
+
+        </div>
         {showShareButton && (
           <Button
             variant="ghost"
@@ -272,41 +401,54 @@ const WorkoutPage = () => {
             </div>
           </div>
         )}
-        <ExerciseList
-          exercises={exercises}
-          status={listStatus}
-          workoutId={workoutId}
-          onExerciseUpdate={handleExerciseUpdate}
-          onExerciseDelete={handleExerciseDelete}
-        />
+        {showEmptyWorkoutIntentLoading ? (
+          <LoadingThrobber />
+        ) : (
+          <ExerciseList
+            exercises={exercises}
+            status={listStatus}
+            workoutId={workoutId}
+            onExerciseUpdate={handleExerciseUpdate}
+            onExerciseDelete={handleExerciseDelete}
+          />
+        )}
         <div className="bg-primary/20 mt-8 mb-4 h-px w-full" role="separator" />
         <div className="flex items-center justify-center pb-24">
-          <Button
-            type="button"
-            onClick={() => setShowAddExerciseModal(true)}
-            onMouseEnter={warmExerciseTypeModal}
-            onTouchStart={warmExerciseTypeModal}
-            onFocus={warmExerciseTypeModal}
-            className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
-            disabled={isAuthenticated && addExerciseMutation.isPending}
-          >
-            {isAuthenticated && addExerciseMutation.isPending
-              ? "Adding..."
-              : "Add Exercise"}
-          </Button>
+          {pageInteractionsPending ? (
+            <Skeleton
+              aria-hidden="true"
+              className="h-14 w-40 rounded-full"
+            />
+          ) : (
+            <Button
+              type="button"
+              onClick={() => setShowAddExerciseModal(true)}
+              onMouseEnter={warmExerciseTypeModal}
+              onTouchStart={warmExerciseTypeModal}
+              onFocus={warmExerciseTypeModal}
+              className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
+              disabled={isAuthenticated && addExerciseMutation.isPending}
+            >
+              {isAuthenticated && addExerciseMutation.isPending
+                ? "Adding..."
+                : "Add Exercise"}
+            </Button>
+          )}
         </div>
         <div ref={bottomScrollAnchorRef} aria-hidden="true" />
       </div>
 
-      <FloatingActionButton
-        onClick={() => setShowFinishModal(true)}
-        onMouseEnter={preloadFinishWorkoutModal}
-        onTouchStart={preloadFinishWorkoutModal}
-        onFocus={preloadFinishWorkoutModal}
-        disabled={isAuthenticated && finishWorkoutMutation.isPending}
-      >
-        <span className="text-lg">✓</span>
-      </FloatingActionButton>
+      {!pageInteractionsPending && (
+        <FloatingActionButton
+          onClick={() => setShowFinishModal(true)}
+          onMouseEnter={preloadFinishWorkoutModal}
+          onTouchStart={preloadFinishWorkoutModal}
+          onFocus={preloadFinishWorkoutModal}
+          disabled={isAuthenticated && finishWorkoutMutation.isPending}
+        >
+          <span className="text-lg">✓</span>
+        </FloatingActionButton>
+      )}
 
       <FinishWorkoutModal
         isOpen={showFinishModal}

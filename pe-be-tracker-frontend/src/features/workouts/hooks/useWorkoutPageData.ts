@@ -275,6 +275,7 @@ export const useWorkoutPageData = ({
       ? "error"
       : "success";
   const showLoadingTitle = pagePending && !workoutName;
+  const showEmptyWorkoutIntentLoading = pagePending && knownEmptyExercisesLatched;
   const recoveryMessage = isNetworkError(workoutError)
     ? "Check your connection and try again."
     : "This may be temporary. Try again or go back to your workouts.";
@@ -289,6 +290,7 @@ export const useWorkoutPageData = ({
     routine,
     serverWorkout,
     shouldScrollToBottomOnLoad,
+    showEmptyWorkoutIntentLoading,
     showLoadingTitle,
     showNotFound,
     showRecoverableWorkoutError,

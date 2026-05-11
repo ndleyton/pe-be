@@ -81,6 +81,26 @@ const exerciseApiMocks = vi.hoisted(() => ({
   mockCreateExercise: vi.fn(),
 }));
 
+const apiClientMock = vi.hoisted(() => ({
+  get: vi.fn(),
+  patch: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+}));
+
+type MockGuestWorkout = {
+  id: string | number;
+  name: string | null;
+  notes: string | null;
+  start_time: string;
+  end_time: string | null;
+  workout_type_id: number;
+  created_at: string;
+  updated_at: string;
+  exercises?: unknown[];
+};
+
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual<
     typeof import("@/features/exercises/api")
@@ -93,17 +113,11 @@ vi.mock("@/features/exercises/api", async () => {
 });
 
 vi.mock("@/shared/api/client", () => ({
-  default: {
-    get: vi.fn(),
-    patch: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
+  default: apiClientMock,
 }));
 
 const mockGuestState = {
-  workouts: [],
+  workouts: [] as MockGuestWorkout[],
   hydrated: true,
   deleteExercise: vi.fn(),
   createExercisesFromRoutine: vi.fn(),
@@ -187,6 +201,7 @@ describe("WorkoutPage", () => {
     mockGuestState.hydrated = true;
     mockLocationState = undefined;
     vi.mocked(api.get).mockImplementation(buildApiGetImplementation());
+    vi.mocked(api.patch).mockResolvedValue({ data: mockWorkout });
     windowScrollToMock = vi.fn();
     Object.defineProperty(window, "scrollTo", {
       configurable: true,
@@ -249,6 +264,76 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
+  it("edits the server workout name", async () => {
+    vi.mocked(api.patch).mockResolvedValue({
+      data: { ...mockWorkout, name: "Push Day" },
+    });
+
+    render(<WorkoutPage />);
+
+    await screen.findByRole("heading", { name: /chest day/i, level: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
+
+    const input = screen.getByRole("textbox", {
+      name: /workout name/i,
+    }) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(input).toHaveValue("Chest Day");
+    });
+
+    expect(screen.getByRole("textbox", { name: /workout name/i })).toBeInTheDocument();
+    expect(input).toHaveFocus();
+
+    fireEvent.change(input, { target: { value: "Push Day" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith(`/workouts/${mockWorkoutId}`, {
+        name: "Push Day",
+      });
+    });
+
+    expect(screen.queryByRole("textbox", { name: /workout name/i })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /push day/i, level: 2 }),
+    ).toBeInTheDocument();
+  });
+
+  it("edits the guest workout name through the guest store", async () => {
+    mockAuthState.isAuthenticated = false;
+    mockGuestState.workouts = [
+      {
+        ...mockWorkout,
+        id: mockWorkoutId,
+        name: "Guest Chest Day",
+      },
+    ];
+
+    render(<WorkoutPage />);
+
+    await screen.findByRole("heading", {
+      name: /guest chest day/i,
+      level: 2,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
+    const input = screen.getByRole("textbox", {
+      name: /workout name/i,
+    }) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "Guest Push Day" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(mockGuestState.updateWorkout).toHaveBeenCalledWith(mockWorkoutId, {
+        name: "Guest Push Day",
+      });
+    });
+    expect(screen.queryByRole("textbox", { name: /workout name/i })).not.toBeInTheDocument();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
   it("keeps the page shell visible while the workout query is pending", async () => {
     vi.mocked(api.get).mockImplementation(
       buildApiGetImplementation(() => new Promise(() => {})),
@@ -260,13 +345,27 @@ describe("WorkoutPage", () => {
       await screen.findByRole("heading", { name: /loading workout/i, level: 2 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /add exercise/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /add exercise/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
       "pending",
     );
     expect(screen.queryByText(/workout: #123/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/loading workout\.\.\./i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the initialization throbber for the new empty workout intent", async () => {
+    mockLocationState = { knownEmptyExercises: true };
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => new Promise(() => {})),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByText(/initializing workout/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("exercise-list")).not.toBeInTheDocument();
   });
 
   it("skips the exercise loading state when navigation marks the workout as known empty", async () => {
@@ -386,7 +485,9 @@ describe("WorkoutPage", () => {
     });
     windowScrollToMock.mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /add exercise/i }),
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: /select exercise type/i }),
     );
