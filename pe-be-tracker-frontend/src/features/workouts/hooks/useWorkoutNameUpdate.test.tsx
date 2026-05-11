@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { updateWorkout } from "@/features/workouts/api";
-import { useGuestStore } from "@/stores";
 import { makeWorkout } from "@/test/fixtures";
 
 import { useWorkoutNameUpdate } from "./useWorkoutNameUpdate";
@@ -199,11 +198,14 @@ describe("useWorkoutNameUpdate", () => {
     });
 
     // Verify workouts list update in onSuccess
-    const workoutsUpdater = mockQueryClient.setQueryData.mock.calls.find(
+    // We look for the last call to setQueryData for ["workouts"]
+    const workoutsCalls = mockQueryClient.setQueryData.mock.calls.filter(
       (call) => call[0][0] === "workouts",
-    )?.[1];
+    );
+    const lastWorkoutsUpdater = workoutsCalls[workoutsCalls.length - 1][1];
+
     const initialList = { data: [makeWorkout({ id: 123, name: "Old" })] };
-    const updatedList = workoutsUpdater(initialList);
+    const updatedList = lastWorkoutsUpdater(initialList);
     expect(updatedList.data[0]).toEqual(updatedWorkout);
   });
 
