@@ -109,8 +109,6 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     stats = {"totalSets": 3}
     created_type = SimpleNamespace(id=6)
     units = [SimpleNamespace(id=1, name="kg")]
-    muscles = [SimpleNamespace(id=3, name="Biceps")]
-    muscle_groups = [SimpleNamespace(id=2, name="Chest")]
 
     fake_get_exercise_types = AsyncMock(return_value=paginated)
     fake_get_exercise_type_by_id = AsyncMock(return_value=exercise_type)

@@ -15,8 +15,6 @@ from src.exercises.crud import (
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
-    get_muscles,
-    get_muscle_groups,
     get_exercise_owner_id,
     get_exercise_type_review_queue,
     release_exercise_type,
