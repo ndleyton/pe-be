@@ -191,13 +191,12 @@ class MuscleGroup(Base):
 class Muscle(Base):
     """Model for individual muscles"""
 
-    __tablename__ = "muscles"
-
     name = Column(String, unique=True)
     muscle_group_id = Column(
         Integer,
         ForeignKey("muscle_groups.id", ondelete="RESTRICT"),
         nullable=False,
+        index=True,
     )
 
     # Relationships
@@ -226,7 +225,10 @@ class ExerciseMuscle(Base):
     )
     is_primary = Column(Boolean, nullable=False, default=False, server_default="false")
 
-    __table_args__ = (UniqueConstraint("exercise_type_id", "muscle_id"),)
+    __table_args__ = (
+        UniqueConstraint("exercise_type_id", "muscle_id"),
+        Index("ix_exercise_muscles_exercise_type_id", "exercise_type_id"),
+    )
 
     exercise_type: Mapped["ExerciseType"] = relationship(
         back_populates="exercise_muscles"

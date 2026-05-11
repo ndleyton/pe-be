@@ -425,7 +425,7 @@ async def get_exercise_type_stats(
         )
 
     return await ExerciseTypeService.get_exercise_type_statistics(
-        session, exercise_type_id, user.id
+        session, exercise_type_id, user.id, exercise_type=exercise_type
     )
 
 
