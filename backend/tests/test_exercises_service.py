@@ -134,9 +134,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
         exercises_service, "get_intensity_units", fake_get_intensity_units
     )
     monkeypatch.setattr(TaxonomyCache, "ensure_loaded", AsyncMock())
-    monkeypatch.setattr(
-        TaxonomyCache, "get_all_muscles", lambda: fake_taxonomy_muscles
-    )
+    monkeypatch.setattr(TaxonomyCache, "get_all_muscles", lambda: fake_taxonomy_muscles)
     monkeypatch.setattr(
         TaxonomyCache, "get_all_muscle_groups", lambda: fake_taxonomy_groups
     )
@@ -165,7 +163,9 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     )
     assert await IntensityUnitService.get_all_intensity_units(session) == units
     assert await MuscleService.get_all_muscles(session) == fake_taxonomy_muscles
-    assert await MuscleGroupService.get_all_muscle_groups(session) == fake_taxonomy_groups
+    assert (
+        await MuscleGroupService.get_all_muscle_groups(session) == fake_taxonomy_groups
+    )
 
     fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
     fake_get_exercise_type_by_id.assert_awaited_once_with(session, 5)

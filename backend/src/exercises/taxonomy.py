@@ -5,6 +5,7 @@ from sqlalchemy import select
 if TYPE_CHECKING:
     from src.exercises.models import Muscle, MuscleGroup
 
+
 class TaxonomyCache:
     """Global in-memory cache for static exercise taxonomy (Muscles and Muscle Groups)."""
 
