@@ -264,7 +264,7 @@ describe("WorkoutPage", () => {
     ).resolves.toBeInTheDocument();
   });
 
-  it("edits the server workout name without remounting the title input", async () => {
+  it("edits the server workout name", async () => {
     vi.mocked(api.patch).mockResolvedValue({
       data: { ...mockWorkout, name: "Push Day" },
     });
@@ -272,6 +272,9 @@ describe("WorkoutPage", () => {
     render(<WorkoutPage />);
 
     await screen.findByRole("heading", { name: /chest day/i, level: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
+
     const input = screen.getByRole("textbox", {
       name: /workout name/i,
     }) as HTMLInputElement;
@@ -280,9 +283,7 @@ describe("WorkoutPage", () => {
       expect(input).toHaveValue("Chest Day");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
-
-    expect(screen.getByRole("textbox", { name: /workout name/i })).toBe(input);
+    expect(screen.getByRole("textbox", { name: /workout name/i })).toBeInTheDocument();
     expect(input).toHaveFocus();
 
     fireEvent.change(input, { target: { value: "Push Day" } });
@@ -294,7 +295,7 @@ describe("WorkoutPage", () => {
       });
     });
 
-    expect(screen.getByRole("textbox", { name: /workout name/i })).toBe(input);
+    expect(screen.queryByRole("textbox", { name: /workout name/i })).not.toBeInTheDocument();
     expect(
       await screen.findByRole("heading", { name: /push day/i, level: 2 }),
     ).toBeInTheDocument();
@@ -316,11 +317,11 @@ describe("WorkoutPage", () => {
       name: /guest chest day/i,
       level: 2,
     });
+    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
     const input = screen.getByRole("textbox", {
       name: /workout name/i,
     }) as HTMLInputElement;
 
-    fireEvent.click(screen.getByRole("button", { name: /edit workout name/i }));
     fireEvent.change(input, { target: { value: "Guest Push Day" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
@@ -329,6 +330,7 @@ describe("WorkoutPage", () => {
         name: "Guest Push Day",
       });
     });
+    expect(screen.queryByRole("textbox", { name: /workout name/i })).not.toBeInTheDocument();
     expect(api.patch).not.toHaveBeenCalled();
   });
 

@@ -132,6 +132,10 @@ const WorkoutPage = () => {
 
   const showShareButton = profile?.is_profile_public && workoutEndTime;
   const displayWorkoutName = workoutName || "Workout";
+  const workoutNameInputWidth = Math.max(
+    workoutNameDraft.length || displayWorkoutName.length,
+    7,
+  ) + 1;
 
   const updateWorkoutNameMutation = useWorkoutNameUpdate({
     isAuthenticated,
@@ -304,9 +308,9 @@ const WorkoutPage = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex min-w-0 flex-1 items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center">
           <h2
-            className="min-w-0 text-3xl font-black tracking-tight"
+            className="flex w-fit items-center gap-1.5 min-w-0 max-w-full text-3xl font-black tracking-tight"
             aria-label={
               showLoadingTitle ? "Loading workout" : displayWorkoutName
             }
@@ -343,22 +347,23 @@ const WorkoutPage = () => {
                 {displayWorkoutName}
               </span>
             )}
+            {!showLoadingTitle && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-full text-muted-foreground transition-all duration-300 hover:bg-primary/10 hover:text-primary"
+                aria-label="Edit workout name"
+                disabled={
+                  isEditingWorkoutName || updateWorkoutNameMutation.isPending
+                }
+                onClick={handleStartWorkoutNameEdit}
+              >
+                <SquarePen className="h-4 w-4" />
+              </Button>
+            )}
           </h2>
-          {!showLoadingTitle && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-full text-muted-foreground transition-all duration-300 hover:bg-primary/10 hover:text-primary"
-              aria-label="Edit workout name"
-              disabled={
-                isEditingWorkoutName || updateWorkoutNameMutation.isPending
-              }
-              onClick={handleStartWorkoutNameEdit}
-            >
-              <SquarePen className="h-4 w-4" />
-            </Button>
-          )}
+
         </div>
         {showShareButton && (
           <Button
