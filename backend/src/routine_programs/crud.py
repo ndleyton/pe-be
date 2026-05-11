@@ -724,6 +724,30 @@ async def clone_program(
 async def hydrate_program(program: RoutineProgram, session: AsyncSession) -> dict:
     routines = [day.routine for day in program.days]
     routine_summaries = await _routine_summary_map(session, routines)
+    return _assemble_hydrated_program(program, routine_summaries)
+
+
+async def hydrate_programs(
+    programs: Sequence[RoutineProgram], session: AsyncSession
+) -> list[dict]:
+    if not programs:
+        return []
+
+    # Gather all routines across all programs to hydrate them in bulk
+    all_routines = []
+    for program in programs:
+        all_routines.extend([day.routine for day in program.days])
+
+    routine_summaries = await _routine_summary_map(session, all_routines)
+
+    return [
+        _assemble_hydrated_program(program, routine_summaries) for program in programs
+    ]
+
+
+def _assemble_hydrated_program(
+    program: RoutineProgram, routine_summaries: dict[int, dict]
+) -> dict:
     return {
         "id": program.id,
         "name": program.name,
