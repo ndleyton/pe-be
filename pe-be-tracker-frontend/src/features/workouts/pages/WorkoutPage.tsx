@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, Pencil, Sparkles, Share2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2 } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -132,10 +132,6 @@ const WorkoutPage = () => {
 
   const showShareButton = profile?.is_profile_public && workoutEndTime;
   const displayWorkoutName = workoutName || "Workout";
-  const workoutNameInputWidth = Math.max(
-    workoutNameDraft.length || displayWorkoutName.length,
-    7,
-  ) + 1;
 
   const updateWorkoutNameMutation = useWorkoutNameUpdate({
     isAuthenticated,
@@ -308,7 +304,7 @@ const WorkoutPage = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           <h2
             className="min-w-0 text-3xl font-black tracking-tight"
             aria-label={
@@ -323,26 +319,29 @@ const WorkoutPage = () => {
                   className="h-10 w-48 rounded-xl md:w-60"
                 />
               </>
-            ) : (
+            ) : isEditingWorkoutName ? (
               <input
                 ref={workoutNameInputRef}
                 type="text"
                 value={workoutNameDraft}
                 placeholder="Workout"
-                readOnly={!isEditingWorkoutName}
-                tabIndex={isEditingWorkoutName ? 0 : -1}
                 aria-label="Workout name"
                 aria-busy={updateWorkoutNameMutation.isPending}
                 onBlur={handleCommitWorkoutName}
                 onChange={(event) => setWorkoutNameDraft(event.target.value)}
                 onKeyDown={handleWorkoutNameKeyDown}
-                className={`max-w-full truncate border-0 bg-transparent p-0 text-3xl font-black tracking-tight outline-none placeholder:text-foreground/70 ${
-                  isEditingWorkoutName
-                    ? "rounded-md text-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                    : "pointer-events-none text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent"
-                }`}
-                style={{ width: `${workoutNameInputWidth}ch` }}
+                className="max-w-full rounded-md border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-foreground outline-none ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+                style={{
+                  width: `${Math.max(workoutNameDraft.length, 7) + 1}ch`,
+                }}
               />
+            ) : (
+              <span
+                onClick={handleStartWorkoutNameEdit}
+                className="cursor-pointer text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent transition-all duration-200 hover:opacity-70"
+              >
+                {displayWorkoutName}
+              </span>
             )}
           </h2>
           {!showLoadingTitle && (
@@ -350,14 +349,14 @@ const WorkoutPage = () => {
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+              className="size-8 rounded-full text-muted-foreground transition-all duration-300 hover:bg-primary/10 hover:text-primary"
               aria-label="Edit workout name"
               disabled={
                 isEditingWorkoutName || updateWorkoutNameMutation.isPending
               }
               onClick={handleStartWorkoutNameEdit}
             >
-              <Pencil className="h-4 w-4" />
+              <SquarePen className="h-4 w-4" />
             </Button>
           )}
         </div>
