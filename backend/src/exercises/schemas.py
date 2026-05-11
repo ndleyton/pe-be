@@ -1,5 +1,6 @@
 from typing import Optional, List, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
+import logging
 import json
 from pydantic import (
     ConfigDict,
@@ -15,6 +16,9 @@ from src.exercises.image_assets import (
 )
 from src.exercises.models import ExerciseType as ExerciseTypeModel
 from src.exercises.taxonomy import TaxonomyCache
+
+
+logger = logging.getLogger(__name__)
 
 
 class ExerciseBase(BaseModel):
@@ -237,19 +241,37 @@ class ExerciseTypeRead(BaseModel):
                     # Attempt to resolve muscle from cache if not eagerly loaded
                     muscle = exercise_muscle.__dict__.get("muscle")
                     if not muscle:
+                        logger.warning(
+                            "ExerciseTypeRead: Muscle ID %s not eagerly loaded. Falling back to TaxonomyCache.",
+                            exercise_muscle.muscle_id,
+                        )
                         muscle = TaxonomyCache.get_muscle(exercise_muscle.muscle_id)
 
                     if not muscle:
+                        logger.warning(
+                            "ExerciseTypeRead: Muscle ID %s missing from TaxonomyCache fallback. Muscle will be omitted from response.",
+                            exercise_muscle.muscle_id,
+                        )
                         continue
 
                     # Attempt to resolve muscle group from cache if not eagerly loaded
                     muscle_group = muscle.__dict__.get("muscle_group")
                     if not muscle_group:
+                        logger.warning(
+                            "ExerciseTypeRead: MuscleGroup ID %s not eagerly loaded for muscle %s. Falling back to TaxonomyCache.",
+                            muscle.muscle_group_id,
+                            muscle.id,
+                        )
                         muscle_group = TaxonomyCache.get_muscle_group(
                             muscle.muscle_group_id
                         )
 
                     if not muscle_group:
+                        logger.warning(
+                            "ExerciseTypeRead: MuscleGroup ID %s missing from TaxonomyCache fallback for muscle %s. Muscle will be omitted from response.",
+                            muscle.muscle_group_id,
+                            muscle.id,
+                        )
                         continue
 
                     serialized_muscle = {
