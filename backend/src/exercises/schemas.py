@@ -235,7 +235,7 @@ class ExerciseTypeRead(BaseModel):
             if data.exercise_muscles:
                 for exercise_muscle in data.exercise_muscles:
                     # Attempt to resolve muscle from cache if not eagerly loaded
-                    muscle = getattr(exercise_muscle, "muscle", None)
+                    muscle = exercise_muscle.__dict__.get("muscle")
                     if not muscle:
                         muscle = TaxonomyCache.get_muscle(exercise_muscle.muscle_id)
 
@@ -243,7 +243,7 @@ class ExerciseTypeRead(BaseModel):
                         continue
 
                     # Attempt to resolve muscle group from cache if not eagerly loaded
-                    muscle_group = getattr(muscle, "muscle_group", None)
+                    muscle_group = muscle.__dict__.get("muscle_group")
                     if not muscle_group:
                         muscle_group = TaxonomyCache.get_muscle_group(
                             muscle.muscle_group_id
