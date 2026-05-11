@@ -174,6 +174,7 @@ class ExerciseTypeService:
         released_only: bool = False,
     ) -> PaginatedExerciseTypesResponse:
         """Get all exercise types with optional filtering, ordering and pagination"""
+        await TaxonomyCache.ensure_loaded(session)
         kwargs = {}
         if user is not None:
             kwargs["user_id"] = user.id
@@ -215,6 +216,7 @@ class ExerciseTypeService:
         limit: int = 3,
         user: Optional["User"] = None,
     ) -> SimilarExerciseTypesResponse:
+        await TaxonomyCache.ensure_loaded(session)
         kwargs = {}
         if user is not None:
             kwargs["user_id"] = user.id

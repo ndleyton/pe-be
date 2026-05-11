@@ -14,6 +14,7 @@ from src.exercises.service import (
     MuscleService,
     MuscleGroupService,
 )
+from src.exercises.taxonomy import TaxonomyCache
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -116,8 +117,8 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     fake_get_exercise_type_stats = AsyncMock(return_value=stats)
     fake_create_exercise_type = AsyncMock(return_value=created_type)
     fake_get_intensity_units = AsyncMock(return_value=units)
-    fake_get_muscles = AsyncMock(return_value=muscles)
-    fake_get_muscle_groups = AsyncMock(return_value=muscle_groups)
+    fake_taxonomy_muscles = [SimpleNamespace(id=3, name="Biceps")]
+    fake_taxonomy_groups = [SimpleNamespace(id=2, name="Chest")]
 
     monkeypatch.setattr(
         exercises_service, "get_exercise_types", fake_get_exercise_types
@@ -134,14 +135,15 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     monkeypatch.setattr(
         exercises_service, "get_intensity_units", fake_get_intensity_units
     )
-    monkeypatch.setattr(exercises_service, "get_muscles", fake_get_muscles)
+    monkeypatch.setattr(TaxonomyCache, "ensure_loaded", AsyncMock())
     monkeypatch.setattr(
-        exercises_service,
-        "get_muscle_groups",
-        fake_get_muscle_groups,
+        TaxonomyCache, "get_all_muscles", lambda: fake_taxonomy_muscles
+    )
+    monkeypatch.setattr(
+        TaxonomyCache, "get_all_muscle_groups", lambda: fake_taxonomy_groups
     )
 
-    session = object()
+    session = AsyncMock()
     payload = ExerciseTypeCreate(name="Rows", description="Back")
 
     assert (
@@ -164,8 +166,8 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
         is created_type
     )
     assert await IntensityUnitService.get_all_intensity_units(session) == units
-    assert await MuscleService.get_all_muscles(session) == muscles
-    assert await MuscleGroupService.get_all_muscle_groups(session) == muscle_groups
+    assert await MuscleService.get_all_muscles(session) == fake_taxonomy_muscles
+    assert await MuscleGroupService.get_all_muscle_groups(session) == fake_taxonomy_groups
 
     fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
     fake_get_exercise_type_by_id.assert_awaited_once_with(session, 5)
@@ -174,8 +176,7 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     )
     fake_create_exercise_type.assert_awaited_once_with(session, payload)
     fake_get_intensity_units.assert_awaited_once_with(session)
-    fake_get_muscles.assert_awaited_once_with(session)
-    fake_get_muscle_groups.assert_awaited_once_with(session)
+    TaxonomyCache.ensure_loaded.assert_awaited()
 
 
 @pytest.mark.parametrize(
