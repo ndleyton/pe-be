@@ -103,15 +103,24 @@ def _normalized_exercise_type_name(name: str) -> str:
     return name.strip().lower()
 
 
-def _exercise_type_relationship_option():
+def _exercise_type_relationship_option(deep: bool = False):
     """
     Optimized relationship loading.
 
-    We only load the join table association IDs; the Pydantic schema
-    (ExerciseTypeRead) hydrates the actual Muscle and MuscleGroup data
-    from the in-memory TaxonomyCache during serialization. This eliminates
-    the need for 4-way joins in the database for taxonomy metadata.
+    If deep=False (default), we only load the join table association IDs;
+    the Pydantic schema (ExerciseTypeRead) hydrates the actual Muscle and
+    MuscleGroup data from the in-memory TaxonomyCache during serialization.
+    This eliminates the need for 4-way joins in the database for taxonomy metadata.
+
+    If deep=True, we perform deep eager loading. This is useful for detail paths
+    where we want to ensure data is present without relying on the cache.
     """
+    if deep:
+        return (
+            selectinload(ExerciseType.exercise_muscles)
+            .selectinload(ExerciseMuscle.muscle)
+            .selectinload(Muscle.muscle_group)
+        )
     return selectinload(ExerciseType.exercise_muscles)
 
 
@@ -206,7 +215,7 @@ async def _hydrate_exercise_types_by_ids(
         span.set_attribute("exercise_types.search.match_count", len(exercise_type_ids))
         result = await session.execute(
             select(ExerciseType)
-            .options(_exercise_type_relationship_option())
+            .options(_exercise_type_relationship_option(deep=False))
             .where(
                 ExerciseType.id.in_(exercise_type_ids),
                 _exercise_type_visibility_clause(
@@ -472,7 +481,7 @@ async def get_exercise_types(
     )
     query = (
         select(ExerciseType)
-        .options(_exercise_type_relationship_option())
+        .options(_exercise_type_relationship_option(deep=False))
         .where(visibility_clause)
     )
     if muscle_group_id is not None:
@@ -850,11 +859,7 @@ async def create_exercise_type(
         # Eagerly load muscles and muscle_group relationships for response serialization
         result = await session.execute(
             select(ExerciseType)
-            .options(
-                selectinload(ExerciseType.exercise_muscles)
-                .selectinload(ExerciseMuscle.muscle)
-                .selectinload(Muscle.muscle_group)
-            )
+            .options(_exercise_type_relationship_option(deep=True))
             .where(ExerciseType.id == exercise_type.id)
         )
         return result.unique().scalar_one()
@@ -883,7 +888,7 @@ async def create_exercise_type(
 
         result = await session.execute(
             select(ExerciseType)
-            .options(_exercise_type_relationship_option())
+            .options(_exercise_type_relationship_option(deep=True))
             .where(ExerciseType.id == existing.id)
         )
         return result.unique().scalar_one()
@@ -919,7 +924,7 @@ async def update_exercise_type(
     result = await session.execute(
         select(ExerciseType)
         .execution_options(populate_existing=True)
-        .options(_exercise_type_relationship_option())
+        .options(_exercise_type_relationship_option(deep=True))
         .where(ExerciseType.id == exercise_type.id)
     )
     return result.unique().scalar_one()
@@ -944,7 +949,7 @@ async def request_exercise_type_evaluation(
 async def get_exercise_type_review_queue(session: AsyncSession) -> list[ExerciseType]:
     result = await session.execute(
         select(ExerciseType)
-        .options(_exercise_type_relationship_option())
+        .options(_exercise_type_relationship_option(deep=False))
         .where(ExerciseType.status == ExerciseType.ExerciseTypeStatus.in_review)
         .order_by(desc(ExerciseType.review_requested_at), ExerciseType.id.desc())
     )

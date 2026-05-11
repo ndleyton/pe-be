@@ -356,6 +356,7 @@ class ExerciseTypeService:
 
     @staticmethod
     async def get_review_queue(session: AsyncSession) -> list[ExerciseType]:
+        await TaxonomyCache.ensure_loaded(session)
         return await get_exercise_type_review_queue(session)
 
     @staticmethod
