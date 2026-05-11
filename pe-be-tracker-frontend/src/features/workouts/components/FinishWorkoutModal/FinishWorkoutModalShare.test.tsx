@@ -53,18 +53,16 @@ describe("FinishWorkoutModal Share", () => {
     ) as any;
   });
 
-  it("should show share and download buttons when there are completed sets", () => {
+  it("should show share button when there are completed sets", () => {
     render(<FinishWorkoutModal isOpen={true} exercises={mockExercises} onConfirm={vi.fn()} onCancel={vi.fn()} />);
 
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /download workout summary image/i })).toBeInTheDocument();
   });
 
-  it("should hide share and download buttons when there are no completed sets", () => {
+  it("should hide share button when there are no completed sets", () => {
     render(<FinishWorkoutModal isOpen={true} exercises={[]} onConfirm={vi.fn()} onCancel={vi.fn()} />);
 
     expect(screen.queryByRole("button", { name: /share/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /download workout summary image/i })).not.toBeInTheDocument();
   });
 
   it("should call navigator.share when share button is clicked and sharing is supported", async () => {
@@ -107,8 +105,8 @@ describe("FinishWorkoutModal Share", () => {
     await user.click(screen.getByRole("button", { name: /share/i }));
 
     expect(toast.error).toHaveBeenCalledWith("Failed to share workout summary. Downloading instead.");
-    // It calls handleDownload which eventually calls downloadWorkoutSummaryImage
-    expect(imageHelpers.downloadWorkoutSummaryImage).toHaveBeenCalled();
+    // It uses the existing file to download
+    expect(imageHelpers.downloadWorkoutSummaryImage).toHaveBeenCalledWith(mockFile);
   });
 
   it("should NOT fall back to download when navigator.share fails with AbortError", async () => {
