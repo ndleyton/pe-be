@@ -1,11 +1,18 @@
-import { Suspense, useEffect, useRef, useState, lazy } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  lazy,
+  type KeyboardEvent,
+} from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, Sparkles, Share2 } from "lucide-react";
+import { ArrowLeft, Pencil, Sparkles, Share2 } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -16,6 +23,7 @@ import {
   useWorkoutPageData,
 } from "@/features/workouts/hooks/useWorkoutPageData";
 import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
+import { useWorkoutNameUpdate } from "@/features/workouts/hooks/useWorkoutNameUpdate";
 import { useWorkoutShare } from "@/features/workouts/hooks/useWorkoutShare";
 
 const FinishWorkoutModal = lazy(() =>
@@ -70,9 +78,12 @@ const WorkoutPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSaveRoutineModal, setShowSaveRoutineModal] = useState(false);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [isEditingWorkoutName, setIsEditingWorkoutName] = useState(false);
+  const [workoutNameDraft, setWorkoutNameDraft] = useState("");
   const bottomScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const didHandleRouteScrollRef = useRef(false);
   const previousExerciseCountRef = useRef<number | null>(null);
+  const workoutNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     addExerciseMutation,
@@ -120,6 +131,16 @@ const WorkoutPage = () => {
   const { profile } = usePublicProfileSettings(isAuthenticated);
 
   const showShareButton = profile?.is_profile_public && workoutEndTime;
+  const displayWorkoutName = workoutName || "Workout";
+  const workoutNameInputWidth = Math.max(
+    workoutNameDraft.length || displayWorkoutName.length,
+    7,
+  ) + 1;
+
+  const updateWorkoutNameMutation = useWorkoutNameUpdate({
+    isAuthenticated,
+    workoutId,
+  });
 
   const workoutShare = useWorkoutShare({
     profile,
@@ -128,6 +149,69 @@ const WorkoutPage = () => {
     workoutName,
     queryClient,
   });
+
+  useEffect(() => {
+    if (!isEditingWorkoutName) {
+      setWorkoutNameDraft(workoutName ?? "");
+    }
+  }, [isEditingWorkoutName, workoutName]);
+
+  useEffect(() => {
+    if (!isEditingWorkoutName) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      workoutNameInputRef.current?.focus();
+      workoutNameInputRef.current?.select();
+    });
+  }, [isEditingWorkoutName]);
+
+  const handleStartWorkoutNameEdit = () => {
+    if (showLoadingTitle || updateWorkoutNameMutation.isPending) {
+      return;
+    }
+
+    setWorkoutNameDraft(workoutName ?? "");
+    setIsEditingWorkoutName(true);
+  };
+
+  const handleCancelWorkoutNameEdit = () => {
+    setWorkoutNameDraft(workoutName ?? "");
+    setIsEditingWorkoutName(false);
+  };
+
+  const handleCommitWorkoutName = () => {
+    if (!isEditingWorkoutName) {
+      return;
+    }
+
+    const nextName = workoutNameDraft.trim() || null;
+    const currentName = workoutName?.trim() || null;
+    setIsEditingWorkoutName(false);
+
+    if (nextName === currentName || !workoutId) {
+      setWorkoutNameDraft(workoutName ?? "");
+      return;
+    }
+
+    updateWorkoutNameMutation.mutate(nextName);
+  };
+
+  const handleWorkoutNameKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleCommitWorkoutName();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleCancelWorkoutNameEdit();
+    }
+  };
 
   useEffect(() => {
     if (!hasValidWorkout) {
@@ -224,21 +308,59 @@ const WorkoutPage = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-          {showLoadingTitle ? (
-            <>
-              <span className="sr-only">Loading workout</span>
-              <Skeleton
-                aria-hidden="true"
-                className="h-10 w-48 rounded-xl md:w-60"
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <h2
+            className="min-w-0 text-3xl font-black tracking-tight"
+            aria-label={
+              showLoadingTitle ? "Loading workout" : displayWorkoutName
+            }
+          >
+            {showLoadingTitle ? (
+              <>
+                <span className="sr-only">Loading workout</span>
+                <Skeleton
+                  aria-hidden="true"
+                  className="h-10 w-48 rounded-xl md:w-60"
+                />
+              </>
+            ) : (
+              <input
+                ref={workoutNameInputRef}
+                type="text"
+                value={workoutNameDraft}
+                placeholder="Workout"
+                readOnly={!isEditingWorkoutName}
+                tabIndex={isEditingWorkoutName ? 0 : -1}
+                aria-label="Workout name"
+                aria-busy={updateWorkoutNameMutation.isPending}
+                onBlur={handleCommitWorkoutName}
+                onChange={(event) => setWorkoutNameDraft(event.target.value)}
+                onKeyDown={handleWorkoutNameKeyDown}
+                className={`max-w-full truncate border-0 bg-transparent p-0 text-3xl font-black tracking-tight outline-none placeholder:text-foreground/70 ${
+                  isEditingWorkoutName
+                    ? "rounded-md text-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+                    : "pointer-events-none text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent"
+                }`}
+                style={{ width: `${workoutNameInputWidth}ch` }}
               />
-            </>
-          ) : workoutName ? (
-            `${workoutName}`
-          ) : (
-            "Workout"
+            )}
+          </h2>
+          {!showLoadingTitle && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+              aria-label="Edit workout name"
+              disabled={
+                isEditingWorkoutName || updateWorkoutNameMutation.isPending
+              }
+              onClick={handleStartWorkoutNameEdit}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
           )}
-        </h2>
+        </div>
         {showShareButton && (
           <Button
             variant="ghost"

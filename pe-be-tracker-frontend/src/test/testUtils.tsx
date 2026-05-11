@@ -8,6 +8,7 @@ import { vi } from "vitest";
 vi.mock("@/shared/api/client", () => ({
   default: {
     get: vi.fn().mockRejectedValue(new Error("Unauthorized")),
+    patch: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
