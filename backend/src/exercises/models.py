@@ -191,6 +191,8 @@ class MuscleGroup(Base):
 class Muscle(Base):
     """Model for individual muscles"""
 
+    __tablename__ = "muscles"
+
     name = Column(String, unique=True)
     muscle_group_id = Column(
         Integer,
