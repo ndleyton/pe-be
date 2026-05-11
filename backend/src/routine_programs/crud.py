@@ -733,10 +733,11 @@ async def hydrate_programs(
     if not programs:
         return []
 
-    # Gather all routines across all programs to hydrate them in bulk
-    all_routines = []
-    for program in programs:
-        all_routines.extend([day.routine for day in program.days])
+    # Gather all unique routines across all programs to hydrate them in bulk
+    unique_routines_by_id = {
+        day.routine_id: day.routine for program in programs for day in program.days
+    }
+    all_routines = list(unique_routines_by_id.values())
 
     routine_summaries = await _routine_summary_map(session, all_routines)
 
