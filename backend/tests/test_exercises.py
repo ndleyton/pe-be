@@ -303,7 +303,7 @@ async def test_get_exercise_type_route_returns_serialized_schema(monkeypatch):
         AsyncMock(return_value=exercise_type),
     )
 
-    result = await exercises_router.get_exercise_type(275, session=object())
+    result = await exercises_router.get_exercise_type(275, session=object(), user=None)
 
     assert isinstance(result, ExerciseTypeRead)
     assert result.id == 275

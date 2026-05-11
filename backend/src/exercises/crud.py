@@ -1016,16 +1016,22 @@ async def get_visible_exercise_type_ids(
 
 
 async def get_exercise_type_stats(
-    session: AsyncSession, exercise_type_id: int, user_id: int
+    session: AsyncSession,
+    exercise_type_id: int,
+    user_id: int,
+    *,
+    exercise_type: Optional[ExerciseType] = None,
 ) -> Dict[str, Any]:
     """Get exercise type statistics with optimized database queries"""
 
     # Get the exercise type first to get the default intensity unit
-    exercise_type = await get_exercise_type_by_id(
-        session,
-        exercise_type_id,
-        user_id=user_id,
-    )
+    if exercise_type is None:
+        exercise_type = await get_exercise_type_by_id(
+            session,
+            exercise_type_id,
+            user_id=user_id,
+        )
+
     if not exercise_type:
         return {
             "progressiveOverload": [],

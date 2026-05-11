@@ -38,6 +38,7 @@ from src.exercises.schemas import (
     SimilarExerciseTypesResponse,
     ExerciseTypeUpdate,
     PaginatedExerciseTypesResponse,
+    ExerciseTypeRead,
 )
 
 if TYPE_CHECKING:
@@ -130,6 +131,33 @@ class ExerciseService:
 class ExerciseTypeService:
     """Service layer for exercise type business logic"""
 
+    # Application-level cache for released exercise type metadata (Pydantic models)
+    # We cache the Read model rather than the ORM model to avoid session-binding issues.
+    _metadata_cache: Dict[int, "ExerciseTypeRead"] = {}
+
+    @classmethod
+    async def get_exercise_type_metadata(
+        cls,
+        session: AsyncSession,
+        exercise_type_id: int,
+    ) -> Optional["ExerciseTypeRead"]:
+        """Get exercise type metadata with application-level caching for released types."""
+        if exercise_type_id in cls._metadata_cache:
+            return cls._metadata_cache[exercise_type_id]
+
+        exercise_type = await cls.get_exercise_type(
+            session, exercise_type_id, released_only=True
+        )
+        if (
+            exercise_type
+            and exercise_type.status == ExerciseType.ExerciseTypeStatus.released
+        ):
+            metadata = ExerciseTypeRead.model_validate(exercise_type)
+            cls._metadata_cache[exercise_type_id] = metadata
+            return metadata
+
+        return ExerciseTypeRead.model_validate(exercise_type) if exercise_type else None
+
     @staticmethod
     async def get_all_exercise_types(
         session: AsyncSession,
@@ -209,10 +237,16 @@ class ExerciseTypeService:
 
     @staticmethod
     async def get_exercise_type_statistics(
-        session: AsyncSession, exercise_type_id: int, user_id: int
+        session: AsyncSession,
+        exercise_type_id: int,
+        user_id: int,
+        *,
+        exercise_type: Optional[ExerciseType] = None,
     ) -> Dict[str, Any]:
         """Get exercise type statistics including progressive overload data"""
-        return await get_exercise_type_stats(session, exercise_type_id, user_id)
+        return await get_exercise_type_stats(
+            session, exercise_type_id, user_id, exercise_type=exercise_type
+        )
 
     @staticmethod
     async def create_new_exercise_type(

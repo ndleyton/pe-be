@@ -67,6 +67,7 @@ from src.exercises.service import (
     MuscleGroupService,
 )
 from src.core.database import get_async_session
+from src.exercises.models import ExerciseType
 from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
@@ -368,7 +369,19 @@ async def get_exercise_type(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get an exercise type by ID."""
-    with tracer.start_as_current_span("exercise_types.fetch"):
+    # Use cache for released types when accessed by any user
+    # For candidates/in_review, we still need session-based ORM lookup for visibility
+    with tracer.start_as_current_span("exercise_types.fetch_metadata"):
+        if user is None or not user.is_superuser:
+            # Try cache for released types
+            metadata = await ExerciseTypeService.get_exercise_type_metadata(
+                session, exercise_type_id
+            )
+            if metadata and metadata.status == ExerciseType.ExerciseTypeStatus.released:
+                return metadata
+
+    # Fallback to full ORM lookup for private/review types or cache miss
+    with tracer.start_as_current_span("exercise_types.fetch_orm"):
         exercise_type = await ExerciseTypeService.get_exercise_type(
             session,
             exercise_type_id,
@@ -425,7 +438,7 @@ async def get_exercise_type_stats(
         )
 
     return await ExerciseTypeService.get_exercise_type_statistics(
-        session, exercise_type_id, user.id
+        session, exercise_type_id, user.id, exercise_type=exercise_type
     )
 
 
