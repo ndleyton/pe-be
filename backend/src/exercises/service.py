@@ -38,6 +38,7 @@ from src.exercises.schemas import (
     SimilarExerciseTypesResponse,
     ExerciseTypeUpdate,
     PaginatedExerciseTypesResponse,
+    ExerciseTypeRead,
 )
 
 if TYPE_CHECKING:
@@ -144,19 +145,18 @@ class ExerciseTypeService:
         if exercise_type_id in cls._metadata_cache:
             return cls._metadata_cache[exercise_type_id]
 
-        from src.exercises.schemas import ExerciseTypeRead
-
         exercise_type = await cls.get_exercise_type(
             session, exercise_type_id, released_only=True
         )
-        if exercise_type and exercise_type.status == ExerciseType.ExerciseTypeStatus.released:
+        if (
+            exercise_type
+            and exercise_type.status == ExerciseType.ExerciseTypeStatus.released
+        ):
             metadata = ExerciseTypeRead.model_validate(exercise_type)
             cls._metadata_cache[exercise_type_id] = metadata
             return metadata
 
-        return (
-            ExerciseTypeRead.model_validate(exercise_type) if exercise_type else None
-        )
+        return ExerciseTypeRead.model_validate(exercise_type) if exercise_type else None
 
     @staticmethod
     async def get_all_exercise_types(

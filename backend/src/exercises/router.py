@@ -67,6 +67,7 @@ from src.exercises.service import (
     MuscleGroupService,
 )
 from src.core.database import get_async_session
+from src.exercises.models import ExerciseType
 from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
 
