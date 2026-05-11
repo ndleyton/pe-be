@@ -17,18 +17,6 @@ const WorkoutPageSkeleton = () => (
     </div>
 
     <div className="space-y-6">
-      <div className="rounded-lg border border-primary/20 bg-card/50 p-5 text-left shadow-xl backdrop-blur-md">
-        <div className="mb-3 flex items-center gap-2">
-          <Skeleton className="h-8 w-8 rounded-lg bg-primary/10" />
-          <Skeleton className="h-3 w-28 rounded-full" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-11/12" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-      </div>
-
       <ExerciseListSkeleton count={2} />
 
       <Skeleton className="mt-8 mb-4 h-px w-full bg-primary/20" />
