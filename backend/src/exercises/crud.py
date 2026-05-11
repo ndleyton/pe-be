@@ -104,11 +104,15 @@ def _normalized_exercise_type_name(name: str) -> str:
 
 
 def _exercise_type_relationship_option():
-    return (
-        selectinload(ExerciseType.exercise_muscles)
-        .selectinload(ExerciseMuscle.muscle)
-        .selectinload(Muscle.muscle_group)
-    )
+    """
+    Optimized relationship loading.
+
+    We only load the join table association IDs; the Pydantic schema
+    (ExerciseTypeRead) hydrates the actual Muscle and MuscleGroup data
+    from the in-memory TaxonomyCache during serialization. This eliminates
+    the need for 4-way joins in the database for taxonomy metadata.
+    """
+    return selectinload(ExerciseType.exercise_muscles)
 
 
 def _exact_match_sort_key(

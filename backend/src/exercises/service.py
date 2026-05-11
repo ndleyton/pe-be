@@ -45,6 +45,9 @@ if TYPE_CHECKING:
     from src.users.models import User
 
 
+from src.exercises.taxonomy import TaxonomyCache
+
+
 class ExerciseService:
     """Service layer for exercise business logic"""
 
@@ -407,8 +410,9 @@ class MuscleGroupService:
 
     @staticmethod
     async def get_all_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
-        """Get all muscle groups."""
-        return await get_muscle_groups(session)
+        """Get all muscle groups with in-memory caching."""
+        await TaxonomyCache.ensure_loaded(session)
+        return TaxonomyCache.get_all_muscle_groups()
 
 
 class MuscleService:
@@ -416,5 +420,6 @@ class MuscleService:
 
     @staticmethod
     async def get_all_muscles(session: AsyncSession) -> List[Muscle]:
-        """Get all muscles."""
-        return await get_muscles(session)
+        """Get all muscles with in-memory caching."""
+        await TaxonomyCache.ensure_loaded(session)
+        return TaxonomyCache.get_all_muscles()

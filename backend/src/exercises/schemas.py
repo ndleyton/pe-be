@@ -14,6 +14,7 @@ from src.exercises.image_assets import (
     resolve_exercise_image_urls,
 )
 from src.exercises.models import ExerciseType as ExerciseTypeModel
+from src.exercises.taxonomy import TaxonomyCache
 
 
 class ExerciseBase(BaseModel):
@@ -211,7 +212,7 @@ class ExerciseTypeRead(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def extract_muscles_from_relationship(cls, data: Any) -> Any:
-        """Extract muscles from exercise_muscles relationship"""
+        """Extract muscles from exercise_muscles relationship with TaxonomyCache fallback."""
         if isinstance(data, dict):
             result = dict(data)
             result["reference_images_url"] = cls._public_reference_images_json(
@@ -233,26 +234,36 @@ class ExerciseTypeRead(BaseModel):
 
             if data.exercise_muscles:
                 for exercise_muscle in data.exercise_muscles:
-                    if not (
-                        hasattr(exercise_muscle, "muscle")
-                        and exercise_muscle.muscle
-                        and hasattr(exercise_muscle.muscle, "muscle_group")
-                        and exercise_muscle.muscle.muscle_group
-                    ):
+                    # Attempt to resolve muscle from cache if not eagerly loaded
+                    muscle = getattr(exercise_muscle, "muscle", None)
+                    if not muscle:
+                        muscle = TaxonomyCache.get_muscle(exercise_muscle.muscle_id)
+
+                    if not muscle:
+                        continue
+
+                    # Attempt to resolve muscle group from cache if not eagerly loaded
+                    muscle_group = getattr(muscle, "muscle_group", None)
+                    if not muscle_group:
+                        muscle_group = TaxonomyCache.get_muscle_group(
+                            muscle.muscle_group_id
+                        )
+
+                    if not muscle_group:
                         continue
 
                     serialized_muscle = {
-                        "id": exercise_muscle.muscle.id,
-                        "name": exercise_muscle.muscle.name,
-                        "muscle_group_id": exercise_muscle.muscle.muscle_group_id,
+                        "id": muscle.id,
+                        "name": muscle.name,
+                        "muscle_group_id": muscle.muscle_group_id,
                         "muscle_group": {
-                            "id": exercise_muscle.muscle.muscle_group.id,
-                            "name": exercise_muscle.muscle.muscle_group.name,
-                            "created_at": exercise_muscle.muscle.muscle_group.created_at,
-                            "updated_at": exercise_muscle.muscle.muscle_group.updated_at,
+                            "id": muscle_group.id,
+                            "name": muscle_group.name,
+                            "created_at": muscle_group.created_at,
+                            "updated_at": muscle_group.updated_at,
                         },
-                        "created_at": exercise_muscle.muscle.created_at,
-                        "updated_at": exercise_muscle.muscle.updated_at,
+                        "created_at": muscle.created_at,
+                        "updated_at": muscle.updated_at,
                     }
                     serialized_muscles.append(serialized_muscle)
                     if primary_muscle is None and exercise_muscle.is_primary:
