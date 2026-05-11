@@ -3,7 +3,7 @@ import { Exercise } from "@/features/exercises/api";
 import { getExerciseClientKey } from "@/features/exercises/lib/exerciseRow";
 import { Dumbbell } from "lucide-react";
 import ExerciseRow from "../ExerciseRow";
-import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
+import { ExerciseListSkeleton } from "@/shared/components/skeletons/ExerciseListSkeleton";
 
 interface ExerciseListProps {
   exercises: Exercise[];
@@ -36,7 +36,12 @@ const ExerciseList: React.FC<ExerciseListProps> = ({
 
   return (
     <div className="">
-      {status === "pending" && <LoadingThrobber />}
+      {status === "pending" && (
+        <div role="status" aria-label="Loading exercises">
+          <span className="sr-only">Loading exercises</span>
+          <ExerciseListSkeleton count={2} />
+        </div>
+      )}
 
       {status === "error" && (
         <div className="text-destructive py-4 text-center">

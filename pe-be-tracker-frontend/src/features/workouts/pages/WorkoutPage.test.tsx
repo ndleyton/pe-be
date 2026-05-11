@@ -345,13 +345,27 @@ describe("WorkoutPage", () => {
       await screen.findByRole("heading", { name: /loading workout/i, level: 2 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /add exercise/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /add exercise/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("exercise-list-status")).toHaveTextContent(
       "pending",
     );
     expect(screen.queryByText(/workout: #123/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/loading workout\.\.\./i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the initialization throbber for the new empty workout intent", async () => {
+    mockLocationState = { knownEmptyExercises: true };
+    vi.mocked(api.get).mockImplementation(
+      buildApiGetImplementation(() => new Promise(() => {})),
+    );
+
+    render(<WorkoutPage />);
+
+    expect(
+      await screen.findByText(/initializing workout/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("exercise-list")).not.toBeInTheDocument();
   });
 
   it("skips the exercise loading state when navigation marks the workout as known empty", async () => {
@@ -471,7 +485,9 @@ describe("WorkoutPage", () => {
     });
     windowScrollToMock.mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: /add exercise/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /add exercise/i }),
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: /select exercise type/i }),
     );
