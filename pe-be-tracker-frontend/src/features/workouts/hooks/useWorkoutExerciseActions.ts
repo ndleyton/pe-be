@@ -32,11 +32,50 @@ const createOptimisticExerciseId = (
   return `optimistic-${timestamp}-${exerciseTypeId}-${optimisticExerciseIdCounter}`;
 };
 
-const updateWorkoutEndTime = async (workoutId: string) => {
+const updateWorkoutEndTime = async (workoutId: string, endTime: string | null) => {
   const response = await api.patch(endpoints.workoutById(workoutId), {
-    end_time: getCurrentUTCTimestamp(),
+    end_time: endTime,
   });
   return response.data;
+};
+
+const resumeWorkoutOnServer = async (workoutId: string, newStartTime: string) => {
+  const response = await api.patch(endpoints.workoutById(workoutId), {
+    start_time: newStartTime,
+    end_time: null,
+  });
+  return response.data;
+};
+
+const syncWorkoutInCache = (
+  queryClient: ReturnType<typeof import("@tanstack/react-query").useQueryClient>,
+  updatedWorkout: Workout,
+  workoutId?: string,
+) => {
+  const id = workoutId ?? String(updatedWorkout.id);
+  queryClient.setQueryData(["workout", id], updatedWorkout);
+  queryClient.setQueryData(
+    ["workouts"],
+    (
+      current:
+        | { data: Workout[]; next_cursor?: number | null }
+        | undefined,
+    ) => {
+      if (!current?.data) {
+        return current;
+      }
+
+      return {
+        ...current,
+        data: current.data.map((workout) =>
+          String(workout.id) === String(updatedWorkout.id)
+            ? updatedWorkout
+            : workout,
+        ),
+      };
+    },
+  );
+  queryClient.invalidateQueries({ queryKey: ["workouts"] });
 };
 
 type AddExercisePayload = {
@@ -120,37 +159,26 @@ export const useWorkoutExerciseActions = ({
   }, [deleteExerciseMutation.mutate]);
 
   const finishWorkoutMutation = useMutation({
-    mutationFn: (id: string) => updateWorkoutEndTime(id),
+    mutationFn: (id: string) => updateWorkoutEndTime(id, getCurrentUTCTimestamp()),
     onSuccess: (updatedWorkout, id) => {
-      queryClient.setQueryData(["workout", id], updatedWorkout);
-      queryClient.setQueryData(
-        ["workouts"],
-        (
-          current:
-            | { data: Workout[]; next_cursor?: number | null }
-            | undefined,
-        ) => {
-          if (!current?.data) {
-            return current;
-          }
-
-          return {
-            ...current,
-            data: current.data.map((workout) =>
-              String(workout.id) === String(updatedWorkout.id)
-                ? updatedWorkout
-                : workout,
-            ),
-          };
-        },
-      );
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      syncWorkoutInCache(queryClient, updatedWorkout, id);
       onFinishModalClose();
       navigate("/workouts");
     },
     onError: (error) => {
       console.error("Failed to finish workout:", error);
       onFinishModalClose();
+    },
+  });
+
+  const resumeWorkoutMutation = useMutation({
+    mutationFn: ({ workoutId, newStartTime }: { workoutId: string; newStartTime: string }) =>
+      resumeWorkoutOnServer(workoutId, newStartTime),
+    onSuccess: (updatedWorkout, { workoutId }) => {
+      syncWorkoutInCache(queryClient, updatedWorkout, workoutId);
+    },
+    onError: (error) => {
+      console.error("Failed to resume workout:", error);
     },
   });
 
@@ -386,6 +414,31 @@ export const useWorkoutExerciseActions = ({
     workoutId,
   ]);
 
+  const handleResumeWorkout = useCallback(() => {
+    if (!workoutId || !serverWorkout) {
+      console.error("No workoutId or workout available");
+      return;
+    }
+
+    const now = Date.now();
+    const startTimeMs = new Date(serverWorkout.start_time).getTime();
+    const endTimeMs = serverWorkout.end_time ? new Date(serverWorkout.end_time).getTime() : now;
+
+    // Shift start time forward by the duration the workout was "finished"
+    const pauseDurationMs = now - endTimeMs;
+    const newStartTime = new Date(startTimeMs + pauseDurationMs).toISOString();
+
+    if (isAuthenticated) {
+      resumeWorkoutMutation.mutate({ workoutId, newStartTime });
+      return;
+    }
+
+    guestUpdateWorkout(workoutId, {
+      start_time: newStartTime,
+      end_time: null,
+    });
+  }, [resumeWorkoutMutation, guestUpdateWorkout, isAuthenticated, workoutId, serverWorkout]);
+
   const warmExerciseTypeModal = useCallback(() => {
     preloadExerciseTypeModal();
 
@@ -416,6 +469,8 @@ export const useWorkoutExerciseActions = ({
     handleFinishWorkout,
     handleRegenerateRecap,
     handleSelectExerciseType,
+    handleResumeWorkout,
+    resumeWorkoutMutation,
     warmExerciseTypeModal,
   };
 };

@@ -13,7 +13,7 @@ import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, SquarePen, Sparkles, Share2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2, Play } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -96,6 +96,8 @@ const WorkoutPage = () => {
     handleFinishWorkout,
     handleRegenerateRecap,
     handleSelectExerciseType,
+    handleResumeWorkout,
+    resumeWorkoutMutation,
     warmExerciseTypeModal,
   } = useWorkoutExerciseActions({
     exercises,
@@ -413,42 +415,61 @@ const WorkoutPage = () => {
           />
         )}
         <div className="bg-primary/20 mt-8 mb-4 h-px w-full" role="separator" />
-        <div className="flex items-center justify-center pb-24">
+        <div className="flex flex-wrap items-center justify-center gap-4 pb-24">
           {pageInteractionsPending ? (
             <Skeleton
               aria-hidden="true"
               className="h-14 w-40 rounded-full"
             />
           ) : (
-            <Button
-              type="button"
-              onClick={() => setShowAddExerciseModal(true)}
-              onMouseEnter={warmExerciseTypeModal}
-              onTouchStart={warmExerciseTypeModal}
-              onFocus={warmExerciseTypeModal}
-              className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
-              disabled={isAuthenticated && addExerciseMutation.isPending}
-            >
-              {isAuthenticated && addExerciseMutation.isPending
-                ? "Adding..."
-                : "Add Exercise"}
-            </Button>
+            <>
+              <Button
+                type="button"
+                onClick={() => setShowAddExerciseModal(true)}
+                onMouseEnter={warmExerciseTypeModal}
+                onTouchStart={warmExerciseTypeModal}
+                onFocus={warmExerciseTypeModal}
+                className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
+                disabled={isAuthenticated && addExerciseMutation.isPending}
+              >
+                {isAuthenticated && addExerciseMutation.isPending
+                  ? "Adding..."
+                  : "Add Exercise"}
+              </Button>
+              {workoutEndTime && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResumeWorkout}
+                  disabled={isAuthenticated && resumeWorkoutMutation.isPending}
+                  className="h-14 rounded-full border border-primary/40 px-8 py-2 font-bold shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary/10"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  {isAuthenticated && resumeWorkoutMutation.isPending
+                    ? "Resuming..."
+                    : "Resume Workout"}
+                </Button>
+              )}
+            </>
           )}
         </div>
         <div ref={bottomScrollAnchorRef} aria-hidden="true" />
       </div>
 
-      {!pageInteractionsPending && (
+      {!pageInteractionsPending && !workoutEndTime && (
         <FloatingActionButton
           onClick={() => setShowFinishModal(true)}
           onMouseEnter={preloadFinishWorkoutModal}
           onTouchStart={preloadFinishWorkoutModal}
           onFocus={preloadFinishWorkoutModal}
           disabled={isAuthenticated && finishWorkoutMutation.isPending}
+          aria-label="Finish workout"
         >
           <span className="text-lg">✓</span>
         </FloatingActionButton>
       )}
+
+
 
       <FinishWorkoutModal
         isOpen={showFinishModal}
