@@ -426,11 +426,11 @@ const WorkoutPage = () => {
               <Button
                 type="button"
                 onClick={() => setShowAddExerciseModal(true)}
-                onMouseEnter={warmExerciseTypeModal}
-                onTouchStart={warmExerciseTypeModal}
-                onFocus={warmExerciseTypeModal}
+                onMouseEnter={resumeWorkoutMutation.isPending ? undefined : warmExerciseTypeModal}
+                onTouchStart={resumeWorkoutMutation.isPending ? undefined : warmExerciseTypeModal}
+                onFocus={resumeWorkoutMutation.isPending ? undefined : warmExerciseTypeModal}
                 className="h-14 rounded-full border border-primary/40 bg-primary/10 px-8 py-2 font-bold text-primary shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
-                disabled={isAuthenticated && addExerciseMutation.isPending}
+                disabled={isAuthenticated && (addExerciseMutation.isPending || resumeWorkoutMutation.isPending)}
               >
                 {isAuthenticated && addExerciseMutation.isPending
                   ? "Adding..."
@@ -468,7 +468,6 @@ const WorkoutPage = () => {
           <span className="text-lg">✓</span>
         </FloatingActionButton>
       )}
-
 
 
       <FinishWorkoutModal
