@@ -119,8 +119,8 @@ const ExerciseRow = ({
           className={cn(
             "mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border-border/5 border-t-4 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 transition-all duration-300 hover:shadow-xl",
             isExpanded
-              ? "bg-rose-500/10 border-t-rose-500/30"
-              : "bg-card/80 border-t-rose-500/10",
+              ? "bg-primary/10 border-t-primary/30"
+              : "bg-card/80 border-t-primary/10",
           )}
         >
           <CardHeader className="pb-2">
