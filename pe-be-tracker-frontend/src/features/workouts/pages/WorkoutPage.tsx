@@ -470,6 +470,7 @@ const WorkoutPage = () => {
       )}
 
 
+
       <FinishWorkoutModal
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
