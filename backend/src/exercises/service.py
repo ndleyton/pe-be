@@ -15,8 +15,6 @@ from src.exercises.crud import (
     create_exercise_type,
     get_exercise_type_stats,
     get_intensity_units,
-    get_muscles,
-    get_muscle_groups,
     get_exercise_owner_id,
     get_exercise_type_review_queue,
     release_exercise_type,
@@ -43,6 +41,9 @@ from src.exercises.schemas import (
 
 if TYPE_CHECKING:
     from src.users.models import User
+
+
+from src.exercises.taxonomy import TaxonomyCache
 
 
 class ExerciseService:
@@ -171,6 +172,7 @@ class ExerciseTypeService:
         released_only: bool = False,
     ) -> PaginatedExerciseTypesResponse:
         """Get all exercise types with optional filtering, ordering and pagination"""
+        await TaxonomyCache.ensure_loaded(session)
         kwargs = {}
         if user is not None:
             kwargs["user_id"] = user.id
@@ -212,6 +214,7 @@ class ExerciseTypeService:
         limit: int = 3,
         user: Optional["User"] = None,
     ) -> SimilarExerciseTypesResponse:
+        await TaxonomyCache.ensure_loaded(session)
         kwargs = {}
         if user is not None:
             kwargs["user_id"] = user.id
@@ -353,6 +356,7 @@ class ExerciseTypeService:
 
     @staticmethod
     async def get_review_queue(session: AsyncSession) -> list[ExerciseType]:
+        await TaxonomyCache.ensure_loaded(session)
         return await get_exercise_type_review_queue(session)
 
     @staticmethod
@@ -407,8 +411,9 @@ class MuscleGroupService:
 
     @staticmethod
     async def get_all_muscle_groups(session: AsyncSession) -> List[MuscleGroup]:
-        """Get all muscle groups."""
-        return await get_muscle_groups(session)
+        """Get all muscle groups with in-memory caching."""
+        await TaxonomyCache.ensure_loaded(session)
+        return TaxonomyCache.get_all_muscle_groups()
 
 
 class MuscleService:
@@ -416,5 +421,6 @@ class MuscleService:
 
     @staticmethod
     async def get_all_muscles(session: AsyncSession) -> List[Muscle]:
-        """Get all muscles."""
-        return await get_muscles(session)
+        """Get all muscles with in-memory caching."""
+        await TaxonomyCache.ensure_loaded(session)
+        return TaxonomyCache.get_all_muscles()

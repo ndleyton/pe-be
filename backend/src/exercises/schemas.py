@@ -1,5 +1,6 @@
 from typing import Optional, List, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
+import logging
 import json
 from pydantic import (
     ConfigDict,
@@ -14,6 +15,10 @@ from src.exercises.image_assets import (
     resolve_exercise_image_urls,
 )
 from src.exercises.models import ExerciseType as ExerciseTypeModel
+from src.exercises.taxonomy import TaxonomyCache
+
+
+logger = logging.getLogger(__name__)
 
 
 class ExerciseBase(BaseModel):
@@ -211,7 +216,7 @@ class ExerciseTypeRead(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def extract_muscles_from_relationship(cls, data: Any) -> Any:
-        """Extract muscles from exercise_muscles relationship"""
+        """Extract muscles from exercise_muscles relationship with TaxonomyCache fallback."""
         if isinstance(data, dict):
             result = dict(data)
             result["reference_images_url"] = cls._public_reference_images_json(
@@ -233,26 +238,54 @@ class ExerciseTypeRead(BaseModel):
 
             if data.exercise_muscles:
                 for exercise_muscle in data.exercise_muscles:
-                    if not (
-                        hasattr(exercise_muscle, "muscle")
-                        and exercise_muscle.muscle
-                        and hasattr(exercise_muscle.muscle, "muscle_group")
-                        and exercise_muscle.muscle.muscle_group
-                    ):
+                    # Attempt to resolve muscle from cache if not eagerly loaded
+                    muscle = exercise_muscle.__dict__.get("muscle")
+                    if not muscle:
+                        logger.warning(
+                            "ExerciseTypeRead: Muscle ID %s not eagerly loaded. Falling back to TaxonomyCache.",
+                            exercise_muscle.muscle_id,
+                        )
+                        muscle = TaxonomyCache.get_muscle(exercise_muscle.muscle_id)
+
+                    if not muscle:
+                        logger.warning(
+                            "ExerciseTypeRead: Muscle ID %s missing from TaxonomyCache fallback. Muscle will be omitted from response.",
+                            exercise_muscle.muscle_id,
+                        )
+                        continue
+
+                    # Attempt to resolve muscle group from cache if not eagerly loaded
+                    muscle_group = muscle.__dict__.get("muscle_group")
+                    if not muscle_group:
+                        logger.warning(
+                            "ExerciseTypeRead: MuscleGroup ID %s not eagerly loaded for muscle %s. Falling back to TaxonomyCache.",
+                            muscle.muscle_group_id,
+                            muscle.id,
+                        )
+                        muscle_group = TaxonomyCache.get_muscle_group(
+                            muscle.muscle_group_id
+                        )
+
+                    if not muscle_group:
+                        logger.warning(
+                            "ExerciseTypeRead: MuscleGroup ID %s missing from TaxonomyCache fallback for muscle %s. Muscle will be omitted from response.",
+                            muscle.muscle_group_id,
+                            muscle.id,
+                        )
                         continue
 
                     serialized_muscle = {
-                        "id": exercise_muscle.muscle.id,
-                        "name": exercise_muscle.muscle.name,
-                        "muscle_group_id": exercise_muscle.muscle.muscle_group_id,
+                        "id": muscle.id,
+                        "name": muscle.name,
+                        "muscle_group_id": muscle.muscle_group_id,
                         "muscle_group": {
-                            "id": exercise_muscle.muscle.muscle_group.id,
-                            "name": exercise_muscle.muscle.muscle_group.name,
-                            "created_at": exercise_muscle.muscle.muscle_group.created_at,
-                            "updated_at": exercise_muscle.muscle.muscle_group.updated_at,
+                            "id": muscle_group.id,
+                            "name": muscle_group.name,
+                            "created_at": muscle_group.created_at,
+                            "updated_at": muscle_group.updated_at,
                         },
-                        "created_at": exercise_muscle.muscle.created_at,
-                        "updated_at": exercise_muscle.muscle.updated_at,
+                        "created_at": muscle.created_at,
+                        "updated_at": muscle.updated_at,
                     }
                     serialized_muscles.append(serialized_muscle)
                     if primary_muscle is None and exercise_muscle.is_primary:
