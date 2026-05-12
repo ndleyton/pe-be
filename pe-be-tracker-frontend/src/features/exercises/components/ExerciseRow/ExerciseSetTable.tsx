@@ -141,14 +141,14 @@ const ExerciseSetRow = memo(({
     <div
       className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
         ? isPR
-          ? "bg-amber-500/10 border-amber-500/30 shadow-inner"
+          ? "bg-warning/10 border-warning/30 shadow-inner"
           : "bg-done/10 border-done/20 shadow-inner"
         : "bg-muted/50 border-transparent shadow-sm"
         }`}
     >
       <div
         className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-500 ${isPR
-          ? "bg-amber-500 text-white shadow-md scale-110"
+          ? "bg-warning text-white shadow-md scale-110"
           : "bg-muted/40"
           }`}
       >
@@ -338,7 +338,7 @@ const ExerciseSetRow = memo(({
           aria-pressed={set.done}
           className={`group relative h-10 w-10 rounded-xl transition-all duration-300 ${set.done
             ? isPR
-              ? "bg-amber-500 text-white scale-110 shadow-lg shadow-amber-500/40 ring-4 ring-amber-500/20"
+              ? "bg-warning text-white scale-110 shadow-lg shadow-warning/40 ring-4 ring-warning/20"
               : "bg-done text-done-foreground scale-110 shadow-lg ring-4 ring-done/20"
             : "border-done/45 bg-done/15 text-done-foreground/80 border-2 shadow-sm hover:border-done hover:bg-done/40 dark:bg-done/10 dark:text-done-foreground/70"
             }`}
@@ -354,7 +354,7 @@ const ExerciseSetRow = memo(({
           {isPR && (
             <span
               aria-hidden="true"
-              className="absolute inset-0 animate-ping animate-twice rounded-xl bg-amber-400/50 duration-1000"
+              className="absolute inset-0 animate-ping animate-twice rounded-xl bg-warning/50 duration-1000"
             />
           )}
           {isPR ? (
@@ -612,7 +612,7 @@ const SetOptionsDialogContent = ({
         <div className="flex items-center justify-between border-t pt-2">
           <Button
             variant="outline"
-            className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive dark:text-destructive-foreground/80 dark:hover:bg-destructive/20"
             onClick={() => {
               void onDeleteSet(activeSetKey);
               onCloseSetOptions();

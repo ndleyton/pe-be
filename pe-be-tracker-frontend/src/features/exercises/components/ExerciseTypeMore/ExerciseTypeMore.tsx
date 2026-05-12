@@ -109,7 +109,7 @@ const ExerciseTypeMore = ({
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
-                className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive dark:text-destructive-foreground/80 dark:hover:bg-destructive/20"
                 disabled={disableExerciseDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />

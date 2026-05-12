@@ -33,6 +33,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-done: var(--done);
   --color-done-foreground: var(--done-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-activity: var(--activity);
+  --color-activity-foreground: var(--activity-foreground);
   --radius: var(--radius);
 }
 
@@ -59,7 +63,7 @@
     --sidebar-accent-foreground: rgb(26, 26, 26);
     --muted: rgb(219, 213, 213);
     --muted-foreground: rgb(129, 125, 125);
-    --destructive: rgb(230, 26, 26);
+    --destructive: #dc2626; /* red-600 */
     --destructive-foreground: rgb(242, 242, 242);
     --border: rgb(209, 183, 183);
     --sidebar-border: rgb(209, 183, 183);
@@ -71,11 +75,15 @@
     --chart-3: rgb(173, 14, 43);
     --chart-4: rgb(158, 22, 39);
     --chart-5: rgb(153, 31, 31);
-    --warning: rgb(255, 165, 0);
+    --warning: #f59e0b; /* amber-500 */
     --warning-foreground: rgb(242, 242, 242);
     --radius: 1rem;
     --done: #aafbdc;
     --done-foreground: rgb(25, 20, 5);
+    --highlight: #fb7185; /* matches rose-400 for light mode */
+    --highlight-foreground: rgb(26, 25, 25);
+    --activity: #fb923c; /* orange-400 */
+    --activity-foreground: rgb(242, 242, 242);
   }
 
   .dark {
@@ -116,6 +124,10 @@
     --warning-foreground: rgb(25, 20, 5);
     --done: rgb(179, 255, 236);
     --done-foreground: rgb(25, 20, 5);
+    --highlight: #f43f5e; /* matches rose-500 */
+    --highlight-foreground: rgb(242, 242, 242);
+    --activity: #f97316; /* orange-500 */
+    --activity-foreground: rgb(242, 242, 242);
   }
 }
 
