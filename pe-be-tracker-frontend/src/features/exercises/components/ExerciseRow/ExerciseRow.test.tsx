@@ -57,7 +57,7 @@ vi.mock("../ExerciseTypeMore", () => ({
       <button
         onClick={onExerciseDelete}
         data-testid="delete-exercise-button"
-        className="text-red-600 dark:text-red-400"
+        className="text-destructive dark:text-destructive-foreground/80"
       >
         🗑️ Delete Exercise
       </button>

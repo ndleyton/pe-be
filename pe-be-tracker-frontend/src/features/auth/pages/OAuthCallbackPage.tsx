@@ -32,7 +32,7 @@ const PostLoginPage = () => {
               aria-live="polite"
               aria-busy="true"
             >
-              <div className="loading loading-spinner loading-lg mx-auto text-blue-500"></div>
+              <div className="loading loading-spinner loading-lg mx-auto text-primary"></div>
             </div>
           ),
           title: "Syncing your data...",
