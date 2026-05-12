@@ -32,9 +32,9 @@ const createOptimisticExerciseId = (
   return `optimistic-${timestamp}-${exerciseTypeId}-${optimisticExerciseIdCounter}`;
 };
 
-const updateWorkoutEndTime = async (workoutId: string) => {
+const updateWorkoutEndTime = async (workoutId: string, endTime: string | null) => {
   const response = await api.patch(endpoints.workoutById(workoutId), {
-    end_time: getCurrentUTCTimestamp(),
+    end_time: endTime,
   });
   return response.data;
 };
@@ -120,7 +120,7 @@ export const useWorkoutExerciseActions = ({
   }, [deleteExerciseMutation.mutate]);
 
   const finishWorkoutMutation = useMutation({
-    mutationFn: (id: string) => updateWorkoutEndTime(id),
+    mutationFn: (id: string) => updateWorkoutEndTime(id, getCurrentUTCTimestamp()),
     onSuccess: (updatedWorkout, id) => {
       queryClient.setQueryData(["workout", id], updatedWorkout);
       queryClient.setQueryData(
@@ -151,6 +151,38 @@ export const useWorkoutExerciseActions = ({
     onError: (error) => {
       console.error("Failed to finish workout:", error);
       onFinishModalClose();
+    },
+  });
+
+  const resumeWorkoutMutation = useMutation({
+    mutationFn: (id: string) => updateWorkoutEndTime(id, null),
+    onSuccess: (updatedWorkout, id) => {
+      queryClient.setQueryData(["workout", id], updatedWorkout);
+      queryClient.setQueryData(
+        ["workouts"],
+        (
+          current:
+            | { data: Workout[]; next_cursor?: number | null }
+            | undefined,
+        ) => {
+          if (!current?.data) {
+            return current;
+          }
+
+          return {
+            ...current,
+            data: current.data.map((workout) =>
+              String(workout.id) === String(updatedWorkout.id)
+                ? updatedWorkout
+                : workout,
+            ),
+          };
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+    },
+    onError: (error) => {
+      console.error("Failed to resume workout:", error);
     },
   });
 
@@ -386,6 +418,22 @@ export const useWorkoutExerciseActions = ({
     workoutId,
   ]);
 
+  const handleResumeWorkout = useCallback(() => {
+    if (!workoutId) {
+      console.error("No workoutId available");
+      return;
+    }
+
+    if (isAuthenticated) {
+      resumeWorkoutMutation.mutate(workoutId);
+      return;
+    }
+
+    guestUpdateWorkout(workoutId, {
+      end_time: null,
+    });
+  }, [resumeWorkoutMutation, guestUpdateWorkout, isAuthenticated, workoutId]);
+
   const warmExerciseTypeModal = useCallback(() => {
     preloadExerciseTypeModal();
 
@@ -416,6 +464,8 @@ export const useWorkoutExerciseActions = ({
     handleFinishWorkout,
     handleRegenerateRecap,
     handleSelectExerciseType,
+    handleResumeWorkout,
+    resumeWorkoutMutation,
     warmExerciseTypeModal,
   };
 };

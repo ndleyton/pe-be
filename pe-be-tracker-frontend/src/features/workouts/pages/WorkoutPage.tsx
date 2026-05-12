@@ -13,7 +13,7 @@ import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, SquarePen, Sparkles, Share2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2, Play } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -96,6 +96,8 @@ const WorkoutPage = () => {
     handleFinishWorkout,
     handleRegenerateRecap,
     handleSelectExerciseType,
+    handleResumeWorkout,
+    resumeWorkoutMutation,
     warmExerciseTypeModal,
   } = useWorkoutExerciseActions({
     exercises,
@@ -438,15 +440,26 @@ const WorkoutPage = () => {
         <div ref={bottomScrollAnchorRef} aria-hidden="true" />
       </div>
 
-      {!pageInteractionsPending && (
+      {!pageInteractionsPending && !workoutEndTime && (
         <FloatingActionButton
           onClick={() => setShowFinishModal(true)}
           onMouseEnter={preloadFinishWorkoutModal}
           onTouchStart={preloadFinishWorkoutModal}
           onFocus={preloadFinishWorkoutModal}
           disabled={isAuthenticated && finishWorkoutMutation.isPending}
+          aria-label="Finish workout"
         >
           <span className="text-lg">✓</span>
+        </FloatingActionButton>
+      )}
+
+      {!pageInteractionsPending && workoutEndTime && (
+        <FloatingActionButton
+          onClick={handleResumeWorkout}
+          disabled={isAuthenticated && resumeWorkoutMutation.isPending}
+          aria-label="Resume workout"
+        >
+          <Play className="h-6 w-6 ml-1" />
         </FloatingActionButton>
       )}
 
