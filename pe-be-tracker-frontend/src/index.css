@@ -35,6 +35,8 @@
   --color-done-foreground: var(--done-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-activity: var(--activity);
+  --color-activity-foreground: var(--activity-foreground);
   --radius: var(--radius);
 }
 
@@ -80,6 +82,8 @@
     --done-foreground: rgb(25, 20, 5);
     --highlight: #fb7185; /* matches rose-400 for light mode */
     --highlight-foreground: rgb(26, 25, 25);
+    --activity: #fb923c; /* orange-400 */
+    --activity-foreground: rgb(242, 242, 242);
   }
 
   .dark {
@@ -122,6 +126,8 @@
     --done-foreground: rgb(25, 20, 5);
     --highlight: #f43f5e; /* matches rose-500 */
     --highlight-foreground: rgb(242, 242, 242);
+    --activity: #f97316; /* orange-500 */
+    --activity-foreground: rgb(242, 242, 242);
   }
 }
 
