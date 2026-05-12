@@ -77,7 +77,6 @@ const syncWorkoutInCache = (
   );
   queryClient.invalidateQueries({ queryKey: ["workouts"] });
 };
-
 type AddExercisePayload = {
   data: CreateExerciseData;
   exerciseType: ExerciseType;
