@@ -39,6 +39,14 @@ const updateWorkoutEndTime = async (workoutId: string, endTime: string | null) =
   return response.data;
 };
 
+const resumeWorkoutOnServer = async (workoutId: string, newStartTime: string) => {
+  const response = await api.patch(endpoints.workoutById(workoutId), {
+    start_time: newStartTime,
+    end_time: null,
+  });
+  return response.data;
+};
+
 type AddExercisePayload = {
   data: CreateExerciseData;
   exerciseType: ExerciseType;
@@ -155,9 +163,10 @@ export const useWorkoutExerciseActions = ({
   });
 
   const resumeWorkoutMutation = useMutation({
-    mutationFn: (id: string) => updateWorkoutEndTime(id, null),
-    onSuccess: (updatedWorkout, id) => {
-      queryClient.setQueryData(["workout", id], updatedWorkout);
+    mutationFn: ({ workoutId, newStartTime }: { workoutId: string; newStartTime: string }) =>
+      resumeWorkoutOnServer(workoutId, newStartTime),
+    onSuccess: (updatedWorkout, { workoutId }) => {
+      queryClient.setQueryData(["workout", workoutId], updatedWorkout);
       queryClient.setQueryData(
         ["workouts"],
         (
@@ -419,20 +428,29 @@ export const useWorkoutExerciseActions = ({
   ]);
 
   const handleResumeWorkout = useCallback(() => {
-    if (!workoutId) {
-      console.error("No workoutId available");
+    if (!workoutId || !serverWorkout) {
+      console.error("No workoutId or workout available");
       return;
     }
 
+    const now = Date.now();
+    const startTimeMs = new Date(serverWorkout.start_time).getTime();
+    const endTimeMs = serverWorkout.end_time ? new Date(serverWorkout.end_time).getTime() : now;
+
+    // Shift start time forward by the duration the workout was "finished"
+    const pauseDurationMs = now - endTimeMs;
+    const newStartTime = new Date(startTimeMs + pauseDurationMs).toISOString();
+
     if (isAuthenticated) {
-      resumeWorkoutMutation.mutate(workoutId);
+      resumeWorkoutMutation.mutate({ workoutId, newStartTime });
       return;
     }
 
     guestUpdateWorkout(workoutId, {
+      start_time: newStartTime,
       end_time: null,
     });
-  }, [resumeWorkoutMutation, guestUpdateWorkout, isAuthenticated, workoutId]);
+  }, [resumeWorkoutMutation, guestUpdateWorkout, isAuthenticated, workoutId, serverWorkout]);
 
   const warmExerciseTypeModal = useCallback(() => {
     preloadExerciseTypeModal();
