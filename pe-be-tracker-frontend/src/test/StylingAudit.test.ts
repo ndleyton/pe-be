@@ -39,7 +39,7 @@ describe("Styling Standardization Audit", () => {
         }
       } else if (
         (item.name.endsWith(".ts") || item.name.endsWith(".tsx")) &&
-        item.name !== "StylingAudit.test.ts"
+        !/\.(test|spec)\.(ts|tsx)$/.test(item.name)
       ) {
         files.push(fullPath);
       }
