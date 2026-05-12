@@ -33,6 +33,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-done: var(--done);
   --color-done-foreground: var(--done-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --radius: var(--radius);
 }
 
@@ -76,6 +78,8 @@
     --radius: 1rem;
     --done: #aafbdc;
     --done-foreground: rgb(25, 20, 5);
+    --highlight: #fb7185; /* matches rose-400 for light mode */
+    --highlight-foreground: rgb(26, 25, 25);
   }
 
   .dark {
@@ -116,6 +120,8 @@
     --warning-foreground: rgb(25, 20, 5);
     --done: rgb(179, 255, 236);
     --done-foreground: rgb(25, 20, 5);
+    --highlight: #f43f5e; /* matches rose-500 */
+    --highlight-foreground: rgb(242, 242, 242);
   }
 }
 

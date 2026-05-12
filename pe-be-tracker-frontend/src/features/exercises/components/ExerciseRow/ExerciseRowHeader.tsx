@@ -92,7 +92,7 @@ export const ExerciseRowHeader = ({
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-0 transition-colors duration-300",
             isExpanded
-              ? "bg-primary text-primary-foreground"
+              ? "bg-highlight text-highlight-foreground"
               : "bg-primary text-primary-foreground",
           )}
         >

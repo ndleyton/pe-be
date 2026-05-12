@@ -83,8 +83,8 @@ const AboutPage = () => {
               <Code2 className="h-4 w-4" />
               <span>Open Source</span>
               <span className="text-muted-foreground/40 mx-1">•</span>
-              <Heart className="h-4 w-4 fill-current text-primary" />
-              <span className="text-primary">Built for you</span>
+              <Heart className="h-4 w-4 fill-current text-highlight" />
+              <span className="text-highlight">Built for you</span>
             </div>
           </CardHeader>
           <CardContent className="px-0 pb-0 text-left">
