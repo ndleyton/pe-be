@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 /**
  * This test audits the codebase for hardcoded Tailwind colors (e.g., text-rose-500, bg-blue-400).
@@ -8,6 +9,8 @@ import path from "path";
  * ensures the application is compatible with future theming.
  */
 describe("Styling Standardization Audit", () => {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   const srcPath = path.resolve(__dirname, "..");
 
   // List of hardcoded colors to avoid
