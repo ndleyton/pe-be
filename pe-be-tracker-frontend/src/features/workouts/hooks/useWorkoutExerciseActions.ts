@@ -47,6 +47,37 @@ const resumeWorkoutOnServer = async (workoutId: string, newStartTime: string) =>
   return response.data;
 };
 
+const syncWorkoutInCache = (
+  queryClient: ReturnType<typeof import("@tanstack/react-query").useQueryClient>,
+  updatedWorkout: Workout,
+  workoutId?: string,
+) => {
+  const id = workoutId ?? String(updatedWorkout.id);
+  queryClient.setQueryData(["workout", id], updatedWorkout);
+  queryClient.setQueryData(
+    ["workouts"],
+    (
+      current:
+        | { data: Workout[]; next_cursor?: number | null }
+        | undefined,
+    ) => {
+      if (!current?.data) {
+        return current;
+      }
+
+      return {
+        ...current,
+        data: current.data.map((workout) =>
+          String(workout.id) === String(updatedWorkout.id)
+            ? updatedWorkout
+            : workout,
+        ),
+      };
+    },
+  );
+  queryClient.invalidateQueries({ queryKey: ["workouts"] });
+};
+
 type AddExercisePayload = {
   data: CreateExerciseData;
   exerciseType: ExerciseType;
@@ -130,29 +161,7 @@ export const useWorkoutExerciseActions = ({
   const finishWorkoutMutation = useMutation({
     mutationFn: (id: string) => updateWorkoutEndTime(id, getCurrentUTCTimestamp()),
     onSuccess: (updatedWorkout, id) => {
-      queryClient.setQueryData(["workout", id], updatedWorkout);
-      queryClient.setQueryData(
-        ["workouts"],
-        (
-          current:
-            | { data: Workout[]; next_cursor?: number | null }
-            | undefined,
-        ) => {
-          if (!current?.data) {
-            return current;
-          }
-
-          return {
-            ...current,
-            data: current.data.map((workout) =>
-              String(workout.id) === String(updatedWorkout.id)
-                ? updatedWorkout
-                : workout,
-            ),
-          };
-        },
-      );
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      syncWorkoutInCache(queryClient, updatedWorkout, id);
       onFinishModalClose();
       navigate("/workouts");
     },
@@ -166,29 +175,7 @@ export const useWorkoutExerciseActions = ({
     mutationFn: ({ workoutId, newStartTime }: { workoutId: string; newStartTime: string }) =>
       resumeWorkoutOnServer(workoutId, newStartTime),
     onSuccess: (updatedWorkout, { workoutId }) => {
-      queryClient.setQueryData(["workout", workoutId], updatedWorkout);
-      queryClient.setQueryData(
-        ["workouts"],
-        (
-          current:
-            | { data: Workout[]; next_cursor?: number | null }
-            | undefined,
-        ) => {
-          if (!current?.data) {
-            return current;
-          }
-
-          return {
-            ...current,
-            data: current.data.map((workout) =>
-              String(workout.id) === String(updatedWorkout.id)
-                ? updatedWorkout
-                : workout,
-            ),
-          };
-        },
-      );
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      syncWorkoutInCache(queryClient, updatedWorkout, workoutId);
     },
     onError: (error) => {
       console.error("Failed to resume workout:", error);
