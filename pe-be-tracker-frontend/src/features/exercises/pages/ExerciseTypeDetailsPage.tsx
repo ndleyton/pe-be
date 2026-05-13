@@ -20,13 +20,15 @@ import {
   type IntensityUnit,
 } from "@/features/exercises/api";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
-import { ExerciseTypeImageUploadPanel } from "@/features/exercises/components/ExerciseTypeImageUploadPanel";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import type { Muscle } from "@/shared/types";
 import { NAV_PATHS } from "@/shared/navigation/constants";
-import { SimilarExercisesSection } from "@/features/exercises/components";
+import {
+  ExerciseTypeImageUploadPanel,
+  SimilarExercisesSection,
+} from "@/features/exercises/components";
 import { useSimilarExercises } from "@/features/exercises/hooks";
 
 const ProgressiveOverloadChart = lazy(() =>

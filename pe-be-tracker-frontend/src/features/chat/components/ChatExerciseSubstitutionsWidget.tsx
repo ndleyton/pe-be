@@ -1,5 +1,5 @@
 import { MessageCircle } from "lucide-react";
-import { ExerciseSummaryCard } from "@/features/exercises/components/ExerciseSummaryCard";
+import { ExerciseSummaryCard } from "@/features/exercises/components";
 import { ExerciseSubstitutionsEvent, ExerciseSubstitutionItem } from "../types";
 
 const substitutionReasonLabel: Record<

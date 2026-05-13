@@ -1,6 +1,6 @@
 import { MessageCircle } from "lucide-react";
-import { ExerciseSummaryCard } from "./ExerciseSummaryCard";
 
+import { ExerciseSummaryCard } from "@/features/exercises";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import type {
