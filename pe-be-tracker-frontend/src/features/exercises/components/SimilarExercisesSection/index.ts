@@ -1,0 +1,1 @@
+export { SimilarExercisesSection } from "./SimilarExercisesSection";

@@ -1,0 +1,1 @@
+export { ExerciseTypeImageUploadPanel } from "./ExerciseTypeImageUploadPanel";
