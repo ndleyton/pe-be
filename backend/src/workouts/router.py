@@ -290,7 +290,7 @@ async def get_workout_photo_file(
             path=file_path,
             media_type=photo.mime_type,
             headers={
-                "Cache-Control": "private, no-store",
+                "Cache-Control": "private, max-age=3600",
                 "X-Content-Type-Options": "nosniff",
             },
         )

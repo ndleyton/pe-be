@@ -434,7 +434,7 @@ async def test_workout_photo_upload_download_and_detail(
     )
     assert file_response.status_code == 200, file_response.text
     assert file_response.headers["content-type"] == "image/webp"
-    assert file_response.headers["cache-control"] == "private, no-store"
+    assert file_response.headers["cache-control"] == "private, max-age=3600"
     assert file_response.headers["x-content-type-options"] == "nosniff"
     assert file_response.content
 
