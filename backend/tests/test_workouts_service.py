@@ -26,6 +26,8 @@ from src.workouts.service import (
     WorkoutService,
     WorkoutTypeService,
 )
+from src.workouts.photo_service import WorkoutPhotoService
+from src.workouts.crud import get_active_primary_workout_photo
 from tests.test_exercises_crud import (
     _seed_exercise,
     _seed_exercise_type,
@@ -734,3 +736,99 @@ async def test_parse_workout_text_wraps_general_errors(monkeypatch):
         await WorkoutParsingService.parse_workout_text("bad output")
 
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "error"
+
+
+async def test_workout_photo_service_replaces_primary_photo(
+    db_session, monkeypatch, tmp_path
+):
+    from io import BytesIO
+
+    from PIL import Image
+
+    owner = await _seed_user(db_session, "workout-photo-service@example.com")
+    db_session.add(
+        WorkoutType(
+            id=DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+            name="Strength Training",
+            description="Seeded for service tests",
+        )
+    )
+    await db_session.flush()
+    workout = await _seed_workout(
+        db_session,
+        owner.id,
+        DEFAULT_STRENGTH_TRAINING_WORKOUT_TYPE_ID,
+        name="Photo Workout",
+    )
+    await db_session.commit()
+
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+    )
+
+    def _png_bytes(color: str) -> bytes:
+        buffer = BytesIO()
+        Image.new("RGB", (5, 5), color=color).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    service = WorkoutPhotoService(user_id=owner.id, session=db_session)
+    first = await service.save_uploaded_photo(
+        workout_id=workout.id,
+        filename="first.png",
+        content_type="image/png",
+        data=_png_bytes("red"),
+    )
+    second = await service.save_uploaded_photo(
+        workout_id=workout.id,
+        filename="second.png",
+        content_type="image/png",
+        data=_png_bytes("green"),
+    )
+
+    active = await get_active_primary_workout_photo(
+        db_session,
+        workout_id=workout.id,
+        user_id=owner.id,
+    )
+    assert active is not None
+    assert active.id == second.id
+
+    await db_session.refresh(first)
+    assert first.deleted_at is not None
+    assert service.photo_file_path(first.storage_key).is_file()
+    assert service.photo_file_path(second.storage_key).is_file()
+
+
+async def test_workout_photo_service_maps_decode_oserror_to_validation_error(
+    db_session, monkeypatch
+):
+    owner = await _seed_user(db_session, "workout-photo-oserror@example.com")
+    service = WorkoutPhotoService(user_id=owner.id, session=db_session)
+
+    class _FakeImage:
+        format = "PNG"
+        size = (10, 10)
+
+        def verify(self):
+            return None
+
+        def load(self):
+            raise OSError("broken image stream")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    first_image = _FakeImage()
+    second_image = _FakeImage()
+    images = iter([first_image, second_image])
+    monkeypatch.setattr(
+        "src.workouts.photo_service.Image.open",
+        lambda *_args, **_kwargs: next(images),
+    )
+
+    with pytest.raises(ValueError, match="Uploaded file is not a valid image"):
+        service._inspect_image(b"not-really-an-image")

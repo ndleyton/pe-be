@@ -1,10 +1,21 @@
+import logging
 from typing import List, Optional
-from fastapi import Depends, APIRouter, status, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi import (
+    Depends,
+    APIRouter,
+    status,
+    HTTPException,
+    Query,
+    Request,
+    File,
+    UploadFile,
+)
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.cache_metrics import record_cache_request
 from src.core.config import settings
+from src.core.rate_limit import RateLimitExceededError, rate_limiter
 from src.core.http_cache import (
     build_cached_json_response,
     render_json_bytes,
@@ -20,7 +31,9 @@ from src.workouts.schemas import (
     AddExerciseRequest,
     PaginatedWorkouts,
     SaveWorkoutAsRoutineRequest,
+    WorkoutPhotoUploadResponse,
 )
+from src.workouts.photo_service import WorkoutPhotoService
 from src.workouts.service import (
     WorkoutService,
     WorkoutTypeService,
@@ -35,6 +48,25 @@ from src.exercises.schemas import ExerciseRead
 
 router = APIRouter(tags=["workouts"])
 WORKOUT_TYPES_CACHE_TAG = "workout-types"
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+logger = logging.getLogger(__name__)
+
+
+async def _read_upload_file_limited(file: UploadFile, *, max_bytes: int) -> bytes:
+    data = bytearray()
+    while True:
+        remaining = max_bytes - len(data)
+        read_size = min(UPLOAD_READ_CHUNK_BYTES, max(remaining + 1, 1))
+        chunk = await file.read(read_size)
+        if not chunk:
+            break
+        if len(data) + len(chunk) > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image upload exceeds maximum size of {max_bytes} bytes",
+            )
+        data.extend(chunk)
+    return bytes(data)
 
 
 # ----- Collection routes -----
@@ -191,6 +223,90 @@ async def update_workout(
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
     return workout
+
+
+@router.post("/{workout_id}/photo", response_model=WorkoutPhotoUploadResponse)
+async def upload_workout_photo(
+    workout_id: int,
+    file: UploadFile = File(...),
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        await rate_limiter.check(
+            scope="workout-photo",
+            key=str(user.id),
+            limit=settings.WORKOUT_PHOTO_RATE_LIMIT_MAX_REQUESTS,
+            window_seconds=settings.WORKOUT_PHOTO_RATE_LIMIT_WINDOW_SECONDS,
+        )
+        photo_service = WorkoutPhotoService(user_id=user.id, session=session)
+        photo = await photo_service.save_uploaded_photo(
+            workout_id=workout_id,
+            filename=file.filename or "upload",
+            content_type=file.content_type or "",
+            data=await _read_upload_file_limited(
+                file,
+                max_bytes=settings.WORKOUT_PHOTO_MAX_BYTES,
+            ),
+        )
+        return WorkoutPhotoUploadResponse.model_validate(photo)
+    except RateLimitExceededError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many workout photo uploads. Please slow down.",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Workout photo upload failed user_id=%s workout_id=%s",
+            user.id,
+            workout_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to upload workout photo"
+        ) from exc
+
+
+@router.get("/{workout_id}/photo/file")
+async def get_workout_photo_file(
+    workout_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        photo_service = WorkoutPhotoService(user_id=user.id, session=session)
+        photo = await photo_service.get_primary_photo(workout_id)
+        file_path = photo_service.photo_file_path(photo.storage_key)
+        if not file_path.is_file():
+            raise HTTPException(status_code=404, detail="Workout photo file not found")
+
+        return FileResponse(
+            path=file_path,
+            media_type=photo.mime_type,
+            headers={
+                "Cache-Control": "private, no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Workout photo download failed user_id=%s workout_id=%s",
+            user.id,
+            workout_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to load workout photo"
+        ) from exc
 
 
 @router.delete("/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)

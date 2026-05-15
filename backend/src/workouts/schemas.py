@@ -1,7 +1,16 @@
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from decimal import Decimal
-from pydantic import field_validator, model_validator, ConfigDict, BaseModel, Field
+from pydantic import (
+    field_validator,
+    model_validator,
+    ConfigDict,
+    BaseModel,
+    Field,
+    computed_field,
+)
+
+from src.core.config import settings
 
 
 class WorkoutBase(BaseModel):
@@ -50,6 +59,33 @@ class WorkoutUpdate(WorkoutBase):
     visibility: Optional[Literal["private", "public"]] = None
 
 
+class WorkoutPhotoRead(BaseModel):
+    """Compact workout photo payload embedded inside workout detail responses."""
+
+    id: int
+    # Keep the raw workout_id out of serialized bodies while still retaining it
+    # on the schema instance so the computed file URL can be built from it.
+    workout_id: int = Field(exclude=True)
+    width: Optional[int] = None
+    height: Optional[int] = None
+    mime_type: str
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file"
+
+
+class WorkoutPhotoUploadResponse(WorkoutPhotoRead):
+    """Verbose upload response that keeps workout_id for client-side reconciliation."""
+
+    workout_id: int
+    size_bytes: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkoutRead(WorkoutBase):
     """Schema for reading workout data"""
 
@@ -58,6 +94,7 @@ class WorkoutRead(WorkoutBase):
     visibility: Literal["private", "public"]
     created_at: datetime
     updated_at: datetime
+    photo: Optional[WorkoutPhotoRead] = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -1,4 +1,5 @@
 import os
+from typing import Any
 from pathlib import Path
 from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -149,6 +150,31 @@ class Settings(BaseSettings):
         10,
         validation_alias="CHAT_ATTACHMENT_RATE_LIMIT_MAX_REQUESTS",
         description="Max chat attachment uploads allowed per window",
+    )
+    WORKOUT_PHOTO_STORAGE_DIR: str = Field(
+        str(Path(__file__).resolve().parents[2] / ".workout_photos"),
+        validation_alias="WORKOUT_PHOTO_STORAGE_DIR",
+        description="Filesystem path for uploaded workout photos",
+    )
+    WORKOUT_PHOTO_MAX_BYTES: int = Field(
+        10 * 1024 * 1024,
+        validation_alias="WORKOUT_PHOTO_MAX_BYTES",
+        description="Max accepted workout photo size in bytes",
+    )
+    WORKOUT_PHOTO_ALLOWED_MIME_TYPES: tuple[str, ...] = Field(
+        ("image/jpeg", "image/png", "image/webp"),
+        validation_alias="WORKOUT_PHOTO_ALLOWED_MIME_TYPES",
+        description="Allowed MIME types for workout photo uploads",
+    )
+    WORKOUT_PHOTO_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        60,
+        validation_alias="WORKOUT_PHOTO_RATE_LIMIT_WINDOW_SECONDS",
+        description="Time window for workout photo upload rate limiting",
+    )
+    WORKOUT_PHOTO_RATE_LIMIT_MAX_REQUESTS: int = Field(
+        10,
+        validation_alias="WORKOUT_PHOTO_RATE_LIMIT_MAX_REQUESTS",
+        description="Max workout photo uploads allowed per window",
     )
     EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS: int = Field(
         60,
@@ -329,6 +355,27 @@ class Settings(BaseSettings):
     def validate_sample_rate(cls, v: float) -> float:
         if not 0 <= v <= 1:
             raise ValueError("OTEL trace sampler arg must be between 0 and 1")
+        return v
+
+    @field_validator(
+        "CHAT_ATTACHMENT_ALLOWED_MIME_TYPES",
+        "EXERCISE_IMAGE_UPLOAD_ALLOWED_MIME_TYPES",
+        "WORKOUT_PHOTO_ALLOWED_MIME_TYPES",
+        mode="before",
+    )
+    @classmethod
+    def parse_mime_type_lists(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            normalized = v.strip()
+            if not normalized:
+                return ()
+            if normalized.startswith("["):
+                return v
+            return tuple(
+                part.strip().lower() for part in normalized.split(",") if part.strip()
+            )
+        if isinstance(v, (list, tuple, set)):
+            return tuple(str(part).strip().lower() for part in v if str(part).strip())
         return v
 
 

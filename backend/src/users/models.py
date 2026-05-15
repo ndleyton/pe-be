@@ -15,6 +15,7 @@ from src.core.database import Base
 if TYPE_CHECKING:
     from src.chat.models import Conversation
     from src.routine_programs.models import RoutineProgram
+    from src.workouts.models import WorkoutPhoto
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTable[int], Base):
@@ -57,6 +58,7 @@ class User(SQLAlchemyBaseUserTable[int], Base):
 
     # Forward reference for workouts (will be imported by workouts domain)
     workouts: Mapped[List["Workout"]] = relationship(back_populates="owner")
+    workout_photos: Mapped[List["WorkoutPhoto"]] = relationship(back_populates="user")
 
     # Forward reference for routines (backed by the legacy `recipes` table)
     routines: Mapped[List["Routine"]] = relationship(back_populates="creator")

@@ -1,13 +1,18 @@
 from datetime import datetime, timezone
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
+from PIL import Image
 
 from src.core.config import settings
 from src.main import app
+from src.users.models import User
 from src.users.router import current_active_user
+from src.workouts.models import Workout, WorkoutType
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -74,6 +79,29 @@ def override_workout_user():
     app.dependency_overrides[current_active_user] = _override_user
     try:
         yield
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest_asyncio.fixture
+async def authenticated_workout_user(db_session):
+    user = User(
+        email="workout-router@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    async def _override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = _override_user
+    try:
+        yield user
     finally:
         app.dependency_overrides.pop(current_active_user, None)
 
@@ -302,3 +330,64 @@ async def test_save_public_workout_as_routine_returns_404_for_missing_source(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Workout not found"
+
+
+async def test_workout_photo_upload_download_and_detail(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Photo Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+    buffer.seek(0)
+
+    upload_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+    )
+    assert upload_response.status_code == 200, upload_response.text
+    upload_payload = upload_response.json()
+    assert upload_payload["workout_id"] == workout.id
+    assert upload_payload["mime_type"] == "image/png"
+    assert upload_payload["width"] == 8
+    assert upload_payload["height"] == 6
+    assert upload_payload["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+
+    detail_response = await async_client.get(
+        f"{settings.API_PREFIX}/workouts/{workout.id}"
+    )
+    assert detail_response.status_code == 200, detail_response.text
+    assert (
+        detail_response.json()["photo"]["url"]
+        == f"/api/v1/workouts/{workout.id}/photo/file"
+    )
+
+    file_response = await async_client.get(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo/file"
+    )
+    assert file_response.status_code == 200, file_response.text
+    assert file_response.headers["content-type"] == "image/png"
+    assert file_response.headers["cache-control"] == "private, no-store"
+    assert file_response.headers["x-content-type-options"] == "nosniff"
+    assert file_response.content
