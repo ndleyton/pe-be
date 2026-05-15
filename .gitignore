@@ -123,3 +123,6 @@ backend/.exercise_images/
 
 # Agent instructions
 backend/AGENTS.md
+
+# Workout photos
+backend/.workout_photos/
