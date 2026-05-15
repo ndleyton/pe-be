@@ -159,24 +159,27 @@ async def setup_database():
     # PostgreSQL named enums cannot be dropped and recreated under the same
     # transaction without tripping duplicate-type catalog errors.
     async with test_engine.begin() as conn:
-        # Drop in case a previous interrupted session left stale tables
+        # Drop everything in case a previous interrupted session left stale state.
+        # We drop known custom types explicitly with CASCADE to ensure they're gone
+        # even if Base.metadata.drop_all misses them or encounters dependency issues.
         await conn.run_sync(Base.metadata.drop_all)
-        await conn.execute(text("DROP TYPE IF EXISTS recipe_visibility CASCADE"))
-        await conn.execute(
-            text("DROP TYPE IF EXISTS routine_program_visibility CASCADE")
-        )
-        await conn.execute(text("DROP TYPE IF EXISTS workout_visibility CASCADE"))
-        await conn.execute(text("DROP TYPE IF EXISTS exercise_type_status CASCADE"))
+
+        types_to_drop = [
+            "recipe_visibility",
+            "routine_program_visibility",
+            "workout_visibility",
+            "exercise_type_status",
+        ]
+        for type_name in types_to_drop:
+            await conn.execute(text(f"DROP TYPE IF EXISTS {type_name} CASCADE"))
 
     async with test_engine.begin() as conn:
         # Re-create the schema based on the *current* models
         await conn.run_sync(Base.metadata.create_all)
 
-        # No additional tweaks required – the schema now reflects production
-        # constraints (including the unique exercise type name).
-
     yield
 
+    # Optional: cleanup at the end of the session to leave the DB clean
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -195,12 +198,10 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     async with TestSessionLocal() as session:
         # Clean all mapped tables before each DB test. Resetting identities keeps
         # tests deterministic without rebuilding the schema every time.
-        preparer = IdentifierPreparer(test_engine.dialect)
-        table_names = [
-            preparer.format_table(table)
-            for table in reversed(Base.metadata.sorted_tables)
-        ]
-        if table_names:
+        tables = Base.metadata.sorted_tables
+        if tables:
+            preparer = IdentifierPreparer(test_engine.dialect)
+            table_names = [preparer.format_table(t) for t in reversed(tables)]
             await session.execute(
                 text(f"TRUNCATE {', '.join(table_names)} RESTART IDENTITY CASCADE")
             )
