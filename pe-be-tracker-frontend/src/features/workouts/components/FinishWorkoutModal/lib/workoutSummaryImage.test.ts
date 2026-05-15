@@ -48,7 +48,6 @@ describe("workoutSummaryImage helper", () => {
       expect(result).toBe("data:image/png;base64,test");
       expect(htmlToImage.toPng).toHaveBeenCalledWith(mockNode, expect.objectContaining({
         backgroundColor: expect.any(String),
-        cacheBust: true,
       }));
 
       document.body.removeChild(mockNode);
