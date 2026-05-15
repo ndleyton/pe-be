@@ -150,7 +150,12 @@ class WorkoutPhotoService:
                     quality=80,
                     method=6,  # Highest compression efficiency
                 )
-                return buffer.getvalue(), width, height, f"image/{settings.WORKOUT_PHOTO_OPTIMIZED_FORMAT}"
+                return (
+                    buffer.getvalue(),
+                    width,
+                    height,
+                    f"image/{settings.WORKOUT_PHOTO_OPTIMIZED_FORMAT}",
+                )
         except Exception as exc:
             raise ValueError(f"Failed to optimize image: {str(exc)}") from exc
 
