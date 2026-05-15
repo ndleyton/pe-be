@@ -765,7 +765,6 @@ async def test_workout_photo_service_replaces_primary_photo(
     monkeypatch.setattr(
         "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
         str(tmp_path),
-        raising=False,
     )
 
     def _png_bytes(color: str) -> bytes:
