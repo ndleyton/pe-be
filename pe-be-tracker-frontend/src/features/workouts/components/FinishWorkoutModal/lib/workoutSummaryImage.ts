@@ -68,7 +68,6 @@ export async function createWorkoutSummaryPng(node: HTMLElement): Promise<string
 
   return toPng(node, {
     backgroundColor,
-    cacheBust: true,
     filter: (domNode) =>
       !(domNode instanceof Element) ||
       domNode.getAttribute("data-export-ignore") !== "true",
