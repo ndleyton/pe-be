@@ -50,6 +50,22 @@ class WorkoutUpdate(WorkoutBase):
     visibility: Optional[Literal["private", "public"]] = None
 
 
+class WorkoutPhotoRead(BaseModel):
+    id: int
+    url: str
+    width: Optional[int] = None
+    height: Optional[int] = None
+    mime_type: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkoutPhotoUploadResponse(WorkoutPhotoRead):
+    workout_id: int
+    size_bytes: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkoutRead(WorkoutBase):
     """Schema for reading workout data"""
 
@@ -58,6 +74,7 @@ class WorkoutRead(WorkoutBase):
     visibility: Literal["private", "public"]
     created_at: datetime
     updated_at: datetime
+    photo: Optional[WorkoutPhotoRead] = None
     model_config = ConfigDict(from_attributes=True)
 
 

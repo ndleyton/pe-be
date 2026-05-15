@@ -1,12 +1,12 @@
 from typing import Optional, List
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from src.core.errors import DomainValidationError
-from src.workouts.models import Workout, WorkoutType
+from src.workouts.models import Workout, WorkoutType, WorkoutPhoto
 from src.workouts.schemas import WorkoutCreate, WorkoutUpdate, WorkoutTypeCreate
 from src.exercises.models import Exercise
 from src.exercise_sets.models import ExerciseSet
@@ -73,7 +73,9 @@ async def get_workout_by_id(
 ) -> Optional[Workout]:
     """Get a workout by ID for a specific user"""
     result = await session.execute(
-        select(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
+        select(Workout)
+        .options(joinedload(Workout.photo))
+        .where(Workout.id == workout_id, Workout.owner_id == user_id)
     )
     return result.scalar_one_or_none()
 
@@ -165,8 +167,7 @@ async def update_workout(
         if mapped_error:
             raise mapped_error from e
         raise
-    await session.refresh(workout)
-    return workout
+    return await get_workout_by_id(session, workout_id, user_id)
 
 
 async def delete_workout(session: AsyncSession, workout_id: int, user_id: int) -> bool:
@@ -227,3 +228,63 @@ async def get_stale_open_workouts(
         .order_by(Workout.start_time.asc(), Workout.id.asc())
     )
     return result.scalars().all()
+
+
+async def get_active_primary_workout_photo(
+    session: AsyncSession,
+    *,
+    workout_id: int,
+    user_id: int,
+) -> Optional[WorkoutPhoto]:
+    result = await session.execute(
+        select(WorkoutPhoto).where(
+            WorkoutPhoto.workout_id == workout_id,
+            WorkoutPhoto.user_id == user_id,
+            WorkoutPhoto.is_primary.is_(True),
+            WorkoutPhoto.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def replace_primary_workout_photo(
+    session: AsyncSession,
+    *,
+    workout_id: int,
+    user_id: int,
+    original_filename: str,
+    storage_key: str,
+    mime_type: str,
+    size_bytes: int,
+    sha256: str,
+    width: Optional[int],
+    height: Optional[int],
+) -> WorkoutPhoto:
+    now = datetime.now(timezone.utc)
+    await session.execute(
+        update(WorkoutPhoto)
+        .where(
+            WorkoutPhoto.workout_id == workout_id,
+            WorkoutPhoto.user_id == user_id,
+            WorkoutPhoto.is_primary.is_(True),
+            WorkoutPhoto.deleted_at.is_(None),
+        )
+        .values(deleted_at=now)
+    )
+
+    photo = WorkoutPhoto(
+        workout_id=workout_id,
+        user_id=user_id,
+        original_filename=original_filename,
+        storage_key=storage_key,
+        mime_type=mime_type,
+        size_bytes=size_bytes,
+        sha256=sha256,
+        width=width,
+        height=height,
+        is_primary=True,
+    )
+    session.add(photo)
+    await session.commit()
+    await session.refresh(photo)
+    return photo

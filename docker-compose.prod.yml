@@ -32,6 +32,7 @@ services:
     volumes:
       - exercise_images_data:/app/.exercise_images
       - chat_attachments_data:/app/.chat_attachments
+      - workout_photos_data:/app/.workout_photos
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +73,7 @@ volumes:
   caddy_config:
   exercise_images_data:
   chat_attachments_data:
+  workout_photos_data:
 
 networks:
   edge:

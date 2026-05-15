@@ -8,6 +8,14 @@ This backup flow is intentionally small:
 
 The personal computer is the off-VPS disaster recovery copy. It does not need to be highly available; it only needs to pull often enough for the recovery point you can tolerate.
 
+This runbook covers PostgreSQL dumps only. Production media stored in Docker volumes is not included in the nightly `pg_dump`, so disaster recovery must also cover the backend media volumes:
+
+- `exercise_images_data`
+- `chat_attachments_data`
+- `workout_photos_data`
+
+Back those up with host-level volume snapshots, volume exports, or by switching those paths to host bind mounts that are included in your normal filesystem backups.
+
 ## VPS Setup
 
 Install host dependencies:
