@@ -661,7 +661,9 @@ async def test_workout_photo_upload_requires_file_field(
     await db_session.commit()
     await db_session.refresh(workout)
 
-    response = await async_client.post(f"{settings.API_PREFIX}/workouts/{workout.id}/photo")
+    response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo"
+    )
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "file"]
