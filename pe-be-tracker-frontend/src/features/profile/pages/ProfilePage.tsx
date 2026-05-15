@@ -19,7 +19,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
-  const { data } = await getMyWorkouts(undefined, 100);
+  const { data } = await getMyWorkouts(undefined, 25);
   return data;
 };
 

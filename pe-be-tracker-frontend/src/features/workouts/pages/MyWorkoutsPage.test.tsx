@@ -278,7 +278,7 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 100);
+      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 25);
     });
   });
 

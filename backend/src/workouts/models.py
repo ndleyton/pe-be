@@ -94,7 +94,7 @@ class Workout(Base):
         back_populates="workout",
         cascade="all, delete-orphan",
     )
-    photo: Mapped[Optional["WorkoutPhoto"]] = relationship(
+    primary_photo: Mapped[Optional["WorkoutPhoto"]] = relationship(
         "WorkoutPhoto",
         primaryjoin=lambda: and_(
             Workout.id == WorkoutPhoto.workout_id,
@@ -105,6 +105,17 @@ class Workout(Base):
         viewonly=True,
         overlaps="photos,workout",
     )
+
+    @property
+    def photo(self) -> Optional["WorkoutPhoto"]:
+        if self.primary_photo is not None:
+            return self.primary_photo
+
+        for photo in self.photos:
+            if photo.is_primary and photo.deleted_at is None:
+                return photo
+
+        return None
 
 
 class WorkoutPhoto(Base):

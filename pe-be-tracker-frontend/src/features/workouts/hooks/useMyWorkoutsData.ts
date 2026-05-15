@@ -38,7 +38,8 @@ export const useMyWorkoutsData = () => {
     refetch,
   } = useQuery({
     queryKey: ["workouts"],
-    queryFn: () => getMyWorkouts(undefined, 100),
+    // TODO: Move the workouts history screen to useInfiniteQuery so paging stays incremental.
+    queryFn: () => getMyWorkouts(undefined, 25),
     enabled: authInitialized && !authLoading && isAuthenticated,
   });
 

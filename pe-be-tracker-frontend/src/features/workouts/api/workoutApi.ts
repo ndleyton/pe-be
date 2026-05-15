@@ -34,7 +34,7 @@ const normalizeWorkout = (workout: Workout): Workout => ({
  */
 export const getMyWorkouts = async (
   cursor?: number | null,
-  limit: number = 100,
+  limit: number = 25,
 ): Promise<{ data: Workout[]; next_cursor?: number | null }> => {
   const params = new URLSearchParams();
   if (cursor !== undefined && cursor !== null) {

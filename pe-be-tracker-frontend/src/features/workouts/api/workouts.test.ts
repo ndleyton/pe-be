@@ -60,7 +60,7 @@ describe("workouts API - pagination", () => {
 
       const result = await getMyWorkouts();
 
-      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=100");
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=25");
       expect(result.data).toEqual(mockWorkouts);
     });
 
@@ -124,7 +124,7 @@ describe("workouts API - pagination", () => {
 
       expect(result.data).toEqual(mockWorkouts);
       expect(result.next_cursor).toBe(next);
-      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=100");
+      expect(mockApi.get).toHaveBeenCalledWith("/workouts/mine?limit=25");
     });
 
     it("should handle API errors", async () => {

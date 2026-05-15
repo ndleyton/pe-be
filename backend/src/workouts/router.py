@@ -79,7 +79,7 @@ async def get_my_workouts(
     cursor: Optional[int] = Query(
         default=None, description="ID cursor for keyset pagination"
     ),
-    limit: int = Query(default=100, le=1000),
+    limit: int = Query(default=25, le=1000),
 ):
     """Get all workouts for the current user"""
     workouts = await WorkoutService.get_my_workouts(session, user.id, limit, cursor)

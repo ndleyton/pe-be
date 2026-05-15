@@ -145,6 +145,49 @@ async def test_get_my_workouts_returns_no_cursor_for_partial_page(
     assert response.json()["next_cursor"] is None
 
 
+async def test_get_my_workouts_defaults_to_25_and_includes_photo_metadata(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Photo List Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+    upload_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+    )
+    assert upload_response.status_code == 200, upload_response.text
+
+    response = await async_client.get(f"{settings.API_PREFIX}/workouts/mine")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["next_cursor"] is None
+    returned_workout = next(item for item in body["data"] if item["id"] == workout.id)
+    assert returned_workout["photo"]["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+
+
 async def test_workout_router_create_and_types_endpoints(
     async_client: AsyncClient, monkeypatch, override_workout_user
 ):
