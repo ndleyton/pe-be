@@ -22,9 +22,11 @@ export const useWorkoutPhotoUpload = ({
     return () => {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+        setPreviewUrl(null);
       }
     };
-  }, []);
+  }, [workoutId]);
 
   const mutation = useMutation<
     WorkoutPhoto,

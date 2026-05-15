@@ -87,7 +87,12 @@ export const uploadWorkoutPhoto = async (
   formData.append("file", file);
 
   const response = await api.post(endpoints.workoutPhoto(workoutId), formData);
-  return normalizeWorkoutPhoto(response.data) as WorkoutPhoto;
+  const normalizedPhoto = normalizeWorkoutPhoto(response.data);
+  if (!normalizedPhoto) {
+    throw new Error("Workout photo upload returned an empty photo payload.");
+  }
+
+  return normalizedPhoto;
 };
 
 export const deleteWorkout = async (
