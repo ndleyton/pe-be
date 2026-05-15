@@ -73,18 +73,12 @@ async def get_workout_by_id(
 ) -> Optional[Workout]:
     """Get a workout by ID for a specific user"""
     result = await session.execute(
-        select(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
+        select(Workout)
+        .options(joinedload(Workout.photo))
+        .where(Workout.id == workout_id, Workout.owner_id == user_id)
+        .execution_options(populate_existing=True)
     )
-    workout = result.scalar_one_or_none()
-    if workout is None:
-        return None
-
-    workout.photo = await get_active_primary_workout_photo(
-        session,
-        workout_id=workout_id,
-        user_id=user_id,
-    )
-    return workout
+    return result.unique().scalar_one_or_none()
 
 
 async def get_public_completed_workout_by_id(
