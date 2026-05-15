@@ -70,6 +70,7 @@ const FinishWorkoutModal = ({
     state.getFormattedWorkoutTime(),
   );
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [resolvedWorkoutPhotoUrl, setResolvedWorkoutPhotoUrl] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   // Preload logo as data URL to avoid CORS/taint issues in html2canvas
@@ -94,6 +95,55 @@ const FinishWorkoutModal = ({
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (workoutPhotoPreviewUrl) {
+      setResolvedWorkoutPhotoUrl(workoutPhotoPreviewUrl);
+      return;
+    }
+
+    if (!workoutPhoto?.url) {
+      setResolvedWorkoutPhotoUrl(null);
+      return;
+    }
+
+    let isMounted = true;
+    let objectUrl: string | null = null;
+
+    (async () => {
+      try {
+        const response = await fetch(workoutPhoto.url, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch workout photo for export (status ${response.status})`,
+          );
+        }
+
+        const blob = await response.blob();
+        if (!isMounted) {
+          return;
+        }
+
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedWorkoutPhotoUrl(objectUrl);
+      } catch (error) {
+        console.error("Error preloading workout photo for export:", error);
+        if (isMounted) {
+          setResolvedWorkoutPhotoUrl(workoutPhoto.url);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [workoutPhoto?.url, workoutPhotoPreviewUrl]);
 
   if (!isOpen) return null;
 
@@ -269,7 +319,7 @@ const FinishWorkoutModal = ({
                 muscleGroupSummary={muscleGroupSummary}
                 workoutName={workoutName}
                 workoutPhoto={workoutPhoto}
-                workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
+                workoutPhotoPreviewUrl={resolvedWorkoutPhotoUrl}
               />
               <div className="grid gap-2">
                 {muscleGroupSummary.map((group) => (
