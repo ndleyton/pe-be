@@ -51,9 +51,7 @@ import src.sync.models  # noqa: F401
 
 
 def _maintenance_connection_kwargs(db_url: str) -> dict[str, object]:
-    parsed = urlsplit(
-        db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
-    )
+    parsed = urlsplit(db_url.replace("postgresql+asyncpg://", "postgresql://", 1))
     kwargs: dict[str, object] = {"dbname": "postgres"}
     if parsed.hostname:
         kwargs["host"] = parsed.hostname
@@ -80,9 +78,7 @@ def _ensure_database_exists(db_url: str, database_name: str) -> None:
             )
             if cursor.fetchone() is None:
                 cursor.execute(
-                    sql.SQL("CREATE DATABASE {}").format(
-                        sql.Identifier(database_name)
-                    )
+                    sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name))
                 )
     finally:
         conn.close()
