@@ -60,7 +60,11 @@ class WorkoutUpdate(WorkoutBase):
 
 
 class WorkoutPhotoRead(BaseModel):
+    """Compact workout photo payload embedded inside workout detail responses."""
+
     id: int
+    # Keep the raw workout_id out of serialized bodies while still retaining it
+    # on the schema instance so the computed file URL can be built from it.
     workout_id: int = Field(exclude=True)
     width: Optional[int] = None
     height: Optional[int] = None
@@ -74,6 +78,8 @@ class WorkoutPhotoRead(BaseModel):
 
 
 class WorkoutPhotoUploadResponse(WorkoutPhotoRead):
+    """Verbose upload response that keeps workout_id for client-side reconciliation."""
+
     workout_id: int
     size_bytes: int
     created_at: datetime
