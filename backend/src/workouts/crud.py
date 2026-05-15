@@ -79,7 +79,7 @@ async def get_workout_by_id(
     if workout is None:
         return None
 
-    workout.__dict__["photo"] = await get_active_primary_workout_photo(
+    workout.photo = await get_active_primary_workout_photo(
         session,
         workout_id=workout_id,
         user_id=user_id,
