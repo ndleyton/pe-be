@@ -104,12 +104,13 @@ class WorkoutPhotoService:
             with Image.open(BytesIO(data)) as image:
                 image.verify()
             with Image.open(BytesIO(data)) as image:
+                image.load()
                 mime_type = Image.MIME.get(image.format or "")
                 if not mime_type:
                     raise ValueError("Unsupported image type")
                 width, height = image.size
                 return width, height, mime_type.lower()
-        except UnidentifiedImageError as exc:
+        except (UnidentifiedImageError, OSError) as exc:
             raise ValueError("Uploaded file is not a valid image") from exc
 
     def _suffix_for_mime_type(self, mime_type: str) -> str:

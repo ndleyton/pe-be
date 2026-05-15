@@ -799,3 +799,37 @@ async def test_workout_photo_service_replaces_primary_photo(
     assert first.deleted_at is not None
     assert service.photo_file_path(first.storage_key).is_file()
     assert service.photo_file_path(second.storage_key).is_file()
+
+
+async def test_workout_photo_service_maps_decode_oserror_to_validation_error(
+    db_session, monkeypatch
+):
+    owner = await _seed_user(db_session, "workout-photo-oserror@example.com")
+    service = WorkoutPhotoService(user_id=owner.id, session=db_session)
+
+    class _FakeImage:
+        format = "PNG"
+        size = (10, 10)
+
+        def verify(self):
+            return None
+
+        def load(self):
+            raise OSError("broken image stream")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    first_image = _FakeImage()
+    second_image = _FakeImage()
+    images = iter([first_image, second_image])
+    monkeypatch.setattr(
+        "src.workouts.photo_service.Image.open",
+        lambda *_args, **_kwargs: next(images),
+    )
+
+    with pytest.raises(ValueError, match="Uploaded file is not a valid image"):
+        service._inspect_image(b"not-really-an-image")
