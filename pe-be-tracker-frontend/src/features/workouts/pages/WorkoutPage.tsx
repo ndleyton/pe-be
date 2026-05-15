@@ -25,6 +25,7 @@ import {
 } from "@/features/workouts/hooks/useWorkoutPageData";
 import { useWorkoutExerciseActions } from "@/features/workouts/hooks/useWorkoutExerciseActions";
 import { useWorkoutNameUpdate } from "@/features/workouts/hooks/useWorkoutNameUpdate";
+import { useWorkoutPhotoUpload } from "@/features/workouts/hooks/useWorkoutPhotoUpload";
 import { useWorkoutShare } from "@/features/workouts/hooks/useWorkoutShare";
 
 const FinishWorkoutModal = lazy(() =>
@@ -143,6 +144,14 @@ const WorkoutPage = () => {
   ) + 1;
 
   const updateWorkoutNameMutation = useWorkoutNameUpdate({
+    isAuthenticated,
+    workoutId,
+  });
+  const {
+    isUploadingWorkoutPhoto,
+    uploadWorkoutPhoto,
+    workoutPhotoPreviewUrl,
+  } = useWorkoutPhotoUpload({
     isAuthenticated,
     workoutId,
   });
@@ -480,6 +489,10 @@ const WorkoutPage = () => {
         exercises={exercises}
         onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
         workoutName={workoutName || undefined}
+        workoutPhoto={serverWorkout?.photo}
+        workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
+        onUploadWorkoutPhoto={isAuthenticated ? uploadWorkoutPhoto : undefined}
+        isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
         recap={serverWorkout?.recap}
         isRecapLoading={generateRecapMutation.isPending}
         onRegenerateRecap={handleRegenerateRecap}

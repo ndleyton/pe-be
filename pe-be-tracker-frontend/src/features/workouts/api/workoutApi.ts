@@ -1,6 +1,30 @@
 import api from "@/shared/api/client";
+import { resolveApiAssetUrl } from "@/shared/api/assets";
 import { endpoints } from "@/shared/api/endpoints";
-import { Workout, CreateWorkoutData, UpdateWorkoutData } from "../types";
+import {
+  Workout,
+  WorkoutPhoto,
+  CreateWorkoutData,
+  UpdateWorkoutData,
+} from "../types";
+
+const normalizeWorkoutPhoto = (
+  photo?: WorkoutPhoto | null,
+): WorkoutPhoto | null | undefined => {
+  if (!photo) {
+    return photo;
+  }
+
+  return {
+    ...photo,
+    url: resolveApiAssetUrl(photo.url),
+  };
+};
+
+const normalizeWorkout = (workout: Workout): Workout => ({
+  ...workout,
+  photo: normalizeWorkoutPhoto(workout.photo),
+});
 
 /**
  * Fetch the current user's workouts using cursor-based pagination.
@@ -25,21 +49,26 @@ export const getMyWorkouts = async (
   const response = await api.get(url);
 
   // Server returns: { data: [...], next_cursor: ... }
-  return response.data;
+  return {
+    ...response.data,
+    data: Array.isArray(response.data?.data)
+      ? response.data.data.map(normalizeWorkout)
+      : [],
+  };
 };
 
 export const getWorkoutById = async (
   workoutId: string | number,
 ): Promise<Workout> => {
   const response = await api.get(endpoints.workoutById(workoutId));
-  return response.data;
+  return normalizeWorkout(response.data);
 };
 
 export const createWorkout = async (
   workoutData: CreateWorkoutData,
 ): Promise<Workout> => {
   const response = await api.post(endpoints.workouts, workoutData);
-  return response.data;
+  return normalizeWorkout(response.data);
 };
 
 export const updateWorkout = async (
@@ -47,7 +76,18 @@ export const updateWorkout = async (
   updateData: UpdateWorkoutData,
 ): Promise<Workout> => {
   const response = await api.patch(endpoints.workoutById(workoutId), updateData);
-  return response.data;
+  return normalizeWorkout(response.data);
+};
+
+export const uploadWorkoutPhoto = async (
+  workoutId: string | number,
+  file: File,
+): Promise<WorkoutPhoto> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post(endpoints.workoutPhoto(workoutId), formData);
+  return normalizeWorkoutPhoto(response.data) as WorkoutPhoto;
 };
 
 export const deleteWorkout = async (

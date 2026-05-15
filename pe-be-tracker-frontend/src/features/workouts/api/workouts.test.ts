@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getMyWorkouts, type Workout } from "@/features/workouts";
+import {
+  getMyWorkouts,
+  uploadWorkoutPhoto,
+  type Workout,
+} from "@/features/workouts";
 import api from "@/shared/api/client";
+import { endpoints } from "@/shared/api/endpoints";
 import {
   makeOngoingWorkout,
+  makeWorkoutPhoto,
   makePaginatedWorkouts,
   makeWorkout,
   makeWorkouts,
@@ -222,6 +228,32 @@ describe("workouts API - pagination", () => {
 
       expect(result.data).toEqual(workoutsWithStringIds);
       expect(typeof result.data[0].id).toBe("string");
+    });
+  });
+
+  describe("uploadWorkoutPhoto", () => {
+    it("uploads a workout photo as multipart form data", async () => {
+      const file = new File(["photo"], "progress.png", { type: "image/png" });
+      mockApi.post.mockResolvedValue({
+        data: makeWorkoutPhoto({
+          workout_id: 123,
+          url: "/api/v1/workouts/123/photo/file",
+        }),
+      });
+
+      await expect(uploadWorkoutPhoto(123, file)).resolves.toEqual(
+        makeWorkoutPhoto({
+          workout_id: 123,
+          url: "http://localhost:8000/api/v1/workouts/123/photo/file",
+        }),
+      );
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        endpoints.workoutPhoto(123),
+        expect.any(FormData),
+      );
+      const formData = mockApi.post.mock.calls[0][1] as FormData;
+      expect(formData.get("file")).toBe(file);
     });
   });
 });

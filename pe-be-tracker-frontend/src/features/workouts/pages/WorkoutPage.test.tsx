@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import api from "@/shared/api/client";
 import WorkoutPage from "./WorkoutPage";
@@ -155,6 +156,7 @@ const mockWorkout = {
   workout_type_id: 1,
   created_at: "2024-01-01T10:00:00.000Z",
   updated_at: "2024-01-01T10:00:00.000Z",
+  photo: null,
 };
 
 vi.mock("@/stores", () => ({
@@ -242,6 +244,16 @@ describe("WorkoutPage", () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 0;
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:workout-photo-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
     });
     exerciseComponentsMocks.ExerciseListMock.mockClear();
     exerciseApiMocks.mockGetExercisesInWorkout.mockReset();
@@ -413,6 +425,55 @@ describe("WorkoutPage", () => {
     return expect(
       screen.findByLabelText(/floating action button/i),
     ).resolves.toBeInTheDocument();
+  });
+
+  it("uploads a workout photo from the finish modal and shows the preview", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.post).mockImplementation((url: string) => {
+      if (url === `/workouts/${mockWorkoutId}/photo`) {
+        return Promise.resolve({
+          data: {
+            id: 1,
+            workout_id: Number(mockWorkoutId),
+            url: `/api/v1/workouts/${mockWorkoutId}/photo/file`,
+            width: 1080,
+            height: 1350,
+            mime_type: "image/png",
+            size_bytes: 123_456,
+            created_at: "2024-01-01T10:00:00.000Z",
+            updated_at: "2024-01-01T10:00:00.000Z",
+          },
+        });
+      }
+
+      return Promise.resolve({ data: {} });
+    });
+    exerciseApiMocks.mockGetExercisesInWorkout.mockResolvedValue([
+      {
+        id: 1,
+        exercise_type: mockExerciseType,
+        exercise_sets: [{ done: true }],
+      },
+    ]);
+
+    render(<WorkoutPage />);
+
+    fireEvent.click(await screen.findByLabelText(/floating action button/i));
+
+    await user.upload(
+      await screen.findByLabelText(/upload workout photo/i),
+      new File(["photo"], "progress.png", { type: "image/png" }),
+    );
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith(
+        `/workouts/${mockWorkoutId}/photo`,
+        expect.any(FormData),
+      );
+    });
+    expect(
+      await screen.findByAltText("Workout photo for Chest Day"),
+    ).toHaveAttribute("src", "blob:workout-photo-preview");
   });
 
   it("does not reopen the finish modal when browser back is pressed after canceling", async () => {

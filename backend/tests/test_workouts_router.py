@@ -7,12 +7,13 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from PIL import Image
+from sqlalchemy import select
 
 from src.core.config import settings
 from src.main import app
 from src.users.models import User
 from src.users.router import current_active_user
-from src.workouts.models import Workout, WorkoutType
+from src.workouts.models import Workout, WorkoutPhoto, WorkoutType
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -391,3 +392,328 @@ async def test_workout_photo_upload_download_and_detail(
     assert file_response.headers["cache-control"] == "private, no-store"
     assert file_response.headers["x-content-type-options"] == "nosniff"
     assert file_response.content
+
+
+async def test_workout_photo_upload_replacement_keeps_one_active_primary(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Replacement Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    def _png_bytes(color: str) -> bytes:
+        buffer = BytesIO()
+        Image.new("RGB", (8, 6), color=color).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    first_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("first.png", _png_bytes("blue"), "image/png")},
+    )
+    assert first_response.status_code == 200, first_response.text
+
+    second_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("second.png", _png_bytes("green"), "image/png")},
+    )
+    assert second_response.status_code == 200, second_response.text
+
+    rows = (
+        (
+            await db_session.execute(
+                select(WorkoutPhoto)
+                .where(WorkoutPhoto.workout_id == workout.id)
+                .order_by(WorkoutPhoto.id.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    active_rows = [row for row in rows if row.deleted_at is None]
+
+    assert len(rows) == 2
+    assert len(active_rows) == 1
+    assert active_rows[0].original_filename == "second.png"
+
+
+async def test_workout_photo_upload_requires_workout_ownership(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    other_user = User(
+        email="workout-photo-other@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(other_user)
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Private Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+
+    async def _other_override():
+        return other_user
+
+    async def _owner_override():
+        return authenticated_workout_user
+
+    app.dependency_overrides[current_active_user] = _other_override
+    try:
+        buffer = BytesIO()
+        Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+        response = await async_client.post(
+            f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+            files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Workout not found"
+    finally:
+        app.dependency_overrides[current_active_user] = _owner_override
+
+
+async def test_workout_photo_file_requires_workout_ownership(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    other_user = User(
+        email="workout-photo-reader@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(other_user)
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Photo Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+    upload_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+    )
+    assert upload_response.status_code == 200, upload_response.text
+
+    async def _other_override():
+        return other_user
+
+    async def _owner_override():
+        return authenticated_workout_user
+
+    app.dependency_overrides[current_active_user] = _other_override
+    try:
+        response = await async_client.get(
+            f"{settings.API_PREFIX}/workouts/{workout.id}/photo/file"
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Workout photo not found"
+    finally:
+        app.dependency_overrides[current_active_user] = _owner_override
+
+
+async def test_workout_photo_upload_rejects_invalid_mime_type(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+    workout = Workout(
+        name="Invalid Mime Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="GIF")
+    response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.gif", buffer.getvalue(), "image/gif")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported image type"
+
+
+async def test_workout_photo_upload_rejects_oversize_files(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "src.workouts.router.settings.WORKOUT_PHOTO_MAX_BYTES",
+        32,
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+    workout = Workout(
+        name="Oversize Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+    response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+    )
+
+    assert response.status_code == 413
+    assert "Image upload exceeds maximum size of 32 bytes" in response.json()["detail"]
+
+
+async def test_workout_photo_upload_requires_file_field(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+):
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+    workout = Workout(
+        name="Missing File Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    response = await async_client.post(f"{settings.API_PREFIX}/workouts/{workout.id}/photo")
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "file"]
+
+
+async def test_workout_photo_file_returns_404_when_stored_file_is_missing(
+    async_client: AsyncClient,
+    authenticated_workout_user,
+    db_session,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "src.workouts.photo_service.settings.WORKOUT_PHOTO_STORAGE_DIR",
+        str(tmp_path),
+        raising=False,
+    )
+
+    workout_type = WorkoutType(name="Strength", description="Strength training")
+    db_session.add(workout_type)
+    await db_session.flush()
+
+    workout = Workout(
+        name="Missing Stored Photo Workout",
+        workout_type_id=workout_type.id,
+        owner_id=authenticated_workout_user.id,
+    )
+    db_session.add(workout)
+    await db_session.commit()
+    await db_session.refresh(workout)
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 6), color="blue").save(buffer, format="PNG")
+    upload_response = await async_client.post(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo",
+        files={"file": ("progress.png", buffer.getvalue(), "image/png")},
+    )
+    assert upload_response.status_code == 200, upload_response.text
+
+    photo_row = (
+        await db_session.execute(
+            select(WorkoutPhoto).where(
+                WorkoutPhoto.workout_id == workout.id,
+                WorkoutPhoto.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one()
+    stored_file = tmp_path / photo_row.storage_key
+    stored_file.unlink()
+
+    file_response = await async_client.get(
+        f"{settings.API_PREFIX}/workouts/{workout.id}/photo/file"
+    )
+    assert file_response.status_code == 404
+    assert file_response.json()["detail"] == "Workout photo file not found"

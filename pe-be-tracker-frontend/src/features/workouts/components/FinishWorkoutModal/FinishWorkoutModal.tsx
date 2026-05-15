@@ -1,11 +1,19 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import {
   calculateMuscleGroupSummary,
   ExerciseTypeWithMuscles,
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
-import AnatomicalImage from "./AnatomicalImage";
-import { RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList, Share2 } from "lucide-react";
+import FinishWorkoutVisual from "./FinishWorkoutVisual";
+import {
+  RefreshCw,
+  Sparkles,
+  Timer,
+  CircleAlert,
+  ClipboardList,
+  Share2,
+  Camera,
+} from "lucide-react";
 import { useUIStore } from "@/stores";
 import { toast } from "sonner";
 import {
@@ -13,6 +21,7 @@ import {
   downloadWorkoutSummaryImage,
   buildWorkoutSummaryFilename,
 } from "./lib/workoutSummaryImage";
+import type { WorkoutPhoto } from "@/features/workouts/types";
 
 
 interface Exercise {
@@ -29,6 +38,10 @@ interface FinishWorkoutModalProps {
   exercises?: Exercise[];
   onSaveRoutine?: () => void;
   workoutName?: string;
+  workoutPhoto?: WorkoutPhoto | null;
+  workoutPhotoPreviewUrl?: string | null;
+  onUploadWorkoutPhoto?: (file: File) => Promise<unknown>;
+  isUploadingWorkoutPhoto?: boolean;
   recap?: string | null;
   isRecapLoading?: boolean;
   onRegenerateRecap?: () => void;
@@ -43,11 +56,16 @@ const FinishWorkoutModal = ({
   exercises = [],
   onSaveRoutine,
   workoutName,
+  workoutPhoto,
+  workoutPhotoPreviewUrl,
+  onUploadWorkoutPhoto,
+  isUploadingWorkoutPhoto = false,
   recap,
   isRecapLoading = false,
   onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
+  const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
   const formattedDuration = useUIStore((state) =>
     state.getFormattedWorkoutTime(),
   );
@@ -84,8 +102,7 @@ const FinishWorkoutModal = ({
     (sum, group) => sum + group.setCount,
     0,
   );
-
-
+  const canUploadWorkoutPhoto = isAuthenticated && Boolean(onUploadWorkoutPhoto);
 
   const handleShare = async () => {
     const node = downloadAreaRef.current;
@@ -128,6 +145,23 @@ const FinishWorkoutModal = ({
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       onCancel();
+    }
+  };
+
+  const handleWorkoutPhotoSelection = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !onUploadWorkoutPhoto) {
+      return;
+    }
+
+    try {
+      await onUploadWorkoutPhoto(file);
+    } catch {
+      // Error feedback is handled by the upload hook.
     }
   };
 
@@ -190,7 +224,32 @@ const FinishWorkoutModal = ({
                     {workoutName ?? "Great Training Session!"}
                   </span>
                 </h3>
-                <div className="flex" data-export-ignore="true">
+                <div className="flex items-center justify-end gap-1.5" data-export-ignore="true">
+                  {canUploadWorkoutPhoto ? (
+                    <>
+                      <input
+                        ref={workoutPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="sr-only"
+                        aria-label="Upload workout photo"
+                        onChange={handleWorkoutPhotoSelection}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => workoutPhotoInputRef.current?.click()}
+                        disabled={isUploadingWorkoutPhoto}
+                        aria-label="Add workout photo"
+                        title="Add workout photo"
+                        className="h-8 w-8 text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10 transition-all active:scale-95"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
@@ -205,7 +264,13 @@ const FinishWorkoutModal = ({
                   </Button>
                 </div>
               </div>
-              <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
+              <FinishWorkoutVisual
+                isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
+                muscleGroupSummary={muscleGroupSummary}
+                workoutName={workoutName}
+                workoutPhoto={workoutPhoto}
+                workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
+              />
               <div className="grid gap-2">
                 {muscleGroupSummary.map((group) => (
                   <div

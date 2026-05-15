@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
-import { makeExerciseForSummary } from "@/test/fixtures";
+import { makeExerciseForSummary, makeWorkoutPhoto } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
 
 const defaultProps = {
@@ -512,6 +512,102 @@ describe("FinishWorkoutModal", () => {
 
       expect(
         screen.getByText("Recap generation skipped or failed."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("Workout Photos", () => {
+    const exercises = [
+      makeExerciseForSummary({
+        name: "Bench Press",
+        muscleGroups: ["Chest"],
+        completedSets: 2,
+      }),
+    ];
+
+    it("shows the camera button for authenticated users with upload enabled", () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={exercises}
+          isAuthenticated={true}
+          onUploadWorkoutPhoto={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: /add workout photo/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("hides the camera button for guests", () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={exercises}
+          isAuthenticated={false}
+          onUploadWorkoutPhoto={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /add workout photo/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("uploads immediately after selecting a workout photo", async () => {
+      const user = userEvent.setup();
+      const onUploadWorkoutPhoto = vi.fn().mockResolvedValue(undefined);
+      const file = new File(["photo"], "progress.png", { type: "image/png" });
+
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={exercises}
+          isAuthenticated={true}
+          onUploadWorkoutPhoto={onUploadWorkoutPhoto}
+        />,
+      );
+
+      await user.upload(
+        screen.getByLabelText(/upload workout photo/i),
+        file,
+      );
+
+      expect(onUploadWorkoutPhoto).toHaveBeenCalledWith(file);
+    });
+
+    it("renders the workout photo instead of the anatomy fallback when a photo exists", () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={exercises}
+          workoutName="Leg Day"
+          workoutPhoto={makeWorkoutPhoto({
+            url: "https://cdn.example.com/workout-photo.png",
+          })}
+        />,
+      );
+
+      expect(
+        screen.getByAltText("Workout photo for Leg Day"),
+      ).toHaveAttribute("src", "https://cdn.example.com/workout-photo.png");
+      expect(
+        screen.queryByLabelText("Anatomical muscle diagram"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the anatomy fallback when no workout photo exists", async () => {
+      render(
+        <FinishWorkoutModal
+          {...defaultProps}
+          exercises={exercises}
+          workoutName="Leg Day"
+        />,
+      );
+
+      expect(
+        await screen.findByLabelText("Anatomical muscle diagram"),
       ).toBeInTheDocument();
     });
   });
