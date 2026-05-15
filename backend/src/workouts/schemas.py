@@ -1,7 +1,16 @@
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from decimal import Decimal
-from pydantic import field_validator, model_validator, ConfigDict, BaseModel, Field
+from pydantic import (
+    field_validator,
+    model_validator,
+    ConfigDict,
+    BaseModel,
+    Field,
+    computed_field,
+)
+
+from src.core.config import settings
 
 
 class WorkoutBase(BaseModel):
@@ -52,11 +61,16 @@ class WorkoutUpdate(WorkoutBase):
 
 class WorkoutPhotoRead(BaseModel):
     id: int
-    url: str
+    workout_id: int = Field(exclude=True)
     width: Optional[int] = None
     height: Optional[int] = None
     mime_type: str
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file"
 
 
 class WorkoutPhotoUploadResponse(WorkoutPhotoRead):

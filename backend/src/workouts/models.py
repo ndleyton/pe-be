@@ -19,7 +19,6 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import relationship, Mapped
 
 from src.core.database import Base
-from src.core.config import settings
 
 if TYPE_CHECKING:
     from src.users.models import User
@@ -154,7 +153,3 @@ class WorkoutPhoto(Base):
 
     workout: Mapped["Workout"] = relationship("Workout", back_populates="photos")
     user: Mapped["User"] = relationship("User", back_populates="workout_photos")
-
-    @property
-    def url(self) -> str:
-        return f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file"
