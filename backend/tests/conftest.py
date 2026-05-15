@@ -7,8 +7,9 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import text
+from sqlalchemy.sql.compiler import IdentifierPreparer
 from sqlalchemy.orm import sessionmaker
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 from pathlib import Path
 
 # Ensure test environment variables are loaded from a safe test dotenv file
@@ -49,6 +50,56 @@ import src.chat.models  # noqa: F401
 import src.sync.models  # noqa: F401
 
 
+def _maintenance_connection_kwargs(db_url: str) -> dict[str, object]:
+    parsed = urlsplit(
+        db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    )
+    kwargs: dict[str, object] = {"dbname": "postgres"}
+    if parsed.hostname:
+        kwargs["host"] = parsed.hostname
+    if parsed.port:
+        kwargs["port"] = parsed.port
+    if parsed.username:
+        kwargs["user"] = unquote(parsed.username)
+    if parsed.password:
+        kwargs["password"] = unquote(parsed.password)
+    return kwargs
+
+
+def _ensure_database_exists(db_url: str, database_name: str) -> None:
+    """Create an xdist worker database if it does not already exist."""
+    import psycopg2
+    from psycopg2 import sql
+
+    conn = psycopg2.connect(**_maintenance_connection_kwargs(db_url))
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM pg_database WHERE datname = %s", (database_name,)
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    sql.SQL("CREATE DATABASE {}").format(
+                        sql.Identifier(database_name)
+                    )
+                )
+    finally:
+        conn.close()
+
+
+def _database_url_for_worker(db_url: str) -> str:
+    worker = os.getenv("PYTEST_XDIST_WORKER")
+    if not worker:
+        return db_url
+
+    parsed = urlsplit(db_url)
+    base_db_name = (parsed.path or "").lstrip("/")
+    worker_db_name = f"{base_db_name}_{worker}"
+    _ensure_database_exists(db_url, worker_db_name)
+    return urlunsplit(parsed._replace(path=f"/{worker_db_name}"))
+
+
 def get_test_database_url():
     """Get test database URL and ensure it's async compatible."""
     db_url = os.getenv(
@@ -58,18 +109,19 @@ def get_test_database_url():
 
     # Convert postgresql:// to postgresql+asyncpg:// for async operations
     if db_url.startswith("postgresql://"):
-        return db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif db_url.startswith("postgres://"):
-        return db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-    return db_url
+    return _database_url_for_worker(db_url)
 
 
 # Test database URL - use environment variable or default
 TEST_DATABASE_URL = get_test_database_url()
 
-# Create test engine
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
+# Create test engine. SQL echo is intentionally disabled because captured SQL
+# output adds significant overhead across the full suite.
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 
 # Create test session
 TestSessionLocal = sessionmaker(
@@ -101,15 +153,12 @@ def _assert_safe_test_database_url(db_url: str) -> None:
 _assert_safe_test_database_url(TEST_DATABASE_URL)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="session")
 async def setup_database():
-    """Ensure a clean test database state for each test function.
+    """Create the test schema once for the test session.
 
-    We first drop *all* tables to remove any leftover schema from previous
-    runs (e.g., stale unique constraints).  Then we recreate the schema from
-    the current SQLAlchemy models.  After the test function completes, we
-    drop the tables again so that subsequent tests always start from a
-    blank slate.
+    Per-test isolation is handled by the db_session fixture with TRUNCATE. This
+    avoids spending most DB-test runtime dropping and recreating the full schema.
     """
     # PostgreSQL named enums cannot be dropped and recreated under the same
     # transaction without tripping duplicate-type catalog errors.
@@ -132,7 +181,6 @@ async def setup_database():
 
     yield
 
-    # Tear-down: drop everything to avoid leaking state between tests
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -146,27 +194,20 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     operations run under the same connection with asyncpg. We instead:
       - TRUNCATE relevant tables up-front and COMMIT once to ensure a clean state
       - Yield the raw session so app code can manage its own transactions
-      - Let the `setup_database` fixture drop the schema after each test for isolation
+      - Let the `setup_database` fixture drop the schema after the test session
     """
     async with TestSessionLocal() as session:
-        # Clean tables before test (outside an explicit transaction)
-        for table in [
-            "exercises",
-            "exercise_sets",
-            "exercise_muscles",
-            "exercise_types",
-            "conversation_message_parts",
-            "conversation_messages",
-            "chat_attachments",
-            "conversations",
-            "workouts",
-            "users",
-            "routine_program_days",
-            "routine_programs",
-            "recipes",
-            "sync_logs",
-        ]:
-            await session.execute(text(f"TRUNCATE {table} CASCADE"))
+        # Clean all mapped tables before each DB test. Resetting identities keeps
+        # tests deterministic without rebuilding the schema every time.
+        preparer = IdentifierPreparer(test_engine.dialect)
+        table_names = [
+            preparer.format_table(table)
+            for table in reversed(Base.metadata.sorted_tables)
+        ]
+        if table_names:
+            await session.execute(
+                text(f"TRUNCATE {', '.join(table_names)} RESTART IDENTITY CASCADE")
+            )
         await session.commit()
 
         # Hand the session to tests and route handlers via dependency override
