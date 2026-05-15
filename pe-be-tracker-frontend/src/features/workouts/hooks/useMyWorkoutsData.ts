@@ -5,6 +5,28 @@ import { getMyWorkouts } from "../api";
 import { type Workout } from "../types";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
+const WORKOUTS_PAGE_SIZE = 25;
+
+const getAllMyWorkouts = async () => {
+  const workouts: Workout[] = [];
+  let cursor: number | null | undefined = undefined;
+
+  // TODO: Move the workouts history screen to useInfiniteQuery so paging stays incremental.
+  while (true) {
+    const page = await getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+    workouts.push(...(Array.isArray(page.data) ? page.data : []));
+
+    if (page.next_cursor == null) {
+      return {
+        data: workouts,
+        next_cursor: null,
+      };
+    }
+
+    cursor = page.next_cursor;
+  }
+};
+
 const getActiveWorkout = (workouts: Workout[]): Workout | null =>
   workouts.reduce<Workout | null>((activeWorkout, workout) => {
     if (workout.end_time) {
@@ -38,8 +60,7 @@ export const useMyWorkoutsData = () => {
     refetch,
   } = useQuery({
     queryKey: ["workouts"],
-    // TODO: Move the workouts history screen to useInfiniteQuery so paging stays incremental.
-    queryFn: () => getMyWorkouts(undefined, 25),
+    queryFn: getAllMyWorkouts,
     enabled: authInitialized && !authLoading && isAuthenticated,
   });
 
