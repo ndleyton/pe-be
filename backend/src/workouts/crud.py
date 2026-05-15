@@ -132,6 +132,7 @@ async def get_user_workouts(
         .where(Workout.owner_id == user_id)
         .order_by(Workout.id.desc())
         .limit(limit)
+        .execution_options(populate_existing=True)
     )
     if cursor is not None:
         stmt = stmt.where(Workout.id < cursor)

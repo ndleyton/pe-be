@@ -17,6 +17,8 @@ from sqlalchemy import (
 )
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy import inspect
+from sqlalchemy.orm.state import NO_VALUE
 
 from src.core.database import Base
 
@@ -108,12 +110,19 @@ class Workout(Base):
 
     @property
     def photo(self) -> Optional["WorkoutPhoto"]:
-        if self.primary_photo is not None:
-            return self.primary_photo
+        state = inspect(self)
 
-        for photo in self.photos:
-            if photo.is_primary and photo.deleted_at is None:
-                return photo
+        primary_photo_attr = state.attrs.primary_photo
+        primary_photo_value = primary_photo_attr.loaded_value
+        if primary_photo_value is not NO_VALUE:
+            return primary_photo_value
+
+        photos_attr = state.attrs.photos
+        photos_value = photos_attr.loaded_value
+        if photos_value is not NO_VALUE:
+            for photo in photos_value:
+                if photo.is_primary and photo.deleted_at is None:
+                    return photo
 
         return None
 
