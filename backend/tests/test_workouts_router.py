@@ -185,7 +185,9 @@ async def test_get_my_workouts_defaults_to_25_and_includes_photo_metadata(
     body = response.json()
     assert body["next_cursor"] is None
     returned_workout = next(item for item in body["data"] if item["id"] == workout.id)
-    assert returned_workout["photo"]["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+    assert (
+        returned_workout["photo"]["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+    )
 
 
 async def test_workout_router_create_and_types_endpoints(
