@@ -415,7 +415,7 @@ async def test_workout_photo_upload_download_and_detail(
     assert upload_response.status_code == 200, upload_response.text
     upload_payload = upload_response.json()
     assert upload_payload["workout_id"] == workout.id
-    assert upload_payload["mime_type"] == "image/png"
+    assert upload_payload["mime_type"] == "image/webp"
     assert upload_payload["width"] == 8
     assert upload_payload["height"] == 6
     assert upload_payload["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
@@ -433,7 +433,7 @@ async def test_workout_photo_upload_download_and_detail(
         f"{settings.API_PREFIX}/workouts/{workout.id}/photo/file"
     )
     assert file_response.status_code == 200, file_response.text
-    assert file_response.headers["content-type"] == "image/png"
+    assert file_response.headers["content-type"] == "image/webp"
     assert file_response.headers["cache-control"] == "private, no-store"
     assert file_response.headers["x-content-type-options"] == "nosniff"
     assert file_response.content

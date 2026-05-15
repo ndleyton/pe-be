@@ -176,6 +176,16 @@ class Settings(BaseSettings):
         validation_alias="WORKOUT_PHOTO_RATE_LIMIT_MAX_REQUESTS",
         description="Max workout photo uploads allowed per window",
     )
+    WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX: int = Field(
+        1600,
+        validation_alias="WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX",
+        description="Max longest edge for optimized workout photos",
+    )
+    WORKOUT_PHOTO_OPTIMIZED_FORMAT: str = Field(
+        "webp",
+        validation_alias="WORKOUT_PHOTO_OPTIMIZED_FORMAT",
+        description="Output format for optimized workout photos",
+    )
     EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS: int = Field(
         60,
         validation_alias="EXERCISE_TYPES_USAGE_CACHE_TTL_SECONDS",
