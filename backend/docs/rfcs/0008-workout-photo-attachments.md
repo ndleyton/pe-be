@@ -196,11 +196,23 @@ Recommended response:
 Replacement behavior:
 
 - v1 should treat the upload as "replace the primary photo"
-- create the new row and file first
-- mark the previous active primary row `deleted_at`
+- write the new image file to a temp or pending location first
+- start a database transaction before changing `workout_photos`
+- soft-delete the current active primary row first so the partial unique index does not conflict:
+  ```sql
+  UPDATE workout_photos
+  SET deleted_at = NOW()
+  WHERE workout_id = :workout_id
+    AND is_primary = true
+    AND deleted_at IS NULL;
+  ```
+- insert the new `workout_photos` row with `is_primary=true` in the same transaction
+- commit the transaction, then move or mark the temp file as final
 - do not block the upload response on deleting replaced files
 - clean soft-deleted files with a scheduled cleanup job as a follow-up
-- if database persistence fails, delete the newly written file before returning
+- if the transaction fails, delete the newly written temp file before returning
+
+This ordering is required by `uq_workout_photos_one_active_primary`, the partial unique index on `workout_photos (workout_id) WHERE is_primary = true AND deleted_at IS NULL`. Inserting the replacement row before soft-deleting the existing primary row can violate that constraint.
 
 `GET /api/v1/workouts/{workout_id}/photo/file`
 
