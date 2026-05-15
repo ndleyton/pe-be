@@ -81,6 +81,15 @@ async def get_workout_by_id(
     return result.unique().scalar_one_or_none()
 
 
+async def _get_workout_row_for_owner(
+    session: AsyncSession, workout_id: int, user_id: int
+) -> Optional[Workout]:
+    result = await session.execute(
+        select(Workout).where(Workout.id == workout_id, Workout.owner_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_public_completed_workout_by_id(
     session: AsyncSession, workout_id: int, owner_id: int | None = None
 ) -> Optional[Workout]:
@@ -152,7 +161,7 @@ async def update_workout(
     session: AsyncSession, workout_id: int, workout_update: WorkoutUpdate, user_id: int
 ) -> Optional[Workout]:
     """Update an existing workout"""
-    workout = await get_workout_by_id(session, workout_id, user_id)
+    workout = await _get_workout_row_for_owner(session, workout_id, user_id)
     if not workout:
         return None
 
@@ -173,7 +182,7 @@ async def update_workout(
 
 async def delete_workout(session: AsyncSession, workout_id: int, user_id: int) -> bool:
     """Delete a workout"""
-    workout = await get_workout_by_id(session, workout_id, user_id)
+    workout = await _get_workout_row_for_owner(session, workout_id, user_id)
     if not workout:
         return False
 
