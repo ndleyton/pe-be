@@ -97,10 +97,7 @@ class WorkoutPhotoService:
         return file_path
 
     def _storage_key(self, *, workout_id: int, suffix: str) -> str:
-        return (
-            f"user-{self.user_id}/workout-{workout_id}/"
-            f"{uuid4().hex}{suffix.lower()}"
-        )
+        return f"user-{self.user_id}/workout-{workout_id}/{uuid4().hex}{suffix.lower()}"
 
     def _inspect_image(self, data: bytes) -> tuple[int, int, str]:
         try:

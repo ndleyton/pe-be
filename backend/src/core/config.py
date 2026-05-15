@@ -372,9 +372,7 @@ class Settings(BaseSettings):
             if normalized.startswith("["):
                 return v
             return tuple(
-                part.strip().lower()
-                for part in normalized.split(",")
-                if part.strip()
+                part.strip().lower() for part in normalized.split(",") if part.strip()
             )
         if isinstance(v, (list, tuple, set)):
             return tuple(str(part).strip().lower() for part in v if str(part).strip())
