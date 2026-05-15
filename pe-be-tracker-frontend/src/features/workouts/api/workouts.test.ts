@@ -255,5 +255,19 @@ describe("workouts API - pagination", () => {
       const formData = mockApi.post.mock.calls[0][1] as FormData;
       expect(formData.get("file")).toBe(file);
     });
+
+    it("surfaces upload errors", async () => {
+      const file = new File(["photo"], "progress.png", { type: "image/png" });
+      mockApi.post.mockRejectedValue(new Error("Upload failed"));
+
+      await expect(uploadWorkoutPhoto(123, file)).rejects.toThrow(
+        "Upload failed",
+      );
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        endpoints.workoutPhoto(123),
+        expect.any(FormData),
+      );
+    });
   });
 });

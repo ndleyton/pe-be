@@ -128,7 +128,7 @@ async def get_user_workouts(
     """
     stmt = (
         select(Workout)
-        .options(selectinload(Workout.photos))
+        .options(selectinload(Workout.primary_photo))
         .where(Workout.owner_id == user_id)
         .order_by(Workout.id.desc())
         .limit(limit)
