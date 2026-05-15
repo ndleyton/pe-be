@@ -66,11 +66,13 @@ const FinishWorkoutModal = ({
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
+  const workoutPhotoLoadPromiseRef = useRef<Promise<void> | null>(null);
   const formattedDuration = useUIStore((state) =>
     state.getFormattedWorkoutTime(),
   );
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [resolvedWorkoutPhotoUrl, setResolvedWorkoutPhotoUrl] = useState<string | null>(null);
+  const [isLoadingWorkoutPhoto, setIsLoadingWorkoutPhoto] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // Preload logo as data URL to avoid CORS/taint issues in html2canvas
@@ -99,18 +101,24 @@ const FinishWorkoutModal = ({
   useEffect(() => {
     if (workoutPhotoPreviewUrl) {
       setResolvedWorkoutPhotoUrl(workoutPhotoPreviewUrl);
+      setIsLoadingWorkoutPhoto(false);
+      workoutPhotoLoadPromiseRef.current = null;
       return;
     }
 
     if (!workoutPhoto?.url) {
       setResolvedWorkoutPhotoUrl(null);
+      setIsLoadingWorkoutPhoto(false);
+      workoutPhotoLoadPromiseRef.current = null;
       return;
     }
 
     let isMounted = true;
     let objectUrl: string | null = null;
+    setResolvedWorkoutPhotoUrl(null);
+    setIsLoadingWorkoutPhoto(true);
 
-    (async () => {
+    const loadPromise = (async () => {
       try {
         const response = await fetch(workoutPhoto.url, {
           credentials: "include",
@@ -132,13 +140,19 @@ const FinishWorkoutModal = ({
       } catch (error) {
         console.error("Error preloading workout photo for export:", error);
         if (isMounted) {
-          setResolvedWorkoutPhotoUrl(workoutPhoto.url);
+          setResolvedWorkoutPhotoUrl(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingWorkoutPhoto(false);
         }
       }
     })();
+    workoutPhotoLoadPromiseRef.current = loadPromise;
 
     return () => {
       isMounted = false;
+      workoutPhotoLoadPromiseRef.current = null;
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
@@ -161,6 +175,10 @@ const FinishWorkoutModal = ({
     setIsExporting(true);
     let file: File | undefined;
     try {
+      if (workoutPhoto && !workoutPhotoPreviewUrl && workoutPhotoLoadPromiseRef.current) {
+        await workoutPhotoLoadPromiseRef.current;
+      }
+
       const filename = buildWorkoutSummaryFilename();
       file = await createWorkoutSummaryFile(node, filename);
       const shareData = {
@@ -315,7 +333,9 @@ const FinishWorkoutModal = ({
                 </div>
               </div>
               <FinishWorkoutVisual
-                isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
+                isUploadingWorkoutPhoto={
+                  isUploadingWorkoutPhoto || Boolean(workoutPhoto && isLoadingWorkoutPhoto)
+                }
                 muscleGroupSummary={muscleGroupSummary}
                 workoutName={workoutName}
                 workoutPhoto={workoutPhoto}
