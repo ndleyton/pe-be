@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from src.core.errors import DomainValidationError
 from src.workouts.models import Workout, WorkoutType, WorkoutPhoto
@@ -74,7 +74,7 @@ async def get_workout_by_id(
     """Get a workout by ID for a specific user"""
     result = await session.execute(
         select(Workout)
-        .options(joinedload(Workout.photo))
+        .options(joinedload(Workout.primary_photo))
         .where(Workout.id == workout_id, Workout.owner_id == user_id)
         .execution_options(populate_existing=True)
     )
@@ -128,9 +128,11 @@ async def get_user_workouts(
     """
     stmt = (
         select(Workout)
+        .options(selectinload(Workout.primary_photo))
         .where(Workout.owner_id == user_id)
         .order_by(Workout.id.desc())
         .limit(limit)
+        .execution_options(populate_existing=True)
     )
     if cursor is not None:
         stmt = stmt.where(Workout.id < cursor)

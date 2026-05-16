@@ -7,8 +7,21 @@ export interface Workout {
   workout_type_id: number;
   recap?: string | null;
   visibility?: 'private' | 'public';
+  photo?: WorkoutPhoto | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface WorkoutPhoto {
+  id: number;
+  workout_id?: number;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+  mime_type: string;
+  size_bytes?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface WorkoutType {

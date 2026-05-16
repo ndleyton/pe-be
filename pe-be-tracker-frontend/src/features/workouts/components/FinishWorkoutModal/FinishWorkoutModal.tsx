@@ -1,11 +1,19 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import {
   calculateMuscleGroupSummary,
   ExerciseTypeWithMuscles,
 } from "@/utils/muscleGroups";
 import { Button } from "@/shared/components/ui/button";
-import AnatomicalImage from "./AnatomicalImage";
-import { RefreshCw, Sparkles, Timer, CircleAlert, ClipboardList, Share2 } from "lucide-react";
+import FinishWorkoutVisual from "./FinishWorkoutVisual";
+import {
+  RefreshCw,
+  Sparkles,
+  Timer,
+  CircleAlert,
+  ClipboardList,
+  Share2,
+  Camera,
+} from "lucide-react";
 import { useUIStore } from "@/stores";
 import { toast } from "sonner";
 import {
@@ -13,6 +21,7 @@ import {
   downloadWorkoutSummaryImage,
   buildWorkoutSummaryFilename,
 } from "./lib/workoutSummaryImage";
+import type { WorkoutPhoto } from "@/features/workouts/types";
 
 
 interface Exercise {
@@ -29,6 +38,10 @@ interface FinishWorkoutModalProps {
   exercises?: Exercise[];
   onSaveRoutine?: () => void;
   workoutName?: string;
+  workoutPhoto?: WorkoutPhoto | null;
+  workoutPhotoPreviewUrl?: string | null;
+  onUploadWorkoutPhoto?: (file: File) => Promise<unknown>;
+  isUploadingWorkoutPhoto?: boolean;
   recap?: string | null;
   isRecapLoading?: boolean;
   onRegenerateRecap?: () => void;
@@ -43,15 +56,23 @@ const FinishWorkoutModal = ({
   exercises = [],
   onSaveRoutine,
   workoutName,
+  workoutPhoto,
+  workoutPhotoPreviewUrl,
+  onUploadWorkoutPhoto,
+  isUploadingWorkoutPhoto = false,
   recap,
   isRecapLoading = false,
   onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
   const downloadAreaRef = useRef<HTMLDivElement>(null);
+  const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
+  const workoutPhotoLoadPromiseRef = useRef<Promise<void> | null>(null);
   const formattedDuration = useUIStore((state) =>
     state.getFormattedWorkoutTime(),
   );
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [resolvedWorkoutPhotoUrl, setResolvedWorkoutPhotoUrl] = useState<string | null>(null);
+  const [isLoadingWorkoutPhoto, setIsLoadingWorkoutPhoto] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // Preload logo as data URL to avoid CORS/taint issues in html2canvas
@@ -77,6 +98,67 @@ const FinishWorkoutModal = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (workoutPhotoPreviewUrl) {
+      setResolvedWorkoutPhotoUrl(workoutPhotoPreviewUrl);
+      setIsLoadingWorkoutPhoto(false);
+      workoutPhotoLoadPromiseRef.current = null;
+      return;
+    }
+
+    if (!workoutPhoto?.url) {
+      setResolvedWorkoutPhotoUrl(null);
+      setIsLoadingWorkoutPhoto(false);
+      workoutPhotoLoadPromiseRef.current = null;
+      return;
+    }
+
+    let isMounted = true;
+    let objectUrl: string | null = null;
+    setResolvedWorkoutPhotoUrl(null);
+    setIsLoadingWorkoutPhoto(true);
+
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch(workoutPhoto.url, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch workout photo for export (status ${response.status})`,
+          );
+        }
+
+        const blob = await response.blob();
+        if (!isMounted) {
+          return;
+        }
+
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedWorkoutPhotoUrl(objectUrl);
+      } catch (error) {
+        console.error("Error preloading workout photo for export:", error);
+        if (isMounted) {
+          setResolvedWorkoutPhotoUrl(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingWorkoutPhoto(false);
+        }
+      }
+    })();
+    workoutPhotoLoadPromiseRef.current = loadPromise;
+
+    return () => {
+      isMounted = false;
+      workoutPhotoLoadPromiseRef.current = null;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [workoutPhoto?.url, workoutPhotoPreviewUrl]);
+
   if (!isOpen) return null;
 
   const muscleGroupSummary = calculateMuscleGroupSummary(exercises);
@@ -84,8 +166,7 @@ const FinishWorkoutModal = ({
     (sum, group) => sum + group.setCount,
     0,
   );
-
-
+  const canUploadWorkoutPhoto = isAuthenticated && Boolean(onUploadWorkoutPhoto);
 
   const handleShare = async () => {
     const node = downloadAreaRef.current;
@@ -94,6 +175,10 @@ const FinishWorkoutModal = ({
     setIsExporting(true);
     let file: File | undefined;
     try {
+      if (workoutPhoto && !workoutPhotoPreviewUrl && workoutPhotoLoadPromiseRef.current) {
+        await workoutPhotoLoadPromiseRef.current;
+      }
+
       const filename = buildWorkoutSummaryFilename();
       file = await createWorkoutSummaryFile(node, filename);
       const shareData = {
@@ -128,6 +213,23 @@ const FinishWorkoutModal = ({
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       onCancel();
+    }
+  };
+
+  const handleWorkoutPhotoSelection = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !onUploadWorkoutPhoto) {
+      return;
+    }
+
+    try {
+      await onUploadWorkoutPhoto(file);
+    } catch {
+      // Error feedback is handled by the upload hook.
     }
   };
 
@@ -183,29 +285,64 @@ const FinishWorkoutModal = ({
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-2 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
-                <div aria-hidden="true" className="size-9" />
+              <div className="mb-2 grid grid-cols-[5rem_minmax(0,1fr)_5rem] items-center gap-2">
+                <div aria-hidden="true" className="h-10 w-20" />
                 <h3 className="text-foreground break-words text-center text-xl leading-tight font-black tracking-tight px-1">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
                   </span>
                 </h3>
-                <div className="flex" data-export-ignore="true">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleShare}
-                    disabled={isExporting}
-                    aria-label="Share workout summary image"
-                    title="Share image"
-                    className="h-8 w-8 text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10 transition-all active:scale-95"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex justify-end" data-export-ignore="true">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-primary/10 bg-background/90 p-1 shadow-sm backdrop-blur-sm">
+                    {canUploadWorkoutPhoto ? (
+                      <>
+                        <input
+                          ref={workoutPhotoInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="sr-only"
+                          aria-label="Upload workout photo"
+                          onChange={handleWorkoutPhotoSelection}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => workoutPhotoInputRef.current?.click()}
+                          disabled={isUploadingWorkoutPhoto}
+                          aria-label="Add workout photo"
+                          title="Add workout photo"
+                          className="h-8 w-8 rounded-full bg-transparent text-primary shadow-none transition-all hover:bg-primary/10 hover:text-primary active:scale-95"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleShare}
+                      disabled={isExporting}
+                      aria-label="Share workout summary image"
+                      title="Share image"
+                      className="h-8 w-8 rounded-full bg-transparent text-primary shadow-none transition-all hover:bg-primary/10 hover:text-primary active:scale-95"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <AnatomicalImage muscleGroupSummary={muscleGroupSummary} />
+              <FinishWorkoutVisual
+                isUploadingWorkoutPhoto={
+                  isUploadingWorkoutPhoto || Boolean(workoutPhoto && isLoadingWorkoutPhoto)
+                }
+                muscleGroupSummary={muscleGroupSummary}
+                workoutName={workoutName}
+                workoutPhoto={workoutPhoto}
+                workoutPhotoPreviewUrl={resolvedWorkoutPhotoUrl}
+              />
               <div className="grid gap-2">
                 {muscleGroupSummary.map((group) => (
                   <div

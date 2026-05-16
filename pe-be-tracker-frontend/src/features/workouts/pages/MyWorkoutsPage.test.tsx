@@ -278,7 +278,45 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
-      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 100);
+      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 25);
+    });
+  });
+
+  it("fetches additional authenticated workout pages until next_cursor is exhausted", async () => {
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
+      )
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[1], mockWorkouts[2]], null) as any,
+      );
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(1, undefined, 25);
+      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(2, 123, 25);
+      expect(screen.getByText("Morning Workout")).toBeInTheDocument();
+      expect(screen.getByText("Evening Workout")).toBeInTheDocument();
+    });
+  });
+
+  it("stops authenticated workout pagination when the API repeats a cursor", async () => {
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
+      )
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[1]], 123) as any,
+      );
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
+      expect(
+        screen.getByText("Workouts pagination returned repeated cursor 123"),
+      ).toBeInTheDocument();
     });
   });
 

@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
-import api from "@/shared/api/client";
-import { endpoints } from "@/shared/api/endpoints";
 import {
   getExercisesInWorkout,
   type Exercise,
 } from "@/features/exercises/api";
+import { getWorkoutById } from "@/features/workouts/api";
 import { normalizeExerciseClientKeys } from "@/features/exercises/lib/exerciseRow";
 import type { Routine } from "@/features/routines/types";
 import { useAuthStore, useGuestStore, useUIStore } from "@/stores";
@@ -42,8 +41,7 @@ const isNetworkError = (error: unknown): boolean => {
 };
 
 const fetchWorkout = async (workoutId: string): Promise<Workout> => {
-  const response = await api.get(endpoints.workoutById(workoutId));
-  return response.data as Workout;
+  return getWorkoutById(workoutId);
 };
 
 export const useWorkoutPageData = ({

@@ -1,4 +1,4 @@
-import type { PaginatedWorkouts, Workout } from "@/features/workouts";
+import type { PaginatedWorkouts, Workout, WorkoutPhoto } from "@/features/workouts";
 
 const DEFAULT_START = "2024-01-01T08:00:00Z";
 const DEFAULT_END = "2024-01-01T09:00:00Z";
@@ -18,6 +18,21 @@ export const makeWorkout = (overrides: Partial<Workout> = {}): Workout => ({
   start_time: DEFAULT_START,
   end_time: DEFAULT_END,
   workout_type_id: 1,
+  created_at: DEFAULT_START,
+  updated_at: DEFAULT_END,
+  ...overrides,
+});
+
+export const makeWorkoutPhoto = (
+  overrides: Partial<WorkoutPhoto> = {},
+): WorkoutPhoto => ({
+  id: 1,
+  workout_id: 1,
+  url: "http://localhost:8000/api/v1/workouts/1/photo/file",
+  width: 1080,
+  height: 1350,
+  mime_type: "image/png",
+  size_bytes: 123_456,
   created_at: DEFAULT_START,
   updated_at: DEFAULT_END,
   ...overrides,

@@ -66,6 +66,7 @@ class WorkoutPhotoRead(BaseModel):
     # Keep the raw workout_id out of serialized bodies while still retaining it
     # on the schema instance so the computed file URL can be built from it.
     workout_id: int = Field(exclude=True)
+    updated_at: datetime = Field(exclude=True)
     width: Optional[int] = None
     height: Optional[int] = None
     mime_type: str
@@ -74,7 +75,10 @@ class WorkoutPhotoRead(BaseModel):
     @computed_field
     @property
     def url(self) -> str:
-        return f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file"
+        version = f"{self.id}-{int(self.updated_at.timestamp())}"
+        return (
+            f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file?v={version}"
+        )
 
 
 class WorkoutPhotoUploadResponse(WorkoutPhotoRead):

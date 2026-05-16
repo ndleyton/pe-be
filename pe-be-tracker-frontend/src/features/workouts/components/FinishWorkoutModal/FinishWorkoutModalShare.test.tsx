@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
-import { makeExerciseForSummary } from "@/test/fixtures";
+import { makeExerciseForSummary, makeWorkoutPhoto } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
 import * as imageHelpers from "./lib/workoutSummaryImage";
 import { toast } from "sonner";
@@ -122,5 +122,74 @@ describe("FinishWorkoutModal Share", () => {
     await user.click(screen.getByRole("button", { name: /share/i }));
 
     expect(imageHelpers.downloadWorkoutSummaryImage).not.toHaveBeenCalled();
+  });
+
+  it("includes the uploaded photo in the share/export area on a desktop viewport", async () => {
+    const user = userEvent.setup();
+    const mockFile = new File([""], "test.png", { type: "image/png" });
+    vi.mocked(imageHelpers.createWorkoutSummaryFile).mockResolvedValue(mockFile);
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1440,
+    });
+
+    render(
+      <FinishWorkoutModal
+        isOpen={true}
+        exercises={mockExercises}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+        workoutName="Desktop Push Day"
+        workoutPhoto={makeWorkoutPhoto({
+          url: "https://cdn.example.com/desktop-photo.png",
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /share/i }));
+
+    const exportedNode = vi.mocked(imageHelpers.createWorkoutSummaryFile)
+      .mock.calls[0][0] as HTMLElement;
+    expect(
+      exportedNode.querySelector(
+        'img[alt="Workout photo for Desktop Push Day"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("includes the uploaded photo in the share/export area on a mobile viewport", async () => {
+    const user = userEvent.setup();
+    const mockFile = new File([""], "test.png", { type: "image/png" });
+    vi.mocked(imageHelpers.createWorkoutSummaryFile).mockResolvedValue(mockFile);
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+
+    render(
+      <FinishWorkoutModal
+        isOpen={true}
+        exercises={mockExercises}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+        workoutName="Mobile Push Day"
+        workoutPhotoPreviewUrl="blob:mobile-preview"
+        workoutPhoto={makeWorkoutPhoto({
+          url: "https://cdn.example.com/mobile-photo.png",
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /share/i }));
+
+    const exportedNode = vi.mocked(imageHelpers.createWorkoutSummaryFile)
+      .mock.calls[0][0] as HTMLElement;
+    const photo = exportedNode.querySelector(
+      'img[alt="Workout photo for Mobile Push Day"]',
+    ) as HTMLImageElement | null;
+    expect(photo).not.toBeNull();
+    expect(photo?.src).toContain("blob:mobile-preview");
   });
 });
