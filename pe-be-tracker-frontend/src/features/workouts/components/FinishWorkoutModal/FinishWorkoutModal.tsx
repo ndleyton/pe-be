@@ -285,51 +285,53 @@ const FinishWorkoutModal = ({
                   {formattedDuration}
                 </div>
               </div>
-              <div className="mb-2 grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
-                <div aria-hidden="true" className="size-9" />
+              <div className="mb-2 grid grid-cols-[5rem_minmax(0,1fr)_5rem] items-center gap-2">
+                <div aria-hidden="true" className="h-10 w-20" />
                 <h3 className="text-foreground break-words text-center text-xl leading-tight font-black tracking-tight px-1">
                   <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {workoutName ?? "Great Training Session!"}
                   </span>
                 </h3>
-                <div className="flex items-center justify-end gap-1.5" data-export-ignore="true">
-                  {canUploadWorkoutPhoto ? (
-                    <>
-                      <input
-                        ref={workoutPhotoInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="sr-only"
-                        aria-label="Upload workout photo"
-                        onChange={handleWorkoutPhotoSelection}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => workoutPhotoInputRef.current?.click()}
-                        disabled={isUploadingWorkoutPhoto}
-                        aria-label="Add workout photo"
-                        title="Add workout photo"
-                        className="h-8 w-8 text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10 transition-all active:scale-95"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleShare}
-                    disabled={isExporting}
-                    aria-label="Share workout summary image"
-                    title="Share image"
-                    className="h-8 w-8 text-primary hover:text-primary rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-primary/10 transition-all active:scale-95"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex justify-end" data-export-ignore="true">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-primary/10 bg-background/90 p-1 shadow-sm backdrop-blur-sm">
+                    {canUploadWorkoutPhoto ? (
+                      <>
+                        <input
+                          ref={workoutPhotoInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="sr-only"
+                          aria-label="Upload workout photo"
+                          onChange={handleWorkoutPhotoSelection}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => workoutPhotoInputRef.current?.click()}
+                          disabled={isUploadingWorkoutPhoto}
+                          aria-label="Add workout photo"
+                          title="Add workout photo"
+                          className="h-8 w-8 rounded-full bg-transparent text-primary shadow-none transition-all hover:bg-primary/10 hover:text-primary active:scale-95"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleShare}
+                      disabled={isExporting}
+                      aria-label="Share workout summary image"
+                      title="Share image"
+                      className="h-8 w-8 rounded-full bg-transparent text-primary shadow-none transition-all hover:bg-primary/10 hover:text-primary active:scale-95"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               <FinishWorkoutVisual
