@@ -6,9 +6,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeWorkout, makeWorkoutPhoto } from "@/test/fixtures";
 
-const { mockUploadWorkoutPhoto, mockToastError } = vi.hoisted(() => ({
-  mockUploadWorkoutPhoto: vi.fn(),
-  mockToastError: vi.fn(),
+const { mockPrepareWorkoutPhotoFile, mockUploadWorkoutPhoto, mockToastError } =
+  vi.hoisted(() => ({
+    mockPrepareWorkoutPhotoFile: vi.fn(),
+    mockUploadWorkoutPhoto: vi.fn(),
+    mockToastError: vi.fn(),
+  }));
+
+vi.mock("@/features/workouts/lib/workoutPhotoPreparation", () => ({
+  prepareWorkoutPhotoFile: mockPrepareWorkoutPhotoFile,
 }));
 
 vi.mock("@/features/workouts/api", async () => {
@@ -37,6 +43,7 @@ const createWrapper = (queryClient: QueryClient) =>
 describe("useWorkoutPhotoUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrepareWorkoutPhotoFile.mockImplementation(async (file: File) => file);
     vi.stubGlobal("URL", {
       ...URL,
       createObjectURL: vi.fn(() => "blob:preview"),
@@ -61,6 +68,13 @@ describe("useWorkoutPhotoUpload", () => {
         url: "http://localhost:8000/api/v1/workouts/123/photo/file",
       }),
     );
+    const originalFile = new File(["photo"], "progress.png", {
+      type: "image/png",
+    });
+    const preparedFile = new File(["prepared"], "progress.webp", {
+      type: "image/webp",
+    });
+    mockPrepareWorkoutPhotoFile.mockResolvedValue(preparedFile);
 
     const { result } = renderHook(
       () =>
@@ -74,16 +88,12 @@ describe("useWorkoutPhotoUpload", () => {
     );
 
     await act(async () => {
-      await result.current.uploadWorkoutPhoto(
-        new File(["photo"], "progress.png", { type: "image/png" }),
-      );
+      await result.current.uploadWorkoutPhoto(originalFile);
     });
 
     await waitFor(() => {
-      expect(mockUploadWorkoutPhoto).toHaveBeenCalledWith(
-        "123",
-        expect.any(File),
-      );
+      expect(mockPrepareWorkoutPhotoFile).toHaveBeenCalledWith(originalFile);
+      expect(mockUploadWorkoutPhoto).toHaveBeenCalledWith("123", preparedFile);
     });
     expect(result.current.workoutPhotoPreviewUrl).toBe("blob:preview");
     expect(queryClient.getQueryData(["workout", "123"])).toMatchObject({

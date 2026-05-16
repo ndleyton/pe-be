@@ -9,12 +9,12 @@ def test_workout_photo_optimized_max_edge_px_must_be_positive():
         Settings(_env_file=None, WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX=0)
 
 
-def test_workout_photo_optimized_max_edge_px_defaults_to_1024(monkeypatch):
+def test_workout_photo_optimized_max_edge_px_defaults_to_1600(monkeypatch):
     monkeypatch.delenv("WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX", raising=False)
 
     settings = Settings(_env_file=None)
 
-    assert settings.WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX == 1024
+    assert settings.WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX == 1600
 
 
 def test_workout_photo_max_edge_px_must_be_positive():

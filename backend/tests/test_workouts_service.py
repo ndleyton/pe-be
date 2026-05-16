@@ -879,7 +879,7 @@ async def test_workout_photo_service_rejects_large_source_pixel_count_before_dec
         service._inspect_image(buffer.getvalue())
 
 
-async def test_workout_photo_service_optimizes_to_configured_1024px_longest_edge(
+async def test_workout_photo_service_optimizes_to_configured_1600px_longest_edge(
     monkeypatch,
 ):
     from io import BytesIO
@@ -887,15 +887,15 @@ async def test_workout_photo_service_optimizes_to_configured_1024px_longest_edge
     from PIL import Image
 
     buffer = BytesIO()
-    Image.new("RGB", (2048, 1024), color="blue").save(buffer, format="PNG")
+    Image.new("RGB", (3200, 1600), color="blue").save(buffer, format="PNG")
     service = WorkoutPhotoService(user_id=1, session=None)
-    monkeypatch.setattr(settings, "WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX", 1024)
+    monkeypatch.setattr(settings, "WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX", 1600)
 
     optimized_data, width, height, mime_type = service._optimize_image(
         buffer.getvalue()
     )
 
     assert optimized_data
-    assert width == 1024
-    assert height == 512
+    assert width == 1600
+    assert height == 800
     assert mime_type == "image/webp"

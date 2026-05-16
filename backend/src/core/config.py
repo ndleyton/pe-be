@@ -194,7 +194,7 @@ class Settings(BaseSettings):
         description="Max decoded pixel count accepted for source workout photo uploads",
     )
     WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX: int = Field(
-        1024,
+        1600,
         gt=0,
         validation_alias="WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX",
         description="Max longest edge for optimized workout photos",
