@@ -839,7 +839,7 @@ async def test_workout_photo_service_rejects_large_source_edge_before_decode(
 ):
     from io import BytesIO
 
-    from PIL import Image
+    from PIL import Image, ImageFile
 
     buffer = BytesIO()
     Image.new("RGB", (12, 8), color="red").save(buffer, format="PNG")
@@ -850,7 +850,7 @@ async def test_workout_photo_service_rejects_large_source_edge_before_decode(
     def fail_load(self):
         raise AssertionError("image.load should not run for oversized images")
 
-    monkeypatch.setattr(Image.Image, "load", fail_load)
+    monkeypatch.setattr(ImageFile.ImageFile, "load", fail_load)
 
     with pytest.raises(ValueError, match="Uploaded image dimensions are too large"):
         service._inspect_image(buffer.getvalue())
@@ -861,7 +861,7 @@ async def test_workout_photo_service_rejects_large_source_pixel_count_before_dec
 ):
     from io import BytesIO
 
-    from PIL import Image
+    from PIL import Image, ImageFile
 
     buffer = BytesIO()
     Image.new("RGB", (12, 8), color="red").save(buffer, format="PNG")
@@ -873,7 +873,7 @@ async def test_workout_photo_service_rejects_large_source_pixel_count_before_dec
     def fail_load(self):
         raise AssertionError("image.load should not run for oversized images")
 
-    monkeypatch.setattr(Image.Image, "load", fail_load)
+    monkeypatch.setattr(ImageFile.ImageFile, "load", fail_load)
 
     with pytest.raises(ValueError, match="Uploaded image has too many pixels"):
         service._inspect_image(buffer.getvalue())
