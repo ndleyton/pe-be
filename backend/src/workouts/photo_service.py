@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
+from PIL.Image import DecompressionBombError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
@@ -109,16 +110,28 @@ class WorkoutPhotoService:
     def _inspect_image(self, data: bytes) -> tuple[int, int, str]:
         try:
             with Image.open(BytesIO(data)) as image:
-                image.verify()
-            with Image.open(BytesIO(data)) as image:
-                image.load()
                 mime_type = Image.MIME.get(image.format or "")
                 if not mime_type:
                     raise ValueError("Unsupported image type")
                 width, height = image.size
+                self._validate_source_dimensions(width, height)
+                image.verify()
+            with Image.open(BytesIO(data)) as image:
+                image.load()
                 return width, height, mime_type.lower()
-        except (UnidentifiedImageError, OSError) as exc:
+        except (UnidentifiedImageError, OSError, DecompressionBombError) as exc:
             raise ValueError("Uploaded file is not a valid image") from exc
+
+    def _validate_source_dimensions(self, width: int, height: int) -> None:
+        if width <= 0 or height <= 0:
+            raise ValueError("Uploaded file is not a valid image")
+        if (
+            width > settings.WORKOUT_PHOTO_MAX_EDGE_PX
+            or height > settings.WORKOUT_PHOTO_MAX_EDGE_PX
+        ):
+            raise ValueError("Uploaded image dimensions are too large")
+        if width * height > settings.WORKOUT_PHOTO_MAX_PIXELS:
+            raise ValueError("Uploaded image has too many pixels")
 
     def _optimize_image(self, data: bytes) -> tuple[bytes, int, int, str]:
         try:

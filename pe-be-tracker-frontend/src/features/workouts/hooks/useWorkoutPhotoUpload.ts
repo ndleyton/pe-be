@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { uploadWorkoutPhoto } from "@/features/workouts/api";
+import { prepareWorkoutPhotoFile } from "@/features/workouts/lib/workoutPhotoPreparation";
 import type { Workout, WorkoutPhoto } from "@/features/workouts/types";
 
 type UseWorkoutPhotoUploadParams = {
@@ -43,7 +44,8 @@ export const useWorkoutPhotoUpload = ({
         throw new Error("Workout photo uploads require sign-in.");
       }
 
-      return uploadWorkoutPhoto(workoutId, file);
+      const preparedFile = await prepareWorkoutPhotoFile(file);
+      return uploadWorkoutPhoto(workoutId, preparedFile);
     },
     onMutate: async (file) => {
       const previousPreviewUrl = previewUrlRef.current;

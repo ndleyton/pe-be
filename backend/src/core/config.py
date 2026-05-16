@@ -181,6 +181,18 @@ class Settings(BaseSettings):
         validation_alias="WORKOUT_PHOTO_RATE_LIMIT_MAX_REQUESTS",
         description="Max workout photo uploads allowed per window",
     )
+    WORKOUT_PHOTO_MAX_EDGE_PX: int = Field(
+        6000,
+        gt=0,
+        validation_alias="WORKOUT_PHOTO_MAX_EDGE_PX",
+        description="Max longest edge accepted for source workout photo uploads",
+    )
+    WORKOUT_PHOTO_MAX_PIXELS: int = Field(
+        16_000_000,
+        gt=0,
+        validation_alias="WORKOUT_PHOTO_MAX_PIXELS",
+        description="Max decoded pixel count accepted for source workout photo uploads",
+    )
     WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX: int = Field(
         1600,
         gt=0,
