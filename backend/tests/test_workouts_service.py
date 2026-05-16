@@ -832,3 +832,70 @@ async def test_workout_photo_service_maps_decode_oserror_to_validation_error(
 
     with pytest.raises(ValueError, match="Uploaded file is not a valid image"):
         service._inspect_image(b"not-really-an-image")
+
+
+async def test_workout_photo_service_rejects_large_source_edge_before_decode(
+    monkeypatch,
+):
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (12, 8), color="red").save(buffer, format="PNG")
+    service = WorkoutPhotoService(user_id=1, session=None)
+
+    monkeypatch.setattr(settings, "WORKOUT_PHOTO_MAX_EDGE_PX", 10)
+
+    def fail_load(self):
+        raise AssertionError("image.load should not run for oversized images")
+
+    monkeypatch.setattr(Image.Image, "load", fail_load)
+
+    with pytest.raises(ValueError, match="Uploaded image dimensions are too large"):
+        service._inspect_image(buffer.getvalue())
+
+
+async def test_workout_photo_service_rejects_large_source_pixel_count_before_decode(
+    monkeypatch,
+):
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (12, 8), color="red").save(buffer, format="PNG")
+    service = WorkoutPhotoService(user_id=1, session=None)
+
+    monkeypatch.setattr(settings, "WORKOUT_PHOTO_MAX_EDGE_PX", 100)
+    monkeypatch.setattr(settings, "WORKOUT_PHOTO_MAX_PIXELS", 50)
+
+    def fail_load(self):
+        raise AssertionError("image.load should not run for oversized images")
+
+    monkeypatch.setattr(Image.Image, "load", fail_load)
+
+    with pytest.raises(ValueError, match="Uploaded image has too many pixels"):
+        service._inspect_image(buffer.getvalue())
+
+
+async def test_workout_photo_service_optimizes_to_configured_1024px_longest_edge(
+    monkeypatch,
+):
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (2048, 1024), color="blue").save(buffer, format="PNG")
+    service = WorkoutPhotoService(user_id=1, session=None)
+    monkeypatch.setattr(settings, "WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX", 1024)
+
+    optimized_data, width, height, mime_type = service._optimize_image(
+        buffer.getvalue()
+    )
+
+    assert optimized_data
+    assert width == 1024
+    assert height == 512
+    assert mime_type == "image/webp"
