@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from io import BytesIO
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import AsyncMock
 
 import pytest
@@ -17,6 +18,20 @@ from src.workouts.models import Workout, WorkoutPhoto, WorkoutType
 
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+def _assert_versioned_workout_photo_url(
+    url: str, *, workout_id: int, photo_id: int | None = None
+) -> None:
+    parsed = urlparse(url)
+    assert parsed.path == f"/api/v1/workouts/{workout_id}/photo/file"
+    version = parse_qs(parsed.query).get("v")
+    assert version is not None
+    assert len(version) == 1
+    if photo_id is not None:
+        assert version[0].startswith(f"{photo_id}-")
+    else:
+        assert "-" in version[0]
 
 
 def _workout_payload(workout_id: int, owner_id: int = 123) -> dict:
@@ -185,8 +200,10 @@ async def test_get_my_workouts_defaults_to_25_and_includes_photo_metadata(
     body = response.json()
     assert body["next_cursor"] is None
     returned_workout = next(item for item in body["data"] if item["id"] == workout.id)
-    assert (
-        returned_workout["photo"]["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+    _assert_versioned_workout_photo_url(
+        returned_workout["photo"]["url"],
+        workout_id=workout.id,
+        photo_id=upload_response.json()["id"],
     )
 
 
@@ -418,16 +435,15 @@ async def test_workout_photo_upload_download_and_detail(
     assert upload_payload["mime_type"] == "image/webp"
     assert upload_payload["width"] == 8
     assert upload_payload["height"] == 6
-    assert upload_payload["url"] == f"/api/v1/workouts/{workout.id}/photo/file"
+    _assert_versioned_workout_photo_url(
+        upload_payload["url"], workout_id=workout.id, photo_id=upload_payload["id"]
+    )
 
     detail_response = await async_client.get(
         f"{settings.API_PREFIX}/workouts/{workout.id}"
     )
     assert detail_response.status_code == 200, detail_response.text
-    assert (
-        detail_response.json()["photo"]["url"]
-        == f"/api/v1/workouts/{workout.id}/photo/file"
-    )
+    assert detail_response.json()["photo"]["url"] == upload_payload["url"]
 
     file_response = await async_client.get(
         f"{settings.API_PREFIX}/workouts/{workout.id}/photo/file"
