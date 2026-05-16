@@ -76,7 +76,9 @@ class WorkoutPhotoRead(BaseModel):
     @property
     def url(self) -> str:
         version = f"{self.id}-{int(self.updated_at.timestamp())}"
-        return f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file?v={version}"
+        return (
+            f"{settings.API_PREFIX}/workouts/{self.workout_id}/photo/file?v={version}"
+        )
 
 
 class WorkoutPhotoUploadResponse(WorkoutPhotoRead):
