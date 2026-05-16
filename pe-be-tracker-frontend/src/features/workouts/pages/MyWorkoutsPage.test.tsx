@@ -301,6 +301,25 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
+  it("stops authenticated workout pagination when the API repeats a cursor", async () => {
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
+      )
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[1]], 123) as any,
+      );
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
+      expect(
+        screen.getByText("Workouts pagination returned repeated cursor 123"),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("displays workouts after loading", async () => {
     render(<MyWorkoutsPage />);
 

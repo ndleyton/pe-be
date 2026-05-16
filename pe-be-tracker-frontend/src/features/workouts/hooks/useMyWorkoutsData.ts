@@ -9,6 +9,7 @@ const WORKOUTS_PAGE_SIZE = 25;
 
 const getAllMyWorkouts = async () => {
   const workouts: Workout[] = [];
+  const seenCursors = new Set<number>();
   let cursor: number | null | undefined = undefined;
 
   // TODO: Move the workouts history screen to useInfiniteQuery so paging stays incremental.
@@ -23,6 +24,11 @@ const getAllMyWorkouts = async () => {
       };
     }
 
+    if (seenCursors.has(page.next_cursor)) {
+      throw new Error(`Workouts pagination returned repeated cursor ${page.next_cursor}`);
+    }
+
+    seenCursors.add(page.next_cursor);
     cursor = page.next_cursor;
   }
 };

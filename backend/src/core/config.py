@@ -5,6 +5,11 @@ from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+WORKOUT_PHOTO_OPTIMIZED_OUTPUT_FORMATS = frozenset(
+    {"avif", "gif", "jpeg", "jpg", "png", "webp"}
+)
+
+
 class Settings(BaseSettings):
     # Required for production, but have defaults for testing
     # In a production environment, these should be set via environment variables.
@@ -178,6 +183,7 @@ class Settings(BaseSettings):
     )
     WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX: int = Field(
         1600,
+        gt=0,
         validation_alias="WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX",
         description="Max longest edge for optimized workout photos",
     )
@@ -387,6 +393,19 @@ class Settings(BaseSettings):
         if isinstance(v, (list, tuple, set)):
             return tuple(str(part).strip().lower() for part in v if str(part).strip())
         return v
+
+    @field_validator("WORKOUT_PHOTO_OPTIMIZED_FORMAT", mode="before")
+    @classmethod
+    def validate_workout_photo_optimized_format(cls, v: Any) -> str:
+        normalized = str(v).strip().lower()
+        if normalized not in WORKOUT_PHOTO_OPTIMIZED_OUTPUT_FORMATS:
+            allowed = ", ".join(sorted(WORKOUT_PHOTO_OPTIMIZED_OUTPUT_FORMATS))
+            raise ValueError(
+                f"WORKOUT_PHOTO_OPTIMIZED_FORMAT must be one of: {allowed}"
+            )
+        if normalized == "jpg":
+            return "jpeg"
+        return normalized
 
 
 # Global settings instance

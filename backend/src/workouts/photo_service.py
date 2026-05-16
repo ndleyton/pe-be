@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 from io import BytesIO
 from pathlib import Path
@@ -46,7 +47,9 @@ class WorkoutPhotoService:
             raise ValueError("Uploaded file content does not match MIME type")
 
         # Optimize image: resize and convert to WebP
-        optimized_data, width, height, final_mime_type = self._optimize_image(data)
+        optimized_data, width, height, final_mime_type = await asyncio.to_thread(
+            self._optimize_image, data
+        )
 
         suffix = f".{settings.WORKOUT_PHOTO_OPTIMIZED_FORMAT}"
         storage_key = self._storage_key(
@@ -54,8 +57,7 @@ class WorkoutPhotoService:
             suffix=suffix,
         )
         file_path = self._photo_file_path(storage_key)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_bytes(optimized_data)
+        await asyncio.to_thread(self._write_photo_bytes, file_path, optimized_data)
 
         try:
             return await replace_primary_workout_photo(
@@ -86,6 +88,10 @@ class WorkoutPhotoService:
 
     def photo_file_path(self, storage_key: str) -> Path:
         return self._photo_file_path(storage_key)
+
+    def _write_photo_bytes(self, file_path: Path, data: bytes) -> None:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(data)
 
     def _photo_storage_dir(self) -> Path:
         return Path(settings.WORKOUT_PHOTO_STORAGE_DIR).expanduser().resolve()
