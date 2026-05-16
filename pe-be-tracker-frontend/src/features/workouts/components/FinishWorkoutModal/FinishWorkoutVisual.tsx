@@ -18,10 +18,13 @@ const FinishWorkoutVisual = ({
   workoutPhotoPreviewUrl,
 }: FinishWorkoutVisualProps) => {
   const imageUrl = workoutPhotoPreviewUrl || workoutPhoto?.url || null;
+  const visualFrameClassName = imageUrl
+    ? "aspect-square w-full"
+    : "aspect-[1065/827] w-full";
 
   return (
     <div className="relative mb-3 overflow-hidden rounded-[2.5rem] border border-border/20 bg-muted/10 shadow-inner">
-      <div className="aspect-[4/5] w-full">
+      <div className={visualFrameClassName}>
         {imageUrl ? (
           <img
             src={imageUrl}
