@@ -66,6 +66,30 @@ async def test_patch_workout_invalid_workout_type_returns_422(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_create_workout_type_duplicate_name_returns_400(
+    db_session: AsyncSession, async_client: AsyncClient
+):
+    await _override_authenticated_user(db_session)
+    db_session.add(
+        WorkoutType(name="Strength", description="Strength training"),
+    )
+    await db_session.flush()
+    await db_session.commit()
+
+    try:
+        response = await async_client.post(
+            f"{settings.API_PREFIX}/workouts/workout-types/",
+            json={"name": "Strength", "description": "Duplicate strength type"},
+        )
+        assert response.status_code == 400
+        body = response.json()
+        assert "already exists" in body["detail"]
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_patch_workout_end_time_before_start_returns_422(
     db_session: AsyncSession, async_client: AsyncClient
 ):

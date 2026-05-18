@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     CheckConstraint,
     Index,
+    UniqueConstraint,
     desc,
     Boolean,
     text,
@@ -31,6 +32,7 @@ class WorkoutType(Base):
     """Model for workout types"""
 
     __tablename__ = "workout_types"
+    __table_args__ = (UniqueConstraint("name", name="uq_workout_types_name"),)
 
     name = Column(String)
     description = Column(String)
