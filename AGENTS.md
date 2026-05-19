@@ -81,6 +81,11 @@ Notes:
   - **Service**: `src/workouts/recap.py` (WorkoutRecapService) handles metric gathering and Gemini generation.
   - **Data Grounding**: The recap is grounded in deterministic metrics (sets, volume, PR detection) and incorporates qualitative feedback from workout/exercise/set notes.
   - **Trigger**: Triggered via `POST /api/v1/workouts/{workout_id}/recap` from the `FinishWorkoutModal` in the frontend.
+- **Workout Photo Attachments**: Authenticated users can upload and attach a primary photo to their workouts to capture visual progress.
+  - **Service**: `src/workouts/photo_service.py` (`WorkoutPhotoService`) handles source image validation, resizing/optimizing (WebP downscaling), storage, and caching.
+  - **Storage**: Uploaded photo files are saved in `WORKOUT_PHOTO_STORAGE_DIR` (defaults to `.workout_photos`) and metadata is saved in the `workout_photos` table.
+  - **Replacement & Deletion Constraints**: Replacing or deleting a photo requires soft-deleting the old database record first (setting `deleted_at = NOW()`) inside a transaction to prevent violating the partial unique index constraint `uq_workout_photos_one_active_primary` (which enforces at most one active primary photo per workout). Soft-deleted photo files are later cleaned from the filesystem by a background job.
+  - **Endpoints**: Wired under `POST /api/v1/workouts/{workout_id}/photo` and `GET /api/v1/workouts/{workout_id}/photo/file`.
 - Standalone backend CLIs and scheduled jobs do not get FastAPI app startup imports for free. Before the first ORM query, ensure the SQLAlchemy model registry is loaded so string-based relationships like `"User"` and `"Workout"` resolve correctly.
 
 ### Frontend
@@ -96,6 +101,9 @@ Notes:
 - If a hook or helper depends on nested server shapes, prefer shared fixtures in `pe-be-tracker-frontend/src/test/fixtures/` over large inline objects. Use server-style fixtures for authenticated flows and guest fixtures for local-first flows.
 - For debounced hook tests, be careful combining fake timers with `waitFor`; prefer advancing timers inside `act(...)` and asserting directly on the resulting state or mock calls.
 - Preserve progressive rendering. Thin pages should still render stable shells and section-level placeholders/skeletons when possible; avoid replacing an otherwise usable screen with a single full-page "Loading..." state unless the entire route is blocked on first load.
+- **Workout Photo Uploads**: Enabled in `FinishWorkoutModal` for authenticated users (disabled/hidden for guest/local-first mode).
+  - **Client-Side Downscaling**: Photo files are optimized/downscaled client-side (to a max of 1600px edge length and converted to WebP with a JPEG fallback if decoding fails) using helper `src/features/workouts/lib/workoutPhotoPreparation.ts` and hook `src/features/workouts/hooks/useWorkoutPhotoUpload.ts` before transmission.
+  - **UI Interaction**: When a photo exists, the finish modal replaces `AnatomicalImage` with the uploaded photo preview inside the share/summary card.
 
 ## API Conventions
 
@@ -117,6 +125,8 @@ Useful current route examples:
 - Exercise types API: `/api/v1/exercises/exercise-types/`
 - Exercise sets for an exercise: `/api/v1/exercise-sets/exercise/{exercise_id}`
 - Auth session probe: `/api/v1/auth/session`
+- Workout photo upload API: `POST /api/v1/workouts/{workout_id}/photo`
+- Workout photo serving API: `GET /api/v1/workouts/{workout_id}/photo/file`
 
 ## Migration Guidance
 
