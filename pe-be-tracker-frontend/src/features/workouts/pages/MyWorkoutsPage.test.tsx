@@ -632,4 +632,69 @@ describe("MyWorkoutsPage", () => {
       expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
     });
   });
+
+  it("keeps workouts visible and renders inline retry UI when pagination fails", async () => {
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
+      )
+      .mockRejectedValueOnce(new Error("Failed to load page 2"));
+
+    render(<MyWorkoutsPage />);
+
+    // Wait for page 1 to load
+    await waitFor(() => {
+      expect(screen.getByText("Morning Workout")).toBeInTheDocument();
+      expect(screen.getByTestId("infinite-scroll-trigger")).toBeInTheDocument();
+    });
+
+    // Trigger scroll intersection to load page 2
+    expect(observerCallback).not.toBeNull();
+    observerCallback!([{ isIntersecting: true }]);
+
+    // Wait for the inline error UI to appear
+    await waitFor(() => {
+      expect(screen.getByText("Error Loading More Workouts")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load page 2")).toBeInTheDocument();
+      expect(screen.getByTestId("retry-pagination-button")).toBeInTheDocument();
+      expect(screen.getByTestId("refetch-all-button")).toBeInTheDocument();
+    });
+
+    // The workouts list should still be visible
+    expect(screen.getByText("Morning Workout")).toBeInTheDocument();
+  });
+
+  it("allows retrying the next page load from the inline retry UI", async () => {
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
+      )
+      .mockRejectedValueOnce(new Error("Failed to load page 2"))
+      .mockResolvedValueOnce(
+        makePaginatedWorkouts([mockWorkouts[1]], null) as any,
+      );
+
+    render(<MyWorkoutsPage />);
+
+    // Wait for page 1 to load
+    await waitFor(() => {
+      expect(screen.getByText("Morning Workout")).toBeInTheDocument();
+    });
+
+    // Trigger scroll intersection to load page 2
+    expect(observerCallback).not.toBeNull();
+    observerCallback!([{ isIntersecting: true }]);
+
+    // Wait for inline error
+    const retryButton = await screen.findByTestId("retry-pagination-button");
+
+    // Click retry
+    await userEvent.click(retryButton);
+
+    // Wait for page 2 to load successfully and the error to clear
+    await waitFor(() => {
+      expect(screen.getByText("Traditional Strength Training")).toBeInTheDocument();
+      expect(screen.queryByText("Error Loading More Workouts")).not.toBeInTheDocument();
+    });
+  });
 });
