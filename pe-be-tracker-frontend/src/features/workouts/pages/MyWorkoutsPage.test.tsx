@@ -181,9 +181,23 @@ const mockWorkouts = [
 ];
 
 describe("MyWorkoutsPage", () => {
+  let observerCallback: ((entries: any[]) => void) | null = null;
+
   beforeEach(() => {
+    observerCallback = null;
+    class MockIntersectionObserver {
+      constructor(callback: any) {
+        observerCallback = callback;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
     vi.clearAllMocks();
     mockNavigate.mockReset();
+    mockGetMyWorkouts.mockReset();
     mockLocation.pathname = "/workouts";
     mockLocation.state = null;
     Object.assign(mockAuthState, {
@@ -282,7 +296,7 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
-  it("fetches additional authenticated workout pages until next_cursor is exhausted", async () => {
+  it("fetches additional authenticated workout pages when the scroll trigger intersects", async () => {
     mockGetMyWorkouts
       .mockResolvedValueOnce(
         makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
@@ -293,15 +307,27 @@ describe("MyWorkoutsPage", () => {
 
     render(<MyWorkoutsPage />);
 
+    // Page 1 should load on mount
     await waitFor(() => {
       expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(1, undefined, 25);
-      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(2, 123, 25);
       expect(screen.getByText("Morning Workout")).toBeInTheDocument();
+    });
+
+    // Intersection trigger should be in the document since there is a next_cursor
+    expect(screen.getByTestId("infinite-scroll-trigger")).toBeInTheDocument();
+
+    // Trigger intersection
+    expect(observerCallback).not.toBeNull();
+    observerCallback!([{ isIntersecting: true }]);
+
+    // Page 2 should now be fetched
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(2, 123, 25);
       expect(screen.getByText("Evening Workout")).toBeInTheDocument();
     });
   });
 
-  it("stops authenticated workout pagination when the API repeats a cursor", async () => {
+  it("stops authenticated workout pagination when the API repeats a cursor on scroll intersection", async () => {
     mockGetMyWorkouts
       .mockResolvedValueOnce(
         makePaginatedWorkouts([mockWorkouts[0]], 123) as any,
@@ -313,7 +339,24 @@ describe("MyWorkoutsPage", () => {
     render(<MyWorkoutsPage />);
 
     await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenNthCalledWith(1, undefined, 25);
+      expect(screen.getByTestId("infinite-scroll-trigger")).toBeInTheDocument();
+    });
+
+    // Trigger scroll intersection to load page 2
+    expect(observerCallback).not.toBeNull();
+    observerCallback!([{ isIntersecting: true }]);
+
+    // Wait for page 2 to finish loading
+    await waitFor(() => {
       expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId("infinite-scroll-trigger")).toBeInTheDocument();
+    });
+
+    // Trigger scroll intersection again to fetch page 3, which repeats the cursor
+    observerCallback!([{ isIntersecting: true }]);
+
+    await waitFor(() => {
       expect(
         screen.getByText("Workouts pagination returned repeated cursor 123"),
       ).toBeInTheDocument();
@@ -569,6 +612,24 @@ describe("MyWorkoutsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("5m 0s")).toBeInTheDocument(); // 5 minutes
       expect(screen.getByText("3h 30m")).toBeInTheDocument(); // 3.5 hours
+    });
+  });
+
+  it("renders a 'Load More' button fallback when IntersectionObserver is undefined", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    mockGetMyWorkouts.mockResolvedValue(makePaginatedWorkouts(mockWorkouts, 123) as any);
+
+    render(<MyWorkoutsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("load-more-fallback-button")).toBeInTheDocument();
+    });
+
+    // Click fallback button to fetch page 2
+    await userEvent.click(screen.getByTestId("load-more-fallback-button"));
+
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2);
     });
   });
 });

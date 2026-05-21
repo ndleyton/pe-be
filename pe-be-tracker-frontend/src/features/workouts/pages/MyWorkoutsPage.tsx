@@ -12,7 +12,7 @@ import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import { useStartWorkoutFromRoutine } from "@/features/routines/hooks";
 import type { Routine } from "@/features/routines/types";
 import axios from "axios";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 interface MyWorkoutsPageLocationState {
   openWorkoutForm?: boolean;
@@ -25,8 +25,35 @@ const MyWorkoutsPage = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const handleStartWorkoutFromRoutine = useStartWorkoutFromRoutine();
 
-  const { workouts, isLoading: listPending, error, refetch, isAuthenticated } = useMyWorkoutsData();
+  const {
+    workouts,
+    isLoading: listPending,
+    error,
+    refetch,
+    isAuthenticated,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useMyWorkoutsData();
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
+  const observerRef = useRef<HTMLDivElement | null>(null);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    isFetchingRef.current = isFetchingNextPage;
+  }, [isFetchingNextPage]);
+
+  const loadNextPage = useCallback(async () => {
+    if (isFetchingRef.current || !hasNextPage || listPending) {
+      return;
+    }
+    isFetchingRef.current = true;
+    try {
+      await fetchNextPage();
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, [hasNextPage, listPending, fetchNextPage]);
 
   const listStatus: "pending" | "success" = listPending ? "pending" : "success";
 
@@ -76,6 +103,37 @@ const MyWorkoutsPage = () => {
     setShowWorkoutForm(true);
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (!hasNextPage || listPending || isFetchingNextPage) {
+      return;
+    }
+
+    if (typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          void loadNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerRef.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+      observer.disconnect();
+    };
+  }, [hasNextPage, listPending, isFetchingNextPage, loadNextPage]);
 
   const isAuthError =
     axios.isAxiosError(error) &&
@@ -175,6 +233,31 @@ const MyWorkoutsPage = () => {
                 ))}
               </div>
 
+              {/* Infinite scroll sensor/trigger */}
+              {hasNextPage && (
+                <div
+                  ref={observerRef}
+                  className="h-16 w-full flex items-center justify-center"
+                  data-testid="infinite-scroll-trigger"
+                >
+                  {isFetchingNextPage ? (
+                    <span
+                      className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+                      data-testid="loading-spinner"
+                    ></span>
+                  ) : (
+                    typeof IntersectionObserver === "undefined" && (
+                      <button
+                        onClick={() => void loadNextPage()}
+                        className="rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary px-4 py-2 text-sm font-semibold transition-colors duration-200"
+                        data-testid="load-more-fallback-button"
+                      >
+                        Load More
+                      </button>
+                    )
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
