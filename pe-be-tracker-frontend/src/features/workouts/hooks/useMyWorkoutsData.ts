@@ -1,37 +1,11 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useGuestStore, useAuthStore } from "@/stores";
 import { getMyWorkouts } from "../api";
 import { type Workout } from "../types";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 
 const WORKOUTS_PAGE_SIZE = 25;
-
-const getAllMyWorkouts = async () => {
-  const workouts: Workout[] = [];
-  const seenCursors = new Set<number>();
-  let cursor: number | null | undefined = undefined;
-
-  // TODO: Move the workouts history screen to useInfiniteQuery so paging stays incremental.
-  while (true) {
-    const page = await getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
-    workouts.push(...(Array.isArray(page.data) ? page.data : []));
-
-    if (page.next_cursor == null) {
-      return {
-        data: workouts,
-        next_cursor: null,
-      };
-    }
-
-    if (seenCursors.has(page.next_cursor)) {
-      throw new Error(`Workouts pagination returned repeated cursor ${page.next_cursor}`);
-    }
-
-    seenCursors.add(page.next_cursor);
-    cursor = page.next_cursor;
-  }
-};
 
 const getActiveWorkout = (workouts: Workout[]): Workout | null =>
   workouts.reduce<Workout | null>((activeWorkout, workout) => {
@@ -57,6 +31,7 @@ export const useMyWorkoutsData = () => {
   const guestWorkouts = useGuestStore((state) => state.workouts);
 
   const authResolved = authInitialized && !authLoading;
+  const queryClient = useQueryClient();
 
   const {
     data: serverWorkoutsResponse,
@@ -64,9 +39,37 @@ export const useMyWorkoutsData = () => {
     status,
     error,
     refetch,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["workouts"],
-    queryFn: getAllMyWorkouts,
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as number | undefined;
+      if (cursor !== undefined && cursor !== null) {
+        const cachedData = queryClient.getQueryData<{
+          pages: { next_cursor?: number | null }[];
+        }>(["workouts"]);
+        const fetchedCursors = new Set<number | undefined>();
+        fetchedCursors.add(undefined);
+        if (cachedData?.pages) {
+          for (let i = 0; i < cachedData.pages.length - 1; i++) {
+            const nextCursor = cachedData.pages[i].next_cursor;
+            if (nextCursor !== undefined && nextCursor !== null) {
+              fetchedCursors.add(nextCursor);
+            }
+          }
+        }
+        if (fetchedCursors.has(cursor)) {
+          throw new Error(
+            `Workouts pagination returned repeated cursor ${cursor}`
+          );
+        }
+      }
+      return getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+    },
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: authInitialized && !authLoading && isAuthenticated,
   });
 
@@ -76,9 +79,12 @@ export const useMyWorkoutsData = () => {
     }
 
     if (isAuthenticated) {
-      return Array.isArray(serverWorkoutsResponse?.data)
-        ? serverWorkoutsResponse.data
-        : [];
+      if (!serverWorkoutsResponse?.pages) {
+        return [];
+      }
+      return serverWorkoutsResponse.pages.flatMap((page) =>
+        Array.isArray(page?.data) ? page.data : []
+      );
     }
 
     return guestWorkouts.map((gw) => ({
@@ -110,5 +116,8 @@ export const useMyWorkoutsData = () => {
     error,
     refetch,
     isAuthenticated,
+    fetchNextPage,
+    hasNextPage: !!hasNextPage,
+    isFetchingNextPage,
   };
 };
