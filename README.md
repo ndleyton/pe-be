@@ -149,7 +149,7 @@ pnpm run test:e2e                        # Run Playwright E2E tests
 *   User-facing components in React format timestamps into the client's local timezone.
 
 ### Contributing
-For details on database optimization (such as `joinedload` vs `selectinload`), branching strategies (`develop` as default targets), and defensive Alembic migration patterns, please read our dedicated [**`CONTRIBUTING.md`**](CONTRIBUTING.md) guide.
+For details on database optimization (such as `joinedload` vs `selectinload`), branching strategy (`main` as the PR target), and defensive Alembic migration patterns, please read our dedicated [**`CONTRIBUTING.md`**](CONTRIBUTING.md) guide.
 
 ---
 

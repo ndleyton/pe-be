@@ -20,12 +20,12 @@ Before writing any code, search the issue tracker to see if your bug or feature 
 - To suggest a feature, open an issue using the [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md).
 
 ### 2. Submit a Pull Request
-We use a **Git Flow-inspired branching strategy** to manage updates:
-- **`develop` branch**: The main integration branch. All feature and bugfix PRs must target `develop`.
-- **`main` branch**: The production release branch. Only release PRs and critical hotfixes target `main`.
+We use a trunk-based development workflow, with `main` as the single source-of-truth branch for active development and production releases:
+- **`main` branch**: Feature, documentation, bugfix, release, and critical hotfix PRs should target `main`.
+- **Short-lived branches**: Create focused feature, documentation, bugfix, or hotfix branches from `main`, then rebase onto `origin/main` before merging.
 
 **Pull Request Process:**
-1. Fork the repository and create your branch from `develop`:
+1. Fork the repository and create your branch from `main`:
    ```bash
    git checkout -b feature/my-cool-feature
    # or
@@ -34,13 +34,13 @@ We use a **Git Flow-inspired branching strategy** to manage updates:
 2. Write clean, documented code and include appropriate unit or integration tests.
 3. Verify your changes locally (see the commands below).
 4. Commit your changes. We recommend descriptive, semantic commit messages.
-5. Push your branch to your fork and open a Pull Request targeting `develop`.
+5. Push your branch to your fork and open a Pull Request targeting `main`.
 6. Ensure all CI/CD checks (linting, type checking, unit tests) pass.
-7. Before merging, please fetch updates and rebase onto `origin/develop` to ensure a clean history:
+7. Before merging, please fetch updates and rebase onto `origin/main` to ensure a clean history:
    ```bash
    git fetch origin
    git switch feature/my-cool-feature
-   git rebase origin/develop
+   git rebase origin/main
    ```
 
 ---
