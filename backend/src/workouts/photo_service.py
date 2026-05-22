@@ -213,19 +213,23 @@ async def cleanup_deleted_workout_photos(
        and whose mtime is older than *orphan_grace_hours* are removed.
     """
     effective_dir = (
-        Path(storage_dir) if storage_dir is not None
+        Path(storage_dir)
+        if storage_dir is not None
         else Path(settings.WORKOUT_PHOTO_STORAGE_DIR).expanduser().resolve()
     )
     effective_retention = (
-        retention_days if retention_days is not None
+        retention_days
+        if retention_days is not None
         else settings.WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS
     )
     effective_batch = (
-        batch_size if batch_size is not None
+        batch_size
+        if batch_size is not None
         else settings.WORKOUT_PHOTO_CLEANUP_BATCH_SIZE
     )
     effective_grace = (
-        orphan_grace_hours if orphan_grace_hours is not None
+        orphan_grace_hours
+        if orphan_grace_hours is not None
         else settings.WORKOUT_PHOTO_ORPHAN_GRACE_HOURS
     )
 
