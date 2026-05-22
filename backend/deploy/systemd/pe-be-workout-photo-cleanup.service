@@ -1,0 +1,10 @@
+[Unit]
+Description=PE-BE workout photo cleanup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/pe-be
+Environment=ENV_FILE=.env.production
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.workout_photo_cleanup
