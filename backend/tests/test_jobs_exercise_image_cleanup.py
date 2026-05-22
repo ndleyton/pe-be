@@ -13,7 +13,11 @@ async def test_cleanup_job_run_delegates_to_managed_runner(monkeypatch):
         assert job_name == exercise_image_cleanup.JOB_NAME
         assert job_logger is exercise_image_cleanup.logger
         metrics = await job_callable("session")
-        assert metrics == {"deleted_rows": 5, "orphaned_files": 2, "reclaimed_bytes": 1024}
+        assert metrics == {
+            "deleted_rows": 5,
+            "orphaned_files": 2,
+            "reclaimed_bytes": 1024,
+        }
         return JobRunResult(job_name=job_name, status="success", metrics=metrics)
 
     monkeypatch.setattr(
@@ -81,8 +85,7 @@ def test_cleanup_job_main_prints_skipped_message(monkeypatch, capsys):
 
     captured = capsys.readouterr()
     assert (
-        captured.out.strip()
-        == "Skipped exercise image cleanup; another run is active."
+        captured.out.strip() == "Skipped exercise image cleanup; another run is active."
     )
 
 
