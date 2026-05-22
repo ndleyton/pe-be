@@ -1,219 +1,158 @@
 # PersonalBestie
 
-PersonalBestie is a full-stack fitness tracker with a FastAPI backend, a React frontend, and an AI-powered coaching layer built around server-side function calling. The product centers on workouts, exercises, exercise sets, and routines, with local-first guest usage in the frontend and authenticated sync once a user signs in.
+PersonalBestie is a full-stack fitness tracker designed to help users log workouts, routines, and exercises, featuring a **local-first guest mode** and an **AI-powered coaching layer** built with server-side function calling.
 
-What makes the project technically interesting is that the AI layer is not just free-form chat. The backend exposes application-owned tools to Gemini, validates tool inputs with typed schemas, executes those tools server-side, and uses the results to answer questions grounded in real workout data.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)](backend)
+[![React 19](https://img.shields.io/badge/Frontend-React_19-61DAFB?style=flat&logo=react)](pe-be-tracker-frontend)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python)](backend)
+[![pnpm](https://img.shields.io/badge/Package_Manager-pnpm-F69220?style=flat&logo=pnpm)](pe-be-tracker-frontend)
+[![Gemini](https://img.shields.io/badge/AI-Google_Gemini-4285F4?style=flat&logo=google)](backend/src/workouts/recap.py)
 
-Licensed under the MIT License. See [`LICENSE`](LICENSE).
+---
 
-## What Lives Here
+## Key Features
+
+*   **Local-First Guest Mode**: Instantly log workouts without an account. All data is persisted locally in the browser's IndexedDB and seamlessly synced to the database once you sign in.
+*   **AI Coaching and Recaps**: Undergoes automated post-workout analysis using Google Gemini to summarize performance, detect personal records (PRs), and provide evidence-based workout insights.
+*   **Server-Side Function Calling**: AI capabilities are validated and executed securely server-side using typed schemas and FastAPI-backed endpoints rather than ungrounded prompt generation.
+*   **Responsive UI**: Modern interface optimized for both desktop and mobile screens, built with Tailwind CSS v4 and React 19.
+
+---
+
+## Project Structure
 
 | Path | Purpose |
 | --- | --- |
-| `backend/` | FastAPI API, SQLAlchemy models, Alembic migrations, tests |
-| `pe-be-tracker-frontend/` | React 19 + Vite frontend |
-| `docker-compose.yml` | Optional full-stack local environment |
-| `AGENTS.md` | Repository-specific development instructions |
+| [`backend/`](backend) | FastAPI application, SQLAlchemy models, Alembic migrations, and backend tests. |
+| [`pe-be-tracker-frontend/`](pe-be-tracker-frontend) | React 19 + Vite frontend application. |
+| [`docker-compose.yml`](docker-compose.yml) | Local multi-container development configuration. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Open-source contributor guidelines and conventions. |
+| [`AGENTS.md`](AGENTS.md) | Reference file for AI agents and developer rule setups. |
 
-## Stack
+---
+
+## Stack Overview
 
 ### Backend
-
-- Python
-- FastAPI
-- SQLAlchemy + Alembic
-- PostgreSQL
-- `uv` for dependency management and command execution
-- Google Gemini integration via `google-genai`
-- Server-side function calling over application-owned tools
-- Langfuse observability
+*   **Language & Runtime**: Python 3.10–3.12 managed by [**`uv`**](https://docs.astral.sh/uv/)
+*   **Web Framework**: FastAPI
+*   **ORM / Migrations**: SQLAlchemy + Alembic
+*   **Database**: PostgreSQL
+*   **AI Integration**: `google-genai` (Google Gemini)
+*   **Observability**: Langfuse (tracing and prompt management)
 
 ### Frontend
+*   **Library**: React 19 (TypeScript)
+*   **Build Tool**: Vite
+*   **Router**: React Router v7
+*   **State Management**: Zustand
+*   **Data Fetching**: TanStack Query
+*   **Styling**: Tailwind CSS v4
+*   **Testing**: Vitest & Playwright
 
-- React 19
-- TypeScript
-- Vite
-- React Router v7
-- TanStack Query
-- Tailwind CSS v4
-- Zustand
-- Vitest and Playwright
+---
 
-## Local Development
+## AI Layer & Architecture
 
-The recommended workflow is to run the backend and frontend separately from their own directories.
+What makes this project technically interesting is that the AI layer is not just free-form chat. It is structured around server-side function calling, typed inputs, real data grounding, and consistent image generation:
+
+*   **Server-Side Function Calling**: Instead of relying on prompt-only instructions, the chat assistant uses Google Gemini with application-owned tools. The backend defines and exposes these tools to Gemini.
+*   **Input Validation**: Tool inputs are validated using typed schemas before execution, ensuring reliability and security.
+*   **Data Grounding**: The assistant answers questions by running tools that query the database for real, user-specific workout metrics (PRs, volume deltas, history) and notes.
+*   **Post-Workout AI Recaps**: Automated, evidence-based coaching summaries are triggered asynchronously upon workout completion. Generated via [`backend/src/workouts/recap.py`](backend/src/workouts/recap.py) (`WorkoutRecapService`), it gathers workout statistics and qualitative notes to compose personalized coaching feedback.
+*   **Consistent Image Generation Pipeline**: An advanced multi-phase image generation system in [`backend/src/genai/google_images.py`](backend/src/genai/google_images.py) produces consistent, multi-frame exercise guide illustrations. It uses the first generated frame (or an uploaded reference) as a visual anchor image, feeding it back into the model to generate the subsequent exercise phases (e.g., start/eccentric vs concentric positions) while maintaining anatomical consistency, clothing, art style, and framing.
+*   **Observability**: Prompt versions, traces, and LLM latency are tracked in real-time using Langfuse. Details can be found in [`backend/LANGFUSE_INTEGRATION.md`](backend/LANGFUSE_INTEGRATION.md).
+
+---
+
+## Quick Start (Local Development)
+
+The backend and frontend are typically run separately for a better hot-reloading experience.
 
 ### Prerequisites
+*   Python 3.10 to 3.12 with [**`uv`**](https://docs.astral.sh/uv/)
+*   Node.js 20+ with Corepack-enabled pnpm
+*   PostgreSQL running (you can start a PostgreSQL container using `docker compose up db -d` from the root)
 
-- Python 3.10 to 3.12
-- [`uv`](https://docs.astral.sh/uv/)
-- Node.js 20+ with Corepack-enabled pnpm
-- PostgreSQL
-
-### 1. Start the Backend
-
-From [`backend/`](backend/):
-
+### 1. Launch the Backend
+Navigate to [`backend/`](backend):
 ```bash
 cp .env.example .env
 uv sync
 uv run alembic upgrade head
 uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
+*   **API Base**: `http://localhost:8000/api/v1`
+*   **Health Check**: `http://localhost:8000/health`
 
-Make sure Postgres is running first. If you want to use Docker just for the database, `docker compose up db -d` from the repo root is enough.
-
-Important backend env vars:
-
-- `DATABASE_URL`
-- `SECRET_KEY`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `FRONTEND_URL`
-
-Default local API base:
-
-```text
-http://localhost:8000/api/v1
-```
-
-Health check:
-
-```text
-http://localhost:8000/health
-```
-
-### 2. Start the Frontend
-
-From [`pe-be-tracker-frontend/`](pe-be-tracker-frontend/):
-
+### 2. Launch the Frontend
+Navigate to [`pe-be-tracker-frontend/`](pe-be-tracker-frontend):
 ```bash
 corepack enable
 pnpm install
 cp env.example .env.development
 pnpm run dev
 ```
+*   **Local URL**: `http://localhost:5173`
 
-Minimum frontend env vars:
+---
 
-- `VITE_API_BASE_URL=http://localhost:8000/api/v1`
+## Docker Compose Alternative
 
-Also required outside test mode:
-
-- `VITE_PUBLIC_POSTHOG_KEY`
-- `VITE_PUBLIC_POSTHOG_HOST`
-
-Default local frontend URL:
-
-```text
-http://localhost:5173
-```
-
-## Docker Compose
-
-If you want a containerized setup instead, run this from the repo root:
-
+To run the entire full-stack application inside containers:
 ```bash
 docker compose up --build
 ```
+*   **Frontend**: `http://localhost:3000`
+*   **Backend**: `http://localhost:8000`
+*   **Postgres**: `localhost:5432`
 
-Default compose ports:
-
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
-- Postgres: `localhost:5432`
-
-Stop and remove containers plus the Postgres volume:
-
+To stop containers and tear down resources including database volumes:
 ```bash
 docker compose down -v
 ```
 
-## Common Commands
+---
 
-Run commands from the relevant subdirectory unless noted otherwise.
+## Common Development Commands
 
-### Backend
-
+### Backend Commands
+From [`backend/`](backend):
 ```bash
-uv run pytest
-uv run pytest --no-cov tests/test_file.py
-uv run ruff check .
-uv run ruff check . --fix
-uv run alembic current
-uv run alembic upgrade head
+uv run pytest                            # Run full test suite with coverage
+uv run pytest --no-cov tests/test_file.py # Run a single test file without coverage checks
+uv run ruff check .                      # Lint codebase
+uv run ruff check . --fix                # Auto-fix lint errors
+uv run alembic current                   # Inspect current migration status
+uv run alembic upgrade head              # Apply all migrations
 ```
 
-Notes:
-
-- Full backend test runs enforce coverage via `backend/pytest.ini`.
-- Focused test runs should usually use `--no-cov`.
-- Tests load `ENV_FILE` if set, otherwise `backend/.env.test`.
-- Test safety checks require a dedicated test database whose name contains `test`.
-
-### Frontend
-
+### Frontend Commands
+From [`pe-be-tracker-frontend/`](pe-be-tracker-frontend):
 ```bash
-pnpm run dev
-pnpm run lint
-pnpm run typecheck
-pnpm test
-pnpm run test:coverage
-pnpm run test:e2e
+pnpm run dev                             # Start development server
+pnpm run lint                            # Run ESLint validation
+pnpm run typecheck                       # Check TypeScript compilability
+pnpm test                                # Run unit tests via Vitest
+pnpm run test:coverage                  # Run unit tests and generate coverage report
+pnpm run test:e2e                        # Run Playwright E2E tests
 ```
 
-## Architecture Notes
+---
 
-### AI Layer
+## Architecture & Conventions
 
-- The chat assistant uses Gemini with backend-owned tool definitions rather than relying on prompt-only behavior.
-- **Post-Workout AI Recaps**: Automated coaching summaries generated upon workout completion, grounded in deterministic metrics (PRs, volume deltas) and qualitative notes.
-- Tool inputs are defined as typed schemas and validated before execution.
-- Tool execution stays server-side, which keeps access to user workout data and domain actions inside the application boundary.
-- Langfuse is used for prompt and trace visibility around AI interactions.
+### Time and Timezones
+*   All datetime metrics are transported and stored in **UTC**.
+*   Conversions to UTC happen prior to database insertions/updates.
+*   User-facing components in React format timestamps into the client's local timezone.
 
-### Backend
+### Contributing
+For details on database optimization (such as `joinedload` vs `selectinload`), branching strategy (`main` as the PR target), and defensive Alembic migration patterns, please read our dedicated [**`CONTRIBUTING.md`**](CONTRIBUTING.md) guide.
 
-- API routes mount under `/api/v1` by default.
-- Feature slices live under [`backend/src/`](backend/src/), including `users`, `workouts`, `exercises`, `exercise_sets`, `routines`, `chat`, `admin`, and `health`.
-- User-facing "routines" are the product term. Avoid reintroducing "recipes" in UI or API copy unless you are intentionally referring to older backend model names.
+---
 
-Useful routes:
+## License
 
-- `/api/v1/routines/`
-- `/api/v1/workouts/mine`
-- `/api/v1/workouts/workout-types/`
-- `/api/v1/exercises/exercise-types/`
-- `/api/v1/exercise-sets/exercise/{exercise_id}`
-- `/api/v1/auth/session`
-
-### Frontend
-
-- Guest mode is local-first and persisted through a Zustand store, not React context.
-- IndexedDB is the primary storage for guest state, with localStorage fallback.
-- Guest-to-authenticated sync logic lives in [`pe-be-tracker-frontend/src/utils/syncGuestData.ts`](pe-be-tracker-frontend/src/utils/syncGuestData.ts).
-- Shared endpoint constants live in [`pe-be-tracker-frontend/src/shared/api/endpoints.ts`](pe-be-tracker-frontend/src/shared/api/endpoints.ts).
-
-## Conventions That Matter
-
-- Preserve trailing slashes on collection endpoints used by the frontend client to avoid FastAPI `307` redirects on `POST`.
-- Prefer endpoint constants over hardcoded frontend API paths.
-- For backend detail endpoints with a small fixed relationship graph, prefer `joinedload` deliberately instead of defaulting to nested `selectinload`.
-- Keep Alembic migrations defensive when changing existing schema objects.
-
-## Time and Timezone Handling
-
-The app follows a UTC-first model:
-
-- Store and transport timestamps in UTC.
-- Convert user input to UTC before sending it to the backend.
-- Render timestamps in the user's local timezone in the UI.
-
-If you touch date handling, preserve the existing helpers and avoid ad hoc formatting or local-time storage.
-
-## Related Docs
-
-- Repo instructions: [`AGENTS.md`](AGENTS.md)
-- Backend setup details: [`backend/README.md`](backend/README.md)
-- Frontend setup details: [`pe-be-tracker-frontend/README.md`](pe-be-tracker-frontend/README.md)
-- Langfuse notes: [`backend/LANGFUSE_INTEGRATION.md`](backend/LANGFUSE_INTEGRATION.md)
+PersonalBestie is open-source software licensed under the [MIT License](LICENSE).
