@@ -1,4 +1,5 @@
 """Tests for workout photo cleanup: service layer + job wiring."""
+
 from __future__ import annotations
 
 import hashlib
@@ -438,8 +439,7 @@ async def test_job_main_prints_skipped_message(monkeypatch, capsys):
 
     captured = capsys.readouterr()
     assert (
-        captured.out.strip()
-        == "Skipped workout photo cleanup; another run is active."
+        captured.out.strip() == "Skipped workout photo cleanup; another run is active."
     )
 
 
