@@ -415,7 +415,7 @@ async def test_job_run_returns_disabled_when_config_flag_is_false(monkeypatch):
     assert result.metrics == {}
 
 
-def test_job_main_prints_skipped_message(monkeypatch, capsys):
+async def test_job_main_prints_skipped_message(monkeypatch, capsys):
     def _fake_configure_job_runtime():
         return None
 
@@ -443,7 +443,7 @@ def test_job_main_prints_skipped_message(monkeypatch, capsys):
     )
 
 
-def test_job_main_prints_disabled_message(monkeypatch, capsys):
+async def test_job_main_prints_disabled_message(monkeypatch, capsys):
     def _fake_configure_job_runtime():
         return None
 
@@ -468,7 +468,7 @@ def test_job_main_prints_disabled_message(monkeypatch, capsys):
     assert captured.out.strip() == "Workout photo cleanup is disabled."
 
 
-def test_job_main_prints_success_metrics(monkeypatch, capsys):
+async def test_job_main_prints_success_metrics(monkeypatch, capsys):
     def _fake_configure_job_runtime():
         return None
 
