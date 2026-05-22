@@ -10,6 +10,8 @@ Files:
 - `pe-be-exercise-image-cleanup.timer`
 - `pe-be-close-stale-open-workouts.service`
 - `pe-be-close-stale-open-workouts.timer`
+- `pe-be-workout-photo-cleanup.service`
+- `pe-be-workout-photo-cleanup.timer`
 - `pe-be-postgres-backup.service`
 - `pe-be-postgres-backup.timer`
 
@@ -26,12 +28,15 @@ sudo cp backend/deploy/systemd/pe-be-exercise-image-cleanup.service /etc/systemd
 sudo cp backend/deploy/systemd/pe-be-exercise-image-cleanup.timer /etc/systemd/system/
 sudo cp backend/deploy/systemd/pe-be-close-stale-open-workouts.service /etc/systemd/system/
 sudo cp backend/deploy/systemd/pe-be-close-stale-open-workouts.timer /etc/systemd/system/
+sudo cp backend/deploy/systemd/pe-be-workout-photo-cleanup.service /etc/systemd/system/
+sudo cp backend/deploy/systemd/pe-be-workout-photo-cleanup.timer /etc/systemd/system/
 sudo cp backend/deploy/systemd/pe-be-postgres-backup.service /etc/systemd/system/
 sudo cp backend/deploy/systemd/pe-be-postgres-backup.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now pe-be-chat-attachment-cleanup.timer
 sudo systemctl enable --now pe-be-exercise-image-cleanup.timer
 sudo systemctl enable --now pe-be-close-stale-open-workouts.timer
+sudo systemctl enable --now pe-be-workout-photo-cleanup.timer
 sudo systemctl enable --now pe-be-postgres-backup.timer
 ```
 
@@ -47,6 +52,7 @@ The service references `/srv/pe-be/backend/.env.production` via `EnvironmentFile
 JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=true
 JOB_EXERCISE_IMAGE_CLEANUP_ENABLED=true
 JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=true
+JOB_WORKOUT_PHOTO_CLEANUP_ENABLED=true
 ```
 
 Env flow for these jobs is:
@@ -62,6 +68,7 @@ To disable the job without masking the timer:
 JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=false
 JOB_EXERCISE_IMAGE_CLEANUP_ENABLED=false
 JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=false
+JOB_WORKOUT_PHOTO_CLEANUP_ENABLED=false
 ```
 
 Because the service uses `docker compose run`, Compose re-reads `backend/.env.production` on each invocation. No timer restart is required for the next scheduled run to pick up the new value.
@@ -74,10 +81,12 @@ Check the timer:
 sudo systemctl status pe-be-chat-attachment-cleanup.timer
 sudo systemctl status pe-be-exercise-image-cleanup.timer
 sudo systemctl status pe-be-close-stale-open-workouts.timer
+sudo systemctl status pe-be-workout-photo-cleanup.timer
 sudo systemctl status pe-be-postgres-backup.timer
 sudo systemctl list-timers --all | grep pe-be-chat-attachment-cleanup
 sudo systemctl list-timers --all | grep pe-be-exercise-image-cleanup
 sudo systemctl list-timers --all | grep pe-be-close-stale-open-workouts
+sudo systemctl list-timers --all | grep pe-be-workout-photo-cleanup
 sudo systemctl list-timers --all | grep pe-be-postgres-backup
 ```
 
@@ -88,6 +97,7 @@ cd /srv/pe-be
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.chat_attachment_cleanup
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.exercise_image_cleanup
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.close_stale_open_workouts
+docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.workout_photo_cleanup
 sudo systemctl start pe-be-postgres-backup.service
 ```
 
@@ -97,6 +107,7 @@ Inspect service logs:
 sudo journalctl -u pe-be-chat-attachment-cleanup.service -n 50 --no-pager
 sudo journalctl -u pe-be-exercise-image-cleanup.service -n 50 --no-pager
 sudo journalctl -u pe-be-close-stale-open-workouts.service -n 50 --no-pager
+sudo journalctl -u pe-be-workout-photo-cleanup.service -n 50 --no-pager
 sudo journalctl -u pe-be-postgres-backup.service -n 50 --no-pager
 ```
 
@@ -116,5 +127,6 @@ The repo also has unit coverage for this behavior in `backend/tests/test_jobs_sh
 
 - `pe-be-chat-attachment-cleanup.timer`: hourly
 - `pe-be-exercise-image-cleanup.timer`: daily
+- `pe-be-workout-photo-cleanup.timer`: daily
 - `pe-be-postgres-backup.timer`: daily at `02:30`
 - `pe-be-close-stale-open-workouts.timer`: daily at `03:00`

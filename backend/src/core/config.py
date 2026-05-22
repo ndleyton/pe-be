@@ -136,6 +136,26 @@ class Settings(BaseSettings):
         validation_alias="JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS",
         description="Max age in hours before an open workout is auto-closed",
     )
+    JOB_WORKOUT_PHOTO_CLEANUP_ENABLED: bool = Field(
+        True,
+        validation_alias="JOB_WORKOUT_PHOTO_CLEANUP_ENABLED",
+        description="Enable the scheduled workout photo cleanup job",
+    )
+    WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS: int = Field(
+        7,
+        validation_alias="WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS",
+        description="Retention for soft-deleted workout photos before hard-delete",
+    )
+    WORKOUT_PHOTO_CLEANUP_BATCH_SIZE: int = Field(
+        25,
+        validation_alias="WORKOUT_PHOTO_CLEANUP_BATCH_SIZE",
+        description="Max workout photo rows to clean up per sweep",
+    )
+    WORKOUT_PHOTO_ORPHAN_GRACE_HOURS: int = Field(
+        24,
+        validation_alias="WORKOUT_PHOTO_ORPHAN_GRACE_HOURS",
+        description="Grace period before removing photo files with no database row",
+    )
     CHAT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
         60,
         validation_alias="CHAT_RATE_LIMIT_WINDOW_SECONDS",

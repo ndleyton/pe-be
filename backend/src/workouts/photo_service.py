@@ -1,11 +1,14 @@
 import asyncio
 import hashlib
+import logging
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import DecompressionBombError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
@@ -15,6 +18,8 @@ from src.workouts.crud import (
     replace_primary_workout_photo,
 )
 from src.workouts.models import WorkoutPhoto
+
+logger = logging.getLogger(__name__)
 
 
 class WorkoutPhotoService:
@@ -184,3 +189,111 @@ class WorkoutPhotoService:
             "image/jpeg": ".jpg",
             "image/webp": ".webp",
         }.get(mime_type, ".bin")
+
+
+# ---------------------------------------------------------------------------
+# Standalone cleanup (called by scheduled job)
+# ---------------------------------------------------------------------------
+
+
+async def cleanup_deleted_workout_photos(
+    session: AsyncSession,
+    *,
+    storage_dir: Path | None = None,
+    retention_days: int | None = None,
+    batch_size: int | None = None,
+    orphan_grace_hours: int | None = None,
+) -> dict[str, int]:
+    """Purge soft-deleted workout photos past the retention window.
+
+    Two cleanup passes:
+    1. DB rows with ``deleted_at`` older than *retention_days* are hard-deleted,
+       and the corresponding file on disk is removed.
+    2. Files on disk under ``storage_dir`` that have no matching active DB row
+       and whose mtime is older than *orphan_grace_hours* are removed.
+    """
+    effective_dir = (
+        Path(storage_dir)
+        if storage_dir is not None
+        else Path(settings.WORKOUT_PHOTO_STORAGE_DIR).expanduser().resolve()
+    )
+    effective_retention = (
+        retention_days
+        if retention_days is not None
+        else settings.WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS
+    )
+    effective_batch = (
+        batch_size
+        if batch_size is not None
+        else settings.WORKOUT_PHOTO_CLEANUP_BATCH_SIZE
+    )
+    effective_grace = (
+        orphan_grace_hours
+        if orphan_grace_hours is not None
+        else settings.WORKOUT_PHOTO_ORPHAN_GRACE_HOURS
+    )
+
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=effective_retention)
+
+    # Pass 1 – purge soft-deleted rows past retention
+    stmt = (
+        select(WorkoutPhoto)
+        .where(
+            WorkoutPhoto.deleted_at.is_not(None),
+            WorkoutPhoto.deleted_at <= cutoff,
+        )
+        .order_by(WorkoutPhoto.deleted_at.asc())
+        .limit(effective_batch)
+    )
+    result = await session.execute(stmt)
+    candidates = result.scalars().all()
+
+    deleted_rows = 0
+    reclaimed_bytes = 0
+    for photo in candidates:
+        try:
+            file_path = (effective_dir / photo.storage_key).resolve()
+            if effective_dir in file_path.parents and file_path.is_file():
+                reclaimed_bytes += file_path.stat().st_size
+                file_path.unlink(missing_ok=True)
+        except (OSError, ValueError):
+            pass
+        await session.delete(photo)
+        deleted_rows += 1
+
+    # Pass 2 – remove orphaned files on disk with no DB row
+    known_keys: set[str] = set()
+    all_rows = await session.execute(select(WorkoutPhoto.storage_key))
+    for (key,) in all_rows:
+        known_keys.add(key)
+
+    orphaned_files = 0
+    grace_delta = timedelta(hours=effective_grace)
+    if effective_dir.exists():
+        for file_path in effective_dir.rglob("*"):
+            if not file_path.is_file():
+                continue
+            try:
+                relative_key = str(file_path.relative_to(effective_dir))
+                file_age = now - datetime.fromtimestamp(
+                    file_path.stat().st_mtime,
+                    tz=timezone.utc,
+                )
+            except (OSError, ValueError):
+                continue
+            if relative_key in known_keys or file_age < grace_delta:
+                continue
+            try:
+                reclaimed_bytes += file_path.stat().st_size
+                file_path.unlink(missing_ok=True)
+                orphaned_files += 1
+            except OSError:
+                continue
+
+    await session.commit()
+    return {
+        "deleted_rows": deleted_rows,
+        "orphaned_files": orphaned_files,
+        "reclaimed_bytes": reclaimed_bytes,
+    }
