@@ -13,6 +13,8 @@ The design follows [RFC 0004](../../docs/rfcs/0004-backend-cron-jobs-on-vps.md):
 
 - [chat_attachment_cleanup.py](./chat_attachment_cleanup.py)
 - [close_stale_open_workouts.py](./close_stale_open_workouts.py)
+- [exercise_image_cleanup.py](./exercise_image_cleanup.py)
+- [workout_photo_cleanup.py](./workout_photo_cleanup.py)
 
 Manual run:
 
@@ -59,6 +61,8 @@ That caps the stored workout duration instead of letting a stale open workout ap
 - [shared.py](./shared.py): common runtime helper for jobs
 - [chat_attachment_cleanup.py](./chat_attachment_cleanup.py): first standardized recurring job
 - [close_stale_open_workouts.py](./close_stale_open_workouts.py): auto-close for stale open workouts
+- [exercise_image_cleanup.py](./exercise_image_cleanup.py): exercise image candidate cleanup
+- [workout_photo_cleanup.py](./workout_photo_cleanup.py): soft-deleted workout photo cleanup
 
 ## Job Contract
 
