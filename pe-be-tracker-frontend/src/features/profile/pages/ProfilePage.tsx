@@ -12,8 +12,8 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
-import { ModeToggle } from "@/shared/components/theme/mode-toggle";
-import { Dumbbell, Check, Timer, Sparkles, MessageSquare } from "lucide-react";
+import { useTheme } from "@/shared/components/theme/theme-provider";
+import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Sun, Moon, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -122,6 +122,7 @@ const PublicProfileSettings = ({
 };
 
 const ProfilePage = () => {
+  const { theme, setTheme } = useTheme();
   // Use new store structure
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const loading = useAuthStore((state) => state.loading);
@@ -353,10 +354,35 @@ const ProfilePage = () => {
               </Alert>
             )}
 
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-2">Visual Theme</label>
-                <ModeToggle />
+            <div className="text-left">
+              <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-3">
+                Visual Theme
+              </label>
+              <div className="flex flex-wrap gap-2 w-full">
+                {[
+                  { value: "light" as const, label: "Light", icon: Sun },
+                  { value: "dark" as const, label: "Dark", icon: Moon },
+                  { value: "energetic" as const, label: "Energetic", icon: Zap },
+                ].map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = theme === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setTheme(opt.value)}
+                      className={cn(
+                        "flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-xs font-bold uppercase tracking-wider transition-all duration-300 border cursor-pointer flex-1 min-w-[100px]",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-102"
+                          : "bg-card/40 text-muted-foreground border-border/40 hover:bg-card/85 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4", isActive ? "animate-pulse" : "")} />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -45,7 +45,13 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme);
-  }, [theme]);
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(theme));
+    } catch (error) {
+      // Ignore private browsing issues
+    }
+  }, [theme, storageKey]);
 
   const value = {
     theme,

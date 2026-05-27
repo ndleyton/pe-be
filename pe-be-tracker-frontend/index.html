@@ -2,6 +2,22 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (() => {
+        try {
+          const themeStr = localStorage.getItem("vite-ui-theme");
+          const theme = themeStr ? JSON.parse(themeStr) : "dark";
+          const root = document.documentElement;
+          root.classList.remove("light", "dark", "energetic");
+          if (theme === "system") {
+            const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            root.classList.add(systemTheme);
+          } else if (theme) {
+            root.classList.add(theme);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PersonalBestie</title>
