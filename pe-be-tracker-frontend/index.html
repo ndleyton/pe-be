@@ -8,7 +8,7 @@
           const themeStr = localStorage.getItem("vite-ui-theme");
           const theme = themeStr ? JSON.parse(themeStr) : "dark";
           const root = document.documentElement;
-          root.classList.remove("light", "dark", "energetic");
+          root.classList.remove("light", "dark", "energetic", "performance");
           if (theme === "system") {
             const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
             root.classList.add(systemTheme);

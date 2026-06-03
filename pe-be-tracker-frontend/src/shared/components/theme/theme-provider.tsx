@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from "react";
 import { useLocalStorage } from "@/shared/hooks";
 
-type Theme = "dark" | "light" | "system" | "energetic";
+type Theme = "dark" | "light" | "system" | "energetic" | "performance";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark", "energetic");
+    root.classList.remove("light", "dark", "energetic", "performance");
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
