@@ -1,7 +1,30 @@
-import { createContext, useContext, useEffect } from "react";
-import { useLocalStorage } from "@/shared/hooks";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type Theme = "dark" | "light" | "system" | "energetic" | "performance";
+
+const themeClasses = ["light", "dark", "energetic", "performance"] as const;
+const themes = [...themeClasses, "system"] as const;
+
+const isTheme = (value: unknown): value is Theme =>
+  typeof value === "string" && themes.includes(value as Theme);
+
+const getStoredTheme = (storageKey: string, fallback: Theme): Theme => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const item = window.localStorage.getItem(storageKey);
+    if (!item) {
+      return fallback;
+    }
+
+    const parsed = JSON.parse(item);
+    return isTheme(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -27,12 +50,14 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useLocalStorage<Theme>(storageKey, defaultTheme);
+  const [theme, setThemeState] = useState<Theme>(() =>
+    getStoredTheme(storageKey, defaultTheme),
+  );
 
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark", "energetic", "performance");
+    root.classList.remove(...themeClasses);
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
@@ -45,20 +70,23 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme);
+  }, [theme]);
 
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(theme));
-    } catch (error) {
-      // Ignore private browsing issues
-    }
-  }, [theme, storageKey]);
+  const value = useMemo(
+    () => ({
+      theme,
+      setTheme: (theme: Theme) => {
+        setThemeState(theme);
 
-  const value = {
-    theme,
-    setTheme: (theme: Theme) => {
-      setTheme(theme);
-    },
-  };
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(theme));
+        } catch {
+          // Ignore private browsing issues.
+        }
+      },
+    }),
+    [storageKey, theme],
+  );
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>

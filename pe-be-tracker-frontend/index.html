@@ -5,14 +5,17 @@
     <script>
       (() => {
         try {
+          const themeClasses = ["light", "dark", "energetic", "performance"];
+          const themes = [...themeClasses, "system"];
           const themeStr = localStorage.getItem("vite-ui-theme");
-          const theme = themeStr ? JSON.parse(themeStr) : "dark";
+          const parsedTheme = themeStr ? JSON.parse(themeStr) : "dark";
+          const theme = themes.includes(parsedTheme) ? parsedTheme : "dark";
           const root = document.documentElement;
-          root.classList.remove("light", "dark", "energetic", "performance");
+          root.classList.remove(...themeClasses);
           if (theme === "system") {
             const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
             root.classList.add(systemTheme);
-          } else if (theme) {
+          } else {
             root.classList.add(theme);
           }
         } catch (e) {}
