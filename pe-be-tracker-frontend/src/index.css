@@ -129,6 +129,96 @@
     --activity: #f97316; /* orange-500 */
     --activity-foreground: rgb(242, 242, 242);
   }
+
+  .energetic {
+    --background: rgb(248, 245, 241);
+    --card: rgb(255, 252, 248);
+    --popover: rgb(255, 252, 248);
+    --sidebar: rgb(248, 245, 241);
+    --foreground: rgb(35, 34, 33);
+    --card-foreground: rgb(35, 34, 33);
+    --popover-foreground: rgb(35, 34, 33);
+    --sidebar-foreground: rgb(35, 34, 33);
+    --primary-rgb: 234, 121, 0;
+    --primary: rgb(234, 121, 0);
+    --sidebar-primary: rgb(234, 121, 0);
+    --primary-foreground: rgb(255, 255, 255);
+    --sidebar-primary-foreground: rgb(255, 255, 255);
+    --secondary: rgb(238, 231, 224);
+    --accent: rgb(238, 231, 224);
+    --sidebar-accent: rgb(238, 231, 224);
+    --secondary-foreground: rgb(35, 34, 33);
+    --accent-foreground: rgb(35, 34, 33);
+    --sidebar-accent-foreground: rgb(35, 34, 33);
+    --muted: rgb(234, 228, 221);
+    --muted-foreground: rgb(98, 93, 88);
+    --destructive: rgb(220, 38, 38);
+    --destructive-foreground: rgb(255, 255, 255);
+    --border: rgb(224, 215, 205);
+    --sidebar-border: rgb(224, 215, 205);
+    --ring: rgb(245, 158, 11);
+    --sidebar-ring: rgb(245, 158, 11);
+    --input: rgb(226, 217, 207);
+    --chart-1: rgb(234, 121, 0);
+    --chart-2: rgb(221, 52, 111);
+    --chart-3: rgb(83, 91, 101);
+    --chart-4: rgb(31, 131, 121);
+    --chart-5: rgb(177, 124, 23);
+    --warning: rgb(217, 119, 6);
+    --warning-foreground: rgb(255, 255, 255);
+    --radius: 1rem;
+    --done: rgb(31, 158, 141);
+    --done-foreground: rgb(255, 255, 255);
+    --highlight: rgb(234, 121, 0);
+    --highlight-foreground: rgb(255, 255, 255);
+    --activity: rgb(221, 52, 111);
+    --activity-foreground: rgb(255, 255, 255);
+  }
+
+  .performance {
+    --background: rgb(18, 20, 28);
+    --card: rgb(24, 27, 38);
+    --popover: rgb(24, 27, 38);
+    --sidebar: rgb(18, 20, 28);
+    --foreground: rgb(245, 247, 250);
+    --card-foreground: rgb(245, 247, 250);
+    --popover-foreground: rgb(245, 247, 250);
+    --sidebar-foreground: rgb(245, 247, 250);
+    --primary-rgb: 47, 128, 237;
+    --primary: rgb(47, 128, 237);
+    --sidebar-primary: rgb(47, 128, 237);
+    --primary-foreground: rgb(255, 255, 255);
+    --sidebar-primary-foreground: rgb(255, 255, 255);
+    --secondary: rgb(35, 39, 52);
+    --accent: rgb(35, 39, 52);
+    --sidebar-accent: rgb(35, 39, 52);
+    --secondary-foreground: rgb(245, 247, 250);
+    --accent-foreground: rgb(245, 247, 250);
+    --sidebar-accent-foreground: rgb(245, 247, 250);
+    --muted: rgb(42, 47, 62);
+    --muted-foreground: rgb(163, 171, 184);
+    --destructive: rgb(239, 68, 68);
+    --destructive-foreground: rgb(255, 255, 255);
+    --border: rgb(52, 58, 75);
+    --sidebar-border: rgb(52, 58, 75);
+    --ring: rgb(47, 128, 237);
+    --sidebar-ring: rgb(47, 128, 237);
+    --input: rgb(42, 47, 62);
+    --chart-1: rgb(47, 128, 237);
+    --chart-2: rgb(24, 195, 126);
+    --chart-3: rgb(247, 7, 111);
+    --chart-4: rgb(245, 158, 11);
+    --chart-5: rgb(139, 92, 246);
+    --warning: rgb(245, 158, 11);
+    --warning-foreground: rgb(24, 20, 12);
+    --radius: 1rem;
+    --done: rgb(24, 195, 126);
+    --done-foreground: rgb(6, 24, 17);
+    --highlight: rgb(247, 7, 111);
+    --highlight-foreground: rgb(255, 255, 255);
+    --activity: rgb(24, 195, 126);
+    --activity-foreground: rgb(6, 24, 17);
+  }
 }
 
 @layer base {
@@ -142,6 +232,32 @@
 }
 
 @layer utilities {
+  .energetic .home-logo-wordmark {
+    background-image: none;
+    color: var(--primary);
+  }
+
+  .performance .home-logo-wordmark {
+    color: var(--foreground);
+  }
+
+  .performance .home-logo-wordmark span:last-child {
+    color: inherit;
+  }
+
+  .performance .home-logo-mark {
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--card) 88%, var(--primary) 12%);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--background) 70%, black);
+  }
+
+  .performance .home-logo-mark img {
+    height: 1.95rem;
+    width: 1.95rem;
+    transform: translate(0.04rem, 0.13rem) scale(1.08);
+  }
+
   .animate-twice {
     animation-iteration-count: 2 !important;
   }

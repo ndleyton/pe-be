@@ -12,8 +12,8 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/shared/components/ui/alert";
-import { ModeToggle } from "@/shared/components/theme/mode-toggle";
-import { Dumbbell, Check, Timer, Sparkles, MessageSquare } from "lucide-react";
+import { useTheme } from "@/shared/components/theme/theme-provider";
+import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Monitor, Sun, Moon, Flame, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -122,6 +122,7 @@ const PublicProfileSettings = ({
 };
 
 const ProfilePage = () => {
+  const { theme, setTheme } = useTheme();
   // Use new store structure
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const loading = useAuthStore((state) => state.loading);
@@ -353,10 +354,38 @@ const ProfilePage = () => {
               </Alert>
             )}
 
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-2">Visual Theme</label>
-                <ModeToggle />
+            <div className="text-left">
+              <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-3">
+                Visual Theme
+              </label>
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:justify-center">
+                {[
+                  { value: "system" as const, label: "System", icon: Monitor },
+                  { value: "light" as const, label: "Light", icon: Sun },
+                  { value: "dark" as const, label: "Dark", icon: Moon },
+                  { value: "energetic" as const, label: "Celsius", icon: Flame },
+                  { value: "performance" as const, label: "Aqua", icon: Waves },
+                ].map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = theme === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setTheme(opt.value)}
+                      className={cn(
+                        "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
+                          : "bg-card/40 text-muted-foreground border-border/40 hover:bg-card/85 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4", isActive ? "animate-pulse" : "")} />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

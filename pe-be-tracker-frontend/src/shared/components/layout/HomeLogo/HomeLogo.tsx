@@ -30,14 +30,16 @@ const HomeLogo = ({ onClick, className = "" }: HomeLogoProps) => {
       aria-label={isInteractive ? "Go to home page" : undefined}
     >
       {/* Reserve logo space to avoid CLS */}
-      <img
-        src="/assets/logo.svg"
-        alt="PBestie Logo"
-        className="h-8 w-8"
-        width={32}
-        height={32}
-      />
-      <div className="flex flex-col items-start drop-shadow-sm text-left text-base leading-[0.9] font-black tracking-tight text-highlight">
+      <span className="home-logo-mark flex h-8 w-8 items-center justify-center">
+        <img
+          src="/assets/logo.svg"
+          alt="PBestie Logo"
+          className="h-8 w-8"
+          width={32}
+          height={32}
+        />
+      </span>
+      <div className="home-logo-wordmark flex flex-col items-start text-left text-base leading-[0.9] font-black tracking-tight text-highlight">
         <span>Personal</span>
         <span>Bestie</span>
       </div>
