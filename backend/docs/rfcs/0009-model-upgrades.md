@@ -66,7 +66,7 @@ We propose the following cost-optimized configuration mapping in `backend/.env.p
 
 ## Suggested Configuration Updates
 
-#### `backend/.env.production.template` (Option B: Balanced Budget)
+### `backend/.env.production.template` (Option B: Balanced Budget)
 ```ini
 CHAT_MODEL=gemini-2.5-flash
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite
@@ -74,7 +74,7 @@ WORKOUT_RECAP_MODEL=gemini-2.5-flash-lite
 EXERCISE_IMAGE_PHASE_MODEL=gemini-2.5-flash-image
 ```
 
-#### `backend/.env.production.template` (Option A: Extreme Budget)
+### `backend/.env.production.template` (Option A: Extreme Budget)
 ```ini
 CHAT_MODEL=gemini-3.1-flash-lite
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite

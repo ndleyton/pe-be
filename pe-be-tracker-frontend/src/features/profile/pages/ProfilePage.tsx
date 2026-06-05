@@ -13,7 +13,7 @@ import {
   AlertTitle,
 } from "@/shared/components/ui/alert";
 import { useTheme } from "@/shared/components/theme/theme-provider";
-import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Sun, Moon, Flame, Waves } from "lucide-react";
+import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Monitor, Sun, Moon, Flame, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -358,8 +358,9 @@ const ProfilePage = () => {
               <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-3">
                 Visual Theme
               </label>
-              <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
+                  { value: "system" as const, label: "System", icon: Monitor },
                   { value: "light" as const, label: "Light", icon: Sun },
                   { value: "dark" as const, label: "Dark", icon: Moon },
                   { value: "energetic" as const, label: "Celsius", icon: Flame },
@@ -371,6 +372,7 @@ const ProfilePage = () => {
                     <button
                       key={opt.value}
                       type="button"
+                      aria-pressed={isActive}
                       onClick={() => setTheme(opt.value)}
                       className={cn(
                         "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer",
