@@ -358,7 +358,7 @@ const ProfilePage = () => {
               <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider block mb-3">
                 Visual Theme
               </label>
-              <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-5">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:justify-center">
                 {[
                   { value: "system" as const, label: "System", icon: Monitor },
                   { value: "light" as const, label: "Light", icon: Sun },
@@ -377,7 +377,7 @@ const ProfilePage = () => {
                       className={cn(
                         "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer",
                         isActive
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-102"
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
                           : "bg-card/40 text-muted-foreground border-border/40 hover:bg-card/85 hover:text-foreground"
                       )}
                     >
