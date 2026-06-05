@@ -53,7 +53,7 @@ We propose the following cost-optimized configuration mapping in `backend/.env.p
 *   **Proposed Model:** Keep `gemini-2.5-flash-lite`.
 *   **Rationale:** At \$0.10 per 1M input tokens, this is the most cost-effective tier available, providing rapid response times (<1.5s) and sufficient accuracy for structured data extraction and summary writing.
 
-### 3. Main Chat Assistant
+### 2. Main Chat Assistant
 *   **Current Model:** `gemini-2.5-flash`
 *   **Option A (Extreme Budget):** Downgrade to `gemini-2.5-flash-lite` or `gemini-3.1-flash-lite`.
     *   *Pros:* Extremely low credit burn; ultra-fast response times.
