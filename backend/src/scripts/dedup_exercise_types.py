@@ -59,8 +59,8 @@ class RunResult:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Repoint all references from one non-released exercise type to a "
-            "released exercise type, then delete the non-released row. "
+            "Repoint all references from a source exercise type (usually non-released) to a "
+            "released exercise type, then delete the source row. "
             "Defaults to dry-run mode."
         )
     )
@@ -72,14 +72,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--non-released-name",
         required=True,
-        help="Case-insensitive name of the candidate/in-review exercise type to remove.",
+        help="Case-insensitive name of the source exercise type to remove.",
     )
     parser.add_argument(
         "--non-released-owner-id",
         type=int,
         default=None,
         help=(
-            "Optional owner id to disambiguate multiple non-released exercise "
+            "Optional owner id to disambiguate multiple source exercise "
             "types with the same name."
         ),
     )
@@ -273,7 +273,7 @@ def build_dedup_plan(
     )
 
 
-def print_report(plan: DedupPlan, *, apply: bool, stream: TextIO) -> None:
+def print_report(plan: DedupPlan, *, apply: bool, force_released_source: bool = False, stream: TextIO) -> None:
     mode = "APPLY" if apply else "DRY RUN"
     print(f"{mode}: dedup exercise types", file=stream)
     print(
@@ -281,8 +281,9 @@ def print_report(plan: DedupPlan, *, apply: bool, stream: TextIO) -> None:
         f"{plan.released.name} (id={plan.released.id}, status={plan.released.status})",
         file=stream,
     )
+    source_label = "Source (may be released): " if force_released_source else "Non-released source: "
     print(
-        "Non-released source: "
+        f"{source_label}"
         f"{plan.non_released.name} (id={plan.non_released.id}, "
         f"status={plan.non_released.status}, owner_id={plan.non_released.owner_id})",
         file=stream,
@@ -306,7 +307,8 @@ def print_report(plan: DedupPlan, *, apply: bool, stream: TextIO) -> None:
         f"  times_used to transfer: {plan.non_released.times_used}",
         file=stream,
     )
-    print("The non-released row will be deleted after the reassignment.", file=stream)
+    row_label = "source row" if force_released_source else "non-released row"
+    print(f"The {row_label} will be deleted after the reassignment.", file=stream)
 
     if not apply:
         print("Dry run only. Re-run with --apply to persist changes.", file=stream)
@@ -412,15 +414,16 @@ def run_dedup(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
         connection = connect_target_database(args)
         connection.autocommit = False
 
+        force_released = getattr(args, "force_released_source", False)
         plan = build_dedup_plan(
             connection,
             released_name=args.released_name,
             non_released_name=args.non_released_name,
             non_released_owner_id=args.non_released_owner_id,
-            force_released_source=getattr(args, "force_released_source", False),
+            force_released_source=force_released,
         )
         should_apply = args.apply and not args.dry_run
-        print_report(plan, apply=should_apply, stream=stream)
+        print_report(plan, apply=should_apply, force_released_source=force_released, stream=stream)
 
         if not should_apply:
             connection.rollback()
