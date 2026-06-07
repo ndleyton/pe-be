@@ -98,6 +98,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Explicitly force dry-run mode.",
     )
+    parser.add_argument(
+        "--force-released-source",
+        action="store_true",
+        help="Allow merging a released exercise type into another released exercise type.",
+    )
     return parser.parse_args(argv)
 
 
@@ -175,14 +180,21 @@ def load_non_released_matches(
     name: str,
     *,
     owner_id: int | None,
+    force_released_source: bool = False,
 ) -> list[ExerciseTypeMatch]:
     query = """
         SELECT id, name, status::text AS status, owner_id, times_used
         FROM exercise_types
         WHERE LOWER(name) = LOWER(%s)
-          AND status::text = ANY(%s)
     """
-    params: list[object] = [name, list(NON_RELEASED_STATUSES)]
+    params: list[object] = [name]
+
+    if not force_released_source:
+        query += " AND status::text = ANY(%s)"
+        params.append(list(NON_RELEASED_STATUSES))
+    else:
+        query += " AND status::text = 'released'"
+
     if owner_id is not None:
         query += " AND owner_id = %s"
         params.append(owner_id)
@@ -231,6 +243,7 @@ def build_dedup_plan(
     released_name: str,
     non_released_name: str,
     non_released_owner_id: int | None,
+    force_released_source: bool = False,
 ) -> DedupPlan:
     released = _resolve_single_match(
         load_released_matches(connection, released_name),
@@ -242,8 +255,9 @@ def build_dedup_plan(
             connection,
             non_released_name,
             owner_id=non_released_owner_id,
+            force_released_source=force_released_source,
         ),
-        role="non-released",
+        role="non-released" if not force_released_source else "source",
         input_name=non_released_name,
         owner_id=non_released_owner_id,
     )
@@ -403,6 +417,7 @@ def run_dedup(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
             released_name=args.released_name,
             non_released_name=args.non_released_name,
             non_released_owner_id=args.non_released_owner_id,
+            force_released_source=getattr(args, "force_released_source", False),
         )
         should_apply = args.apply and not args.dry_run
         print_report(plan, apply=should_apply, stream=stream)
