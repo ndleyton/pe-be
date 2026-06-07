@@ -367,4 +367,3 @@ def test_load_non_released_matches_queries():
     assert "status::text = ANY" not in query_true
     assert "status::text = 'released'" in query_true
     assert params_true == ("Squat",)
-
