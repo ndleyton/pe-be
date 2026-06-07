@@ -273,7 +273,9 @@ def build_dedup_plan(
     )
 
 
-def print_report(plan: DedupPlan, *, apply: bool, force_released_source: bool = False, stream: TextIO) -> None:
+def print_report(
+    plan: DedupPlan, *, apply: bool, force_released_source: bool = False, stream: TextIO
+) -> None:
     mode = "APPLY" if apply else "DRY RUN"
     print(f"{mode}: dedup exercise types", file=stream)
     print(
@@ -281,7 +283,11 @@ def print_report(plan: DedupPlan, *, apply: bool, force_released_source: bool = 
         f"{plan.released.name} (id={plan.released.id}, status={plan.released.status})",
         file=stream,
     )
-    source_label = "Source (may be released): " if force_released_source else "Non-released source: "
+    source_label = (
+        "Source (may be released): "
+        if force_released_source
+        else "Non-released source: "
+    )
     print(
         f"{source_label}"
         f"{plan.non_released.name} (id={plan.non_released.id}, "
@@ -423,7 +429,12 @@ def run_dedup(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
             force_released_source=force_released,
         )
         should_apply = args.apply and not args.dry_run
-        print_report(plan, apply=should_apply, force_released_source=force_released, stream=stream)
+        print_report(
+            plan,
+            apply=should_apply,
+            force_released_source=force_released,
+            stream=stream,
+        )
 
         if not should_apply:
             connection.rollback()
