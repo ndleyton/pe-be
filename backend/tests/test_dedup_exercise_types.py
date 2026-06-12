@@ -320,3 +320,50 @@ def test_apply_dedup_plan_raises_if_non_released_row_not_deleted():
 
     with pytest.raises(RuntimeError, match="Expected exactly 1 non-released row"):
         script.apply_dedup_plan(cursor, plan)
+
+
+def test_load_non_released_matches_queries():
+    executed = []
+
+    class MockCursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def execute(self, query, params=()):
+            executed.append((query, params))
+
+        def fetchall(self):
+            return [
+                {
+                    "id": 1,
+                    "name": "Squat",
+                    "status": "released",
+                    "owner_id": None,
+                    "times_used": 10,
+                }
+            ]
+
+    class MockConnection:
+        def cursor(self, cursor_factory=None):
+            return MockCursor()
+
+    # 1. With force_released_source=False
+    script.load_non_released_matches(
+        MockConnection(), "Squat", owner_id=None, force_released_source=False
+    )
+    query_false, params_false = executed[-1]
+    assert "status::text = ANY" in query_false
+    assert "status::text = 'released'" not in query_false
+    assert params_false == ("Squat", ["candidate", "in_review"])
+
+    # 2. With force_released_source=True
+    script.load_non_released_matches(
+        MockConnection(), "Squat", owner_id=None, force_released_source=True
+    )
+    query_true, params_true = executed[-1]
+    assert "status::text = ANY" not in query_true
+    assert "status::text = 'released'" in query_true
+    assert params_true == ("Squat",)
