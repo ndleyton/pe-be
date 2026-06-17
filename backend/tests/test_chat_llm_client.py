@@ -425,7 +425,7 @@ async def test_gemini_3_chat_uses_low_thinking_level_when_supported(
     mock_client_class.return_value = mock_client
 
     with patch.dict(types.ThinkingConfig.model_fields, {"thinking_level": MagicMock()}):
-        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-flash-preview")
+        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-test")
         client.client = mock_client
 
         await client.acomplete(
@@ -453,7 +453,7 @@ async def test_gemini_3_chat_skips_low_thinking_level_when_sdk_lacks_field(
     mock_client_class.return_value = mock_client
 
     with patch.object(types.ThinkingConfig, "model_fields", {}, create=True):
-        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-flash-preview")
+        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-test")
         client.client = mock_client
 
         await client.acomplete(
