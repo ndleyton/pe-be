@@ -103,6 +103,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Allow merging a released exercise type into another released exercise type.",
     )
+    parser.add_argument(
+        "--merge-exercise-type-fields",
+        action="store_true",
+        help=(
+            "Fill empty target exercise type fields from the source row before "
+            "deleting it. Existing target values are preserved."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -274,7 +282,12 @@ def build_dedup_plan(
 
 
 def print_report(
-    plan: DedupPlan, *, apply: bool, force_released_source: bool = False, stream: TextIO
+    plan: DedupPlan,
+    *,
+    apply: bool,
+    force_released_source: bool = False,
+    merge_exercise_type_fields: bool = False,
+    stream: TextIO,
 ) -> None:
     mode = "APPLY" if apply else "DRY RUN"
     print(f"{mode}: dedup exercise types", file=stream)
@@ -315,12 +328,22 @@ def print_report(
     )
     row_label = "source row" if force_released_source else "non-released row"
     print(f"The {row_label} will be deleted after the reassignment.", file=stream)
+    if merge_exercise_type_fields:
+        print(
+            "Empty target exercise type fields will be filled from the source row.",
+            file=stream,
+        )
 
     if not apply:
         print("Dry run only. Re-run with --apply to persist changes.", file=stream)
 
 
-def apply_dedup_plan(cursor, plan: DedupPlan) -> AppliedChanges:
+def apply_dedup_plan(
+    cursor,
+    plan: DedupPlan,
+    *,
+    merge_exercise_type_fields: bool = False,
+) -> AppliedChanges:
     now = datetime.now(timezone.utc)
 
     cursor.execute(
@@ -393,6 +416,38 @@ def apply_dedup_plan(cursor, plan: DedupPlan) -> AppliedChanges:
             f"Expected exactly 1 released row to be updated, but got {released_rows_updated}"
         )
 
+    if merge_exercise_type_fields:
+        cursor.execute(
+            """
+            UPDATE exercise_types AS target
+            SET
+                description = COALESCE(NULLIF(target.description, ''), source.description),
+                default_intensity_unit = COALESCE(
+                    target.default_intensity_unit,
+                    source.default_intensity_unit
+                ),
+                instructions = COALESCE(NULLIF(target.instructions, ''), source.instructions),
+                equipment = COALESCE(NULLIF(target.equipment, ''), source.equipment),
+                category = COALESCE(NULLIF(target.category, ''), source.category),
+                images_url = COALESCE(NULLIF(target.images_url, ''), source.images_url),
+                reference_images_url = COALESCE(
+                    NULLIF(target.reference_images_url, ''),
+                    source.reference_images_url
+                ),
+                updated_at = %s
+            FROM exercise_types AS source
+            WHERE target.id = %s
+              AND source.id = %s
+            """,
+            (now, plan.released.id, plan.non_released.id),
+        )
+        merged_field_rows_updated = cursor.rowcount
+        if merged_field_rows_updated != 1:
+            raise RuntimeError(
+                "Expected exactly 1 released row to be updated during field merge, "
+                f"but got {merged_field_rows_updated}"
+            )
+
     cursor.execute(
         "DELETE FROM exercise_types WHERE id = %s",
         (plan.non_released.id,),
@@ -433,6 +488,9 @@ def run_dedup(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
             plan,
             apply=should_apply,
             force_released_source=force_released,
+            merge_exercise_type_fields=getattr(
+                args, "merge_exercise_type_fields", False
+            ),
             stream=stream,
         )
 
@@ -441,7 +499,13 @@ def run_dedup(args: argparse.Namespace, *, stream: TextIO) -> RunResult:
             return RunResult(plan=plan, applied_changes=None)
 
         with connection.cursor() as cursor:
-            applied_changes = apply_dedup_plan(cursor, plan)
+            applied_changes = apply_dedup_plan(
+                cursor,
+                plan,
+                merge_exercise_type_fields=getattr(
+                    args, "merge_exercise_type_fields", False
+                ),
+            )
         connection.commit()
         print(
             "Applied changes: "
