@@ -194,6 +194,52 @@ def test_apply_dedup_plan_updates_references_transfers_usage_and_deletes_duplica
     assert cursor.executed[5][1] == (8,)
 
 
+def test_apply_dedup_plan_merges_empty_target_fields_when_flag_enabled():
+    plan = script.DedupPlan(
+        released=make_match(
+            row_id=5,
+            name="Bench Press",
+            status="released",
+            times_used=9,
+        ),
+        non_released=make_match(
+            row_id=8,
+            name="Bench Press Draft",
+            status="candidate",
+            owner_id=22,
+            times_used=4,
+        ),
+        reference_counts=script.ReferenceCounts(
+            exercises=3,
+            exercise_templates=2,
+            exercise_muscles=1,
+            exercise_image_candidates=5,
+        ),
+    )
+    cursor = FakeApplyCursor([3, 2, 1, 5, 1, 1, 1])
+
+    applied = script.apply_dedup_plan(
+        cursor,
+        plan,
+        merge_exercise_type_fields=True,
+    )
+
+    assert applied == script.AppliedChanges(
+        exercises_updated=3,
+        exercise_templates_updated=2,
+        exercise_muscles_merged=1,
+        exercise_image_candidates_updated=5,
+        released_rows_updated=1,
+        deleted_exercise_types=1,
+    )
+    assert len(cursor.executed) == 7
+    assert "UPDATE exercise_types AS target" in cursor.executed[5][0]
+    assert "description = COALESCE" in cursor.executed[5][0]
+    assert "images_url = COALESCE" in cursor.executed[5][0]
+    assert cursor.executed[5][1][1:] == (5, 8)
+    assert cursor.executed[6][1] == (8,)
+
+
 def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
     cursor = FakeRunCursor(
         released_rows=[
@@ -226,6 +272,7 @@ def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
         apply=False,
         dry_run=False,
         database_url=None,
+        merge_exercise_type_fields=False,
     )
 
     result = script.run_dedup(args, stream=stream)
@@ -264,7 +311,7 @@ def test_run_dedup_apply_commits_and_prints_applied_counts(monkeypatch):
             }
         ],
         reference_counts=(10, 4, 2, 3),
-        apply_rowcounts=[10, 4, 2, 3, 1, 1],
+        apply_rowcounts=[10, 4, 2, 3, 1, 1, 1],
     )
     connection = FakeRunConnection(cursor)
     monkeypatch.setattr(script, "connect_target_database", lambda args: connection)
@@ -276,6 +323,7 @@ def test_run_dedup_apply_commits_and_prints_applied_counts(monkeypatch):
         apply=True,
         dry_run=False,
         database_url=None,
+        merge_exercise_type_fields=True,
     )
 
     result = script.run_dedup(args, stream=stream)
@@ -293,6 +341,7 @@ def test_run_dedup_apply_commits_and_prints_applied_counts(monkeypatch):
     assert connection.closed == 1
     output = stream.getvalue()
     assert "APPLY: dedup exercise types" in output
+    assert "Empty target exercise type fields will be filled" in output
     assert "Applied changes: exercises=10, exercise_templates=4" in output
 
 
@@ -320,6 +369,25 @@ def test_apply_dedup_plan_raises_if_non_released_row_not_deleted():
 
     with pytest.raises(RuntimeError, match="Expected exactly 1 non-released row"):
         script.apply_dedup_plan(cursor, plan)
+
+
+def test_apply_dedup_plan_raises_if_field_merge_target_not_updated():
+    plan = script.DedupPlan(
+        released=make_match(row_id=5, name="R", status="released"),
+        non_released=make_match(row_id=8, name="N", status="candidate"),
+        reference_counts=script.ReferenceCounts(0, 0, 0, 0),
+    )
+    cursor = FakeApplyCursor([0, 0, 0, 0, 1, 0, 1])
+
+    with pytest.raises(
+        RuntimeError,
+        match="Expected exactly 1 released row to be updated during field merge",
+    ):
+        script.apply_dedup_plan(
+            cursor,
+            plan,
+            merge_exercise_type_fields=True,
+        )
 
 
 def test_load_non_released_matches_queries():
