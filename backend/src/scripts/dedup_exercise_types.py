@@ -422,6 +422,10 @@ def apply_dedup_plan(
             UPDATE exercise_types AS target
             SET
                 description = COALESCE(NULLIF(target.description, ''), source.description),
+                default_intensity_unit = COALESCE(
+                    target.default_intensity_unit,
+                    source.default_intensity_unit
+                ),
                 instructions = COALESCE(NULLIF(target.instructions, ''), source.instructions),
                 equipment = COALESCE(NULLIF(target.equipment, ''), source.equipment),
                 category = COALESCE(NULLIF(target.category, ''), source.category),

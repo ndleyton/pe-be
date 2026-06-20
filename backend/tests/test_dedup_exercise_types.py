@@ -235,6 +235,7 @@ def test_apply_dedup_plan_merges_empty_target_fields_when_flag_enabled():
     assert len(cursor.executed) == 7
     assert "UPDATE exercise_types AS target" in cursor.executed[5][0]
     assert "description = COALESCE" in cursor.executed[5][0]
+    assert "default_intensity_unit = COALESCE" in cursor.executed[5][0]
     assert "images_url = COALESCE" in cursor.executed[5][0]
     assert cursor.executed[5][1][1:] == (5, 8)
     assert cursor.executed[6][1] == (8,)
