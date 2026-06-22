@@ -15,7 +15,12 @@ Files:
 - `pe-be-postgres-backup.service`
 - `pe-be-postgres-backup.timer`
 
-These units are intended for a production Docker Compose deployment rooted at `/srv/pe-be` and launched through `docker-compose.prod.yml`.
+These units are intended for a production Docker Compose deployment launched through `docker-compose.prod.yml`.
+
+The existing workout photo cleanup unit auto-detects the two known checkout roots:
+
+- `/srv/pe-be`
+- `/home/deploy/apps/pe-be/pe-be`
 
 ## Install
 
@@ -40,13 +45,13 @@ sudo systemctl enable --now pe-be-workout-photo-cleanup.timer
 sudo systemctl enable --now pe-be-postgres-backup.timer
 ```
 
-If your checkout path is not `/srv/pe-be`, update `WorkingDirectory=` and `EnvironmentFile=` in the service unit before enabling it.
+If your checkout path is not one of those two locations, update `ExecStart=` in the service unit before enabling it.
 
 Postgres backups also require `/root/.config/pe-be-backup.env` and an encryption passphrase file on the VPS. See `backend/deploy/backups/README.md` for the full backup and restore runbook.
 
 ## Operator Controls
 
-The service references `/srv/pe-be/backend/.env.production` via `EnvironmentFile=`. The backend container receives:
+The backend container receives these env vars from `backend/.env.production` via `docker-compose.prod.yml`:
 
 ```bash
 JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=true
@@ -57,7 +62,7 @@ JOB_WORKOUT_PHOTO_CLEANUP_ENABLED=true
 
 Env flow for these jobs is:
 
-1. `systemd` starts the oneshot service in `/srv/pe-be`.
+1. `systemd` starts the oneshot service from the detected app checkout.
 2. The service runs `docker compose -f docker-compose.prod.yml run ...`.
 3. Compose injects the configured job env vars into the ephemeral `backend` container from `backend/.env.production` via `docker-compose.prod.yml`.
 4. The backend process reads those env vars through `src.core.config.Settings`.
@@ -93,7 +98,7 @@ sudo systemctl list-timers --all | grep pe-be-postgres-backup
 Run the job manually through the same container path used by the service:
 
 ```bash
-cd /srv/pe-be
+cd /srv/pe-be  # or /home/deploy/apps/pe-be/pe-be on the current VPS
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.chat_attachment_cleanup
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.exercise_image_cleanup
 docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.close_stale_open_workouts

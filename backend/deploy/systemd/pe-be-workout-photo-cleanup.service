@@ -1,10 +1,9 @@
 [Unit]
 Description=PE-BE workout photo cleanup
-Requires=docker.service
-After=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=/srv/pe-be
-Environment=ENV_FILE=.env.production
-ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.workout_photo_cleanup
+TimeoutStartSec=300
+ExecStart=/usr/bin/env bash -lc 'set -euo pipefail; for app_dir in /srv/pe-be /home/deploy/apps/pe-be/pe-be; do if [[ -f "$app_dir/docker-compose.prod.yml" && -f "$app_dir/backend/.env.production" ]]; then cd "$app_dir"; exec /usr/bin/docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.workout_photo_cleanup; fi; done; echo "Could not find app checkout in /srv/pe-be or /home/deploy/apps/pe-be/pe-be" >&2; exit 1'
