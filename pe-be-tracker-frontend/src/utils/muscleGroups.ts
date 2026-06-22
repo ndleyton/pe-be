@@ -107,7 +107,7 @@ export function getExerciseMuscleGroupsFallback(
   const exactMatches: Record<string, string[]> = {
     // Chest exercises
     "Bench Press": ["Chest"],
-    "Incline Bench Press": ["Chest", "Shoulders"],
+    "Barbell Incline Bench Press - Medium Grip": ["Chest", "Shoulders"],
     "Decline Bench Press": ["Chest"],
     "Dumbbell Press": ["Chest", "Shoulders"],
     "Chest Press": ["Chest"],
