@@ -123,7 +123,7 @@ async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
     user_id = user.id
 
     # Create existing exercise type
-    et = ExerciseType(name="Squat", status="released", default_intensity_unit=1)
+    et = ExerciseType(name="Barbell Squat", status="released", default_intensity_unit=1)
     db_session.add(et)
 
     wt = WorkoutType(name="Legs", description="Leg workout")
@@ -152,7 +152,7 @@ async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
         exerciseTypes=[
             GuestExerciseType(
                 id="guest-et-squat",
-                name="Squat",  # Matches existing by name
+                name="Barbell Squat",  # Matches existing by name
             )
         ],
         workoutTypes=[
@@ -167,8 +167,8 @@ async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
 
     assert result.success is True
 
-    # Verify no new exercise types were created (we only want one 'Squat')
-    stmt = select(ExerciseType).where(ExerciseType.name == "Squat")
+    # Verify no new exercise types were created (we only want one 'Barbell Squat')
+    stmt = select(ExerciseType).where(ExerciseType.name == "Barbell Squat")
     results = (await db_session.execute(stmt)).scalars().all()
     assert len(results) == 1
     assert results[0].id == et.id

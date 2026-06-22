@@ -246,7 +246,7 @@ def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
         released_rows=[
             {
                 "id": 101,
-                "name": "Deadlift",
+                "name": "Barbell Deadlift",
                 "status": "released",
                 "owner_id": None,
                 "times_used": 8,
@@ -255,7 +255,7 @@ def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
         non_released_rows=[
             {
                 "id": 202,
-                "name": "Barbell Deadlift",
+                "name": "Deadlift",
                 "status": "candidate",
                 "owner_id": 14,
                 "times_used": 3,
@@ -267,8 +267,8 @@ def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
     monkeypatch.setattr(script, "connect_target_database", lambda args: connection)
     stream = StringIO()
     args = SimpleNamespace(
-        released_name="Deadlift",
-        non_released_name="Barbell Deadlift",
+        released_name="Barbell Deadlift",
+        non_released_name="Deadlift",
         non_released_owner_id=None,
         apply=False,
         dry_run=False,
@@ -286,7 +286,7 @@ def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
     assert connection.closed == 1
     output = stream.getvalue()
     assert "DRY RUN: dedup exercise types" in output
-    assert "Deadlift (id=101, status=released)" in output
+    assert "Barbell Deadlift (id=101, status=released)" in output
     assert "exercise_templates: 2" in output
     assert "Dry run only. Re-run with --apply to persist changes." in output
 
