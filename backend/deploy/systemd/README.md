@@ -17,10 +17,12 @@ Files:
 
 These units are intended for a production Docker Compose deployment launched through `docker-compose.prod.yml`.
 
-The existing workout photo cleanup unit auto-detects the two known checkout roots:
+The new workout photo cleanup unit auto-detects the two known checkout roots:
 
 - `/srv/pe-be`
 - `/home/deploy/apps/pe-be/pe-be`
+
+The older units in this directory still assume `/srv/pe-be`. On hosts that use a different checkout root, update those existing service files before enabling them.
 
 ## Install
 
@@ -45,7 +47,7 @@ sudo systemctl enable --now pe-be-workout-photo-cleanup.timer
 sudo systemctl enable --now pe-be-postgres-backup.timer
 ```
 
-If your checkout path is not one of those two locations, update `ExecStart=` in the service unit before enabling it.
+If your checkout path is not one of those two locations, update `ExecStart=` in the workout photo cleanup service before enabling it. For the older units, continue updating their existing path-specific fields as needed.
 
 Postgres backups also require `/root/.config/pe-be-backup.env` and an encryption passphrase file on the VPS. See `backend/deploy/backups/README.md` for the full backup and restore runbook.
 
