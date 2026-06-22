@@ -53,8 +53,12 @@ docker compose -f "$COMPOSE_FILE" exec -T db \
     --dbname "$POSTGRES_DB" \
     --format custom \
     --no-owner \
-    --file - \
   > "$plain_dump"
+
+if [[ ! -s "$plain_dump" ]]; then
+  echo "pg_dump produced an empty backup payload" >&2
+  exit 1
+fi
 
 case "$ENCRYPTION_MODE" in
   gpg-passphrase)
