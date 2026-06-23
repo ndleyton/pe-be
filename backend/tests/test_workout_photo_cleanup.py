@@ -354,6 +354,29 @@ async def test_cleanup_batch_size_limits_deletions(
     assert result["deleted_rows"] == 2
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"retention_days": -1}, "retention_days must be non-negative"),
+        ({"orphan_grace_hours": -1}, "orphan_grace_hours must be non-negative"),
+        ({"batch_size": 0}, "batch_size must be between 1 and 1000"),
+        ({"batch_size": 1001}, "batch_size must be between 1 and 1000"),
+    ],
+)
+async def test_cleanup_rejects_invalid_override_values(
+    db_session: AsyncSession,
+    tmp_path: Path,
+    kwargs: dict[str, int],
+    message: str,
+):
+    with pytest.raises(ValueError, match=message):
+        await cleanup_deleted_workout_photos(
+            db_session,
+            storage_dir=tmp_path,
+            **kwargs,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Job module tests (unit-level, monkeypatched)
 # ---------------------------------------------------------------------------

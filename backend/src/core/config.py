@@ -143,18 +143,31 @@ class Settings(BaseSettings):
     )
     WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS: int = Field(
         7,
+        ge=0,
         validation_alias="WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS",
-        description="Retention for soft-deleted workout photos before hard-delete",
+        description=(
+            "Retention for soft-deleted workout photos before hard-delete; "
+            "must be >= 0 days"
+        ),
     )
     WORKOUT_PHOTO_CLEANUP_BATCH_SIZE: int = Field(
         25,
+        gt=0,
+        le=1000,
         validation_alias="WORKOUT_PHOTO_CLEANUP_BATCH_SIZE",
-        description="Max workout photo rows to clean up per sweep",
+        description=(
+            "Max workout photo rows to clean up per sweep; must be between 1 "
+            "and 1000"
+        ),
     )
     WORKOUT_PHOTO_ORPHAN_GRACE_HOURS: int = Field(
         24,
+        ge=0,
         validation_alias="WORKOUT_PHOTO_ORPHAN_GRACE_HOURS",
-        description="Grace period before removing photo files with no database row",
+        description=(
+            "Grace period before removing photo files with no database row; "
+            "must be >= 0 hours"
+        ),
     )
     CHAT_RATE_LIMIT_WINDOW_SECONDS: int = Field(
         60,

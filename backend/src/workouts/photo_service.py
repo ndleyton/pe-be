@@ -20,6 +20,7 @@ from src.workouts.crud import (
 from src.workouts.models import WorkoutPhoto
 
 logger = logging.getLogger(__name__)
+MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE = 1000
 
 
 class WorkoutPhotoService:
@@ -217,6 +218,18 @@ async def cleanup_deleted_workout_photos(
         if storage_dir is not None
         else Path(settings.WORKOUT_PHOTO_STORAGE_DIR).expanduser().resolve()
     )
+    if retention_days is not None and retention_days < 0:
+        raise ValueError("retention_days must be non-negative")
+    if orphan_grace_hours is not None and orphan_grace_hours < 0:
+        raise ValueError("orphan_grace_hours must be non-negative")
+    if batch_size is not None and (
+        batch_size <= 0 or batch_size > MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE
+    ):
+        raise ValueError(
+            "batch_size must be between 1 and "
+            f"{MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE}"
+        )
+
     effective_retention = (
         retention_days
         if retention_days is not None
