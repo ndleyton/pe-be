@@ -156,8 +156,7 @@ class Settings(BaseSettings):
         le=1000,
         validation_alias="WORKOUT_PHOTO_CLEANUP_BATCH_SIZE",
         description=(
-            "Max workout photo rows to clean up per sweep; must be between 1 "
-            "and 1000"
+            "Max workout photo rows to clean up per sweep; must be between 1 and 1000"
         ),
     )
     WORKOUT_PHOTO_ORPHAN_GRACE_HOURS: int = Field(

@@ -226,8 +226,7 @@ async def cleanup_deleted_workout_photos(
         batch_size <= 0 or batch_size > MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE
     ):
         raise ValueError(
-            "batch_size must be between 1 and "
-            f"{MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE}"
+            f"batch_size must be between 1 and {MAX_WORKOUT_PHOTO_CLEANUP_BATCH_SIZE}"
         )
 
     effective_retention = (
