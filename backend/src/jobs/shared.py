@@ -46,6 +46,7 @@ def ensure_model_registry_loaded() -> None:
         "src.chat.models",
         "src.exercise_sets.models",
         "src.exercises.models",
+        "src.routine_programs.models",
         "src.routines.models",
         "src.users.models",
         "src.workouts.models",

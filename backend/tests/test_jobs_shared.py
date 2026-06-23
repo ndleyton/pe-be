@@ -147,6 +147,7 @@ def test_ensure_model_registry_loaded_imports_modules_once(monkeypatch):
         "src.chat.models",
         "src.exercise_sets.models",
         "src.exercises.models",
+        "src.routine_programs.models",
         "src.routines.models",
         "src.users.models",
         "src.workouts.models",
