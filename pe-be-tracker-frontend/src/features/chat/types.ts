@@ -43,6 +43,47 @@ export interface RoutineCreatedEvent {
   routine: RoutineWidgetData;
 }
 
+export interface RoutineRecommendationItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  category?: string | null;
+  exerciseCount: number;
+  setCount: number;
+  exerciseNamesPreview: string[];
+  score: number;
+  reason: string;
+}
+
+export interface RoutineRecommendedEvent {
+  type: "routine_recommended";
+  title?: string;
+  query: string;
+  recommendations: RoutineRecommendationItem[];
+}
+
+export interface RoutineProgramRecommendationItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  category?: string | null;
+  sourceLabel?: string | null;
+  dayCount: number;
+  routineCount: number;
+  dayLabelsPreview: string[];
+  score: number;
+  reason: string;
+}
+
+export interface RoutineProgramRecommendedEvent {
+  type: "routine_program_recommended";
+  title?: string;
+  query: string;
+  recommendations: RoutineProgramRecommendationItem[];
+}
+
 export interface ExerciseSubstitutionItem {
   id: number;
   name: string;
@@ -89,6 +130,47 @@ export interface ChatApiRoutineCreatedEvent {
     exercise_count: number;
     set_count: number;
   };
+}
+
+export interface ChatApiRoutineRecommendationItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  category?: string | null;
+  exercise_count: number;
+  set_count: number;
+  exercise_names_preview: string[];
+  score: number;
+  reason: string;
+}
+
+export interface ChatApiRoutineRecommendedEvent {
+  type: "routine_recommended";
+  title?: string | null;
+  query: string;
+  recommendations: ChatApiRoutineRecommendationItem[];
+}
+
+export interface ChatApiRoutineProgramRecommendationItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  category?: string | null;
+  source_label?: string | null;
+  day_count: number;
+  routine_count: number;
+  day_labels_preview: string[];
+  score: number;
+  reason: string;
+}
+
+export interface ChatApiRoutineProgramRecommendedEvent {
+  type: "routine_program_recommended";
+  title?: string | null;
+  query: string;
+  recommendations: ChatApiRoutineProgramRecommendationItem[];
 }
 
 export interface ChatApiExerciseSubstitutionItem {
@@ -166,6 +248,8 @@ export interface ChatPageLocationState {
 export type ChatEvent =
   | WorkoutCreatedEvent
   | RoutineCreatedEvent
+  | RoutineRecommendedEvent
+  | RoutineProgramRecommendedEvent
   | ExerciseSubstitutionsEvent;
 
 export interface ChatMessage {

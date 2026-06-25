@@ -1,10 +1,14 @@
 import {
   type ChatApiExerciseSubstitutionsEvent,
   type ChatApiRoutineCreatedEvent,
+  type ChatApiRoutineProgramRecommendedEvent,
+  type ChatApiRoutineRecommendedEvent,
   type ChatApiWorkoutCreatedEvent,
   type ChatEvent,
   type ExerciseSubstitutionsEvent,
   type RoutineCreatedEvent,
+  type RoutineProgramRecommendedEvent,
+  type RoutineRecommendedEvent,
   type WorkoutCreatedEvent,
 } from "../types";
 
@@ -43,6 +47,51 @@ export const parseRoutineCreatedEvent = (
   };
 };
 
+export const parseRoutineRecommendedEvent = (
+  event: ChatApiRoutineRecommendedEvent,
+): RoutineRecommendedEvent => {
+  return {
+    type: "routine_recommended",
+    title: event.title ?? undefined,
+    query: event.query,
+    recommendations: event.recommendations.map((recommendation) => ({
+      id: recommendation.id,
+      name: recommendation.name,
+      description: recommendation.description,
+      author: recommendation.author,
+      category: recommendation.category,
+      exerciseCount: recommendation.exercise_count,
+      setCount: recommendation.set_count,
+      exerciseNamesPreview: recommendation.exercise_names_preview,
+      score: recommendation.score,
+      reason: recommendation.reason,
+    })),
+  };
+};
+
+export const parseRoutineProgramRecommendedEvent = (
+  event: ChatApiRoutineProgramRecommendedEvent,
+): RoutineProgramRecommendedEvent => {
+  return {
+    type: "routine_program_recommended",
+    title: event.title ?? undefined,
+    query: event.query,
+    recommendations: event.recommendations.map((recommendation) => ({
+      id: recommendation.id,
+      name: recommendation.name,
+      description: recommendation.description,
+      author: recommendation.author,
+      category: recommendation.category,
+      sourceLabel: recommendation.source_label,
+      dayCount: recommendation.day_count,
+      routineCount: recommendation.routine_count,
+      dayLabelsPreview: recommendation.day_labels_preview,
+      score: recommendation.score,
+      reason: recommendation.reason,
+    })),
+  };
+};
+
 export const parseExerciseSubstitutionsEvent = (
   event: ChatApiExerciseSubstitutionsEvent,
 ): ExerciseSubstitutionsEvent => {
@@ -70,6 +119,8 @@ export const extractChatEvents = (
   events?: Array<
     | ChatApiWorkoutCreatedEvent
     | ChatApiRoutineCreatedEvent
+    | ChatApiRoutineRecommendedEvent
+    | ChatApiRoutineProgramRecommendedEvent
     | ChatApiExerciseSubstitutionsEvent
   >,
 ): ChatEvent[] =>
@@ -80,6 +131,14 @@ export const extractChatEvents = (
     }
     if (event.type === "routine_created") {
       acc.push(parseRoutineCreatedEvent(event));
+      return acc;
+    }
+    if (event.type === "routine_recommended") {
+      acc.push(parseRoutineRecommendedEvent(event));
+      return acc;
+    }
+    if (event.type === "routine_program_recommended") {
+      acc.push(parseRoutineProgramRecommendedEvent(event));
       return acc;
     }
     if (event.type === "exercise_substitutions_recommended") {

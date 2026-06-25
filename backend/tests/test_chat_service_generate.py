@@ -447,6 +447,68 @@ async def test_generate_response_returns_routine_created_event(
 
 
 @pytest.mark.asyncio
+@patch("src.chat.service.routine_service.create_routine_admin")
+@patch("src.chat.service.get_visible_routines_summary")
+@patch("src.chat.service.ChatService._get_llm_client")
+async def test_generate_response_returns_routine_recommendation_event(
+    mock_get_llm,
+    mock_get_summaries,
+    mock_create_routine,
+    chat_service_with_db,
+):
+    mock_llm = AsyncMock()
+    mock_llm.model_name = "test-model"
+
+    mock_tool_call_response = MagicMock()
+    mock_tool_call = MagicMock()
+    mock_tool_call.name = "recommend_existing_routines"
+    mock_tool_call.call_id = "call_routine_rec_123"
+    mock_tool_call.args = {
+        "query": "Recommend a beginner full body routine",
+        "goal": "strength",
+        "experience_level": "beginner",
+    }
+    mock_tool_call_response.tool_calls = [mock_tool_call]
+    mock_tool_call_response.message = ConversationMessage(role="assistant", content="")
+
+    mock_text_response = MagicMock()
+    mock_text_response.tool_calls = []
+    mock_text_response.message = ConversationMessage(
+        role="assistant",
+        content="I found a strong existing match in the routine library.",
+    )
+
+    mock_llm.acomplete.side_effect = [mock_tool_call_response, mock_text_response]
+    mock_get_llm.return_value = mock_llm
+    mock_get_summaries.return_value = [
+        {
+            "id": 42,
+            "name": "Beginner Full Body A",
+            "description": "A beginner full body gym strength routine.",
+            "visibility": "public",
+            "is_readonly": True,
+            "author": "Personal Bestie",
+            "category": "Beginner",
+            "times_used": 10,
+            "exercise_count": 6,
+            "set_count": 18,
+            "exercise_names_preview": ["Squat", "Bench Press", "Lat Pulldown"],
+        }
+    ]
+
+    with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"):
+        result = await chat_service_with_db.generate_response(
+            [{"role": "user", "content": "Recommend a beginner full body routine"}],
+            save_to_db=False,
+        )
+
+    assert result["message"] == "I found a strong existing match in the routine library."
+    assert result["events"][0]["type"] == "routine_recommended"
+    assert result["events"][0]["recommendations"][0]["id"] == 42
+    mock_create_routine.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 @patch("src.chat.service.get_similar_exercise_type_matches")
 @patch("src.chat.service.get_exercise_type_by_id")
 @patch("src.chat.service.ChatService._get_llm_client")

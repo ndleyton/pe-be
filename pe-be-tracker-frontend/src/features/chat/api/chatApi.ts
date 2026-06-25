@@ -5,6 +5,8 @@ import {
   type ChatApiExerciseSubstitutionsEvent,
   type ChatApiMessage,
   type ChatApiRoutineCreatedEvent,
+  type ChatApiRoutineProgramRecommendedEvent,
+  type ChatApiRoutineRecommendedEvent,
   type ChatApiWorkoutCreatedEvent,
   type ConversationResponse,
 } from "../types";
@@ -21,6 +23,8 @@ export interface ChatResponse {
   events?: Array<
     | ChatApiWorkoutCreatedEvent
     | ChatApiRoutineCreatedEvent
+    | ChatApiRoutineRecommendedEvent
+    | ChatApiRoutineProgramRecommendedEvent
     | ChatApiExerciseSubstitutionsEvent
   >;
 }
