@@ -36,7 +36,7 @@ Google's current lineup offers distinct price-to-performance tiers:
 
 ## Budgeting Strategy: 1,000 AI Credits
 
-Under a **Google One AI Pro** subscription allocating **1,000 AI credits** monthly, avoiding premium models like Gemini 3.5 Flash is essential for sustainable operations. 
+Under a **Google One AI Pro** subscription allocating **1,000 AI credits** monthly, avoiding premium models like Gemini 3.5 Flash is essential for sustainable operations.
 
 By standardizing on **Flash-Lite** and entry-level **Flash** models:
 1. **Chat Costs Reduction:** Running the main Chat Assistant on `gemini-2.5-flash-lite` or `gemini-3.1-flash-lite` instead of a 3.5-class model reduces token costs by up to **85%**.
@@ -71,7 +71,7 @@ We propose the following cost-optimized configuration mapping in `backend/.env.p
 CHAT_MODEL=gemini-2.5-flash
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite
 WORKOUT_RECAP_MODEL=gemini-2.5-flash-lite
-EXERCISE_IMAGE_PHASE_MODEL=gemini-2.5-flash-image
+EXERCISE_IMAGE_PHASE_MODEL=gemini-3.1-flash-image
 ```
 
 ### `backend/.env.production.template` (Option A: Extreme Budget)
@@ -79,5 +79,5 @@ EXERCISE_IMAGE_PHASE_MODEL=gemini-2.5-flash-image
 CHAT_MODEL=gemini-3.1-flash-lite
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite
 WORKOUT_RECAP_MODEL=gemini-2.5-flash-lite
-EXERCISE_IMAGE_PHASE_MODEL=gemini-2.5-flash-image
+EXERCISE_IMAGE_PHASE_MODEL=gemini-3.1-flash-image
 ```

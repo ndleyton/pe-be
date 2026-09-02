@@ -59,6 +59,11 @@ export const endpoints = {
     googleAuthorize: "/auth/google/authorize",
   },
 
+  // Personal access tokens used by external MCP clients
+  personalAccessTokens: "/users/me/personal-access-tokens/",
+  personalAccessTokenById: (id: string | number) =>
+    `/users/me/personal-access-tokens/${id}`,
+
   // Public profiles
   profileMe: "/profiles/me",
   publicProfile: (username: string) => `/profiles/${username}`,

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/features/auth/components";
+import { PersonalAccessTokensSettings } from "@/features/mcp/components/PersonalAccessTokensSettings";
 import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
 import { getMyWorkouts, type Workout } from "@/features/workouts";
 import { WeekTracking } from "@/shared/components/WeekTracking";
@@ -389,6 +390,10 @@ const ProfilePage = () => {
               </div>
             </div>
           </div>
+
+          <PersonalAccessTokensSettings
+            enabled={!loading && isAuthenticated}
+          />
         </div>
       </div>
     </div>

@@ -286,12 +286,12 @@ class Settings(BaseSettings):
         description="Filesystem path for exercise reference and generated images",
     )
     EXERCISE_IMAGE_PHASE_MODEL: str = Field(
-        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
         validation_alias="EXERCISE_IMAGE_PHASE_MODEL",
         description="Gemini image model for phase image generation",
     )
     EXERCISE_IMAGE_REFERENCE_MODEL: str = Field(
-        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
         validation_alias="EXERCISE_IMAGE_REFERENCE_MODEL",
         description="Gemini image model for regenerate-from-reference pipeline",
     )
