@@ -48,6 +48,8 @@ import src.routines.models  # noqa: F401
 import src.routine_programs.models  # noqa: F401
 import src.chat.models  # noqa: F401
 import src.sync.models  # noqa: F401
+import src.mcp.models  # noqa: F401
+import src.users.pat_models  # noqa: F401
 
 
 def _maintenance_connection_kwargs(db_url: str) -> dict[str, object]:
@@ -169,6 +171,7 @@ async def setup_database():
             "routine_program_visibility",
             "workout_visibility",
             "exercise_type_status",
+            "mcp_idempotency_status",
         ]
         for type_name in types_to_drop:
             await conn.execute(text(f"DROP TYPE IF EXISTS {type_name} CASCADE"))

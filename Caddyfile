@@ -56,6 +56,24 @@
                 window {$EDGE_HEALTH_RATE_LIMIT_WINDOW}
             }
 
+            zone mcp_catalog {
+                match {
+                    path /api/mcp/catalog /api/mcp/catalog/*
+                }
+                key {client_ip}
+                events {$EDGE_MCP_CATALOG_RATE_LIMIT_EVENTS:120}
+                window {$EDGE_MCP_CATALOG_RATE_LIMIT_WINDOW:1m}
+            }
+
+            zone mcp_trainer {
+                match {
+                    path /api/mcp/trainer /api/mcp/trainer/*
+                }
+                key {client_ip}
+                events {$EDGE_MCP_TRAINER_RATE_LIMIT_EVENTS:60}
+                window {$EDGE_MCP_TRAINER_RATE_LIMIT_WINDOW:1m}
+            }
+
             log_key
         }
 

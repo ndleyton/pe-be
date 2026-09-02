@@ -357,6 +357,38 @@ class Settings(BaseSettings):
         description="JWT token lifetime in seconds (default: 7 days)",
     )
 
+    # Model Context Protocol servers and Personal Access Tokens
+    MCP_ENABLED: bool = Field(True, validation_alias="MCP_ENABLED")
+    MCP_CATALOG_ENABLED: bool = Field(True, validation_alias="MCP_CATALOG_ENABLED")
+    MCP_TRAINER_ENABLED: bool = Field(True, validation_alias="MCP_TRAINER_ENABLED")
+    MCP_PUBLIC_BASE_URL: str = Field(
+        "http://localhost:8000/api/mcp",
+        validation_alias="MCP_PUBLIC_BASE_URL",
+    )
+    MCP_ALLOWED_HOSTS: str = Field(
+        "localhost:*,127.0.0.1:*,test:*,testserver",
+        validation_alias="MCP_ALLOWED_HOSTS",
+    )
+    MCP_ALLOWED_ORIGINS: str = Field(
+        "http://localhost:*,http://127.0.0.1:*",
+        validation_alias="MCP_ALLOWED_ORIGINS",
+    )
+    MCP_PAT_PEPPER: str = Field(
+        "development-only-mcp-pat-pepper", validation_alias="MCP_PAT_PEPPER"
+    )
+    MCP_PAT_DEFAULT_EXPIRY_DAYS: int = Field(
+        90, validation_alias="MCP_PAT_DEFAULT_EXPIRY_DAYS"
+    )
+    MCP_PAT_MAX_EXPIRY_DAYS: int = Field(
+        365, validation_alias="MCP_PAT_MAX_EXPIRY_DAYS"
+    )
+    MCP_PAT_LAST_USED_UPDATE_INTERVAL_MINUTES: int = Field(
+        60, validation_alias="MCP_PAT_LAST_USED_UPDATE_INTERVAL_MINUTES"
+    )
+    MCP_ALLOW_TRUSTED_STDIO_USER: bool = Field(
+        False, validation_alias="MCP_ALLOW_TRUSTED_STDIO_USER"
+    )
+
     LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
     OTEL_ENABLED: bool = Field(False, validation_alias="OTEL_ENABLED")
     OTEL_SERVICE_NAME: str = Field(

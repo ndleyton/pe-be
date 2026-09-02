@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic import field_validator
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from src.routines.schemas import RoutineRead
 from src.users.schemas import normalize_username
@@ -15,6 +16,7 @@ class ProfileMeRead(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     is_profile_public: bool
+    timezone: str = "UTC"
 
 
 class ProfileMeUpdate(BaseModel):
@@ -23,11 +25,23 @@ class ProfileMeUpdate(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     is_profile_public: Optional[bool] = None
+    timezone: Optional[str] = None
 
     @field_validator("username", mode="before")
     @classmethod
     def validate_username(cls, value):
         return normalize_username(value)
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value):
+        if value is None:
+            return value
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError("timezone must be a valid IANA timezone") from exc
+        return value
 
 
 class PublicProfileRead(BaseModel):
