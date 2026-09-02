@@ -109,6 +109,7 @@ class ProfileService:
             bio=user.bio,
             avatar_url=user.avatar_url,
             is_profile_public=user.is_profile_public,
+            timezone=user.timezone,
         )
 
     async def update_my_profile(
