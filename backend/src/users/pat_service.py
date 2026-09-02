@@ -114,7 +114,7 @@ async def verify_personal_access_token(
     )
     now = datetime.now(timezone.utc)
     matched: tuple[PersonalAccessToken, User] | None = None
-    for record, user in result.all():
+    for record, user in result.unique().all():
         if hmac.compare_digest(record.token_hash, _token_hash(token)):
             matched = (record, user)
             break

@@ -18,6 +18,9 @@ class _Rows:
     def all(self):
         return self._rows
 
+    def unique(self):
+        return self
+
 
 class _Session:
     def __init__(self, rows):
