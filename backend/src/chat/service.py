@@ -54,6 +54,7 @@ from src.exercises.intensity_units import (
     DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
     prefers_duration_for_intensity_unit,
 )
+from src.exercises.substitution_service import ExerciseSubstitutionService
 from src.exercises.crud import get_exercises_for_workout
 from src.exercises.set_display import format_set_summary
 from src.routines.models import Routine
@@ -249,18 +250,9 @@ class PersonalizedRoutineArgs(BaseModel):
 
 class ChatService:
     _LOOKUP_TOKEN_RE = re.compile(r"[^a-z0-9]+")
-    _KNOWN_EQUIPMENT_KEYWORDS: ClassVar[dict[str, set[str]]] = {
-        "machine": {"machine", "machines"},
-        "cable": {"cable", "cables"},
-        "barbell": {"barbell", "barbells", "olympic bar"},
-        "dumbbell": {"dumbbell", "dumbbells", "db"},
-        "kettlebell": {"kettlebell", "kettlebells", "kb"},
-        "bodyweight": {"bodyweight", "body weight", "bw"},
-        "band": {"band", "bands", "resistance band", "resistance bands"},
-        "smith machine": {"smith machine", "smith"},
-        "bench": {"bench", "benches"},
-        "pull-up bar": {"pull-up bar", "pull up bar", "pullup bar"},
-    }
+    _KNOWN_EQUIPMENT_KEYWORDS = (
+        ExerciseSubstitutionService.KNOWN_EQUIPMENT_KEYWORDS
+    )
 
     @staticmethod
     def _is_provider_busy_error(error_message: str) -> bool:
@@ -358,48 +350,7 @@ class ChatService:
         cls,
         context_notes: str | None,
     ) -> tuple[set[str], set[str], bool]:
-        if not context_notes:
-            return set(), set(), False
-
-        normalized = f" {cls._normalize_lookup_value(context_notes)} "
-        preferred: set[str] = set()
-        avoided: set[str] = set()
-        same_equipment_requested = any(
-            phrase in normalized
-            for phrase in (
-                " same equipment ",
-                " similar equipment ",
-                " same setup ",
-                " same machine ",
-            )
-        )
-
-        avoidance_prefixes = ["no", "without", "avoid", "dont have", "don't have"]
-        normalized_avoidance_prefixes = [
-            cls._normalize_lookup_value(prefix) for prefix in avoidance_prefixes
-        ]
-
-        for canonical, aliases in cls._KNOWN_EQUIPMENT_KEYWORDS.items():
-            if any(f" {alias} " in normalized for alias in aliases):
-                preferred.add(canonical)
-
-            canonical_avoided = any(
-                f" {prefix} {canonical} " in normalized
-                for prefix in normalized_avoidance_prefixes
-            )
-            alias_avoided = any(
-                f" {prefix} {alias} " in normalized
-                for prefix in normalized_avoidance_prefixes
-                for alias in aliases
-            )
-            if canonical_avoided or alias_avoided:
-                avoided.add(canonical)
-
-        if " home " in normalized:
-            preferred.update({"bodyweight", "dumbbell", "kettlebell", "band"})
-            avoided.add("machine")
-
-        return preferred, avoided, same_equipment_requested
+        return ExerciseSubstitutionService.extract_equipment_preferences(context_notes)
 
     @classmethod
     def _rerank_substitution_suggestions(
@@ -410,41 +361,12 @@ class ChatService:
         context_notes: str | None,
         limit: int,
     ) -> list[dict[str, Any]]:
-        if not context_notes:
-            return suggestions[:limit]
-
-        preferred_equipment, avoided_equipment, same_equipment_requested = (
-            cls._extract_equipment_preferences(context_notes)
+        return ExerciseSubstitutionService.rerank_suggestions(
+            suggestions,
+            source_exercise=source_exercise,
+            context_notes=context_notes,
+            limit=limit,
         )
-        source_equipment = cls._normalize_lookup_value(
-            getattr(source_exercise, "equipment", "") or ""
-        )
-
-        def score(item_with_index: tuple[int, dict[str, Any]]) -> tuple[int, int]:
-            index, item = item_with_index
-            candidate_equipment = cls._normalize_lookup_value(
-                getattr(item["exercise_type"], "equipment", "") or ""
-            )
-            candidate_score = 0
-
-            if candidate_equipment:
-                for preferred in preferred_equipment:
-                    if preferred in candidate_equipment:
-                        candidate_score += 20
-                for avoided in avoided_equipment:
-                    if avoided in candidate_equipment:
-                        candidate_score -= 40
-                if (
-                    same_equipment_requested
-                    and source_equipment
-                    and candidate_equipment == source_equipment
-                ):
-                    candidate_score += 30
-
-            return (candidate_score, -index)
-
-        reranked = sorted(enumerate(suggestions), key=score, reverse=True)
-        return [item for _, item in reranked[:limit]]
 
     @classmethod
     def _normalize_compact_lookup_value(cls, value: str) -> str:
@@ -951,17 +873,24 @@ class ChatService:
                         f"'{exercise_name}' was not found."
                     )
 
-            suggestions, strategy = await get_similar_exercise_type_matches(
-                self.session,
-                source_exercise,
-                limit=max(limit, 8),
+            substitution_result = (
+                await ExerciseSubstitutionService().recommend_from_source(
+                    self.session,
+                    source_exercise,
+                    context_notes=context_notes,
+                    limit=limit,
+                    candidate_limit=max(limit, 8),
+                    similarity_loader=get_similar_exercise_type_matches,
+                )
             )
-            suggestions = self._rerank_substitution_suggestions(
-                suggestions,
-                source_exercise=source_exercise,
-                context_notes=context_notes,
-                limit=limit,
-            )
+            suggestions = [
+                {
+                    "exercise_type": item.exercise_type,
+                    "match_reason": item.match_reason,
+                }
+                for item in substitution_result.substitutions
+            ]
+            strategy = substitution_result.strategy
 
             if not suggestions:
                 if strategy == "no_primary_muscle":

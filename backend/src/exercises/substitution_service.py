@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any, Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,38 +28,127 @@ class ExerciseSubstitutionResult:
 
 
 class ExerciseSubstitutionService:
-    _EQUIPMENT_TERMS = (
-        "barbell",
-        "dumbbell",
-        "cable",
-        "machine",
-        "kettlebell",
-        "band",
-        "bodyweight",
-        "smith",
-    )
+    KNOWN_EQUIPMENT_KEYWORDS: dict[str, set[str]] = {
+        "machine": {"machine", "machines"},
+        "cable": {"cable", "cables"},
+        "barbell": {"barbell", "barbells", "olympic bar"},
+        "dumbbell": {"dumbbell", "dumbbells", "db"},
+        "kettlebell": {"kettlebell", "kettlebells", "kb"},
+        "bodyweight": {"bodyweight", "body weight", "bw"},
+        "band": {"band", "bands", "resistance band", "resistance bands"},
+        "smith machine": {"smith machine", "smith"},
+        "bench": {"bench", "benches"},
+        "pull-up bar": {"pull-up bar", "pull up bar", "pullup bar"},
+    }
+
+    @staticmethod
+    def normalize_lookup_value(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", " ", value.strip().casefold()).strip()
 
     @classmethod
-    def _equipment_preferences(cls, notes: str | None) -> set[str]:
-        normalized = re.sub(r"[^a-z0-9]+", " ", (notes or "").lower())
-        return {term for term in cls._EQUIPMENT_TERMS if term in normalized}
+    def extract_equipment_preferences(
+        cls, context_notes: str | None
+    ) -> tuple[set[str], set[str], bool]:
+        if not context_notes:
+            return set(), set(), False
+        normalized = f" {cls.normalize_lookup_value(context_notes)} "
+        preferred: set[str] = set()
+        avoided: set[str] = set()
+        same_equipment_requested = any(
+            phrase in normalized
+            for phrase in (
+                " same equipment ",
+                " similar equipment ",
+                " same setup ",
+                " same machine ",
+            )
+        )
+        avoidance_prefixes = ["no", "without", "avoid", "dont have", "don't have"]
+        normalized_prefixes = [
+            cls.normalize_lookup_value(prefix) for prefix in avoidance_prefixes
+        ]
+        for canonical, aliases in cls.KNOWN_EQUIPMENT_KEYWORDS.items():
+            if any(f" {alias} " in normalized for alias in aliases):
+                preferred.add(canonical)
+            if any(
+                f" {prefix} {term} " in normalized
+                for prefix in normalized_prefixes
+                for term in {canonical, *aliases}
+            ):
+                avoided.add(canonical)
+        if " home " in normalized:
+            preferred.update({"bodyweight", "dumbbell", "kettlebell", "band"})
+            avoided.add("machine")
+        return preferred, avoided, same_equipment_requested
 
     @classmethod
-    def _rerank(
-        cls, matches: list[dict], context_notes: str | None
-    ) -> list[dict]:
-        preferred = cls._equipment_preferences(context_notes)
-        if not preferred:
-            return matches
+    def rerank_suggestions(
+        cls,
+        suggestions: list[dict[str, Any]],
+        *,
+        source_exercise: Any,
+        context_notes: str | None,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if not context_notes:
+            return suggestions[:limit]
+        preferred, avoided, same_requested = cls.extract_equipment_preferences(
+            context_notes
+        )
+        source_equipment = cls.normalize_lookup_value(
+            getattr(source_exercise, "equipment", "") or ""
+        )
 
-        def score(item: dict) -> int:
-            exercise_type = item["exercise_type"]
-            haystack = " ".join(
-                filter(None, [exercise_type.name, exercise_type.equipment])
-            ).lower()
-            return int(any(term in haystack for term in preferred))
+        def score(indexed_item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
+            index, item = indexed_item
+            equipment = cls.normalize_lookup_value(
+                getattr(item["exercise_type"], "equipment", "") or ""
+            )
+            value = sum(20 for term in preferred if term in equipment)
+            value -= sum(40 for term in avoided if term in equipment)
+            if same_requested and source_equipment and equipment == source_equipment:
+                value += 30
+            return value, -index
 
-        return sorted(matches, key=score, reverse=True)
+        return [
+            item
+            for _, item in sorted(enumerate(suggestions), key=score, reverse=True)[
+                :limit
+            ]
+        ]
+
+    async def recommend_from_source(
+        self,
+        session: AsyncSession,
+        source: ExerciseType,
+        *,
+        context_notes: str | None,
+        limit: int,
+        candidate_limit: int | None = None,
+        similarity_loader: Callable[
+            ..., Awaitable[tuple[list[dict[str, Any]], str]]
+        ] = get_similar_exercise_types,
+    ) -> ExerciseSubstitutionResult:
+        raw_matches, strategy = await similarity_loader(
+            session, source, limit=candidate_limit or min(max(limit * 3, limit), 20)
+        )
+        reranked = self.rerank_suggestions(
+            raw_matches,
+            source_exercise=source,
+            context_notes=context_notes,
+            limit=limit,
+        )
+        return ExerciseSubstitutionResult(
+            source_exercise=source,
+            substitutions=[
+                ExerciseSubstitution(
+                    exercise_type=item["exercise_type"],
+                    match_reason=item["match_reason"],
+                )
+                for item in reranked
+            ],
+            strategy=strategy,
+        )
 
     async def recommend_substitutions(
         self,
@@ -106,18 +196,9 @@ class ExerciseSubstitutionService:
         if source is None:
             raise LookupError("Exercise not found")
 
-        raw_matches, strategy = await get_similar_exercise_types(
-            session, source, limit=min(max(limit * 3, limit), 20)
-        )
-        reranked = self._rerank(raw_matches, context_notes)[:limit]
-        return ExerciseSubstitutionResult(
-            source_exercise=source,
-            substitutions=[
-                ExerciseSubstitution(
-                    exercise_type=item["exercise_type"],
-                    match_reason=item["match_reason"],
-                )
-                for item in reranked
-            ],
-            strategy=strategy,
+        return await self.recommend_from_source(
+            session,
+            source,
+            context_notes=context_notes,
+            limit=limit,
         )

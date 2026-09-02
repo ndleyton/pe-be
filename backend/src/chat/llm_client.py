@@ -131,7 +131,14 @@ class ToolDefinition:
 
             cleaned: dict[str, Any] = {}
             for key, value in schema.items():
-                if key in {"$defs", "$ref", "title", "default", "example"}:
+                if key in {
+                    "$defs",
+                    "$ref",
+                    "title",
+                    "default",
+                    "example",
+                    "pattern",
+                }:
                     continue
                 cleaned[key] = cls._clean_pydantic_schema_inner(value, defs)
 
