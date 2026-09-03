@@ -67,15 +67,21 @@ class ExerciseSubstitutionService:
         normalized_prefixes = [
             cls.normalize_lookup_value(prefix) for prefix in avoidance_prefixes
         ]
+        optional_articles = ("", "a ", "an ", "the ", "any ")
         for canonical, aliases in cls.KNOWN_EQUIPMENT_KEYWORDS.items():
-            if any(f" {alias} " in normalized for alias in aliases):
-                preferred.add(canonical)
-            if any(
-                f" {prefix} {term} " in normalized
+            normalized_terms = {
+                cls.normalize_lookup_value(term) for term in {canonical, *aliases}
+            }
+            is_avoided = any(
+                f" {prefix} {article}{term} " in normalized
                 for prefix in normalized_prefixes
-                for term in {canonical, *aliases}
-            ):
+                for article in optional_articles
+                for term in normalized_terms
+            )
+            if is_avoided:
                 avoided.add(canonical)
+            elif any(f" {term} " in normalized for term in normalized_terms):
+                preferred.add(canonical)
         if " home " in normalized:
             preferred.update({"bodyweight", "dumbbell", "kettlebell", "band"})
             avoided.add("machine")
