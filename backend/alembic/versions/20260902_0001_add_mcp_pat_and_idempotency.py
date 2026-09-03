@@ -5,6 +5,7 @@ Revises: 3a6db27a297a
 Create Date: 2026-09-02
 """
 
+import logging
 from typing import Sequence, Union
 
 from alembic import op
@@ -17,9 +18,71 @@ down_revision: Union[str, None] = "3a6db27a297a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+_OWNERSHIP_MARKER = "alembic:20260902_0001"
+_logger = logging.getLogger(__name__)
+
 
 def _columns(inspector: sa.Inspector, table_name: str) -> set[str]:
     return {column["name"] for column in inspector.get_columns(table_name)}
+
+
+def _column_comment(
+    inspector: sa.Inspector, table_name: str, column_name: str
+) -> str | None:
+    for column in inspector.get_columns(table_name):
+        if column["name"] == column_name:
+            return column.get("comment")
+    return None
+
+
+def _table_comment(inspector: sa.Inspector, table_name: str) -> str | None:
+    return inspector.get_table_comment(table_name).get("text")
+
+
+def _enum_exists(connection: sa.Connection, enum_name: str) -> bool:
+    return bool(
+        connection.scalar(
+            sa.text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_type AS type
+                    JOIN pg_namespace AS namespace
+                      ON namespace.oid = type.typnamespace
+                    WHERE type.typname = :enum_name
+                      AND type.typtype = 'e'
+                      AND namespace.nspname = current_schema()
+                )
+                """
+            ),
+            {"enum_name": enum_name},
+        )
+    )
+
+
+def _enum_comment(connection: sa.Connection, enum_name: str) -> str | None:
+    return connection.scalar(
+        sa.text(
+            """
+            SELECT obj_description(type.oid, 'pg_type')
+            FROM pg_type AS type
+            JOIN pg_namespace AS namespace
+              ON namespace.oid = type.typnamespace
+            WHERE type.typname = :enum_name
+              AND type.typtype = 'e'
+              AND namespace.nspname = current_schema()
+            """
+        ),
+        {"enum_name": enum_name},
+    )
+
+
+def _log_skipped_drop(artifact: str) -> None:
+    _logger.warning(
+        "Skipping removal of %s because it is not marked as created by "
+        "revision 20260902_0001. Verify ownership before removing it manually.",
+        artifact,
+    )
 
 
 def upgrade() -> None:
@@ -36,6 +99,9 @@ def upgrade() -> None:
                 nullable=False,
                 server_default="UTC",
             ),
+        )
+        op.execute(
+            f"COMMENT ON COLUMN users.timezone IS '{_OWNERSHIP_MARKER}'"
         )
 
     if "personal_access_tokens" not in tables:
@@ -58,6 +124,9 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("token_hash"),
         )
+        op.execute(
+            f"COMMENT ON TABLE personal_access_tokens IS '{_OWNERSHIP_MARKER}'"
+        )
         op.create_index(
             "ix_personal_access_tokens_prefix",
             "personal_access_tokens",
@@ -71,6 +140,7 @@ def upgrade() -> None:
 
     inspector = sa.inspect(connection)
     if "mcp_idempotency_records" not in inspector.get_table_names():
+        enum_already_existed = _enum_exists(connection, "mcp_idempotency_status")
         status_enum = postgresql.ENUM(
             "pending",
             "completed",
@@ -79,6 +149,10 @@ def upgrade() -> None:
             create_type=False,
         )
         status_enum.create(connection, checkfirst=True)
+        if not enum_already_existed:
+            op.execute(
+                f"COMMENT ON TYPE mcp_idempotency_status IS '{_OWNERSHIP_MARKER}'"
+            )
         op.create_table(
             "mcp_idempotency_records",
             sa.Column("user_id", sa.Integer(), nullable=False),
@@ -108,6 +182,9 @@ def upgrade() -> None:
                 name="uq_mcp_idempotency_user_operation_key",
             ),
         )
+        op.execute(
+            f"COMMENT ON TABLE mcp_idempotency_records IS '{_OWNERSHIP_MARKER}'"
+        )
         op.create_index(
             "ix_mcp_idempotency_user_operation",
             "mcp_idempotency_records",
@@ -121,15 +198,31 @@ def downgrade() -> None:
     tables = set(inspector.get_table_names())
 
     if "mcp_idempotency_records" in tables:
-        op.drop_table("mcp_idempotency_records")
-    postgresql.ENUM(name="mcp_idempotency_status").drop(connection, checkfirst=True)
+        if _table_comment(inspector, "mcp_idempotency_records") == _OWNERSHIP_MARKER:
+            op.drop_table("mcp_idempotency_records")
+        else:
+            _log_skipped_drop("table mcp_idempotency_records")
+
+    if _enum_exists(connection, "mcp_idempotency_status"):
+        if _enum_comment(connection, "mcp_idempotency_status") == _OWNERSHIP_MARKER:
+            postgresql.ENUM(name="mcp_idempotency_status").drop(
+                connection, checkfirst=False
+            )
+        else:
+            _log_skipped_drop("enum mcp_idempotency_status")
 
     inspector = sa.inspect(connection)
     if "personal_access_tokens" in inspector.get_table_names():
-        op.drop_table("personal_access_tokens")
+        if _table_comment(inspector, "personal_access_tokens") == _OWNERSHIP_MARKER:
+            op.drop_table("personal_access_tokens")
+        else:
+            _log_skipped_drop("table personal_access_tokens")
 
     inspector = sa.inspect(connection)
     if "users" in inspector.get_table_names() and "timezone" in _columns(
         inspector, "users"
     ):
-        op.drop_column("users", "timezone")
+        if _column_comment(inspector, "users", "timezone") == _OWNERSHIP_MARKER:
+            op.drop_column("users", "timezone")
+        else:
+            _log_skipped_drop("column users.timezone")
