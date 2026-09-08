@@ -77,6 +77,24 @@ def _enum_comment(connection: sa.Connection, enum_name: str) -> str | None:
     )
 
 
+def _enum_referenced_by_columns(
+    connection: sa.Connection, enum_name: str, table_name: str | None = None
+) -> bool:
+    query = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND (udt_name = :enum_name OR udt_name = '_' || :enum_name)
+    """
+    params: dict[str, str] = {"enum_name": enum_name}
+    if table_name is not None:
+        query += " AND table_name = :table_name"
+        params["table_name"] = table_name
+    query += "\n        )"
+    return bool(connection.scalar(sa.text(query), params))
+
+
 def _log_skipped_drop(artifact: str) -> None:
     _logger.warning(
         "Skipping removal of %s because it is not marked as created by "
@@ -203,11 +221,32 @@ def downgrade() -> None:
         else:
             _log_skipped_drop("table mcp_idempotency_records")
 
+    inspector = sa.inspect(connection)
+    preserved_records_depend_on_enum = (
+        "mcp_idempotency_records" in inspector.get_table_names()
+        and _enum_referenced_by_columns(
+            connection, "mcp_idempotency_status", table_name="mcp_idempotency_records"
+        )
+    )
+
     if _enum_exists(connection, "mcp_idempotency_status"):
         if _enum_comment(connection, "mcp_idempotency_status") == _OWNERSHIP_MARKER:
-            postgresql.ENUM(name="mcp_idempotency_status").drop(
-                connection, checkfirst=False
-            )
+            if preserved_records_depend_on_enum:
+                _logger.warning(
+                    "Skipping removal of enum mcp_idempotency_status because the "
+                    "preserved mcp_idempotency_records table still depends on it."
+                )
+            elif _enum_referenced_by_columns(
+                connection, "mcp_idempotency_status"
+            ):
+                _logger.warning(
+                    "Skipping removal of enum mcp_idempotency_status because it is still "
+                    "referenced by preserved tables or columns."
+                )
+            else:
+                postgresql.ENUM(name="mcp_idempotency_status").drop(
+                    connection, checkfirst=False
+                )
         else:
             _log_skipped_drop("enum mcp_idempotency_status")
 

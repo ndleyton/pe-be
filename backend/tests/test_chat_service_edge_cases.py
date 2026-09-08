@@ -256,7 +256,7 @@ def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
         ("without a barbell", "barbell"),
         ("avoid an olympic bar", "barbell"),
         ("don't have the pull-up bar", "pull-up bar"),
-        ("without any resistance bands", "band"),
+        ("at home without any resistance bands", "band"),
     ],
 )
 def test_extract_equipment_preferences_accepts_articles_in_avoidance(

@@ -54,6 +54,18 @@ class PATBearerMiddleware:
     def __init__(self, app):
         self.app = app
 
+    @staticmethod
+    async def _reject(scope, receive, send, detail: str, status_code: int) -> None:
+        if scope["type"] == "websocket":
+            await send({"type": "websocket.close", "code": 1008, "reason": detail})
+            return
+
+        await JSONResponse(
+            {"detail": detail},
+            status_code=status_code,
+            headers={"WWW-Authenticate": "Bearer"} if status_code == 401 else None,
+        )(scope, receive, send)
+
     async def __call__(self, scope, receive, send):
         if scope["type"] not in {"http", "websocket"}:
             await self.app(scope, receive, send)
@@ -66,11 +78,13 @@ class PATBearerMiddleware:
         authorization = headers.get("authorization", "")
         scheme, _, token_value = authorization.partition(" ")
         if scheme.lower() != "bearer" or not token_value:
-            await JSONResponse(
-                {"detail": "A Bearer personal access token is required"},
-                status_code=401,
-                headers={"WWW-Authenticate": "Bearer"},
-            )(scope, receive, send)
+            await self._reject(
+                scope,
+                receive,
+                send,
+                "A Bearer personal access token is required",
+                401,
+            )
             return
 
         try:
@@ -79,17 +93,23 @@ class PATBearerMiddleware:
                     session, token_value.strip()
                 )
         except PATAuthenticationError:
-            await JSONResponse(
-                {"detail": "Invalid or expired personal access token"},
-                status_code=401,
-                headers={"WWW-Authenticate": "Bearer"},
-            )(scope, receive, send)
+            await self._reject(
+                scope,
+                receive,
+                send,
+                "Invalid or expired personal access token",
+                401,
+            )
             return
 
         if "trainer:read" not in principal.scopes:
-            await JSONResponse(
-                {"detail": "Missing required scope: trainer:read"}, status_code=403
-            )(scope, receive, send)
+            await self._reject(
+                scope,
+                receive,
+                send,
+                "Missing required scope: trainer:read",
+                403,
+            )
             return
 
         context_token: Token = _principal.set(principal)

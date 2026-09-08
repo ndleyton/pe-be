@@ -85,6 +85,7 @@ class ExerciseSubstitutionService:
         if " home " in normalized:
             preferred.update({"bodyweight", "dumbbell", "kettlebell", "band"})
             avoided.add("machine")
+        preferred.difference_update(avoided)
         return preferred, avoided, same_equipment_requested
 
     @classmethod
