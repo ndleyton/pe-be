@@ -102,12 +102,12 @@ class PATBearerMiddleware:
             )
             return
 
-        if "trainer:read" not in principal.scopes:
+        if not any(scope.startswith("trainer:") for scope in principal.scopes):
             await self._reject(
                 scope,
                 receive,
                 send,
-                "Missing required scope: trainer:read",
+                "Missing required scope: trainer:*",
                 403,
             )
             return

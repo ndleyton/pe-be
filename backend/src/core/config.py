@@ -1,7 +1,7 @@
 import os
 from typing import Any
 from pathlib import Path
-from pydantic import Field, field_validator, computed_field
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -366,7 +366,7 @@ class Settings(BaseSettings):
         validation_alias="MCP_PUBLIC_BASE_URL",
     )
     MCP_ALLOWED_HOSTS: str = Field(
-        "localhost:*,127.0.0.1:*,test:*,testserver",
+        "localhost:*,127.0.0.1:*",
         validation_alias="MCP_ALLOWED_HOSTS",
     )
     MCP_ALLOWED_ORIGINS: str = Field(
@@ -482,6 +482,18 @@ class Settings(BaseSettings):
         if normalized == "jpg":
             return "jpeg"
         return normalized
+
+    @model_validator(mode="after")
+    def validate_production_mcp_pat_pepper(self) -> "Settings":
+        environment = (self.ENVIRONMENT or "").strip().lower()
+        if (
+            environment == "production"
+            and self.MCP_PAT_PEPPER == "development-only-mcp-pat-pepper"
+        ):
+            raise ValueError(
+                "MCP_PAT_PEPPER must not use the development-only default in production"
+            )
+        return self
 
 
 # Global settings instance
