@@ -17,6 +17,8 @@ def test_pat_scopes_are_bounded_and_deduplicated():
     assert payload.scopes == ["trainer:read"]
 
     with pytest.raises(ValidationError):
+        PersonalAccessTokenCreate(name="   ", scopes=["trainer:read"])
+    with pytest.raises(ValidationError):
         PersonalAccessTokenCreate(name="bad", scopes=["admin:write"])
     with pytest.raises(ValidationError, match="requires trainer:read"):
         PersonalAccessTokenCreate(name="write only", scopes=["trainer:write"])

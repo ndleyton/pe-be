@@ -7,14 +7,17 @@ from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.database import async_session_maker
 from src.mcp.auth import current_principal, require_scope
 from src.mcp.idempotency import (
+    IdempotencyClaim,
     claim_idempotency_key,
     complete_idempotent_operation,
     request_fingerprint,
 )
-from src.mcp.models import MCPIdempotencyStatus
+from src.mcp.models import MCPIdempotencyRecord, MCPIdempotencyStatus
 from src.mcp.trainer_schemas import (
     ExercisePerformanceOutput,
     MutationResultOutput,
@@ -147,6 +150,23 @@ async def get_workout_recap(workout_id: int) -> WorkoutRecapOutput:
         return WorkoutRecapOutput(workout_id=workout.id, recap=workout.recap)
 
 
+async def _mark_claim_failed(
+    session: AsyncSession,
+    claim: IdempotencyClaim,
+    error_code: str,
+) -> None:
+    try:
+        await session.rollback()
+        record = await session.get(MCPIdempotencyRecord, claim.record.id)
+        if record is not None:
+            record.status = MCPIdempotencyStatus.failed
+            record.error_code = error_code
+            await session.commit()
+    except Exception:
+        # Avoid masking the primary exception if session rollback/commit fails
+        pass
+
+
 @trainer_server.tool(
     annotations=ToolAnnotations(
         title="Generate workout recap",
@@ -190,12 +210,13 @@ async def generate_workout_recap(
                 session, workout_id, principal.user_id
             )
         except Exception:
-            claim.record.status = MCPIdempotencyStatus.failed
-            claim.record.error_code = "generation_failed"
-            await session.commit()
+            await _mark_claim_failed(session, claim, "generation_failed")
             raise
+
         if recap is None:
+            await _mark_claim_failed(session, claim, "workout_not_found")
             raise ValueError("Workout not found")
+
         output = WorkoutRecapOutput(
             workout_id=workout_id, recap=recap, generated=True
         )

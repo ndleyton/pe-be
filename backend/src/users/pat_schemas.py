@@ -11,7 +11,7 @@ class PersonalAccessTokenCreate(BaseModel):
     scopes: list[PATScope] = Field(min_length=1, max_length=2)
     expires_in_days: int | None = Field(default=None, ge=1)
 
-    @field_validator("name")
+    @field_validator("name", mode="before")
     @classmethod
     def strip_name(cls, value: str) -> str:
         return value.strip()
