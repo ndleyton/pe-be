@@ -36,6 +36,7 @@ async def claim_idempotency_key(
     operation: str,
     key: str,
     request_hash: str,
+    _retry: bool = False,
 ) -> IdempotencyClaim:
     result = await session.execute(
         select(MCPIdempotencyRecord).where(
@@ -68,19 +69,22 @@ async def claim_idempotency_key(
         request_hash=request_hash,
         status=MCPIdempotencyStatus.pending,
     )
-    session.add(record)
     try:
-        await session.flush()
+        async with session.begin_nested():
+            session.add(record)
+            await session.flush()
     except IntegrityError:
-        # A concurrent request won the unique-key race. Discard this transaction
-        # and resolve the committed winner using the normal replay rules.
-        await session.rollback()
+        if _retry:
+            raise
+        # A concurrent request won the unique-key race. The savepoint rollback
+        # preserved the outer transaction; resolve the committed winner via replay.
         return await claim_idempotency_key(
             session,
             user_id=user_id,
             operation=operation,
             key=key,
             request_hash=request_hash,
+            _retry=True,
         )
     return IdempotencyClaim(record, None)
 
