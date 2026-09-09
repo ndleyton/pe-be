@@ -52,7 +52,9 @@ async def _seed_catalog(db_session):
     return user, workout_type, exercise_type
 
 
-async def test_pat_lifecycle_uses_one_time_plaintext_and_enforces_revocation(db_session):
+async def test_pat_lifecycle_uses_one_time_plaintext_and_enforces_revocation(
+    db_session,
+):
     user, _workout_type, _exercise_type = await _seed_catalog(db_session)
     created = await create_personal_access_token(
         db_session,
@@ -116,9 +118,7 @@ async def test_workout_and_routine_mutations_are_atomic_idempotent_and_user_scop
     assert replay.created is False
     assert await db_session.scalar(select(func.count(Workout.id))) == 1
 
-    changed_payload = workout_payload.model_copy(
-        update={"name": "Different workout"}
-    )
+    changed_payload = workout_payload.model_copy(update={"name": "Different workout"})
     with pytest.raises(IdempotencyConflictError):
         await WorkoutLogService().log_workout_idempotent(
             db_session, user.id, changed_payload
@@ -131,9 +131,7 @@ async def test_workout_and_routine_mutations_are_atomic_idempotent_and_user_scop
         exercises=[
             {
                 "exercise_type_id": exercise_type.id,
-                "sets": [
-                    {"reps": 5, "intensity": 75, "intensity_unit": "kg"}
-                ],
+                "sets": [{"reps": 5, "intensity": 75, "intensity_unit": "kg"}],
             }
         ],
     )

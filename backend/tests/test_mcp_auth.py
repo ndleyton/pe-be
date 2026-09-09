@@ -77,9 +77,7 @@ async def test_authenticated_rejections_use_transport_valid_events(
     )
 
     if scope_type == "websocket":
-        assert events == [
-            {"type": "websocket.close", "code": 1008, "reason": detail}
-        ]
+        assert events == [{"type": "websocket.close", "code": 1008, "reason": detail}]
     else:
         assert events[0]["type"] == "http.response.start"
         assert events[0]["status"] == status_code

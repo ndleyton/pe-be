@@ -259,12 +259,8 @@ def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
         ("at home without any resistance bands", "band"),
     ],
 )
-def test_extract_equipment_preferences_accepts_articles_in_avoidance(
-    notes, equipment
-):
-    preferred, avoided, _same_equip = ChatService._extract_equipment_preferences(
-        notes
-    )
+def test_extract_equipment_preferences_accepts_articles_in_avoidance(notes, equipment):
+    preferred, avoided, _same_equip = ChatService._extract_equipment_preferences(notes)
 
     assert equipment in avoided
     assert equipment not in preferred

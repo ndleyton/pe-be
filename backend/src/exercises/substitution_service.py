@@ -169,9 +169,7 @@ class ExerciseSubstitutionService:
         released_only: bool = False,
     ) -> ExerciseSubstitutionResult:
         if (exercise_type_id is None) == (exercise_name is None):
-            raise ValueError(
-                "Provide exactly one of exercise_type_id or exercise_name"
-            )
+            raise ValueError("Provide exactly one of exercise_type_id or exercise_name")
 
         source = None
         if exercise_type_id is not None:

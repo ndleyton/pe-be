@@ -191,9 +191,7 @@ async def generate_workout_recap(
         if workout.recap and not force:
             return WorkoutRecapOutput(workout_id=workout.id, recap=workout.recap)
 
-        fingerprint = request_fingerprint(
-            {"workout_id": workout_id, "force": force}
-        )
+        fingerprint = request_fingerprint({"workout_id": workout_id, "force": force})
         claim = await claim_idempotency_key(
             session,
             user_id=principal.user_id,
@@ -217,9 +215,7 @@ async def generate_workout_recap(
             await _mark_claim_failed(session, claim, "workout_not_found")
             raise ValueError("Workout not found")
 
-        output = WorkoutRecapOutput(
-            workout_id=workout_id, recap=recap, generated=True
-        )
+        output = WorkoutRecapOutput(workout_id=workout_id, recap=recap, generated=True)
         complete_idempotent_operation(
             claim,
             entity_type="workout_recap",

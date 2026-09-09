@@ -250,9 +250,7 @@ class PersonalizedRoutineArgs(BaseModel):
 
 class ChatService:
     _LOOKUP_TOKEN_RE = re.compile(r"[^a-z0-9]+")
-    _KNOWN_EQUIPMENT_KEYWORDS = (
-        ExerciseSubstitutionService.KNOWN_EQUIPMENT_KEYWORDS
-    )
+    _KNOWN_EQUIPMENT_KEYWORDS = ExerciseSubstitutionService.KNOWN_EQUIPMENT_KEYWORDS
 
     @staticmethod
     def _is_provider_busy_error(error_message: str) -> bool:

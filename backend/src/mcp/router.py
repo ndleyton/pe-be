@@ -21,7 +21,6 @@ transport_security = TransportSecuritySettings(
 )
 
 
-
 class RestartableMCPApp:
     """Create a fresh SDK session manager for each ASGI lifespan."""
 
