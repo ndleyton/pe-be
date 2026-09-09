@@ -10,7 +10,6 @@ from src.mcp.idempotency import (
 )
 from src.mcp.models import MCPIdempotencyRecord, MCPIdempotencyStatus
 from src.mcp.server_trainer import _mark_claim_failed, generate_workout_recap
-from src.mcp.trainer_schemas import WorkoutRecapOutput
 
 
 # ---------------------------------------------------------------------------
