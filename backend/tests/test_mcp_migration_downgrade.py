@@ -117,9 +117,8 @@ def test_downgrade_preserves_enum_when_records_table_preserved_and_depends_on_en
         patch.object(
             migration,
             "_enum_referenced_by_columns",
-            side_effect=lambda conn, enum_name, table_name=None: True
-            if table_name == "mcp_idempotency_records"
-            else True,
+            side_effect=lambda conn, enum_name, table_name=None: table_name
+            == "mcp_idempotency_records",
         ),
         patch.object(migration.postgresql, "ENUM") as mock_enum_cls,
     ):

@@ -73,9 +73,13 @@ class WorkoutRecapService:
 
     @staticmethod
     async def generate_recap(
-        session: AsyncSession, workout_id: int, user_id: int
+        session: AsyncSession,
+        workout_id: int,
+        user_id: int,
+        *,
+        raise_on_error: bool = False,
     ) -> Optional[str]:
-        """Generate an AI recap for a workout and store it."""
+        """Generate and store a recap; strict callers receive retryable errors."""
         workout = await get_workout_by_id(session, workout_id, user_id)
         if not workout:
             return None
@@ -203,6 +207,8 @@ Recap:"""
         # 3. Call Gemini
         if not settings.GOOGLE_AI_KEY:
             logger.warning("GOOGLE_AI_KEY not configured, cannot generate recap")
+            if raise_on_error:
+                raise RuntimeError("AI recap unavailable (API key missing).")
             return "AI recap unavailable (API key missing)."
 
         langfuse = WorkoutRecapService._get_langfuse_client()
@@ -230,6 +236,8 @@ Recap:"""
                     max_output_tokens=300,
                 ),
             )
+            if raise_on_error and not (response.text or "").strip():
+                raise RuntimeError("AI recap generation returned no text")
             recap_text = (
                 response.text.strip() if response.text else "Could not generate recap."
             )
@@ -264,4 +272,6 @@ Recap:"""
                     }
                 )
             logger.exception("Error generating workout recap")
+            if raise_on_error:
+                raise
             return f"Error generating recap: {str(e)}"

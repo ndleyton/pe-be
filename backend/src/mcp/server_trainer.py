@@ -7,6 +7,7 @@ from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import async_session_maker
@@ -156,8 +157,10 @@ async def _mark_claim_failed(
     error_code: str,
 ) -> None:
     try:
+        # Identity metadata survives rollback and failed flushes without lazy I/O.
+        record_id = inspect(claim.record).identity[0]
         await session.rollback()
-        record = await session.get(MCPIdempotencyRecord, claim.record.id)
+        record = await session.get(MCPIdempotencyRecord, record_id)
         if record is not None:
             record.status = MCPIdempotencyStatus.failed
             record.error_code = error_code
@@ -205,7 +208,7 @@ async def generate_workout_recap(
 
         try:
             recap = await WorkoutRecapService.generate_recap(
-                session, workout_id, principal.user_id
+                session, workout_id, principal.user_id, raise_on_error=True
             )
         except Exception:
             await _mark_claim_failed(session, claim, "generation_failed")

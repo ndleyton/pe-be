@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, make_transient_to_detached
 
 from src.core.config import Settings
 from src.mcp.idempotency import (
@@ -150,7 +151,15 @@ async def test_claim_idempotency_key_propagates_integrity_error_when_retry_exhau
 @pytest.mark.asyncio
 async def test_mark_claim_failed_rolls_back_and_marks_record():
     session = AsyncMock()
-    mock_record = MagicMock(id=99, status=MCPIdempotencyStatus.pending, error_code=None)
+    mock_record = MCPIdempotencyRecord(
+        id=99, status=MCPIdempotencyStatus.pending, error_code=None
+    )
+    make_transient_to_detached(mock_record)
+    orm_session = Session()
+    orm_session.add(mock_record)
+    # A failed flush may have expired the record before failure handling starts.
+    orm_session.expire(mock_record)
+    session.rollback.side_effect = orm_session.expire_all
     session.get.return_value = mock_record
 
     claim = IdempotencyClaim(record=mock_record, cached_payload=None)
@@ -162,6 +171,7 @@ async def test_mark_claim_failed_rolls_back_and_marks_record():
     assert mock_record.status == MCPIdempotencyStatus.failed
     assert mock_record.error_code == "generation_failed"
     session.commit.assert_awaited_once()
+    orm_session.close()
 
 
 @pytest.mark.asyncio
@@ -181,7 +191,7 @@ async def test_generate_workout_recap_marks_failed_on_exception():
         patch(
             "src.mcp.server_trainer.WorkoutRecapService.generate_recap",
             side_effect=RuntimeError("LLM failed"),
-        ),
+        ) as generate_recap,
         patch(
             "src.mcp.server_trainer._mark_claim_failed", new_callable=AsyncMock
         ) as mock_mark_failed,
@@ -193,6 +203,9 @@ async def test_generate_workout_recap_marks_failed_on_exception():
                 workout_id=10, idempotency_key="key-abc-123", force=True
             )
 
+        generate_recap.assert_awaited_once_with(
+            mock_session, 10, 1, raise_on_error=True
+        )
         mock_mark_failed.assert_awaited_once_with(
             mock_session, mock_claim, "generation_failed"
         )

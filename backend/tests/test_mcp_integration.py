@@ -162,3 +162,35 @@ async def test_workout_and_routine_mutations_are_atomic_idempotent_and_user_scop
     )
     assert performance is not None
     assert performance.workout_id == first.id
+
+
+async def test_failed_recap_claim_can_be_retried_after_rollback(db_session):
+    from src.mcp.idempotency import claim_idempotency_key
+    from src.mcp.models import MCPIdempotencyStatus
+    from src.mcp.server_trainer import _mark_claim_failed
+
+    user, _, _ = await _seed_catalog(db_session)
+    user_id = user.id
+    claim_args = dict(
+        user_id=user_id,
+        operation="generate_workout_recap",
+        key="recap-retry-test",
+        request_hash="same-request",
+    )
+    claim = await claim_idempotency_key(db_session, **claim_args)
+    await db_session.commit()
+    record_id = claim.record.id
+    # Recap generation opens a transaction before a provider failure.
+    await db_session.execute(select(User).where(User.id == user_id))
+    await _mark_claim_failed(db_session, claim, "generation_failed")
+
+    db_session.expire_all()
+    record = await db_session.get(MCPIdempotencyRecord, record_id)
+    assert record.status == MCPIdempotencyStatus.failed
+    assert record.error_code == "generation_failed"
+
+    retry = await claim_idempotency_key(db_session, **claim_args)
+    assert retry.record.id == record_id
+    assert retry.record.status == MCPIdempotencyStatus.pending
+    assert retry.record.error_code is None
+    assert retry.cached_payload is None
