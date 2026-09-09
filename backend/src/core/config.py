@@ -1,7 +1,7 @@
 import os
 from typing import Any
 from pathlib import Path
-from pydantic import Field, field_validator, computed_field
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -286,12 +286,12 @@ class Settings(BaseSettings):
         description="Filesystem path for exercise reference and generated images",
     )
     EXERCISE_IMAGE_PHASE_MODEL: str = Field(
-        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
         validation_alias="EXERCISE_IMAGE_PHASE_MODEL",
         description="Gemini image model for phase image generation",
     )
     EXERCISE_IMAGE_REFERENCE_MODEL: str = Field(
-        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
         validation_alias="EXERCISE_IMAGE_REFERENCE_MODEL",
         description="Gemini image model for regenerate-from-reference pipeline",
     )
@@ -355,6 +355,38 @@ class Settings(BaseSettings):
         3600 * 24 * 7,
         validation_alias="JWT_LIFETIME_SECONDS",
         description="JWT token lifetime in seconds (default: 7 days)",
+    )
+
+    # Model Context Protocol servers and Personal Access Tokens
+    MCP_ENABLED: bool = Field(True, validation_alias="MCP_ENABLED")
+    MCP_CATALOG_ENABLED: bool = Field(True, validation_alias="MCP_CATALOG_ENABLED")
+    MCP_TRAINER_ENABLED: bool = Field(True, validation_alias="MCP_TRAINER_ENABLED")
+    MCP_PUBLIC_BASE_URL: str = Field(
+        "http://localhost:8000/api/mcp",
+        validation_alias="MCP_PUBLIC_BASE_URL",
+    )
+    MCP_ALLOWED_HOSTS: str = Field(
+        "localhost:*,127.0.0.1:*",
+        validation_alias="MCP_ALLOWED_HOSTS",
+    )
+    MCP_ALLOWED_ORIGINS: str = Field(
+        "http://localhost:*,http://127.0.0.1:*",
+        validation_alias="MCP_ALLOWED_ORIGINS",
+    )
+    MCP_PAT_PEPPER: str = Field(
+        "development-only-mcp-pat-pepper", validation_alias="MCP_PAT_PEPPER"
+    )
+    MCP_PAT_DEFAULT_EXPIRY_DAYS: int = Field(
+        90, validation_alias="MCP_PAT_DEFAULT_EXPIRY_DAYS"
+    )
+    MCP_PAT_MAX_EXPIRY_DAYS: int = Field(
+        365, validation_alias="MCP_PAT_MAX_EXPIRY_DAYS"
+    )
+    MCP_PAT_LAST_USED_UPDATE_INTERVAL_MINUTES: int = Field(
+        60, validation_alias="MCP_PAT_LAST_USED_UPDATE_INTERVAL_MINUTES"
+    )
+    MCP_ALLOW_TRUSTED_STDIO_USER: bool = Field(
+        False, validation_alias="MCP_ALLOW_TRUSTED_STDIO_USER"
     )
 
     LOG_LEVEL: str = Field("INFO", validation_alias="LOG_LEVEL")
@@ -450,6 +482,18 @@ class Settings(BaseSettings):
         if normalized == "jpg":
             return "jpeg"
         return normalized
+
+    @model_validator(mode="after")
+    def validate_production_mcp_pat_pepper(self) -> "Settings":
+        environment = (self.ENVIRONMENT or "").strip().lower()
+        if (
+            environment == "production"
+            and self.MCP_PAT_PEPPER == "development-only-mcp-pat-pepper"
+        ):
+            raise ValueError(
+                "MCP_PAT_PEPPER must not use the development-only default in production"
+            )
+        return self
 
 
 # Global settings instance

@@ -245,7 +245,25 @@ def test_extract_equipment_preferences_handles_apostrophes_in_avoidance():
         "no barbell, but I have a dumbbell"
     )
     assert "barbell" in avoided
+    assert "barbell" not in preferred
     assert "dumbbell" in preferred
+
+
+@pytest.mark.parametrize(
+    ("notes", "equipment"),
+    [
+        ("no barbell", "barbell"),
+        ("without a barbell", "barbell"),
+        ("avoid an olympic bar", "barbell"),
+        ("don't have the pull-up bar", "pull-up bar"),
+        ("at home without any resistance bands", "band"),
+    ],
+)
+def test_extract_equipment_preferences_accepts_articles_in_avoidance(notes, equipment):
+    preferred, avoided, _same_equip = ChatService._extract_equipment_preferences(notes)
+
+    assert equipment in avoided
+    assert equipment not in preferred
 
 
 @pytest.mark.asyncio

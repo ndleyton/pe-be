@@ -8,7 +8,7 @@ requires-python = ">=3.11,<3.13"
 readme = "README.md"
 dependencies = [
     "fastapi>=0.110.0,<1",
-    "uvicorn[standard]>=0.29.0,<0.31",
+    "uvicorn[standard]>=0.31.1,<1",
     "sqlalchemy>=2.0.29,<3",
     "alembic>=1.13.1,<2",
     "fastapi-users[sqlalchemy, oauth]>=14,<15",
@@ -31,6 +31,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.61b0",
     "opentelemetry-instrumentation-httpx>=0.61b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.61b0",
+    "mcp>=2.0.0,<3",
 ]
 
 [dependency-groups]

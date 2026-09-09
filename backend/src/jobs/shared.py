@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
@@ -15,13 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import async_session_maker
 from src.core.logging import configure_logging
 from src.core.config import settings
+from src.core.model_registry import ensure_model_registry_loaded
 
 
 logger = logging.getLogger(__name__)
 
 JobStatus = Literal["success", "skipped", "failed", "disabled"]
 JobCallable = Callable[[AsyncSession], Awaitable[Mapping[str, Any] | None]]
-_MODEL_REGISTRY_LOADED = False
 
 
 @dataclass(frozen=True)
@@ -33,27 +32,6 @@ class JobRunResult:
 
 def configure_job_runtime() -> None:
     configure_logging(settings.LOG_LEVEL)
-
-
-def ensure_model_registry_loaded() -> None:
-    global _MODEL_REGISTRY_LOADED
-    if _MODEL_REGISTRY_LOADED:
-        return
-
-    # Standalone jobs do not import the FastAPI app, so load model modules
-    # explicitly before the first ORM query to resolve string relationships.
-    for module_name in (
-        "src.chat.models",
-        "src.exercise_sets.models",
-        "src.exercises.models",
-        "src.routine_programs.models",
-        "src.routines.models",
-        "src.users.models",
-        "src.workouts.models",
-    ):
-        importlib.import_module(module_name)
-
-    _MODEL_REGISTRY_LOADED = True
 
 
 def advisory_lock_key_for_job(job_name: str) -> int:

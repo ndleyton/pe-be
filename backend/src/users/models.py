@@ -50,6 +50,9 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     is_profile_public: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    timezone: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="UTC", server_default="UTC"
+    )
 
     # Relationships
     oauth_accounts: Mapped[List[OAuthAccount]] = relationship(
