@@ -19,9 +19,7 @@ from src.mcp.router import transport_security
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run a PE-BE MCP server")
     parser.add_argument("server", choices=("catalog", "trainer"))
-    parser.add_argument(
-        "--transport", choices=("stdio", "http"), default="stdio"
-    )
+    parser.add_argument("--transport", choices=("stdio", "http"), default="stdio")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     return parser

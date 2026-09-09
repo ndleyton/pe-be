@@ -14,9 +14,7 @@ def test_enum_referenced_by_columns_without_table_name():
     mock_conn = MagicMock()
     mock_conn.scalar.return_value = True
 
-    result = migration._enum_referenced_by_columns(
-        mock_conn, "mcp_idempotency_status"
-    )
+    result = migration._enum_referenced_by_columns(mock_conn, "mcp_idempotency_status")
 
     assert result is True
     mock_conn.scalar.assert_called_once()
@@ -74,9 +72,7 @@ def test_downgrade_drops_enum_when_table_dropped_and_no_references():
             "_enum_comment",
             return_value=migration._OWNERSHIP_MARKER,
         ),
-        patch.object(
-            migration, "_enum_referenced_by_columns", return_value=False
-        ),
+        patch.object(migration, "_enum_referenced_by_columns", return_value=False),
         patch.object(migration.postgresql, "ENUM") as mock_enum_cls,
     ):
         mock_enum_instance = MagicMock()
@@ -86,9 +82,7 @@ def test_downgrade_drops_enum_when_table_dropped_and_no_references():
 
         mock_drop_table.assert_any_call("mcp_idempotency_records")
         mock_enum_cls.assert_called_with(name="mcp_idempotency_status")
-        mock_enum_instance.drop.assert_called_once_with(
-            mock_conn, checkfirst=False
-        )
+        mock_enum_instance.drop.assert_called_once_with(mock_conn, checkfirst=False)
 
 
 def test_downgrade_preserves_enum_when_records_table_preserved_and_depends_on_enum(
@@ -135,14 +129,11 @@ def test_downgrade_preserves_enum_when_records_table_preserved_and_depends_on_en
         with caplog.at_level("WARNING"):
             migration.downgrade()
 
-        dropped_tables = [
-            call[0][0] for call in mock_drop_table.call_args_list
-        ]
+        dropped_tables = [call[0][0] for call in mock_drop_table.call_args_list]
         assert "mcp_idempotency_records" not in dropped_tables
         mock_enum_instance.drop.assert_not_called()
         assert (
-            "preserved mcp_idempotency_records table still depends on it"
-            in caplog.text
+            "preserved mcp_idempotency_records table still depends on it" in caplog.text
         )
 
 
@@ -186,9 +177,7 @@ def test_downgrade_preserves_enum_when_another_table_references_it(caplog):
             migration.downgrade()
 
         mock_enum_instance.drop.assert_not_called()
-        assert (
-            "still referenced by preserved tables or columns" in caplog.text
-        )
+        assert "still referenced by preserved tables or columns" in caplog.text
 
 
 def test_downgrade_skips_enum_drop_when_marker_mismatches(caplog):

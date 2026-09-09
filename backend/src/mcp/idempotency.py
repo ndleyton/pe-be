@@ -24,7 +24,9 @@ class IdempotencyClaim:
 
 
 def request_fingerprint(payload: BaseModel | dict[str, Any]) -> str:
-    value = payload.model_dump(mode="json") if isinstance(payload, BaseModel) else payload
+    value = (
+        payload.model_dump(mode="json") if isinstance(payload, BaseModel) else payload
+    )
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 

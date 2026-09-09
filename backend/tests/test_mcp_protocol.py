@@ -51,7 +51,9 @@ def test_catalog_protocol_discovery_and_public_schema():
 
         response = _request(client, "resources/templates/list", request_id=3)
         templates = response.json()["result"]["resourceTemplates"]
-        assert any(item["uriTemplate"] == "exercises://{exercise_id}" for item in templates)
+        assert any(
+            item["uriTemplate"] == "exercises://{exercise_id}" for item in templates
+        )
 
 
 def test_trainer_requires_bearer_pat_and_cors_exposes_session_header():

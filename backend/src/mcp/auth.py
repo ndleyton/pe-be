@@ -11,9 +11,7 @@ from src.users.models import User
 from src.users.pat_schemas import PATPrincipal
 from src.users.pat_service import PATAuthenticationError, verify_personal_access_token
 
-_principal: ContextVar[PATPrincipal | None] = ContextVar(
-    "mcp_principal", default=None
-)
+_principal: ContextVar[PATPrincipal | None] = ContextVar("mcp_principal", default=None)
 
 
 class MCPAuthorizationError(PermissionError):
