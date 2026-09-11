@@ -115,9 +115,7 @@ def test_workout_input_validates_times():
         )
 
     # Invalid order raises ValidationError
-    with pytest.raises(
-        ValidationError, match="end_time must not precede start_time"
-    ):
+    with pytest.raises(ValidationError, match="end_time must not precede start_time"):
         WorkoutLogInput(
             name="Push",
             idempotency_key="key-12345",

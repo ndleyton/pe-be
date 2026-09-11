@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exercises.intensity_units import normalize_intensity_for_storage
-from src.exercises.models import IntensityUnit
+from src.exercises.unit_resolution import resolve_intensity_unit
 from src.mcp.idempotency import (
     claim_idempotency_key,
     complete_idempotent_operation,
@@ -76,27 +76,11 @@ class PersonalizedRoutineService:
                 session.add(template)
                 await session.flush()
                 for set_input in exercise_input.sets:
-                    requested = set_input.intensity_unit
-                    query = select(IntensityUnit)
-                    if requested:
-                        normalized = requested.strip().lower()
-                        query = query.where(
-                            (func.lower(IntensityUnit.abbreviation) == normalized)
-                            | (func.lower(IntensityUnit.name) == normalized)
-                        )
-                    elif exercise_type.default_intensity_unit is not None:
-                        query = query.where(
-                            IntensityUnit.id == exercise_type.default_intensity_unit
-                        )
-                    else:
-                        raise ValueError("Intensity unit is required")
-                    unit = (
-                        await session.execute(query.order_by(IntensityUnit.id).limit(1))
-                    ).scalar_one_or_none()
-                    if unit is None:
-                        raise ValueError(
-                            f"Intensity unit not found: {requested or 'default'}"
-                        )
+                    unit = await resolve_intensity_unit(
+                        session,
+                        requested=set_input.intensity_unit,
+                        default_id=exercise_type.default_intensity_unit,
+                    )
                     canonical_value, canonical_key = normalize_intensity_for_storage(
                         set_input.intensity, unit
                     )

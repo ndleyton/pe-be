@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.exercise_sets.models import ExerciseSet
 from src.exercises.intensity_units import normalize_intensity_for_storage
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
+from src.exercises.unit_resolution import resolve_intensity_unit
 from src.mcp.idempotency import (
     claim_idempotency_key,
     complete_idempotent_operation,
@@ -41,32 +42,6 @@ async def _resolve_exercise_type(
             f"Exercise type not found: {exercise_type_id or exercise_name}"
         )
     return exercise_type
-
-
-async def _resolve_unit(
-    session: AsyncSession,
-    *,
-    requested: str | None,
-    default_id: int | None,
-) -> IntensityUnit:
-    query = select(IntensityUnit)
-    if requested:
-        normalized = requested.strip().lower()
-        query = query.where(
-            or_(
-                func.lower(IntensityUnit.abbreviation) == normalized,
-                func.lower(IntensityUnit.name) == normalized,
-            )
-        )
-    elif default_id is not None:
-        query = query.where(IntensityUnit.id == default_id)
-    else:
-        raise ValueError("Intensity unit is required")
-    query = query.order_by(IntensityUnit.id).limit(1)
-    unit = (await session.execute(query)).scalar_one_or_none()
-    if unit is None:
-        raise ValueError(f"Intensity unit not found: {requested or default_id}")
-    return unit
 
 
 async def _canonical_unit(
@@ -147,7 +122,7 @@ class WorkoutLogService:
                 await session.flush()
 
                 for set_input in exercise_input.sets:
-                    unit = await _resolve_unit(
+                    unit = await resolve_intensity_unit(
                         session,
                         requested=set_input.intensity_unit,
                         default_id=exercise_type.default_intensity_unit,
