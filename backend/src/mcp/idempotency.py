@@ -56,10 +56,25 @@ async def claim_idempotency_key(
         if existing.status == MCPIdempotencyStatus.completed:
             return IdempotencyClaim(existing, existing.result_payload or {})
         if existing.status == MCPIdempotencyStatus.failed:
-            existing.status = MCPIdempotencyStatus.pending
-            existing.error_code = None
+            # Ensure atomic transition from failed to pending
+            lock_result = await session.execute(
+                select(MCPIdempotencyRecord)
+                .where(
+                    MCPIdempotencyRecord.id == existing.id,
+                    MCPIdempotencyRecord.status == MCPIdempotencyStatus.failed,
+                )
+                .with_for_update()
+            )
+            locked_existing = lock_result.scalar_one_or_none()
+            if not locked_existing:
+                raise IdempotencyConflictError(
+                    "An operation with this idempotency key is already in progress"
+                )
+            
+            locked_existing.status = MCPIdempotencyStatus.pending
+            locked_existing.error_code = None
             await session.flush()
-            return IdempotencyClaim(existing, None)
+            return IdempotencyClaim(locked_existing, None)
         raise IdempotencyConflictError(
             "An operation with this idempotency key is already in progress"
         )

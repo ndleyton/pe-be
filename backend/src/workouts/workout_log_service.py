@@ -111,7 +111,7 @@ class WorkoutLogService:
                     exercise_type_id=exercise_input.exercise_type_id,
                     exercise_name=exercise_input.exercise_name,
                 )
-                exercise_type.times_used = (exercise_type.times_used or 0) + 1
+                exercise_type.times_used = func.coalesce(ExerciseType.times_used, 0) + 1
                 exercise = Exercise(
                     workout_id=workout.id,
                     exercise_type_id=exercise_type.id,

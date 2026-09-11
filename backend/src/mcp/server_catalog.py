@@ -6,7 +6,7 @@ from typing import Annotated
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from src.core.database import async_session_maker
@@ -80,12 +80,19 @@ async def _released_one(
     if exercise_id is not None:
         items = await _released_by_ids(session, [exercise_id])
         return items[0] if items else None
-    matches = await get_exercise_types(
-        session, name=exercise_name, limit=1, released_only=True
+    result = await session.execute(
+        select(ExerciseType.id)
+        .where(
+            func.lower(ExerciseType.name) == exercise_name.lower(),
+            ExerciseType.status == ExerciseType.ExerciseTypeStatus.released,
+        )
+        .order_by(ExerciseType.id)
+        .limit(1)
     )
-    if not matches.data:
+    matched_id = result.scalar_one_or_none()
+    if matched_id is None:
         return None
-    items = await _released_by_ids(session, [matches.data[0].id])
+    items = await _released_by_ids(session, [matched_id])
     return items[0] if items else None
 
 

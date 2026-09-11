@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 
 from src.exercises.models import ExerciseType, IntensityUnit
 from src.mcp.idempotency import IdempotencyConflictError
-from src.mcp.models import MCPIdempotencyRecord
+from src.mcp.models import MCPIdempotencyRecord, MCPIdempotencyStatus
 from src.mcp.trainer_schemas import RoutineCreationInput, WorkoutLogInput
 from src.routines.models import Routine
 from src.routines.routine_creation_service import PersonalizedRoutineService
@@ -194,3 +194,91 @@ async def test_failed_recap_claim_can_be_retried_after_rollback(db_session):
     assert retry.record.status == MCPIdempotencyStatus.pending
     assert retry.record.error_code is None
     assert retry.cached_payload is None
+
+
+async def test_catalog_detail_requires_exact_released_name(db_session):
+    from src.mcp.server_catalog import _released_one
+
+    _, _, exercise = await _seed_catalog(db_session)
+    exercise_id = exercise.id
+    for name in ("Bench Press", "bEnCh PrEsS"):
+        match = await _released_one(db_session, exercise_id=None, exercise_name=name)
+        assert match.id == exercise_id
+
+    for name in ("Bench", "Bench Pres", "%", "Unknown Exercise"):
+        assert (
+            await _released_one(db_session, exercise_id=None, exercise_name=name)
+            is None
+        )
+
+    assert (
+        await _released_one(db_session, exercise_id=exercise_id, exercise_name=None)
+    ).id == exercise_id
+    exercise.status = ExerciseType.ExerciseTypeStatus.candidate
+    await db_session.flush()
+    assert (
+        await _released_one(db_session, exercise_id=None, exercise_name="Bench Press")
+        is None
+    )
+    assert (
+        await _released_one(db_session, exercise_id=exercise_id, exercise_name=None)
+        is None
+    )
+
+
+async def test_concurrent_idempotency_failed_to_pending_transition(db_session):
+    import asyncio
+    from tests.conftest import TestSessionLocal
+    
+    user, _, _ = await _seed_catalog(db_session)
+    record = MCPIdempotencyRecord(
+        user_id=user.id,
+        operation="test_concurrent_transition",
+        idempotency_key="key-concurrent",
+        request_hash="hash-1",
+        status=MCPIdempotencyStatus.failed,
+        error_code="some_error"
+    )
+    db_session.add(record)
+    await db_session.commit()
+    
+    # We must coordinate the execution so both transactions start and block
+    # before either one finishes, maximizing the chance of catching atomicity gaps.
+    barrier = asyncio.Barrier(2)
+
+    async def try_claim():
+        async with TestSessionLocal() as session:
+            try:
+                # Start transaction
+                await session.begin()
+                # Wait for both tasks to be ready
+                await barrier.wait()
+                
+                from src.mcp.idempotency import claim_idempotency_key
+                await claim_idempotency_key(
+                    session,
+                    user_id=user.id,
+                    operation="test_concurrent_transition",
+                    key="key-concurrent",
+                    request_hash="hash-1"
+                )
+                await session.commit()
+                return "success"
+            except IdempotencyConflictError:
+                await session.rollback()
+                return "conflict"
+            except Exception as e:
+                await session.rollback()
+                raise e
+
+    results = await asyncio.gather(try_claim(), try_claim())
+    
+    successes = [r for r in results if r == "success"]
+    conflicts = [r for r in results if r == "conflict"]
+    
+    assert len(successes) == 1
+    assert len(conflicts) == 1
+    
+    await db_session.refresh(record)
+    assert record.status == MCPIdempotencyStatus.pending
+

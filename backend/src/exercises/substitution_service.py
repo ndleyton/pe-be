@@ -4,9 +4,11 @@ import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exercises.crud import (
+    _exercise_type_visibility_clause,
     get_exercise_type_by_id,
     get_exercise_types,
     get_similar_exercise_types,
@@ -63,6 +65,11 @@ class ExerciseSubstitutionService:
                 " same machine ",
             )
         )
+        if same_equipment_requested and re.search(
+            r"\b(?:not|no|without|avoid|never|cannot|can\s*t|cant|don\s*t|dont|do\s+not|doesn\s*t|doesnt|does\s+not)\s+(?:(?:use|using|have|having|want|need)(?:\s+to\s+be)?\s+)?(?:the\s+)?(?:same|similar)\s+(?:equipment|setup|machine)\b",
+            normalized,
+        ):
+            same_equipment_requested = False
         avoidance_prefixes = ["no", "without", "avoid", "dont have", "don't have"]
         normalized_prefixes = [
             cls.normalize_lookup_value(prefix) for prefix in avoidance_prefixes
@@ -180,22 +187,48 @@ class ExerciseSubstitutionService:
                 released_only=released_only,
             )
         else:
-            matches = await get_exercise_types(
-                session,
-                name=exercise_name,
-                limit=1,
-                user_id=user_id,
-                released_only=released_only,
+            normalized = self.normalize_lookup_value(exercise_name)
+            if not normalized:
+                raise LookupError("Exercise name is required")
+            # Check all visible names so pagination cannot hide an ambiguity.
+            rows = await session.execute(
+                select(ExerciseType.id, ExerciseType.name).where(
+                    _exercise_type_visibility_clause(
+                        user_id=user_id, is_admin=False, released_only=released_only
+                    )
+                )
             )
-            source = (
-                await get_exercise_type_by_id(
+            exact = [
+                (item_id, name)
+                for item_id, name in rows.all()
+                if self.normalize_lookup_value(name) == normalized
+            ]
+            if len(exact) > 1:
+                candidates = ", ".join(
+                    f"{name} (ID {item_id})" for item_id, name in sorted(exact)
+                )
+                raise LookupError(
+                    f"Ambiguous exercise name. Retry with exercise_type_id: {candidates}"
+                )
+            if not exact:
+                matches = await get_exercise_types(
                     session,
-                    matches.data[0].id,
+                    name=exercise_name,
+                    limit=5,
                     user_id=user_id,
                     released_only=released_only,
                 )
-                if matches.data
-                else None
+                candidates = ", ".join(
+                    f"{item.name} (ID {item.id})" for item in matches.data
+                )
+                hint = (
+                    f" Candidates: {candidates}. Retry with exercise_type_id."
+                    if candidates
+                    else " Use search_exercises to find an exercise ID."
+                )
+                raise LookupError(f"No exact exercise name match.{hint}")
+            source = await get_exercise_type_by_id(
+                session, exact[0][0], user_id=user_id, released_only=released_only
             )
 
         if source is None:

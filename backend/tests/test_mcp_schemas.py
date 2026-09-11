@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -23,6 +23,14 @@ def test_pat_scopes_are_bounded_and_deduplicated():
         PersonalAccessTokenCreate(name="bad", scopes=["admin:write"])
     with pytest.raises(ValidationError, match="requires trainer:read"):
         PersonalAccessTokenCreate(name="write only", scopes=["trainer:write"])
+
+
+def test_pat_name_validation_handles_non_string_types():
+    with pytest.raises(ValidationError, match="Input should be a valid string"):
+        PersonalAccessTokenCreate(name=None, scopes=["trainer:read"])
+
+    with pytest.raises(ValidationError, match="Input should be a valid string"):
+        PersonalAccessTokenCreate(name=123, scopes=["trainer:read"])
 
 
 def test_workout_payload_is_bounded_and_fingerprint_is_stable():
@@ -120,6 +128,6 @@ def test_workout_input_validates_times():
             name="Push",
             idempotency_key="key-12345",
             start_time=now_aware,
-            end_time=now_aware.replace(year=now_aware.year - 1),
+            end_time=now_aware - timedelta(days=1),
             exercises=[{"exercise_type_id": 1, "sets": [{"reps": 5}]}],
         )

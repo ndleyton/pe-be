@@ -266,6 +266,40 @@ def test_extract_equipment_preferences_accepts_articles_in_avoidance(notes, equi
     assert equipment not in preferred
 
 
+@pytest.mark.parametrize(
+    "notes",
+    [
+        "not the same equipment",
+        "do not use the same machine",
+        "don't use the same setup",
+        "avoid the same equipment",
+        "without the same machine",
+        "no same equipment",
+        "can't use the same machine",
+        "doesn't have to be the same equipment",
+    ],
+)
+def test_extract_equipment_preferences_negated_same_equipment(notes):
+    _preferred, _avoided, same_equip = ChatService._extract_equipment_preferences(notes)
+    assert not same_equip
+
+
+@pytest.mark.parametrize(
+    "notes",
+    [
+        "same equipment",
+        "use the same machine",
+        "similar equipment",
+        "same setup",
+        "no barbell, but use the same equipment",
+        "don't have dumbbells, but same machine is fine",
+    ],
+)
+def test_extract_equipment_preferences_positive_same_equipment(notes):
+    _preferred, _avoided, same_equip = ChatService._extract_equipment_preferences(notes)
+    assert same_equip
+
+
 @pytest.mark.asyncio
 @patch("src.workouts.service.WorkoutService.create_workout_from_parsed")
 async def test_parse_workout_and_save_exception(mock_create, chat_service_with_db):

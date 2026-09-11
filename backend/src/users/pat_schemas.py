@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -13,8 +13,10 @@ class PersonalAccessTokenCreate(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def strip_name(cls, value: str) -> str:
-        return value.strip()
+    def strip_name(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     @field_validator("scopes")
     @classmethod
