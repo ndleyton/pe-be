@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -74,3 +75,53 @@ def test_public_exercise_dto_drops_moderation_and_owner_fields():
     assert "owner_id" not in serialized
     assert "reviewed_by" not in serialized
     assert "review_notes" not in serialized
+
+
+def test_workout_input_validates_times():
+    now_aware = datetime.now(timezone.utc)
+    now_naive = datetime.now()
+
+    # Valid when both are aware and end_time >= start_time
+    valid_aware = WorkoutLogInput(
+        name="Push",
+        idempotency_key="key-12345",
+        start_time=now_aware,
+        end_time=now_aware,
+        exercises=[{"exercise_type_id": 1, "sets": [{"reps": 5}]}],
+    )
+    assert valid_aware.start_time == now_aware
+
+    # Mismatched awareness raises ValidationError
+    with pytest.raises(
+        ValidationError, match="must both be timezone-aware or both naive"
+    ):
+        WorkoutLogInput(
+            name="Push",
+            idempotency_key="key-12345",
+            start_time=now_aware,
+            end_time=now_naive,
+            exercises=[{"exercise_type_id": 1, "sets": [{"reps": 5}]}],
+        )
+
+    with pytest.raises(
+        ValidationError, match="must both be timezone-aware or both naive"
+    ):
+        WorkoutLogInput(
+            name="Push",
+            idempotency_key="key-12345",
+            start_time=now_naive,
+            end_time=now_aware,
+            exercises=[{"exercise_type_id": 1, "sets": [{"reps": 5}]}],
+        )
+
+    # Invalid order raises ValidationError
+    with pytest.raises(
+        ValidationError, match="end_time must not precede start_time"
+    ):
+        WorkoutLogInput(
+            name="Push",
+            idempotency_key="key-12345",
+            start_time=now_aware,
+            end_time=now_aware.replace(year=now_aware.year - 1),
+            exercises=[{"exercise_type_id": 1, "sets": [{"reps": 5}]}],
+        )

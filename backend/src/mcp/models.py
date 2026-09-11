@@ -13,6 +13,7 @@ class MCPIdempotencyStatus(str, Enum):
     failed = "failed"
 
 
+# TODO: Add a scheduled cleanup job to prune completed/failed records older than N days.
 class MCPIdempotencyRecord(Base):
     __tablename__ = "mcp_idempotency_records"
     __table_args__ = (

@@ -60,6 +60,8 @@ async def _resolve_unit(
         )
     elif default_id is not None:
         query = query.where(IntensityUnit.id == default_id)
+    else:
+        raise ValueError("Intensity unit is required")
     query = query.order_by(IntensityUnit.id).limit(1)
     unit = (await session.execute(query)).scalar_one_or_none()
     if unit is None:

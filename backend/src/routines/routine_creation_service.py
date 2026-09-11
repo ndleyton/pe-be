@@ -88,6 +88,8 @@ class PersonalizedRoutineService:
                         query = query.where(
                             IntensityUnit.id == exercise_type.default_intensity_unit
                         )
+                    else:
+                        raise ValueError("Intensity unit is required")
                     unit = (
                         await session.execute(query.order_by(IntensityUnit.id).limit(1))
                     ).scalar_one_or_none()

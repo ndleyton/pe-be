@@ -243,3 +243,47 @@ async def test_generate_workout_recap_marks_failed_when_recap_is_none():
         mock_mark_failed.assert_awaited_once_with(
             mock_session, mock_claim, "workout_not_found"
         )
+
+
+@pytest.mark.asyncio
+async def test_routine_creation_requires_intensity_unit_when_requested_and_default_absent():
+    from src.mcp.trainer_schemas import RoutineCreationInput
+    from src.routines.routine_creation_service import PersonalizedRoutineService
+
+    session = AsyncMock()
+    mock_record = MagicMock(id=1, status=MCPIdempotencyStatus.pending)
+    mock_claim = IdempotencyClaim(record=mock_record, cached_payload=None)
+
+    mock_wt = MagicMock()
+    mock_wt.scalar_one_or_none.return_value = 1
+
+    mock_et = MagicMock(id=10, default_intensity_unit=None)
+
+    session.execute.side_effect = [mock_wt]
+    session.add = MagicMock()
+
+    data = RoutineCreationInput(
+        name="Test Routine",
+        idempotency_key="key-test-1234",
+        exercises=[
+            {
+                "exercise_type_id": 10,
+                "sets": [{"reps": 10, "intensity_unit": None}],
+            }
+        ],
+    )
+
+    with (
+        patch(
+            "src.routines.routine_creation_service.claim_idempotency_key",
+            return_value=mock_claim,
+        ),
+        patch(
+            "src.routines.routine_creation_service._resolve_exercise_type",
+            return_value=mock_et,
+        ),
+    ):
+        with pytest.raises(ValueError, match="Intensity unit is required"):
+            await PersonalizedRoutineService().create_routine_idempotent(
+                session, user_id=1, data=data
+            )

@@ -49,8 +49,13 @@ class WorkoutLogInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_times(self) -> "WorkoutLogInput":
-        if self.start_time and self.end_time and self.end_time < self.start_time:
-            raise ValueError("end_time must not precede start_time")
+        if self.start_time is not None and self.end_time is not None:
+            if (self.start_time.tzinfo is None) != (self.end_time.tzinfo is None):
+                raise ValueError(
+                    "start_time and end_time must both be timezone-aware or both naive"
+                )
+            if self.end_time < self.start_time:
+                raise ValueError("end_time must not precede start_time")
         return self
 
 
