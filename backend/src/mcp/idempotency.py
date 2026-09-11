@@ -70,7 +70,7 @@ async def claim_idempotency_key(
                 raise IdempotencyConflictError(
                     "An operation with this idempotency key is already in progress"
                 )
-            
+
             locked_existing.status = MCPIdempotencyStatus.pending
             locked_existing.error_code = None
             await session.flush()

@@ -229,7 +229,7 @@ async def test_catalog_detail_requires_exact_released_name(db_session):
 async def test_concurrent_idempotency_failed_to_pending_transition(db_session):
     import asyncio
     from tests.conftest import TestSessionLocal
-    
+
     user, _, _ = await _seed_catalog(db_session)
     record = MCPIdempotencyRecord(
         user_id=user.id,
@@ -237,11 +237,11 @@ async def test_concurrent_idempotency_failed_to_pending_transition(db_session):
         idempotency_key="key-concurrent",
         request_hash="hash-1",
         status=MCPIdempotencyStatus.failed,
-        error_code="some_error"
+        error_code="some_error",
     )
     db_session.add(record)
     await db_session.commit()
-    
+
     # We must coordinate the execution so both transactions start and block
     # before either one finishes, maximizing the chance of catching atomicity gaps.
     barrier = asyncio.Barrier(2)
@@ -253,14 +253,15 @@ async def test_concurrent_idempotency_failed_to_pending_transition(db_session):
                 await session.begin()
                 # Wait for both tasks to be ready
                 await barrier.wait()
-                
+
                 from src.mcp.idempotency import claim_idempotency_key
+
                 await claim_idempotency_key(
                     session,
                     user_id=user.id,
                     operation="test_concurrent_transition",
                     key="key-concurrent",
-                    request_hash="hash-1"
+                    request_hash="hash-1",
                 )
                 await session.commit()
                 return "success"
@@ -272,13 +273,12 @@ async def test_concurrent_idempotency_failed_to_pending_transition(db_session):
                 raise e
 
     results = await asyncio.gather(try_claim(), try_claim())
-    
+
     successes = [r for r in results if r == "success"]
     conflicts = [r for r in results if r == "conflict"]
-    
+
     assert len(successes) == 1
     assert len(conflicts) == 1
-    
+
     await db_session.refresh(record)
     assert record.status == MCPIdempotencyStatus.pending
-

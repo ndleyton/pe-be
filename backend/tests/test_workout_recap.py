@@ -102,7 +102,8 @@ def _build_exercise(
     )
 
 
-async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
+@pytest.mark.parametrize("strict", [False, True])
+async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, strict):
     workout = SimpleNamespace(
         id=7,
         name="Push Day",
@@ -111,7 +112,7 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
         recap=None,
     )
     exercise = _build_exercise(notes="Last set moved well", set_notes=["Felt easy"])
-    session = SimpleNamespace(commit=AsyncMock())
+    session = SimpleNamespace(commit=AsyncMock(), flush=AsyncMock())
     langfuse = _FakeLangfuse()
     client_holder = {}
 
@@ -154,11 +155,18 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
     )
     monkeypatch.setattr(recap_module.genai, "Client", fake_client_factory)
 
-    recap = await WorkoutRecapService.generate_recap(session, 7, 42)
+    recap = await WorkoutRecapService.generate_recap(
+        session, 7, 42, raise_on_error=strict
+    )
 
     assert recap == "Great session. Add 2.5 lb next time."
     assert workout.recap == recap
-    session.commit.assert_awaited_once()
+    if strict:
+        session.flush.assert_awaited_once()
+        session.commit.assert_not_awaited()
+    else:
+        session.commit.assert_awaited_once()
+        session.flush.assert_not_awaited()
     assert client_holder["client"].api_key == "google-key"
     assert langfuse.trace_kwargs["name"] == "workout-recap"
     assert langfuse.trace_kwargs["user_id"] == "42"

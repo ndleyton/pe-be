@@ -91,6 +91,9 @@ class WorkoutLogService:
             if workout_type_id is None:
                 raise ValueError("No workout type is configured")
 
+            if data.end_time is not None and data.start_time is None:
+                raise ValueError("start_time is required when end_time is provided")
+
             started_at = data.start_time or datetime.now(timezone.utc)
             workout = Workout(
                 owner_id=user_id,
@@ -104,6 +107,8 @@ class WorkoutLogService:
             session.add(workout)
             await session.flush()
 
+            unit_cache = {}
+            canonical_unit_cache = {}
             for exercise_input in data.exercises:
                 exercise_type = await _resolve_exercise_type(
                     session,
@@ -122,15 +127,26 @@ class WorkoutLogService:
                 await session.flush()
 
                 for set_input in exercise_input.sets:
-                    unit = await resolve_intensity_unit(
-                        session,
-                        requested=set_input.intensity_unit,
-                        default_id=exercise_type.default_intensity_unit,
+                    unit_cache_key = (
+                        set_input.intensity_unit,
+                        exercise_type.default_intensity_unit,
                     )
+                    if unit_cache_key not in unit_cache:
+                        unit_cache[unit_cache_key] = await resolve_intensity_unit(
+                            session,
+                            requested=set_input.intensity_unit,
+                            default_id=exercise_type.default_intensity_unit,
+                        )
+                    unit = unit_cache[unit_cache_key]
+
                     canonical_value, canonical_key = normalize_intensity_for_storage(
                         set_input.intensity, unit
                     )
-                    canonical = await _canonical_unit(session, canonical_key)
+                    if canonical_key not in canonical_unit_cache:
+                        canonical_unit_cache[canonical_key] = await _canonical_unit(
+                            session, canonical_key
+                        )
+                    canonical = canonical_unit_cache[canonical_key]
                     session.add(
                         ExerciseSet(
                             exercise_id=exercise.id,

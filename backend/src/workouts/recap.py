@@ -79,7 +79,7 @@ class WorkoutRecapService:
         *,
         raise_on_error: bool = False,
     ) -> Optional[str]:
-        """Generate and store a recap; strict callers receive retryable errors."""
+        """Generate a recap; strict callers own the commit and receive errors."""
         workout = await get_workout_by_id(session, workout_id, user_id)
         if not workout:
             return None
@@ -260,7 +260,10 @@ Recap:"""
 
             # 4. Save to workout
             workout.recap = recap_text
-            await session.commit()
+            if raise_on_error:
+                await session.flush()
+            else:
+                await session.commit()
 
             return recap_text
         except Exception as e:

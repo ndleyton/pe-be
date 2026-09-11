@@ -218,12 +218,18 @@ async def generate_workout_recap(
             await _mark_claim_failed(session, claim, "workout_not_found")
             raise ValueError("Workout not found")
 
-        output = WorkoutRecapOutput(workout_id=workout_id, recap=recap, generated=True)
-        complete_idempotent_operation(
-            claim,
-            entity_type="workout_recap",
-            entity_id=workout_id,
-            payload=output.model_dump(mode="json"),
-        )
-        await session.commit()
+        try:
+            output = WorkoutRecapOutput(
+                workout_id=workout_id, recap=recap, generated=True
+            )
+            complete_idempotent_operation(
+                claim,
+                entity_type="workout_recap",
+                entity_id=workout_id,
+                payload=output.model_dump(mode="json"),
+            )
+            await session.commit()
+        except Exception:
+            await _mark_claim_failed(session, claim, "generation_failed")
+            raise
         return output

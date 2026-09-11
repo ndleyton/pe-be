@@ -61,6 +61,8 @@ class PersonalizedRoutineService:
             session.add(routine)
             await session.flush()
 
+            unit_cache = {}
+            canonical_unit_cache = {}
             for exercise_input in data.exercises:
                 exercise_type = await _resolve_exercise_type(
                     session,
@@ -76,15 +78,26 @@ class PersonalizedRoutineService:
                 session.add(template)
                 await session.flush()
                 for set_input in exercise_input.sets:
-                    unit = await resolve_intensity_unit(
-                        session,
-                        requested=set_input.intensity_unit,
-                        default_id=exercise_type.default_intensity_unit,
+                    unit_cache_key = (
+                        set_input.intensity_unit,
+                        exercise_type.default_intensity_unit,
                     )
+                    if unit_cache_key not in unit_cache:
+                        unit_cache[unit_cache_key] = await resolve_intensity_unit(
+                            session,
+                            requested=set_input.intensity_unit,
+                            default_id=exercise_type.default_intensity_unit,
+                        )
+                    unit = unit_cache[unit_cache_key]
+
                     canonical_value, canonical_key = normalize_intensity_for_storage(
                         set_input.intensity, unit
                     )
-                    canonical = await _canonical_unit(session, canonical_key)
+                    if canonical_key not in canonical_unit_cache:
+                        canonical_unit_cache[canonical_key] = await _canonical_unit(
+                            session, canonical_key
+                        )
+                    canonical = canonical_unit_cache[canonical_key]
                     session.add(
                         SetTemplate(
                             exercise_template_id=template.id,
