@@ -23,6 +23,7 @@ from src.admin.router import router as admin_router
 from src.health.router import router as health_router
 from src.chat.router import router as chat_router
 from src.sync.router import router as sync_router
+from src.mcp.router import catalog_http_app, mcp_lifespan, trainer_http_app
 
 configure_logging(settings.LOG_LEVEL)
 logger = logging.getLogger("src.request")
@@ -39,7 +40,7 @@ def create_app() -> FastAPI:
     if settings.ENVIRONMENT == "production":
         fastapi_kwargs["proxy_headers"] = True
 
-    app = FastAPI(**fastapi_kwargs)
+    app = FastAPI(lifespan=mcp_lifespan, **fastapi_kwargs)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Mcp-Session-Id"],
     )
 
     # Include domain routers with API prefix
@@ -144,6 +146,11 @@ def create_app() -> FastAPI:
     app.include_router(sync_router, prefix=f"{api_prefix}", tags=["sync"])
     app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
     app.include_router(health_router, tags=["health"])
+
+    if settings.MCP_ENABLED and settings.MCP_CATALOG_ENABLED:
+        app.mount("/api/mcp/catalog", catalog_http_app, name="mcp-catalog")
+    if settings.MCP_ENABLED and settings.MCP_TRAINER_ENABLED:
+        app.mount("/api/mcp/trainer", trainer_http_app, name="mcp-trainer")
 
     # Register OAuth2 error handler so Google sign-in redirects work as before
     async def oauth_exception_handler(request: Request, exc: OAuth2Error):

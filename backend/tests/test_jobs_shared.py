@@ -1,8 +1,7 @@
 import logging
-from types import SimpleNamespace
-
 import pytest
 
+from src.core import model_registry
 from src.jobs import shared
 
 
@@ -133,22 +132,23 @@ def test_ensure_model_registry_loaded_imports_modules_once(monkeypatch):
 
     def _fake_import_module(name: str):
         imported.append(name)
-        return SimpleNamespace(__name__=name)
+        return object()
 
-    monkeypatch.setattr(
-        shared, "importlib", SimpleNamespace(import_module=_fake_import_module)
-    )
-    monkeypatch.setattr(shared, "_MODEL_REGISTRY_LOADED", False)
+    monkeypatch.setattr(model_registry.importlib, "import_module", _fake_import_module)
+    monkeypatch.setattr(model_registry, "_MODEL_REGISTRY_LOADED", False)
 
-    shared.ensure_model_registry_loaded()
-    shared.ensure_model_registry_loaded()
+    model_registry.ensure_model_registry_loaded()
+    model_registry.ensure_model_registry_loaded()
 
     assert imported == [
         "src.chat.models",
         "src.exercise_sets.models",
         "src.exercises.models",
+        "src.mcp.models",
         "src.routine_programs.models",
         "src.routines.models",
+        "src.sync.models",
         "src.users.models",
+        "src.users.pat_models",
         "src.workouts.models",
     ]

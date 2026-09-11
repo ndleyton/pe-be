@@ -102,7 +102,8 @@ def _build_exercise(
     )
 
 
-async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
+@pytest.mark.parametrize("strict", [False, True])
+async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, strict):
     workout = SimpleNamespace(
         id=7,
         name="Push Day",
@@ -111,7 +112,7 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
         recap=None,
     )
     exercise = _build_exercise(notes="Last set moved well", set_notes=["Felt easy"])
-    session = SimpleNamespace(commit=AsyncMock())
+    session = SimpleNamespace(commit=AsyncMock(), flush=AsyncMock())
     langfuse = _FakeLangfuse()
     client_holder = {}
 
@@ -154,11 +155,18 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch):
     )
     monkeypatch.setattr(recap_module.genai, "Client", fake_client_factory)
 
-    recap = await WorkoutRecapService.generate_recap(session, 7, 42)
+    recap = await WorkoutRecapService.generate_recap(
+        session, 7, 42, raise_on_error=strict
+    )
 
     assert recap == "Great session. Add 2.5 lb next time."
     assert workout.recap == recap
-    session.commit.assert_awaited_once()
+    if strict:
+        session.flush.assert_awaited_once()
+        session.commit.assert_not_awaited()
+    else:
+        session.commit.assert_awaited_once()
+        session.flush.assert_not_awaited()
     assert client_holder["client"].api_key == "google-key"
     assert langfuse.trace_kwargs["name"] == "workout-recap"
     assert langfuse.trace_kwargs["user_id"] == "42"
@@ -236,7 +244,8 @@ async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
     assert "top_set_intensity_achieved" in prompt
 
 
-async def test_generate_recap_updates_langfuse_on_error(monkeypatch):
+@pytest.mark.parametrize("strict", [False, True])
+async def test_generate_recap_updates_langfuse_on_error(monkeypatch, strict):
     workout = SimpleNamespace(
         id=9,
         name="Lower Body",
@@ -274,10 +283,59 @@ async def test_generate_recap_updates_langfuse_on_error(monkeypatch):
     )
     monkeypatch.setattr(recap_module.genai, "Client", fake_client_factory)
 
-    recap = await WorkoutRecapService.generate_recap(session, 9, 84)
-
-    assert recap == "Error generating recap: quota exceeded"
+    if strict:
+        with pytest.raises(RuntimeError, match="quota exceeded"):
+            await WorkoutRecapService.generate_recap(
+                session, 9, 84, raise_on_error=True
+            )
+    else:
+        recap = await WorkoutRecapService.generate_recap(session, 9, 84)
+        assert recap == "Error generating recap: quota exceeded"
     session.commit.assert_not_called()
     assert langfuse.trace_obj.generations == []
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "error"
     assert langfuse.trace_obj.updates[-1]["metadata"]["error"] == "quota exceeded"
+
+
+@pytest.mark.parametrize("failure", ["missing_key", "empty_response", "blank_response"])
+async def test_strict_recap_does_not_save_unavailable_generation(monkeypatch, failure):
+    workout = SimpleNamespace(
+        id=9,
+        name="Workout",
+        notes=None,
+        start_time=datetime(2026, 4, 3, tzinfo=timezone.utc),
+        recap=None,
+    )
+    session = SimpleNamespace(commit=AsyncMock())
+    monkeypatch.setattr(
+        settings, "GOOGLE_AI_KEY", "" if failure == "missing_key" else "test-key"
+    )
+    monkeypatch.setattr(
+        recap_module, "get_workout_by_id", AsyncMock(return_value=workout)
+    )
+    monkeypatch.setattr(
+        recap_module,
+        "get_exercises_for_workout",
+        AsyncMock(return_value=[_build_exercise()]),
+    )
+    monkeypatch.setattr(
+        recap_module,
+        "get_exercise_type_stats",
+        AsyncMock(return_value={"progressiveOverload": []}),
+    )
+    monkeypatch.setattr(
+        WorkoutRecapService, "_get_langfuse_client", staticmethod(lambda: None)
+    )
+    monkeypatch.setattr(
+        recap_module.genai,
+        "Client",
+        lambda **kwargs: _FakeClient(
+            response_text="   " if failure == "blank_response" else None
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="API key missing|returned no text"):
+        await WorkoutRecapService.generate_recap(session, 9, 84, raise_on_error=True)
+
+    assert workout.recap is None
+    session.commit.assert_not_awaited()
