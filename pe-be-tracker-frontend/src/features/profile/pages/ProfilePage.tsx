@@ -14,7 +14,7 @@ import {
   AlertTitle,
 } from "@/shared/components/ui/alert";
 import { useTheme } from "@/shared/components/theme/theme-provider";
-import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Monitor, Sun, Moon, Flame, Waves } from "lucide-react";
+import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Monitor, Sun, Moon, Flame, Waves, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -343,6 +343,20 @@ const ProfilePage = () => {
                         <p className="text-muted-foreground">
                           Use the AI coach chat when you want extra guidance
                           between sessions.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-foreground font-semibold">
+                          Personal AI Trainer (MCP)
+                        </p>
+                        <p className="text-muted-foreground">
+                          While the exercise catalog is public, sign in to let your assistant review your history and log workouts.
                         </p>
                       </div>
                     </div>
