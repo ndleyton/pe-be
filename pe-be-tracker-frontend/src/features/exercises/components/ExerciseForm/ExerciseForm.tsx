@@ -193,7 +193,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({
           <input
             type="text"
             {...register("notes")}
-            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-3 py-2 focus:ring-2 focus:outline-none"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1 mb-2 w-full rounded border px-3 py-2 text-base focus:ring-2 focus:outline-none"
           />
         </label>
       </div>

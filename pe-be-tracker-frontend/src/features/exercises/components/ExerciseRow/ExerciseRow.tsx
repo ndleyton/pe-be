@@ -147,7 +147,7 @@ const ExerciseRow = ({
                 value={exerciseNotesValue}
                 onChange={(e) => setExerciseNotesValue(e.target.value)}
                 onBlur={() => updateExerciseNotes(exerciseNotesValue)}
-                className="min-h-[60px] bg-background/50 resize-none text-sm border-dashed"
+                className="min-h-[60px] bg-background/50 resize-none border-dashed"
               />
             </div>
             <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
