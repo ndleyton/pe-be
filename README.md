@@ -16,7 +16,69 @@ PersonalBestie is a full-stack fitness tracker designed to help users log workou
 *   **Local-First Guest Mode**: Instantly log workouts without an account. All data is persisted locally in the browser's IndexedDB and seamlessly synced to the database once you sign in.
 *   **AI Coaching and Recaps**: Undergoes automated post-workout analysis using Google Gemini to summarize performance, detect personal records (PRs), and provide evidence-based workout insights.
 *   **Server-Side Function Calling**: AI capabilities are validated and executed securely server-side using typed schemas and FastAPI-backed endpoints rather than ungrounded prompt generation.
+*   **Bring Your Own AI Assistant (MCP)**: Connect a compatible assistant to explore exercises, review your training history, create routines, and log workouts. Choose read-only or read-and-write access, and revoke it anytime.
 *   **Responsive UI**: Modern interface optimized for both desktop and mobile screens, built with Tailwind CSS v4 and React 19.
+
+---
+
+## Connect Your AI Assistant (MCP)
+
+Your training history can inform conversations with the AI assistant you already use. PersonalBestie exposes two Model Context Protocol (MCP) servers over **Streamable HTTP**:
+
+| Server | URL | Access |
+| --- | --- | --- |
+| Exercise catalog | `https://app.personalbestie.com/api/mcp/catalog/` | Public, read-only exercise search, details, muscle taxonomy, and substitutions. |
+| Personal trainer | `https://app.personalbestie.com/api/mcp/trainer/` | Personal access token required for workout history, routines, workout logging, and recaps. |
+
+### Connect to your account
+
+1. Sign in to [PersonalBestie](https://app.personalbestie.com) and open **Personal Access Tokens / MCP** in your profile settings.
+2. Create a token with `trainer:read` to review your training. Include both `trainer:read` and `trainer:write` to create routines, log workouts, and generate recaps.
+3. Copy the token when it is shown; it is displayed only once.
+4. In an MCP client that supports Streamable HTTP and custom bearer authentication, add the trainer URL above and configure `Authorization: Bearer <your-token>`.
+
+Keep the trailing slash in the server URL. Revoke tokens from your profile settings whenever you want to remove access. The public catalog needs no token.
+
+Try asking your connected assistant:
+
+- “Review my recent workouts and summarize my progress.”
+- “Find an alternative to bench press using dumbbells.”
+- “Create a three-day routine based on my recent training.”
+
+### Run locally
+
+The normal FastAPI startup also starts both MCP endpoints:
+
+- Catalog: `http://localhost:8000/api/mcp/catalog/`
+- Trainer: `http://localhost:8000/api/mcp/trainer/`
+
+Use the backend setup below to configure the database and apply migrations. For a client that launches a local stdio process, run these from `backend/`:
+
+```bash
+uv run python -m src.mcp.cli catalog
+PE_BE_USER_ID=<your-user-id> uv run python -m src.mcp.cli trainer
+```
+
+Trainer stdio is a trusted local mode: it grants access as the specified database user without a PAT. Use the authenticated HTTP endpoint for remote connections.
+
+### Deploy on the VM
+
+MCP runs inside the existing backend container. Set these values in `backend/.env.production` before rebuilding and recreating it:
+
+```dotenv
+MCP_ENABLED=true
+MCP_CATALOG_ENABLED=true
+MCP_TRAINER_ENABLED=true
+MCP_PUBLIC_BASE_URL=https://app.personalbestie.com/api/mcp
+MCP_ALLOWED_HOSTS=app.personalbestie.com,origin-api.personalbestie.com
+MCP_ALLOWED_ORIGINS=https://app.personalbestie.com
+MCP_ALLOW_TRUSTED_STDIO_USER=false
+MCP_PAT_PEPPER=<persistent-random-secret>
+```
+
+Generate the pepper once with `openssl rand -hex 32`. Keep it private and retain it across deployments; changing it invalidates existing tokens. Substitute your own domains when self-hosting. The public proxy must forward `/api/mcp/*` and the `Authorization` header to the backend.
+
+The current `Deploy VPS` workflow rewrites `.env.production` without these MCP settings. Update its environment generation before using it to deploy MCP; manually added settings would otherwise be overwritten.
 
 ---
 
