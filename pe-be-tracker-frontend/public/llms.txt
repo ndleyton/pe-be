@@ -18,6 +18,12 @@ PersonalBestie is a React + TypeScript fitness app built around a personalized A
 - Routine and workout review flows that help users understand progress and next steps
 - Chat experience for asking training questions and getting coaching support
 
+## Model Context Protocol (MCP)
+
+PersonalBestie exposes two MCP servers to connect external AI assistants to the platform:
+- `/api/mcp/catalog/`: Public, read-only exercise search, details, muscle taxonomy, and substitutions.
+- `/api/mcp/trainer/`: Private personal trainer for workout history, routines, logging, and recaps. Requires a personal access token generated from the user's profile settings.
+
 ## Blog Guides
 
 - `/blog/`: article hub for search and LLM discovery
