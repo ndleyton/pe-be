@@ -47,7 +47,7 @@ Try asking your connected assistant:
 
 ### Run locally
 
-The normal FastAPI startup also starts both MCP endpoints:
+The normal FastAPI startup also mounts each MCP endpoint when `MCP_ENABLED` and its corresponding catalog or trainer setting are enabled:
 
 - Catalog: `http://localhost:8000/api/mcp/catalog/`
 - Trainer: `http://localhost:8000/api/mcp/trainer/`
