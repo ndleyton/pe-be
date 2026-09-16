@@ -18,14 +18,20 @@ import {
   type ExerciseRowProps,
 } from "@/features/exercises/lib/exerciseRow";
 import {
+  createInitialWriteState,
+  mergeUpdateData,
+  reconcileExerciseSets,
+  type SetDirtyField,
+  type SetField,
+  type SetWriteState,
+} from "@/features/exercises/lib/exerciseSetWriter";
+import {
   convertIntensityValue,
   DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS,
   prefersDurationForIntensityUnit,
 } from "@/features/exercises/lib/intensityUnits";
 import { type SetValueMode } from "@/features/exercises/lib/setValue";
 import { useAuthStore, useGuestStore } from "@/stores";
-
-type SetField = "weight" | "reps" | "duration_seconds";
 
 const areExerciseSetsShallowEqual = (
   left: ExerciseSet[],
@@ -54,25 +60,135 @@ export const useExerciseSetActions = ({
   );
   const exerciseSetsRef = useRef(exerciseSets);
   const latestExerciseRef = useRef(exercise);
+  const writeStatesRef = useRef<Map<string, SetWriteState>>(new Map());
+
+  const invalidateExerciseQuery = useCallback(() => {
+    if (!workoutId) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
+  }, [queryClient, workoutId]);
+
+  const executeFlush = useCallback(async (key: string) => {
+    const state = writeStatesRef.current.get(key);
+    if (!state) {
+      return;
+    }
+
+    if (state.isInFlight) {
+      return;
+    }
+
+    if (!state.pendingPatch) {
+      if (state.dirtyFields.size === 0 && !state.pendingTimer) {
+        writeStatesRef.current.delete(key);
+      }
+      return;
+    }
+
+    const currentSet = exerciseSetsRef.current.find(
+      (set) => getExerciseSetClientKey(set) === key,
+    );
+    const resolvedServerId = currentSet?.id ?? state.serverSetId;
+
+    if (typeof resolvedServerId === "string" && resolvedServerId.startsWith("temp-")) {
+      return;
+    }
+
+    state.serverSetId = resolvedServerId;
+    const batchToSend = state.pendingPatch;
+    state.pendingPatch = null;
+    state.inFlightPatch = batchToSend;
+    state.isInFlight = true;
+
+    try {
+      await updateExerciseSet(resolvedServerId, batchToSend);
+
+      (Object.keys(batchToSend) as Array<keyof UpdateExerciseSetData>).forEach((field) => {
+        if (field === "reps" || field === "duration_seconds" || field === "intensity") {
+          if (!state.pendingPatch || !(field in state.pendingPatch)) {
+            state.dirtyFields.delete(field as SetDirtyField);
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Failed to update exercise set:", error);
+      state.pendingPatch = mergeUpdateData(batchToSend, state.pendingPatch);
+      invalidateExerciseQuery();
+    } finally {
+      state.isInFlight = false;
+      state.inFlightPatch = null;
+
+      if (state.pendingPatch) {
+        if (!state.pendingTimer) {
+          state.pendingTimer = setTimeout(() => {
+            state.pendingTimer = null;
+            void executeFlush(key);
+          }, 500);
+        }
+      } else if (state.dirtyFields.size === 0 && !state.pendingTimer) {
+        writeStatesRef.current.delete(key);
+      }
+    }
+  }, [invalidateExerciseQuery]);
+
+  const queueSetUpdate = useCallback((
+    setClientKey: string | number,
+    serverSetId: string | number,
+    data: UpdateExerciseSetData,
+    field?: SetField,
+  ) => {
+    const key = String(setClientKey);
+    let state = writeStatesRef.current.get(key);
+    if (!state) {
+      state = createInitialWriteState(serverSetId);
+      writeStatesRef.current.set(key, state);
+    } else if (!String(serverSetId).startsWith("temp-")) {
+      state.serverSetId = serverSetId;
+    }
+
+    if (field === "weight") {
+      state.dirtyFields.add("intensity");
+    } else if (field === "reps" || field === "duration_seconds") {
+      state.dirtyFields.add(field);
+    }
+    if ("reps" in data) state.dirtyFields.add("reps");
+    if ("duration_seconds" in data) state.dirtyFields.add("duration_seconds");
+    if ("intensity" in data) state.dirtyFields.add("intensity");
+
+    state.pendingPatch = mergeUpdateData(state.pendingPatch, data);
+
+    if (state.pendingTimer) {
+      clearTimeout(state.pendingTimer);
+    }
+
+    state.pendingTimer = setTimeout(() => {
+      state.pendingTimer = null;
+      void executeFlush(key);
+    }, 500);
+  }, [executeFlush]);
 
   useEffect(() => {
+    const rawSets = exercise.exercise_sets || [];
     const normalizedExerciseSets = normalizeExerciseSetClientKeys(
-      sortExerciseSets(exercise.exercise_sets || []),
+      sortExerciseSets(rawSets),
       exerciseSetsRef.current,
     );
     setExerciseSets((currentExerciseSets) => {
-      if (
-        areExerciseSetsShallowEqual(
-          currentExerciseSets,
-          normalizedExerciseSets,
-        )
-      ) {
+      const reconciled = reconcileExerciseSets(
+        currentExerciseSets,
+        normalizedExerciseSets,
+        writeStatesRef.current,
+      );
+
+      if (areExerciseSetsShallowEqual(currentExerciseSets, reconciled)) {
         exerciseSetsRef.current = currentExerciseSets;
         return currentExerciseSets;
       }
 
-      exerciseSetsRef.current = normalizedExerciseSets;
-      return normalizedExerciseSets;
+      exerciseSetsRef.current = reconciled;
+      return reconciled;
     });
   }, [exercise.exercise_sets]);
 
@@ -83,17 +199,6 @@ export const useExerciseSetActions = ({
   useEffect(() => {
     exerciseSetsRef.current = exerciseSets;
   }, [exerciseSets]);
-
-  const pendingUpdatesRef = useRef<
-    Record<
-      string,
-      {
-        timeout: ReturnType<typeof setTimeout>;
-        data: UpdateExerciseSetData;
-        serverSetId: string | number;
-      }
-    >
-  >({});
 
   const publishExerciseUpdate = useCallback((nextExerciseSets: ExerciseSet[]) => {
     if (!onExerciseUpdate) {
@@ -111,23 +216,29 @@ export const useExerciseSetActions = ({
     onExerciseUpdate(updatedExercise);
   }, [isAuthenticated, onExerciseUpdate]);
 
-  const invalidateExerciseQuery = () => {
-    if (!workoutId) {
-      return;
-    }
-
-    void queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-  };
-
   useEffect(() => {
     return () => {
-      Object.entries(pendingUpdatesRef.current).forEach(([setClientKey, update]) => {
-        clearTimeout(update.timeout);
-        const serverSetId = exerciseSetsRef.current.find(
-          (set) => getExerciseSetClientKey(set) === setClientKey,
-        )?.id ?? update.serverSetId;
+      writeStatesRef.current.forEach((state, key) => {
+        if (state.pendingTimer) {
+          clearTimeout(state.pendingTimer);
+          state.pendingTimer = null;
+        }
 
-        void updateExerciseSet(serverSetId, update.data).catch((error) => {
+        const dataToFlush = state.pendingPatch;
+        if (!dataToFlush || state.isInFlight) {
+          return;
+        }
+
+        const serverSetId =
+          exerciseSetsRef.current.find(
+            (set) => getExerciseSetClientKey(set) === key,
+          )?.id ?? state.serverSetId;
+
+        if (typeof serverSetId === "string" && serverSetId.startsWith("temp-")) {
+          return;
+        }
+
+        void updateExerciseSet(serverSetId, dataToFlush).catch((error) => {
           console.error("Failed to flush update on unmount:", error);
         });
       });
@@ -150,46 +261,6 @@ export const useExerciseSetActions = ({
     publishExerciseUpdate(nextExerciseSets);
     return nextExerciseSets;
   }, [publishExerciseUpdate]);
-
-  const queueSetUpdate = (
-    setClientKey: string | number,
-    serverSetId: string | number,
-    data: UpdateExerciseSetData,
-  ) => {
-    const key = String(setClientKey);
-
-    const resolveServerSetId = () =>
-      exerciseSetsRef.current.find(
-        (set) => getExerciseSetClientKey(set) === key,
-      )?.id ?? pendingUpdatesRef.current[key]?.serverSetId ?? serverSetId;
-
-    if (pendingUpdatesRef.current[key]) {
-      clearTimeout(pendingUpdatesRef.current[key].timeout);
-      pendingUpdatesRef.current[key].data = {
-        ...pendingUpdatesRef.current[key].data,
-        ...data,
-      };
-      pendingUpdatesRef.current[key].serverSetId = serverSetId;
-    } else {
-      pendingUpdatesRef.current[key] = {
-        timeout: setTimeout(() => undefined, 0),
-        data,
-        serverSetId,
-      };
-    }
-
-    pendingUpdatesRef.current[key].timeout = setTimeout(async () => {
-      try {
-        const finalData = pendingUpdatesRef.current[key].data;
-        await updateExerciseSet(resolveServerSetId(), finalData);
-      } catch (error) {
-        console.error("Failed to update exercise set:", error);
-        invalidateExerciseQuery();
-      } finally {
-        delete pendingUpdatesRef.current[key];
-      }
-    }, 500);
-  };
 
   const updateSetField = useCallback((
     setId: string | number,
@@ -240,8 +311,8 @@ export const useExerciseSetActions = ({
           ? { reps: value, duration_seconds: null }
           : { duration_seconds: value, reps: null };
 
-    queueSetUpdate(setId, currentSet.id, updateData);
-  }, [applyLocalExerciseSets, isAuthenticated]);
+    queueSetUpdate(setId, currentSet.id, updateData, field);
+  }, [applyLocalExerciseSets, isAuthenticated, queueSetUpdate]);
 
   const incrementReps = useCallback((setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
@@ -297,8 +368,8 @@ export const useExerciseSetActions = ({
       return;
     }
 
-    queueSetUpdate(setId, currentSet.id, updates);
-  }, [applyLocalExerciseSets, isAuthenticated]);
+    queueSetUpdate(setId, currentSet.id, updates, mode === "time" ? "duration_seconds" : "reps");
+  }, [applyLocalExerciseSets, isAuthenticated, queueSetUpdate]);
 
   const toggleSetCompletion = useCallback(async (setId: string | number) => {
     const currentSet = exerciseSetsRef.current.find(
@@ -373,9 +444,16 @@ export const useExerciseSetActions = ({
       return;
     }
 
+    const key = String(setId);
+    const writeState = writeStatesRef.current.get(key);
+    if (writeState?.pendingTimer) {
+      clearTimeout(writeState.pendingTimer);
+    }
+    writeStatesRef.current.delete(key);
+
     applyLocalExerciseSets((currentExerciseSets) =>
       currentExerciseSets.filter(
-        (set) => getExerciseSetClientKey(set) !== String(setId),
+        (set) => getExerciseSetClientKey(set) !== key,
       ),
     );
 
@@ -464,15 +542,18 @@ export const useExerciseSetActions = ({
             : set,
         ),
       );
-      const pendingUpdate = pendingUpdatesRef.current[tempId];
-      if (pendingUpdate) {
-        pendingUpdate.serverSetId = createdSet.id;
+      const writeState = writeStatesRef.current.get(tempId);
+      if (writeState) {
+        writeState.serverSetId = createdSet.id;
+        if (writeState.pendingPatch && !writeState.isInFlight && !writeState.pendingTimer) {
+          void executeFlush(tempId);
+        }
       }
     } catch (error) {
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
     }
-  }, [applyLocalExerciseSets, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
+  }, [applyLocalExerciseSets, executeFlush, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
 
   const updateExerciseNotes = useCallback((notes: string) => {
     if (!onExerciseUpdate) {

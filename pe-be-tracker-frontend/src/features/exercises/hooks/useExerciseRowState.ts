@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   Exercise,
@@ -22,20 +22,6 @@ import {
 } from "@/features/exercises/constants";
 import { useDebounce } from "@/shared/hooks";
 import { useAuthStore } from "@/stores";
-
-const areStringRecordValuesEqual = (
-  left: Record<string, string>,
-  right: Record<string, string>,
-) => {
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-
-  if (leftKeys.length !== rightKeys.length) {
-    return false;
-  }
-
-  return leftKeys.every((key) => left[key] === right[key]);
-};
 
 export const useExerciseRowState = ({
   exercise,
@@ -61,15 +47,45 @@ export const useExerciseRowState = ({
   const [currentIntensityUnit, setCurrentIntensityUnit] = useState<
     IntensityUnit | GuestIntensityUnit
   >(initialIntensityUnit);
-  const [intensityInputs, setIntensityInputs] = useState<Record<string, string>>(
-    () => buildIntensityInputs(exercise.exercise_sets || [], initialIntensityUnit.id),
-  );
-  const [repsInputs, setRepsInputs] = useState<Record<string, string>>(() =>
-    buildRepsInputs(exercise.exercise_sets || []),
-  );
-  const [durationInputs, setDurationInputs] = useState<Record<string, string>>(
-    () => buildDurationInputs(exercise.exercise_sets || []),
-  );
+
+  // Option K: Track active string drafts only while editing; otherwise derive directly from numeric model
+  const [draftInputs, setDraftInputs] = useState<
+    Record<string, { reps?: string; intensity?: string; duration?: string }>
+  >({});
+
+  const intensityInputs = useMemo(() => {
+    const base = buildIntensityInputs(exerciseSets, currentIntensityUnit.id);
+    const result: Record<string, string> = { ...base };
+    Object.entries(draftInputs).forEach(([key, drafts]) => {
+      if (drafts.intensity !== undefined) {
+        result[key] = drafts.intensity;
+      }
+    });
+    return result;
+  }, [currentIntensityUnit.id, draftInputs, exerciseSets]);
+
+  const repsInputs = useMemo(() => {
+    const base = buildRepsInputs(exerciseSets);
+    const result: Record<string, string> = { ...base };
+    Object.entries(draftInputs).forEach(([key, drafts]) => {
+      if (drafts.reps !== undefined) {
+        result[key] = drafts.reps;
+      }
+    });
+    return result;
+  }, [draftInputs, exerciseSets]);
+
+  const durationInputs = useMemo(() => {
+    const base = buildDurationInputs(exerciseSets);
+    const result: Record<string, string> = { ...base };
+    Object.entries(draftInputs).forEach(([key, drafts]) => {
+      if (drafts.duration !== undefined) {
+        result[key] = drafts.duration;
+      }
+    });
+    return result;
+  }, [draftInputs, exerciseSets]);
+
   const [exerciseNotesValue, setExerciseNotesValue] = useState(exercise.notes || "");
   const [activeSetId, setActiveSetId] = useState<string | number | null>(null);
   const [setNotesValue, setSetNotesValue] = useState("");
@@ -80,31 +96,6 @@ export const useExerciseRowState = ({
   const debouncedSetNotesValue = useDebounce(setNotesValue, 1000);
   const debouncedSetRpeValue = useDebounce(setRpeValue, 1000);
   const debouncedSetRirValue = useDebounce(setRirValue, 1000);
-
-  useEffect(() => {
-    const nextIntensityInputs = buildIntensityInputs(
-      exerciseSets,
-      currentIntensityUnit.id,
-    );
-    const nextRepsInputs = buildRepsInputs(exerciseSets);
-    const nextDurationInputs = buildDurationInputs(exerciseSets);
-
-    setIntensityInputs((currentIntensityInputs) =>
-      areStringRecordValuesEqual(currentIntensityInputs, nextIntensityInputs)
-        ? currentIntensityInputs
-        : nextIntensityInputs,
-    );
-    setRepsInputs((currentRepsInputs) =>
-      areStringRecordValuesEqual(currentRepsInputs, nextRepsInputs)
-        ? currentRepsInputs
-        : nextRepsInputs,
-    );
-    setDurationInputs((currentDurationInputs) =>
-      areStringRecordValuesEqual(currentDurationInputs, nextDurationInputs)
-        ? currentDurationInputs
-        : nextDurationInputs,
-    );
-  }, [currentIntensityUnit.id, exerciseSets]);
 
   useEffect(() => {
     setExerciseNotesValue(exercise.notes || "");
@@ -187,28 +178,80 @@ export const useExerciseRowState = ({
   ) => {
     setCurrentIntensityUnit(unit);
     setExerciseSettingsOpen(false);
+    setDraftInputs((current) => {
+      const next: Record<string, { reps?: string; intensity?: string; duration?: string }> = {};
+      let changed = false;
+      Object.entries(current).forEach(([key, drafts]) => {
+        if (drafts.intensity !== undefined) {
+          changed = true;
+          const { intensity: _, ...rest } = drafts;
+          if (Object.keys(rest).length > 0) {
+            next[key] = rest;
+          }
+        } else {
+          next[key] = drafts;
+        }
+      });
+      return changed ? next : current;
+    });
   }, []);
 
-  const setDurationInputValue = useCallback((setId: string | number, value: string) =>
-    setDurationInputs((current) => ({
+  const setDurationInputValue = useCallback((setId: string | number, value: string) => {
+    setDraftInputs((current) => ({
       ...current,
-      [String(setId)]: value,
-    })), []);
+      [String(setId)]: {
+        ...current[String(setId)],
+        duration: value,
+      },
+    }));
+  }, []);
 
-  const setIntensityInputValue = useCallback((setId: string | number, value: string) =>
-    setIntensityInputs((current) => ({
+  const setIntensityInputValue = useCallback((setId: string | number, value: string) => {
+    setDraftInputs((current) => ({
       ...current,
-      [String(setId)]: value,
-    })), []);
+      [String(setId)]: {
+        ...current[String(setId)],
+        intensity: value,
+      },
+    }));
+  }, []);
 
-  const setRepsInputValue = useCallback((setId: string | number, value: string) =>
-    setRepsInputs((current) => ({
+  const setRepsInputValue = useCallback((setId: string | number, value: string) => {
+    setDraftInputs((current) => ({
       ...current,
-      [String(setId)]: value,
-    })), []);
+      [String(setId)]: {
+        ...current[String(setId)],
+        reps: value,
+      },
+    }));
+  }, []);
+
+  const clearDraftInput = useCallback((setId: string | number, field?: "reps" | "intensity" | "duration") => {
+    const key = String(setId);
+    setDraftInputs((current) => {
+      if (!current[key]) return current;
+      if (!field) {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      }
+      const nextSetDraft = { ...current[key] };
+      delete nextSetDraft[field];
+      if (Object.keys(nextSetDraft).length === 0) {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      }
+      return {
+        ...current,
+        [key]: nextSetDraft,
+      };
+    });
+  }, []);
 
   return {
     activeSetId,
+    clearDraftInput,
     currentIntensityUnit,
     durationInputs,
     exerciseNotesValue,

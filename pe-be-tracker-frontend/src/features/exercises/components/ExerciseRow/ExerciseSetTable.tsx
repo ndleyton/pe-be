@@ -47,6 +47,7 @@ type ExerciseSetTableProps = {
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
   onAddSet: () => void;
+  onClearDraftInput?: (setId: string | number, field?: "reps" | "intensity" | "duration") => void;
   onCloseSetOptions: () => void;
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
@@ -93,6 +94,7 @@ type ExerciseSetRowProps = {
   isPR: boolean;
   savedDisplayIntensity: number | null;
   currentIntensityUnitId: number;
+  onClearDraftInput?: (setId: string | number, field?: "reps" | "intensity" | "duration") => void;
   onSetWeightInputValue: (setId: string | number, value: string) => void;
   onUpdateSetField: (
     setId: string | number,
@@ -126,6 +128,7 @@ const ExerciseSetRow = memo(({
   isPR,
   savedDisplayIntensity,
   currentIntensityUnitId,
+  onClearDraftInput,
   onSetWeightInputValue,
   onUpdateSetField,
   onSetDurationInputValue,
@@ -136,6 +139,28 @@ const ExerciseSetRow = memo(({
   onOpenSetOptions,
 }: ExerciseSetRowProps) => {
   const setKey = getExerciseSetClientKey(set);
+
+  const handleIncrement = () => {
+    onClearDraftInput?.(setKey, "reps");
+    if (repsValue !== savedRepsValue) {
+      const parsed = repsValue === "" ? 0 : Number.parseInt(repsValue, 10);
+      const nextReps = (Number.isNaN(parsed) ? 0 : parsed) + 1;
+      onUpdateSetField(setKey, "reps", nextReps);
+      return;
+    }
+    onIncrementReps(setKey);
+  };
+
+  const handleDecrement = () => {
+    onClearDraftInput?.(setKey, "reps");
+    if (repsValue !== savedRepsValue) {
+      const parsed = repsValue === "" ? 0 : Number.parseInt(repsValue, 10);
+      const nextReps = Math.max(0, (Number.isNaN(parsed) ? 0 : parsed) - 1);
+      onUpdateSetField(setKey, "reps", nextReps);
+      return;
+    }
+    onDecrementReps(setKey);
+  };
 
   return (
     <div
@@ -171,6 +196,7 @@ const ExerciseSetRow = memo(({
             onSetWeightInputValue(setKey, event.target.value)
           }
           onBlur={(event) => {
+            onClearDraftInput?.(setKey, "intensity");
             const parsedValue = parseDecimalInput(
               event.currentTarget.value,
             );
@@ -181,17 +207,9 @@ const ExerciseSetRow = memo(({
             }
 
             if (parsedValue === savedDisplayIntensity) {
-              onSetWeightInputValue(
-                setKey,
-                formatIntensityInputValue(parsedValue),
-              );
               return;
             }
 
-            onSetWeightInputValue(
-              setKey,
-              formatIntensityInputValue(parsedValue),
-            );
             onUpdateSetField(
               setKey,
               "weight",
@@ -207,6 +225,7 @@ const ExerciseSetRow = memo(({
 
             if (event.key === "Escape") {
               event.preventDefault();
+              onClearDraftInput?.(setKey, "intensity");
               onSetWeightInputValue(setKey, savedIntensityValue);
               (event.currentTarget as HTMLInputElement).blur();
             }
@@ -231,6 +250,7 @@ const ExerciseSetRow = memo(({
               }
             }}
             onBlur={(event) => {
+              onClearDraftInput?.(setKey, "duration");
               const parsedValue = parseDurationInputValue(
                 event.currentTarget.value,
               );
@@ -253,6 +273,7 @@ const ExerciseSetRow = memo(({
 
               if (event.key === "Escape") {
                 event.preventDefault();
+                onClearDraftInput?.(setKey, "duration");
                 onSetDurationInputValue(setKey, savedDurationValue);
                 (event.currentTarget as HTMLInputElement).blur();
               }
@@ -264,11 +285,13 @@ const ExerciseSetRow = memo(({
       ) : (
         <div className="min-w-0 flex items-center justify-center gap-0.5 sm:gap-1">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
-            onClick={() => onDecrementReps(setKey)}
+            onClick={handleDecrement}
             disabled={set.done}
+            aria-label={`Decrease reps for set ${index + 1}`}
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -283,6 +306,7 @@ const ExerciseSetRow = memo(({
               }
             }}
             onBlur={(event) => {
+              onClearDraftInput?.(setKey, "reps");
               const parsedValue =
                 event.currentTarget.value === ""
                   ? null
@@ -303,6 +327,7 @@ const ExerciseSetRow = memo(({
 
               if (event.key === "Escape") {
                 event.preventDefault();
+                onClearDraftInput?.(setKey, "reps");
                 onSetRepsInputValue(setKey, savedRepsValue);
                 event.currentTarget.value = savedRepsValue;
                 (event.currentTarget as HTMLInputElement).blur();
@@ -312,11 +337,13 @@ const ExerciseSetRow = memo(({
             disabled={set.done}
           />
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
-            onClick={() => onIncrementReps(setKey)}
+            onClick={handleIncrement}
             disabled={set.done}
+            aria-label={`Increase reps for set ${index + 1}`}
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -639,6 +666,7 @@ export const ExerciseSetTable = memo(({
   intensityInputs,
   isUnsavedExercise,
   onAddSet,
+  onClearDraftInput,
   onCloseSetOptions,
   onDecrementReps,
   onDeleteSet,
@@ -756,6 +784,7 @@ export const ExerciseSetTable = memo(({
               key={getExerciseSetClientKey(rowData.set)}
               {...rowData}
               currentIntensityUnitId={currentIntensityUnitId}
+              onClearDraftInput={onClearDraftInput}
               onSetWeightInputValue={onSetWeightInputValue}
               onUpdateSetField={onUpdateSetField}
               onSetDurationInputValue={onSetDurationInputValue}
