@@ -529,7 +529,7 @@ const RoutineTemplateSection = memo(
                 onChange={(event) =>
                   onUpdateTemplate(template.id, { notes: event.target.value })
                 }
-                className="min-h-[80px] resize-none cursor-text rounded-2xl border-primary/5 bg-primary/5 text-sm shadow-inner transition-all focus:border-primary/20"
+                className="min-h-[80px] resize-none cursor-text rounded-2xl border-primary/5 bg-primary/5 text-base shadow-inner transition-all focus:border-primary/20"
               />
             </div>
           ) : null}
@@ -857,7 +857,7 @@ const SetDetailsDialog = ({
                         notes: event.target.value,
                       })
                     }
-                    className="min-h-[80px] rounded-xl border-primary/5 bg-primary/5 text-sm transition-all focus:border-primary/20"
+                    className="min-h-[80px] rounded-xl border-primary/5 bg-primary/5 text-base transition-all focus:border-primary/20"
                   />
                 </div>
 

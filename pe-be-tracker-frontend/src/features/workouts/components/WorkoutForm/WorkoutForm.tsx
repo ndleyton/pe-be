@@ -284,7 +284,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
               type="text"
               {...register("name")}
               data-testid="workout-name-input"
-              className="bg-background text-foreground border-border focus:ring-ring flex-1 rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
+              className="bg-background text-foreground border-border focus:ring-ring flex-1 rounded border px-2 py-1.5 text-base focus:ring-2 focus:outline-none sm:px-3 sm:py-2"
               autoFocus
             />
             <Button
@@ -344,7 +344,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
             type="text"
             {...register("notes")}
             data-testid="workout-notes-input"
-            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-base focus:ring-2 focus:outline-none"
           />
         </label>
       </div>
@@ -354,7 +354,7 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
           <input
             type="datetime-local"
             {...register("start_time", { required: "Start time is required" })}
-            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+            className="bg-background text-foreground border-border focus:ring-ring mt-1.5 w-full rounded-lg border px-3 py-2 text-base focus:ring-2 focus:outline-none"
           />
         </label>
         {formState.errors.start_time && (

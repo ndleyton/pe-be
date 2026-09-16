@@ -247,7 +247,7 @@ export const PersonalAccessTokensSettings = ({
                 readOnly
                 value={createdToken.token}
                 aria-label="New personal access token"
-                className="font-mono text-xs"
+                className="font-mono text-base"
                 onFocus={(event) => event.currentTarget.select()}
               />
               <Button

@@ -135,7 +135,7 @@ export const RoutineInfoCard = ({
                 value={description}
                 onChange={(event) => onDescriptionChange(event.target.value)}
                 placeholder="Optional routine description"
-                className="min-h-[100px] rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all italic text-sm"
+                className="min-h-[100px] rounded-xl bg-primary/5 border-primary/10 focus:border-primary/30 transition-all italic text-base"
               />
             </div>
 
