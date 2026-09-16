@@ -52,7 +52,8 @@
     "types": [
       "vite/client",
       "node",
-      "@testing-library/jest-dom"
+      "@testing-library/jest-dom",
+      "vitest/globals"
     ]
   },
   "include": [
