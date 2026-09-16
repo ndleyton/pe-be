@@ -258,7 +258,7 @@ describe("useExerciseSetActions", () => {
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
 
-  it("flushes queued optimistic set edits with the reconciled server id", async () => {
+  it.each([100, 600])("flushes optimistic edits with the server id when creation takes %i ms", async (createDelay) => {
     let resolveCreateExerciseSet: (
       createdSet: ReturnType<typeof makeExerciseSet>,
     ) => void = () => undefined;
@@ -297,6 +297,9 @@ describe("useExerciseSetActions", () => {
       result.current.updateSetField(optimisticSetKey!, "reps", 12);
     });
 
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(createDelay);
+    });
     expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -312,9 +315,11 @@ describe("useExerciseSetActions", () => {
       await Promise.resolve();
     });
 
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(createDelay >= 500 ? 1 : 0);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(Math.max(500 - createDelay, 0));
     });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
 
     expect(mockUpdateExerciseSet).toHaveBeenCalledWith(999, {
       reps: 12,

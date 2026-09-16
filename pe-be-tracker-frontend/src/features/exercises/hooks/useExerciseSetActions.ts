@@ -128,6 +128,9 @@ export const useExerciseSetActions = ({
     const serverSetId = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === key,
     )?.id ?? update.serverSetId;
+    // Creation will resume this batch once a real ID is available.
+    if (typeof serverSetId === "string" && serverSetId.startsWith("temp-")) return;
+
     const data = update.data;
     update.data = null;
     update.inFlight = true;
@@ -475,6 +478,7 @@ export const useExerciseSetActions = ({
       const pendingUpdate = pendingUpdatesRef.current[tempId];
       if (pendingUpdate) {
         pendingUpdate.serverSetId = createdSet.id;
+        if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
       }
     } catch (error) {
       console.error("Failed to create exercise set:", error);
