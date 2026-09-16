@@ -681,4 +681,22 @@ describe("useExerciseSetActions", () => {
     }
   });
 
+  it("does not enter an infinite retry loop on failed write", async () => {
+    mockUpdateExerciseSet.mockRejectedValue(new Error("Controlled 403 Forbidden"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { result } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
 });
