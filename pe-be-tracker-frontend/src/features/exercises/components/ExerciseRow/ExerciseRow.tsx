@@ -53,7 +53,6 @@ const ExerciseRow = ({
 
   const {
     activeSetId,
-    clearDraftInput,
     currentIntensityUnit,
     durationInputs,
     exerciseNotesValue,
@@ -164,7 +163,6 @@ const ExerciseRow = ({
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
               onAddSet={handleAddSet}
-              onClearDraftInput={clearDraftInput}
               onCloseSetOptions={closeSetOptions}
               onDecrementReps={decrementReps}
               onDeleteSet={deleteSet}

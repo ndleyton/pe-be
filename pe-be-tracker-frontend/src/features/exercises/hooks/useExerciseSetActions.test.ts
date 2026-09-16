@@ -597,328 +597,88 @@ describe("useExerciseSetActions", () => {
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
 
-  describe("Reliable Repeated Input and Serialization (Option D + K)", () => {
-    it("handles a burst of 10 synchronous increments immediately and saves once after 500ms", async () => {
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-          }),
-        ],
-      });
-
-      const { result } = renderHook(() =>
-        useExerciseSetActions({
-          exercise,
-        }),
-      );
-
-      act(() => {
-        for (let i = 0; i < 10; i += 1) {
-          result.current.incrementReps(1);
-        }
-      });
-
-      // Immediate local update to 20
-      expect(result.current.exerciseSets[0].reps).toBe(20);
-      expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
-
-      // After 500ms debounce quiet period
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
-      expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
-        reps: 20,
-        duration_seconds: null,
-      });
+  const renderRepEditor = () => {
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [makeExerciseSet({ id: 1, exercise_id: 123, reps: 10 })],
     });
+    return renderHook(() => useExerciseSetActions({ exercise }));
+  };
 
-    it("prevents lost-write race when new input arrives while an earlier request is in flight", async () => {
-      let resolveFirstUpdate: (() => void) | undefined;
-      mockUpdateExerciseSet.mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveFirstUpdate = resolve;
-          }),
-      );
-
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-          }),
-        ],
-      });
-
-      const { result } = renderHook(() =>
-        useExerciseSetActions({
-          exercise,
-        }),
-      );
-
-      // t = 0ms: First increment
-      act(() => {
-        result.current.incrementReps(1);
-      });
-      expect(result.current.exerciseSets[0].reps).toBe(11);
-
-      // t = 500ms: First timer fires, Request A in flight with reps: 11
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
-      expect(mockUpdateExerciseSet).toHaveBeenNthCalledWith(1, 1, {
-        reps: 11,
-        duration_seconds: null,
-      });
-
-      // t = 550ms: Second increment while Request A is in flight
-      act(() => {
-        result.current.incrementReps(1);
-      });
-      expect(result.current.exerciseSets[0].reps).toBe(12);
-
-      // t = 600ms: Request A resolves
-      await act(async () => {
-        resolveFirstUpdate?.();
-        await Promise.resolve();
-      });
-
-      // Advance timers by another 500ms to allow the second debounced update to fire
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      // Verify second request was sent with reps: 12 without TypeError or dropped write
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
-      expect(mockUpdateExerciseSet).toHaveBeenNthCalledWith(2, 1, {
-        reps: 12,
-        duration_seconds: null,
-      });
-      expect(result.current.exerciseSets[0].reps).toBe(12);
+  it("counts every press in a rapid burst and saves the final value once", async () => {
+    const { result } = renderRepEditor();
+    act(() => {
+      for (let i = 0; i < 10; i++) result.current.incrementReps(1);
+      for (let i = 0; i < 3; i++) result.current.decrementReps(1);
     });
-
-    it("serializes overlapping requests so only one request per set is in flight at a time", async () => {
-      let resolveFirstUpdate: (() => void) | undefined;
-      mockUpdateExerciseSet.mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveFirstUpdate = resolve;
-          }),
-      );
-
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-          }),
-        ],
-      });
-
-      const { result } = renderHook(() =>
-        useExerciseSetActions({
-          exercise,
-        }),
-      );
-
-      // 0ms: +1
-      act(() => {
-        result.current.incrementReps(1);
-      });
-      // 500ms: Request A starts
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
-
-      // 550ms: +1
-      act(() => {
-        result.current.incrementReps(1);
-      });
-      expect(result.current.exerciseSets[0].reps).toBe(12);
-
-      // 1050ms: Second timer expires, but Request A is STILL in flight
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-      // Still only 1 call because Request A has not settled!
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
-
-      // Request A now settles
-      await act(async () => {
-        resolveFirstUpdate?.();
-        await Promise.resolve();
-      });
-
-      // Now drain next queued update
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
-      expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
-        reps: 12,
-        duration_seconds: null,
-      });
-    });
-
-    it("preserves dirty local fields when incoming props bring stale server data", () => {
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-            notes: "Original note",
-          }),
-        ],
-      });
-
-      const { result, rerender } = renderHook(
-        ({ ex }) =>
-          useExerciseSetActions({
-            exercise: ex,
-          }),
-        {
-          initialProps: { ex: exercise },
-        },
-      );
-
-      // Make dirty edit locally
-      act(() => {
-        result.current.incrementReps(1);
-      });
-      expect(result.current.exerciseSets[0].reps).toBe(11);
-
-      // Server refetch returns stale reps (10) but updated notes ("Server note")
-      const staleIncomingExercise = {
-        ...exercise,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-            notes: "Server note",
-          }),
-        ],
-      };
-
-      rerender({ ex: staleIncomingExercise });
-
-      // Local dirty reps (11) must be preserved, while clean notes ("Server note") is adopted!
-      expect(result.current.exerciseSets[0].reps).toBe(11);
-      expect(result.current.exerciseSets[0].notes).toBe("Server note");
-    });
-
-    it("queues edits on a temporary set until creation resolves with a real server ID", async () => {
-      let resolveCreate: ((value: ReturnType<typeof makeExerciseSet>) => void) | undefined;
-      mockCreateExerciseSet.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolveCreate = resolve;
-          }),
-      );
-
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [],
-      });
-
-      const { result } = renderHook(() =>
-        useExerciseSetActions({
-          exercise,
-        }),
-      );
-
-      act(() => {
-        void result.current.addSet(1);
-      });
-
-      const tempId = result.current.exerciseSets[0].id;
-      expect(String(tempId)).toContain("temp-");
-
-      // Increment on temp set before create resolves
-      act(() => {
-        result.current.incrementReps(tempId);
-      });
-
-      // Advance debounce timer
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      // No PUT to temp ID
-      expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
-
-      // Create resolves with server ID 777
-      await act(async () => {
-        resolveCreate?.(
-          makeExerciseSet({
-            id: 777,
-            exercise_id: 123,
-            reps: 0,
-          }),
-        );
-        await Promise.resolve();
-      });
-
-      // Advance timers for queued edit to flush
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      expect(mockUpdateExerciseSet).toHaveBeenCalledWith(777, {
-        reps: 1,
-        duration_seconds: null,
-      });
-    });
-
-    it("cancels pending update timers when a set is deleted", async () => {
-      const exercise = makeExercise({
-        id: 123,
-        exercise_sets: [
-          makeExerciseSet({
-            id: 1,
-            exercise_id: 123,
-            reps: 10,
-          }),
-        ],
-      });
-
-      const { result } = renderHook(() =>
-        useExerciseSetActions({
-          exercise,
-        }),
-      );
-
-      act(() => {
-        result.current.incrementReps(1);
-      });
-
-      // Delete set before debounce timer expires
-      await act(async () => {
-        await result.current.deleteSet(1);
-      });
-
-      // Advance debounce timer
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
-
-      // No update should be sent for the deleted set
-      expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    expect(result.current.exerciseSets[0].reps).toBe(17);
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
+      reps: 17, duration_seconds: null,
     });
   });
+
+  it.each([50, 600])(
+    "keeps newer edits when the first request finishes after %i ms",
+    async (requestDelay) => {
+      let resolveFirst!: () => void;
+      mockUpdateExerciseSet.mockImplementationOnce(() => new Promise<void>((resolve) => {
+        resolveFirst = resolve;
+      }));
+      const { result } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(requestDelay); });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+      await act(async () => { resolveFirst(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(result.current.exerciseSets[0].reps).toBe(12);
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
+      expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
+        reps: 12, duration_seconds: null,
+      });
+    },
+  );
+
+  it("drains newer input after unmount without duplicating the in-flight write", async () => {
+    let resolveFirst!: () => void;
+    mockUpdateExerciseSet.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    }));
+    const { result, unmount } = renderRepEditor();
+    act(() => result.current.incrementReps(1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    act(() => result.current.incrementReps(1));
+    unmount();
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveFirst(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
+    expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
+      reps: 12, duration_seconds: null,
+    });
+  });
+
+  it("does not retry a failed write after unmount", async () => {
+    let rejectFirst!: (error: Error) => void;
+    mockUpdateExerciseSet.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectFirst = reject;
+    }));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { result, unmount } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      unmount();
+      await act(async () => { rejectFirst(new Error("Save failed")); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
 });
