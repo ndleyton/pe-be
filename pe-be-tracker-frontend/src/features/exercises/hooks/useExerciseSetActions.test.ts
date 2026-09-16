@@ -258,7 +258,7 @@ describe("useExerciseSetActions", () => {
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
 
-  it("flushes queued optimistic set edits with the reconciled server id", async () => {
+  it.each([100, 600])("flushes optimistic edits with the server id when creation takes %i ms", async (createDelay) => {
     let resolveCreateExerciseSet: (
       createdSet: ReturnType<typeof makeExerciseSet>,
     ) => void = () => undefined;
@@ -297,6 +297,9 @@ describe("useExerciseSetActions", () => {
       result.current.updateSetField(optimisticSetKey!, "reps", 12);
     });
 
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(createDelay);
+    });
     expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -312,9 +315,11 @@ describe("useExerciseSetActions", () => {
       await Promise.resolve();
     });
 
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(createDelay >= 500 ? 1 : 0);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(Math.max(500 - createDelay, 0));
     });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
 
     expect(mockUpdateExerciseSet).toHaveBeenCalledWith(999, {
       reps: 12,
@@ -596,4 +601,107 @@ describe("useExerciseSetActions", () => {
     expect(result.current.exerciseSets[0].reps).toBe(12);
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
+
+  const renderRepEditor = () => {
+    const exercise = makeExercise({
+      id: 123,
+      exercise_sets: [makeExerciseSet({ id: 1, exercise_id: 123, reps: 10 })],
+    });
+    return renderHook(() => useExerciseSetActions({ exercise }));
+  };
+
+  it("counts every press in a rapid burst and saves the final value once", async () => {
+    const { result } = renderRepEditor();
+    act(() => {
+      for (let i = 0; i < 10; i++) result.current.incrementReps(1);
+      for (let i = 0; i < 3; i++) result.current.decrementReps(1);
+    });
+    expect(result.current.exerciseSets[0].reps).toBe(17);
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    expect(mockUpdateExerciseSet).toHaveBeenCalledWith(1, {
+      reps: 17, duration_seconds: null,
+    });
+  });
+
+  it.each([50, 600])(
+    "keeps newer edits when the first request finishes after %i ms",
+    async (requestDelay) => {
+      let resolveFirst!: () => void;
+      mockUpdateExerciseSet.mockImplementationOnce(() => new Promise<void>((resolve) => {
+        resolveFirst = resolve;
+      }));
+      const { result } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(requestDelay); });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+      await act(async () => { resolveFirst(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(result.current.exerciseSets[0].reps).toBe(12);
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
+      expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
+        reps: 12, duration_seconds: null,
+      });
+    },
+  );
+
+  it("drains newer input after unmount without duplicating the in-flight write", async () => {
+    let resolveFirst!: () => void;
+    mockUpdateExerciseSet.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    }));
+    const { result, unmount } = renderRepEditor();
+    act(() => result.current.incrementReps(1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    act(() => result.current.incrementReps(1));
+    unmount();
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveFirst(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(2);
+    expect(mockUpdateExerciseSet).toHaveBeenLastCalledWith(1, {
+      reps: 12, duration_seconds: null,
+    });
+  });
+
+  it("does not retry a failed write after unmount", async () => {
+    let rejectFirst!: (error: Error) => void;
+    mockUpdateExerciseSet.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectFirst = reject;
+    }));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { result, unmount } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      unmount();
+      await act(async () => { rejectFirst(new Error("Save failed")); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("does not enter an infinite retry loop on failed write", async () => {
+    mockUpdateExerciseSet.mockRejectedValue(new Error("Controlled 403 Forbidden"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { result } = renderRepEditor();
+      act(() => result.current.incrementReps(1));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledTimes(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
 });

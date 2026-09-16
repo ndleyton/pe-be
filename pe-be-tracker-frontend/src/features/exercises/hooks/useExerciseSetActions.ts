@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import {
   createExerciseSet,
@@ -88,8 +89,9 @@ export const useExerciseSetActions = ({
     Record<
       string,
       {
-        timeout: ReturnType<typeof setTimeout>;
-        data: UpdateExerciseSetData;
+        timeout: ReturnType<typeof setTimeout> | null;
+        data: UpdateExerciseSetData | null;
+        inFlight: boolean;
         serverSetId: string | number;
       }
     >
@@ -119,17 +121,45 @@ export const useExerciseSetActions = ({
     void queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
   };
 
+  const flushSetUpdate = async (key: string) => {
+    const update = pendingUpdatesRef.current[key];
+    if (!update || update.inFlight || !update.data) return;
+
+    const serverSetId = exerciseSetsRef.current.find(
+      (set) => getExerciseSetClientKey(set) === key,
+    )?.id ?? update.serverSetId;
+    // Creation will resume this batch once a real ID is available.
+    if (typeof serverSetId === "string" && serverSetId.startsWith("temp-")) return;
+
+    const data = update.data;
+    update.data = null;
+    update.inFlight = true;
+
+    try {
+      await updateExerciseSet(serverSetId, data);
+    } catch (error) {
+      console.error("Failed to update exercise set:", error);
+      toast.error("Couldn't save set changes. Please check your connection and try again.");
+      invalidateExerciseQuery();
+    } finally {
+      update.inFlight = false;
+      if (update.data) {
+        // A timer that expired during this request leaves its batch ready to send.
+        // Send only newer input; failed batches are never automatically retried.
+        if (!update.timeout) void flushSetUpdate(key);
+      } else {
+        delete pendingUpdatesRef.current[key];
+      }
+    }
+  };
+
   useEffect(() => {
     return () => {
-      Object.entries(pendingUpdatesRef.current).forEach(([setClientKey, update]) => {
-        clearTimeout(update.timeout);
-        const serverSetId = exerciseSetsRef.current.find(
-          (set) => getExerciseSetClientKey(set) === setClientKey,
-        )?.id ?? update.serverSetId;
-
-        void updateExerciseSet(serverSetId, update.data).catch((error) => {
-          console.error("Failed to flush update on unmount:", error);
-        });
+      Object.entries(pendingUpdatesRef.current).forEach(([key, update]) => {
+        if (update.timeout) clearTimeout(update.timeout);
+        update.timeout = null;
+        // Use the same writer so cleanup cannot duplicate an in-flight request.
+        void flushSetUpdate(key);
       });
     };
   }, []);
@@ -158,36 +188,17 @@ export const useExerciseSetActions = ({
   ) => {
     const key = String(setClientKey);
 
-    const resolveServerSetId = () =>
-      exerciseSetsRef.current.find(
-        (set) => getExerciseSetClientKey(set) === key,
-      )?.id ?? pendingUpdatesRef.current[key]?.serverSetId ?? serverSetId;
-
-    if (pendingUpdatesRef.current[key]) {
-      clearTimeout(pendingUpdatesRef.current[key].timeout);
-      pendingUpdatesRef.current[key].data = {
-        ...pendingUpdatesRef.current[key].data,
-        ...data,
-      };
-      pendingUpdatesRef.current[key].serverSetId = serverSetId;
-    } else {
-      pendingUpdatesRef.current[key] = {
-        timeout: setTimeout(() => undefined, 0),
-        data,
-        serverSetId,
-      };
+    let update = pendingUpdatesRef.current[key];
+    if (!update) {
+      update = { timeout: null, data: null, serverSetId, inFlight: false };
+      pendingUpdatesRef.current[key] = update;
     }
-
-    pendingUpdatesRef.current[key].timeout = setTimeout(async () => {
-      try {
-        const finalData = pendingUpdatesRef.current[key].data;
-        await updateExerciseSet(resolveServerSetId(), finalData);
-      } catch (error) {
-        console.error("Failed to update exercise set:", error);
-        invalidateExerciseQuery();
-      } finally {
-        delete pendingUpdatesRef.current[key];
-      }
+    if (update.timeout) clearTimeout(update.timeout);
+    update.data = { ...update.data, ...data };
+    update.serverSetId = serverSetId;
+    update.timeout = setTimeout(() => {
+      update.timeout = null;
+      void flushSetUpdate(key);
     }, 500);
   };
 
@@ -467,6 +478,7 @@ export const useExerciseSetActions = ({
       const pendingUpdate = pendingUpdatesRef.current[tempId];
       if (pendingUpdate) {
         pendingUpdate.serverSetId = createdSet.id;
+        if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
       }
     } catch (error) {
       console.error("Failed to create exercise set:", error);
