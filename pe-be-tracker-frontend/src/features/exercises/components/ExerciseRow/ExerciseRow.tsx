@@ -117,7 +117,7 @@ const ExerciseRow = ({
           <AccordionItem value="images" className="border-none">
         <Card
           className={cn(
-            "mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border-border/5 border-t-4 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 transition-all duration-300 hover:shadow-xl",
+            "mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border-border/5 border-t-4 border-b-4 shadow-lg backdrop-blur-sm shadow-black/5 transition-all duration-300 hover:shadow-xl gap-2",
             isExpanded
               ? "bg-highlight/10 border-t-highlight/30"
               : "bg-card/80 border-t-highlight/10",
@@ -140,7 +140,7 @@ const ExerciseRow = ({
 
           <AccordionContent className="p-0">
             <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
-            <div className="px-4 py-2.5">
+            <div className="px-4 pt-2 pb-1">
               <ExerciseNotesInput
                 id={`notes-${exerciseKey}`}
                 value={exerciseNotesValue}
