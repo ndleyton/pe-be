@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -24,25 +25,57 @@ async def test_get_last_exercise_performance_happy_path(monkeypatch):
         assert name == "Deadlift"
         assert limit == 1
         assert user_id == 123
-        return SimpleNamespace(data=[SimpleNamespace(id=9)])
+        return SimpleNamespace(data=[SimpleNamespace(id=9, name="Deadlift")])
 
-    async def _fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+    exercise = SimpleNamespace(
+        id=42,
+        created_at=datetime(2026, 2, 28, tzinfo=timezone.utc),
+        workout=SimpleNamespace(
+            start_time=datetime(2026, 2, 28, tzinfo=timezone.utc),
+        ),
+        exercise_type=SimpleNamespace(name="Deadlift"),
+        notes="Belt felt tight on final set",
+        exercise_sets=[
+            SimpleNamespace(
+                id=1,
+                reps=5,
+                duration_seconds=None,
+                intensity=315,
+                rpe=Decimal("8"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Felt smooth",
+            ),
+            SimpleNamespace(
+                id=2,
+                reps=3,
+                duration_seconds=None,
+                intensity=335,
+                rpe=Decimal("9.5"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Gripped mixed",
+            ),
+        ],
+    )
+
+    async def _fake_get_latest_exercise_by_type(session, exercise_type_id, user_id):
         assert exercise_type_id == 9
         assert user_id == 123
-        return {
-            "lastWorkout": {"date": "2026-02-28", "sets": 5, "maxWeight": 315},
-            "intensityUnit": {"abbreviation": "lbs"},
-        }
+        return exercise
 
     monkeypatch.setattr("src.chat.service.get_exercise_types", _fake_get_exercise_types)
     monkeypatch.setattr(
-        "src.chat.service.get_exercise_type_stats", _fake_get_exercise_type_stats
+        "src.chat.service.get_latest_exercise_by_type", _fake_get_latest_exercise_by_type
     )
 
     summary = await svc._get_last_exercise_performance("Deadlift")
     assert "2026-02-28" in summary
-    assert "5 sets" in summary
+    assert "Exercise notes: Belt felt tight on final set" in summary
     assert "315 lbs" in summary
+    assert "Set notes: Felt smooth" in summary
+    assert "335 lbs" in summary
+    assert "Set notes: Gripped mixed" in summary
 
 
 async def test_get_last_workout_summary_happy_path(monkeypatch):

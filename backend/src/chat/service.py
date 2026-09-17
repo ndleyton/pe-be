@@ -45,7 +45,7 @@ from src.chat.schemas import (
 from src.core.config import settings
 from src.exercises.crud import (
     get_exercise_type_by_id,
-    get_exercise_type_stats,
+    get_latest_exercise_by_type,
     get_exercise_types,
     get_similar_exercise_types as get_similar_exercise_type_matches,
     get_intensity_units,
@@ -711,22 +711,39 @@ class ChatService:
             return f"No exercise named '{exercise_name}' found."
 
         exercise_type = exercise_types_response.data[0]
-        stats = await get_exercise_type_stats(
+        latest_exercise = await get_latest_exercise_by_type(
             self.session, exercise_type.id, self.user_id
         )
 
-        if not stats or not stats.get("lastWorkout"):
+        if not latest_exercise:
             return f"No workout data found for {exercise_name}."
 
-        last_workout = stats["lastWorkout"]
-        intensity_unit = stats.get("intensityUnit")
-        unit_abbr = intensity_unit["abbreviation"] if intensity_unit else ""
-
-        return (
-            f"On your last {exercise_name} workout on {last_workout['date']}, "
-            f"you did {last_workout['sets']} sets with a max weight of "
-            f"{last_workout['maxWeight']} {unit_abbr}."
+        workout_date = (
+            latest_exercise.workout.start_time.strftime("%Y-%m-%d")
+            if getattr(latest_exercise, "workout", None)
+            and getattr(latest_exercise.workout, "start_time", None)
+            else latest_exercise.created_at.strftime("%Y-%m-%d")
         )
+
+        actual_name = (
+            latest_exercise.exercise_type.name
+            if getattr(latest_exercise, "exercise_type", None)
+            else exercise_type.name
+        )
+
+        summary = f"On your last {actual_name} workout on {workout_date}:\n"
+        summary += self._format_optional_notes(
+            "Exercise notes", getattr(latest_exercise, "notes", None)
+        )
+
+        sets = getattr(latest_exercise, "exercise_sets", []) or []
+        if sets:
+            for exercise_set in sets:
+                summary += self._format_set_summary(exercise_set)
+        else:
+            summary += "No sets were logged for this exercise.\n"
+
+        return summary.strip()
 
     async def _get_last_workout_summary(self) -> str:
         logger.debug("Fetching last workout summary user_id=%s", self.user_id)
@@ -1066,7 +1083,8 @@ class ChatService:
                 args_model=LastExercisePerformanceArgs,
                 description=(
                     "Useful for when you need to find out the user's last recorded "
-                    "performance for a specific exercise. Input should be the exact "
+                    "performance for a specific exercise, including sets, reps, weight, "
+                    "and any exercise or set notes. Input should be the exact "
                     "name of the exercise."
                 ),
             ),

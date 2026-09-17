@@ -129,6 +129,7 @@ async def _seed_exercise_set(
     reps: int | None,
     created_at: datetime | None = None,
     deleted_at: datetime | None = None,
+    notes: str | None = None,
 ) -> ExerciseSet:
     timestamp = created_at or datetime.now(timezone.utc)
     intensity_unit = await db_session.get(IntensityUnit, intensity_unit_id)
@@ -156,6 +157,7 @@ async def _seed_exercise_set(
         canonical_intensity=canonical_intensity,
         canonical_intensity_unit_id=canonical_intensity_unit_id,
         reps=reps,
+        notes=notes,
         created_at=timestamp,
         updated_at=timestamp,
         deleted_at=deleted_at,
@@ -1463,3 +1465,93 @@ def test_is_new_personal_best():
         )
         is False
     )
+
+
+async def test_get_latest_exercise_by_type_returns_most_recent_and_respects_filters(
+    db_session,
+):
+    owner = await _seed_user(db_session, "latest-exercise@example.com")
+    other_user = await _seed_user(db_session, "other-user@example.com")
+    workout_type = await _seed_workout_type(db_session, "Strength Workout")
+    workout1 = await _seed_workout(db_session, owner.id, workout_type.id)
+    workout2 = await _seed_workout(db_session, owner.id, workout_type.id)
+    other_workout = await _seed_workout(db_session, other_user.id, workout_type.id)
+    unit = await _seed_intensity_unit(db_session)
+    exercise_type = await _seed_exercise_type(db_session, "Bench Press")
+
+    # None when no exercises exist
+    assert (
+        await crud.get_latest_exercise_by_type(
+            db_session, exercise_type.id, owner.id
+        )
+        is None
+    )
+
+    # Older exercise
+    older_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout1.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 10, tzinfo=timezone.utc),
+        notes="Older note",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=older_exercise.id,
+        reps=10,
+        intensity=135,
+        intensity_unit_id=unit.id,
+    )
+
+    # Newer exercise for owner
+    newer_exercise = await _seed_exercise(
+        db_session,
+        workout_id=workout2.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 2, 20, tzinfo=timezone.utc),
+        notes="Paused on chest",
+    )
+    active_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=newer_exercise.id,
+        reps=8,
+        intensity=185,
+        intensity_unit_id=unit.id,
+        notes="Felt good",
+    )
+    # Soft deleted set in newer exercise
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=newer_exercise.id,
+        reps=5,
+        intensity=200,
+        intensity_unit_id=unit.id,
+        deleted_at=datetime(2026, 2, 20, tzinfo=timezone.utc),
+    )
+
+    # Even newer exercise but for another user
+    other_exercise = await _seed_exercise(
+        db_session,
+        workout_id=other_workout.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        notes="Other user note",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=other_exercise.id,
+        reps=5,
+        intensity=225,
+        intensity_unit_id=unit.id,
+    )
+
+    latest = await crud.get_latest_exercise_by_type(
+        db_session, exercise_type.id, owner.id
+    )
+    assert latest is not None
+    assert latest.id == newer_exercise.id
+    assert latest.notes == "Paused on chest"
+    assert len(latest.exercise_sets) == 1
+    assert latest.exercise_sets[0].id == active_set.id
+    assert latest.exercise_sets[0].notes == "Felt good"
+    assert latest.exercise_sets[0].intensity_unit.id == unit.id
