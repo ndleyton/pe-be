@@ -84,6 +84,44 @@ const ExerciseTypeModal = ({
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
+  const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
+  const activeMuscleGroupId =
+    selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
+
+  const { data: muscleGroups = [] } = useQuery<MuscleGroup[]>({
+    queryKey: ["muscleGroups"],
+    queryFn: getMuscleGroups,
+    staleTime: Infinity,
+  });
+
+  const availableMuscleGroups: Array<{ id: number | string; name: string }> =
+    useMemo(() => {
+      if (muscleGroups.length > 0) {
+        return muscleGroups;
+      }
+      const groupsMap = new Map<string, { id: number | string; name: string }>();
+      if (!isAuthenticated && Array.isArray(guestData.exerciseTypes)) {
+        guestData.exerciseTypes.forEach((ex) => {
+          ex.muscle_groups?.forEach((mg) => {
+            if (!groupsMap.has(mg.toLowerCase())) {
+              groupsMap.set(mg.toLowerCase(), { id: mg, name: mg });
+            }
+          });
+          ex.muscles?.forEach((m) => {
+            if (!groupsMap.has(m.name.toLowerCase())) {
+              groupsMap.set(m.name.toLowerCase(), { id: m.id, name: m.name });
+            }
+          });
+        });
+      }
+      return Array.from(groupsMap.values());
+    }, [guestData.exerciseTypes, isAuthenticated, muscleGroups]);
+
+  const sortedMuscleGroups = useMemo(
+    () => [...availableMuscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
+    [availableMuscleGroups],
+  );
+
   const {
     data: browseExerciseTypesResponse,
     isPending: isBrowseLoading,
@@ -92,9 +130,17 @@ const ExerciseTypeModal = ({
     isFetchingNextPage: isFetchingBrowseNextPage,
     error: browseError,
   } = useInfiniteQuery({
-    queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY,
+    queryKey: [
+      ...EXERCISE_TYPE_MODAL_QUERY_KEY,
+      activeMuscleGroupId ?? "all",
+    ],
     queryFn: ({ pageParam }) =>
-      getExerciseTypes("usage", pageParam, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
+      getExerciseTypes(
+        "usage",
+        pageParam,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        ...(activeMuscleGroupId !== undefined ? [activeMuscleGroupId] : []),
+      ),
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
     initialPageParam: undefined as number | undefined,
     enabled: isAuthenticated && isOpen,
@@ -110,6 +156,7 @@ const ExerciseTypeModal = ({
   } = useInfiniteQuery({
     queryKey: [
       ...EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY,
+      activeMuscleGroupId ?? "all",
       trimmedDeferredSearchTerm.toLowerCase(),
     ],
     queryFn: ({ pageParam }) =>
@@ -117,7 +164,7 @@ const ExerciseTypeModal = ({
         "name",
         pageParam,
         EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        undefined,
+        activeMuscleGroupId,
         trimmedDeferredSearchTerm,
       ),
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
@@ -172,6 +219,7 @@ const ExerciseTypeModal = ({
     if (!isOpen) {
       setAreResultsReady(false);
       setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+      setSelectedMuscleGroupId("all");
       return;
     }
 
@@ -197,19 +245,72 @@ const ExerciseTypeModal = ({
     setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
   }, [deferredSearchTerm]);
 
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    setLastSettledSearchResults([]);
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+  }, [selectedMuscleGroupId]);
+
   const filteredExerciseTypes = useMemo(() => {
     if (isAuthenticated) {
       return exerciseTypes;
     }
 
-    if (!trimmedDeferredSearchTerm) return exerciseTypes;
+    let list: GuestExerciseType[] = Array.isArray(guestData.exerciseTypes)
+      ? guestData.exerciseTypes
+      : [];
+
+    if (selectedMuscleGroupId !== "all") {
+      const selectedGroup = availableMuscleGroups.find(
+        (mg) => String(mg.id) === selectedMuscleGroupId,
+      );
+      const groupName = selectedGroup?.name.toLowerCase();
+
+      if (groupName) {
+        list = list.filter((type: GuestExerciseType) => {
+          if (type.muscle_groups?.some((mg) => mg.toLowerCase() === groupName)) {
+            return true;
+          }
+          if (
+            "muscles" in type &&
+            Array.isArray(type.muscles) &&
+            type.muscles.some((m) =>
+              m.name.toLowerCase().includes(groupName),
+            )
+          ) {
+            return true;
+          }
+          if (type.category?.toLowerCase() === groupName) {
+            return true;
+          }
+          if (type.name.toLowerCase().includes(groupName)) {
+            return true;
+          }
+          if (type.description?.toLowerCase().includes(groupName)) {
+            return true;
+          }
+          return false;
+        });
+      }
+    }
+
+    if (!trimmedDeferredSearchTerm) return list;
     const term = trimmedDeferredSearchTerm.toLowerCase();
-    return exerciseTypes.filter(
-      (type: ExerciseType | GuestExerciseType) =>
+    return list.filter(
+      (type: GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
+  }, [
+    availableMuscleGroups,
+    exerciseTypes,
+    guestData.exerciseTypes,
+    isAuthenticated,
+    selectedMuscleGroupId,
+    trimmedDeferredSearchTerm,
+  ]);
 
   const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
   const fetchNextPage = isSearchActive
@@ -239,8 +340,8 @@ const ExerciseTypeModal = ({
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
       // Optimistically update the times_used count in the cache for server data
-      queryClient.setQueryData(
-        EXERCISE_TYPE_MODAL_QUERY_KEY,
+      queryClient.setQueriesData(
+        { queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY },
         (oldData: InfiniteData<ExerciseTypePage> | undefined) => {
           if (!oldData?.pages.length) return oldData;
 
@@ -287,6 +388,7 @@ const ExerciseTypeModal = ({
     }
 
     setSearchTerm("");
+    setSelectedMuscleGroupId("all");
     onSelect(exerciseType);
   };
 
@@ -570,6 +672,53 @@ const ExerciseTypeModal = ({
               <Info className="h-3 w-3" />
               Failed to create exercise type. Please try again.
             </p>
+          )}
+
+          {/* Muscle Group Quick-Filter Chips */}
+          {sortedMuscleGroups.length > 0 && (
+            <div
+              data-testid="muscle-group-filter-chips"
+              className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+              role="tablist"
+              aria-label="Filter exercises by muscle group"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedMuscleGroupId === "all"}
+                onClick={() => setSelectedMuscleGroupId("all")}
+                className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                  selectedMuscleGroupId === "all"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-border/30 bg-secondary/60 text-secondary-foreground hover:bg-secondary"
+                }`}
+              >
+                All
+              </button>
+              {sortedMuscleGroups.map((group) => {
+                const isSelected = selectedMuscleGroupId === String(group.id);
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() =>
+                      setSelectedMuscleGroupId(
+                        isSelected ? "all" : String(group.id),
+                      )
+                    }
+                    className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "border border-border/30 bg-secondary/60 text-secondary-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {group.name}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
