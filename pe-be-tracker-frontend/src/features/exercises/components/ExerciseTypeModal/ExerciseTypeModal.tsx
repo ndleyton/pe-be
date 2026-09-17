@@ -383,14 +383,10 @@ const ExerciseTypeModal = ({
   };
 
   const SkeletonCard = () => (
-    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
-      <div className="min-h-[2lh] text-base leading-snug">
+    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border px-4 py-3">
+      <div className="flex min-h-[2lh] items-center text-base leading-snug">
         <div className="bg-muted h-4 w-3/4 rounded" />
       </div>
-      <div className="mt-1 min-h-[1lh] text-sm leading-snug">
-        <div className="bg-muted h-3 w-1/3 rounded" />
-      </div>
-      <div className="bg-muted mt-2 h-5 w-1/2 rounded" />
     </div>
   );
 
@@ -479,7 +475,7 @@ const ExerciseTypeModal = ({
 
     return (
       <div className="space-y-4 p-1">
-        <div className="grid auto-rows-fr gap-3">
+        <div className="grid gap-2">
           {visibleExerciseTypes.map((exerciseType) => (
             <ExerciseSearchResult
               key={exerciseType.id}
