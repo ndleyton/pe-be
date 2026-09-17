@@ -155,9 +155,9 @@ test.describe("Add Exercise (authenticated)", () => {
     ).toBeVisible();
     await page.getByPlaceholder("Search exercise types...").fill("Push");
     await expect(
-      page.getByRole("button", { name: /^P Push-ups\b/ }),
+      page.getByRole("button", { name: "Push-ups", exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
+    await page.getByRole("button", { name: "Push-ups", exact: true }).click();
 
     // Wait for the POST to be made
     await expect.poll(() => trailingCalled).toBe(true);
