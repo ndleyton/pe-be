@@ -15,7 +15,7 @@ import {
   AccordionContent,
   AccordionItem
 } from "@/shared/components/ui/accordion";
-import { Textarea } from "@/shared/components/ui/textarea";
+import { ExerciseNotesInput } from "./ExerciseNotesInput";
 
 const ExerciseRow = ({
   exercise,
@@ -139,18 +139,15 @@ const ExerciseRow = ({
           </CardHeader>
 
           <AccordionContent className="p-0">
-            <div className="px-4 pb-2 pt-2">
-              <Textarea
+            <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
+            <div className="px-4 py-2.5">
+              <ExerciseNotesInput
                 id={`notes-${exerciseKey}`}
-                aria-label="Exercise notes"
-                placeholder="Add exercise notes..."
                 value={exerciseNotesValue}
-                onChange={(e) => setExerciseNotesValue(e.target.value)}
-                onBlur={() => updateExerciseNotes(exerciseNotesValue)}
-                className="min-h-[60px] bg-background/50 resize-none border-dashed"
+                onChange={setExerciseNotesValue}
+                onSave={updateExerciseNotes}
               />
             </div>
-            <ExerciseRowImagePanel exerciseType={exercise.exercise_type} />
           </AccordionContent>
 
           <CardContent className="p-4 pt-0">
