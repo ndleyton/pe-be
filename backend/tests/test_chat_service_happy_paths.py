@@ -59,14 +59,17 @@ async def test_get_last_exercise_performance_happy_path(monkeypatch):
         ],
     )
 
-    async def _fake_get_latest_exercise_by_type(session, exercise_type_id, user_id):
+    async def _fake_get_recent_exercises_by_type(
+        session, exercise_type_id, user_id, limit=1
+    ):
         assert exercise_type_id == 9
         assert user_id == 123
-        return exercise
+        return [exercise]
 
     monkeypatch.setattr("src.chat.service.get_exercise_types", _fake_get_exercise_types)
     monkeypatch.setattr(
-        "src.chat.service.get_latest_exercise_by_type", _fake_get_latest_exercise_by_type
+        "src.chat.service.get_recent_exercises_by_type",
+        _fake_get_recent_exercises_by_type,
     )
 
     summary = await svc._get_last_exercise_performance("Deadlift")
@@ -76,6 +79,75 @@ async def test_get_last_exercise_performance_happy_path(monkeypatch):
     assert "Set notes: Felt smooth" in summary
     assert "335 lbs" in summary
     assert "Set notes: Gripped mixed" in summary
+
+
+async def test_get_last_exercise_performance_multi_session_comparison(monkeypatch):
+    svc = ChatService(user_id=123, session=object())
+
+    async def _fake_get_exercise_types(session, name, limit, user_id):
+        return SimpleNamespace(data=[SimpleNamespace(id=9, name="Bench Press")])
+
+    session1 = SimpleNamespace(
+        id=101,
+        created_at=datetime(2026, 3, 10, tzinfo=timezone.utc),
+        workout=SimpleNamespace(start_time=datetime(2026, 3, 10, tzinfo=timezone.utc)),
+        exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Felt explosive",
+        exercise_sets=[
+            SimpleNamespace(
+                id=1,
+                reps=8,
+                duration_seconds=None,
+                intensity=205,
+                rpe=Decimal("8.5"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Smooth tempo",
+            )
+        ],
+    )
+    session2 = SimpleNamespace(
+        id=90,
+        created_at=datetime(2026, 3, 3, tzinfo=timezone.utc),
+        workout=SimpleNamespace(start_time=datetime(2026, 3, 3, tzinfo=timezone.utc)),
+        exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Heavy fatigue",
+        exercise_sets=[
+            SimpleNamespace(
+                id=2,
+                reps=8,
+                duration_seconds=None,
+                intensity=195,
+                rpe=Decimal("9"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Hard lockout",
+            )
+        ],
+    )
+
+    async def _fake_get_recent_exercises_by_type(
+        session, exercise_type_id, user_id, limit=1
+    ):
+        assert limit == 2
+        return [session1, session2]
+
+    monkeypatch.setattr("src.chat.service.get_exercise_types", _fake_get_exercise_types)
+    monkeypatch.setattr(
+        "src.chat.service.get_recent_exercises_by_type",
+        _fake_get_recent_exercises_by_type,
+    )
+
+    summary = await svc._get_last_exercise_performance("Bench Press", limit=2)
+    assert "Here are your last 2 sessions for Bench Press:" in summary
+    assert "Session 1 (Most recent - 2026-03-10):" in summary
+    assert "Exercise notes: Felt explosive" in summary
+    assert "205 lbs" in summary
+    assert "Set notes: Smooth tempo" in summary
+    assert "Session 2 (2026-03-03):" in summary
+    assert "Exercise notes: Heavy fatigue" in summary
+    assert "195 lbs" in summary
+    assert "Set notes: Hard lockout" in summary
 
 
 async def test_get_last_workout_summary_happy_path(monkeypatch):
@@ -165,6 +237,26 @@ async def test_get_workout_summary_by_date_happy_path(monkeypatch):
     assert "Exercise notes: Keep stroke rate steady" in summary
     assert "15 reps at 50 kg" in summary
     assert "Set notes: Could have gone heavier" in summary
+
+
+async def test_get_workout_summary_delegates_correctly(monkeypatch):
+    svc = ChatService(user_id=1, session=object())
+
+    async def _mock_last():
+        return "Last workout called"
+
+    async def _mock_by_date(date_str):
+        return f"Date workout called: {date_str}"
+
+    monkeypatch.setattr(svc, "_get_last_workout_summary", _mock_last)
+    monkeypatch.setattr(svc, "_get_workout_summary_by_date", _mock_by_date)
+
+    # When date is omitted -> calls last
+    assert await svc._get_workout_summary() == "Last workout called"
+    assert await svc._get_workout_summary(None) == "Last workout called"
+
+    # When date is provided -> calls by_date
+    assert await svc._get_workout_summary("2026-03-01") == "Date workout called: 2026-03-01"
 
 
 async def test_get_last_workout_summary_formats_duration_based_sets(monkeypatch):

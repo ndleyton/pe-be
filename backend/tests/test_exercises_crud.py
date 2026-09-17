@@ -1555,3 +1555,11 @@ async def test_get_latest_exercise_by_type_returns_most_recent_and_respects_filt
     assert latest.exercise_sets[0].id == active_set.id
     assert latest.exercise_sets[0].notes == "Felt good"
     assert latest.exercise_sets[0].intensity_unit.id == unit.id
+
+    # Recent with limit=2 returns newer and older for owner in desc order
+    recent = await crud.get_recent_exercises_by_type(
+        db_session, exercise_type.id, owner.id, limit=2
+    )
+    assert len(recent) == 2
+    assert recent[0].id == newer_exercise.id
+    assert recent[1].id == older_exercise.id

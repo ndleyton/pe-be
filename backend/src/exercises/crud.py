@@ -408,12 +408,13 @@ async def get_exercises_for_workout(
     return _sort_loaded_exercise_sets(result.scalars().all())
 
 
-async def get_latest_exercise_by_type(
+async def get_recent_exercises_by_type(
     session: AsyncSession,
     exercise_type_id: int,
     user_id: int,
-) -> Optional[Exercise]:
-    """Get the most recent non-deleted exercise of a specific type for a user with sets and units loaded."""
+    limit: int = 1,
+) -> List[Exercise]:
+    """Get the most recent non-deleted exercises of a specific type for a user with sets and units loaded."""
     result = await session.execute(
         select(Exercise)
         .join(Workout, Exercise.workout_id == Workout.id)
@@ -430,12 +431,22 @@ async def get_latest_exercise_by_type(
             Workout.owner_id == user_id,
         )
         .order_by(Exercise.created_at.desc(), Exercise.id.desc())
-        .limit(1)
+        .limit(limit)
     )
-    exercise = result.scalar_one_or_none()
-    if exercise is None:
-        return None
-    return _sort_loaded_exercise_sets([exercise])[0]
+    exercises = result.scalars().all()
+    return _sort_loaded_exercise_sets(list(exercises))
+
+
+async def get_latest_exercise_by_type(
+    session: AsyncSession,
+    exercise_type_id: int,
+    user_id: int,
+) -> Optional[Exercise]:
+    """Get the most recent non-deleted exercise of a specific type for a user with sets and units loaded."""
+    exercises = await get_recent_exercises_by_type(
+        session, exercise_type_id, user_id, limit=1
+    )
+    return exercises[0] if exercises else None
 
 
 async def create_exercise(
