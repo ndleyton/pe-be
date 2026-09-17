@@ -51,10 +51,11 @@ async def _seed_workout(
     owner_id: int,
     workout_type_id: int,
     name: str = "Workout",
+    start_time: datetime | None = None,
 ) -> Workout:
     workout = Workout(
         name=name,
-        start_time=datetime.now(timezone.utc),
+        start_time=start_time or datetime.now(timezone.utc),
         owner_id=owner_id,
         workout_type_id=workout_type_id,
     )
@@ -1481,9 +1482,7 @@ async def test_get_latest_exercise_by_type_returns_most_recent_and_respects_filt
 
     # None when no exercises exist
     assert (
-        await crud.get_latest_exercise_by_type(
-            db_session, exercise_type.id, owner.id
-        )
+        await crud.get_latest_exercise_by_type(db_session, exercise_type.id, owner.id)
         is None
     )
 
@@ -1563,3 +1562,78 @@ async def test_get_latest_exercise_by_type_returns_most_recent_and_respects_filt
     assert len(recent) == 2
     assert recent[0].id == newer_exercise.id
     assert recent[1].id == older_exercise.id
+
+
+async def test_get_recent_exercises_by_type_orders_by_workout_start_time_over_creation_time(
+    db_session,
+):
+    owner = await _seed_user(db_session, "start-time-order@example.com")
+    workout_type = await _seed_workout_type(db_session, "Strength Workout")
+    exercise_type = await _seed_exercise_type(db_session, "Overhead Press")
+    unit = await _seed_intensity_unit(db_session)
+
+    # Workout A happened earlier (Jan 1), but was logged/created later (Feb 20)
+    workout_early = await _seed_workout(
+        db_session,
+        owner.id,
+        workout_type.id,
+        name="Early Workout",
+        start_time=datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc),
+    )
+
+    # Workout B happened later (Feb 1), but was logged/created earlier (Jan 15)
+    workout_late = await _seed_workout(
+        db_session,
+        owner.id,
+        workout_type.id,
+        name="Late Workout",
+        start_time=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+    )
+
+    # Exercise for workout_late has an EARLIER created_at (Jan 15)
+    exercise_for_late_workout = await _seed_exercise(
+        db_session,
+        workout_id=workout_late.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 1, 15, tzinfo=timezone.utc),
+        notes="More recent workout date",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise_for_late_workout.id,
+        reps=5,
+        intensity=115,
+        intensity_unit_id=unit.id,
+    )
+
+    # Exercise for workout_early has a LATER created_at (Feb 20, e.g. back-filled)
+    exercise_for_early_workout = await _seed_exercise(
+        db_session,
+        workout_id=workout_early.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 2, 20, tzinfo=timezone.utc),
+        notes="Back-filled older workout",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise_for_early_workout.id,
+        reps=5,
+        intensity=95,
+        intensity_unit_id=unit.id,
+    )
+
+    # get_latest_exercise_by_type should return the exercise from the latest workout start_time (Feb 1), NOT latest created_at
+    latest = await crud.get_latest_exercise_by_type(
+        db_session, exercise_type.id, owner.id
+    )
+    assert latest is not None
+    assert latest.id == exercise_for_late_workout.id
+    assert latest.workout.start_time == datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc)
+
+    # get_recent_exercises_by_type should return workout_late first, then workout_early
+    recent = await crud.get_recent_exercises_by_type(
+        db_session, exercise_type.id, owner.id, limit=2
+    )
+    assert len(recent) == 2
+    assert recent[0].id == exercise_for_late_workout.id
+    assert recent[1].id == exercise_for_early_workout.id

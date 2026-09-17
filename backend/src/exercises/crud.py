@@ -430,7 +430,7 @@ async def get_recent_exercises_by_type(
             Exercise.deleted_at.is_(None),
             Workout.owner_id == user_id,
         )
-        .order_by(Exercise.created_at.desc(), Exercise.id.desc())
+        .order_by(Workout.start_time.desc().nullslast(), Exercise.id.desc())
         .limit(limit)
     )
     exercises = result.scalars().all()
