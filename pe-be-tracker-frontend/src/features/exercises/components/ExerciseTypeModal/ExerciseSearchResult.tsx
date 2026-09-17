@@ -26,11 +26,11 @@ export function ExerciseSearchResult({ exerciseType, onSelect }: ExerciseSearchR
         {/* The name and optional suffix share a two-line minimum, rather than
             reserving empty lines for metadata that may not exist. */}
         <div className="flex min-h-[2lh] flex-col justify-center text-base leading-snug">
-          <h4 className="font-bold text-foreground [overflow-wrap:anywhere] group-hover:text-primary">
+          <h4 className="line-clamp-2 font-bold text-foreground [overflow-wrap:anywhere] group-hover:text-primary">
             {baseName}
           </h4>
           {variation && (
-            <div className="text-sm leading-snug font-semibold text-primary [overflow-wrap:anywhere]">
+            <div className="line-clamp-1 text-sm leading-snug font-semibold text-primary [overflow-wrap:anywhere]">
               {variation}
             </div>
           )}

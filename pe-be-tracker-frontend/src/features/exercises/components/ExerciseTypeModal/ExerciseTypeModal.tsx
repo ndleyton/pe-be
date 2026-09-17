@@ -11,13 +11,16 @@ import {
 } from "react";
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
 import {
   getExerciseTypes,
+  getMuscleGroups,
   type CreateExerciseTypeData,
   type ExerciseType,
+  type MuscleGroup,
 } from "@/features/exercises/api";
 import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
