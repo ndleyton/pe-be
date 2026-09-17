@@ -11,17 +11,20 @@ import {
 } from "react";
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
 import {
   getExerciseTypes,
+  getMuscleGroups,
   type CreateExerciseTypeData,
   type ExerciseType,
+  type MuscleGroup,
 } from "@/features/exercises/api";
 import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
-import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
+import { ExerciseSearchResult } from "./ExerciseSearchResult";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import {
   Dialog,
@@ -57,15 +60,6 @@ type ExerciseTypePage = {
   next_cursor?: number | null;
 };
 
-// Type guard to check if an exercise type has muscles property
-const hasMusclesProperty = (
-  exerciseType: ExerciseType | GuestExerciseType,
-): exerciseType is ExerciseType & {
-  muscles: Array<{ id: number; name: string }>;
-} => {
-  return "muscles" in exerciseType && Array.isArray(exerciseType.muscles);
-};
-
 const ExerciseTypeModal = ({
   isOpen,
   onClose,
@@ -90,6 +84,44 @@ const ExerciseTypeModal = ({
   const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
   const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
+  const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
+  const activeMuscleGroupId =
+    selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
+
+  const { data: muscleGroups = [] } = useQuery<MuscleGroup[]>({
+    queryKey: ["muscleGroups"],
+    queryFn: getMuscleGroups,
+    staleTime: Infinity,
+  });
+
+  const availableMuscleGroups: Array<{ id: number | string; name: string }> =
+    useMemo(() => {
+      if (muscleGroups.length > 0) {
+        return muscleGroups;
+      }
+      const groupsMap = new Map<string, { id: number | string; name: string }>();
+      if (!isAuthenticated && Array.isArray(guestData.exerciseTypes)) {
+        guestData.exerciseTypes.forEach((ex) => {
+          ex.muscle_groups?.forEach((mg) => {
+            if (!groupsMap.has(mg.toLowerCase())) {
+              groupsMap.set(mg.toLowerCase(), { id: mg, name: mg });
+            }
+          });
+          ex.muscles?.forEach((m) => {
+            if (!groupsMap.has(m.name.toLowerCase())) {
+              groupsMap.set(m.name.toLowerCase(), { id: m.id, name: m.name });
+            }
+          });
+        });
+      }
+      return Array.from(groupsMap.values());
+    }, [guestData.exerciseTypes, isAuthenticated, muscleGroups]);
+
+  const sortedMuscleGroups = useMemo(
+    () => [...availableMuscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
+    [availableMuscleGroups],
+  );
+
   const {
     data: browseExerciseTypesResponse,
     isPending: isBrowseLoading,
@@ -98,9 +130,17 @@ const ExerciseTypeModal = ({
     isFetchingNextPage: isFetchingBrowseNextPage,
     error: browseError,
   } = useInfiniteQuery({
-    queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY,
+    queryKey: [
+      ...EXERCISE_TYPE_MODAL_QUERY_KEY,
+      activeMuscleGroupId ?? "all",
+    ],
     queryFn: ({ pageParam }) =>
-      getExerciseTypes("usage", pageParam, EXERCISE_TYPE_MODAL_INITIAL_LIMIT),
+      getExerciseTypes(
+        "usage",
+        pageParam,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        ...(activeMuscleGroupId !== undefined ? [activeMuscleGroupId] : []),
+      ),
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
     initialPageParam: undefined as number | undefined,
     enabled: isAuthenticated && isOpen,
@@ -116,6 +156,7 @@ const ExerciseTypeModal = ({
   } = useInfiniteQuery({
     queryKey: [
       ...EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY,
+      activeMuscleGroupId ?? "all",
       trimmedDeferredSearchTerm.toLowerCase(),
     ],
     queryFn: ({ pageParam }) =>
@@ -123,7 +164,7 @@ const ExerciseTypeModal = ({
         "name",
         pageParam,
         EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        undefined,
+        activeMuscleGroupId,
         trimmedDeferredSearchTerm,
       ),
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
@@ -178,6 +219,7 @@ const ExerciseTypeModal = ({
     if (!isOpen) {
       setAreResultsReady(false);
       setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+      setSelectedMuscleGroupId("all");
       return;
     }
 
@@ -203,19 +245,72 @@ const ExerciseTypeModal = ({
     setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
   }, [deferredSearchTerm]);
 
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    setLastSettledSearchResults([]);
+    setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
+  }, [selectedMuscleGroupId]);
+
   const filteredExerciseTypes = useMemo(() => {
     if (isAuthenticated) {
       return exerciseTypes;
     }
 
-    if (!trimmedDeferredSearchTerm) return exerciseTypes;
+    let list: GuestExerciseType[] = Array.isArray(guestData.exerciseTypes)
+      ? guestData.exerciseTypes
+      : [];
+
+    if (selectedMuscleGroupId !== "all") {
+      const selectedGroup = availableMuscleGroups.find(
+        (mg) => String(mg.id) === selectedMuscleGroupId,
+      );
+      const groupName = selectedGroup?.name.toLowerCase();
+
+      if (groupName) {
+        list = list.filter((type: GuestExerciseType) => {
+          if (type.muscle_groups?.some((mg) => mg.toLowerCase() === groupName)) {
+            return true;
+          }
+          if (
+            "muscles" in type &&
+            Array.isArray(type.muscles) &&
+            type.muscles.some((m) =>
+              m.name.toLowerCase().includes(groupName),
+            )
+          ) {
+            return true;
+          }
+          if (type.category?.toLowerCase() === groupName) {
+            return true;
+          }
+          if (type.name.toLowerCase().includes(groupName)) {
+            return true;
+          }
+          if (type.description?.toLowerCase().includes(groupName)) {
+            return true;
+          }
+          return false;
+        });
+      }
+    }
+
+    if (!trimmedDeferredSearchTerm) return list;
     const term = trimmedDeferredSearchTerm.toLowerCase();
-    return exerciseTypes.filter(
-      (type: ExerciseType | GuestExerciseType) =>
+    return list.filter(
+      (type: GuestExerciseType) =>
         type.name.toLowerCase().includes(term) ||
         (type.description && type.description.toLowerCase().includes(term)),
     );
-  }, [exerciseTypes, isAuthenticated, trimmedDeferredSearchTerm]);
+  }, [
+    availableMuscleGroups,
+    exerciseTypes,
+    guestData.exerciseTypes,
+    isAuthenticated,
+    selectedMuscleGroupId,
+    trimmedDeferredSearchTerm,
+  ]);
 
   const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
   const fetchNextPage = isSearchActive
@@ -245,8 +340,8 @@ const ExerciseTypeModal = ({
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
       // Optimistically update the times_used count in the cache for server data
-      queryClient.setQueryData(
-        EXERCISE_TYPE_MODAL_QUERY_KEY,
+      queryClient.setQueriesData(
+        { queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY },
         (oldData: InfiniteData<ExerciseTypePage> | undefined) => {
           if (!oldData?.pages.length) return oldData;
 
@@ -293,6 +388,7 @@ const ExerciseTypeModal = ({
     }
 
     setSearchTerm("");
+    setSelectedMuscleGroupId("all");
     onSelect(exerciseType);
   };
 
@@ -392,13 +488,9 @@ const ExerciseTypeModal = ({
   };
 
   const SkeletonCard = () => (
-    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border p-4">
-      <div className="flex items-center space-x-4">
-        <div className="bg-muted h-12 w-12 rounded-xl"></div>
-        <div className="flex-1">
-          <div className="bg-muted mb-2 h-4 w-1/2 rounded"></div>
-          <div className="bg-muted h-3 w-3/4 rounded"></div>
-        </div>
+    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border px-4 py-3">
+      <div className="flex min-h-[2lh] items-center text-base leading-snug">
+        <div className="bg-muted h-4 w-3/4 rounded" />
       </div>
     </div>
   );
@@ -488,57 +580,14 @@ const ExerciseTypeModal = ({
 
     return (
       <div className="space-y-4 p-1">
-        <div className="grid gap-3">
-          {visibleExerciseTypes.map(
-            (exerciseType: ExerciseType | GuestExerciseType) => (
-              <button
-                key={exerciseType.id}
-                onClick={() => handleSelect(exerciseType)}
-                className="group relative flex w-full items-center space-x-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-4 text-left transition-all hover:scale-[1.01] hover:bg-accent/60 hover:border-primary/30 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xl transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-                  <span>{exerciseType.name.charAt(0)}</span>
-                </div>
-
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="truncate text-foreground font-bold text-base group-hover:text-primary transition-colors">
-                      {exerciseType.name}
-                    </h4>
-                  </div>
-
-                  <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs font-medium leading-normal opacity-70 group-hover:opacity-100">
-                    {exerciseType.description || "No description provided."}
-                  </p>
-
-                  {hasMusclesProperty(exerciseType) &&
-                    exerciseType.muscles.length > 0 && (
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 grayscale-[0.5] group-hover:grayscale-0 transition-all">
-                        {exerciseType.muscles
-                          .slice(0, MUSCLE_DISPLAY_LIMIT)
-                          .map((muscle) => (
-                            <span
-                              key={muscle.id}
-                              className="inline-flex items-center rounded-lg bg-secondary/80 px-2 py-0.5 text-[10px] font-bold text-secondary-foreground border border-border/30"
-                            >
-                              {muscle.name}
-                            </span>
-                          ))}
-                        {exerciseType.muscles.length > MUSCLE_DISPLAY_LIMIT && (
-                          <span className="inline-flex items-center rounded-lg bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-muted-foreground border border-border/20">
-                            +{exerciseType.muscles.length - MUSCLE_DISPLAY_LIMIT}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                </div>
-
-                <div className="text-muted-foreground opacity-30 transition-all group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-primary">
-                  <Plus className="h-5 w-5" />
-                </div>
-              </button>
-            ),
-          )}
+        <div className="grid gap-2">
+          {visibleExerciseTypes.map((exerciseType) => (
+            <ExerciseSearchResult
+              key={exerciseType.id}
+              exerciseType={exerciseType}
+              onSelect={handleSelect}
+            />
+          ))}
         </div>
 
         {isAuthenticated && isFetchingNextPage && !isSearchActive && (
@@ -623,6 +672,53 @@ const ExerciseTypeModal = ({
               <Info className="h-3 w-3" />
               Failed to create exercise type. Please try again.
             </p>
+          )}
+
+          {/* Muscle Group Quick-Filter Chips */}
+          {sortedMuscleGroups.length > 0 && (
+            <div
+              data-testid="muscle-group-filter-chips"
+              className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+              role="tablist"
+              aria-label="Filter exercises by muscle group"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedMuscleGroupId === "all"}
+                onClick={() => setSelectedMuscleGroupId("all")}
+                className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                  selectedMuscleGroupId === "all"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-border/30 bg-secondary/60 text-secondary-foreground hover:bg-secondary"
+                }`}
+              >
+                All
+              </button>
+              {sortedMuscleGroups.map((group) => {
+                const isSelected = selectedMuscleGroupId === String(group.id);
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() =>
+                      setSelectedMuscleGroupId(
+                        isSelected ? "all" : String(group.id),
+                      )
+                    }
+                    className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "border border-border/30 bg-secondary/60 text-secondary-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {group.name}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 

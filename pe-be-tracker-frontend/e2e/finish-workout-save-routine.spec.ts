@@ -73,7 +73,7 @@ test.describe("Finish workout routine creation", () => {
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: /^P Push-ups\b/ }).click();
+    await page.getByRole("button", { name: "Push-ups", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Select Exercise Type" }),
     ).not.toBeVisible();

@@ -113,7 +113,5 @@ test.describe("Guest Mode Workout Creation", () => {
     await expect(page.locator(`h2:has-text("${workoutName}")`)).toBeVisible();
   });
 
-  test.afterEach(async ({ page }) => {
-    await clearGuestData(page);
-  });
+  // Playwright disposes this test's isolated context, including its storage.
 });

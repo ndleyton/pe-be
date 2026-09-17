@@ -3,11 +3,16 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
-import { makeExerciseType, makePaginatedExerciseTypes } from "@/test/fixtures";
+import {
+  makeExerciseType,
+  makeMuscleGroup,
+  makePaginatedExerciseTypes,
+} from "@/test/fixtures";
 import type { ExerciseType } from "@/features/exercises/types";
 import ExerciseTypeModal from "./ExerciseTypeModal";
 
 const mockGetExerciseTypes = vi.fn();
+const mockGetMuscleGroups = vi.fn();
 const mockCreateExerciseType = vi.fn();
 let mockIsAuthenticated = false;
 let mockGuestStore: {
@@ -22,6 +27,7 @@ let mockGuestStore: {
 
 vi.mock("@/features/exercises/api", () => ({
   getExerciseTypes: (...args: unknown[]) => mockGetExerciseTypes(...args),
+  getMuscleGroups: (...args: unknown[]) => mockGetMuscleGroups(...args),
   createExerciseType: (...args: unknown[]) => mockCreateExerciseType(...args),
 }));
 
@@ -60,6 +66,7 @@ describe("ExerciseTypeModal", () => {
       updateExerciseType: vi.fn(),
       addExerciseType: vi.fn(),
     };
+    mockGetMuscleGroups.mockResolvedValue([]);
     mockGetExerciseTypes.mockResolvedValue(
       makePaginatedExerciseTypes([]),
     );
@@ -188,6 +195,21 @@ describe("ExerciseTypeModal", () => {
     await waitFor(() => {
       expect(screen.getByText("Squats")).toBeInTheDocument();
     });
+  });
+
+  it("keeps similar variations identifiable and selects the original exercise", async () => {
+    const closeGrip = makeExerciseType({ id: 1, name: "Barbell Bench Press - Close Grip" });
+    mockGuestStore.exerciseTypes = [
+      closeGrip,
+      makeExerciseType({ id: 2, name: "Barbell Bench Press - Medium Grip" }),
+    ];
+    render(<ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />);
+
+    const result = await screen.findByRole("button", { name: closeGrip.name });
+    expect(screen.getByText("Close Grip")).toBeVisible();
+    expect(screen.getByText("Medium Grip")).toBeVisible();
+    await userEvent.setup().click(result);
+    expect(mockOnSelect).toHaveBeenCalledWith(closeGrip);
   });
 
   it("clears the search input after selecting an exercise type", async () => {
@@ -695,5 +717,167 @@ describe("ExerciseTypeModal", () => {
     });
 
     expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
+  });
+
+  it("renders muscle group filter chips and allows filtering in guest mode", async () => {
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 1, name: "Chest" }),
+      makeMuscleGroup({ id: 2, name: "Legs" }),
+    ]);
+
+    mockGuestStore = {
+      ...mockGuestStore,
+      exerciseTypes: [
+        makeExerciseType({ id: 1, name: "Bench Press", muscle_groups: ["Chest"] }),
+        makeExerciseType({ id: 2, name: "Squats", muscle_groups: ["Legs"] }),
+      ],
+    };
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const chipsContainer = await screen.findByTestId("muscle-group-filter-chips");
+    expect(chipsContainer).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Chest" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Legs" })).toBeInTheDocument();
+
+    await screen.findByText("Bench Press");
+    expect(screen.getByText("Squats")).toBeInTheDocument();
+
+    // Click Chest chip
+    await user.click(screen.getByRole("tab", { name: "Chest" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Bench Press")).toBeInTheDocument();
+      expect(screen.queryByText("Squats")).not.toBeInTheDocument();
+    });
+
+    // Click All chip
+    await user.click(screen.getByRole("tab", { name: "All" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Bench Press")).toBeInTheDocument();
+      expect(screen.getByText("Squats")).toBeInTheDocument();
+    });
+  });
+
+  it("filters authenticated exercises when a muscle group chip is clicked", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 10, name: "Back" }),
+    ]);
+
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([
+        makeExerciseType({ id: 1, name: "Lat Pulldown" }),
+      ]),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const backChip = await screen.findByRole("tab", { name: "Back" });
+    await user.click(backChip);
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "usage",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        10,
+      );
+    });
+  });
+
+  it("toggling the active muscle group chip resets filter to all", async () => {
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 1, name: "Chest" }),
+    ]);
+
+    mockGuestStore = {
+      ...mockGuestStore,
+      exerciseTypes: [
+        makeExerciseType({ id: 1, name: "Bench Press", muscle_groups: ["Chest"] }),
+        makeExerciseType({ id: 2, name: "Squats", muscle_groups: ["Legs"] }),
+      ],
+    };
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await screen.findByText("Bench Press");
+
+    const chestChip = await screen.findByRole("tab", { name: "Chest" });
+    await user.click(chestChip);
+
+    await waitFor(() => {
+      expect(chestChip).toHaveAttribute("aria-selected", "true");
+      expect(screen.queryByText("Squats")).not.toBeInTheDocument();
+    });
+
+    // Click again to toggle off
+    await user.click(chestChip);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "All" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByText("Squats")).toBeInTheDocument();
+    });
+  });
+
+  it("combines muscle group filter with search query in authenticated mode", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 5, name: "Chest" }),
+    ]);
+
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([
+        makeExerciseType({ id: 1, name: "Incline Bench Press" }),
+      ]),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const chestChip = await screen.findByRole("tab", { name: "Chest" });
+    await user.click(chestChip);
+
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "Incline");
+
+    await waitFor(() => {
+      expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+        "name",
+        undefined,
+        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
+        5,
+        "Incline",
+      );
+    });
   });
 });
