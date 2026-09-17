@@ -34,17 +34,19 @@ async def test_get_last_exercise_performance_no_exercise(
 
 @pytest.mark.asyncio
 @patch("src.chat.service.get_exercise_types")
-@patch("src.chat.service.get_exercise_type_stats")
+@patch("src.chat.service.get_recent_exercises_by_type")
 async def test_get_last_exercise_performance_no_stats(
-    mock_stats, mock_types, chat_service_with_db
+    mock_get_recent, mock_types, chat_service_with_db
 ):
     mock_type = MagicMock(id=1)
     mock_types.return_value = MagicMock(data=[mock_type])
-    mock_stats.return_value = {}  # Empty stats
+    mock_get_recent.return_value = []  # Empty recent exercises
 
     result = await chat_service_with_db._get_last_exercise_performance("squat")
     assert result == "No workout data found for squat."
-    mock_stats.assert_awaited_once_with(chat_service_with_db.session, 1, 1)
+    mock_get_recent.assert_awaited_once_with(
+        chat_service_with_db.session, 1, 1, limit=1
+    )
 
 
 @pytest.mark.asyncio
