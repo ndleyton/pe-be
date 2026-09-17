@@ -7,7 +7,7 @@ export type ExerciseNotesInputProps = {
   id?: string;
   value: string;
   onChange: (value: string) => void;
-  onSave: (value: string) => void;
+  onSave: (value: string) => Promise<void> | void;
   placeholder?: string;
   className?: string;
 };
@@ -44,17 +44,21 @@ export const ExerciseNotesInput = ({
     };
   }, []);
 
-  const handleBlur = () => {
-    onSave(value);
-    if (value !== lastSavedRef.current) {
-      lastSavedRef.current = value;
-      setShowSaved(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+  const handleBlur = async () => {
+    try {
+      await onSave(value);
+      if (value !== lastSavedRef.current) {
+        lastSavedRef.current = value;
+        setShowSaved(true);
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+        timerRef.current = setTimeout(() => {
+          setShowSaved(false);
+        }, 2000);
       }
-      timerRef.current = setTimeout(() => {
-        setShowSaved(false);
-      }, 2000);
+    } catch {
+      // Do not show saved indicator if persistence fails
     }
   };
 

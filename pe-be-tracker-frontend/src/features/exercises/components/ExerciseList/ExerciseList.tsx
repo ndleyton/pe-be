@@ -9,7 +9,7 @@ interface ExerciseListProps {
   exercises: Exercise[];
   status: "idle" | "pending" | "success" | "error";
   workoutId?: string;
-  onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  onExerciseUpdate?: (updatedExercise: Exercise) => void | Promise<void>;
   onExerciseDelete?: (exerciseId: number | string) => void;
 }
 

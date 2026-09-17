@@ -14,7 +14,7 @@ import { formatDurationInputValue } from "@/features/exercises/lib/setValue";
 
 export interface ExerciseRowProps {
   exercise: Exercise;
-  onExerciseUpdate?: (updatedExercise: Exercise) => void;
+  onExerciseUpdate?: (updatedExercise: Exercise) => void | Promise<void>;
   onExerciseDelete?: (exerciseId: number | string) => void;
   workoutId?: string;
   isExpanded?: boolean;

@@ -77,7 +77,7 @@ describe("ExerciseNotesInput", () => {
     fireEvent.blur(textarea);
 
     expect(handleSave).toHaveBeenCalledWith("Updated notes");
-    expect(screen.getByTestId("notes-saved-indicator")).toBeInTheDocument();
+    expect(await screen.findByTestId("notes-saved-indicator")).toBeInTheDocument();
     expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 
@@ -99,5 +99,74 @@ describe("ExerciseNotesInput", () => {
     expect(
       screen.queryByTestId("notes-saved-indicator"),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not show saved indicator if onSave rejects", async () => {
+    const handleSave = vi.fn().mockRejectedValue(new Error("Persistence failed"));
+
+    const { rerender } = render(
+      <ExerciseNotesInput
+        value="Initial"
+        onChange={vi.fn()}
+        onSave={handleSave}
+      />,
+    );
+
+    const textarea = screen.getByRole("textbox", { name: /exercise notes/i });
+
+    rerender(
+      <ExerciseNotesInput
+        value="Updated notes"
+        onChange={vi.fn()}
+        onSave={handleSave}
+      />,
+    );
+
+    await fireEvent.blur(textarea);
+
+    expect(handleSave).toHaveBeenCalledWith("Updated notes");
+    expect(
+      screen.queryByTestId("notes-saved-indicator"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("awaits async onSave and shows saved indicator on success", async () => {
+    let resolvePromise: () => void = () => {};
+    const handleSave = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePromise = resolve;
+        }),
+    );
+
+    const { rerender } = render(
+      <ExerciseNotesInput
+        value="Initial"
+        onChange={vi.fn()}
+        onSave={handleSave}
+      />,
+    );
+
+    const textarea = screen.getByRole("textbox", { name: /exercise notes/i });
+
+    rerender(
+      <ExerciseNotesInput
+        value="Updated notes"
+        onChange={vi.fn()}
+        onSave={handleSave}
+      />,
+    );
+
+    fireEvent.blur(textarea);
+
+    // Before resolve, indicator should not be shown
+    expect(
+      screen.queryByTestId("notes-saved-indicator"),
+    ).not.toBeInTheDocument();
+
+    // After resolve
+    resolvePromise();
+    await screen.findByTestId("notes-saved-indicator");
+    expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 });

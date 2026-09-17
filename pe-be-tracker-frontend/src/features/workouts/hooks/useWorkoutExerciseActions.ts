@@ -356,8 +356,7 @@ export const useWorkoutExerciseActions = ({
     shouldInvalidateQuery: boolean = false,
   ) => {
     if (isAuthenticated && shouldInvalidateQuery) {
-      queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
-      return;
+      return queryClient.invalidateQueries({ queryKey: ["exercises", workoutId] });
     }
 
     if (isAuthenticated) {
@@ -384,7 +383,8 @@ export const useWorkoutExerciseActions = ({
       exercise_id: String(set.exercise_id),
     }));
 
-    guestUpdateExercise(String(updatedExercise.id), {
+    return guestUpdateExercise(String(updatedExercise.id), {
+      notes: updatedExercise.notes,
       exercise_sets: guestExerciseSets,
     });
   }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);

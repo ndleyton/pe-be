@@ -190,4 +190,36 @@ describe("useWorkoutExerciseActions", () => {
       expect(vi.mocked(api.post)).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("persists exercise notes to guestUpdateExercise in guest mode", () => {
+    const { result } = renderHook(
+      () =>
+        useWorkoutExerciseActions({
+          exercises: [],
+          isAuthenticated: false,
+          onFinishModalClose: vi.fn(),
+          serverWorkout: undefined,
+          showFinishModal: false,
+          workoutId: "guest-123",
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    );
+
+    const updated = makeExercise({
+      id: "guest-ex-1",
+      notes: "Pin on 5th hole",
+      exercise_sets: [],
+    });
+
+    act(() => {
+      result.current.handleExerciseUpdate(updated);
+    });
+
+    expect(mockGuestUpdateExercise).toHaveBeenCalledWith("guest-ex-1", {
+      notes: "Pin on 5th hole",
+      exercise_sets: [],
+    });
+  });
 });
