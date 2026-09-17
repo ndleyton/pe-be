@@ -190,6 +190,21 @@ describe("ExerciseTypeModal", () => {
     });
   });
 
+  it("keeps similar variations identifiable and selects the original exercise", async () => {
+    const closeGrip = makeExerciseType({ id: 1, name: "Barbell Bench Press - Close Grip" });
+    mockGuestStore.exerciseTypes = [
+      closeGrip,
+      makeExerciseType({ id: 2, name: "Barbell Bench Press - Medium Grip" }),
+    ];
+    render(<ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />);
+
+    const result = await screen.findByRole("button", { name: closeGrip.name });
+    expect(screen.getByText("Close Grip")).toBeVisible();
+    expect(screen.getByText("Medium Grip")).toBeVisible();
+    await userEvent.setup().click(result);
+    expect(mockOnSelect).toHaveBeenCalledWith(closeGrip);
+  });
+
   it("clears the search input after selecting an exercise type", async () => {
     mockGuestStore = {
       ...mockGuestStore,
