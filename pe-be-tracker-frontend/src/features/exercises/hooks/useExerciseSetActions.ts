@@ -497,7 +497,7 @@ export const useExerciseSetActions = ({
     };
 
     latestExerciseRef.current = updatedExercise;
-    onExerciseUpdate(updatedExercise);
+    return onExerciseUpdate(updatedExercise);
   }, [onExerciseUpdate]);
 
   const handleExerciseDelete = useCallback(async () => {

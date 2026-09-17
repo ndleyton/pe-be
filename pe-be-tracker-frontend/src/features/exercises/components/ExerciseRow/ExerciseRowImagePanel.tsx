@@ -48,9 +48,9 @@ export const ExerciseRowImagePanel = memo(({
   }
 
   return (
-    <div className="px-4 pb-4">
+    <div className="px-4 pb-3">
       <div
-        className="bg-muted/30 border-border/10 flex items-center justify-center overflow-hidden rounded-xl border shadow-inner"
+        className="mx-auto bg-muted/30 border-border/10 flex items-center justify-center overflow-hidden rounded-xl border shadow-inner"
         style={{ aspectRatio: containerRatio, maxHeight: "300px" }}
         data-testid="exercise-row-carousel-container"
       >
