@@ -49,7 +49,7 @@
             zone health {
                 match {
                     method GET HEAD
-                    path /health
+                    path /health /health/ready /api/v1/health/ready
                 }
                 key {client_ip}
                 events {$EDGE_HEALTH_RATE_LIMIT_EVENTS}

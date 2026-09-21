@@ -131,14 +131,5 @@ jobs:
         asset_name: backend-${{ needs.create-release.outputs.version }}.tar.gz
         asset_content_type: application/gzip
 
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [create-release, build-and-release]
-    environment: production
-
-    steps:
-    - name: Deploy to Production
-      run: |
-        echo "🚀 Deploying release ${{ needs.create-release.outputs.version }} to production"
-        echo "This would trigger your production deployment process"
-        # Add your production deployment commands here
+  # Releases publish artifacts only. Render deploys the frontend from main;
+  # the backend is deployed manually through deploy-vps.yml.

@@ -20,7 +20,7 @@ from src.routines.router import router as routines_router
 from src.routine_programs.router import router as routine_programs_router
 from src.profiles.router import router as profiles_router
 from src.admin.router import router as admin_router
-from src.health.router import router as health_router
+from src.health.router import readiness_router, router as health_router
 from src.chat.router import router as chat_router
 from src.sync.router import router as sync_router
 from src.mcp.router import catalog_http_app, mcp_lifespan, trainer_http_app
@@ -146,6 +146,8 @@ def create_app() -> FastAPI:
     app.include_router(sync_router, prefix=f"{api_prefix}", tags=["sync"])
     app.include_router(admin_router, prefix=api_prefix, tags=["admin"])
     app.include_router(health_router, tags=["health"])
+    app.include_router(readiness_router, tags=["health"])
+    app.include_router(readiness_router, prefix=api_prefix, tags=["health"])
 
     if settings.MCP_ENABLED and settings.MCP_CATALOG_ENABLED:
         app.mount("/api/mcp/catalog", catalog_http_app, name="mcp-catalog")

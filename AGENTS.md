@@ -63,6 +63,11 @@ Notes:
 
 ### Deployment
 
+- The frontend auto-deploys through Render's git integration when changes merge to `main`.
+- Backend releases use the manually dispatched `.github/workflows/deploy-vps.yml` during supervised maintenance windows. Container recreation can briefly interrupt requests; the GitHub runner remains active while the remote deployment runs.
+- Deploy additive backend/API/schema changes before frontend changes that depend on them. Remove obsolete behavior only after callers have migrated; frontend and backend releases are independent.
+- Deployment must pass database readiness at `/health/ready` through origin HTTPS and `/api/v1/health/ready` through the frontend proxy. `/health` remains a database-independent liveness probe.
+
 - Production frontend traffic is served from a static host at `app.example.com`.
 - Production backend and PostgreSQL run on a VPS behind that public host.
 - The public browser-facing API remains `https://app.example.com/api/...` via a frontend-side rewrite/proxy to the VPS origin.
