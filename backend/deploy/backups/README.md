@@ -111,3 +111,20 @@ rm -f /tmp/pe-be-postgres.dump
 ```
 
 Run this monthly. If the restore command fails, the backup process is not healthy even if files are being copied.
+
+## Pre-migration recovery checkpoints
+
+The manual VPS deployment writes a private custom-format dump to
+`$DEPLOY_PATH/backups/` before migrations. It checks the archive catalog and only
+then renames the temporary file to `pre-migrate-*.dump`. Failed backups stop the
+deployment. The five newest completed dumps are retained separately from the
+encrypted nightly backups. Catalog inspection is not a substitute for the restore
+drill above, and these VPS-local files do not protect against loss of the host.
+
+If migration or readiness verification fails, inspect the workflow and service
+logs before retrying. The workflow does not automatically restore the database.
+Prefer a compatible forward fix. Before restoring a checkpoint, stop application
+writes and scheduled jobs, preserve the current database, and explicitly account
+for writes made since the checkpoint: restoring it would discard those writes.
+Restore into a separate test database first using the procedure above, then plan
+the production restore and matching application version during maintenance.

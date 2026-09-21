@@ -103,40 +103,5 @@ jobs:
 #          path: ./pe-be-tracker-frontend/dist/
 #          retention-days: 7
 
-  deploy-staging:
-    runs-on: ubuntu-latest
-    needs: [test, build]
-    if: github.ref == 'refs/heads/develop'
-
-    steps:
-#      - name: Download build artifacts
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: frontend-build
-#          path: ./dist
-
-      - name: Deploy to staging
-        run: |
-          echo "🚀 Deploying frontend to staging environment"
-          echo "Build files available in ./dist"
-          # Add your staging deployment commands here
-          # Example: rsync, AWS S3, Netlify, Vercel, etc.
-
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [test, build]
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-#      - name: Download build artifacts
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: frontend-build
-#          path: ./dist
-
-      - name: Deploy to production
-        run: |
-          echo "🚀 Deploying frontend to production environment"
-          echo "Build files available in ./dist"
-          # Add your production deployment commands here
-          # Example: rsync, AWS S3, Netlify, Vercel, etc.
+  # Production frontend deployment is handled by Render's main-branch git integration.
+  # This workflow validates/builds only; no staging deployment is configured here.

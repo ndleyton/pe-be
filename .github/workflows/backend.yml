@@ -229,20 +229,4 @@ jobs:
 #        path: ./backend/backend-image.tar.gz
 #        retention-days: 7
 
-  # deploy-staging:
-  #   runs-on: ubuntu-latest
-  #   needs: [test, build]
-  #   if: github.ref == 'refs/heads/develop'
-  #   steps:
-  #     - name: Deploy to staging
-  #       run: |
-  #         echo "🚀 Render will auto-deploy staging on push to develop branch"
-  #
-  # deploy-production:
-  #   runs-on: ubuntu-latest
-  #   needs: [test, build]
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - name: Deploy to production
-  #       run: |
-  #         echo "🚀 Render will auto-deploy production on push to main branch"
+  # Production backend deployments are manually dispatched via deploy-vps.yml.

@@ -78,6 +78,10 @@ jobs:
           JOB_EXERCISE_IMAGE_CLEANUP_ENABLED=${{ secrets.JOB_EXERCISE_IMAGE_CLEANUP_ENABLED || 'true' }}
           JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_ENABLED || 'true' }}
           JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS=${{ secrets.JOB_CLOSE_STALE_OPEN_WORKOUTS_MAX_AGE_HOURS || '24' }}
+          JOB_WORKOUT_PHOTO_CLEANUP_ENABLED=${{ secrets.JOB_WORKOUT_PHOTO_CLEANUP_ENABLED || 'true' }}
+          WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS=${{ secrets.WORKOUT_PHOTO_CLEANUP_RETENTION_DAYS || '7' }}
+          WORKOUT_PHOTO_CLEANUP_BATCH_SIZE=${{ secrets.WORKOUT_PHOTO_CLEANUP_BATCH_SIZE || '25' }}
+          WORKOUT_PHOTO_ORPHAN_GRACE_HOURS=${{ secrets.WORKOUT_PHOTO_ORPHAN_GRACE_HOURS || '24' }}
           EXERCISE_IMAGE_UPLOAD_MAX_BYTES=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_BYTES || '5242880' }}
           EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_COUNT_PER_TYPE || '4' }}
           EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER=${{ secrets.EXERCISE_IMAGE_UPLOAD_MAX_BYTES_PER_USER || '104857600' }}
@@ -158,6 +162,32 @@ jobs:
             done
           '
 
+          # Create a pre-migration database snapshot
+          echo "Creating pre-migration database snapshot..."
+          umask 077
+          pre_migration_dump="${DEPLOY_PATH}/backups/pre-migrate-$(date -u +%Y%m%d%H%M%S).dump"
+          pending_dump=$(mktemp "${pre_migration_dump}.XXXXXX.partial")
+          trap 'rm -f -- "$pending_dump"' EXIT
+          docker compose -f docker-compose.prod.yml exec -T db \
+            sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner' > "$pending_dump"
+          if [[ ! -s "$pending_dump" ]]; then
+            echo "Pre-migration pg_dump produced an empty file!" >&2
+            exit 1
+          fi
+          # Archive inspection catches malformed output; restore drills are still required.
+          docker compose -f docker-compose.prod.yml exec -T db \
+            pg_restore --list < "$pending_dump" > /dev/null
+          mv -- "$pending_dump" "$pre_migration_dump"
+          trap - EXIT
+          echo "Pre-migration snapshot saved to ${pre_migration_dump}"
+
+          # Names sort chronologically; retain the newest five completed dumps.
+          shopt -s nullglob
+          snapshots=("${DEPLOY_PATH}"/backups/pre-migrate-*.dump)
+          if (( ${#snapshots[@]} > 5 )); then
+            rm -- "${snapshots[@]:0:${#snapshots[@]}-5}"
+          fi
+
           # Run migrations
           docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 
@@ -170,7 +200,8 @@ jobs:
           # Health check: backend directly
           echo "Checking backend health..."
           docker compose -f docker-compose.prod.yml exec -T backend \
-            curl -fsS --retry 5 --retry-delay 3 http://localhost:8000/health
+            curl -fsS --retry 5 --retry-connrefused --retry-delay 3 \
+              --connect-timeout 5 --max-time 10 http://localhost:8000/health/ready
 
           install_systemd_unit() {
             local src="$1"
@@ -185,11 +216,54 @@ jobs:
           install_systemd_unit backend/deploy/systemd/pe-be-exercise-image-cleanup.timer
           install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.service
           install_systemd_unit backend/deploy/systemd/pe-be-close-stale-open-workouts.timer
+          install_systemd_unit backend/deploy/systemd/pe-be-workout-photo-cleanup.service
+          install_systemd_unit backend/deploy/systemd/pe-be-workout-photo-cleanup.timer
 
           sudo systemctl daemon-reload
-          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer
-          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer
+          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer
+          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer
+
+          for timer in pe-be-chat-attachment-cleanup pe-be-exercise-image-cleanup pe-be-close-stale-open-workouts pe-be-workout-photo-cleanup; do
+            sudo systemctl is-enabled "${timer}.timer"
+            sudo systemctl is-active "${timer}.timer"
+          done
 
           echo ""
-          echo "Deployment complete."
+          echo "VPS updates complete; external ingress verification follows."
           DEPLOYEOF
+
+      - name: Verify origin and public API ingress
+        env:
+          API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+          : "${API_ORIGIN_DOMAIN:?API_ORIGIN_DOMAIN is required}"
+          : "${FRONTEND_URL:?FRONTEND_URL is required}"
+          [[ "$FRONTEND_URL" == https://* ]] || { echo "FRONTEND_URL must use HTTPS" >&2; exit 1; }
+          for endpoint in "https://${API_ORIGIN_DOMAIN}/health/ready" "${FRONTEND_URL%/}/api/v1/health/ready"; do
+            # Reject redirects and static-host SPA fallback pages.
+            response_file=$(mktemp)
+            trap 'rm -f -- "$response_file"' EXIT
+            status=$(curl --silent --show-error --fail --retry 5 --retry-connrefused \
+              --retry-delay 3 --connect-timeout 5 --max-time 10 \
+              --proto '=https' --output "$response_file" --write-out '%{http_code}' "$endpoint")
+            [[ "$status" == 200 ]] || { echo "Ingress returned HTTP $status" >&2; exit 1; }
+            python - "$response_file" <<'PYTHON'
+          import json
+          import sys
+          with open(sys.argv[1]) as response:
+              if json.load(response) != {"status": "ok"}:
+                  raise SystemExit("Ingress readiness check failed")
+          PYTHON
+            rm -f -- "$response_file"
+            trap - EXIT
+          done
+          echo "Deployment verified through origin TLS and public API proxy."
+
+      - name: Prune dangling images after verification
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" 'docker image prune -f'
