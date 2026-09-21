@@ -45,7 +45,7 @@ from src.chat.schemas import (
 from src.core.config import settings
 from src.exercises.crud import (
     get_exercise_type_by_id,
-    get_exercise_type_stats,
+    get_recent_exercises_by_type,
     get_exercise_types,
     get_similar_exercise_types as get_similar_exercise_type_matches,
     get_intensity_units,
@@ -75,10 +75,25 @@ logger = logging.getLogger(__name__)
 
 class LastExercisePerformanceArgs(BaseModel):
     exercise_name: str
+    limit: int = Field(
+        default=1,
+        ge=1,
+        le=5,
+        description=(
+            "Number of recent sessions to retrieve (e.g. 1 for last session, "
+            "or up to 5 to compare to previous workouts or track progress)."
+        ),
+    )
 
 
-class WorkoutSummaryByDateArgs(BaseModel):
-    workout_date: str
+class WorkoutSummaryArgs(BaseModel):
+    workout_date: Optional[str] = Field(
+        default=None,
+        description=(
+            "Date in YYYY-MM-DD format if the user asked about a specific day. "
+            "Leave null or omitted to retrieve the most recent workout."
+        ),
+    )
 
 
 class ExerciseSubstitutionArgs(BaseModel):
@@ -697,9 +712,13 @@ class ChatService:
             ],
         )
 
-    async def _get_last_exercise_performance(self, exercise_name: str) -> str:
+    async def _get_last_exercise_performance(
+        self, exercise_name: str, limit: int = 1
+    ) -> str:
         if not self.session:
             return "Database session not available."
+
+        limit = max(1, min(limit, 5))
 
         exercise_types_response = await get_exercise_types(
             self.session,
@@ -711,22 +730,82 @@ class ChatService:
             return f"No exercise named '{exercise_name}' found."
 
         exercise_type = exercise_types_response.data[0]
-        stats = await get_exercise_type_stats(
-            self.session, exercise_type.id, self.user_id
+        recent_exercises = await get_recent_exercises_by_type(
+            self.session, exercise_type.id, self.user_id, limit=limit
         )
 
-        if not stats or not stats.get("lastWorkout"):
+        if not recent_exercises:
             return f"No workout data found for {exercise_name}."
 
-        last_workout = stats["lastWorkout"]
-        intensity_unit = stats.get("intensityUnit")
-        unit_abbr = intensity_unit["abbreviation"] if intensity_unit else ""
-
-        return (
-            f"On your last {exercise_name} workout on {last_workout['date']}, "
-            f"you did {last_workout['sets']} sets with a max weight of "
-            f"{last_workout['maxWeight']} {unit_abbr}."
+        actual_name = (
+            recent_exercises[0].exercise_type.name
+            if getattr(recent_exercises[0], "exercise_type", None)
+            else exercise_type.name
         )
+
+        # Group exercises by workout while preserving workout ordering
+        workout_sessions = []
+        current_workout_id = None
+        current_session = []
+
+        for exercise in recent_exercises:
+            workout_id = getattr(exercise, "workout_id", None)
+            if workout_id is None:
+                workout_obj = getattr(exercise, "workout", None)
+                workout_id = (
+                    getattr(workout_obj, "id", None) if workout_obj else id(exercise)
+                )
+
+            if current_workout_id is None or workout_id != current_workout_id:
+                if current_session:
+                    workout_sessions.append(current_session)
+                current_session = [exercise]
+                current_workout_id = workout_id
+            else:
+                current_session.append(exercise)
+
+        if current_session:
+            workout_sessions.append(current_session)
+
+        summaries = []
+        for i, session_exercises in enumerate(workout_sessions):
+            first_exercise = session_exercises[0]
+            workout_date = (
+                first_exercise.workout.start_time.strftime("%Y-%m-%d")
+                if getattr(first_exercise, "workout", None)
+                and getattr(first_exercise.workout, "start_time", None)
+                else first_exercise.created_at.strftime("%Y-%m-%d")
+            )
+
+            if len(workout_sessions) == 1:
+                header = f"On your last {actual_name} workout on {workout_date}:"
+            elif i == 0:
+                header = f"Session 1 (Most recent - {workout_date}):"
+            else:
+                header = f"Session {i + 1} ({workout_date}):"
+
+            session_summary = f"{header}\n"
+            for exercise in session_exercises:
+                session_summary += self._format_optional_notes(
+                    "Exercise notes", getattr(exercise, "notes", None)
+                )
+
+                sets = getattr(exercise, "exercise_sets", []) or []
+                if sets:
+                    for exercise_set in sets:
+                        session_summary += self._format_set_summary(exercise_set)
+                else:
+                    session_summary += "No sets were logged for this exercise.\n"
+
+            summaries.append(session_summary.rstrip())
+
+        if len(summaries) > 1:
+            intro = (
+                f"Here are your last {len(summaries)} sessions for {actual_name}:\n\n"
+            )
+            return intro + "\n\n".join(summaries)
+
+        return summaries[0]
 
     async def _get_last_workout_summary(self) -> str:
         logger.debug("Fetching last workout summary user_id=%s", self.user_id)
@@ -829,6 +908,11 @@ class ChatService:
             workout,
             exercises,
         )
+
+    async def _get_workout_summary(self, workout_date: Optional[str] = None) -> str:
+        if workout_date is not None:
+            return await self._get_workout_summary_by_date(workout_date)
+        return await self._get_last_workout_summary()
 
     async def _recommend_exercise_substitutions(
         self,
@@ -1065,8 +1149,11 @@ class ChatService:
                 handler=self._get_last_exercise_performance,
                 args_model=LastExercisePerformanceArgs,
                 description=(
-                    "Useful for when you need to find out the user's last recorded "
-                    "performance for a specific exercise. Input should be the exact "
+                    "Useful for when you need to find out the user's recorded "
+                    "performance for a specific exercise, including sets, reps, weight, "
+                    "and any exercise or set notes. Set limit > 1 (up to 5) when "
+                    "the user asks to compare to previous workouts, track progress, "
+                    "or review multiple past sessions. Input should be the exact "
                     "name of the exercise."
                 ),
             ),
@@ -1110,22 +1197,14 @@ class ChatService:
                 ),
             ),
             ToolDefinition(
-                name="get_last_workout_summary",
-                handler=self._get_last_workout_summary,
+                name="get_workout_summary",
+                handler=self._get_workout_summary,
+                args_model=WorkoutSummaryArgs,
                 description=(
-                    "Use this tool when the user asks a general question about their "
-                    "most recent or last workout, like 'what did I do last time?' or "
-                    "'give me my last workout'. This tool does not require any input."
-                ),
-            ),
-            ToolDefinition(
-                name="get_workout_summary_by_date",
-                handler=self._get_workout_summary_by_date,
-                args_model=WorkoutSummaryByDateArgs,
-                description=(
-                    "Useful for when you need to find out what the user did in their "
-                    "workout on a specific date. Input should be the date in "
-                    "YYYY-MM-DD format."
+                    "Use this tool to find out what exercises, sets, and notes were logged "
+                    "in a workout. Pass workout_date in YYYY-MM-DD format if the user asks "
+                    "about a specific day, or leave workout_date omitted to get the user's "
+                    "most recent or last workout."
                 ),
             ),
         ]
