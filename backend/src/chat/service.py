@@ -743,16 +743,43 @@ class ChatService:
             else exercise_type.name
         )
 
+        # Group exercises by workout while preserving workout ordering
+        workout_sessions = []
+        current_workout_id = None
+        current_session = []
+
+        for exercise in recent_exercises:
+            workout_id = getattr(exercise, "workout_id", None)
+            if workout_id is None:
+                workout_obj = getattr(exercise, "workout", None)
+                workout_id = (
+                    getattr(workout_obj, "id", None)
+                    if workout_obj
+                    else id(exercise)
+                )
+
+            if current_workout_id is None or workout_id != current_workout_id:
+                if current_session:
+                    workout_sessions.append(current_session)
+                current_session = [exercise]
+                current_workout_id = workout_id
+            else:
+                current_session.append(exercise)
+
+        if current_session:
+            workout_sessions.append(current_session)
+
         summaries = []
-        for i, exercise in enumerate(recent_exercises):
+        for i, session_exercises in enumerate(workout_sessions):
+            first_exercise = session_exercises[0]
             workout_date = (
-                exercise.workout.start_time.strftime("%Y-%m-%d")
-                if getattr(exercise, "workout", None)
-                and getattr(exercise.workout, "start_time", None)
-                else exercise.created_at.strftime("%Y-%m-%d")
+                first_exercise.workout.start_time.strftime("%Y-%m-%d")
+                if getattr(first_exercise, "workout", None)
+                and getattr(first_exercise.workout, "start_time", None)
+                else first_exercise.created_at.strftime("%Y-%m-%d")
             )
 
-            if len(recent_exercises) == 1:
+            if len(workout_sessions) == 1:
                 header = f"On your last {actual_name} workout on {workout_date}:"
             elif i == 0:
                 header = f"Session 1 (Most recent - {workout_date}):"
@@ -760,16 +787,17 @@ class ChatService:
                 header = f"Session {i + 1} ({workout_date}):"
 
             session_summary = f"{header}\n"
-            session_summary += self._format_optional_notes(
-                "Exercise notes", getattr(exercise, "notes", None)
-            )
+            for exercise in session_exercises:
+                session_summary += self._format_optional_notes(
+                    "Exercise notes", getattr(exercise, "notes", None)
+                )
 
-            sets = getattr(exercise, "exercise_sets", []) or []
-            if sets:
-                for exercise_set in sets:
-                    session_summary += self._format_set_summary(exercise_set)
-            else:
-                session_summary += "No sets were logged for this exercise.\n"
+                sets = getattr(exercise, "exercise_sets", []) or []
+                if sets:
+                    for exercise_set in sets:
+                        session_summary += self._format_set_summary(exercise_set)
+                else:
+                    session_summary += "No sets were logged for this exercise.\n"
 
             summaries.append(session_summary.rstrip())
 

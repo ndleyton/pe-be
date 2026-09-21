@@ -150,6 +150,134 @@ async def test_get_last_exercise_performance_multi_session_comparison(monkeypatc
     assert "Set notes: Hard lockout" in summary
 
 
+async def test_get_last_exercise_performance_groups_multiple_entries_per_workout(monkeypatch):
+    svc = ChatService(user_id=123, session=object())
+
+    async def _fake_get_exercise_types(session, name, limit, user_id):
+        return SimpleNamespace(data=[SimpleNamespace(id=9, name="Bench Press")])
+
+    workout_latest = SimpleNamespace(id=101, start_time=datetime(2026, 3, 10, tzinfo=timezone.utc))
+    workout_older = SimpleNamespace(id=90, start_time=datetime(2026, 3, 3, tzinfo=timezone.utc))
+
+    entry_latest_1 = SimpleNamespace(
+        id=1,
+        workout_id=101,
+        workout=workout_latest,
+        created_at=datetime(2026, 3, 10, 10, 0, tzinfo=timezone.utc),
+        exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Working sets",
+        exercise_sets=[
+            SimpleNamespace(
+                id=11,
+                reps=5,
+                duration_seconds=None,
+                intensity=225,
+                rpe=Decimal("8"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Felt crisp",
+            )
+        ],
+    )
+    entry_latest_2 = SimpleNamespace(
+        id=2,
+        workout_id=101,
+        workout=workout_latest,
+        created_at=datetime(2026, 3, 10, 10, 30, tzinfo=timezone.utc),
+        exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Drop sets",
+        exercise_sets=[
+            SimpleNamespace(
+                id=12,
+                reps=10,
+                duration_seconds=None,
+                intensity=185,
+                rpe=Decimal("9.5"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Burnout",
+            )
+        ],
+    )
+    entry_older = SimpleNamespace(
+        id=3,
+        workout_id=90,
+        workout=workout_older,
+        created_at=datetime(2026, 3, 3, 10, 0, tzinfo=timezone.utc),
+        exercise_type=SimpleNamespace(name="Bench Press"),
+        notes="Volume day",
+        exercise_sets=[
+            SimpleNamespace(
+                id=13,
+                reps=8,
+                duration_seconds=None,
+                intensity=205,
+                rpe=Decimal("8.5"),
+                rir=None,
+                intensity_unit=SimpleNamespace(abbreviation="lbs"),
+                notes="Solid reps",
+            )
+        ],
+    )
+
+    async def _fake_get_recent_exercises_by_type(session, exercise_type_id, user_id, limit=1):
+        if limit == 1:
+            return [entry_latest_1, entry_latest_2]
+        elif limit == 2:
+            return [entry_latest_1, entry_latest_2, entry_older]
+        return []
+
+    monkeypatch.setattr("src.chat.service.get_exercise_types", _fake_get_exercise_types)
+    monkeypatch.setattr(
+        "src.chat.service.get_recent_exercises_by_type",
+        _fake_get_recent_exercises_by_type,
+    )
+
+    # Test limit=2: 3 entries grouped under exactly 2 session headers
+    summary_2 = await svc._get_last_exercise_performance("Bench Press", limit=2)
+    assert "Here are your last 2 sessions for Bench Press:" in summary_2
+    assert "Session 1 (Most recent - 2026-03-10):" in summary_2
+    assert "Session 2 (2026-03-03):" in summary_2
+    assert "Session 3" not in summary_2
+
+    # Assert note-set associations are preserved per entry
+    pos_s1 = summary_2.index("Session 1 (Most recent - 2026-03-10):")
+    pos_s2 = summary_2.index("Session 2 (2026-03-03):")
+    s1_text = summary_2[pos_s1:pos_s2]
+    s2_text = summary_2[pos_s2:]
+
+    assert "Exercise notes: Working sets" in s1_text
+    assert "225 lbs" in s1_text
+    assert "Exercise notes: Drop sets" in s1_text
+    assert "185 lbs" in s1_text
+    # Notes precede their own sets within Session 1
+    pos_notes1 = s1_text.index("Exercise notes: Working sets")
+    pos_set1 = s1_text.index("225 lbs")
+    pos_notes2 = s1_text.index("Exercise notes: Drop sets")
+    pos_set2 = s1_text.index("185 lbs")
+    assert pos_notes1 < pos_set1 < pos_notes2 < pos_set2
+
+    assert "Exercise notes: Volume day" in s2_text
+    assert "205 lbs" in s2_text
+
+    # Test limit=1: exactly 1 workout header, including both entries from latest workout
+    summary_1 = await svc._get_last_exercise_performance("Bench Press", limit=1)
+    assert "On your last Bench Press workout on 2026-03-10:" in summary_1
+    assert "Session 1" not in summary_1
+    assert "Session 2" not in summary_1
+    assert "Exercise notes: Working sets" in summary_1
+    assert "225 lbs" in summary_1
+    assert "Exercise notes: Drop sets" in summary_1
+    assert "185 lbs" in summary_1
+    assert "Volume day" not in summary_1
+    assert "205 lbs" not in summary_1
+    pos_1_notes1 = summary_1.index("Exercise notes: Working sets")
+    pos_1_set1 = summary_1.index("225 lbs")
+    pos_1_notes2 = summary_1.index("Exercise notes: Drop sets")
+    pos_1_set2 = summary_1.index("185 lbs")
+    assert pos_1_notes1 < pos_1_set1 < pos_1_notes2 < pos_1_set2
+
+
 async def test_get_last_workout_summary_happy_path(monkeypatch):
     svc = ChatService(user_id=222, session=object())
     workout = SimpleNamespace(

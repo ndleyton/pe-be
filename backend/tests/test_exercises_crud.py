@@ -1637,3 +1637,99 @@ async def test_get_recent_exercises_by_type_orders_by_workout_start_time_over_cr
     assert len(recent) == 2
     assert recent[0].id == exercise_for_late_workout.id
     assert recent[1].id == exercise_for_early_workout.id
+
+
+async def test_get_recent_exercises_by_type_limits_distinct_workouts_and_orders_intra_workout_chronologically(
+    db_session,
+):
+    owner = await _seed_user(db_session, "distinct-workouts@example.com")
+    workout_type = await _seed_workout_type(db_session, "Strength Workout")
+    exercise_type = await _seed_exercise_type(db_session, "Incline Dumbbell Press")
+    unit = await _seed_intensity_unit(db_session)
+
+    workout_older = await _seed_workout(
+        db_session,
+        owner.id,
+        workout_type.id,
+        name="Older Workout",
+        start_time=datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc),
+    )
+    workout_latest = await _seed_workout(
+        db_session,
+        owner.id,
+        workout_type.id,
+        name="Latest Workout",
+        start_time=datetime(2026, 3, 10, 10, 0, tzinfo=timezone.utc),
+    )
+
+    exercise_older = await _seed_exercise(
+        db_session,
+        workout_id=workout_older.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 3, 1, 10, 15, tzinfo=timezone.utc),
+        notes="Older workout entry",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise_older.id,
+        reps=10,
+        intensity=70,
+        intensity_unit_id=unit.id,
+    )
+
+    # First entry in latest workout (chronologically earlier within workout)
+    exercise_latest_first = await _seed_exercise(
+        db_session,
+        workout_id=workout_latest.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 3, 10, 10, 10, tzinfo=timezone.utc),
+        notes="Heavy working sets",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise_latest_first.id,
+        reps=8,
+        intensity=85,
+        intensity_unit_id=unit.id,
+    )
+
+    # Second entry in latest workout (chronologically later within workout)
+    exercise_latest_second = await _seed_exercise(
+        db_session,
+        workout_id=workout_latest.id,
+        exercise_type_id=exercise_type.id,
+        created_at=datetime(2026, 3, 10, 10, 40, tzinfo=timezone.utc),
+        notes="Drop sets to failure",
+    )
+    await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise_latest_second.id,
+        reps=12,
+        intensity=60,
+        intensity_unit_id=unit.id,
+    )
+
+    # limit=1 should return both entries from the latest workout, ordered chronologically (created_at asc, id asc)
+    recent_limit_1 = await crud.get_recent_exercises_by_type(
+        db_session, exercise_type.id, owner.id, limit=1
+    )
+    assert len(recent_limit_1) == 2
+    assert recent_limit_1[0].id == exercise_latest_first.id
+    assert recent_limit_1[1].id == exercise_latest_second.id
+
+    # limit=2 should return all three entries across the 2 distinct workouts
+    recent_limit_2 = await crud.get_recent_exercises_by_type(
+        db_session, exercise_type.id, owner.id, limit=2
+    )
+    assert len(recent_limit_2) == 3
+    assert recent_limit_2[0].id == exercise_latest_first.id
+    assert recent_limit_2[1].id == exercise_latest_second.id
+    assert recent_limit_2[2].id == exercise_older.id
+
+    # get_latest_exercise_by_type preserves singular semantics (most recent entry in most recent workout)
+    latest_singular = await crud.get_latest_exercise_by_type(
+        db_session, exercise_type.id, owner.id
+    )
+    assert latest_singular is not None
+    assert latest_singular.id == exercise_latest_second.id
+    assert latest_singular.notes == "Drop sets to failure"
