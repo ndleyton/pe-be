@@ -388,6 +388,7 @@ async def test_get_workout_summary_delegates_correctly(monkeypatch):
         await svc._get_workout_summary("2026-03-01")
         == "Date workout called: 2026-03-01"
     )
+    assert await svc._get_workout_summary("") == "Date workout called: "
 
 
 async def test_get_last_workout_summary_formats_duration_based_sets(monkeypatch):

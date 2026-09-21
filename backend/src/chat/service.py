@@ -912,7 +912,7 @@ class ChatService:
         )
 
     async def _get_workout_summary(self, workout_date: Optional[str] = None) -> str:
-        if workout_date:
+        if workout_date is not None:
             return await self._get_workout_summary_by_date(workout_date)
         return await self._get_last_workout_summary()
 
