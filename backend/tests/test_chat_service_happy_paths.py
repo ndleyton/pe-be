@@ -150,14 +150,20 @@ async def test_get_last_exercise_performance_multi_session_comparison(monkeypatc
     assert "Set notes: Hard lockout" in summary
 
 
-async def test_get_last_exercise_performance_groups_multiple_entries_per_workout(monkeypatch):
+async def test_get_last_exercise_performance_groups_multiple_entries_per_workout(
+    monkeypatch,
+):
     svc = ChatService(user_id=123, session=object())
 
     async def _fake_get_exercise_types(session, name, limit, user_id):
         return SimpleNamespace(data=[SimpleNamespace(id=9, name="Bench Press")])
 
-    workout_latest = SimpleNamespace(id=101, start_time=datetime(2026, 3, 10, tzinfo=timezone.utc))
-    workout_older = SimpleNamespace(id=90, start_time=datetime(2026, 3, 3, tzinfo=timezone.utc))
+    workout_latest = SimpleNamespace(
+        id=101, start_time=datetime(2026, 3, 10, tzinfo=timezone.utc)
+    )
+    workout_older = SimpleNamespace(
+        id=90, start_time=datetime(2026, 3, 3, tzinfo=timezone.utc)
+    )
 
     entry_latest_1 = SimpleNamespace(
         id=1,
@@ -220,7 +226,9 @@ async def test_get_last_exercise_performance_groups_multiple_entries_per_workout
         ],
     )
 
-    async def _fake_get_recent_exercises_by_type(session, exercise_type_id, user_id, limit=1):
+    async def _fake_get_recent_exercises_by_type(
+        session, exercise_type_id, user_id, limit=1
+    ):
         if limit == 1:
             return [entry_latest_1, entry_latest_2]
         elif limit == 2:

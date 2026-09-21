@@ -753,9 +753,7 @@ class ChatService:
             if workout_id is None:
                 workout_obj = getattr(exercise, "workout", None)
                 workout_id = (
-                    getattr(workout_obj, "id", None)
-                    if workout_obj
-                    else id(exercise)
+                    getattr(workout_obj, "id", None) if workout_obj else id(exercise)
                 )
 
             if current_workout_id is None or workout_id != current_workout_id:
