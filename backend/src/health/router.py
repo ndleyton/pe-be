@@ -32,6 +32,4 @@ async def readiness():
             content={"status": "unavailable"},
             headers={"Cache-Control": "no-store"},
         )
-    return JSONResponse(
-        content={"status": "ok"}, headers={"Cache-Control": "no-store"}
-    )
+    return JSONResponse(content={"status": "ok"}, headers={"Cache-Control": "no-store"})
