@@ -94,6 +94,7 @@ async def test_admin_create_routine_success_sets_flags(
             "workout_type_id": workout_type.id,
             "visibility": "public",
             "is_readonly": True,
+            "template_tree_version": 2,
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type.id,
@@ -102,6 +103,8 @@ async def test_admin_create_routine_success_sets_flags(
                             "reps": 12,
                             "intensity": 40.0,
                             "intensity_unit_id": intensity_unit.id,
+                            "side": None,
+                            "position": 0,
                         }
                     ],
                 }
