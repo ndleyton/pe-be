@@ -730,6 +730,9 @@ describe("ExerciseTypeModal", () => {
 
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
     expect(screen.queryByText("Deadlift")).not.toBeInTheDocument();
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+    expect(mockOnSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Bench Press" })).toBeDisabled();
 
     await act(async () => {
       resolveDeadSearch?.(
@@ -1065,6 +1068,12 @@ describe("ExerciseTypeModal", () => {
     // Previous exercise remains visible during transition
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
 
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.click(searchInput);
+    await user.keyboard("{Enter}");
+    expect(mockOnSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Bench Press" })).toBeDisabled();
+
     // Now resolve the Back query
     await act(async () => {
       resolveBackQuery?.(
@@ -1076,6 +1085,11 @@ describe("ExerciseTypeModal", () => {
 
     await screen.findByText("Lat Pulldown");
     expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lat Pulldown" })).toBeEnabled();
+    await user.keyboard("{Enter}");
+    expect(mockOnSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 2, name: "Lat Pulldown" }),
+    );
   });
 
   it("shows muscle group empty state when filtered muscle group has no exercises", async () => {

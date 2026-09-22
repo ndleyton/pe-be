@@ -341,6 +341,9 @@ const ExerciseTypeModal = ({
   const isFetchingNextPage = isSearchActive
     ? isFetchingSearchNextPage
     : isFetchingBrowseNextPage;
+  const isResultsPlaceholderData =
+    isAuthenticated &&
+    (isSearchActive ? isSearchPlaceholderData : isBrowsePlaceholderData);
   const error = isSearchActive ? searchError : browseError;
   const isInitialBrowseLoading =
     isAuthenticated &&
@@ -443,7 +446,11 @@ const ExerciseTypeModal = ({
   });
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && filteredExerciseTypes.length > 0) {
+    if (
+      e.key === "Enter" &&
+      !isResultsPlaceholderData &&
+      filteredExerciseTypes.length > 0
+    ) {
       handleSelect(filteredExerciseTypes[0]);
     } else if (e.key === "Escape") {
       setSearchTerm("");
@@ -605,7 +612,7 @@ const ExerciseTypeModal = ({
     return (
       <div
         className={`space-y-4 p-1 transition-opacity duration-150 ${
-          (isSearchActive ? isSearchPlaceholderData : isBrowsePlaceholderData)
+          isResultsPlaceholderData
             ? "opacity-60 pointer-events-none"
             : ""
         }`}
@@ -616,6 +623,7 @@ const ExerciseTypeModal = ({
               key={exerciseType.id}
               exerciseType={exerciseType}
               onSelect={handleSelect}
+              disabled={isResultsPlaceholderData}
             />
           ))}
         </div>

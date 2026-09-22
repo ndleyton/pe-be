@@ -8,9 +8,14 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 interface ExerciseSearchResultProps {
   exerciseType: ExerciseType | GuestExerciseType;
   onSelect: (exerciseType: ExerciseType | GuestExerciseType) => void;
+  disabled?: boolean;
 }
 
-export function ExerciseSearchResult({ exerciseType, onSelect }: ExerciseSearchResultProps) {
+export function ExerciseSearchResult({
+  exerciseType,
+  onSelect,
+  disabled = false,
+}: ExerciseSearchResultProps) {
   const { baseName, variation } = parseExerciseName(exerciseType.name);
   const muscles = "muscles" in exerciseType && Array.isArray(exerciseType.muscles)
     ? exerciseType.muscles
@@ -19,6 +24,7 @@ export function ExerciseSearchResult({ exerciseType, onSelect }: ExerciseSearchR
   return (
     <button
       type="button"
+      disabled={disabled}
       aria-label={exerciseType.name}
       onClick={() => onSelect(exerciseType)}
       className="group flex w-full items-start gap-3 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 text-left transition-colors hover:bg-accent/60 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
