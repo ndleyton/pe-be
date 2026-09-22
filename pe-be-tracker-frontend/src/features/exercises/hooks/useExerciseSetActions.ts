@@ -436,7 +436,7 @@ export const useExerciseSetActions = ({
       done: false,
       notes: null,
       type: nextSetType,
-      side: lastSet?.side ?? null,
+      side: null,
       position: Math.max(-1, ...currentExerciseSets.map((set, index) => set.position ?? index)) + 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -462,7 +462,7 @@ export const useExerciseSetActions = ({
         done: false,
         notes: undefined,
         type: nextSetType,
-        side: lastSet?.side ?? null,
+        side: null,
         ...(nextDurationSeconds != null
           ? { duration_seconds: nextDurationSeconds }
           : { reps: nextReps || 0 }),

@@ -49,6 +49,9 @@ def _map_exercise_set_integrity_error(
     ):
         return DomainValidationError.invalid_reference(field="exercise_id")
 
+    if constraint_name == "uq_exercise_sets_active_position" or "uq_exercise_sets_active_position" in error_message:
+        return DomainValidationError.invalid_range(field="position", message="position collision")
+
     return None
 
 

@@ -516,6 +516,17 @@ async def update_routine(
         select(Routine.id).where(Routine.id == routine.id).with_for_update()
     )
 
+    if routine_data.exercise_templates is not None:
+        routine = await (
+            get_any_routine_by_id(session, routine_id, populate_existing=True)
+            if is_superuser
+            else get_user_routine_by_id(
+                session, routine_id, user_id, populate_existing=True
+            )
+        )
+        if not routine:
+            return None
+
     # Update fields if provided
     if routine_data.name is not None:
         routine.name = routine_data.name
