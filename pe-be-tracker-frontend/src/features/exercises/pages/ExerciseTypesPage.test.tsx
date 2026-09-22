@@ -89,20 +89,9 @@ describe("ExerciseTypesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsAuthenticated = false;
-    Element.prototype.hasPointerCapture = () => false;
-    Element.prototype.setPointerCapture = () => {};
-    Element.prototype.releasePointerCapture = () => {};
-    Element.prototype.scrollIntoView = () => {};
-
-    // In jsdom 30.1.0, focusing an element incorrectly dispatches a blur event on window,
-    // which causes Radix UI Select's window blur listener to immediately close the dropdown.
-    const origAddEventListener = window.addEventListener;
-    window.addEventListener = function (type: string, listener: any, options?: any) {
-      if (type === "blur") {
-        return;
-      }
-      return origAddEventListener.call(this, type, listener, options);
-    };
+    Element.prototype.hasPointerCapture ??= vi.fn(() => false);
+    Element.prototype.releasePointerCapture ??= vi.fn();
+    Element.prototype.scrollIntoView ??= vi.fn();
 
     Object.defineProperty(document.documentElement, "scrollTop", {
       value: 0,
