@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime
 from decimal import Decimal
 from pydantic import ConfigDict, BaseModel, Field, computed_field
@@ -47,6 +47,8 @@ class SetTemplateBase(BaseModel):
     intensity_unit_id: int
     notes: Optional[str] = None
     type: Optional[str] = None
+    side: Optional[Literal["left", "right", "both"]] = None
+    position: Optional[int] = Field(default=None, ge=0)
 
 
 class SetTemplateCreate(SetTemplateBase):
@@ -104,6 +106,7 @@ class RoutineCreate(RoutineBase):
     """Schema for creating routines"""
 
     exercise_templates: List[ExerciseTemplateCreate] = []
+    template_tree_version: Optional[int] = None
 
 
 class RoutineRead(RoutineBase):
@@ -146,6 +149,12 @@ class RoutineUpdate(BaseModel):
     author: Optional[str] = None
     category: Optional[str] = None
     exercise_templates: Optional[List[ExerciseTemplateCreate]] = None
+    template_tree_version: Optional[int] = None
+
+
+class SetTemplateOrderUpdate(BaseModel):
+    ordered_set_ids: List[int]
+    expected_set_ids: List[int]
 
 
 class AdminRoutineCreate(RoutineBase):
