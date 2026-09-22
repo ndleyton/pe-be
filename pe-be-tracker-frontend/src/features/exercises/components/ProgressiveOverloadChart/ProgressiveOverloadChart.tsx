@@ -38,6 +38,9 @@ export const ProgressiveOverloadChart = ({
   const [activeSide, setActiveSide] = useState<typeof availableSides[number]>(
     availableSides[0] ?? "unspecified",
   );
+  const effectiveSide = availableSides.includes(activeSide)
+    ? activeSide
+    : availableSides[0];
   const chartConfig = {
     maxWeight: {
       label: `Max Weight (${intensityUnit.abbreviation})`,
@@ -49,54 +52,32 @@ export const ProgressiveOverloadChart = ({
     },
   } satisfies ChartConfig;
 
-  // Transform data for the chart
-  const chartData = data.map((point) => ({
+  // Aggregate values are only valid when there is no side filter.
+  const scopedData = data.map((point) =>
+    effectiveSide != null ? point.sideBreakdown?.[effectiveSide] : point,
+  );
+  const chartData = data.map((point, index) => ({
     date: new Date(point.date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     }),
-    maxWeight: Math.round(
-      (point.sideBreakdown?.[activeSide]?.maxWeight ?? point.maxWeight) * 100,
-    ) / 100,
-    totalVolume: Math.round(
-      (point.sideBreakdown?.[activeSide]?.totalVolume ?? point.totalVolume) * 100,
-    ) / 100,
+    maxWeight: scopedData[index] == null
+      ? null
+      : Math.round(scopedData[index].maxWeight * 100) / 100,
+    totalVolume: scopedData[index] == null
+      ? null
+      : Math.round(scopedData[index].totalVolume * 100) / 100,
   }));
 
-  // Calculate trend for the latest period.
-  // When a side filter is active use its scoped values so the badge reflects
-  // the same slice the chart is showing.
-  const latestWeight =
-    data[data.length - 1]?.sideBreakdown?.[activeSide]?.maxWeight ??
-    data[data.length - 1]?.maxWeight ??
-    0;
-  const previousWeight =
-    data[data.length - 2]?.sideBreakdown?.[activeSide]?.maxWeight ??
-    data[data.length - 2]?.maxWeight ??
-    latestWeight;
-  const weightTrend = latestWeight > previousWeight;
-  const weightChange =
-    latestWeight > 0 && previousWeight > 0
-      ? Math.abs(
-          ((latestWeight - previousWeight) / previousWeight) * 100,
-        ).toFixed(1)
-      : "0";
-
-  const latestVolume =
-    data[data.length - 1]?.sideBreakdown?.[activeSide]?.totalVolume ??
-    data[data.length - 1]?.totalVolume ??
-    0;
-  const previousVolume =
-    data[data.length - 2]?.sideBreakdown?.[activeSide]?.totalVolume ??
-    data[data.length - 2]?.totalVolume ??
-    latestVolume;
-  const volumeTrend = latestVolume > previousVolume;
-  const volumeChange =
-    latestVolume > 0 && previousVolume > 0
-      ? Math.abs(
-          ((latestVolume - previousVolume) / previousVolume) * 100,
-        ).toFixed(1)
-      : "0";
+  const latestWeight = scopedData.at(-1)?.maxWeight;
+  const latestVolume = scopedData.at(-1)?.totalVolume;
+  const latestValue = scopedData.at(-1)?.[activeMetric];
+  const previousValue = scopedData.at(-2)?.[activeMetric];
+  const hasTrend = latestValue != null && previousValue != null;
+  const trendingUp = hasTrend && latestValue > previousValue;
+  const change = hasTrend && latestValue > 0 && previousValue > 0
+    ? Math.abs(((latestValue - previousValue) / previousValue) * 100).toFixed(1)
+    : "0";
 
   return (
     <div className="space-y-4">
@@ -129,15 +110,15 @@ export const ProgressiveOverloadChart = ({
           </button>
         </div>
       </div>
-      {activeMetric === "maxWeight" && availableSides.length > 0 && (
+      {availableSides.length > 0 && (
         <div className="flex flex-wrap justify-center gap-1" aria-label="Side filter">
           {availableSides.map((side) => (
             <button
               type="button"
               key={side}
-              aria-pressed={activeSide === side}
+              aria-pressed={effectiveSide === side}
               onClick={() => setActiveSide(side)}
-              className={`rounded-md border px-2 py-1 text-xs capitalize ${activeSide === side ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              className={`rounded-md border px-2 py-1 text-xs capitalize ${effectiveSide === side ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
             >
               {side === "both" ? "Both sides" : side}
             </button>
@@ -198,26 +179,23 @@ export const ProgressiveOverloadChart = ({
       <div className="flex w-full items-start gap-2 text-sm">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 leading-none font-medium">
-            {activeMetric === "maxWeight"
-              ? weightTrend
-                ? "Trending up"
-                : "Steady progress"
-              : volumeTrend
-                ? "Trending up"
-                : "Steady progress"}{" "}
-            by {activeMetric === "maxWeight" ? weightChange : volumeChange}%
-            this session <TrendingUp className="h-4 w-4" />
+            {hasTrend ? (
+              <>
+                {trendingUp ? "Trending up" : "Steady progress"} by {change}%
+                this session <TrendingUp className="h-4 w-4" />
+              </>
+            ) : "Trend unavailable"}
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
             {activeMetric === "maxWeight" ? (
               <>
-                Latest: {formatDecimal(latestWeight)}
-                {intensityUnit.abbreviation} max weight
+                Latest: {latestWeight == null ? "Unavailable" : formatDecimal(latestWeight)}
+                {latestWeight != null && intensityUnit.abbreviation} max weight
               </>
             ) : (
               <>
-                Latest: {formatDecimal(latestVolume)}
-                {intensityUnit.abbreviation} total volume
+                Latest: {latestVolume == null ? "Unavailable" : formatDecimal(latestVolume)}
+                {latestVolume != null && intensityUnit.abbreviation} total volume
               </>
             )}
           </div>

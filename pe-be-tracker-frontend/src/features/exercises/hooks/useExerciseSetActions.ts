@@ -497,9 +497,15 @@ export const useExerciseSetActions = ({
     const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
     const now = new Date().toISOString();
     const operationKey = crypto.randomUUID();
+    const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
+    const nextDurationSeconds = durationPreferred
+      ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
+      : (lastSet?.duration_seconds ?? null);
+    const nextReps = durationPreferred ? null : (lastSet?.reps ?? null);
+
     const common = {
-      reps: lastSet?.reps ?? 0,
-      duration_seconds: lastSet?.duration_seconds ?? null,
+      reps: nextReps,
+      duration_seconds: nextDurationSeconds,
       intensity: convertIntensityValue(lastSet?.intensity ?? null, lastSet?.intensity_unit_id, intensityUnitId) ?? 0,
       rpe: lastSet?.rpe ?? null,
       rir: lastSet?.rir ?? null,
@@ -525,8 +531,9 @@ export const useExerciseSetActions = ({
       const created = await createExerciseSetPair(
         exercise.id,
         optimistic.map((item) => ({
-          reps: item.reps ?? undefined,
-          duration_seconds: item.duration_seconds,
+          ...(item.duration_seconds != null
+            ? { duration_seconds: item.duration_seconds }
+            : { reps: item.reps || 0 }),
           intensity: item.intensity ?? undefined,
           rpe: item.rpe,
           rir: item.rir,
