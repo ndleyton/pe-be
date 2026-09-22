@@ -15,14 +15,17 @@ import {
 
 const {
   mockCreateExerciseSet,
+  mockCreateExerciseSetPair,
   mockDeleteExercise,
   mockDeleteExerciseSet,
   mockInvalidateQueries,
   mockUpdateExerciseSet,
   mockDeleteGuestExercise,
   mockAuthState,
+  mockToastError,
 } = vi.hoisted(() => ({
   mockCreateExerciseSet: vi.fn(),
+  mockCreateExerciseSetPair: vi.fn(),
   mockDeleteExercise: vi.fn(),
   mockDeleteExerciseSet: vi.fn(),
   mockInvalidateQueries: vi.fn(),
@@ -31,6 +34,7 @@ const {
   mockAuthState: {
     isAuthenticated: true,
   },
+  mockToastError: vi.fn(),
 }));
 
 vi.mock("@/features/exercises/api", async () => {
@@ -38,6 +42,7 @@ vi.mock("@/features/exercises/api", async () => {
   return {
     ...actual,
     createExerciseSet: mockCreateExerciseSet,
+    createExerciseSetPair: mockCreateExerciseSetPair,
     deleteExercise: mockDeleteExercise,
     deleteExerciseSet: mockDeleteExerciseSet,
     updateExerciseSet: mockUpdateExerciseSet,
@@ -63,6 +68,12 @@ vi.mock("@/stores", () => ({
     }),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: mockToastError,
+  },
+}));
+
 import { useExerciseSetActions } from "./useExerciseSetActions";
 
 describe("useExerciseSetActions", () => {
@@ -79,6 +90,7 @@ describe("useExerciseSetActions", () => {
         exercise_id: 123,
       }),
     );
+    mockCreateExerciseSetPair.mockResolvedValue([]);
     mockUpdateExerciseSet.mockResolvedValue({});
     mockDeleteExerciseSet.mockResolvedValue(undefined);
     mockDeleteExercise.mockResolvedValue(undefined);
@@ -517,6 +529,36 @@ describe("useExerciseSetActions", () => {
       reps: null,
       duration_seconds: 600,
     });
+  });
+
+  it("rolls back a failed optimistic pair and shows an error without a workout id", async () => {
+    mockCreateExerciseSetPair.mockRejectedValueOnce(new Error("offline"));
+    const exercise = makeExercise({
+      id: 123,
+      workout_id: 456,
+      exercise_sets: [
+        makeExerciseSet({ id: 1, exercise_id: 123, position: 0 }),
+      ],
+    });
+    const onExerciseUpdate = vi.fn();
+    const { result } = renderHook(() =>
+      useExerciseSetActions({ exercise, onExerciseUpdate }),
+    );
+
+    await act(async () => {
+      await result.current.addLeftRightPair(1);
+    });
+
+    expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1]);
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't add left and right sets. Please try again.",
+    );
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    expect(onExerciseUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        exercise_sets: [expect.objectContaining({ id: 1 })],
+      }),
+    );
   });
 
   it("keeps exercise sets sorted when initial props arrive out of order", () => {

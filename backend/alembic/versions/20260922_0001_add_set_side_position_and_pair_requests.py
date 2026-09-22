@@ -40,30 +40,46 @@ def upgrade() -> None:
 
     op.execute(
         """
-        WITH ranked AS (
-            SELECT id, row_number() OVER (
-                PARTITION BY exercise_id ORDER BY created_at, id
-            ) - 1 AS new_position
+        WITH parent_max AS (
+            SELECT exercise_id, COALESCE(MAX(position), -1) AS max_pos
             FROM exercise_sets
+            GROUP BY exercise_id
+        ),
+        ranked AS (
+            SELECT e.id,
+                   p.max_pos + row_number() OVER (
+                       PARTITION BY e.exercise_id ORDER BY e.created_at, e.id
+                   ) AS new_position
+            FROM exercise_sets e
+            JOIN parent_max p ON e.exercise_id = p.exercise_id
+            WHERE e.position IS NULL
         )
         UPDATE exercise_sets AS target
         SET position = ranked.new_position
         FROM ranked
-        WHERE target.id = ranked.id AND target.position IS NULL
+        WHERE target.id = ranked.id
         """
     )
     op.execute(
         """
-        WITH ranked AS (
-            SELECT id, row_number() OVER (
-                PARTITION BY exercise_template_id ORDER BY id
-            ) - 1 AS new_position
+        WITH parent_max AS (
+            SELECT exercise_template_id, COALESCE(MAX(position), -1) AS max_pos
             FROM set_templates
+            GROUP BY exercise_template_id
+        ),
+        ranked AS (
+            SELECT s.id,
+                   p.max_pos + row_number() OVER (
+                       PARTITION BY s.exercise_template_id ORDER BY s.id
+                   ) AS new_position
+            FROM set_templates s
+            JOIN parent_max p ON s.exercise_template_id = p.exercise_template_id
+            WHERE s.position IS NULL
         )
         UPDATE set_templates AS target
         SET position = ranked.new_position
         FROM ranked
-        WHERE target.id = ranked.id AND target.position IS NULL
+        WHERE target.id = ranked.id
         """
     )
 

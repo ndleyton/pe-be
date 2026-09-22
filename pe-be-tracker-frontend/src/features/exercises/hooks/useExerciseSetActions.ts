@@ -538,13 +538,49 @@ export const useExerciseSetActions = ({
         })),
         operationKey,
       );
-      const optimisticKeys = new Set(optimistic.map((item) => String(item.client_key)));
-      applyLocalExerciseSets((sets) => [
-        ...sets.filter((item) => !optimisticKeys.has(String(item.client_key))),
-        ...created,
-      ]);
+      applyLocalExerciseSets((sets) =>
+        sets.map((set) => {
+          const optMatch = optimistic.find(
+            (o) => String(o.client_key) === getExerciseSetClientKey(set)
+          );
+          if (optMatch) {
+            const createdMatch = created.find((c) => c.side === optMatch.side);
+            if (createdMatch) {
+              return {
+                ...createdMatch,
+                client_key: set.client_key ?? optMatch.client_key,
+              };
+            }
+          }
+          return set;
+        }),
+      );
+
+      optimistic.forEach((optItem) => {
+        const createdMatch = created.find((c) => c.side === optItem.side);
+        if (createdMatch) {
+          const tempId = String(optItem.client_key);
+          const pendingUpdate = pendingUpdatesRef.current[tempId];
+          if (pendingUpdate) {
+            pendingUpdate.serverSetId = createdMatch.id;
+            if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
+          }
+        }
+      });
     } catch (error) {
       console.error("Failed to create left/right pair:", error);
+      const optimisticKeys = new Set(
+        optimistic.map((item) => getExerciseSetClientKey(item)),
+      );
+      optimisticKeys.forEach((key) => {
+        const pendingUpdate = pendingUpdatesRef.current[key];
+        if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
+        delete pendingUpdatesRef.current[key];
+      });
+      applyLocalExerciseSets((sets) =>
+        sets.filter((set) => !optimisticKeys.has(getExerciseSetClientKey(set))),
+      );
+      toast.error("Couldn't add left and right sets. Please try again.");
       invalidateExerciseQuery();
     }
   }, [applyLocalExerciseSets, exercise.id, invalidateExerciseQuery, isAuthenticated, isUnsavedExercise]);
