@@ -1092,6 +1092,52 @@ describe("ExerciseTypeModal", () => {
     );
   });
 
+  it("shows no matches for an empty search within a populated muscle group", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 10, name: "Back" }),
+    ]);
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => Promise.resolve(
+        makePaginatedExerciseTypes(
+          orderBy === "name"
+            ? []
+            : [makeExerciseType({
+                id: muscleGroupId === 10 ? 2 : 1,
+                name: muscleGroupId === 10 ? "Lat Pulldown" : "Bench Press",
+              })],
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+    );
+
+    await screen.findByRole("button", { name: "Bench Press" });
+    await user.click(await screen.findByRole("tab", { name: "Back" }));
+    await screen.findByRole("button", { name: "Lat Pulldown" });
+
+    await user.type(
+      screen.getByPlaceholderText(/search exercise types/i),
+      "Unmatched exercise",
+    );
+
+    await screen.findByText("No matches");
+    expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+      "name", undefined, EXERCISE_TYPE_MODAL_INITIAL_LIMIT, 10, "Unmatched exercise",
+    );
+    expect(screen.queryByText("No Exercises Found")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No exercises match the selected muscle group."),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows muscle group empty state when filtered muscle group has no exercises", async () => {
     mockIsAuthenticated = true;
     mockGetMuscleGroups.mockResolvedValue([
