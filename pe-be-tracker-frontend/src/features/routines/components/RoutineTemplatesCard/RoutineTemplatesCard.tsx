@@ -561,16 +561,20 @@ const RoutineTemplateSection = memo(
       </div>
 
       {canEdit ? (
-        <Button
-          data-testid={`add-routine-set-${templateIndex}`}
-          variant="secondary"
-          size="sm"
-          className="mt-4 h-10 w-full rounded-xl border border-primary/30 bg-primary/20 text-xs font-bold uppercase tracking-widest transition-all hover:bg-primary/20"
-          onClick={() => onAddSet(template.id)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Set
-        </Button>
+        <>
+          <Button
+            data-testid={`add-routine-set-${templateIndex}`}
+            variant="secondary"
+            size="sm"
+            className="mt-4 h-10 w-full rounded-xl border border-primary/30 bg-primary/20 text-xs font-bold uppercase tracking-widest transition-all hover:bg-primary/20"
+            onClick={() => onAddSet(template.id)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Set
+          </Button>
+          {/* TODO: Add 'Add left + right' button for pair creation (RFC 0010) */}
+          {/* TODO: Add Move Up / Move Down UI controls for sets (RFC 0010) */}
+        </>
       ) : null}
     </div>
   ),

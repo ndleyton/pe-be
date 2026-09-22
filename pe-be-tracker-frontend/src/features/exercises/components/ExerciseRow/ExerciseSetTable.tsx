@@ -416,6 +416,7 @@ type SetOptionsDialogContentProps = {
   onSetRpeValueChange: (value: number | null) => void;
   onSetRirValueChange: (value: number | null) => void;
   onSetValueModeChange: (setId: string | number, mode: SetValueMode) => void;
+  // TODO: Add onMoveSet action (move up/down) for RFC 0010 position reordering
   onDeleteSet: (setId: string | number) => void | Promise<void>;
   onCloseSetOptions: () => void;
   onUpdateSetSide: ExerciseSetTableProps["onUpdateSetSide"];
