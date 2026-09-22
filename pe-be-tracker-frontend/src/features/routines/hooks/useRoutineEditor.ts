@@ -301,10 +301,13 @@ const routineEditorReducer = (
                 ...template,
                 set_templates: [
                   ...template.set_templates,
-                  createDefaultSet(
-                    action.payload.availableIntensityUnits,
-                    template.exercise_type?.default_intensity_unit,
-                  ),
+                  {
+                    ...createDefaultSet(
+                      action.payload.availableIntensityUnits,
+                      template.exercise_type?.default_intensity_unit,
+                    ),
+                    position: template.set_templates.length,
+                  },
                 ],
               },
         ),
@@ -317,9 +320,9 @@ const routineEditorReducer = (
             ? template
             : {
                 ...template,
-                set_templates: template.set_templates.filter(
-                  (setTemplate) => setTemplate.id !== action.payload.setId,
-                ),
+                set_templates: template.set_templates
+                  .filter((setTemplate) => setTemplate.id !== action.payload.setId)
+                  .map((setTemplate, position) => ({ ...setTemplate, position })),
               },
         ),
       };
