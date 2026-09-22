@@ -24,7 +24,11 @@ import {
 } from "@/features/exercises/api";
 import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
-import { ExerciseSearchResult } from "./ExerciseSearchResult";
+import {
+  ExerciseSearchResult,
+  ExerciseSearchResultSkeleton,
+} from "./ExerciseSearchResult";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import {
   Dialog,
@@ -88,7 +92,9 @@ const ExerciseTypeModal = ({
   const activeMuscleGroupId =
     selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
 
-  const { data: muscleGroups = [] } = useQuery<MuscleGroup[]>({
+  const { data: muscleGroups = [], isPending: isMuscleGroupsLoading } = useQuery<
+    MuscleGroup[]
+  >({
     queryKey: ["muscleGroups"],
     queryFn: getMuscleGroups,
     staleTime: Infinity,
@@ -487,31 +493,27 @@ const ExerciseTypeModal = ({
     loadMoreBrowseResults(event.currentTarget);
   };
 
-  const SkeletonCard = () => (
-    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border px-4 py-3">
-      <div className="flex min-h-[2lh] items-center text-base leading-snug">
-        <div className="bg-muted h-4 w-3/4 rounded" />
-      </div>
-    </div>
-  );
-
   const renderContent = () => {
     if (isInitialBrowseLoading) {
       return (
-        <div className="grid gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={index} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={index} />
+            ))}
+          </div>
         </div>
       );
     }
 
     if (isSearchingWithoutResults) {
       return (
-        <div className="grid gap-3 p-1">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={`search-skeleton-${index}`} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={`search-skeleton-${index}`} />
+            ))}
+          </div>
         </div>
       );
     }
@@ -570,10 +572,12 @@ const ExerciseTypeModal = ({
 
     if (!areResultsReady) {
       return (
-        <div className="grid gap-3 p-1">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <SkeletonCard key={`deferred-skeleton-${index}`} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={`deferred-skeleton-${index}`} />
+            ))}
+          </div>
         </div>
       );
     }
@@ -590,8 +594,8 @@ const ExerciseTypeModal = ({
           ))}
         </div>
 
-        {isAuthenticated && isFetchingNextPage && !isSearchActive && (
-          <div className="flex justify-center py-1">
+        {isAuthenticated && isFetchingNextPage && (
+          <div className="flex justify-center py-2">
             <span className="text-muted-foreground text-xs font-medium">
               Loading more exercises...
             </span>
@@ -675,7 +679,20 @@ const ExerciseTypeModal = ({
           )}
 
           {/* Muscle Group Quick-Filter Chips */}
-          {sortedMuscleGroups.length > 0 && (
+          {isAuthenticated && isMuscleGroupsLoading && sortedMuscleGroups.length === 0 ? (
+            <div
+              data-testid="muscle-group-filter-chips-skeleton"
+              className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+              aria-label="Loading muscle group filters"
+              aria-busy="true"
+            >
+              <Skeleton className="h-7 w-12 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-16 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-14 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-20 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-16 shrink-0 rounded-xl" />
+            </div>
+          ) : sortedMuscleGroups.length > 0 ? (
             <div
               data-testid="muscle-group-filter-chips"
               className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
@@ -719,7 +736,7 @@ const ExerciseTypeModal = ({
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div

@@ -880,4 +880,103 @@ describe("ExerciseTypeModal", () => {
       );
     });
   });
+
+  it("renders skeleton cards during initial browse loading in authenticated mode", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    expect(
+      screen.getAllByTestId("exercise-search-result-skeleton").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("renders muscle group filter chip skeletons while muscle groups are loading in authenticated mode", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockReturnValue(new Promise(() => {}));
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([makeExerciseType()]),
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("muscle-group-filter-chips-skeleton"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows loading indicator when fetching next page during search", async () => {
+    mockIsAuthenticated = true;
+    let resolveNextPage: (value: unknown) => void = () => {};
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        cursor?: number | null,
+      ) => {
+        if (orderBy === "name") {
+          if (!cursor) {
+            return Promise.resolve(
+              makePaginatedExerciseTypes(
+                [makeExerciseType({ id: 1, name: "Squats" })],
+                2,
+              ),
+            );
+          }
+          return new Promise((resolve) => {
+            resolveNextPage = resolve;
+          });
+        }
+        return Promise.resolve(makePaginatedExerciseTypes([]));
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "Squat");
+
+    await screen.findByText("Squats");
+
+    const scrollContainer = screen.getByTestId(
+      "exercise-type-modal-scroll-container",
+    );
+    setScrollMetrics(scrollContainer);
+    fireEvent.scroll(scrollContainer);
+
+    await screen.findByText("Loading more exercises...");
+
+    await act(async () => {
+      resolveNextPage(
+        makePaginatedExerciseTypes([
+          makeExerciseType({ id: 2, name: "Squats Heavy" }),
+        ]),
+      );
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Loading more exercises..."),
+      ).not.toBeInTheDocument();
+    });
+  });
 });
