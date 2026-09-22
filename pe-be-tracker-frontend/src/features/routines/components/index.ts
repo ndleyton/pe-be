@@ -10,4 +10,8 @@ export {
   RoutineProgramDetailsLoadingState,
   RoutineProgramDetailsPageSkeleton,
 } from "./skeletons/RoutineDetailsPageSkeleton";
-export { RoutinesPageSkeleton, RoutinesGridSkeleton } from "./skeletons/RoutinesPageSkeleton";
+export {
+  RoutinesPageSkeleton,
+  RoutinesGridSkeleton,
+  RoutineQuickStartCardSkeleton,
+} from "./skeletons/RoutinesPageSkeleton";

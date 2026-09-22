@@ -55,6 +55,15 @@ describe("RoutinesSection", () => {
     mockGetRoutines.mockResolvedValue({ data: routines, next_cursor: null });
   });
 
+  it("renders an accessible skeleton accordion while loading without plain Loading text", () => {
+    mockGetRoutines.mockReturnValue(new Promise(() => {}));
+    const { container } = render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
+
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /quick start routines/i })).toBeInTheDocument();
+    expect(container.querySelector("[aria-busy='true']")).toBeInTheDocument();
+  });
+
   it("auto-opens the routines list when requested", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
 

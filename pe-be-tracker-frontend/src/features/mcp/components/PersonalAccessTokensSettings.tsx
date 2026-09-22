@@ -25,6 +25,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
 } from "@/shared/components/ui";
 
 const MCP_PATH = "/api/mcp/trainer/";
@@ -139,6 +140,29 @@ const TokenRow = ({
     </li>
   );
 };
+
+const TokenRowSkeleton = () => (
+  <li
+    className="rounded-xl border border-border/50 bg-background/40 p-4"
+    aria-hidden="true"
+  >
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-44" />
+        <div className="flex flex-wrap gap-1.5">
+          <Skeleton className="h-5 w-12 rounded-md" />
+          <Skeleton className="h-5 w-14 rounded-md" />
+        </div>
+        <Skeleton className="h-3.5 w-48" />
+      </div>
+      <Skeleton className="h-9 w-20 shrink-0 rounded-md" />
+    </div>
+  </li>
+);
 
 export const PersonalAccessTokensSettings = ({
   enabled,
@@ -350,7 +374,14 @@ export const PersonalAccessTokensSettings = ({
           Your tokens
         </h4>
         {isLoading ? (
-          <p className="mt-3 text-sm text-muted-foreground">Loading tokens...</p>
+          <ul
+            className="mt-3 space-y-3"
+            aria-label="Loading tokens"
+            aria-busy="true"
+          >
+            <TokenRowSkeleton />
+            <TokenRowSkeleton />
+          </ul>
         ) : loadError ? (
           <p role="alert" className="mt-3 text-sm font-semibold text-destructive">
             {loadError}

@@ -11,3 +11,4 @@ export * from "./sheet";
 export * from "./textarea";
 export * from "./sonner";
 export * from "./tooltip";
+export * from "./skeleton";
