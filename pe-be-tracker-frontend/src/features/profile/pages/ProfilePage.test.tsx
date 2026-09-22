@@ -18,10 +18,26 @@ vi.mock("@/features/mcp/components/PersonalAccessTokensSettings", () => ({
   PersonalAccessTokensSettings: () => <div>PAT Settings Mock</div>,
 }));
 
+vi.mock("@/shared/components/WeekTracking", () => ({
+  WeekTracking: () => <div data-testid="week-tracking">Week tracking mock</div>,
+}));
+
 vi.mock("@/stores", () => ({
   useAuthStore: vi.fn(),
   useGuestStore: vi.fn(),
 }));
+
+const mockAuthState = {
+  isAuthenticated: true,
+  user: { id: 1, email: "test@example.com" },
+  loading: false,
+  initialized: true,
+};
+
+const mockGuestState = {
+  hydrated: true,
+  workouts: [],
+};
 
 const mockGetMyWorkouts = vi.mocked(getMyWorkouts);
 const mockUsePublicProfileSettings = vi.mocked(usePublicProfileSettings);
@@ -32,15 +48,13 @@ describe("ProfilePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseAuthStore.mockImplementation((selector) => {
-      const state = { isAuthenticated: true, loading: false };
-      return selector(state as any);
-    });
+    mockUseAuthStore.mockImplementation((selector: any) =>
+      selector ? selector(mockAuthState) : mockAuthState,
+    );
 
-    mockUseGuestStore.mockImplementation((selector) => {
-      const state = { workouts: [] };
-      return selector(state as any);
-    });
+    mockUseGuestStore.mockImplementation((selector: any) =>
+      selector ? selector(mockGuestState) : mockGuestState,
+    );
 
     mockUsePublicProfileSettings.mockReturnValue({
       createProfile: vi.fn(),
@@ -49,11 +63,8 @@ describe("ProfilePage", () => {
       isLoading: false,
       isPending: false,
       profile: {
-        id: 1,
         username: "lifter123",
         is_profile_public: true,
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:00:00Z",
       },
       setUsernameFocused: vi.fn(),
       setUsername: vi.fn(),
@@ -99,7 +110,7 @@ describe("ProfilePage", () => {
       errorMessage: null,
       isLoading: true,
       isPending: false,
-      profile: null,
+      profile: undefined,
       setUsernameFocused: vi.fn(),
       setUsername: vi.fn(),
       toggleVisibility: vi.fn(),
@@ -120,7 +131,7 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     await waitFor(() => {
-      expect(screen.getByText("1")).toBeInTheDocument(); // 1 total workout
+      expect(screen.getAllByText("1")).toHaveLength(2); // Total Workouts and Completed
     });
 
     expect(screen.getByText("60")).toBeInTheDocument(); // 60 min average duration
