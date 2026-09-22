@@ -423,6 +423,36 @@ describe("ExerciseTypeModal", () => {
     expect(screen.queryByText(/no matches/i)).not.toBeInTheDocument();
   });
 
+  it("keeps browse results selectable after clearing a completed authenticated search", async () => {
+    mockIsAuthenticated = true;
+    const browseExercise = makeExerciseType({ id: 1, name: "Squat" });
+    const searchExercise = makeExerciseType({ id: 2, name: "Bench Press" });
+    mockGetExerciseTypes.mockImplementation((orderBy?: "usage" | "name") =>
+      Promise.resolve(
+        makePaginatedExerciseTypes([
+          orderBy === "name" ? searchExercise : browseExercise,
+        ]),
+      ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+    );
+
+    await screen.findByRole("button", { name: "Squat" });
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "Bench");
+    await screen.findByRole("button", { name: "Bench Press" });
+    await user.clear(searchInput);
+
+    const browseResult = await screen.findByRole("button", { name: "Squat" });
+    expect(browseResult.closest(".pointer-events-none")).toBeNull();
+    expect(browseResult.closest(".opacity-60")).toBeNull();
+    await user.click(browseResult);
+    expect(mockOnSelect).toHaveBeenCalledWith(browseExercise);
+  });
+
   it("keeps create available when authenticated fuzzy search returns similar but not exact matches", async () => {
     mockIsAuthenticated = true;
     mockGetExerciseTypes.mockImplementation(
@@ -992,7 +1022,7 @@ describe("ExerciseTypeModal", () => {
 
     mockGetExerciseTypes.mockImplementation(
       (
-        orderBy?: "usage" | "name",
+        _orderBy?: "usage" | "name",
         _cursor?: number | null,
         _limit?: number,
         muscleGroupId?: number,

@@ -605,7 +605,7 @@ const ExerciseTypeModal = ({
     return (
       <div
         className={`space-y-4 p-1 transition-opacity duration-150 ${
-          isBrowsePlaceholderData || isSearchPlaceholderData
+          (isSearchActive ? isSearchPlaceholderData : isBrowsePlaceholderData)
             ? "opacity-60 pointer-events-none"
             : ""
         }`}
