@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import {
   createExerciseSet,
+  createExerciseSetPair,
   deleteExercise,
   deleteExerciseSet,
   updateExerciseSet,
@@ -344,7 +345,7 @@ export const useExerciseSetActions = ({
 
   const updateSetOptions = useCallback(async (
     setId: string | number,
-    updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir">,
+    updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir" | "side">,
   ) => {
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
@@ -435,6 +436,8 @@ export const useExerciseSetActions = ({
       done: false,
       notes: null,
       type: nextSetType,
+      side: lastSet?.side ?? null,
+      position: Math.max(-1, ...currentExerciseSets.map((set) => set.position)) + 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -459,6 +462,7 @@ export const useExerciseSetActions = ({
         done: false,
         notes: undefined,
         type: nextSetType,
+        side: lastSet?.side ?? null,
         ...(nextDurationSeconds != null
           ? { duration_seconds: nextDurationSeconds }
           : { reps: nextReps || 0 }),
@@ -485,6 +489,65 @@ export const useExerciseSetActions = ({
       invalidateExerciseQuery();
     }
   }, [applyLocalExerciseSets, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
+
+  const addLeftRightPair = useCallback(async (intensityUnitId: number) => {
+    if (isUnsavedExercise) return;
+    const current = exerciseSetsRef.current;
+    const lastSet = current[current.length - 1];
+    const firstPosition = Math.max(-1, ...current.map((set) => set.position)) + 1;
+    const now = new Date().toISOString();
+    const operationKey = crypto.randomUUID();
+    const common = {
+      reps: lastSet?.reps ?? 0,
+      duration_seconds: lastSet?.duration_seconds ?? null,
+      intensity: convertIntensityValue(lastSet?.intensity ?? null, lastSet?.intensity_unit_id, intensityUnitId) ?? 0,
+      rpe: lastSet?.rpe ?? null,
+      rir: lastSet?.rir ?? null,
+      intensity_unit_id: intensityUnitId,
+      exercise_id: exercise.id,
+      rest_time_seconds: 0,
+      done: false as const,
+      notes: null,
+      type: current.length === 0 ? "warmup" : "working",
+    };
+    const optimistic = (["left", "right"] as const).map((side, offset) => ({
+      ...common,
+      id: `temp-${operationKey}-${side}`,
+      client_key: `temp-${operationKey}-${side}`,
+      side,
+      position: firstPosition + offset,
+      created_at: now,
+      updated_at: now,
+    } satisfies ExerciseSet));
+    applyLocalExerciseSets([...current, ...optimistic]);
+    if (!isAuthenticated) return;
+    try {
+      const created = await createExerciseSetPair(
+        exercise.id,
+        optimistic.map((item) => ({
+          reps: item.reps ?? undefined,
+          duration_seconds: item.duration_seconds,
+          intensity: item.intensity ?? undefined,
+          rpe: item.rpe,
+          rir: item.rir,
+          intensity_unit_id: item.intensity_unit_id,
+          rest_time_seconds: item.rest_time_seconds ?? undefined,
+          done: false,
+          type: item.type ?? undefined,
+          side: item.side as "left" | "right",
+        })),
+        operationKey,
+      );
+      const optimisticKeys = new Set(optimistic.map((item) => item.client_key));
+      applyLocalExerciseSets((sets) => [
+        ...sets.filter((item) => !optimisticKeys.has(item.client_key)),
+        ...created,
+      ]);
+    } catch (error) {
+      console.error("Failed to create left/right pair:", error);
+      invalidateExerciseQuery();
+    }
+  }, [applyLocalExerciseSets, exercise.id, invalidateExerciseQuery, isAuthenticated, isUnsavedExercise]);
 
   const updateExerciseNotes = useCallback((notes: string) => {
     if (!onExerciseUpdate) {
@@ -520,6 +583,7 @@ export const useExerciseSetActions = ({
 
   return {
     addSet,
+    addLeftRightPair,
     decrementReps,
     deleteSet,
     exerciseSets,

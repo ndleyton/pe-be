@@ -1,4 +1,4 @@
-# RFC 0010: Set Sides and Exercise Variations
+# RFC 0010: Set Sides, Ordering, and Exercise Variations
 
 - Status: Proposed
 - Date: 2026-09-22
