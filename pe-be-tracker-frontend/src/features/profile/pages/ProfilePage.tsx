@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { LoadingStatus } from "@/shared/components/ui/loading-status";
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
   const { data } = await getMyWorkouts(undefined, 25);
@@ -58,17 +59,20 @@ const PublicProfileSettings = ({
         Public Profile
       </label>
       {isLoading ? (
-        <div
-          className="mt-2 space-y-2.5"
-          aria-label="Loading public profile settings"
-          aria-busy="true"
-        >
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-4 w-60" />
-          <div className="flex gap-2 pt-1">
-            <Skeleton className="h-8 w-24 rounded-lg" />
+        <>
+          <LoadingStatus message="Loading public profile settings" />
+          <div
+            className="mt-2 space-y-2.5"
+            aria-label="Loading public profile settings"
+            aria-busy="true"
+          >
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-4 w-60" />
+            <div className="flex gap-2 pt-1">
+              <Skeleton className="h-8 w-24 rounded-lg" />
+            </div>
           </div>
-        </div>
+        </>
       ) : error ? (
         <p className="mt-2 text-sm font-semibold text-destructive">
           Failed to load public profile settings.
@@ -229,6 +233,7 @@ const ProfilePage = () => {
         />
 
         {/* Stats Cards */}
+        {isStatsLoading && <LoadingStatus message="Loading workout statistics" />}
         <div
           className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3"
           aria-busy={isStatsLoading ? "true" : undefined}

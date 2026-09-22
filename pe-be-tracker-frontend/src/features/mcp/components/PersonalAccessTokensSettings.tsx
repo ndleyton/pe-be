@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  LoadingStatus,
 } from "@/shared/components/ui";
 
 const MCP_PATH = "/api/mcp/trainer/";
@@ -374,14 +375,17 @@ export const PersonalAccessTokensSettings = ({
           Your tokens
         </h4>
         {isLoading ? (
-          <ul
-            className="mt-3 space-y-3"
-            aria-label="Loading tokens"
-            aria-busy="true"
-          >
-            <TokenRowSkeleton />
-            <TokenRowSkeleton />
-          </ul>
+          <>
+            <LoadingStatus message="Loading tokens" />
+            <ul
+              className="mt-3 space-y-3"
+              aria-label="Loading tokens"
+              aria-busy="true"
+            >
+              <TokenRowSkeleton />
+              <TokenRowSkeleton />
+            </ul>
+          </>
         ) : loadError ? (
           <p role="alert" className="mt-3 text-sm font-semibold text-destructive">
             {loadError}
