@@ -12,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
+import { LoadingStatus } from "@/shared/components/ui/loading-status";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -56,6 +57,7 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
 
   return (
     <div className="mb-6 w-full" aria-busy={isLoading ? "true" : undefined}>
+      {isLoading && <LoadingStatus message="Loading quick start routines" />}
       <Accordion
         type="single"
         collapsible
