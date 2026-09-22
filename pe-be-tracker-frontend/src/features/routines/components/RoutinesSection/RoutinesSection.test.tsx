@@ -81,29 +81,10 @@ describe("RoutinesSection", () => {
     expect(mockGetRoutines).toHaveBeenCalledWith("createdAtAsc", 0, 3);
   });
 
-  it("stays collapsed by default and hides the browse link", async () => {
-    render(<RoutinesSection onStartWorkout={vi.fn()} />);
-
-    const trigger = await screen.findByRole("button", {
-      name: /quick start routines/i,
-    });
-
-    await waitFor(() => {
-      expect(trigger).toHaveAttribute("aria-expanded", "false");
-    });
-    expect(screen.queryByText("Push Day")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /browse all routines/i }),
-    ).not.toBeInTheDocument();
-  });
-
   it("preloads the routines page when the browse button shows intent", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /quick start routines/i }),
-    );
-
+    // Note: The accordion now opens automatically during the initial loading state
     const browseButton = await screen.findByRole("link", {
       name: /browse all routines/i,
     });

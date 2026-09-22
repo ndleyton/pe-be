@@ -33,10 +33,6 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
   autoOpen = false,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [accordionValue, setAccordionValue] = React.useState(
-    autoOpen ? QUICK_START_ROUTINES_VALUE : "",
-  );
-
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ["routines", "quickstart", 3, isAuthenticated],
     queryFn: async () => {
@@ -45,11 +41,15 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
     },
   });
 
+  const [accordionValue, setAccordionValue] = React.useState(
+    autoOpen || isLoading ? QUICK_START_ROUTINES_VALUE : "",
+  );
+
   React.useEffect(() => {
-    if (autoOpen) {
+    if (autoOpen || isLoading) {
       setAccordionValue(QUICK_START_ROUTINES_VALUE);
     }
-  }, [autoOpen]);
+  }, [autoOpen, isLoading]);
 
   if (!isLoading && routines.length === 0) {
     return null;
