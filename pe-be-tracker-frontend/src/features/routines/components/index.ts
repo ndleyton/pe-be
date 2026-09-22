@@ -1,6 +1,7 @@
 export { RoutinesSection } from "./RoutinesSection/RoutinesSection";
 export { SaveRoutineModal } from "./SaveRoutineModal/SaveRoutineModal";
 export { RoutineQuickStartCard } from "./RoutineQuickStartCard/RoutineQuickStartCard";
+export { RoutineQuickStartCardSkeleton } from "./RoutineQuickStartCard/RoutineQuickStartCardSkeleton";
 export { RoutineProgramCard } from "./RoutineProgramCard/RoutineProgramCard";
 export { RoutineInfoCard } from "./RoutineInfoCard/RoutineInfoCard";
 export { RoutineTemplatesCard } from "./RoutineTemplatesCard/RoutineTemplatesCard";
@@ -13,5 +14,4 @@ export {
 export {
   RoutinesPageSkeleton,
   RoutinesGridSkeleton,
-  RoutineQuickStartCardSkeleton,
 } from "./skeletons/RoutinesPageSkeleton";

@@ -4,7 +4,7 @@ import type { RoutineSummary } from "@/features/routines/types";
 import { useAuthStore } from "@/stores";
 import { getRoutines } from "@/features/routines/api";
 import { RoutineQuickStartCard } from "../RoutineQuickStartCard/RoutineQuickStartCard";
-import { RoutineQuickStartCardSkeleton } from "../skeletons/RoutinesPageSkeleton";
+import { RoutineQuickStartCardSkeleton } from "../RoutineQuickStartCard/RoutineQuickStartCardSkeleton";
 import { Button } from "@/shared/components/ui/button";
 import {
   Accordion,
