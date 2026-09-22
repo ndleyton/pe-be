@@ -78,7 +78,10 @@ export async function syncGuestDataToServer(
             intensity_unit_id: s.intensity_unit_id,
             rest_time_seconds: s.rest_time_seconds,
             done: s.done,
-            notes: s.notes
+            notes: s.notes,
+            type: s.type,
+            side: s.side,
+            position: s.position,
           }))
         }))
       })),

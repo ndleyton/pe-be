@@ -378,6 +378,8 @@ async def create_routine(
                     rir=set_template_data.rir,
                     notes=set_template_data.notes,
                     type=set_template_data.type,
+                    side=set_template_data.side,
+                    position=set_template_data.position,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
                     canonical_intensity_unit_id=canonical_intensity_unit_id,
@@ -468,6 +470,8 @@ async def create_routine_admin(
                     rir=set_template_data.rir,
                     notes=set_template_data.notes,
                     type=set_template_data.type,
+                    side=set_template_data.side,
+                    position=set_template_data.position,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
                     canonical_intensity_unit_id=canonical_intensity_unit_id,
@@ -507,6 +511,10 @@ async def update_routine(
     )
     if not routine:
         return None
+
+    await session.execute(
+        select(Routine.id).where(Routine.id == routine.id).with_for_update()
+    )
 
     # Update fields if provided
     if routine_data.name is not None:
@@ -566,6 +574,8 @@ async def update_routine(
                     rir=set_template_data.rir,
                     notes=set_template_data.notes,
                     type=set_template_data.type,
+                    side=set_template_data.side,
+                    position=set_template_data.position,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template_data.intensity_unit_id,
                     canonical_intensity_unit_id=canonical_intensity_unit_id,
@@ -608,3 +618,55 @@ async def delete_routine(
     await session.delete(routine)
     await session.commit()
     return True
+
+
+async def reorder_set_templates(
+    session: AsyncSession,
+    *,
+    routine_id: int,
+    exercise_template_id: int,
+    ordered_set_ids: list[int],
+    expected_set_ids: list[int],
+    user_id: int,
+    is_superuser: bool = False,
+) -> list[SetTemplate] | None:
+    owner_clause = True if is_superuser else Routine.creator_id == user_id
+    locked_routine = await session.scalar(
+        select(Routine)
+        .where(Routine.id == routine_id, owner_clause)
+        .with_for_update()
+    )
+    if locked_routine is None:
+        raise LookupError
+    template = await session.scalar(
+        select(ExerciseTemplate).where(
+            ExerciseTemplate.id == exercise_template_id,
+            ExerciseTemplate.routine_id == routine_id,
+        )
+    )
+    if template is None:
+        raise LookupError
+    result = await session.execute(
+        select(SetTemplate)
+        .where(SetTemplate.exercise_template_id == exercise_template_id)
+        .order_by(SetTemplate.position, SetTemplate.id)
+    )
+    rows = list(result.scalars().all())
+    current_ids = [row.id for row in rows]
+    if current_ids != expected_set_ids:
+        return None
+    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(
+        ordered_set_ids
+    ) != set(current_ids):
+        raise ValueError("ordered_set_ids must be a complete permutation")
+    if ordered_set_ids == current_ids:
+        return rows
+    by_id = {row.id: row for row in rows}
+    temporary_start = max((row.position for row in rows), default=-1) + 1
+    for offset, set_id in enumerate(ordered_set_ids):
+        by_id[set_id].position = temporary_start + offset
+    await session.flush()
+    for position, set_id in enumerate(ordered_set_ids):
+        by_id[set_id].position = position
+    await session.commit()
+    return [by_id[set_id] for set_id in ordered_set_ids]

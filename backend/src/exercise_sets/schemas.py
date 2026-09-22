@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 from datetime import datetime
 from decimal import Decimal
-from pydantic import ConfigDict, BaseModel, model_validator
+from pydantic import ConfigDict, BaseModel, Field, model_validator
 
 
 class ExerciseSetBase(BaseModel):
@@ -19,7 +19,7 @@ class ExerciseSetBase(BaseModel):
     notes: Optional[str] = None
     type: Optional[str] = None
     side: Optional[Literal["left", "right", "both"]] = None
-    position: Optional[int] = None
+    position: Optional[int] = Field(default=None, ge=0)
 
 
 class ExerciseSetCreate(ExerciseSetBase):

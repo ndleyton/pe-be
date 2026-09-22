@@ -166,3 +166,4 @@ class AdminRoutineCreate(RoutineBase):
     exercise_templates: List[ExerciseTemplateCreate] = []
     visibility: Optional[RoutineModel.RoutineVisibility] = None
     is_readonly: Optional[bool] = None
+    template_tree_version: Optional[int] = None

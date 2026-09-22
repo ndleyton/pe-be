@@ -34,9 +34,12 @@ export const endpoints = {
 
   // Exercise Sets
   exerciseSets: "/exercise-sets/",
+  exerciseSetPairs: "/exercise-sets/pairs/",
   exerciseSetById: (id: string | number) => `/exercise-sets/${id}`,
   exerciseSetsByExercise: (exerciseId: string | number) =>
     `/exercise-sets/exercise/${exerciseId}`,
+  exerciseSetOrder: (exerciseId: string | number) =>
+    `/exercise-sets/exercise/${exerciseId}/order`,
 
   // Workout endpoints
   workouts: "/workouts/",

@@ -77,7 +77,7 @@ class PersonalizedRoutineService:
                 )
                 session.add(template)
                 await session.flush()
-                for set_input in exercise_input.sets:
+                for position, set_input in enumerate(exercise_input.sets):
                     unit_cache_key = (
                         set_input.intensity_unit,
                         exercise_type.default_intensity_unit,
@@ -113,6 +113,8 @@ class PersonalizedRoutineService:
                             rir=set_input.rir,
                             notes=set_input.notes,
                             type=set_input.type,
+                            side=set_input.side,
+                            position=position,
                         )
                     )
 

@@ -62,6 +62,8 @@ export interface GuestExerciseSet {
   done: boolean;
   notes?: string | null;
   type?: string | null;
+  side: "left" | "right" | "both" | null;
+  position: number;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -133,7 +135,10 @@ interface GuestActions {
   restoreExercise: (id: string) => void;
 
   addExerciseSet: (
-    exerciseSet: Omit<GuestExerciseSet, "id" | "created_at" | "updated_at">,
+    exerciseSet: Omit<
+      GuestExerciseSet,
+      "id" | "created_at" | "updated_at" | "side" | "position"
+    > & Partial<Pick<GuestExerciseSet, "side" | "position">>,
   ) => string;
   updateExerciseSet: (id: string, updates: Partial<GuestExerciseSet>) => void;
   deleteExerciseSet: (id: string) => void;
@@ -291,12 +296,22 @@ export const useGuestStore = create<GuestStore>()(
       addExerciseSet: (exerciseSet) => {
         const id = generateRandomId();
         const now = getCurrentUTCTimestamp();
+        const parentExercise = state.workouts
+          .flatMap((workout) => workout.exercises)
+          .find((exercise) => exercise.id === exerciseSet.exercise_id);
+        const nextPosition = parentExercise
+          ? Math.max(-1, ...parentExercise.exercise_sets
+              .filter((item) => !item.deleted_at)
+              .map((item) => item.position)) + 1
+          : 0;
         const newExerciseSet: GuestExerciseSet = {
           ...exerciseSet,
           id,
           intensity: exerciseSet.intensity,
           rpe: exerciseSet.rpe ?? null,
           rir: exerciseSet.rir ?? null,
+          side: exerciseSet.side ?? null,
+          position: exerciseSet.position ?? nextPosition,
           created_at: now,
           updated_at: now,
         };
@@ -434,7 +449,7 @@ export const useGuestStore = create<GuestStore>()(
 
           exerciseIds.push(exerciseId);
 
-          routineExercise.set_templates.forEach((routineSet) => {
+          routineExercise.set_templates.forEach((routineSet, position) => {
             addExerciseSet({
               exercise_id: exerciseId,
               reps: routineSet.reps ?? null,
@@ -445,6 +460,8 @@ export const useGuestStore = create<GuestStore>()(
               intensity_unit_id: routineSet.intensity_unit_id,
               rest_time_seconds: null,
               done: false,
+              side: routineSet.side ?? null,
+              position: routineSet.position ?? position,
             });
           });
         });
@@ -553,7 +570,7 @@ export const useGuestStore = create<GuestStore>()(
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
-        if (persistedVersion == null || persistedVersion < 4) {
+        if (persistedVersion == null || persistedVersion < 5) {
           const guest = migrateGuestData(persistedState);
           return {
             ...createInitialGuestData(generateRandomId),
@@ -566,7 +583,7 @@ export const useGuestStore = create<GuestStore>()(
         // Already at current version — return as-is
         return persistedState as GuestState;
       },
-      version: 4,
+      version: 5,
       onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);

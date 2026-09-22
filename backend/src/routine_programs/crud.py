@@ -647,6 +647,8 @@ async def _clone_routine(
                     rir=set_template.rir,
                     notes=set_template.notes,
                     type=set_template.type,
+                    side=set_template.side,
+                    position=set_template.position,
                     canonical_intensity=canonical_intensity,
                     intensity_unit_id=set_template.intensity_unit_id,
                     canonical_intensity_unit_id=canonical_intensity_unit_id,
