@@ -650,6 +650,34 @@ const SetDetailsDialog = ({
               <div className="space-y-6 py-4">
                 <div className="space-y-2">
                   <label className="ml-1 block text-[10px] font-black uppercase tracking-widest opacity-40">
+                    Side
+                  </label>
+                  <div className="bg-muted inline-flex flex-wrap items-center gap-1 rounded-lg border p-1">
+                    {([
+                      [null, "Unspecified"],
+                      ["left", "Left"],
+                      ["right", "Right"],
+                      ["both", "Both sides"],
+                    ] as const).map(([side, label]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        aria-pressed={activeSetTemplate.side === side}
+                        onClick={() =>
+                          onUpdateSet(activeTemplate.id, activeSetTemplate.id, { side })
+                        }
+                        className={`rounded-md px-2 py-1 text-sm ${activeSetTemplate.side === side ? "bg-background shadow" : "text-muted-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Both sides together; use separate left and right rows for unilateral work.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="ml-1 block text-[10px] font-black uppercase tracking-widest opacity-40">
                     Tracking
                   </label>
                   <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">

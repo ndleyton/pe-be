@@ -47,6 +47,7 @@ type ExerciseSetTableProps = {
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
   onAddSet: () => void;
+  onAddPair: () => void;
   onCloseSetOptions: () => void;
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
@@ -71,6 +72,10 @@ type ExerciseSetTableProps = {
     field: "weight" | "reps" | "duration_seconds",
     value: number | null,
     displayUnitId?: number,
+  ) => void;
+  onUpdateSetSide: (
+    setId: string | number,
+    side: "left" | "right" | "both" | null,
   ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
@@ -158,7 +163,15 @@ const ExerciseSetRow = memo(({
             : "text-muted-foreground text-xs"
             }`}
         >
-          {isPR ? "PR" : index + 1}
+          {isPR
+            ? "PR"
+            : set.side === "left"
+              ? "L"
+              : set.side === "right"
+                ? "R"
+                : set.side === "both"
+                  ? "Both"
+                  : index + 1}
         </span>
       </div>
       <div className="min-w-0 flex justify-center">
@@ -405,6 +418,7 @@ type SetOptionsDialogContentProps = {
   onSetValueModeChange: (setId: string | number, mode: SetValueMode) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
   onCloseSetOptions: () => void;
+  onUpdateSetSide: ExerciseSetTableProps["onUpdateSetSide"];
 };
 
 const SetOptionsDialogContent = ({
@@ -420,6 +434,7 @@ const SetOptionsDialogContent = ({
   onSetValueModeChange,
   onDeleteSet,
   onCloseSetOptions,
+  onUpdateSetSide,
 }: SetOptionsDialogContentProps) => {
   const activeSetKey = getExerciseSetClientKey(activeSet);
   const setValueMode = resolveSetValueMode(activeSet, prefersTimeByDefault);
@@ -434,6 +449,30 @@ const SetOptionsDialogContent = ({
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Side</label>
+          <div className="bg-muted inline-flex flex-wrap items-center gap-1 rounded-lg border p-1">
+            {([
+              [null, "Unspecified"],
+              ["left", "Left"],
+              ["right", "Right"],
+              ["both", "Both sides"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={(activeSet.side ?? null) === value}
+                onClick={() => onUpdateSetSide(activeSetKey, value)}
+                className={`rounded-md px-2 py-1 text-sm ${(activeSet.side ?? null) === value ? "bg-background shadow" : "text-muted-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Both sides together. For one side at a time, add left + right.
+          </p>
+        </div>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Tracking
@@ -639,6 +678,7 @@ export const ExerciseSetTable = memo(({
   intensityInputs,
   isUnsavedExercise,
   onAddSet,
+  onAddPair,
   onCloseSetOptions,
   onDecrementReps,
   onDeleteSet,
@@ -654,6 +694,7 @@ export const ExerciseSetTable = memo(({
   onSetWeightInputValue,
   onToggleSetCompletion,
   onUpdateSetField,
+  onUpdateSetSide,
   repsInputs,
   setNotesValue,
   setRpeValue,
@@ -795,6 +836,7 @@ export const ExerciseSetTable = memo(({
                 onSetValueModeChange={onSetValueModeChange}
                 onDeleteSet={onDeleteSet}
                 onCloseSetOptions={onCloseSetOptions}
+                onUpdateSetSide={onUpdateSetSide}
               />
             );
           })()}
@@ -810,6 +852,14 @@ export const ExerciseSetTable = memo(({
       >
         <Plus className="mr-2 h-5 w-5" />
         <span className="font-bold tracking-tight">Add Set</span>
+      </Button>
+      <Button
+        variant="outline"
+        className="mt-2 w-full"
+        disabled={isUnsavedExercise}
+        onClick={onAddPair}
+      >
+        Add left + right
       </Button>
     </>
   );
