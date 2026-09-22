@@ -62,8 +62,8 @@ export interface GuestExerciseSet {
   done: boolean;
   notes?: string | null;
   type?: string | null;
-  side: "left" | "right" | "both" | null;
-  position: number;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -294,6 +294,7 @@ export const useGuestStore = create<GuestStore>()(
       },
 
       addExerciseSet: (exerciseSet) => {
+        const state = get();
         const id = generateRandomId();
         const now = getCurrentUTCTimestamp();
         const parentExercise = state.workouts
@@ -302,7 +303,7 @@ export const useGuestStore = create<GuestStore>()(
         const nextPosition = parentExercise
           ? Math.max(-1, ...parentExercise.exercise_sets
               .filter((item) => !item.deleted_at)
-              .map((item) => item.position)) + 1
+              .map((item, index) => item.position ?? index)) + 1
           : 0;
         const newExerciseSet: GuestExerciseSet = {
           ...exerciseSet,

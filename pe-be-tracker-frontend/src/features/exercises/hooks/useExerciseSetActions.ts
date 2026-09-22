@@ -437,7 +437,7 @@ export const useExerciseSetActions = ({
       notes: null,
       type: nextSetType,
       side: lastSet?.side ?? null,
-      position: Math.max(-1, ...currentExerciseSets.map((set) => set.position)) + 1,
+      position: Math.max(-1, ...currentExerciseSets.map((set, index) => set.position ?? index)) + 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -494,7 +494,7 @@ export const useExerciseSetActions = ({
     if (isUnsavedExercise) return;
     const current = exerciseSetsRef.current;
     const lastSet = current[current.length - 1];
-    const firstPosition = Math.max(-1, ...current.map((set) => set.position)) + 1;
+    const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
     const now = new Date().toISOString();
     const operationKey = crypto.randomUUID();
     const common = {
@@ -538,9 +538,9 @@ export const useExerciseSetActions = ({
         })),
         operationKey,
       );
-      const optimisticKeys = new Set(optimistic.map((item) => item.client_key));
+      const optimisticKeys = new Set(optimistic.map((item) => String(item.client_key)));
       applyLocalExerciseSets((sets) => [
-        ...sets.filter((item) => !optimisticKeys.has(item.client_key)),
+        ...sets.filter((item) => !optimisticKeys.has(String(item.client_key))),
         ...created,
       ]);
     } catch (error) {

@@ -245,10 +245,15 @@ class ExerciseTypeService:
         user_id: int,
         *,
         exercise_type: Optional[ExerciseType] = None,
+        metrics_version: int = 1,
     ) -> Dict[str, Any]:
         """Get exercise type statistics including progressive overload data"""
         return await get_exercise_type_stats(
-            session, exercise_type_id, user_id, exercise_type=exercise_type
+            session,
+            exercise_type_id,
+            user_id,
+            exercise_type=exercise_type,
+            metrics_version=metrics_version,
         )
 
     @staticmethod

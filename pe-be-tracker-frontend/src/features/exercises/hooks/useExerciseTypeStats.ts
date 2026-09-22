@@ -11,8 +11,8 @@ export const useExerciseTypeStats = (exerciseTypeId: string | number, _exerciseT
     error,
     refetch: updateStats,
   } = useQuery({
-    queryKey: ["exerciseTypeStats", exerciseTypeId],
-    queryFn: () => getExerciseTypeStats(String(exerciseTypeId)),
+    queryKey: ["exerciseTypeStats", exerciseTypeId, 2],
+    queryFn: () => getExerciseTypeStats(String(exerciseTypeId), 2),
     enabled: isAuthenticated && (typeof exerciseTypeId === "number" || typeof exerciseTypeId === "string"),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

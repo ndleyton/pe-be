@@ -46,8 +46,8 @@ export type RoutineEditorSet = {
   type: string | null;
   intensity_unit_id: number;
   intensity_unit: RoutineIntensityUnitOption | null;
-  side: "left" | "right" | "both" | null;
-  position: number;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
 };
 
 export type RoutineEditorTemplate = {
@@ -132,7 +132,7 @@ export const buildEditorTemplatesFromRoutine = (
     exercise_type: toRoutineExerciseTypeOption(template.exercise_type),
     notes: template.notes ?? "",
     set_templates: [...template.set_templates]
-      .sort((left, right) => left.position - right.position)
+      .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
       .map((setTemplate) => ({
       id: String(setTemplate.id),
       reps: setTemplate.reps ?? null,
@@ -163,7 +163,7 @@ export const buildRoutinePayload = (
       intensity_unit_id: setTemplate.intensity_unit_id,
       notes: setTemplate.notes.trim() || null,
       type: setTemplate.type || null,
-      side: setTemplate.side,
+      side: setTemplate.side ?? null,
       position,
       ...(setTemplate.rpe != null ? { rpe: setTemplate.rpe } : {}),
       ...(setTemplate.rir != null ? { rir: setTemplate.rir } : {}),

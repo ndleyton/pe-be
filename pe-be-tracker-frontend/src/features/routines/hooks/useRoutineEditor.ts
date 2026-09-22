@@ -83,6 +83,7 @@ type RoutineEditorAction =
         setId: string;
       };
     }
+  // TODO: Add REORDER_SET or MOVE_SET action for RFC 0010 dense position reordering
   | {
       type: "updateTemplate";
       payload: {

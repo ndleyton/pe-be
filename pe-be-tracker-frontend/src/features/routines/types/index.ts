@@ -23,8 +23,8 @@ export interface SetTemplate {
   intensity_unit_id: number;
   notes?: string | null;
   type?: string | null;
-  side: "left" | "right" | "both" | null;
-  position: number;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
   created_at: string;
   updated_at: string;
   intensity_unit?: IntensityUnit;

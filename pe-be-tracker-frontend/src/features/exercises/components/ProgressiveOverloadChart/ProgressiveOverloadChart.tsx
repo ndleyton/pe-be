@@ -33,13 +33,18 @@ export const ProgressiveOverloadChart = ({
   const [activeMetric, setActiveMetric] = useState<
     "maxWeight" | "totalVolume"
   >("maxWeight");
+  const availableSides = (["left", "right", "both", "unspecified"] as const)
+    .filter((side) => data.some((point) => point.sideBreakdown?.[side]));
+  const [activeSide, setActiveSide] = useState<typeof availableSides[number]>(
+    availableSides[0] ?? "unspecified",
+  );
   const chartConfig = {
     maxWeight: {
       label: `Max Weight (${intensityUnit.abbreviation})`,
       color: "var(--chart-1)",
     },
     totalVolume: {
-      label: `Total Volume (${intensityUnit.abbreviation})`,
+      label: `Recorded Volume (${intensityUnit.abbreviation}·reps)`,
       color: "var(--chart-2)",
     },
   } satisfies ChartConfig;
@@ -50,7 +55,9 @@ export const ProgressiveOverloadChart = ({
       month: "short",
       day: "numeric",
     }),
-    maxWeight: Math.round(point.maxWeight * 100) / 100,
+    maxWeight: Math.round(
+      (point.sideBreakdown?.[activeSide]?.maxWeight ?? point.maxWeight) * 100,
+    ) / 100,
     totalVolume: Math.round(point.totalVolume * 100) / 100,
   }));
 
@@ -106,6 +113,21 @@ export const ProgressiveOverloadChart = ({
           </button>
         </div>
       </div>
+      {activeMetric === "maxWeight" && availableSides.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-1" aria-label="Side filter">
+          {availableSides.map((side) => (
+            <button
+              type="button"
+              key={side}
+              aria-pressed={activeSide === side}
+              onClick={() => setActiveSide(side)}
+              className={`rounded-md border px-2 py-1 text-xs capitalize ${activeSide === side ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              {side === "both" ? "Both sides" : side}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4">
         <ChartContainer config={chartConfig}>

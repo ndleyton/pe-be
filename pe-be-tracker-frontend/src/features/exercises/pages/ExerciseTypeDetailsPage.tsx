@@ -121,8 +121,8 @@ const ExerciseTypeDetailsPage = () => {
     isLoading: isLoadingStats,
     error: statsError,
   } = useQuery({
-    queryKey: ["exerciseTypeStats", exerciseTypeId],
-    queryFn: () => getExerciseTypeStats(exerciseTypeId!),
+    queryKey: ["exerciseTypeStats", exerciseTypeId, 2],
+    queryFn: () => getExerciseTypeStats(exerciseTypeId!, 2),
     enabled: !!exerciseTypeId && !!exerciseType && isAuthenticated,
     retry: 1,
   });

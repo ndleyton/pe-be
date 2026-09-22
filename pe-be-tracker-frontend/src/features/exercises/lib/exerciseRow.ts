@@ -241,7 +241,7 @@ export const sortExerciseSets = (sets: ExerciseSet[]): ExerciseSet[] =>
   [...sets]
     .map((set, index) => ({ set, index }))
     .sort((left, right) => {
-      const positionDiff = left.set.position - right.set.position;
+      const positionDiff = (left.set.position ?? left.index) - (right.set.position ?? right.index);
       if (positionDiff !== 0) return positionDiff;
       const createdAtDiff =
         parseExerciseSetCreatedAt(left.set.created_at) -

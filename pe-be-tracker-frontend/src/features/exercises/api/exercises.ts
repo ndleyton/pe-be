@@ -29,8 +29,8 @@ export interface ExerciseSet {
   done: boolean;
   notes?: string | null;
   type?: string | null;
-  side: "left" | "right" | "both" | null;
-  position: number;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -420,6 +420,12 @@ export interface ProgressiveOverloadDataPoint {
   maxWeight: number;
   totalVolume: number;
   reps: number;
+  sideBreakdown?: Partial<Record<"left" | "right" | "both" | "unspecified", {
+    sets: number;
+    reps: number;
+    maxWeight: number;
+    totalVolume: number;
+  }>>;
 }
 
 export interface LastWorkoutData {
@@ -445,12 +451,18 @@ export interface ExerciseTypeStats {
   personalBest: PersonalBestData | null;
   totalSets: number;
   intensityUnit: IntensityUnit;
+  metricsVersion?: number;
+  sidePersonalBests?: Partial<Record<"left" | "right" | "both" | "unspecified", PersonalBestData>>;
+  exclusions?: Record<string, number>;
 }
 
 // Get exercise type statistics
 export const getExerciseTypeStats = async (
   exerciseTypeId: string,
+  metricsVersion: 1 | 2 = 2,
 ): Promise<ExerciseTypeStats> => {
-  const response = await api.get(endpoints.exerciseTypeStats(exerciseTypeId));
+  const response = await api.get(endpoints.exerciseTypeStats(exerciseTypeId), {
+    params: { metrics_version: metricsVersion },
+  });
   return response.data;
 };
