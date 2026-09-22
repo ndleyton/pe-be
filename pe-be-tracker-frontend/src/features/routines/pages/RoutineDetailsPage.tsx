@@ -65,6 +65,7 @@ const RoutineDetailsPage = () => {
     category,
     unitPickerTarget,
     addSetToTemplate,
+    addPairToTemplate,
     closeExercisePicker,
     closeUnitPicker,
     handleExerciseTypeSelected,
@@ -263,6 +264,7 @@ const RoutineDetailsPage = () => {
                 editorTemplates={editorTemplates}
                 onAddExercise={() => openExercisePicker({ mode: "add" })}
                 onAddSet={addSetToTemplate}
+                onAddPair={addPairToTemplate}
                 onChangeExercise={(templateId) =>
                   openExercisePicker({
                     mode: "replace",

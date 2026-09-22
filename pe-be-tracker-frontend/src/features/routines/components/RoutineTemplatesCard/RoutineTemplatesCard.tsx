@@ -51,6 +51,7 @@ type RoutineTemplatesCardProps = {
   editorTemplates: RoutineEditorTemplate[];
   onAddExercise: () => void;
   onAddSet: (templateId: string) => void;
+  onAddPair: (templateId: string) => void;
   onChangeExercise: (templateId: string) => void;
   onRemoveSet: (templateId: string, setId: string) => void;
   onRemoveTemplate: (templateId: string) => void;
@@ -408,6 +409,7 @@ type RoutineTemplateSectionProps = {
   template: RoutineEditorTemplate;
   templateIndex: number;
   onAddSet: (templateId: string) => void;
+  onAddPair: (templateId: string) => void;
   onChangeExercise: (templateId: string) => void;
   onOpenSetDetails: (templateId: string, setId: string) => void;
   onRemoveSet: (templateId: string, setId: string) => void;
@@ -430,6 +432,7 @@ const RoutineTemplateSection = memo(
     template,
     templateIndex,
     onAddSet,
+    onAddPair,
     onChangeExercise,
     onOpenSetDetails,
     onRemoveSet,
@@ -572,7 +575,13 @@ const RoutineTemplateSection = memo(
             <Plus className="mr-2 h-4 w-4" />
             Add Set
           </Button>
-          {/* TODO: Add 'Add left + right' button for pair creation (RFC 0010) */}
+          <Button
+            variant="outline"
+            className="mt-2 w-full"
+            onClick={() => onAddPair(template.id)}
+          >
+            Add left + right
+          </Button>
           {/* TODO: Add Move Up / Move Down UI controls for sets (RFC 0010) */}
         </>
       ) : null}
@@ -912,6 +921,7 @@ export const RoutineTemplatesCard = ({
   editorTemplates,
   onAddExercise,
   onAddSet,
+  onAddPair,
   onChangeExercise,
   onRemoveSet,
   onRemoveTemplate,
@@ -949,6 +959,7 @@ export const RoutineTemplatesCard = ({
               template={template}
               templateIndex={templateIndex}
               onAddSet={onAddSet}
+              onAddPair={onAddPair}
               onChangeExercise={onChangeExercise}
               onOpenSetDetails={(templateId, setId) =>
                 setActiveSetTarget({ templateId, setId })

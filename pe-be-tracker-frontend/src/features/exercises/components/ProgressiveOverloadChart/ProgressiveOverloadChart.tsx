@@ -58,12 +58,22 @@ export const ProgressiveOverloadChart = ({
     maxWeight: Math.round(
       (point.sideBreakdown?.[activeSide]?.maxWeight ?? point.maxWeight) * 100,
     ) / 100,
-    totalVolume: Math.round(point.totalVolume * 100) / 100,
+    totalVolume: Math.round(
+      (point.sideBreakdown?.[activeSide]?.totalVolume ?? point.totalVolume) * 100,
+    ) / 100,
   }));
 
-  // Calculate trend for the latest period
-  const latestWeight = data[data.length - 1]?.maxWeight || 0;
-  const previousWeight = data[data.length - 2]?.maxWeight || latestWeight;
+  // Calculate trend for the latest period.
+  // When a side filter is active use its scoped values so the badge reflects
+  // the same slice the chart is showing.
+  const latestWeight =
+    data[data.length - 1]?.sideBreakdown?.[activeSide]?.maxWeight ??
+    data[data.length - 1]?.maxWeight ??
+    0;
+  const previousWeight =
+    data[data.length - 2]?.sideBreakdown?.[activeSide]?.maxWeight ??
+    data[data.length - 2]?.maxWeight ??
+    latestWeight;
   const weightTrend = latestWeight > previousWeight;
   const weightChange =
     latestWeight > 0 && previousWeight > 0
@@ -72,8 +82,14 @@ export const ProgressiveOverloadChart = ({
         ).toFixed(1)
       : "0";
 
-  const latestVolume = data[data.length - 1]?.totalVolume || 0;
-  const previousVolume = data[data.length - 2]?.totalVolume || latestVolume;
+  const latestVolume =
+    data[data.length - 1]?.sideBreakdown?.[activeSide]?.totalVolume ??
+    data[data.length - 1]?.totalVolume ??
+    0;
+  const previousVolume =
+    data[data.length - 2]?.sideBreakdown?.[activeSide]?.totalVolume ??
+    data[data.length - 2]?.totalVolume ??
+    latestVolume;
   const volumeTrend = latestVolume > previousVolume;
   const volumeChange =
     latestVolume > 0 && previousVolume > 0

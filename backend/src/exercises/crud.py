@@ -346,9 +346,12 @@ def _map_exercise_integrity_error(
     return None
 
 
-def _exercise_set_sort_key(exercise_set: ExerciseSet) -> tuple[datetime, int]:
-    created_at = exercise_set.created_at or datetime.min.replace(tzinfo=timezone.utc)
-    return (created_at, exercise_set.id)
+def _exercise_set_sort_key(exercise_set: ExerciseSet) -> tuple[int, int]:
+    # Position is authoritative per RFC 0010. id is a deterministic tie-breaker
+    # for the rare case of a gap-free duplicate (shouldn't occur with the unique
+    # partial index, but keeps the sort stable).
+    position = exercise_set.position if exercise_set.position is not None else 0
+    return (position, exercise_set.id)
 
 
 def _sort_loaded_exercise_sets(exercises: List[Exercise]) -> List[Exercise]:

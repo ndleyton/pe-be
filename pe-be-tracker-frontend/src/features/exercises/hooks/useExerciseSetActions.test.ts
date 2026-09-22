@@ -254,6 +254,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
@@ -379,6 +380,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
   });
 
@@ -421,6 +423,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "warmup",
+      side: null,
     });
   });
 
@@ -473,6 +476,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
   });
 
