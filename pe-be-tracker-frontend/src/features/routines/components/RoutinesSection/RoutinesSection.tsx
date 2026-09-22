@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { RoutineSummary } from "@/features/routines/types";
 import { useAuthStore } from "@/stores";
 import { getRoutines } from "@/features/routines/api";
-import { RoutineQuickStartCard } from "@/features/routines/components";
+import { RoutineQuickStartCard } from "../RoutineQuickStartCard/RoutineQuickStartCard";
+import { RoutineQuickStartCardSkeleton } from "../RoutineQuickStartCard/RoutineQuickStartCardSkeleton";
 import { Button } from "@/shared/components/ui/button";
 import {
   Accordion,
@@ -11,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
+import { LoadingStatus } from "@/shared/components/ui/loading-status";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -31,9 +33,6 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
   autoOpen = false,
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [accordionValue, setAccordionValue] = React.useState("");
-  const [hasAutoOpened, setHasAutoOpened] = React.useState(false);
-
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ["routines", "quickstart", 3, isAuthenticated],
     queryFn: async () => {
@@ -42,43 +41,23 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
     },
   });
 
+  const [accordionValue, setAccordionValue] = React.useState(
+    autoOpen || isLoading ? QUICK_START_ROUTINES_VALUE : "",
+  );
+
   React.useEffect(() => {
-    if (!autoOpen) {
-      setHasAutoOpened(false);
-      return;
-    }
-
-    if (isLoading || routines.length === 0 || hasAutoOpened) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
+    if (autoOpen || isLoading) {
       setAccordionValue(QUICK_START_ROUTINES_VALUE);
-      setHasAutoOpened(true);
-    }, 0);
+    }
+  }, [autoOpen, isLoading]);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [autoOpen, hasAutoOpened, isLoading, routines.length]);
-
-  if (isLoading) {
-    return (
-      <div className="mb-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-muted-foreground text-lg font-semibold">
-            Quick Start Routines
-          </h3>
-          <span className="text-muted-foreground text-sm">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (routines.length === 0) {
+  if (!isLoading && routines.length === 0) {
     return null;
   }
 
   return (
-    <div className="mb-6 w-full">
+    <div className="mb-6 w-full" aria-busy={isLoading ? "true" : undefined}>
+      {isLoading && <LoadingStatus message="Loading quick start routines" />}
       <Accordion
         type="single"
         collapsible
@@ -96,30 +75,39 @@ export const RoutinesSection: React.FC<RoutinesSectionProps> = ({
               <div className="flex w-full items-center gap-2">
                 <div className="w-0 min-w-0 flex-1 overflow-x-auto">
                   <div className="flex items-stretch flex-nowrap gap-4 pt-2 pb-8 px-2">
-                    {routines.map((routine) => (
-                      <RoutineQuickStartCard
-                        key={routine.id}
-                        routine={routine}
-                        onStartWorkout={onStartWorkout}
-                        className="w-[18rem] sm:w-80 shrink-0"
-                      />
-                    ))}
+                    {isLoading
+                      ? Array.from({ length: 3 }).map((_, index) => (
+                          <RoutineQuickStartCardSkeleton
+                            key={index}
+                            className="w-[18rem] sm:w-80 shrink-0"
+                          />
+                        ))
+                      : routines.map((routine) => (
+                          <RoutineQuickStartCard
+                            key={routine.id}
+                            routine={routine}
+                            onStartWorkout={onStartWorkout}
+                            className="w-[18rem] sm:w-80 shrink-0"
+                          />
+                        ))}
                   </div>
                 </div>
-                <Button
-                  asChild
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Browse all routines"
-                  className="shrink-0"
-                  onMouseEnter={preloadRoutinesPage}
-                  onTouchStart={preloadRoutinesPage}
-                  onFocus={preloadRoutinesPage}
-                >
-                  <Link to="/routines">
-                    <ChevronRight className="text-muted-foreground h-5 w-5" />
-                  </Link>
-                </Button>
+                {!isLoading && (
+                  <Button
+                    asChild
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Browse all routines"
+                    className="shrink-0"
+                    onMouseEnter={preloadRoutinesPage}
+                    onTouchStart={preloadRoutinesPage}
+                    onFocus={preloadRoutinesPage}
+                  >
+                    <Link to="/routines">
+                      <ChevronRight className="text-muted-foreground h-5 w-5" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </AccordionContent>

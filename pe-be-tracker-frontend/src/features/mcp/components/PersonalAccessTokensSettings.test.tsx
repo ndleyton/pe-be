@@ -90,4 +90,18 @@ describe("PersonalAccessTokensSettings", () => {
       "pebe_pat_abc123def456_secret",
     );
   });
+
+  it("shows an accessible skeleton list while loading tokens instead of plain text", () => {
+    mockUsePersonalAccessTokens.mockReturnValue({
+      ...hookResult,
+      isLoading: true,
+    });
+
+    render(<PersonalAccessTokensSettings enabled />);
+
+    expect(screen.queryByText("Loading tokens...")).not.toBeInTheDocument();
+    const loadingList = screen.getByRole("list", { name: "Loading tokens" });
+    expect(loadingList).toBeInTheDocument();
+    expect(loadingList).toHaveAttribute("aria-busy", "true");
+  });
 });

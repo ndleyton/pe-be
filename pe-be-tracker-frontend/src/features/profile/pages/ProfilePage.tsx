@@ -18,6 +18,8 @@ import { Dumbbell, Check, Timer, Sparkles, MessageSquare, Monitor, Sun, Moon, Fl
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { LoadingStatus } from "@/shared/components/ui/loading-status";
 
 const fetchWorkouts = async (): Promise<Workout[]> => {
   const { data } = await getMyWorkouts(undefined, 25);
@@ -57,9 +59,20 @@ const PublicProfileSettings = ({
         Public Profile
       </label>
       {isLoading ? (
-        <p className="mt-2 text-sm font-semibold text-muted-foreground">
-          Loading public profile settings...
-        </p>
+        <>
+          <LoadingStatus message="Loading public profile settings" />
+          <div
+            className="mt-2 space-y-2.5"
+            aria-label="Loading public profile settings"
+            aria-busy="true"
+          >
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-4 w-60" />
+            <div className="flex gap-2 pt-1">
+              <Skeleton className="h-8 w-24 rounded-lg" />
+            </div>
+          </div>
+        </>
       ) : error ? (
         <p className="mt-2 text-sm font-semibold text-destructive">
           Failed to load public profile settings.
@@ -177,6 +190,7 @@ const ProfilePage = () => {
   const safeWorkouts = Array.isArray(workouts) ? workouts : [];
   const completedWorkouts = safeWorkouts.filter((w) => w.end_time);
   const totalWorkouts = safeWorkouts.length;
+  const isStatsLoading = loading || (isAuthenticated && isLoading);
   const averageWorkoutTime =
     completedWorkouts.length > 0
       ? completedWorkouts.reduce((sum, workout) => {
@@ -219,14 +233,22 @@ const ProfilePage = () => {
         />
 
         {/* Stats Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+        {isStatsLoading && <LoadingStatus message="Loading workout statistics" />}
+        <div
+          className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3"
+          aria-busy={isStatsLoading ? "true" : undefined}
+        >
           <div className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-6 backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5">
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider opacity-70">Total Workouts</p>
-                <p className="text-foreground mt-1 text-3xl font-black">
-                  {totalWorkouts}
-                </p>
+                {isStatsLoading ? (
+                  <Skeleton className="mt-1 h-9 w-14" />
+                ) : (
+                  <p className="text-foreground mt-1 text-3xl font-black">
+                    {totalWorkouts}
+                  </p>
+                )}
               </div>
               <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/20">
                 <Dumbbell className="h-7 w-7" />
@@ -238,9 +260,13 @@ const ProfilePage = () => {
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider opacity-70">Completed</p>
-                <p className="text-foreground mt-1 text-3xl font-black">
-                  {completedWorkouts.length}
-                </p>
+                {isStatsLoading ? (
+                  <Skeleton className="mt-1 h-9 w-14" />
+                ) : (
+                  <p className="text-foreground mt-1 text-3xl font-black">
+                    {completedWorkouts.length}
+                  </p>
+                )}
               </div>
               <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/20">
                 <Check className="h-7 w-7" />
@@ -252,14 +278,18 @@ const ProfilePage = () => {
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider opacity-70">Avg Duration</p>
-                <div className="flex items-baseline gap-1">
-                  <p className="text-foreground mt-1 text-3xl font-black">
-                    {averageWorkoutTime > 0
-                      ? Math.round(averageWorkoutTime)
-                      : "0"}
-                  </p>
-                  <span className="text-muted-foreground text-sm font-bold">min</span>
-                </div>
+                {isStatsLoading ? (
+                  <Skeleton className="mt-1 h-9 w-20" />
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-foreground mt-1 text-3xl font-black">
+                      {averageWorkoutTime > 0
+                        ? Math.round(averageWorkoutTime)
+                        : "0"}
+                    </p>
+                    <span className="text-muted-foreground text-sm font-bold">min</span>
+                  </div>
+                )}
               </div>
               <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/20">
                 <Timer className="h-7 w-7" />

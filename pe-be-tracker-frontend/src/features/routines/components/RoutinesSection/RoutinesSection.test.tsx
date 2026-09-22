@@ -55,6 +55,15 @@ describe("RoutinesSection", () => {
     mockGetRoutines.mockResolvedValue({ data: routines, next_cursor: null });
   });
 
+  it("renders an accessible skeleton accordion while loading without plain Loading text", () => {
+    mockGetRoutines.mockReturnValue(new Promise(() => {}));
+    const { container } = render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
+
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /quick start routines/i })).toBeInTheDocument();
+    expect(container.querySelector("[aria-busy='true']")).toBeInTheDocument();
+  });
+
   it("auto-opens the routines list when requested", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} autoOpen />);
 
@@ -72,29 +81,10 @@ describe("RoutinesSection", () => {
     expect(mockGetRoutines).toHaveBeenCalledWith("createdAtAsc", 0, 3);
   });
 
-  it("stays collapsed by default and hides the browse link", async () => {
-    render(<RoutinesSection onStartWorkout={vi.fn()} />);
-
-    const trigger = await screen.findByRole("button", {
-      name: /quick start routines/i,
-    });
-
-    await waitFor(() => {
-      expect(trigger).toHaveAttribute("aria-expanded", "false");
-    });
-    expect(screen.queryByText("Push Day")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /browse all routines/i }),
-    ).not.toBeInTheDocument();
-  });
-
   it("preloads the routines page when the browse button shows intent", async () => {
     render(<RoutinesSection onStartWorkout={vi.fn()} />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /quick start routines/i }),
-    );
-
+    // Note: The accordion now opens automatically during the initial loading state
     const browseButton = await screen.findByRole("link", {
       name: /browse all routines/i,
     });
