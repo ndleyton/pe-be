@@ -3,28 +3,23 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
   type UIEvent,
 } from "react";
 import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-  type InfiniteData,
-} from "@tanstack/react-query";
-import {
-  getExerciseTypes,
-  getMuscleGroups,
   type CreateExerciseTypeData,
   type ExerciseType,
-  type MuscleGroup,
 } from "@/features/exercises/api";
+import { useExerciseTypeModalResults } from "@/features/exercises/hooks/useExerciseTypeModalResults";
 import { useExerciseTypeCreation } from "@/features/exercises/hooks";
 import { useGuestStore, useAuthStore, GuestExerciseType } from "@/stores";
-import { ExerciseSearchResult } from "./ExerciseSearchResult";
+import {
+  ExerciseSearchResult,
+  ExerciseSearchResultSkeleton,
+} from "./ExerciseSearchResult";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import {
   Dialog,
@@ -44,22 +39,6 @@ interface ExerciseTypeModalProps {
 const EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT = 30;
 const EXERCISE_TYPE_MODAL_RENDER_INCREMENT = 30;
 const EXERCISE_TYPE_MODAL_SCROLL_THRESHOLD = 160;
-const EXERCISE_TYPE_MODAL_QUERY_KEY = [
-  "exerciseTypes",
-  "modal",
-  "usage",
-] as const;
-const EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY = [
-  "exerciseTypes",
-  "modal",
-  "search",
-] as const;
-
-type ExerciseTypePage = {
-  data: ExerciseType[];
-  next_cursor?: number | null;
-};
-
 const ExerciseTypeModal = ({
   isOpen,
   onClose,
@@ -70,150 +49,37 @@ const ExerciseTypeModal = ({
   const [visibleResultCount, setVisibleResultCount] = useState(
     EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT,
   );
-  const [lastSettledSearchResults, setLastSettledSearchResults] = useState<
-    ExerciseType[]
-  >([]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
   const guestActions = useGuestStore();
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const trimmedSearchTerm = searchTerm.trim();
-  const trimmedDeferredSearchTerm = deferredSearchTerm.trim();
-  const isSearchActive = trimmedDeferredSearchTerm.length > 0;
 
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("all");
-  const activeMuscleGroupId =
-    selectedMuscleGroupId === "all" ? undefined : Number(selectedMuscleGroupId);
-
-  const { data: muscleGroups = [] } = useQuery<MuscleGroup[]>({
-    queryKey: ["muscleGroups"],
-    queryFn: getMuscleGroups,
-    staleTime: Infinity,
-  });
-
-  const availableMuscleGroups: Array<{ id: number | string; name: string }> =
-    useMemo(() => {
-      if (muscleGroups.length > 0) {
-        return muscleGroups;
-      }
-      const groupsMap = new Map<string, { id: number | string; name: string }>();
-      if (!isAuthenticated && Array.isArray(guestData.exerciseTypes)) {
-        guestData.exerciseTypes.forEach((ex) => {
-          ex.muscle_groups?.forEach((mg) => {
-            if (!groupsMap.has(mg.toLowerCase())) {
-              groupsMap.set(mg.toLowerCase(), { id: mg, name: mg });
-            }
-          });
-          ex.muscles?.forEach((m) => {
-            if (!groupsMap.has(m.name.toLowerCase())) {
-              groupsMap.set(m.name.toLowerCase(), { id: m.id, name: m.name });
-            }
-          });
-        });
-      }
-      return Array.from(groupsMap.values());
-    }, [guestData.exerciseTypes, isAuthenticated, muscleGroups]);
-
-  const sortedMuscleGroups = useMemo(
-    () => [...availableMuscleGroups].sort((a, b) => a.name.localeCompare(b.name)),
-    [availableMuscleGroups],
-  );
-
   const {
-    data: browseExerciseTypesResponse,
-    isPending: isBrowseLoading,
-    hasNextPage: hasBrowseNextPage,
-    fetchNextPage: fetchBrowseNextPage,
-    isFetchingNextPage: isFetchingBrowseNextPage,
-    error: browseError,
-  } = useInfiniteQuery({
-    queryKey: [
-      ...EXERCISE_TYPE_MODAL_QUERY_KEY,
-      activeMuscleGroupId ?? "all",
-    ],
-    queryFn: ({ pageParam }) =>
-      getExerciseTypes(
-        "usage",
-        pageParam,
-        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        ...(activeMuscleGroupId !== undefined ? [activeMuscleGroupId] : []),
-      ),
-    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
-    initialPageParam: undefined as number | undefined,
-    enabled: isAuthenticated && isOpen,
-  });
-
-  const {
-    data: searchExerciseTypesResponse,
-    isPending: isSearchLoading,
-    hasNextPage: hasSearchNextPage,
-    fetchNextPage: fetchSearchNextPage,
-    isFetchingNextPage: isFetchingSearchNextPage,
-    error: searchError,
-  } = useInfiniteQuery({
-    queryKey: [
-      ...EXERCISE_TYPE_MODAL_SEARCH_QUERY_KEY,
-      activeMuscleGroupId ?? "all",
-      trimmedDeferredSearchTerm.toLowerCase(),
-    ],
-    queryFn: ({ pageParam }) =>
-      getExerciseTypes(
-        "name",
-        pageParam,
-        EXERCISE_TYPE_MODAL_INITIAL_LIMIT,
-        activeMuscleGroupId,
-        trimmedDeferredSearchTerm,
-      ),
-    getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
-    initialPageParam: undefined as number | undefined,
-    enabled: isAuthenticated && isOpen && isSearchActive,
-  });
-
-  const browseExerciseTypes = useMemo(
-    () =>
-      browseExerciseTypesResponse?.pages.flatMap((page) =>
-        Array.isArray(page?.data) ? page.data : [],
-      ) ?? [],
-    [browseExerciseTypesResponse],
-  );
-
-  const searchExerciseTypes = useMemo(
-    () =>
-      searchExerciseTypesResponse?.pages.flatMap((page) =>
-        Array.isArray(page?.data) ? page.data : [],
-      ) ?? [],
-    [searchExerciseTypesResponse],
-  );
-
-  useEffect(() => {
-    if (!isAuthenticated || !isSearchActive) {
-      setLastSettledSearchResults([]);
-      return;
-    }
-
-    if (!isSearchLoading) {
-      setLastSettledSearchResults(searchExerciseTypes);
-    }
-  }, [
-    isAuthenticated,
+    exerciseTypes,
+    filteredExerciseTypes,
+    sortedMuscleGroups,
+    isMuscleGroupsLoading,
     isSearchActive,
-    isSearchLoading,
-    searchExerciseTypes,
-  ]);
-
-  // Use guest data if not authenticated, server data if authenticated
-  const exerciseTypes = isAuthenticated
-    ? isSearchActive
-      ? searchExerciseTypes.length > 0 || !isSearchLoading
-        ? searchExerciseTypes
-        : lastSettledSearchResults
-      : browseExerciseTypes
-    : Array.isArray(guestData.exerciseTypes)
-      ? guestData.exerciseTypes
-      : [];
+    isSearchFetching,
+    isInitialBrowseLoading,
+    isSearchingWithoutResults,
+    isResultsPlaceholderData,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    error,
+    recordAuthenticatedSelection,
+  } = useExerciseTypeModalResults({
+    isOpen,
+    isAuthenticated,
+    deferredSearchTerm,
+    selectedMuscleGroupId,
+    guestExerciseTypes: guestData.exerciseTypes,
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -249,89 +115,9 @@ const ExerciseTypeModal = ({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-    setLastSettledSearchResults([]);
     setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
   }, [selectedMuscleGroupId]);
 
-  const filteredExerciseTypes = useMemo(() => {
-    if (isAuthenticated) {
-      return exerciseTypes;
-    }
-
-    let list: GuestExerciseType[] = Array.isArray(guestData.exerciseTypes)
-      ? guestData.exerciseTypes
-      : [];
-
-    if (selectedMuscleGroupId !== "all") {
-      const selectedGroup = availableMuscleGroups.find(
-        (mg) => String(mg.id) === selectedMuscleGroupId,
-      );
-      const groupName = selectedGroup?.name.toLowerCase();
-
-      if (groupName) {
-        list = list.filter((type: GuestExerciseType) => {
-          if (type.muscle_groups?.some((mg) => mg.toLowerCase() === groupName)) {
-            return true;
-          }
-          if (
-            "muscles" in type &&
-            Array.isArray(type.muscles) &&
-            type.muscles.some((m) =>
-              m.name.toLowerCase().includes(groupName),
-            )
-          ) {
-            return true;
-          }
-          if (type.category?.toLowerCase() === groupName) {
-            return true;
-          }
-          if (type.name.toLowerCase().includes(groupName)) {
-            return true;
-          }
-          if (type.description?.toLowerCase().includes(groupName)) {
-            return true;
-          }
-          return false;
-        });
-      }
-    }
-
-    if (!trimmedDeferredSearchTerm) return list;
-    const term = trimmedDeferredSearchTerm.toLowerCase();
-    return list.filter(
-      (type: GuestExerciseType) =>
-        type.name.toLowerCase().includes(term) ||
-        (type.description && type.description.toLowerCase().includes(term)),
-    );
-  }, [
-    availableMuscleGroups,
-    exerciseTypes,
-    guestData.exerciseTypes,
-    isAuthenticated,
-    selectedMuscleGroupId,
-    trimmedDeferredSearchTerm,
-  ]);
-
-  const hasNextPage = isSearchActive ? hasSearchNextPage : hasBrowseNextPage;
-  const fetchNextPage = isSearchActive
-    ? fetchSearchNextPage
-    : fetchBrowseNextPage;
-  const isFetchingNextPage = isSearchActive
-    ? isFetchingSearchNextPage
-    : isFetchingBrowseNextPage;
-  const isLoading = isSearchActive ? isSearchLoading : isBrowseLoading;
-  const error = isSearchActive ? searchError : browseError;
-  const isInitialBrowseLoading =
-    isAuthenticated &&
-    !isSearchActive &&
-    isLoading &&
-    exerciseTypes.length === 0;
-  const isSearchingWithoutResults =
-    isAuthenticated &&
-    isSearchActive &&
-    isSearchLoading &&
-    lastSettledSearchResults.length === 0 &&
-    searchExerciseTypes.length === 0;
   const visibleExerciseTypes =
     isAuthenticated || isSearchActive
       ? filteredExerciseTypes
@@ -339,47 +125,7 @@ const ExerciseTypeModal = ({
 
   const handleSelect = (exerciseType: ExerciseType | GuestExerciseType) => {
     if (isAuthenticated) {
-      // Optimistically update the times_used count in the cache for server data
-      queryClient.setQueriesData(
-        { queryKey: EXERCISE_TYPE_MODAL_QUERY_KEY },
-        (oldData: InfiniteData<ExerciseTypePage> | undefined) => {
-          if (!oldData?.pages.length) return oldData;
-
-          const pageSizes = oldData.pages.map((page) => page.data.length);
-          const updatedTypes = oldData.pages
-            .flatMap((page) => page.data)
-            .map((type) =>
-              type.id === exerciseType.id
-                ? { ...type, times_used: type.times_used + 1 }
-                : type,
-            );
-
-          // Re-sort by times_used DESC, then by name ASC to maintain the expected order
-          const sortedTypes = [...updatedTypes].sort((a, b) => {
-            if (a.times_used !== b.times_used) {
-              return b.times_used - a.times_used; // DESC
-            }
-            return a.name.localeCompare(b.name); // ASC
-          });
-
-          let currentOffset = 0;
-          const pages = oldData.pages.map((page, index) => {
-            const pageSize = pageSizes[index];
-            const nextOffset = currentOffset + pageSize;
-            const nextPage = {
-              ...page,
-              data: sortedTypes.slice(currentOffset, nextOffset),
-            };
-            currentOffset = nextOffset;
-            return nextPage;
-          });
-
-          return {
-            ...oldData,
-            pages,
-          };
-        },
-      );
+      recordAuthenticatedSelection(exerciseType);
     } else {
       // Update guest data times_used count
       guestActions.updateExerciseType(exerciseType.id as string, {
@@ -421,7 +167,11 @@ const ExerciseTypeModal = ({
   });
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && filteredExerciseTypes.length > 0) {
+    if (
+      e.key === "Enter" &&
+      !isResultsPlaceholderData &&
+      filteredExerciseTypes.length > 0
+    ) {
       handleSelect(filteredExerciseTypes[0]);
     } else if (e.key === "Escape") {
       setSearchTerm("");
@@ -487,31 +237,27 @@ const ExerciseTypeModal = ({
     loadMoreBrowseResults(event.currentTarget);
   };
 
-  const SkeletonCard = () => (
-    <div className="bg-card/40 border-border/40 animate-pulse rounded-2xl border px-4 py-3">
-      <div className="flex min-h-[2lh] items-center text-base leading-snug">
-        <div className="bg-muted h-4 w-3/4 rounded" />
-      </div>
-    </div>
-  );
-
   const renderContent = () => {
     if (isInitialBrowseLoading) {
       return (
-        <div className="grid gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={index} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={index} />
+            ))}
+          </div>
         </div>
       );
     }
 
     if (isSearchingWithoutResults) {
       return (
-        <div className="grid gap-3 p-1">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={`search-skeleton-${index}`} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={`search-skeleton-${index}`} />
+            ))}
+          </div>
         </div>
       );
     }
@@ -532,19 +278,23 @@ const ExerciseTypeModal = ({
       );
     }
 
-    if (exerciseTypes.length === 0) {
+    if (!isSearchActive && exerciseTypes.length === 0) {
       return (
         <div className="py-12 text-center">
           <div className="bg-muted/50 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
             <Dumbbell className="text-muted-foreground h-8 w-8" />
           </div>
           <h4 className="text-foreground mb-2 font-bold text-lg">
-            No Exercises
+            {selectedMuscleGroupId !== "all"
+              ? "No Exercises Found"
+              : "No Exercises"}
           </h4>
           <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">
-            {isAuthenticated
-              ? "Your gym library is currently empty."
-              : "Default exercise types will be initialized soon."}
+            {selectedMuscleGroupId !== "all"
+              ? "No exercises match the selected muscle group."
+              : isAuthenticated
+                ? "Your gym library is currently empty."
+                : "Default exercise types will be initialized soon."}
           </p>
         </div>
       );
@@ -570,28 +320,37 @@ const ExerciseTypeModal = ({
 
     if (!areResultsReady) {
       return (
-        <div className="grid gap-3 p-1">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <SkeletonCard key={`deferred-skeleton-${index}`} />
-          ))}
+        <div className="space-y-4 p-1">
+          <div className="grid gap-2">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <ExerciseSearchResultSkeleton key={`deferred-skeleton-${index}`} />
+            ))}
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="space-y-4 p-1">
+      <div
+        className={`space-y-4 p-1 transition-opacity duration-150 ${
+          isResultsPlaceholderData
+            ? "opacity-60 pointer-events-none"
+            : ""
+        }`}
+      >
         <div className="grid gap-2">
           {visibleExerciseTypes.map((exerciseType) => (
             <ExerciseSearchResult
               key={exerciseType.id}
               exerciseType={exerciseType}
               onSelect={handleSelect}
+              disabled={isResultsPlaceholderData}
             />
           ))}
         </div>
 
-        {isAuthenticated && isFetchingNextPage && !isSearchActive && (
-          <div className="flex justify-center py-1">
+        {isAuthenticated && isFetchingNextPage && (
+          <div className="flex justify-center py-2">
             <span className="text-muted-foreground text-xs font-medium">
               Loading more exercises...
             </span>
@@ -639,7 +398,7 @@ const ExerciseTypeModal = ({
                     <X className="h-5 w-5" />
                   </button>
 
-                  {isAuthenticated && isSearchActive && isSearchLoading && (
+                  {isAuthenticated && isSearchActive && isSearchFetching && (
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-background/20">
                       <Loader2 className="text-muted-foreground/10 h-8 w-8 animate-spin" />
                     </span>
@@ -675,7 +434,20 @@ const ExerciseTypeModal = ({
           )}
 
           {/* Muscle Group Quick-Filter Chips */}
-          {sortedMuscleGroups.length > 0 && (
+          {isAuthenticated && isMuscleGroupsLoading && sortedMuscleGroups.length === 0 ? (
+            <div
+              data-testid="muscle-group-filter-chips-skeleton"
+              className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+              aria-label="Loading muscle group filters"
+              aria-busy="true"
+            >
+              <Skeleton className="h-7 w-12 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-16 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-14 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-20 shrink-0 rounded-xl" />
+              <Skeleton className="h-7 w-16 shrink-0 rounded-xl" />
+            </div>
+          ) : sortedMuscleGroups.length > 0 ? (
             <div
               data-testid="muscle-group-filter-chips"
               className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
@@ -719,7 +491,7 @@ const ExerciseTypeModal = ({
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div

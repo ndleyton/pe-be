@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
@@ -423,6 +424,36 @@ describe("ExerciseTypeModal", () => {
     expect(screen.queryByText(/no matches/i)).not.toBeInTheDocument();
   });
 
+  it("keeps browse results selectable after clearing a completed authenticated search", async () => {
+    mockIsAuthenticated = true;
+    const browseExercise = makeExerciseType({ id: 1, name: "Squat" });
+    const searchExercise = makeExerciseType({ id: 2, name: "Bench Press" });
+    mockGetExerciseTypes.mockImplementation((orderBy?: "usage" | "name") =>
+      Promise.resolve(
+        makePaginatedExerciseTypes([
+          orderBy === "name" ? searchExercise : browseExercise,
+        ]),
+      ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+    );
+
+    await screen.findByRole("button", { name: "Squat" });
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "Bench");
+    await screen.findByRole("button", { name: "Bench Press" });
+    await user.clear(searchInput);
+
+    const browseResult = await screen.findByRole("button", { name: "Squat" });
+    expect(browseResult.closest(".pointer-events-none")).toBeNull();
+    expect(browseResult.closest(".opacity-60")).toBeNull();
+    await user.click(browseResult);
+    expect(mockOnSelect).toHaveBeenCalledWith(browseExercise);
+  });
+
   it("keeps create available when authenticated fuzzy search returns similar but not exact matches", async () => {
     mockIsAuthenticated = true;
     mockGetExerciseTypes.mockImplementation(
@@ -700,6 +731,9 @@ describe("ExerciseTypeModal", () => {
 
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
     expect(screen.queryByText("Deadlift")).not.toBeInTheDocument();
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+    expect(mockOnSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Bench Press" })).toBeDisabled();
 
     await act(async () => {
       resolveDeadSearch?.(
@@ -879,5 +913,310 @@ describe("ExerciseTypeModal", () => {
         "Incline",
       );
     });
+  });
+
+  it("renders skeleton cards during initial browse loading in authenticated mode", async () => {
+    mockIsAuthenticated = true;
+    mockGetExerciseTypes.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    expect(
+      screen.getAllByTestId("exercise-search-result-skeleton").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("renders muscle group filter chip skeletons while muscle groups are loading in authenticated mode", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockReturnValue(new Promise(() => {}));
+    mockGetExerciseTypes.mockResolvedValue(
+      makePaginatedExerciseTypes([makeExerciseType()]),
+    );
+
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("muscle-group-filter-chips-skeleton"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows loading indicator when fetching next page during search", async () => {
+    mockIsAuthenticated = true;
+    let resolveNextPage: (value: unknown) => void = () => {};
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        cursor?: number | null,
+      ) => {
+        if (orderBy === "name") {
+          if (!cursor) {
+            return Promise.resolve(
+              makePaginatedExerciseTypes(
+                [makeExerciseType({ id: 1, name: "Squats" })],
+                2,
+              ),
+            );
+          }
+          return new Promise((resolve) => {
+            resolveNextPage = resolve;
+          });
+        }
+        return Promise.resolve(makePaginatedExerciseTypes([]));
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.type(searchInput, "Squat");
+
+    await screen.findByText("Squats");
+
+    const scrollContainer = screen.getByTestId(
+      "exercise-type-modal-scroll-container",
+    );
+    setScrollMetrics(scrollContainer);
+    fireEvent.scroll(scrollContainer);
+
+    await screen.findByText("Loading more exercises...");
+
+    await act(async () => {
+      resolveNextPage(
+        makePaginatedExerciseTypes([
+          makeExerciseType({ id: 2, name: "Squats Heavy" }),
+        ]),
+      );
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Loading more exercises..."),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("does not flash skeleton cards when clicking a muscle group chip", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 10, name: "Back" }),
+    ]);
+
+    let resolveBackQuery:
+      | ((value: ReturnType<typeof makePaginatedExerciseTypes>) => void)
+      | null = null;
+
+    mockGetExerciseTypes.mockImplementation(
+      (
+        _orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => {
+        if (muscleGroupId === 10) {
+          return new Promise((resolve) => {
+            resolveBackQuery = resolve;
+          });
+        }
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({ id: 1, name: "Bench Press" }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await screen.findByText("Bench Press");
+
+    const backChip = await screen.findByRole("tab", { name: "Back" });
+    await user.click(backChip);
+
+    // Muscle group is selected
+    expect(backChip).toHaveAttribute("aria-selected", "true");
+
+    // Skeletons should NOT be rendered while transitioning between muscle groups
+    expect(
+      screen.queryByTestId("exercise-search-result-skeleton"),
+    ).not.toBeInTheDocument();
+
+    // Previous exercise remains visible during transition
+    expect(screen.getByText("Bench Press")).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/search exercise types/i);
+    await user.click(searchInput);
+    await user.keyboard("{Enter}");
+    expect(mockOnSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Bench Press" })).toBeDisabled();
+
+    // Now resolve the Back query
+    await act(async () => {
+      resolveBackQuery?.(
+        makePaginatedExerciseTypes([
+          makeExerciseType({ id: 2, name: "Lat Pulldown" }),
+        ]),
+      );
+    });
+
+    await screen.findByText("Lat Pulldown");
+    expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lat Pulldown" })).toBeEnabled();
+    await user.keyboard("{Enter}");
+    expect(mockOnSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 2, name: "Lat Pulldown" }),
+    );
+  });
+
+  it("keeps no matches visible while an empty search refetches", async () => {
+    mockIsAuthenticated = true;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    mockGetExerciseTypes.mockResolvedValue(makePaginatedExerciseTypes([]));
+    const { unmount } = render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+      { queryClient },
+    );
+    fireEvent.change(screen.getByPlaceholderText(/search exercise types/i), {
+      target: { value: "Missing" },
+    });
+    await screen.findByText("No matches");
+
+    let resolveRefetch!: (page: ReturnType<typeof makePaginatedExerciseTypes>) => void;
+    mockGetExerciseTypes.mockImplementation(() => new Promise((resolve) => {
+      resolveRefetch = resolve;
+    }));
+    await act(async () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["exerciseTypes", "modal", "search"],
+      });
+      // Allow Query's scheduled observer notification to reach the component.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(queryClient.isFetching()).toBe(1);
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    expect(screen.queryByTestId("exercise-search-result-skeleton")).not.toBeInTheDocument();
+
+    await act(async () => resolveRefetch(makePaginatedExerciseTypes([])));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    unmount();
+    queryClient.clear();
+  });
+
+  it("shows no matches for an empty search within a populated muscle group", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 10, name: "Back" }),
+    ]);
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => Promise.resolve(
+        makePaginatedExerciseTypes(
+          orderBy === "name"
+            ? []
+            : [makeExerciseType({
+                id: muscleGroupId === 10 ? 2 : 1,
+                name: muscleGroupId === 10 ? "Lat Pulldown" : "Bench Press",
+              })],
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+    );
+
+    await screen.findByRole("button", { name: "Bench Press" });
+    await user.click(await screen.findByRole("tab", { name: "Back" }));
+    await screen.findByRole("button", { name: "Lat Pulldown" });
+
+    await user.type(
+      screen.getByPlaceholderText(/search exercise types/i),
+      "Unmatched exercise",
+    );
+
+    await screen.findByText("No matches");
+    expect(mockGetExerciseTypes).toHaveBeenCalledWith(
+      "name", undefined, EXERCISE_TYPE_MODAL_INITIAL_LIMIT, 10, "Unmatched exercise",
+    );
+    expect(screen.queryByText("No Exercises Found")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No exercises match the selected muscle group."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows muscle group empty state when filtered muscle group has no exercises", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 20, name: "Neck" }),
+    ]);
+
+    mockGetExerciseTypes.mockImplementation(
+      (
+        _orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => {
+        if (muscleGroupId === 20) {
+          return Promise.resolve(makePaginatedExerciseTypes([]));
+        }
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({ id: 1, name: "Bench Press" }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await screen.findByText("Bench Press");
+
+    const neckChip = await screen.findByRole("tab", { name: "Neck" });
+    await user.click(neckChip);
+
+    await screen.findByText("No Exercises Found");
+    expect(
+      screen.getByText("No exercises match the selected muscle group."),
+    ).toBeInTheDocument();
   });
 });

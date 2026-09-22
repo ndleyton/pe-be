@@ -102,6 +102,14 @@ Notes:
 - For debounced hook tests, be careful combining fake timers with `waitFor`; prefer advancing timers inside `act(...)` and asserting directly on the resulting state or mock calls.
 - Preserve progressive rendering. Thin pages should still render stable shells and section-level placeholders/skeletons when possible; avoid replacing an otherwise usable screen with a single full-page "Loading..." state unless the entire route is blocked on first load.
 
+#### Query transitions and result interaction
+
+- Derive loading and placeholder state from the active browse/search query. With `keepPreviousData`, a disabled query can retain `isPlaceholderData: true`; its state must not disable results from another mode.
+- Separate content loading from background activity. `isFetching` includes refetches and pagination; preserve settled content, including empty results, during those requests. For retained search results, use `isPending || isPlaceholderData` for content transitions and `isFetching` for the small activity indicator.
+- If placeholder results must be unselectable, disable result buttons and guard keyboard shortcuts such as Enter. CSS `pointer-events-none` does not block keyboard selection.
+- Scope browse empty states to browse mode so an active search with zero matches reaches its search-specific empty state.
+- Test transitions, not just settled screens: search then clear and select, change filters while loading, and refetch a settled empty search. In query tests, wait for observer notifications to reach React before asserting unchanged UI; a request starting does not prove the component has rerendered. DOM tests may not load Tailwind CSS, so also assert disabled semantics or blocking classes where relevant.
+
 ## API Conventions
 
 - Prefer frontend endpoint constants in `pe-be-tracker-frontend/src/shared/api/endpoints.ts` instead of hardcoding paths.
