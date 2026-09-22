@@ -979,4 +979,116 @@ describe("ExerciseTypeModal", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  it("does not flash skeleton cards when clicking a muscle group chip", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 10, name: "Back" }),
+    ]);
+
+    let resolveBackQuery:
+      | ((value: ReturnType<typeof makePaginatedExerciseTypes>) => void)
+      | null = null;
+
+    mockGetExerciseTypes.mockImplementation(
+      (
+        orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => {
+        if (muscleGroupId === 10) {
+          return new Promise((resolve) => {
+            resolveBackQuery = resolve;
+          });
+        }
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({ id: 1, name: "Bench Press" }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await screen.findByText("Bench Press");
+
+    const backChip = await screen.findByRole("tab", { name: "Back" });
+    await user.click(backChip);
+
+    // Muscle group is selected
+    expect(backChip).toHaveAttribute("aria-selected", "true");
+
+    // Skeletons should NOT be rendered while transitioning between muscle groups
+    expect(
+      screen.queryByTestId("exercise-search-result-skeleton"),
+    ).not.toBeInTheDocument();
+
+    // Previous exercise remains visible during transition
+    expect(screen.getByText("Bench Press")).toBeInTheDocument();
+
+    // Now resolve the Back query
+    await act(async () => {
+      resolveBackQuery?.(
+        makePaginatedExerciseTypes([
+          makeExerciseType({ id: 2, name: "Lat Pulldown" }),
+        ]),
+      );
+    });
+
+    await screen.findByText("Lat Pulldown");
+    expect(screen.queryByText("Bench Press")).not.toBeInTheDocument();
+  });
+
+  it("shows muscle group empty state when filtered muscle group has no exercises", async () => {
+    mockIsAuthenticated = true;
+    mockGetMuscleGroups.mockResolvedValue([
+      makeMuscleGroup({ id: 20, name: "Neck" }),
+    ]);
+
+    mockGetExerciseTypes.mockImplementation(
+      (
+        _orderBy?: "usage" | "name",
+        _cursor?: number | null,
+        _limit?: number,
+        muscleGroupId?: number,
+      ) => {
+        if (muscleGroupId === 20) {
+          return Promise.resolve(makePaginatedExerciseTypes([]));
+        }
+        return Promise.resolve(
+          makePaginatedExerciseTypes([
+            makeExerciseType({ id: 1, name: "Bench Press" }),
+          ]),
+        );
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <ExerciseTypeModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    await screen.findByText("Bench Press");
+
+    const neckChip = await screen.findByRole("tab", { name: "Neck" });
+    await user.click(neckChip);
+
+    await screen.findByText("No Exercises Found");
+    expect(
+      screen.getByText("No exercises match the selected muscle group."),
+    ).toBeInTheDocument();
+  });
 });

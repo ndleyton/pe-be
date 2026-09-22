@@ -10,6 +10,7 @@ import {
   type UIEvent,
 } from "react";
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -134,6 +135,7 @@ const ExerciseTypeModal = ({
     hasNextPage: hasBrowseNextPage,
     fetchNextPage: fetchBrowseNextPage,
     isFetchingNextPage: isFetchingBrowseNextPage,
+    isPlaceholderData: isBrowsePlaceholderData,
     error: browseError,
   } = useInfiniteQuery({
     queryKey: [
@@ -150,14 +152,17 @@ const ExerciseTypeModal = ({
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
     initialPageParam: undefined as number | undefined,
     enabled: isAuthenticated && isOpen,
+    placeholderData: keepPreviousData,
   });
 
   const {
     data: searchExerciseTypesResponse,
-    isPending: isSearchLoading,
+    isPending: isSearchPending,
+    isFetching: isSearchFetching,
     hasNextPage: hasSearchNextPage,
     fetchNextPage: fetchSearchNextPage,
     isFetchingNextPage: isFetchingSearchNextPage,
+    isPlaceholderData: isSearchPlaceholderData,
     error: searchError,
   } = useInfiniteQuery({
     queryKey: [
@@ -176,6 +181,7 @@ const ExerciseTypeModal = ({
     getNextPageParam: (lastPage) => lastPage?.next_cursor ?? undefined,
     initialPageParam: undefined as number | undefined,
     enabled: isAuthenticated && isOpen && isSearchActive,
+    placeholderData: keepPreviousData,
   });
 
   const browseExerciseTypes = useMemo(
@@ -193,6 +199,15 @@ const ExerciseTypeModal = ({
       ) ?? [],
     [searchExerciseTypesResponse],
   );
+
+  const isSearchLoading = isSearchPending || isSearchFetching;
+  const hasLoadedInitialBrowseRef = useRef(false);
+
+  useEffect(() => {
+    if (browseExerciseTypesResponse?.pages?.length) {
+      hasLoadedInitialBrowseRef.current = true;
+    }
+  }, [browseExerciseTypesResponse]);
 
   useEffect(() => {
     if (!isAuthenticated || !isSearchActive) {
@@ -226,6 +241,7 @@ const ExerciseTypeModal = ({
       setAreResultsReady(false);
       setVisibleResultCount(EXERCISE_TYPE_MODAL_INITIAL_RENDER_COUNT);
       setSelectedMuscleGroupId("all");
+      hasLoadedInitialBrowseRef.current = false;
       return;
     }
 
@@ -325,12 +341,12 @@ const ExerciseTypeModal = ({
   const isFetchingNextPage = isSearchActive
     ? isFetchingSearchNextPage
     : isFetchingBrowseNextPage;
-  const isLoading = isSearchActive ? isSearchLoading : isBrowseLoading;
   const error = isSearchActive ? searchError : browseError;
   const isInitialBrowseLoading =
     isAuthenticated &&
     !isSearchActive &&
-    isLoading &&
+    !hasLoadedInitialBrowseRef.current &&
+    isBrowseLoading &&
     exerciseTypes.length === 0;
   const isSearchingWithoutResults =
     isAuthenticated &&
@@ -541,12 +557,16 @@ const ExerciseTypeModal = ({
             <Dumbbell className="text-muted-foreground h-8 w-8" />
           </div>
           <h4 className="text-foreground mb-2 font-bold text-lg">
-            No Exercises
+            {selectedMuscleGroupId !== "all"
+              ? "No Exercises Found"
+              : "No Exercises"}
           </h4>
           <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">
-            {isAuthenticated
-              ? "Your gym library is currently empty."
-              : "Default exercise types will be initialized soon."}
+            {selectedMuscleGroupId !== "all"
+              ? "No exercises match the selected muscle group."
+              : isAuthenticated
+                ? "Your gym library is currently empty."
+                : "Default exercise types will be initialized soon."}
           </p>
         </div>
       );
@@ -583,7 +603,13 @@ const ExerciseTypeModal = ({
     }
 
     return (
-      <div className="space-y-4 p-1">
+      <div
+        className={`space-y-4 p-1 transition-opacity duration-150 ${
+          isBrowsePlaceholderData || isSearchPlaceholderData
+            ? "opacity-60 pointer-events-none"
+            : ""
+        }`}
+      >
         <div className="grid gap-2">
           {visibleExerciseTypes.map((exerciseType) => (
             <ExerciseSearchResult
