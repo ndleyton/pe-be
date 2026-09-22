@@ -51,6 +51,7 @@ class RoutineService:
                 positions.append(set_template.position)
             if len(positions) != len(set(positions)):
                 raise ValueError("set template positions must be unique")
+
     async def get_visible_routines(
         self,
         session: AsyncSession,

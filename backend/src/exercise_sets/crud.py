@@ -221,9 +221,9 @@ async def reorder_exercise_sets(
     current_ids = [row.id for row in rows]
     if current_ids != expected_set_ids:
         return None
-    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(
-        ordered_set_ids
-    ) != set(current_ids):
+    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(ordered_set_ids) != set(
+        current_ids
+    ):
         raise ValueError("ordered_set_ids must be a complete permutation")
     if ordered_set_ids == current_ids:
         return rows

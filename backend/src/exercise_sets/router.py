@@ -40,9 +40,7 @@ async def create_exercise_set_pair(
             idempotency_key=str(idempotency_key),
         )
     except PairIdempotencyConflict as exc:
-        raise HTTPException(
-            status_code=409, detail="idempotency_key_reused"
-        ) from exc
+        raise HTTPException(status_code=409, detail="idempotency_key_reused") from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Exercise not found") from exc
 
@@ -71,9 +69,7 @@ async def get_exercise_sets(
     )
 
 
-@router.put(
-    "/exercise/{exercise_id}/order", response_model=List[ExerciseSetRead]
-)
+@router.put("/exercise/{exercise_id}/order", response_model=List[ExerciseSetRead])
 async def reorder_exercise_set_list(
     exercise_id: int,
     order: ExerciseSetOrderUpdate,

@@ -632,9 +632,7 @@ async def reorder_set_templates(
 ) -> list[SetTemplate] | None:
     owner_clause = True if is_superuser else Routine.creator_id == user_id
     locked_routine = await session.scalar(
-        select(Routine)
-        .where(Routine.id == routine_id, owner_clause)
-        .with_for_update()
+        select(Routine).where(Routine.id == routine_id, owner_clause).with_for_update()
     )
     if locked_routine is None:
         raise LookupError
@@ -655,9 +653,9 @@ async def reorder_set_templates(
     current_ids = [row.id for row in rows]
     if current_ids != expected_set_ids:
         return None
-    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(
-        ordered_set_ids
-    ) != set(current_ids):
+    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(ordered_set_ids) != set(
+        current_ids
+    ):
         raise ValueError("ordered_set_ids must be a complete permutation")
     if ordered_set_ids == current_ids:
         return rows

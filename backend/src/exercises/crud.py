@@ -1219,16 +1219,21 @@ async def get_exercise_type_stats(
             stats_intensity_unit = first_set_with_unit.intensity_unit
 
     if metrics_version == 2:
-        user_timezone = await session.scalar(
-            select(User.timezone).where(User.id == user_id)
-        ) or "UTC"
+        user_timezone = (
+            await session.scalar(select(User.timezone).where(User.id == user_id))
+            or "UTC"
+        )
         try:
             display_timezone = ZoneInfo(user_timezone)
         except ZoneInfoNotFoundError:
             display_timezone = ZoneInfo("UTC")
 
         sessions: dict[int, dict[str, Any]] = {}
-        exclusions = {"incompleteSets": 0, "incompatibleLoadSets": 0, "missingLoadSets": 0}
+        exclusions = {
+            "incompleteSets": 0,
+            "incompatibleLoadSets": 0,
+            "missingLoadSets": 0,
+        }
         side_personal_bests: dict[str, dict[str, Any]] = {}
         for exercise in exercises:
             workout = exercise.workout
@@ -1250,7 +1255,12 @@ async def get_exercise_type_stats(
                 side_key = exercise_set.side or "unspecified"
                 side_data = session_data["sides"].setdefault(
                     side_key,
-                    {"sets": 0, "reps": 0, "volume": Decimal("0"), "maxWeight": Decimal("0")},
+                    {
+                        "sets": 0,
+                        "reps": 0,
+                        "volume": Decimal("0"),
+                        "maxWeight": Decimal("0"),
+                    },
                 )
                 reps = exercise_set.reps or 0
                 session_data["sets"] += 1
@@ -1293,8 +1303,12 @@ async def get_exercise_type_stats(
                         "weight": _serialize_numeric(converted),
                         "reps": reps,
                         "volume": _serialize_numeric(volume),
-                        "rpe": _serialize_numeric(exercise_set.rpe) if exercise_set.rpe is not None else None,
-                        "rir": _serialize_numeric(exercise_set.rir) if exercise_set.rir is not None else None,
+                        "rpe": _serialize_numeric(exercise_set.rpe)
+                        if exercise_set.rpe is not None
+                        else None,
+                        "rir": _serialize_numeric(exercise_set.rir)
+                        if exercise_set.rir is not None
+                        else None,
                         "_weight": converted,
                         "_rir": exercise_set.rir,
                     }
@@ -1305,14 +1319,25 @@ async def get_exercise_type_stats(
             date_key = item["dateTime"].astimezone(display_timezone).date().isoformat()
             bucket = daily.setdefault(
                 date_key,
-                {"maxWeight": Decimal("0"), "totalVolume": Decimal("0"), "reps": 0, "sideBreakdown": {}},
+                {
+                    "maxWeight": Decimal("0"),
+                    "totalVolume": Decimal("0"),
+                    "reps": 0,
+                    "sideBreakdown": {},
+                },
             )
             bucket["maxWeight"] = max(bucket["maxWeight"], item["maxWeight"])
             bucket["totalVolume"] += item["volume"]
             bucket["reps"] += item["reps"]
             for side_key, side_data in item["sides"].items():
                 target = bucket["sideBreakdown"].setdefault(
-                    side_key, {"sets": 0, "reps": 0, "totalVolume": Decimal("0"), "maxWeight": Decimal("0")}
+                    side_key,
+                    {
+                        "sets": 0,
+                        "reps": 0,
+                        "totalVolume": Decimal("0"),
+                        "maxWeight": Decimal("0"),
+                    },
                 )
                 target["sets"] += side_data["sets"]
                 target["reps"] += side_data["reps"]
@@ -1339,7 +1364,11 @@ async def get_exercise_type_stats(
             )
         last = ordered_sessions[-1] if ordered_sessions else None
         cleaned_bests = {
-            key: {field: value for field, value in best.items() if not field.startswith("_")}
+            key: {
+                field: value
+                for field, value in best.items()
+                if not field.startswith("_")
+            }
             for key, best in side_personal_bests.items()
         }
         return {
@@ -1351,7 +1380,9 @@ async def get_exercise_type_stats(
                 "totalReps": last["reps"],
                 "maxWeight": _serialize_numeric(last["maxWeight"]),
                 "totalVolume": _serialize_numeric(last["volume"]),
-            } if last else None,
+            }
+            if last
+            else None,
             "personalBest": None,
             "sidePersonalBests": cleaned_bests,
             "totalSets": sum(item["sets"] for item in ordered_sessions),
@@ -1359,7 +1390,9 @@ async def get_exercise_type_stats(
                 "id": stats_intensity_unit.id,
                 "name": stats_intensity_unit.name,
                 "abbreviation": stats_intensity_unit.abbreviation,
-            } if stats_intensity_unit else None,
+            }
+            if stats_intensity_unit
+            else None,
             "exclusions": exclusions,
             "sessions": [
                 {

@@ -59,7 +59,9 @@ async def create_left_right_pair(
         )
         if owner != user_id:
             raise LookupError
-        return [ExerciseSetRead.model_validate(item) for item in existing.result_payload]
+        return [
+            ExerciseSetRead.model_validate(item) for item in existing.result_payload
+        ]
 
     request = ExerciseSetCreationRequest(
         user_id=user_id,
@@ -72,12 +74,16 @@ async def create_left_right_pair(
             session.add(request)
             await session.flush()
     except IntegrityError:
-        existing = await _existing_request(session, user_id=user_id, key=idempotency_key)
+        existing = await _existing_request(
+            session, user_id=user_id, key=idempotency_key
+        )
         if existing is None:
             raise
         if existing.request_hash != fingerprint:
             raise PairIdempotencyConflict
-        return [ExerciseSetRead.model_validate(item) for item in existing.result_payload]
+        return [
+            ExerciseSetRead.model_validate(item) for item in existing.result_payload
+        ]
 
     exercise = await session.scalar(
         select(Exercise)
@@ -105,11 +111,14 @@ async def create_left_right_pair(
         )
         canonical_unit = source_unit
         if canonical_key is not None:
-            canonical_unit = await session.scalar(
-                select(IntensityUnit).where(
-                    IntensityUnit.abbreviation.ilike(canonical_key)
+            canonical_unit = (
+                await session.scalar(
+                    select(IntensityUnit).where(
+                        IntensityUnit.abbreviation.ilike(canonical_key)
+                    )
                 )
-            ) or source_unit
+                or source_unit
+            )
         row = ExerciseSet(
             **values,
             exercise_id=payload.exercise_id,

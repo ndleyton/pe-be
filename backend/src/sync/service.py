@@ -219,7 +219,9 @@ class SyncService:
                             else fallback_position
                         )
                         if position < 0 or position in used_positions:
-                            raise ValueError("Guest set positions must be unique and nonnegative")
+                            raise ValueError(
+                                "Guest set positions must be unique and nonnegative"
+                            )
                         used_positions.add(position)
                         exercise_set = ExerciseSet(
                             reps=guest_s.reps,

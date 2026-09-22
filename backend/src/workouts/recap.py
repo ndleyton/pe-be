@@ -143,7 +143,8 @@ class WorkoutRecapService:
                 item
                 for item in stats.get("sessions", [])
                 if item["workoutId"] != workout.id
-                and item["date"] < (workout.start_time or workout.created_at).isoformat()
+                and item["date"]
+                < (workout.start_time or workout.created_at).isoformat()
             ]
             prev_session = prior_sessions[-1] if prior_sessions else None
 
