@@ -155,7 +155,7 @@ export function useExerciseTypeModalResults({
     [searchExerciseTypesResponse],
   );
 
-  const isSearchLoading = isSearchPending || isSearchFetching;
+  const isSearchLoading = isSearchPending || isSearchPlaceholderData;
   const hasLoadedInitialBrowseRef = useRef(false);
 
   useEffect(() => {
@@ -334,6 +334,7 @@ export function useExerciseTypeModalResults({
     isMuscleGroupsLoading,
     isSearchActive,
     isSearchLoading,
+    isSearchFetching,
     isInitialBrowseLoading,
     isSearchingWithoutResults,
     isResultsPlaceholderData,

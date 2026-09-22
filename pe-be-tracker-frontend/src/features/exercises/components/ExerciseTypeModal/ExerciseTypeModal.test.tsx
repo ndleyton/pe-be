@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/testUtils";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
@@ -1090,6 +1091,43 @@ describe("ExerciseTypeModal", () => {
     expect(mockOnSelect).toHaveBeenCalledWith(
       expect.objectContaining({ id: 2, name: "Lat Pulldown" }),
     );
+  });
+
+  it("keeps no matches visible while an empty search refetches", async () => {
+    mockIsAuthenticated = true;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    mockGetExerciseTypes.mockResolvedValue(makePaginatedExerciseTypes([]));
+    const { unmount } = render(
+      <ExerciseTypeModal isOpen onClose={mockOnClose} onSelect={mockOnSelect} />,
+      { queryClient },
+    );
+    fireEvent.change(screen.getByPlaceholderText(/search exercise types/i), {
+      target: { value: "Missing" },
+    });
+    await screen.findByText("No matches");
+
+    let resolveRefetch!: (page: ReturnType<typeof makePaginatedExerciseTypes>) => void;
+    mockGetExerciseTypes.mockImplementation(() => new Promise((resolve) => {
+      resolveRefetch = resolve;
+    }));
+    await act(async () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["exerciseTypes", "modal", "search"],
+      });
+      // Allow Query's scheduled observer notification to reach the component.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(queryClient.isFetching()).toBe(1);
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    expect(screen.queryByTestId("exercise-search-result-skeleton")).not.toBeInTheDocument();
+
+    await act(async () => resolveRefetch(makePaginatedExerciseTypes([])));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    unmount();
+    queryClient.clear();
   });
 
   it("shows no matches for an empty search within a populated muscle group", async () => {

@@ -95,6 +95,27 @@ describe("useExerciseTypeModalResults", () => {
     expect(result.current.isResultsPlaceholderData).toBe(false);
   });
 
+  it("reports background activity without content loading for a settled empty search", async () => {
+    vi.mocked(getExerciseTypes).mockResolvedValue(makePaginatedExerciseTypes([]));
+    const { result } = setup({ deferredSearchTerm: "Missing" });
+    await waitFor(() => expect(result.current.isSearchFetching).toBe(false));
+    expect(result.current.isSearchLoading).toBe(false);
+
+    const refetch = deferredPage();
+    vi.mocked(getExerciseTypes).mockReturnValue(refetch.promise);
+    act(() => {
+      void client.invalidateQueries({ queryKey: ["exerciseTypes", "modal", "search"] });
+    });
+    await waitFor(() => expect(result.current.isSearchFetching).toBe(true));
+    expect(result.current.isSearchLoading).toBe(false);
+    expect(result.current.isSearchingWithoutResults).toBe(false);
+    expect(result.current.exerciseTypes).toEqual([]);
+
+    await act(async () => refetch.resolve(makePaginatedExerciseTypes([])));
+    await waitFor(() => expect(result.current.isSearchFetching).toBe(false));
+    expect(result.current.isSearchingWithoutResults).toBe(false);
+  });
+
   it("uses the active query for pagination and preserves page sizes in optimistic usage updates", async () => {
     vi.mocked(getExerciseTypes).mockImplementation((order, cursor) => Promise.resolve(
       order === "name"

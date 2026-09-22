@@ -64,7 +64,7 @@ const ExerciseTypeModal = ({
     sortedMuscleGroups,
     isMuscleGroupsLoading,
     isSearchActive,
-    isSearchLoading,
+    isSearchFetching,
     isInitialBrowseLoading,
     isSearchingWithoutResults,
     isResultsPlaceholderData,
@@ -398,7 +398,7 @@ const ExerciseTypeModal = ({
                     <X className="h-5 w-5" />
                   </button>
 
-                  {isAuthenticated && isSearchActive && isSearchLoading && (
+                  {isAuthenticated && isSearchActive && isSearchFetching && (
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-background/20">
                       <Loader2 className="text-muted-foreground/10 h-8 w-8 animate-spin" />
                     </span>
