@@ -68,7 +68,7 @@ describe("useExerciseTypeStats", () => {
     });
 
     expect(result.current.stats).toEqual(mockStats);
-    expect(getExerciseTypeStats).toHaveBeenCalledWith("1");
+    expect(getExerciseTypeStats).toHaveBeenCalledWith("1", 2);
   });
 
   it("does not fetch stats when unauthenticated", async () => {
@@ -96,6 +96,6 @@ describe("useExerciseTypeStats", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(getExerciseTypeStats).toHaveBeenCalledWith("1");
+    expect(getExerciseTypeStats).toHaveBeenCalledWith("1", 2);
   });
 });
