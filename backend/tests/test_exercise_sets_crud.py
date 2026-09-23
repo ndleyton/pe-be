@@ -36,14 +36,6 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         created_at=datetime(2026, 3, 1, tzinfo=timezone.utc),
     )
     deleted_at = datetime(2026, 3, 2, tzinfo=timezone.utc)
-    newer_active_set = await _seed_exercise_set(
-        db_session,
-        exercise_id=exercise.id,
-        intensity_unit_id=unit.id,
-        intensity=80,
-        reps=8,
-        created_at=datetime(2026, 3, 2, 12, 0, tzinfo=timezone.utc),
-    )
     older_active_set = await _seed_exercise_set(
         db_session,
         exercise_id=exercise.id,
@@ -51,6 +43,14 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         intensity=75,
         reps=10,
         created_at=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+    )
+    newer_active_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=80,
+        reps=8,
+        created_at=datetime(2026, 3, 2, 12, 0, tzinfo=timezone.utc),
     )
     deleted_set = await _seed_exercise_set(
         db_session,

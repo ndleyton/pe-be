@@ -90,6 +90,7 @@ async def _seed_public_workout(db_session):
             notes="private set note",
             rest_time_seconds=120,
             type="working",
+            position=0,
         )
     )
     await db_session.commit()
