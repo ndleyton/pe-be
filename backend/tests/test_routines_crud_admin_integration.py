@@ -46,6 +46,7 @@ async def test_create_routine_admin_sets_visibility_and_readonly(
     await db_session.flush()
 
     payload = AdminRoutineCreate(
+        template_tree_version=2,
         name="Admin Routine",
         description="via admin",
         workout_type_id=wt.id,
@@ -55,7 +56,7 @@ async def test_create_routine_admin_sets_visibility_and_readonly(
             ExerciseTemplateCreate(
                 exercise_type_id=et.id,
                 set_templates=[
-                    SetTemplateCreate(
+                    SetTemplateCreate(position=0,
                         reps=5,
                         intensity=45.0,
                         intensity_unit_id=iu.id,
@@ -115,7 +116,7 @@ async def test_create_routine_persists_set_template_notes_and_type(
     db_session.add(user)
     await db_session.flush()
 
-    payload = RoutineCreate(
+    payload = RoutineCreate(template_tree_version=2,
         name="Routine With Set Metadata",
         description="desc",
         workout_type_id=wt.id,
@@ -123,7 +124,7 @@ async def test_create_routine_persists_set_template_notes_and_type(
             ExerciseTemplateCreate(
                 exercise_type_id=et.id,
                 set_templates=[
-                    SetTemplateCreate(
+                    SetTemplateCreate(position=0,
                         duration_seconds=90,
                         intensity_unit_id=iu.id,
                         notes="Smooth tempo",
@@ -170,7 +171,7 @@ async def test_update_routine_persists_set_template_notes_and_type(
 
     created = await crud.create_routine(
         db_session,
-        RoutineCreate(
+        RoutineCreate(template_tree_version=2,
             name="Routine To Update",
             description="desc",
             workout_type_id=wt.id,
@@ -178,7 +179,7 @@ async def test_update_routine_persists_set_template_notes_and_type(
                 ExerciseTemplateCreate(
                     exercise_type_id=et.id,
                     set_templates=[
-                        SetTemplateCreate(
+                        SetTemplateCreate(position=0,
                             reps=5, intensity=45.0, intensity_unit_id=iu.id
                         )
                     ],
@@ -196,7 +197,7 @@ async def test_update_routine_persists_set_template_notes_and_type(
                 ExerciseTemplateCreate(
                     exercise_type_id=et.id,
                     set_templates=[
-                        SetTemplateCreate(
+                        SetTemplateCreate(position=0,
                             reps=8,
                             intensity=55.0,
                             intensity_unit_id=iu.id,

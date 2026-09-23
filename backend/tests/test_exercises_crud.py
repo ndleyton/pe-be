@@ -151,6 +151,11 @@ async def _seed_exercise_set(
             .scalar_one()
             .id
         )
+    result = await db_session.execute(
+        select(func.coalesce(func.max(ExerciseSet.position), -1))
+        .where(ExerciseSet.exercise_id == exercise_id)
+    )
+    next_position = result.scalar_one() + 1
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,
@@ -158,12 +163,14 @@ async def _seed_exercise_set(
         canonical_intensity=canonical_intensity,
         canonical_intensity_unit_id=canonical_intensity_unit_id,
         reps=reps,
+        position=next_position,
         notes=notes,
         created_at=timestamp,
         updated_at=timestamp,
         deleted_at=deleted_at,
     )
     db_session.add(exercise_set)
+    await db_session.flush()
     await db_session.flush()
     return exercise_set
 
