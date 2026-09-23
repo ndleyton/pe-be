@@ -1427,7 +1427,7 @@ async def test_exercise_owner_queries_respect_user_and_deleted_state(db_session)
     )
 
 
-def test_is_new_personal_best():
+async def test_is_new_personal_best():
     from decimal import Decimal
     from src.exercises.crud import is_new_personal_best
 

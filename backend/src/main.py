@@ -171,7 +171,7 @@ def create_app() -> FastAPI:
         if exc.field is not None:
             response["field"] = exc.field
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=response,
         )
 
