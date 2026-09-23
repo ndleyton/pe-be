@@ -381,14 +381,6 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         notes="third",
     )
 
-    newer_kept_set = await _seed_exercise_set(
-        db_session,
-        exercise_id=first.id,
-        intensity_unit_id=unit.id,
-        intensity=100,
-        reps=5,
-        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
-    )
     older_kept_set = await _seed_exercise_set(
         db_session,
         exercise_id=first.id,
@@ -396,6 +388,14 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         intensity=95,
         reps=8,
         created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+    )
+    newer_kept_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=first.id,
+        intensity_unit_id=unit.id,
+        intensity=100,
+        reps=5,
+        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
     )
     await _seed_exercise_set(
         db_session,

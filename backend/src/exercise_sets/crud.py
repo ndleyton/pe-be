@@ -100,7 +100,7 @@ async def get_exercise_sets_for_exercise(
     result = await session.execute(
         select(ExerciseSet)
         .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
-        .order_by(ExerciseSet.created_at.asc(), ExerciseSet.id.asc())
+        .order_by(ExerciseSet.position.asc(), ExerciseSet.id.asc())
     )
     return result.scalars().all()
 
@@ -249,6 +249,17 @@ async def reorder_exercise_sets(
 
 async def soft_delete_exercise_set(session: AsyncSession, exercise_set_id: int) -> bool:
     """Soft delete an exercise set by setting deleted_at timestamp"""
+    # Serialize active-membership changes with creation and reordering.
+    await session.execute(
+        select(Exercise.id)
+        .where(
+            Exercise.id
+            == select(ExerciseSet.exercise_id)
+            .where(ExerciseSet.id == exercise_set_id)
+            .scalar_subquery()
+        )
+        .with_for_update()
+    )
     now = datetime.now(timezone.utc)
     result = await session.execute(
         select(ExerciseSet.id, ExerciseSet.deleted_at).where(

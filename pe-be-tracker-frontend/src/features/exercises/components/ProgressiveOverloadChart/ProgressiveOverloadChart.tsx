@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type {
   IntensityUnit,
@@ -73,9 +73,15 @@ export const ProgressiveOverloadChart = ({
   const latestVolume = scopedData.at(-1)?.totalVolume;
   const latestValue = scopedData.at(-1)?.[activeMetric];
   const previousValue = scopedData.at(-2)?.[activeMetric];
-  const hasTrend = latestValue != null && previousValue != null;
-  const trendingUp = hasTrend && latestValue > previousValue;
-  const change = hasTrend && latestValue > 0 && previousValue > 0
+  const hasTrend = latestValue != null && previousValue != null && latestValue > 0 && previousValue > 0;
+  let trendState: "increasing" | "decreasing" | "unchanged" | "unavailable" = "unavailable";
+  if (hasTrend) {
+    if (latestValue > previousValue) trendState = "increasing";
+    else if (latestValue < previousValue) trendState = "decreasing";
+    else trendState = "unchanged";
+  }
+
+  const change = hasTrend
     ? Math.abs(((latestValue - previousValue) / previousValue) * 100).toFixed(1)
     : "0";
 
@@ -179,12 +185,15 @@ export const ProgressiveOverloadChart = ({
       <div className="flex w-full items-start gap-2 text-sm">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 leading-none font-medium">
-            {hasTrend ? (
-              <>
-                {trendingUp ? "Trending up" : "Steady progress"} by {change}%
-                this session <TrendingUp className="h-4 w-4" />
-              </>
-            ) : "Trend unavailable"}
+            {trendState === "increasing" ? (
+              <>Trending up by {change}% this session <TrendingUp className="text-activity h-4 w-4" /></>
+            ) : trendState === "decreasing" ? (
+              <>Trending down by {change}% this session <TrendingDown className="text-destructive h-4 w-4" /></>
+            ) : trendState === "unchanged" ? (
+              <>Steady progress this session <Minus className="text-muted-foreground h-4 w-4" /></>
+            ) : (
+              "Trend unavailable"
+            )}
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
             {activeMetric === "maxWeight" ? (
