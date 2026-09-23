@@ -124,7 +124,9 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, stri
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id, **kwargs):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
             "sessions": [
                 {
@@ -199,7 +201,9 @@ async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id, **kwargs):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
             "sessions": [
                 {
@@ -266,7 +270,9 @@ async def test_generate_recap_updates_langfuse_on_error(monkeypatch, strict):
     async def fake_get_exercises_for_workout(session, workout_id):
         return [_build_exercise()]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id, **kwargs):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {"sessions": []}
 
     def fake_client_factory(*, api_key):

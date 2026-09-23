@@ -152,8 +152,9 @@ async def _seed_exercise_set(
             .id
         )
     result = await db_session.execute(
-        select(func.coalesce(func.max(ExerciseSet.position), -1))
-        .where(ExerciseSet.exercise_id == exercise_id)
+        select(func.coalesce(func.max(ExerciseSet.position), -1)).where(
+            ExerciseSet.exercise_id == exercise_id
+        )
     )
     next_position = result.scalar_one() + 1
     exercise_set = ExerciseSet(
