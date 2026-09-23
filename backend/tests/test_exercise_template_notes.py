@@ -49,7 +49,13 @@ async def test_exercise_template_notes_propagation(db_session: AsyncSession):
                 exercise_type_id=et.id,
                 notes=routine_notes,
                 set_templates=[
-                    SetTemplateCreate(position=0, side=None, reps=10, intensity=50.0, intensity_unit_id=iu.id)
+                    SetTemplateCreate(
+                        position=0,
+                        side=None,
+                        reps=10,
+                        intensity=50.0,
+                        intensity_unit_id=iu.id,
+                    )
                 ],
             )
         ],
