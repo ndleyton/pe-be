@@ -492,3 +492,37 @@ async def test_direct_router_calls_for_coverage():
         # Call get list
         res3 = await get_conversations(20, 0, mock_user, mock_session)
         assert res3.total == 1
+
+
+async def test_conversation_reads_are_scoped_to_authenticated_owner(
+    async_client, authenticated_user, db_session
+):
+    from src.chat.crud import create_conversation
+
+    other = User(
+        email="other-chat-owner@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(other)
+    await db_session.commit()
+    await db_session.refresh(other)
+    private = await create_conversation(
+        db_session, ConversationCreate(title="Private other chat"), other.id
+    )
+    own = await create_conversation(
+        db_session, ConversationCreate(title="My chat"), authenticated_user.id
+    )
+
+    response = await async_client.get("/api/v1/conversations?limit=1&offset=0")
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert [chat["id"] for chat in response.json()["conversations"]] == [own.id]
+    next_page = await async_client.get("/api/v1/conversations?limit=1&offset=1")
+    assert next_page.json()["conversations"] == []
+    denied = await async_client.get(f"/api/v1/conversations/{private.id}")
+    assert denied.status_code == 404
+    allowed = await async_client.get(f"/api/v1/conversations/{own.id}")
+    assert allowed.status_code == 200

@@ -9,7 +9,7 @@ import {
 } from "react";
 import { chatDraftKey, useChatDraftStore } from "@/stores/useChatDraftStore";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
   sendChatMessage,
@@ -82,6 +82,7 @@ export const useChatComposer = ({
   setConversationId,
   setMessages,
 }: UseChatComposerOptions) => {
+  const queryClient = useQueryClient();
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const draftKey = chatDraftKey(isAuthenticated ? userId : undefined, conversationId);
   const draftsHydrated = useChatDraftStore((state) => state.hydrated);
@@ -131,6 +132,7 @@ export const useChatComposer = ({
       messages: ChatApiMessage[];
     }) => sendChatMessage(messages, nextConversationId),
     onSuccess: (response) => {
+      void queryClient.invalidateQueries({ queryKey: ["chat-history", userId] });
       setConversationId((current) =>
         current === response.conversation_id ? current : response.conversation_id,
       );

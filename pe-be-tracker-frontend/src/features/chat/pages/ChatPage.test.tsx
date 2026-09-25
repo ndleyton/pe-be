@@ -511,7 +511,7 @@ describe("ChatPage", () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockGet).toHaveBeenCalledWith("/chat/conversations/12");
+      expect(mockGet).toHaveBeenCalledWith("/conversations/12");
     });
   });
 
@@ -656,8 +656,24 @@ describe("ChatPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "History" }));
     await userEvent.click(await screen.findByRole("button", { name: /Leg day advice/ }));
     expect(await screen.findByText("Try squats")).toBeInTheDocument();
+    expect(mockGet).toHaveBeenCalledWith("/conversations", { params: { offset: 0, limit: 20 } });
+    expect(mockGet).toHaveBeenCalledWith("/conversations/42");
     await waitFor(() => expect(readActiveChatSession()?.conversationId).toBe(42));
     expect(screen.queryByRole("region", { name: "Chat history" })).not.toBeInTheDocument();
+  });
+
+  it("refreshes open history after a successful chat write", async () => {
+    mockGet.mockResolvedValue({ data: { conversations: [], total: 0, limit: 20, offset: 0 } });
+    mockPost.mockImplementation(async () => {
+      mockGet.mockResolvedValue({ data: { conversations: [{ id: 42, title: "New workout advice", updated_at: "2024-01-02" }], total: 1, limit: 20, offset: 0 } });
+      return { data: { conversation_id: 42, message: "Here is your plan" } };
+    });
+    renderChatPage();
+    await userEvent.click(screen.getByRole("button", { name: "History" }));
+    expect(await screen.findByText("No past chats yet.")).toBeInTheDocument();
+    await userEvent.type(screen.getByRole("textbox"), "Help me train");
+    fireEvent.submit(screen.getByRole("textbox").closest("form")!);
+    expect(await screen.findByRole("button", { name: /New workout advice/ })).toBeInTheDocument();
   });
 
 });

@@ -24,7 +24,7 @@ const EXAMPLE_PROMPTS = [
   "Can you suggest a good leg workout based on my recent training?",
 ];
 
-const ChatPage = () => {
+const ChatSession = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userId = useAuthStore((state) => state.user?.id);
   const location = useLocation();
@@ -44,6 +44,7 @@ const ChatPage = () => {
     setMessages,
   } = useChatSessionRestore({
     isAuthenticated,
+    userId,
   });
 
   const { clearPendingSubstitutionIntent, pendingSubstitutionIntent } =
@@ -175,6 +176,13 @@ const ChatPage = () => {
       />
     </div>
   );
+};
+
+// Remount every chat workflow on identity changes, including pending composer writes.
+const ChatPage = () => {
+  const userId = useAuthStore((state) => state.user?.id);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return <ChatSession key={`${isAuthenticated}:${userId ?? "guest"}`} />;
 };
 
 export default ChatPage;

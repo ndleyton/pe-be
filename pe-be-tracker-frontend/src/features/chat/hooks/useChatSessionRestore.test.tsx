@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ACTIVE_CHAT_SESSION_KEY,
   persistActiveChatSession,
+  readActiveChatSession,
 } from "../lib/chatSession";
 import { useChatSessionRestore } from "./useChatSessionRestore";
 
@@ -230,12 +231,74 @@ describe("useChatSessionRestore", () => {
   });
 
   it("keeps the current chat on a failed history selection", async () => {
-    mockGetConversation.mockRejectedValue(new Error("Offline"));
+    mockGetConversation.mockResolvedValueOnce({
+      id: 12,
+      messages: [{ id: 1, role: "assistant", content: "Saved message", parts: [], created_at: "2024-01-02" }]
+    });
     const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true }));
+
+    // Load conversation 12
+    await act(async () => { await result.current.openConversation(12); });
+    expect(result.current.conversationId).toBe(12);
+    expect(result.current.messages[0].content).toBe("Saved message");
+
+    // Reject opening conversation 99
+    mockGetConversation.mockRejectedValueOnce(new Error("Offline"));
     await act(async () => { await result.current.openConversation(99); });
+
     expect(result.current.restorationResolved).toBe(true);
     expect(result.current.restoreError).toContain("Could not open");
+    expect(result.current.conversationId).toBe(12);
+    expect(result.current.messages[0].content).toBe("Saved message");
+  });
+
+  it("ignores an open request after switching authenticated users", async () => {
+    let resolve!: (value: unknown) => void;
+    mockGetConversation.mockReturnValue(new Promise((done) => { resolve = done; }));
+    const { result, rerender } = renderHook(({ userId }) => useChatSessionRestore({ isAuthenticated: true, userId }), { initialProps: { userId: 1 } });
+    let opening!: Promise<boolean>;
+    act(() => { opening = result.current.openConversation(12); });
+    rerender({ userId: 2 });
+    await act(async () => {
+      resolve({ id: 12, messages: [{ id: 1, role: "assistant", content: "Private", parts: [], created_at: "2024-01-02" }] });
+      await opening;
+    });
+    expect(result.current.messages).toEqual([]);
     expect(result.current.conversationId).toBeUndefined();
+    expect(readActiveChatSession(2)).toBeNull();
+  });
+
+  it("does not restore another user's cached transcript", async () => {
+    persistActiveChatSession({ conversationId: 12, messages: [{ id: "a", role: "assistant", content: "Private", timestamp: new Date() }] }, 1);
+    const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true, userId: 2 }));
+    expect(result.current.messages).toEqual([]);
+    expect(mockGetConversation).not.toHaveBeenCalled();
+  });
+
+  it("preserves a widget when the server transcript grows", async () => {
+    const events = [{ type: "routine_created" as const, routine: { id: 9, name: "Leg day", workout_type_id: 1, exercise_count: 2, set_count: 6 } }];
+    persistActiveChatSession({ conversationId: 12, messages: [{ id: "local", role: "assistant", content: "Routine created", events, timestamp: new Date() }] });
+    mockGetConversation.mockResolvedValue({ id: 12, messages: [
+      { id: 1, role: "assistant", content: "Routine created", parts: [], created_at: "2024-01-02" },
+      { id: 2, role: "assistant", content: "New reply", parts: [], created_at: "2024-01-02" },
+    ] });
+    const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true }));
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.messages[0].events).toEqual(events);
+    await act(async () => { await result.current.openConversation(12); });
+    expect(result.current.messages[0].events).toEqual(events);
+  });
+
+  it("only adopts a legacy cache after server ownership validation", async () => {
+    persistActiveChatSession({ conversationId: 12, messages: [{ id: "local", role: "assistant", content: "Cached private reply", timestamp: new Date() }] });
+    let resolve!: (value: unknown) => void;
+    mockGetConversation.mockReturnValue(new Promise((done) => { resolve = done; }));
+    const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true, userId: 1 }));
+    expect(result.current.messages).toEqual([]);
+    await act(async () => { resolve({ id: 12, messages: [] }); });
+    expect(result.current.messages[0].content).toBe("Cached private reply");
+    expect(readActiveChatSession(1)?.conversationId).toBe(12);
+    expect(readActiveChatSession()).toBeNull();
   });
 
 });

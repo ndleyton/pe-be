@@ -75,3 +75,22 @@ export const mapConversationToChatMessages = (
   conversation: ConversationResponse,
 ): ChatMessage[] =>
   (conversation.messages ?? []).map(mapConversationMessageToChatMessage);
+
+/** The server stores message text/parts, but widget events currently exist only locally. */
+export const reconcileConversationMessages = (
+  conversation: ConversationResponse,
+  localMessages: ChatMessage[],
+): ChatMessage[] => {
+  const remaining = new Set(localMessages);
+  const messages = mapConversationToChatMessages(conversation).map((message) => {
+    const candidates = [...remaining];
+    const local = candidates.find((candidate) => candidate.id === message.id)
+      ?? candidates.find((candidate) => !candidate.id.startsWith("conversation-message-")
+        && candidate.role === message.role && candidate.content === message.content);
+    if (!local) return message;
+    remaining.delete(local);
+    return { ...message, events: local.events };
+  });
+  // Keep local-only messages, including widgets and unsaved follow-up prompts.
+  return [...messages, ...remaining];
+};
