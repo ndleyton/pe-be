@@ -36,9 +36,12 @@ export const useChatSessionRestore = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [restorationResolved, setRestorationResolved] = useState(!isAuthenticated);
   const activeConversationIdRef = useRef<number | undefined>(undefined);
-  const restoreAttemptedRef = useRef(false);
+  const requestRef = useRef(0);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const resetConversationState = useCallback(() => {
+    requestRef.current += 1;
+    setRestoreError(null);
     activeConversationIdRef.current = undefined;
     clearActiveChatSession();
     setMessages([]);
@@ -52,16 +55,10 @@ export const useChatSessionRestore = ({
 
   useEffect(() => {
     if (!isAuthenticated) {
-      restoreAttemptedRef.current = false;
       resetConversationState();
       return;
     }
 
-    if (restoreAttemptedRef.current) {
-      return;
-    }
-
-    restoreAttemptedRef.current = true;
     setRestorationResolved(false);
 
     const storedSession = readActiveChatSession();
@@ -72,9 +69,10 @@ export const useChatSessionRestore = ({
     }
 
     let cancelled = false;
+    const request = ++requestRef.current;
 
     const clearRestoredConversation = () => {
-      if (cancelled) {
+      if (cancelled || request !== requestRef.current) {
         return;
       }
 
@@ -85,14 +83,18 @@ export const useChatSessionRestore = ({
       try {
         const conversation = await getConversation(storedSession.conversationId);
 
-        if (cancelled || storedSession.messages.length > 0) {
+        if (cancelled || request !== requestRef.current) {
           return;
         }
 
         activeConversationIdRef.current = conversation.id;
-        setMessages(mapConversationToChatMessages(conversation));
+        // Keep local widgets when the server transcript has not advanced.
+        if ((conversation.messages?.length ?? 0) > storedSession.messages.length || storedSession.messages.length === 0) {
+          setMessages(mapConversationToChatMessages(conversation));
+        }
         setConversationId(conversation.id);
       } catch (error) {
+        if (cancelled || request !== requestRef.current) return;
         if (
           extractResponseStatus(error) === 404 &&
           (
@@ -101,9 +103,11 @@ export const useChatSessionRestore = ({
           )
         ) {
           clearRestoredConversation();
+        } else {
+          setRestoreError("Could not refresh this chat. Try opening it from chat history.");
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && request === requestRef.current) {
           setRestorationResolved(true);
         }
       }
@@ -113,7 +117,6 @@ export const useChatSessionRestore = ({
       activeConversationIdRef.current = storedSession.conversationId;
       setMessages(storedSession.messages);
       setConversationId(storedSession.conversationId);
-      setRestorationResolved(true);
       void restoreConversation();
 
       return () => {
@@ -138,8 +141,7 @@ export const useChatSessionRestore = ({
       return;
     }
 
-    if (!conversationId || messages.length === 0) {
-      clearActiveChatSession();
+    if (!conversationId) {
       return;
     }
 
@@ -149,7 +151,32 @@ export const useChatSessionRestore = ({
     });
   }, [conversationId, isAuthenticated, messages, restorationResolved]);
 
+  useEffect(() => () => { requestRef.current += 1; }, []);
+
+  const openConversation = useCallback(async (id: number) => {
+    const request = ++requestRef.current;
+    setRestorationResolved(false);
+    setRestoreError(null);
+    try {
+      const conversation = await getConversation(id);
+      if (request !== requestRef.current) return false;
+      activeConversationIdRef.current = id;
+      setConversationId(id);
+      setMessages(mapConversationToChatMessages(conversation));
+      return true;
+    } catch {
+      if (request === requestRef.current) {
+        setRestoreError("Could not open this chat. Please try again.");
+      }
+      return false;
+    } finally {
+      if (request === requestRef.current) setRestorationResolved(true);
+    }
+  }, []);
+
   return {
+    openConversation,
+    restoreError,
     conversationId,
     messages,
     restorationResolved,

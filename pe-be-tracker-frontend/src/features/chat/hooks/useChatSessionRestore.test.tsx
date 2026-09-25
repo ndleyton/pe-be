@@ -1,4 +1,5 @@
-import { renderHook, waitFor } from "@/test/testUtils";
+import { StrictMode } from "react";
+import { act, renderHook, waitFor } from "@/test/testUtils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -203,4 +204,38 @@ describe("useChatSessionRestore", () => {
     expect(result.current.conversationId).toBeUndefined();
     expect(sessionStorage.getItem(ACTIVE_CHAT_SESSION_KEY)).toBeNull();
   });
+  it("restores an ID-only session under Strict Mode and after remount", async () => {
+    persistActiveChatSession({ conversationId: 12, messages: [] });
+    mockGetConversation.mockResolvedValue({
+      id: 12, messages: [{ id: 1, role: "assistant", content: "Saved reply", parts: [], created_at: "2024-01-02" }],
+    });
+    const first = renderHook(() => useChatSessionRestore({ isAuthenticated: true }), { wrapper: StrictMode });
+    await waitFor(() => expect(first.result.current.messages[0]?.content).toBe("Saved reply"));
+    first.unmount();
+    const second = renderHook(() => useChatSessionRestore({ isAuthenticated: true }));
+    await waitFor(() => expect(second.result.current.restorationResolved).toBe(true));
+    expect(second.result.current.conversationId).toBe(12);
+    expect(second.result.current.messages[0].content).toBe("Saved reply");
+  });
+
+  it("refreshes a cached transcript with replies saved while away", async () => {
+    persistActiveChatSession({ conversationId: 12, messages: [{ id: "local", role: "user", content: "Hello", timestamp: new Date() }] });
+    mockGetConversation.mockResolvedValue({ id: 12, messages: [
+      { id: 1, role: "user", content: "Hello", parts: [], created_at: "2024-01-02" },
+      { id: 2, role: "assistant", content: "New reply", parts: [], created_at: "2024-01-02" },
+    ] });
+    const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true }));
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.messages[1].content).toBe("New reply");
+  });
+
+  it("keeps the current chat on a failed history selection", async () => {
+    mockGetConversation.mockRejectedValue(new Error("Offline"));
+    const { result } = renderHook(() => useChatSessionRestore({ isAuthenticated: true }));
+    await act(async () => { await result.current.openConversation(99); });
+    expect(result.current.restorationResolved).toBe(true);
+    expect(result.current.restoreError).toContain("Could not open");
+    expect(result.current.conversationId).toBeUndefined();
+  });
+
 });

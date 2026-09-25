@@ -644,4 +644,17 @@ describe("ChatPage", () => {
     expect(screen.getByText("Meet Personal Bestie")).toBeInTheDocument();
     expect(sessionStorage.getItem(ACTIVE_CHAT_SESSION_KEY)).toBeNull();
   });
+  it("opens a past conversation and saves it as the active chat", async () => {
+    mockGet.mockImplementation(async (url: string) => ({ data: url.endsWith("/conversations")
+      ? { conversations: [{ id: 42, title: "Leg day advice", updated_at: "2024-01-02" }], total: 1, limit: 20, offset: 0 }
+      : { id: 42, messages: [{ id: 1, role: "assistant", content: "Try squats", parts: [], created_at: "2024-01-02" }] }
+    }));
+    renderChatPage();
+    await userEvent.click(screen.getByRole("button", { name: "History" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Leg day advice/ }));
+    expect(await screen.findByText("Try squats")).toBeInTheDocument();
+    await waitFor(() => expect(readActiveChatSession()?.conversationId).toBe(42));
+    expect(screen.queryByRole("region", { name: "Chat history" })).not.toBeInTheDocument();
+  });
+
 });
