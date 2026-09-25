@@ -1,3 +1,4 @@
+import { useChatDraftStore } from "@/stores/useChatDraftStore";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ChangeEvent, type ReactNode, useState } from "react";
@@ -20,6 +21,8 @@ vi.mock("../api/chatApi", () => ({
 interface ComposerHarnessOptions {
   clearPendingSubstitutionIntent?: () => void;
   isAuthenticated?: boolean;
+  userId?: number;
+  initialConversationId?: number;
   pendingSubstitutionIntent?: ExerciseSubstitutionChatIntent | null;
 }
 
@@ -46,15 +49,18 @@ const wrapper = ({ children }: { children: ReactNode }) => {
 const renderComposer = ({
   clearPendingSubstitutionIntent = vi.fn(),
   isAuthenticated = true,
+  userId = 1,
+  initialConversationId,
   pendingSubstitutionIntent = null,
 }: ComposerHarnessOptions = {}) =>
   renderHook(() => {
-    const [conversationId, setConversationId] = useState<number | undefined>();
+    const [conversationId, setConversationId] = useState<number | undefined>(initialConversationId);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const composer = useChatComposer({
       clearPendingSubstitutionIntent,
       conversationId,
       isAuthenticated,
+      userId,
       pendingSubstitutionIntent,
       setConversationId,
       setMessages,
@@ -63,12 +69,15 @@ const renderComposer = ({
     return {
       conversationId,
       messages,
+      setConversationId,
       ...composer,
     };
   }, { wrapper });
 
 describe("useChatComposer", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await useChatDraftStore.persist.rehydrate();
+    useChatDraftStore.setState({ texts: {}, attachments: {}, hydrated: true });
     vi.clearAllMocks();
     vi.useRealTimers();
     Object.defineProperty(URL, "createObjectURL", {
@@ -254,4 +263,50 @@ describe("useChatComposer", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
     expect(mockSendChatMessage).not.toHaveBeenCalled();
   });
+  it("keeps separate drafts per conversation, new chat, and user across remounts", () => {
+    const first = renderComposer();
+    act(() => first.result.current.handleInputChange("New chat draft"));
+    act(() => first.result.current.setConversationId(12));
+    expect(first.result.current.inputValue).toBe("");
+    act(() => first.result.current.handleInputChange("Existing chat draft"));
+    act(() => first.result.current.setConversationId(undefined));
+    expect(first.result.current.inputValue).toBe("New chat draft");
+    first.unmount();
+    const second = renderComposer({ initialConversationId: 12 });
+    expect(second.result.current.inputValue).toBe("Existing chat draft");
+    second.unmount();
+    const otherUser = renderComposer({ userId: 2, initialConversationId: 12 });
+    expect(otherUser.result.current.inputValue).toBe("");
+  });
+
+  it("retains text and attachments after a failed send and clears them after retry", async () => {
+    mockSendChatMessage.mockRejectedValueOnce(new Error("Offline"));
+    mockUploadChatAttachment.mockResolvedValue({ attachment_id: 99, mime_type: "image/png", filename: "form.png" });
+    const { result } = renderComposer();
+    act(() => {
+      result.current.handleInputChange("Check my form");
+      result.current.handleFileChange({ target: { files: [new File(["png"], "form.png", { type: "image/png" })], value: "" } } as unknown as ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => { await result.current.handleSubmitMessage(); });
+    expect(result.current.inputValue).toBe("Check my form");
+    expect(result.current.pendingAttachments).toHaveLength(1);
+    mockSendChatMessage.mockResolvedValueOnce({ conversation_id: 12, message: "Looks good" });
+    await act(async () => { await result.current.handleSubmitMessage(); });
+    expect(result.current.inputValue).toBe("");
+    expect(result.current.pendingAttachments).toHaveLength(0);
+    expect(useChatDraftStore.getState().texts["1:new"]).toBe("");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+  });
+
+  it("keeps attachment previews usable when navigating away and back", () => {
+    const first = renderComposer();
+    act(() => first.result.current.handleFileChange({ target: { files: [new File(["png"], "form.png", { type: "image/png" })], value: "" } } as unknown as ChangeEvent<HTMLInputElement>));
+    first.unmount();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    const second = renderComposer();
+    expect(second.result.current.pendingAttachments).toHaveLength(1);
+    act(() => second.result.current.handleRemoveAttachment(second.result.current.pendingAttachments[0].localId));
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+  });
+
 });

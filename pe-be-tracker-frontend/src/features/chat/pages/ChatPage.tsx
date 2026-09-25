@@ -59,6 +59,7 @@ const ChatPage = () => {
     });
 
   const {
+    draftsHydrated,
     attachmentError,
     canAddAttachments,
     canSubmitMessage,
@@ -75,6 +76,7 @@ const ChatPage = () => {
   } = useChatComposer({
     clearPendingSubstitutionIntent,
     conversationId,
+    userId,
     isAuthenticated,
     pendingSubstitutionIntent,
     setConversationId,
@@ -95,7 +97,7 @@ const ChatPage = () => {
     }
 
     clearPendingSubstitutionIntent();
-    resetComposer();
+    if (!conversationId) resetComposer();
     resetConversationState();
   };
 
@@ -120,7 +122,6 @@ const ChatPage = () => {
             void openConversation(id).then((opened) => {
               if (opened) {
                 clearPendingSubstitutionIntent();
-                resetComposer();
                 setHistoryOpen(false);
               }
             });
@@ -163,7 +164,7 @@ const ChatPage = () => {
         canSubmit={canSubmitMessage && restorationResolved}
         fileInputRef={fileInputRef}
         inputValue={inputValue}
-        isLoading={isLoading || !restorationResolved}
+        isLoading={isLoading || !restorationResolved || !draftsHydrated}
         onFileChange={handleFileChange}
         onInputChange={handleInputChange}
         onRemoveAttachment={handleRemoveAttachment}
