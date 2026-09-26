@@ -87,7 +87,7 @@ async def _read_upload_file_limited(file: UploadFile, *, max_bytes: int) -> byte
             break
         if len(data) + len(chunk) > max_bytes:
             raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"Image upload exceeds maximum size of {max_bytes} bytes",
             )
         data.extend(chunk)
