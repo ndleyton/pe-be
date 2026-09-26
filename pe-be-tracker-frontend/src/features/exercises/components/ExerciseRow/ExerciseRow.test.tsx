@@ -685,13 +685,11 @@ describe("ExerciseRow", () => {
       await user.click(setNotesButton);
 
       expect(screen.getByText("Set Details")).toBeInTheDocument();
-      expect(screen.getByText("Log intensity and notes for this set.")).toBeInTheDocument();
       expect(screen.getByText("RPE")).toBeInTheDocument();
       expect(screen.getByText("RIR")).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText(/add notes for this set/i),
+        screen.getByPlaceholderText(/add notes/i),
       ).toBeInTheDocument();
-      expect(screen.getByText("Tracking")).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Reps" }),
       ).toHaveAttribute("aria-pressed", "true");

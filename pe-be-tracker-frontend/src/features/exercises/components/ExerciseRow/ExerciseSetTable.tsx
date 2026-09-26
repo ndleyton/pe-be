@@ -46,7 +46,7 @@ type ExerciseSetTableProps = {
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
   onAddSet: () => void;
-  onAddPair: () => void;
+  onAddPair: () => void | Promise<void>;
   onCloseSetOptions: () => void;
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
@@ -446,7 +446,7 @@ const SetOptionsDialogContent = ({
         <DialogTitle>Set Details</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
-        <div>
+        <div className="flex gap-3">
           <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
             <button
               type="button"
@@ -473,13 +473,12 @@ const SetOptionsDialogContent = ({
               Time
             </button>
           </div>
-        </div>
-        <div>
           <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
             {([
               [null, "—"],
               ["left", "Left"],
               ["right", "Right"],
+              ["both", "Both"],
             ] as const).map(([value, label]) => (
               <button
                 key={label}

@@ -107,7 +107,7 @@ const ExerciseRow = ({
   }, [addSet, currentIntensityUnit.id]);
 
   const handleAddPair = useCallback(() => {
-    void addLeftRightPair(currentIntensityUnit.id);
+    return addLeftRightPair(currentIntensityUnit.id);
   }, [addLeftRightPair, currentIntensityUnit.id]);
 
   return (
