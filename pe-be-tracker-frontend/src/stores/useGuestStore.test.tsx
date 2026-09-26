@@ -67,7 +67,7 @@ describe("useGuestStore", () => {
     const persistOptions = useGuestStore.persist.getOptions();
     const migrate = persistOptions.migrate;
 
-    expect(persistOptions.version).toBe(4);
+    expect(persistOptions.version).toBe(5);
     expect(migrate).toBeDefined();
 
     const migrated = migrate!(

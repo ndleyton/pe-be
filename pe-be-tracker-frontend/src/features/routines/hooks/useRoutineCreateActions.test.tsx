@@ -133,6 +133,7 @@ describe("useRoutineCreateActions", () => {
       author: "Trimmed Author",
       category: "Trimmed Category",
       exercise_templates: mockPayload,
+      template_tree_version: 2,
     });
   });
 

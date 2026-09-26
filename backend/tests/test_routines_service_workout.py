@@ -58,12 +58,14 @@ async def test_create_workout_from_routine_success(
                 intensity=30.0,
                 intensity_unit_id=iu.id,
                 exercise_template_id=etmpl.id,
+                position=0,
             ),
             SetTemplate(
                 reps=10,
                 intensity=35.0,
                 intensity_unit_id=iu.id,
                 exercise_template_id=etmpl.id,
+                position=1,
             ),
         ]
     )
@@ -181,6 +183,7 @@ async def test_create_workout_from_routine_resolves_canonical_intensity_unit(
             intensity=100.0,
             intensity_unit_id=lbs.id,
             exercise_template_id=etmpl.id,
+            position=0,
         )
     )
     await db_session.commit()
@@ -246,6 +249,7 @@ async def test_create_workout_from_routine_preserves_source_unit_when_no_intensi
             intensity=None,
             intensity_unit_id=lbs.id,
             exercise_template_id=exercise_template.id,
+            position=0,
         )
     )
     await db_session.commit()
@@ -333,6 +337,7 @@ async def test_clone_public_workout_to_private_routine_strips_sensitive_fields(
             done=True,
             notes="Private set note",
             type="working",
+            position=0,
         )
     )
     db_session.add(
@@ -343,6 +348,7 @@ async def test_clone_public_workout_to_private_routine_strips_sensitive_fields(
             done=True,
             deleted_at=datetime(2026, 4, 20, 13, 30, tzinfo=timezone.utc),
             type="working",
+            position=1,
         )
     )
     deleted_exercise = Exercise(
@@ -549,6 +555,7 @@ async def test_create_workout_from_public_routine_allows_nonreleased_exercise_ty
             intensity=40.0,
             intensity_unit_id=iu.id,
             exercise_template_id=exercise_template.id,
+            position=0,
         )
     )
     await db_session.commit()

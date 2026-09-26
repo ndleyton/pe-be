@@ -90,13 +90,23 @@ class WorkoutRecapService:
 
         # 1. Gather deterministic metrics
         metrics = []
+        exercises_by_type = {}
         for exercise in exercises:
+            exercises_by_type.setdefault(exercise.exercise_type_id, []).append(exercise)
+
+        for exercise_type_exercises in exercises_by_type.values():
+            exercise = exercise_type_exercises[0]
             stats = await get_exercise_type_stats(
-                session, exercise.exercise_type_id, user_id
+                session, exercise.exercise_type_id, user_id, metrics_version=2
             )
 
             # Current session stats
-            current_sets = [s for s in exercise.exercise_sets if s.deleted_at is None]
+            current_sets = [
+                s
+                for current_exercise in exercise_type_exercises
+                for s in current_exercise.exercise_sets
+                if s.deleted_at is None and s.done
+            ]
             display_intensity_unit = WorkoutRecapService._get_display_intensity_unit(
                 stats, current_sets
             )
@@ -129,16 +139,14 @@ class WorkoutRecapService:
             )
 
             # Historical stats (progressiveOverload list contains historical points)
-            history = stats.get("progressiveOverload", [])
-            # Filter out current session from history if it's already there
-            workout_date_str = workout.start_time.date().isoformat()
-            history_excluding_today = [
-                h for h in history if h["date"] < workout_date_str
+            prior_sessions = [
+                item
+                for item in stats.get("sessions", [])
+                if item["workoutId"] != workout.id
+                and item["date"]
+                < (workout.start_time or workout.created_at).isoformat()
             ]
-
-            prev_session = (
-                history_excluding_today[-1] if history_excluding_today else None
-            )
+            prev_session = prior_sessions[-1] if prior_sessions else None
 
             metric = {
                 "exercise_name": exercise.exercise_type.name,

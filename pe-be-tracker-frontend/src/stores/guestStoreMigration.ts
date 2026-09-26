@@ -40,12 +40,15 @@ export const migrateGuestData = (data: unknown): GuestData => {
         ? workout.exercises.map((rawExercise) => {
             const exercise = asRecord(rawExercise);
             const exerciseSets = Array.isArray(exercise.exercise_sets)
-              ? exercise.exercise_sets.map((rawSet) => {
+              ? exercise.exercise_sets.map((rawSet, position) => {
                   const set = asRecord(rawSet);
                   return {
                     ...set,
                     created_at: normalizeGuestTimestamp(set.created_at),
                     updated_at: normalizeGuestTimestamp(set.updated_at),
+                    side: set.side ?? null,
+                    position:
+                      typeof set.position === "number" ? set.position : position,
                   };
                 })
               : [];

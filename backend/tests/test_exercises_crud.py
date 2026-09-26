@@ -151,6 +151,12 @@ async def _seed_exercise_set(
             .scalar_one()
             .id
         )
+    result = await db_session.execute(
+        select(func.coalesce(func.max(ExerciseSet.position), -1)).where(
+            ExerciseSet.exercise_id == exercise_id
+        )
+    )
+    next_position = result.scalar_one() + 1
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,
@@ -158,12 +164,14 @@ async def _seed_exercise_set(
         canonical_intensity=canonical_intensity,
         canonical_intensity_unit_id=canonical_intensity_unit_id,
         reps=reps,
+        position=next_position,
         notes=notes,
         created_at=timestamp,
         updated_at=timestamp,
         deleted_at=deleted_at,
     )
     db_session.add(exercise_set)
+    await db_session.flush()
     await db_session.flush()
     return exercise_set
 
@@ -374,14 +382,6 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         notes="third",
     )
 
-    newer_kept_set = await _seed_exercise_set(
-        db_session,
-        exercise_id=first.id,
-        intensity_unit_id=unit.id,
-        intensity=100,
-        reps=5,
-        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
-    )
     older_kept_set = await _seed_exercise_set(
         db_session,
         exercise_id=first.id,
@@ -389,6 +389,14 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         intensity=95,
         reps=8,
         created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+    )
+    newer_kept_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=first.id,
+        intensity_unit_id=unit.id,
+        intensity=100,
+        reps=5,
+        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
     )
     await _seed_exercise_set(
         db_session,
@@ -1419,7 +1427,7 @@ async def test_exercise_owner_queries_respect_user_and_deleted_state(db_session)
     )
 
 
-def test_is_new_personal_best():
+async def test_is_new_personal_best():
     from decimal import Decimal
     from src.exercises.crud import is_new_personal_best
 

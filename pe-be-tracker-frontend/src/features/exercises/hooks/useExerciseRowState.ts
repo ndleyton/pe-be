@@ -46,7 +46,7 @@ export const useExerciseRowState = ({
   exerciseSets: ExerciseSet[];
   updateSetOptions: (
     setId: string | number,
-    updates: { notes?: string; rpe?: number | null; rir?: number | null },
+    updates: { notes?: string; rpe?: number | null; rir?: number | null; side?: "left" | "right" | "both" | null },
   ) => Promise<void>;
 }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

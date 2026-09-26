@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
@@ -49,6 +49,14 @@ def _map_exercise_set_integrity_error(
     ):
         return DomainValidationError.invalid_reference(field="exercise_id")
 
+    if (
+        constraint_name == "uq_exercise_sets_active_position"
+        or "uq_exercise_sets_active_position" in error_message
+    ):
+        return DomainValidationError.invalid_range(
+            field="position", message="position collision"
+        )
+
     return None
 
 
@@ -92,7 +100,7 @@ async def get_exercise_sets_for_exercise(
     result = await session.execute(
         select(ExerciseSet)
         .where(ExerciseSet.exercise_id == exercise_id, ExerciseSet.deleted_at.is_(None))
-        .order_by(ExerciseSet.created_at.asc(), ExerciseSet.id.asc())
+        .order_by(ExerciseSet.position.asc(), ExerciseSet.id.asc())
     )
     return result.scalars().all()
 
@@ -102,6 +110,22 @@ async def create_exercise_set(
 ) -> ExerciseSet:
     """Create a new exercise set"""
     payload = exercise_set_create.model_dump()
+    requested_position = payload.pop("position", None)
+    await session.execute(
+        select(Exercise.id)
+        .where(Exercise.id == payload["exercise_id"])
+        .with_for_update()
+    )
+    if requested_position is None:
+        max_position = await session.scalar(
+            select(func.max(ExerciseSet.position)).where(
+                ExerciseSet.exercise_id == payload["exercise_id"],
+                ExerciseSet.deleted_at.is_(None),
+            )
+        )
+        payload["position"] = (max_position if max_position is not None else -1) + 1
+    else:
+        payload["position"] = requested_position
     source_unit = await session.get(IntensityUnit, payload["intensity_unit_id"])
     canonical_intensity, canonical_unit_key = normalize_intensity_for_storage(
         payload.get("intensity"),
@@ -183,8 +207,59 @@ async def update_exercise_set(
     return exercise_set
 
 
+async def reorder_exercise_sets(
+    session: AsyncSession,
+    *,
+    exercise_id: int,
+    ordered_set_ids: list[int],
+    expected_set_ids: list[int],
+) -> list[ExerciseSet] | None:
+    await session.execute(
+        select(Exercise.id).where(Exercise.id == exercise_id).with_for_update()
+    )
+    result = await session.execute(
+        select(ExerciseSet)
+        .where(
+            ExerciseSet.exercise_id == exercise_id,
+            ExerciseSet.deleted_at.is_(None),
+        )
+        .order_by(ExerciseSet.position, ExerciseSet.id)
+    )
+    rows = list(result.scalars().all())
+    current_ids = [row.id for row in rows]
+    if current_ids != expected_set_ids:
+        return None
+    if len(ordered_set_ids) != len(set(ordered_set_ids)) or set(ordered_set_ids) != set(
+        current_ids
+    ):
+        raise ValueError("ordered_set_ids must be a complete permutation")
+    if ordered_set_ids == current_ids:
+        return rows
+
+    by_id = {row.id: row for row in rows}
+    temporary_start = max((row.position for row in rows), default=-1) + 1
+    for offset, set_id in enumerate(ordered_set_ids):
+        by_id[set_id].position = temporary_start + offset
+    await session.flush()
+    for position, set_id in enumerate(ordered_set_ids):
+        by_id[set_id].position = position
+    await session.commit()
+    return [by_id[set_id] for set_id in ordered_set_ids]
+
+
 async def soft_delete_exercise_set(session: AsyncSession, exercise_set_id: int) -> bool:
     """Soft delete an exercise set by setting deleted_at timestamp"""
+    # Serialize active-membership changes with creation and reordering.
+    await session.execute(
+        select(Exercise.id)
+        .where(
+            Exercise.id
+            == select(ExerciseSet.exercise_id)
+            .where(ExerciseSet.id == exercise_set_id)
+            .scalar_subquery()
+        )
+        .with_for_update()
+    )
     now = datetime.now(timezone.utc)
     result = await session.execute(
         select(ExerciseSet.id, ExerciseSet.deleted_at).where(

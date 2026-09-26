@@ -33,6 +33,7 @@ const ExerciseRow = ({
 
   const {
     addSet,
+    addLeftRightPair,
     decrementReps,
     deleteSet,
     exerciseSets,
@@ -105,6 +106,10 @@ const ExerciseRow = ({
     void addSet(currentIntensityUnit.id);
   }, [addSet, currentIntensityUnit.id]);
 
+  const handleAddPair = useCallback(() => {
+    return addLeftRightPair(currentIntensityUnit.id);
+  }, [addLeftRightPair, currentIntensityUnit.id]);
+
   return (
     <Accordion
       type="single"
@@ -160,6 +165,7 @@ const ExerciseRow = ({
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
               onAddSet={handleAddSet}
+              onAddPair={handleAddPair}
               onCloseSetOptions={closeSetOptions}
               onDecrementReps={decrementReps}
               onDeleteSet={deleteSet}
@@ -175,6 +181,7 @@ const ExerciseRow = ({
               onSetWeightInputValue={setIntensityInputValue}
               onToggleSetCompletion={toggleSetCompletion}
               onUpdateSetField={updateSetField}
+              onUpdateSetSide={(setId, side) => void updateSetOptions(setId, { side })}
               repsInputs={repsInputs}
               setNotesValue={setNotesValue}
               setRpeValue={setRpeValue}

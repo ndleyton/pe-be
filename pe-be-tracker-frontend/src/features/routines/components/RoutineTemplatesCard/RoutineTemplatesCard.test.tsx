@@ -52,6 +52,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[speedTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -96,6 +97,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[speedTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -136,6 +138,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[speedTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -184,6 +187,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[speedTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -227,6 +231,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[repTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -263,6 +268,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[repTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -300,6 +306,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[repTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -349,6 +356,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit={false}
         editorTemplates={[repTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}
@@ -386,6 +394,7 @@ describe("RoutineTemplatesCard", () => {
         canEdit
         editorTemplates={[repTemplate]}
         onAddExercise={noop}
+        onAddPair={noop}
         onAddSet={noop}
         onChangeExercise={noop}
         onRemoveSet={noop}

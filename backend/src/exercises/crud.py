@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, delete, desc, or_, select, true, update
@@ -21,12 +22,14 @@ from src.exercises.models import (
 )
 from src.exercise_sets.models import ExerciseSet
 from src.workouts.models import Workout
+from src.users.models import User
 from src.exercises.schemas import (
     ExerciseCreate,
     ExerciseTypeCreate,
     PaginatedExerciseTypesResponse,
 )
 from src.exercises.intensity_units import (
+    are_intensity_units_compatible,
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
@@ -343,9 +346,12 @@ def _map_exercise_integrity_error(
     return None
 
 
-def _exercise_set_sort_key(exercise_set: ExerciseSet) -> tuple[datetime, int]:
-    created_at = exercise_set.created_at or datetime.min.replace(tzinfo=timezone.utc)
-    return (created_at, exercise_set.id)
+def _exercise_set_sort_key(exercise_set: ExerciseSet) -> tuple[int, int]:
+    # Position is authoritative per RFC 0010. id is a deterministic tie-breaker
+    # for the rare case of a gap-free duplicate (shouldn't occur with the unique
+    # partial index, but keeps the sort stable).
+    position = exercise_set.position if exercise_set.position is not None else 0
+    return (position, exercise_set.id)
 
 
 def _sort_loaded_exercise_sets(exercises: List[Exercise]) -> List[Exercise]:
@@ -1125,6 +1131,7 @@ async def get_exercise_type_stats(
     user_id: int,
     *,
     exercise_type: Optional[ExerciseType] = None,
+    metrics_version: int = 1,
 ) -> Dict[str, Any]:
     """Get exercise type statistics with optimized database queries"""
 
@@ -1160,7 +1167,8 @@ async def get_exercise_type_stats(
         .options(
             selectinload(
                 Exercise.exercise_sets.and_(ExerciseSet.deleted_at.is_(None))
-            ).selectinload(ExerciseSet.intensity_unit)
+            ).selectinload(ExerciseSet.intensity_unit),
+            joinedload(Exercise.workout),
         )
         .where(
             Exercise.exercise_type_id == exercise_type_id,
@@ -1172,7 +1180,7 @@ async def get_exercise_type_stats(
     exercises = exercises_result.unique().scalars().all()
 
     if not exercises:
-        return {
+        empty_stats = {
             "progressiveOverload": [],
             "lastWorkout": None,
             "personalBest": None,
@@ -1185,6 +1193,17 @@ async def get_exercise_type_stats(
             if stats_intensity_unit
             else None,
         }
+        if metrics_version == 2:
+            empty_stats.update(
+                metricsVersion=2,
+                sidePersonalBests={},
+                exclusions={
+                    "incompleteSets": 0,
+                    "incompatibleLoadSets": 0,
+                    "missingLoadSets": 0,
+                },
+            )
+        return empty_stats
 
     if stats_intensity_unit is None:
         first_set_with_unit = next(
@@ -1198,6 +1217,197 @@ async def get_exercise_type_stats(
         )
         if first_set_with_unit is not None:
             stats_intensity_unit = first_set_with_unit.intensity_unit
+
+    if metrics_version == 2:
+        user_timezone = (
+            await session.scalar(select(User.timezone).where(User.id == user_id))
+            or "UTC"
+        )
+        try:
+            display_timezone = ZoneInfo(user_timezone)
+        except ZoneInfoNotFoundError:
+            display_timezone = ZoneInfo("UTC")
+
+        sessions: dict[int, dict[str, Any]] = {}
+        exclusions = {
+            "incompleteSets": 0,
+            "incompatibleLoadSets": 0,
+            "missingLoadSets": 0,
+        }
+        side_personal_bests: dict[str, dict[str, Any]] = {}
+        for exercise in exercises:
+            workout = exercise.workout
+            session_data = sessions.setdefault(
+                workout.id,
+                {
+                    "dateTime": workout.start_time or workout.created_at,
+                    "sets": 0,
+                    "reps": 0,
+                    "volume": Decimal("0"),
+                    "maxWeight": Decimal("0"),
+                    "sides": {},
+                },
+            )
+            for exercise_set in exercise.exercise_sets:
+                if not exercise_set.done:
+                    exclusions["incompleteSets"] += 1
+                    continue
+                side_key = exercise_set.side or "unspecified"
+                side_data = session_data["sides"].setdefault(
+                    side_key,
+                    {
+                        "sets": 0,
+                        "reps": 0,
+                        "volume": Decimal("0"),
+                        "maxWeight": Decimal("0"),
+                    },
+                )
+                reps = exercise_set.reps or 0
+                session_data["sets"] += 1
+                session_data["reps"] += reps
+                side_data["sets"] += 1
+                side_data["reps"] += reps
+                if exercise_set.intensity is None:
+                    exclusions["missingLoadSets"] += 1
+                    continue
+                if not are_intensity_units_compatible(
+                    exercise_set.intensity_unit, stats_intensity_unit
+                ):
+                    exclusions["incompatibleLoadSets"] += 1
+                    continue
+                converted = _get_stats_intensity_value(
+                    exercise_set,
+                    intensity_units_by_id=intensity_units_by_id,
+                    stats_intensity_unit=stats_intensity_unit,
+                )
+                if converted is None:
+                    continue
+                volume = converted * reps
+                session_data["volume"] += volume
+                session_data["maxWeight"] = max(session_data["maxWeight"], converted)
+                side_data["volume"] += volume
+                side_data["maxWeight"] = max(side_data["maxWeight"], converted)
+                if exercise_set.reps is None:
+                    continue
+                current_best = side_personal_bests.get(side_key)
+                if current_best is None or is_new_personal_best(
+                    converted,
+                    reps,
+                    exercise_set.rir,
+                    current_best["_weight"],
+                    current_best["reps"],
+                    current_best["_rir"],
+                ):
+                    side_personal_bests[side_key] = {
+                        "date": (workout.start_time or workout.created_at).isoformat(),
+                        "weight": _serialize_numeric(converted),
+                        "reps": reps,
+                        "volume": _serialize_numeric(volume),
+                        "rpe": _serialize_numeric(exercise_set.rpe)
+                        if exercise_set.rpe is not None
+                        else None,
+                        "rir": _serialize_numeric(exercise_set.rir)
+                        if exercise_set.rir is not None
+                        else None,
+                        "_weight": converted,
+                        "_rir": exercise_set.rir,
+                    }
+
+        ordered_sessions = sorted(sessions.values(), key=lambda item: item["dateTime"])
+        daily: dict[str, dict[str, Any]] = {}
+        for item in ordered_sessions:
+            date_key = item["dateTime"].astimezone(display_timezone).date().isoformat()
+            bucket = daily.setdefault(
+                date_key,
+                {
+                    "maxWeight": Decimal("0"),
+                    "totalVolume": Decimal("0"),
+                    "reps": 0,
+                    "sideBreakdown": {},
+                },
+            )
+            bucket["maxWeight"] = max(bucket["maxWeight"], item["maxWeight"])
+            bucket["totalVolume"] += item["volume"]
+            bucket["reps"] += item["reps"]
+            for side_key, side_data in item["sides"].items():
+                target = bucket["sideBreakdown"].setdefault(
+                    side_key,
+                    {
+                        "sets": 0,
+                        "reps": 0,
+                        "totalVolume": Decimal("0"),
+                        "maxWeight": Decimal("0"),
+                    },
+                )
+                target["sets"] += side_data["sets"]
+                target["reps"] += side_data["reps"]
+                target["totalVolume"] += side_data["volume"]
+                target["maxWeight"] = max(target["maxWeight"], side_data["maxWeight"])
+
+        progressive = []
+        for date_key, item in daily.items():
+            progressive.append(
+                {
+                    "date": date_key,
+                    "maxWeight": _serialize_numeric(item["maxWeight"]),
+                    "totalVolume": _serialize_numeric(item["totalVolume"]),
+                    "reps": item["reps"],
+                    "sideBreakdown": {
+                        key: {
+                            **value,
+                            "totalVolume": _serialize_numeric(value["totalVolume"]),
+                            "maxWeight": _serialize_numeric(value["maxWeight"]),
+                        }
+                        for key, value in item["sideBreakdown"].items()
+                    },
+                }
+            )
+        last = ordered_sessions[-1] if ordered_sessions else None
+        cleaned_bests = {
+            key: {
+                field: value
+                for field, value in best.items()
+                if not field.startswith("_")
+            }
+            for key, best in side_personal_bests.items()
+        }
+        return {
+            "metricsVersion": 2,
+            "progressiveOverload": progressive,
+            "lastWorkout": {
+                "date": last["dateTime"].isoformat(),
+                "sets": last["sets"],
+                "totalReps": last["reps"],
+                "maxWeight": _serialize_numeric(last["maxWeight"]),
+                "totalVolume": _serialize_numeric(last["volume"]),
+            }
+            if last
+            else None,
+            "personalBest": None,
+            "sidePersonalBests": cleaned_bests,
+            "totalSets": sum(item["sets"] for item in ordered_sessions),
+            "intensityUnit": {
+                "id": stats_intensity_unit.id,
+                "name": stats_intensity_unit.name,
+                "abbreviation": stats_intensity_unit.abbreviation,
+            }
+            if stats_intensity_unit
+            else None,
+            "exclusions": exclusions,
+            "sessions": [
+                {
+                    "workoutId": workout_id,
+                    "date": item["dateTime"].isoformat(),
+                    "sets": item["sets"],
+                    "totalReps": item["reps"],
+                    "maxWeight": _serialize_numeric(item["maxWeight"]),
+                    "totalVolume": _serialize_numeric(item["volume"]),
+                }
+                for workout_id, item in sorted(
+                    sessions.items(), key=lambda entry: entry[1]["dateTime"]
+                )
+            ],
+        }
 
     # Calculate progressive overload data (grouped by date)
     progressive_overload = []

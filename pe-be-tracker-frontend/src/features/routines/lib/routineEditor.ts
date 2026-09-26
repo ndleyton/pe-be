@@ -46,6 +46,8 @@ export type RoutineEditorSet = {
   type: string | null;
   intensity_unit_id: number;
   intensity_unit: RoutineIntensityUnitOption | null;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
 };
 
 export type RoutineEditorTemplate = {
@@ -129,7 +131,9 @@ export const buildEditorTemplatesFromRoutine = (
     exercise_type_id: template.exercise_type_id,
     exercise_type: toRoutineExerciseTypeOption(template.exercise_type),
     notes: template.notes ?? "",
-    set_templates: template.set_templates.map((setTemplate) => ({
+    set_templates: [...template.set_templates]
+      .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+      .map((setTemplate) => ({
       id: String(setTemplate.id),
       reps: setTemplate.reps ?? null,
       duration_seconds: setTemplate.duration_seconds ?? null,
@@ -142,6 +146,8 @@ export const buildEditorTemplatesFromRoutine = (
       intensity_unit:
         toRoutineIntensityUnitOption(setTemplate.intensity_unit) ??
         findIntensityUnitById(availableUnits, setTemplate.intensity_unit_id),
+      side: setTemplate.side ?? null,
+      position: setTemplate.position,
     })),
   }));
 
@@ -151,12 +157,14 @@ export const buildRoutinePayload = (
   templates.map((template) => ({
     exercise_type_id: Number(template.exercise_type_id),
     notes: template.notes.trim() || null,
-    set_templates: template.set_templates.map((setTemplate) => ({
+    set_templates: template.set_templates.map((setTemplate, position) => ({
       reps: setTemplate.reps,
       intensity: setTemplate.intensity,
       intensity_unit_id: setTemplate.intensity_unit_id,
       notes: setTemplate.notes.trim() || null,
       type: setTemplate.type || null,
+      side: setTemplate.side ?? null,
+      position,
       ...(setTemplate.rpe != null ? { rpe: setTemplate.rpe } : {}),
       ...(setTemplate.rir != null ? { rir: setTemplate.rir } : {}),
       ...(setTemplate.duration_seconds != null
@@ -190,6 +198,8 @@ export const buildComparableSnapshot = (
         rir: setTemplate.rir,
         notes: setTemplate.notes.trim() || null,
         type: setTemplate.type,
+        side: setTemplate.side,
+        position: setTemplate.position,
         intensity_unit_id: setTemplate.intensity_unit_id,
       })),
     })),
@@ -217,6 +227,8 @@ export const createDefaultSet = (
     type: null,
     intensity_unit_id: fallbackUnit.id,
     intensity_unit: fallbackUnit,
+    side: null,
+    position: 0,
   };
 };
 
@@ -268,6 +280,8 @@ export const buildRoutineFromEditorState = ({
       notes: setTemplate.notes,
       type: setTemplate.type,
       intensity_unit_id: setTemplate.intensity_unit_id,
+      side: setTemplate.side,
+      position: setIndex,
       created_at: routine.created_at,
       updated_at: routine.updated_at,
       intensity_unit: setTemplate.intensity_unit

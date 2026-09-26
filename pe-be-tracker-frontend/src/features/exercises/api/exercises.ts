@@ -29,6 +29,8 @@ export interface ExerciseSet {
   done: boolean;
   notes?: string | null;
   type?: string | null;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -120,6 +122,8 @@ export interface CreateExerciseSetData {
   done?: boolean;
   notes?: string;
   type?: string;
+  side?: "left" | "right" | "both" | null;
+  position?: number;
 }
 
 export interface UpdateExerciseSetData {
@@ -133,6 +137,7 @@ export interface UpdateExerciseSetData {
   done?: boolean;
   notes?: string;
   type?: string;
+  side?: "left" | "right" | "both" | null;
 }
 
 // Create a new exercise set
@@ -140,6 +145,34 @@ export const createExerciseSet = async (
   exerciseSetData: CreateExerciseSetData,
 ): Promise<ExerciseSet> => {
   const response = await api.post(endpoints.exerciseSets, exerciseSetData);
+  return response.data;
+};
+
+export const createExerciseSetPair = async (
+  exerciseId: string | number,
+  sets: Array<Omit<CreateExerciseSetData, "exercise_id" | "position"> & {
+    side: "left" | "right";
+    done: false;
+  }>,
+  idempotencyKey: string,
+): Promise<ExerciseSet[]> => {
+  const response = await api.post(
+    endpoints.exerciseSetPairs,
+    { exercise_id: exerciseId, sets },
+    { headers: { "Idempotency-Key": idempotencyKey } },
+  );
+  return response.data;
+};
+
+export const reorderExerciseSets = async (
+  exerciseId: string | number,
+  orderedSetIds: number[],
+  expectedSetIds: number[],
+): Promise<ExerciseSet[]> => {
+  const response = await api.put(endpoints.exerciseSetOrder(exerciseId), {
+    ordered_set_ids: orderedSetIds,
+    expected_set_ids: expectedSetIds,
+  });
   return response.data;
 };
 
@@ -387,6 +420,12 @@ export interface ProgressiveOverloadDataPoint {
   maxWeight: number;
   totalVolume: number;
   reps: number;
+  sideBreakdown?: Partial<Record<"left" | "right" | "both" | "unspecified", {
+    sets: number;
+    reps: number;
+    maxWeight: number;
+    totalVolume: number;
+  }>>;
 }
 
 export interface LastWorkoutData {
@@ -412,12 +451,18 @@ export interface ExerciseTypeStats {
   personalBest: PersonalBestData | null;
   totalSets: number;
   intensityUnit: IntensityUnit;
+  metricsVersion?: number;
+  sidePersonalBests?: Partial<Record<"left" | "right" | "both" | "unspecified", PersonalBestData>>;
+  exclusions?: Record<string, number>;
 }
 
 // Get exercise type statistics
 export const getExerciseTypeStats = async (
   exerciseTypeId: string,
+  metricsVersion: 1 | 2 = 2,
 ): Promise<ExerciseTypeStats> => {
-  const response = await api.get(endpoints.exerciseTypeStats(exerciseTypeId));
+  const response = await api.get(endpoints.exerciseTypeStats(exerciseTypeId), {
+    params: { metrics_version: metricsVersion },
+  });
   return response.data;
 };

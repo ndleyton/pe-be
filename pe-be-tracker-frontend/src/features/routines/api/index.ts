@@ -28,8 +28,11 @@ export interface CreateRoutineData {
       notes: string | null;
       type: string | null;
       intensity_unit_id: number;
+      side: "left" | "right" | "both" | null;
+      position: number;
     }>;
   }>;
+  template_tree_version: 2;
 }
 
 export interface RoutineTemplatePayload {
@@ -44,6 +47,8 @@ export interface RoutineTemplatePayload {
     notes: string | null;
     type: string | null;
     intensity_unit_id: number;
+    side: "left" | "right" | "both" | null;
+    position: number;
   }>;
 }
 
@@ -55,6 +60,7 @@ export interface UpdateRoutineData {
   author?: string | null;
   category?: string | null;
   exercise_templates?: RoutineTemplatePayload[];
+  template_tree_version?: 2;
 }
 
 export const getRoutines = async (

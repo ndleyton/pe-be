@@ -75,6 +75,7 @@ def _build_exercise(
         exercise_sets=[
             SimpleNamespace(
                 deleted_at=None,
+                done=True,
                 intensity=intensity,
                 reps=6,
                 notes=note,
@@ -89,6 +90,7 @@ def _build_exercise(
         or [
             SimpleNamespace(
                 deleted_at=None,
+                done=True,
                 intensity=intensity,
                 reps=6,
                 notes=None,
@@ -122,10 +124,13 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, stri
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
-            "progressiveOverload": [
+            "sessions": [
                 {
+                    "workoutId": 1,
                     "date": "2026-04-02",
                     "maxWeight": 160,
                     "totalVolume": 900,
@@ -196,10 +201,13 @@ async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
-            "progressiveOverload": [
+            "sessions": [
                 {
+                    "workoutId": 1,
                     "date": "2026-04-02",
                     "maxWeight": 100,
                     "totalVolume": 600,
@@ -262,8 +270,10 @@ async def test_generate_recap_updates_langfuse_on_error(monkeypatch, strict):
     async def fake_get_exercises_for_workout(session, workout_id):
         return [_build_exercise()]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
-        return {"progressiveOverload": []}
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
+        return {"sessions": []}
 
     def fake_client_factory(*, api_key):
         return _FakeClient(error=RuntimeError("quota exceeded"), api_key=api_key)
@@ -321,7 +331,7 @@ async def test_strict_recap_does_not_save_unavailable_generation(monkeypatch, fa
     monkeypatch.setattr(
         recap_module,
         "get_exercise_type_stats",
-        AsyncMock(return_value={"progressiveOverload": []}),
+        AsyncMock(return_value={"sessions": []}),
     )
     monkeypatch.setattr(
         WorkoutRecapService, "_get_langfuse_client", staticmethod(lambda: None)

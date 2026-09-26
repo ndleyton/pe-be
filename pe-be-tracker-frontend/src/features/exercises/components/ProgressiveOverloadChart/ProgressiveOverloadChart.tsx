@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type {
   IntensityUnit,
@@ -33,47 +33,57 @@ export const ProgressiveOverloadChart = ({
   const [activeMetric, setActiveMetric] = useState<
     "maxWeight" | "totalVolume"
   >("maxWeight");
+  const availableSides = (["left", "right", "both", "unspecified"] as const)
+    .filter((side) => data.some((point) => point.sideBreakdown?.[side]));
+  const [activeSide, setActiveSide] = useState<typeof availableSides[number]>(
+    availableSides[0] ?? "unspecified",
+  );
+  const effectiveSide = availableSides.includes(activeSide)
+    ? activeSide
+    : availableSides[0];
   const chartConfig = {
     maxWeight: {
       label: `Max Weight (${intensityUnit.abbreviation})`,
       color: "var(--chart-1)",
     },
     totalVolume: {
-      label: `Total Volume (${intensityUnit.abbreviation})`,
+      label: `Recorded Volume (${intensityUnit.abbreviation}·reps)`,
       color: "var(--chart-2)",
     },
   } satisfies ChartConfig;
 
-  // Transform data for the chart
-  const chartData = data.map((point) => ({
+  // Aggregate values are only valid when there is no side filter.
+  const scopedData = data.map((point) =>
+    effectiveSide != null ? point.sideBreakdown?.[effectiveSide] : point,
+  );
+  const chartData = data.map((point, index) => ({
     date: new Date(point.date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     }),
-    maxWeight: Math.round(point.maxWeight * 100) / 100,
-    totalVolume: Math.round(point.totalVolume * 100) / 100,
+    maxWeight: scopedData[index] == null
+      ? null
+      : Math.round(scopedData[index].maxWeight * 100) / 100,
+    totalVolume: scopedData[index] == null
+      ? null
+      : Math.round(scopedData[index].totalVolume * 100) / 100,
   }));
 
-  // Calculate trend for the latest period
-  const latestWeight = data[data.length - 1]?.maxWeight || 0;
-  const previousWeight = data[data.length - 2]?.maxWeight || latestWeight;
-  const weightTrend = latestWeight > previousWeight;
-  const weightChange =
-    latestWeight > 0 && previousWeight > 0
-      ? Math.abs(
-          ((latestWeight - previousWeight) / previousWeight) * 100,
-        ).toFixed(1)
-      : "0";
+  const latestWeight = scopedData.at(-1)?.maxWeight;
+  const latestVolume = scopedData.at(-1)?.totalVolume;
+  const latestValue = scopedData.at(-1)?.[activeMetric];
+  const previousValue = scopedData.at(-2)?.[activeMetric];
+  const hasTrend = latestValue != null && previousValue != null && latestValue > 0 && previousValue > 0;
+  let trendState: "increasing" | "decreasing" | "unchanged" | "unavailable" = "unavailable";
+  if (hasTrend) {
+    if (latestValue > previousValue) trendState = "increasing";
+    else if (latestValue < previousValue) trendState = "decreasing";
+    else trendState = "unchanged";
+  }
 
-  const latestVolume = data[data.length - 1]?.totalVolume || 0;
-  const previousVolume = data[data.length - 2]?.totalVolume || latestVolume;
-  const volumeTrend = latestVolume > previousVolume;
-  const volumeChange =
-    latestVolume > 0 && previousVolume > 0
-      ? Math.abs(
-          ((latestVolume - previousVolume) / previousVolume) * 100,
-        ).toFixed(1)
-      : "0";
+  const change = hasTrend
+    ? Math.abs(((latestValue - previousValue) / previousValue) * 100).toFixed(1)
+    : "0";
 
   return (
     <div className="space-y-4">
@@ -106,6 +116,21 @@ export const ProgressiveOverloadChart = ({
           </button>
         </div>
       </div>
+      {availableSides.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-1" aria-label="Side filter">
+          {availableSides.map((side) => (
+            <button
+              type="button"
+              key={side}
+              aria-pressed={effectiveSide === side}
+              onClick={() => setActiveSide(side)}
+              className={`rounded-md border px-2 py-1 text-xs capitalize ${effectiveSide === side ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              {side === "both" ? "Both sides" : side}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4">
         <ChartContainer config={chartConfig}>
@@ -160,26 +185,26 @@ export const ProgressiveOverloadChart = ({
       <div className="flex w-full items-start gap-2 text-sm">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 leading-none font-medium">
-            {activeMetric === "maxWeight"
-              ? weightTrend
-                ? "Trending up"
-                : "Steady progress"
-              : volumeTrend
-                ? "Trending up"
-                : "Steady progress"}{" "}
-            by {activeMetric === "maxWeight" ? weightChange : volumeChange}%
-            this session <TrendingUp className="h-4 w-4" />
+            {trendState === "increasing" ? (
+              <>Trending up by {change}% this session <TrendingUp className="text-activity h-4 w-4" /></>
+            ) : trendState === "decreasing" ? (
+              <>Trending down by {change}% this session <TrendingDown className="text-destructive h-4 w-4" /></>
+            ) : trendState === "unchanged" ? (
+              <>Steady progress this session <Minus className="text-muted-foreground h-4 w-4" /></>
+            ) : (
+              "Trend unavailable"
+            )}
           </div>
           <div className="text-muted-foreground flex items-center gap-2 leading-none">
             {activeMetric === "maxWeight" ? (
               <>
-                Latest: {formatDecimal(latestWeight)}
-                {intensityUnit.abbreviation} max weight
+                Latest: {latestWeight == null ? "Unavailable" : formatDecimal(latestWeight)}
+                {latestWeight != null && intensityUnit.abbreviation} max weight
               </>
             ) : (
               <>
-                Latest: {formatDecimal(latestVolume)}
-                {intensityUnit.abbreviation} total volume
+                Latest: {latestVolume == null ? "Unavailable" : formatDecimal(latestVolume)}
+                {latestVolume != null && intensityUnit.abbreviation} total volume
               </>
             )}
           </div>

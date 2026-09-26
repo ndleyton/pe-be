@@ -258,6 +258,7 @@ class WorkoutService:
                 rir=payload.initial_set.rir,
                 intensity_unit_id=payload.initial_set.intensity_unit_id,
                 rest_time_seconds=payload.initial_set.rest_time_seconds,
+                side=payload.initial_set.side,
                 exercise_id=exercise_id,
                 done=False,  # New set is not done by default
             )
@@ -448,6 +449,7 @@ class WorkoutService:
                     intensity_unit_id=unit_id,
                     rest_time_seconds=parsed_set.rest_time_seconds,
                     notes=parsed_set.notes,
+                    side=parsed_set.side,
                     exercise_id=exercise.id,
                     done=True,
                 )

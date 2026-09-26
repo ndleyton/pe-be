@@ -41,6 +41,7 @@ async def test_exercise_template_notes_propagation(db_session: AsyncSession):
     # Create routine with notes
     routine_notes = "Focus on the mind-muscle connection."
     routine_data = RoutineCreate(
+        template_tree_version=2,
         name="Routine with Notes",
         workout_type_id=wt.id,
         exercise_templates=[
@@ -48,7 +49,13 @@ async def test_exercise_template_notes_propagation(db_session: AsyncSession):
                 exercise_type_id=et.id,
                 notes=routine_notes,
                 set_templates=[
-                    SetTemplateCreate(reps=10, intensity=50.0, intensity_unit_id=iu.id)
+                    SetTemplateCreate(
+                        position=0,
+                        side=None,
+                        reps=10,
+                        intensity=50.0,
+                        intensity_unit_id=iu.id,
+                    )
                 ],
             )
         ],
