@@ -477,21 +477,23 @@ const SetOptionsDialogContent = ({
           </div>
           <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
             {([
-              [null, "—"],
+              [null, "Both"],
               ["left", "Left"],
               ["right", "Right"],
-              ["both", "Both"],
-            ] as const).map(([value, label]) => (
-              <button
-                key={label}
-                type="button"
-                aria-pressed={(activeSet.side ?? null) === value}
-                onClick={() => onUpdateSetSide(activeSetKey, value)}
-                className={`rounded-md px-3 py-1 text-sm ${(activeSet.side ?? null) === value ? "bg-background shadow" : "text-muted-foreground"}`}
-              >
-                {label}
-              </button>
-            ))}
+            ] as const).map(([value, label]) => {
+              const isSelected = (activeSet.side ?? null) === value || (activeSet.side === "both" && value === null);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => onUpdateSetSide(activeSetKey, value)}
+                  className={`rounded-md px-3 py-1 text-sm ${isSelected ? "bg-background shadow" : "text-muted-foreground"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className="flex items-stretch justify-center gap-4 sm:gap-12 mb-2">
