@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { Check, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
 import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
@@ -690,6 +690,17 @@ export const ExerciseSetTable = memo(({
   personalBest,
   personalBestUnitId,
 }: ExerciseSetTableProps) => {
+  const [isAddingPair, setIsAddingPair] = useState(false);
+  const handleAddPair = async () => {
+    if (isAddingPair) return;
+    setIsAddingPair(true);
+    try {
+      await onAddPair();
+    } finally {
+      setIsAddingPair(false);
+    }
+  };
+
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
   );
@@ -845,8 +856,8 @@ export const ExerciseSetTable = memo(({
         <Button
           variant="outline"
           className="shrink-0 rounded-xl py-6 px-5"
-          disabled={isUnsavedExercise}
-          onClick={onAddPair}
+          disabled={isUnsavedExercise || isAddingPair}
+          onClick={handleAddPair}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add L+R
