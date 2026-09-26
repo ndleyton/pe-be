@@ -4,11 +4,15 @@ import { Button } from "@/shared/components/ui/button";
 
 interface ChatHeaderProps {
   disableNewChat: boolean;
+  onToggleHistory?: () => void;
+  historyOpen?: boolean;
   onStartNewChat: () => void;
 }
 
 export const ChatHeader = ({
   disableNewChat,
+  onToggleHistory,
+  historyOpen,
   onStartNewChat,
 }: ChatHeaderProps) => {
   return (
@@ -22,6 +26,11 @@ export const ChatHeader = ({
         </h1>
         <p className="text-muted-foreground text-xs">Text + image coaching</p>
       </div>
+      {onToggleHistory && (
+        <Button type="button" variant="outline" aria-expanded={historyOpen} onClick={onToggleHistory}>
+          History
+        </Button>
+      )}
       <Button
         type="button"
         variant="outline"

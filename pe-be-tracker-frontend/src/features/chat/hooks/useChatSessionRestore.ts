@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getConversation } from "../api/chatApi";
-import { mapConversationToChatMessages } from "../lib/chatConversation";
+import { reconcileConversationMessages } from "../lib/chatConversation";
 import {
   clearActiveChatSession,
   persistActiveChatSession,
@@ -11,6 +11,7 @@ import { type ChatMessage } from "../types";
 
 interface UseChatSessionRestoreOptions {
   isAuthenticated: boolean;
+  userId?: number;
 }
 
 const extractResponseStatus = (error: unknown): number | null => {
@@ -31,40 +32,47 @@ const extractResponseStatus = (error: unknown): number | null => {
 
 export const useChatSessionRestore = ({
   isAuthenticated,
+  userId,
 }: UseChatSessionRestoreOptions) => {
+  const [sessionOwner, setSessionOwner] = useState(userId);
   const [conversationId, setConversationId] = useState<number | undefined>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [restorationResolved, setRestorationResolved] = useState(!isAuthenticated);
   const activeConversationIdRef = useRef<number | undefined>(undefined);
-  const restoreAttemptedRef = useRef(false);
+  const requestRef = useRef(0);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const resetConversationState = useCallback(() => {
+    requestRef.current += 1;
+    setRestoreError(null);
     activeConversationIdRef.current = undefined;
-    clearActiveChatSession();
+    clearActiveChatSession(userId);
     setMessages([]);
     setConversationId(undefined);
     setRestorationResolved(true);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     activeConversationIdRef.current = conversationId;
   }, [conversationId]);
 
   useEffect(() => {
+    requestRef.current += 1;
+    setSessionOwner(userId);
+    setMessages([]);
+    setConversationId(undefined);
+    setRestoreError(null);
     if (!isAuthenticated) {
-      restoreAttemptedRef.current = false;
       resetConversationState();
       return;
     }
 
-    if (restoreAttemptedRef.current) {
-      return;
-    }
-
-    restoreAttemptedRef.current = true;
     setRestorationResolved(false);
 
-    const storedSession = readActiveChatSession();
+    const scopedSession = readActiveChatSession(userId);
+    // Legacy caches have no owner. Only adopt them after the server authorizes the ID.
+    const legacySession = userId !== undefined && !scopedSession ? readActiveChatSession() : null;
+    const storedSession = scopedSession ?? legacySession;
 
     if (!storedSession?.conversationId) {
       setRestorationResolved(true);
@@ -72,9 +80,10 @@ export const useChatSessionRestore = ({
     }
 
     let cancelled = false;
+    const request = ++requestRef.current;
 
     const clearRestoredConversation = () => {
-      if (cancelled) {
+      if (cancelled || request !== requestRef.current) {
         return;
       }
 
@@ -85,14 +94,21 @@ export const useChatSessionRestore = ({
       try {
         const conversation = await getConversation(storedSession.conversationId);
 
-        if (cancelled || storedSession.messages.length > 0) {
+        if (cancelled || request !== requestRef.current) {
           return;
         }
 
         activeConversationIdRef.current = conversation.id;
-        setMessages(mapConversationToChatMessages(conversation));
+        // Keep local widgets when the server transcript has not advanced.
+        if ((conversation.messages?.length ?? 0) > storedSession.messages.length || storedSession.messages.length === 0) {
+          setMessages(reconcileConversationMessages(conversation, storedSession.messages));
+        } else if (legacySession) {
+          setMessages(storedSession.messages);
+        }
+        if (legacySession) clearActiveChatSession();
         setConversationId(conversation.id);
       } catch (error) {
+        if (cancelled || request !== requestRef.current) return;
         if (
           extractResponseStatus(error) === 404 &&
           (
@@ -101,19 +117,20 @@ export const useChatSessionRestore = ({
           )
         ) {
           clearRestoredConversation();
+        } else {
+          setRestoreError("Could not refresh this chat. Try opening it from chat history.");
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && request === requestRef.current) {
           setRestorationResolved(true);
         }
       }
     };
 
-    if (storedSession.messages.length > 0) {
+    if (!legacySession && storedSession.messages.length > 0) {
       activeConversationIdRef.current = storedSession.conversationId;
       setMessages(storedSession.messages);
       setConversationId(storedSession.conversationId);
-      setRestorationResolved(true);
       void restoreConversation();
 
       return () => {
@@ -126,33 +143,58 @@ export const useChatSessionRestore = ({
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, resetConversationState]);
+  }, [isAuthenticated, resetConversationState, userId]);
 
   useEffect(() => {
-    if (!restorationResolved) {
+    if (sessionOwner !== userId || !restorationResolved) {
       return;
     }
 
     if (!isAuthenticated) {
-      clearActiveChatSession();
+      clearActiveChatSession(userId);
       return;
     }
 
-    if (!conversationId || messages.length === 0) {
-      clearActiveChatSession();
+    if (!conversationId) {
       return;
     }
 
     persistActiveChatSession({
       conversationId,
       messages,
-    });
-  }, [conversationId, isAuthenticated, messages, restorationResolved]);
+    }, userId);
+  }, [conversationId, isAuthenticated, messages, restorationResolved, sessionOwner, userId]);
+
+  useEffect(() => () => { requestRef.current += 1; }, []);
+
+  const openConversation = useCallback(async (id: number) => {
+    const request = ++requestRef.current;
+    setRestorationResolved(false);
+    setRestoreError(null);
+    try {
+      const conversation = await getConversation(id);
+      if (request !== requestRef.current) return false;
+      activeConversationIdRef.current = id;
+      setConversationId(id);
+      const saved = readActiveChatSession(userId);
+      setMessages(reconcileConversationMessages(conversation, saved?.conversationId === id ? saved.messages : []));
+      return true;
+    } catch {
+      if (request === requestRef.current) {
+        setRestoreError("Could not open this chat. Please try again.");
+      }
+      return false;
+    } finally {
+      if (request === requestRef.current) setRestorationResolved(true);
+    }
+  }, [userId]);
 
   return {
-    conversationId,
-    messages,
-    restorationResolved,
+    openConversation,
+    restoreError,
+    conversationId: sessionOwner === userId ? conversationId : undefined,
+    messages: sessionOwner === userId ? messages : [],
+    restorationResolved: sessionOwner === userId && restorationResolved,
     resetConversationState,
     setConversationId,
     setMessages,

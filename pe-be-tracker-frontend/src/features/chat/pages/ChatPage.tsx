@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -15,6 +15,8 @@ import {
 import { type ChatPageLocationState } from "../types";
 import { useAuthStore } from "@/stores";
 
+import { ChatHistory } from "../components/ChatHistory";
+
 const EXAMPLE_PROMPTS = [
   "I did 3 sets of bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4. Then squats: 3 sets of 185lbs x 10.",
   "What exercises should I do to improve my bench press?",
@@ -22,15 +24,19 @@ const EXAMPLE_PROMPTS = [
   "Can you suggest a good leg workout based on my recent training?",
 ];
 
-const ChatPage = () => {
+const ChatSession = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id);
   const location = useLocation();
   const navigate = useNavigate();
   const routeState = location.state as ChatPageLocationState | null;
+  const [historyOpen, setHistoryOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
     conversationId,
+    openConversation,
+    restoreError,
     messages,
     restorationResolved,
     resetConversationState,
@@ -38,6 +44,7 @@ const ChatPage = () => {
     setMessages,
   } = useChatSessionRestore({
     isAuthenticated,
+    userId,
   });
 
   const { clearPendingSubstitutionIntent, pendingSubstitutionIntent } =
@@ -53,6 +60,7 @@ const ChatPage = () => {
     });
 
   const {
+    draftsHydrated,
     attachmentError,
     canAddAttachments,
     canSubmitMessage,
@@ -69,6 +77,7 @@ const ChatPage = () => {
   } = useChatComposer({
     clearPendingSubstitutionIntent,
     conversationId,
+    userId,
     isAuthenticated,
     pendingSubstitutionIntent,
     setConversationId,
@@ -84,25 +93,43 @@ const ChatPage = () => {
   }, [isLoading, messages]);
 
   const handleStartNewChat = () => {
-    if (isLoading) {
+    if (isLoading || !restorationResolved) {
       return;
     }
 
     clearPendingSubstitutionIntent();
-    resetComposer();
+    if (!conversationId) resetComposer();
     resetConversationState();
   };
 
-  const showRestoringState = isAuthenticated && !restorationResolved;
+  const showRestoringState = isAuthenticated && !restorationResolved && messages.length === 0;
   const showEmptyState = restorationResolved && messages.length === 0;
 
   return (
     <div className="bg-background flex h-[calc(100vh-8rem)] flex-col md:h-[calc(100vh-4rem)]">
       <ChatHeader
         onStartNewChat={handleStartNewChat}
-        disableNewChat={isLoading || (messages.length === 0 && !conversationId)}
+        onToggleHistory={isAuthenticated ? () => setHistoryOpen((open) => !open) : undefined}
+        historyOpen={historyOpen}
+        disableNewChat={isLoading || !restorationResolved || (messages.length === 0 && !conversationId)}
       />
 
+      {isAuthenticated && historyOpen && (
+        <ChatHistory
+          userId={userId}
+          conversationId={conversationId}
+          disabled={isLoading || !restorationResolved}
+          onSelect={(id) => {
+            void openConversation(id).then((opened) => {
+              if (opened) {
+                clearPendingSubstitutionIntent();
+                setHistoryOpen(false);
+              }
+            });
+          }}
+        />
+      )}
+      {restoreError && <p role="alert" className="px-4 py-2 text-sm">{restoreError}</p>}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <div className="mx-auto max-w-4xl">
           {showRestoringState && (
@@ -135,20 +162,27 @@ const ChatPage = () => {
       <ChatComposer
         attachmentError={attachmentError}
         canAddAttachments={canAddAttachments}
-        canSubmit={canSubmitMessage}
+        canSubmit={canSubmitMessage && restorationResolved}
         fileInputRef={fileInputRef}
         inputValue={inputValue}
-        isLoading={isLoading}
+        isLoading={isLoading || !restorationResolved || !draftsHydrated}
         onFileChange={handleFileChange}
         onInputChange={handleInputChange}
         onRemoveAttachment={handleRemoveAttachment}
         onSubmit={() => {
-          void handleSubmitMessage();
+          if (restorationResolved) void handleSubmitMessage();
         }}
         pendingAttachments={pendingAttachments}
       />
     </div>
   );
+};
+
+// Remount every chat workflow on identity changes, including pending composer writes.
+const ChatPage = () => {
+  const userId = useAuthStore((state) => state.user?.id);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return <ChatSession key={`${isAuthenticated}:${userId ?? "guest"}`} />;
 };
 
 export default ChatPage;

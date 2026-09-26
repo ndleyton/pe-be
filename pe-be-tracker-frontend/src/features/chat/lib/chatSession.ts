@@ -2,6 +2,10 @@ import { type ChatMessage, type PersistedChatMessage } from "../types";
 
 export const ACTIVE_CHAT_SESSION_KEY = "chat:active-session";
 
+const sessionKey = (userId?: number) => userId === undefined
+  ? ACTIVE_CHAT_SESSION_KEY
+  : `${ACTIVE_CHAT_SESSION_KEY}:${userId}`;
+
 const getSessionStorage = (): Storage | null => {
   if (typeof window === "undefined") {
     return null;
@@ -59,6 +63,7 @@ export interface ActiveChatSession {
 
 export const persistActiveChatSession = (
   session: ActiveChatSession,
+  userId?: number,
 ): void => {
   const storage = getSessionStorage();
   if (!storage) {
@@ -70,20 +75,20 @@ export const persistActiveChatSession = (
       conversationId: session.conversationId,
       messages: session.messages.map(serializeChatMessage),
     };
-    storage.setItem(ACTIVE_CHAT_SESSION_KEY, JSON.stringify(payload));
+    storage.setItem(sessionKey(userId), JSON.stringify(payload));
   } catch {
     /* ignore */
   }
 };
 
-export const readActiveChatSession = (): ActiveChatSession | null => {
+export const readActiveChatSession = (userId?: number): ActiveChatSession | null => {
   const storage = getSessionStorage();
   if (!storage) {
     return null;
   }
 
   try {
-    const rawValue = storage.getItem(ACTIVE_CHAT_SESSION_KEY);
+    const rawValue = storage.getItem(sessionKey(userId));
     if (!rawValue) {
       return null;
     }
@@ -94,7 +99,7 @@ export const readActiveChatSession = (): ActiveChatSession | null => {
       || !Array.isArray(parsed.messages)
       || !parsed.messages.every(isPersistedChatMessage)
     ) {
-      storage.removeItem(ACTIVE_CHAT_SESSION_KEY);
+      storage.removeItem(sessionKey(userId));
       return null;
     }
 
@@ -104,7 +109,7 @@ export const readActiveChatSession = (): ActiveChatSession | null => {
     };
   } catch {
     try {
-      storage.removeItem(ACTIVE_CHAT_SESSION_KEY);
+      storage.removeItem(sessionKey(userId));
     } catch {
       /* ignore */
     }
@@ -112,14 +117,14 @@ export const readActiveChatSession = (): ActiveChatSession | null => {
   }
 };
 
-export const clearActiveChatSession = (): void => {
+export const clearActiveChatSession = (userId?: number): void => {
   const storage = getSessionStorage();
   if (!storage) {
     return;
   }
 
   try {
-    storage.removeItem(ACTIVE_CHAT_SESSION_KEY);
+    storage.removeItem(sessionKey(userId));
   } catch {
     /* ignore */
   }

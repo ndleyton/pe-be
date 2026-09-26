@@ -7,7 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { chatDraftKey, useChatDraftStore } from "@/stores/useChatDraftStore";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
   sendChatMessage,
@@ -30,6 +32,8 @@ import {
   type PendingAttachment,
   type UIMessagePart,
 } from "../types";
+
+const EMPTY_ATTACHMENTS: PendingAttachment[] = [];
 
 const LOGGED_OUT_COPY =
   "Chat is available for logged-in users. Please sign in to continue.";
@@ -61,6 +65,7 @@ const revokeAttachmentPreviews = (attachments: PendingAttachment[]) => {
 
 interface UseChatComposerOptions {
   clearPendingSubstitutionIntent: () => void;
+  userId?: number;
   conversationId?: number;
   isAuthenticated: boolean;
   pendingSubstitutionIntent: ExerciseSubstitutionChatIntent | null;
@@ -71,20 +76,28 @@ interface UseChatComposerOptions {
 export const useChatComposer = ({
   clearPendingSubstitutionIntent,
   conversationId,
+  userId,
   isAuthenticated,
   pendingSubstitutionIntent,
   setConversationId,
   setMessages,
 }: UseChatComposerOptions) => {
+  const queryClient = useQueryClient();
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const [inputValue, setInputValue] = useState("");
+  const draftKey = chatDraftKey(isAuthenticated ? userId : undefined, conversationId);
+  const draftsHydrated = useChatDraftStore((state) => state.hydrated);
+  const inputValue = useChatDraftStore((state) => state.texts[draftKey] ?? "");
+  const storedAttachments = useChatDraftStore((state) => state.attachments[draftKey]);
+  const pendingAttachments = storedAttachments ?? EMPTY_ATTACHMENTS;
+  const setInputValue = useCallback((text: string) => {
+    useChatDraftStore.getState().setText(draftKey, text);
+  }, [draftKey]);
+  const setPendingAttachments = useCallback((update: PendingAttachment[] | ((current: PendingAttachment[]) => PendingAttachment[])) => {
+    useChatDraftStore.getState().setAttachments(draftKey, update);
+  }, [draftKey]);
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>(
-    [],
-  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const guestResponseTimeoutRef = useRef<number | null>(null);
-  const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
 
   const clearGuestResponseTimeout = useCallback(() => {
     if (guestResponseTimeoutRef.current !== null) {
@@ -102,16 +115,11 @@ export const useChatComposer = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []);
-
-  useEffect(() => {
-    pendingAttachmentsRef.current = pendingAttachments;
-  }, [pendingAttachments]);
+  }, [setPendingAttachments]);
 
   useEffect(() => {
     return () => {
       clearGuestResponseTimeout();
-      revokeAttachmentPreviews(pendingAttachmentsRef.current);
     };
   }, [clearGuestResponseTimeout]);
 
@@ -124,6 +132,7 @@ export const useChatComposer = ({
       messages: ChatApiMessage[];
     }) => sendChatMessage(messages, nextConversationId),
     onSuccess: (response) => {
+      void queryClient.invalidateQueries({ queryKey: ["chat-history", userId] });
       setConversationId((current) =>
         current === response.conversation_id ? current : response.conversation_id,
       );
@@ -211,7 +220,7 @@ export const useChatComposer = ({
     async (messageContent: string) => {
       const trimmedMessage = messageContent.trim();
 
-      if ((!trimmedMessage && pendingAttachments.length === 0) || isLoading) {
+      if ((!trimmedMessage && pendingAttachments.length === 0) || isLoading || !draftsHydrated) {
         return;
       }
 
@@ -220,9 +229,10 @@ export const useChatComposer = ({
       setAttachmentError(null);
 
       const attachmentsSnapshot = [...pendingAttachments];
-      setInputValue("");
+      setInputValue(messageContent);
 
       if (!isAuthenticated) {
+        setInputValue("");
         setMessages((current) => [
           ...current,
           {
@@ -284,8 +294,6 @@ export const useChatComposer = ({
           },
         ]);
 
-        clearPendingAttachments();
-
         try {
           await chatMutation.mutateAsync({
             messages: [
@@ -297,6 +305,12 @@ export const useChatComposer = ({
             ],
             conversationId,
           });
+
+          // Do not erase newer edits made while this request was in flight.
+          if (useChatDraftStore.getState().texts[draftKey] === messageContent) {
+            setInputValue("");
+          }
+          clearPendingAttachments();
 
           if (substitutionIntentForMessage) {
             clearPendingSubstitutionIntent();
@@ -327,6 +341,9 @@ export const useChatComposer = ({
       pendingAttachments,
       pendingSubstitutionIntent,
       setMessages,
+      draftKey,
+      draftsHydrated,
+      setInputValue,
     ],
   );
 
@@ -377,7 +394,7 @@ export const useChatComposer = ({
         return [...current, ...nextAttachments];
       });
     },
-    [],
+    [setPendingAttachments],
   );
 
   const handleRemoveAttachment = useCallback((localId: string) => {
@@ -390,7 +407,7 @@ export const useChatComposer = ({
 
       return current.filter((item) => item.localId !== localId);
     });
-  }, []);
+  }, [setPendingAttachments]);
 
   const handleSubmitMessage = useCallback(
     async (messageContent?: string) => {
@@ -406,7 +423,7 @@ export const useChatComposer = ({
         void processMessage(prompt);
       }, 100);
     },
-    [processMessage],
+    [processMessage, setInputValue],
   );
 
   const resetComposer = useCallback(() => {
@@ -415,13 +432,14 @@ export const useChatComposer = ({
     setAttachmentError(null);
     setInputValue("");
     setIsLoading(false);
-  }, [clearGuestResponseTimeout, clearPendingAttachments]);
+  }, [clearGuestResponseTimeout, clearPendingAttachments, setInputValue]);
 
   return {
+    draftsHydrated,
     attachmentError,
     canAddAttachments: pendingAttachments.length < MAX_CHAT_ATTACHMENTS,
     canSubmitMessage:
-      !isLoading &&
+      draftsHydrated && !isLoading &&
       (Boolean(inputValue.trim()) || pendingAttachments.length > 0),
     clearPendingAttachments,
     fileInputRef,

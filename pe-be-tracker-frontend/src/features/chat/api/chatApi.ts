@@ -52,3 +52,15 @@ export const getConversation = async (
   const response = await api.get(endpoints.chatConversationById(conversationId));
   return response.data;
 };
+
+export const getConversations = async (offset = 0): Promise<{
+  conversations: ConversationResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+}> => {
+  const response = await api.get(endpoints.chatConversations, {
+    params: { offset, limit: 20 },
+  });
+  return response.data;
+};
