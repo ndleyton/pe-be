@@ -452,27 +452,23 @@ const SetOptionsDialogContent = ({
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Side</label>
-          <div className="bg-muted inline-flex flex-wrap items-center gap-1 rounded-lg border p-1">
+          <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
             {([
-              [null, "Unspecified"],
+              [null, "—"],
               ["left", "Left"],
               ["right", "Right"],
-              ["both", "Both sides"],
             ] as const).map(([value, label]) => (
               <button
                 key={label}
                 type="button"
                 aria-pressed={(activeSet.side ?? null) === value}
                 onClick={() => onUpdateSetSide(activeSetKey, value)}
-                className={`rounded-md px-2 py-1 text-sm ${(activeSet.side ?? null) === value ? "bg-background shadow" : "text-muted-foreground"}`}
+                className={`rounded-md px-3 py-1 text-sm ${(activeSet.side ?? null) === value ? "bg-background shadow" : "text-muted-foreground"}`}
               >
                 {label}
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Both sides together. For one side at a time, add left + right.
-          </p>
         </div>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -844,24 +840,26 @@ export const ExerciseSetTable = memo(({
         </DialogContent>
       </Dialog>
 
-      <Button
-        variant="glass"
-        className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
-        data-testid="add-set-button"
-        disabled={isUnsavedExercise}
-        onClick={onAddSet}
-      >
-        <Plus className="mr-2 h-5 w-5" />
-        <span className="font-bold tracking-tight">Add Set</span>
-      </Button>
-      <Button
-        variant="outline"
-        className="mt-2 w-full"
-        disabled={isUnsavedExercise}
-        onClick={onAddPair}
-      >
-        Add left + right
-      </Button>
+      <div className="mt-6 flex gap-2">
+        <Button
+          variant="glass"
+          className="flex-1 rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
+          data-testid="add-set-button"
+          disabled={isUnsavedExercise}
+          onClick={onAddSet}
+        >
+          <Plus className="mr-2 h-5 w-5" />
+          <span className="font-bold tracking-tight">Add Set</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="shrink-0 rounded-xl py-6 px-4 text-sm font-medium"
+          disabled={isUnsavedExercise}
+          onClick={onAddPair}
+        >
+          Add L+R
+        </Button>
+      </div>
     </>
   );
 });
