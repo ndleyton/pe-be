@@ -842,21 +842,22 @@ export const ExerciseSetTable = memo(({
 
       <div className="mt-6 flex gap-2">
         <Button
-          variant="glass"
-          className="flex-1 rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
+          variant="outline"
+          className="flex-1 rounded-xl py-6"
           data-testid="add-set-button"
           disabled={isUnsavedExercise}
           onClick={onAddSet}
         >
-          <Plus className="mr-2 h-5 w-5" />
-          <span className="font-bold tracking-tight">Add Set</span>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Set
         </Button>
         <Button
           variant="outline"
-          className="shrink-0 rounded-xl py-6 px-4 text-sm font-medium"
+          className="shrink-0 rounded-xl py-6 px-5"
           disabled={isUnsavedExercise}
           onClick={onAddPair}
         >
+          <Plus className="mr-2 h-4 w-4" />
           Add L+R
         </Button>
       </div>
