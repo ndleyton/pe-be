@@ -163,7 +163,11 @@ const ExerciseSetRow = memo(({
             }`}
         >
           {isPR
-            ? "PR"
+            ? set.side === "left"
+              ? "PR L"
+              : set.side === "right"
+                ? "PR R"
+                : "PR"
             : set.side === "left"
               ? "L"
               : set.side === "right"
@@ -406,7 +410,6 @@ const ExerciseSetRow = memo(({
 
 type SetOptionsDialogContentProps = {
   activeSet: ExerciseSet;
-  activeSetIndex: number;
   prefersTimeByDefault: boolean;
   setNotesValue: string;
   setRpeValue: number | null;
@@ -423,7 +426,6 @@ type SetOptionsDialogContentProps = {
 
 const SetOptionsDialogContent = ({
   activeSet,
-  activeSetIndex,
   prefersTimeByDefault,
   setNotesValue,
   setRpeValue,
@@ -824,7 +826,6 @@ export const ExerciseSetTable = memo(({
             return (
               <SetOptionsDialogContent
                 activeSet={activeSet}
-                activeSetIndex={activeSetIndex}
                 prefersTimeByDefault={prefersTimeByDefault}
                 setNotesValue={setNotesValue}
                 setRpeValue={setRpeValue}
