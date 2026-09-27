@@ -172,9 +172,7 @@ const ExerciseSetRow = memo(({
               ? "L"
               : set.side === "right"
                 ? "R"
-                : set.side === "both"
-                  ? "Both"
-                  : index + 1}
+                : "Both"}
         </span>
       </div>
       <div className="min-w-0 flex justify-center">

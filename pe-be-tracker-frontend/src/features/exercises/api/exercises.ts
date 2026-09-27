@@ -420,7 +420,7 @@ export interface ProgressiveOverloadDataPoint {
   maxWeight: number;
   totalVolume: number;
   reps: number;
-  sideBreakdown?: Partial<Record<"left" | "right" | "both" | "unspecified", {
+  sideBreakdown?: Partial<Record<"left" | "right" | "both", {
     sets: number;
     reps: number;
     maxWeight: number;

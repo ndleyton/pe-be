@@ -33,10 +33,10 @@ export const ProgressiveOverloadChart = ({
   const [activeMetric, setActiveMetric] = useState<
     "maxWeight" | "totalVolume"
   >("maxWeight");
-  const availableSides = (["left", "right", "both", "unspecified"] as const)
+  const availableSides = (["left", "right", "both"] as const)
     .filter((side) => data.some((point) => point.sideBreakdown?.[side]));
   const [activeSide, setActiveSide] = useState<typeof availableSides[number]>(
-    availableSides[0] ?? "unspecified",
+    availableSides[0] ?? "both",
   );
   const effectiveSide = availableSides.includes(activeSide)
     ? activeSide

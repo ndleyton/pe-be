@@ -342,9 +342,8 @@ describe("ExerciseRow", () => {
   it("displays exercise sets in grid format", () => {
     const { container } = render(<ExerciseRow {...defaultProps} />);
 
-    // Check for set numbers
-    expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    // Null-side sets show "Both" (treated as bilateral)
+    expect(screen.getAllByText("Both")).toHaveLength(2);
 
     // Weight inputs are textboxes with inputMode="decimal"
     const weightInputs = Array.from(
@@ -818,8 +817,8 @@ describe("ExerciseRow", () => {
   it("shows correct set type badges", () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    // Null-side sets display "Both"
+    expect(screen.getAllByText("Both")).toHaveLength(2);
   });
 
   it("applies correct styling for completed sets", () => {

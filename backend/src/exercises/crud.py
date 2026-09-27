@@ -1253,7 +1253,9 @@ async def get_exercise_type_stats(
                 if not exercise_set.done:
                     exclusions["incompleteSets"] += 1
                     continue
-                side_key = exercise_set.side or "unspecified"
+                # null means the user did not tag a side; treat as "both" since
+                # any unilateral work would have been explicitly tagged left/right.
+                side_key = exercise_set.side or "both"
                 side_data = session_data["sides"].setdefault(
                     side_key,
                     {
