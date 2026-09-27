@@ -504,28 +504,36 @@ async def update_routine(
     When `exercise_templates` is provided, the existing nested template tree is
     replaced transactionally using the submitted payload.
     """
+    # Acquire an exclusive lock and verify ownership in one round-trip.
+    # This prevents another transaction from modifying or deleting the routine
+    # between authorization and mutation.
+    lock_clause = (
+        select(Routine.id)
+        .where(
+            Routine.id == routine_id,
+            True if is_superuser else Routine.creator_id == user_id,
+        )
+        .with_for_update()
+    )
+    locked_id = await session.scalar(lock_clause)
+    if locked_id is None:
+        return None
+
+    # Load the full routine tree while the lock is held.  populate_existing=True
+    # is required when exercise_templates is being replaced so the ORM session
+    # reflects the current database state (not a possibly-stale identity-map
+    # snapshot from before this request acquired the lock).
+    needs_tree = routine_data.exercise_templates is not None
     routine = await (
-        get_any_routine_by_id(session, routine_id)
+        get_any_routine_by_id(session, routine_id, populate_existing=needs_tree)
         if is_superuser
-        else get_user_routine_by_id(session, routine_id, user_id)
+        else get_user_routine_by_id(
+            session, routine_id, user_id, populate_existing=needs_tree
+        )
     )
     if not routine:
         return None
 
-    await session.execute(
-        select(Routine.id).where(Routine.id == routine.id).with_for_update()
-    )
-
-    if routine_data.exercise_templates is not None:
-        routine = await (
-            get_any_routine_by_id(session, routine_id, populate_existing=True)
-            if is_superuser
-            else get_user_routine_by_id(
-                session, routine_id, user_id, populate_existing=True
-            )
-        )
-        if not routine:
-            return None
 
     # Update fields if provided
     if routine_data.name is not None:

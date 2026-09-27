@@ -1056,6 +1056,21 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "intensityUnit": {"id": unit.id, "name": "Kilograms", "abbreviation": "kg"},
     }
 
+    empty_v2 = await crud.get_exercise_type_stats(
+        db_session, exercise_type.id, owner.id, metrics_version=2
+    )
+    assert empty_v2 == {
+        **empty,
+        "metricsVersion": 2,
+        "sessions": [],
+        "sidePersonalBests": {},
+        "exclusions": {
+            "incompleteSets": 0,
+            "incompatibleLoadSets": 0,
+            "missingLoadSets": 0,
+        },
+    }
+
     first = await _seed_exercise(
         db_session,
         workout_id=workout.id,

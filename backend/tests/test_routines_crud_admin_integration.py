@@ -316,3 +316,74 @@ async def test_update_and_delete_routine_paths(db_session: AsyncSession):
 
     deleted3 = await crud.delete_routine(db_session, r2.id, owner.id)
     assert deleted3 is True
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_update_routine_refreshes_tree_after_waiting_for_lock(db_session):
+    import asyncio
+    from sqlalchemy import select, text
+    from src.routines.models import ExerciseTemplate
+    from tests.conftest import TestSessionLocal
+
+    owner = User(
+        email="routine-lock@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    workout_type = WorkoutType(name="Lock test")
+    unit = IntensityUnit(name="Kilograms", abbreviation="kg")
+    db_session.add_all([owner, workout_type, unit])
+    await db_session.flush()
+    exercise_type = ExerciseType(name="Lock exercise", default_intensity_unit=unit.id)
+    routine = Routine(
+        name="Locked routine", workout_type_id=workout_type.id, creator_id=owner.id
+    )
+    db_session.add_all([exercise_type, routine])
+    await db_session.commit()
+    routine_id, owner_id, exercise_type_id = routine.id, owner.id, exercise_type.id
+    # Keep a stale, already-loaded collection in the waiting session's identity map.
+    stale = await crud.get_user_routine_by_id(db_session, routine_id, owner_id)
+    assert stale.exercise_templates == []
+    waiting_pid = await db_session.scalar(text("SELECT pg_backend_pid()"))
+
+    async with TestSessionLocal() as writer, TestSessionLocal() as observer:
+        await writer.scalar(
+            select(Routine.id).where(Routine.id == routine_id).with_for_update()
+        )
+        writer.add(
+            ExerciseTemplate(routine_id=routine_id, exercise_type_id=exercise_type_id)
+        )
+        await writer.flush()
+        task = asyncio.create_task(
+            crud.update_routine(
+                db_session, routine_id, RoutineUpdate(exercise_templates=[]), owner_id
+            )
+        )
+        try:
+            async with asyncio.timeout(5):
+                while not await observer.scalar(
+                    text("SELECT cardinality(pg_blocking_pids(:pid)) > 0"),
+                    {"pid": waiting_pid},
+                ):
+                    if task.done():
+                        await task
+                        pytest.fail(
+                            "Update completed without waiting for the routine lock"
+                        )
+                    await asyncio.sleep(0.01)
+            await writer.commit()
+            updated = await asyncio.wait_for(task, timeout=5)
+            assert updated.exercise_templates == []
+            remaining = await observer.scalars(
+                select(ExerciseTemplate.id).where(
+                    ExerciseTemplate.routine_id == routine_id
+                )
+            )
+            assert list(remaining) == []
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)

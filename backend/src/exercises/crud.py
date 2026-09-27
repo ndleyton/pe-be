@@ -1197,6 +1197,7 @@ async def get_exercise_type_stats(
             empty_stats.update(
                 metricsVersion=2,
                 sidePersonalBests={},
+                sessions=[],
                 exclusions={
                     "incompleteSets": 0,
                     "incompatibleLoadSets": 0,

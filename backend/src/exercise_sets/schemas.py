@@ -29,7 +29,12 @@ class ExerciseSetCreate(ExerciseSetBase):
 
 
 class ExerciseSetUpdate(BaseModel):
-    """Schema for updating exercise sets"""
+    """Schema for updating exercise sets
+
+    Note: `position` is intentionally absent. Set order is managed exclusively
+    through the reorder endpoint (PUT /exercise-sets/exercise/{id}/order) to
+    guarantee the two-phase position swap and conflict detection remain atomic.
+    """
 
     reps: Optional[int] = None
     duration_seconds: Optional[int] = None
