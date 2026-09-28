@@ -534,7 +534,6 @@ async def update_routine(
     if not routine:
         return None
 
-
     # Update fields if provided
     if routine_data.name is not None:
         routine.name = routine_data.name
