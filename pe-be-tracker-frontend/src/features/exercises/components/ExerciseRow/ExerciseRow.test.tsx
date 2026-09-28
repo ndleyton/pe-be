@@ -339,11 +339,48 @@ describe("ExerciseRow", () => {
     expect(screen.getByDisplayValue("10:05")).toBeInTheDocument();
   });
 
+  it.each([
+    [null, "1"],
+    [undefined, "1"],
+    ["both", "1"],
+    ["left", "L"],
+    ["right", "R"],
+  ] as const)("shows the correct set marker for side %s", (side, marker) => {
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={{
+          ...mockExercise,
+          exercise_sets: [{ ...mockExerciseSet1, side, done: false }],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(marker)).toBeInTheDocument();
+    expect(screen.queryByText("Both")).not.toBeInTheDocument();
+    if (side !== "left") expect(screen.queryByText("L")).not.toBeInTheDocument();
+    if (side !== "right") expect(screen.queryByText("R")).not.toBeInTheDocument();
+  });
+
+  it("opens alternate set actions from the chevron and closes with Escape", async () => {
+    const user = userEvent.setup();
+    render(<ExerciseRow {...defaultProps} />);
+    const trigger = screen.getByRole("button", { name: "More set actions" });
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    await user.click(trigger);
+    expect(screen.getByRole("menuitem", { name: "Add left + right sets" })).toBeInTheDocument();
+    expect(createExerciseSet).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menuitem")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
   it("displays exercise sets in grid format", () => {
     const { container } = render(<ExerciseRow {...defaultProps} />);
 
-    // Null-side sets show "Both" (treated as bilateral)
-    expect(screen.getAllByText("Both")).toHaveLength(2);
+    // Untagged sets retain their set numbers.
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
 
     // Weight inputs are textboxes with inputMode="decimal"
     const weightInputs = Array.from(
@@ -820,8 +857,9 @@ describe("ExerciseRow", () => {
   it("shows correct set type badges", () => {
     render(<ExerciseRow {...defaultProps} />);
 
-    // Null-side sets display "Both"
-    expect(screen.getAllByText("Both")).toHaveLength(2);
+    expect(screen.queryByText("Both")).not.toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("applies correct styling for completed sets", () => {

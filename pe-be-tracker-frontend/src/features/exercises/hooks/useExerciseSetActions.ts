@@ -605,7 +605,7 @@ export const useExerciseSetActions = ({
       applyLocalExerciseSets((sets) =>
         sets.filter((set) => !optimisticKeys.has(getExerciseSetClientKey(set))),
       );
-      toast.error("Couldn't confirm the pair. Tap Add L+R to retry safely.");
+      toast.error("Couldn't confirm the pair. Choose Add left + right sets to retry safely.");
       invalidateExerciseQuery();
     } finally {
       pairInFlightRef.current = false;

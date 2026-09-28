@@ -553,7 +553,7 @@ describe("useExerciseSetActions", () => {
 
     expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1]);
     expect(mockToastError).toHaveBeenCalledWith(
-      "Couldn't confirm the pair. Tap Add L+R to retry safely.",
+      "Couldn't confirm the pair. Choose Add left + right sets to retry safely.",
     );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
     expect(onExerciseUpdate).toHaveBeenLastCalledWith(

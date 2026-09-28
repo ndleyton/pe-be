@@ -1,6 +1,7 @@
 import { getSetPersonalBest } from "@/features/exercises/lib/personalBests";
 import { memo, useMemo, useState } from "react";
-import { Check, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
+import { DropdownMenu } from "radix-ui";
+import { Check, ChevronDown, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
 import type { ExerciseSet, PersonalBestData, ExerciseTypeStats } from "@/features/exercises/api";
 import {
@@ -174,7 +175,7 @@ const ExerciseSetRow = memo(({
               ? "L"
               : set.side === "right"
                 ? "R"
-                : "Both"}
+                : index + 1}
         </span>
       </div>
       <div className="min-w-0 flex justify-center">
@@ -840,10 +841,10 @@ export const ExerciseSetTable = memo(({
         </DialogContent>
       </Dialog>
 
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex">
         <Button
           variant="outline"
-          className="flex-1 rounded-xl py-6"
+          className="relative flex-1 rounded-l-xl rounded-r-none py-6 focus-visible:z-10"
           data-testid="add-set-button"
           disabled={isUnsavedExercise}
           onClick={onAddSet}
@@ -851,15 +852,33 @@ export const ExerciseSetTable = memo(({
           <Plus className="mr-2 h-4 w-4" />
           Add Set
         </Button>
-        <Button
-          variant="outline"
-          className="shrink-0 rounded-xl py-6 px-5"
-          disabled={isUnsavedExercise || isAddingPair}
-          onClick={handleAddPair}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add L+R
-        </Button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button
+              variant="outline"
+              className="relative w-12 shrink-0 rounded-l-none rounded-r-xl border-l-0 py-6 focus-visible:z-10"
+              disabled={isUnsavedExercise || isAddingPair}
+              aria-label="More set actions"
+            >
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="bg-popover text-popover-foreground border-border z-50 min-w-48 rounded-xl border p-1 shadow-md"
+            >
+              <DropdownMenu.Item
+                className="focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-lg px-3 py-3 text-sm outline-none"
+                disabled={isAddingPair}
+                onSelect={() => void handleAddPair()}
+              >
+                Add left + right sets
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
     </>
   );
