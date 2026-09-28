@@ -1,3 +1,4 @@
+import { getOrCreatePendingPair, clearPendingPair } from "@/features/exercises/lib/pendingSetPair";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -43,6 +44,8 @@ export const useExerciseSetActions = ({
   workoutId,
 }: ExerciseRowProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id);
+  const pairInFlightRef = useRef(false);
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
   const queryClient = useQueryClient();
 
@@ -491,12 +494,12 @@ export const useExerciseSetActions = ({
   }, [applyLocalExerciseSets, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
 
   const addLeftRightPair = useCallback(async (intensityUnitId: number) => {
-    if (isUnsavedExercise) return;
+    if (isUnsavedExercise || pairInFlightRef.current) return;
     const current = exerciseSetsRef.current;
     const lastSet = current[current.length - 1];
     const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
     const now = new Date().toISOString();
-    const operationKey = crypto.randomUUID();
+    let operationKey: string = crypto.randomUUID();
     const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
     const nextDurationSeconds = durationPreferred
       ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
@@ -516,52 +519,67 @@ export const useExerciseSetActions = ({
       notes: null,
       type: current.length === 0 ? "warmup" : "working",
     };
-    const optimistic = (["left", "right"] as const).map((side, offset) => ({
-      ...common,
-      id: `temp-${operationKey}-${side}`,
-      client_key: `temp-${operationKey}-${side}`,
+    let pairSets: Parameters<typeof createExerciseSetPair>[1] = (["left", "right"] as const).map((side) => ({
+      ...(nextDurationSeconds != null
+        ? { duration_seconds: nextDurationSeconds }
+        : { reps: nextReps || 0 }),
+      intensity: common.intensity,
+      rpe: common.rpe,
+      rir: common.rir,
+      intensity_unit_id: intensityUnitId,
+      rest_time_seconds: 0,
+      done: false,
+      type: common.type,
       side,
+    }));
+    if (isAuthenticated) {
+      try {
+        if (userId == null) throw new Error("Missing user for pending pair");
+        const pending = getOrCreatePendingPair(userId, exercise.id, pairSets);
+        operationKey = pending.key;
+        pairSets = pending.sets;
+      } catch (error) {
+        console.error("Could not persist pair operation:", error);
+        toast.error("Couldn't save the pending pair. Please try again.");
+        return;
+      }
+    }
+    const optimistic = pairSets.map((item, offset) => ({
+      ...item,
+      exercise_id: exercise.id,
+      reps: item.reps ?? null,
+      duration_seconds: item.duration_seconds ?? null,
+      intensity: item.intensity ?? null,
+      rpe: item.rpe ?? null,
+      rir: item.rir ?? null,
+      rest_time_seconds: item.rest_time_seconds ?? null,
+      id: `temp-${operationKey}-${item.side}`,
+      client_key: `temp-${operationKey}-${item.side}`,
       position: firstPosition + offset,
       created_at: now,
       updated_at: now,
     } satisfies ExerciseSet));
     applyLocalExerciseSets([...current, ...optimistic]);
     if (!isAuthenticated) return;
+    pairInFlightRef.current = true;
     try {
-      const created = await createExerciseSetPair(
-        exercise.id,
-        optimistic.map((item) => ({
-          ...(item.duration_seconds != null
-            ? { duration_seconds: item.duration_seconds }
-            : { reps: item.reps || 0 }),
-          intensity: item.intensity ?? undefined,
-          rpe: item.rpe,
-          rir: item.rir,
-          intensity_unit_id: item.intensity_unit_id,
-          rest_time_seconds: item.rest_time_seconds ?? undefined,
-          done: false,
-          type: item.type ?? undefined,
-          side: item.side as "left" | "right",
-        })),
-        operationKey,
-      );
-      applyLocalExerciseSets((sets) =>
-        sets.map((set) => {
-          const optMatch = optimistic.find(
-            (o) => String(o.client_key) === getExerciseSetClientKey(set)
-          );
-          if (optMatch) {
-            const createdMatch = created.find((c) => c.side === optMatch.side);
-            if (createdMatch) {
-              return {
-                ...createdMatch,
-                client_key: set.client_key ?? optMatch.client_key,
-              };
-            }
+      const created = await createExerciseSetPair(exercise.id, pairSets, operationKey);
+      clearPendingPair(userId!, exercise.id);
+      // A refetch may already contain the committed rows after a lost response.
+      // Keep those current values instead of replaying the original response.
+      applyLocalExerciseSets((sets) => {
+        const result = sets.filter((set) => !optimistic.some(
+          (item) => getExerciseSetClientKey(item) === getExerciseSetClientKey(set),
+        ));
+        for (const row of created) {
+          if (!result.some((set) => String(set.id) === String(row.id))) {
+            const opt = optimistic.find((item) => item.side === row.side);
+            const pending = opt && pendingUpdatesRef.current[String(opt.client_key)];
+            result.push({ ...row, ...pending?.data, client_key: opt?.client_key });
           }
-          return set;
-        }),
-      );
+        }
+        return result;
+      });
 
       optimistic.forEach((optItem) => {
         const createdMatch = created.find((c) => c.side === optItem.side);
@@ -587,10 +605,12 @@ export const useExerciseSetActions = ({
       applyLocalExerciseSets((sets) =>
         sets.filter((set) => !optimisticKeys.has(getExerciseSetClientKey(set))),
       );
-      toast.error("Couldn't add left and right sets. Please try again.");
+      toast.error("Couldn't confirm the pair. Tap Add L+R to retry safely.");
       invalidateExerciseQuery();
+    } finally {
+      pairInFlightRef.current = false;
     }
-  }, [applyLocalExerciseSets, exercise.id, invalidateExerciseQuery, isAuthenticated, isUnsavedExercise]);
+  }, [applyLocalExerciseSets, exercise.id, invalidateExerciseQuery, isAuthenticated, isUnsavedExercise, userId]);
 
   const updateExerciseNotes = useCallback((notes: string) => {
     if (!onExerciseUpdate) {

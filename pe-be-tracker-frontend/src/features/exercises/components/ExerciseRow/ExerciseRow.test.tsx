@@ -115,10 +115,10 @@ vi.mock("@tanstack/react-query", async () => {
         if (options.queryKey[1] === 999 || options.queryKey[1] === "999") {
           return {
             data: {
-              personalBest: {
-                weight: 50,
-                reps: 5,
-                date: "2023-01-01",
+              personalBest: null,
+              sidePersonalBests: {
+                left: { weight: 50, reps: 5, date: "2023-01-01" },
+                right: { weight: 150, reps: 5, date: "2023-01-01" },
               },
               intensityUnit: { id: 1, abbreviation: "kg" },
             },
@@ -544,11 +544,12 @@ describe("ExerciseRow", () => {
       exercise_sets: [
         {
           ...mockExerciseSet1,
+          side: "left",
           intensity: 105.0,
           intensity_unit_id: 1,
           done: false,
         },
-        mockExerciseSet2,
+        { ...mockExerciseSet2, side: "right", intensity: 105, intensity_unit_id: 1, done: true },
       ],
     };
 
@@ -557,6 +558,8 @@ describe("ExerciseRow", () => {
     // Initially shows standard check icon (since it's not done)
     const doneButtons = screen.getAllByTestId("done-button");
     expect(doneButtons[0]).toHaveAttribute("aria-label", "Mark set done");
+
+    expect(doneButtons[1]).not.toHaveAttribute("aria-label", "Personal Best");
 
     // Toggle set 1 completion
     await user.click(doneButtons[0]);

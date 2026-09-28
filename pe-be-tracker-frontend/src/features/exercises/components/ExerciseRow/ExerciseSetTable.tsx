@@ -1,7 +1,8 @@
+import { getSetPersonalBest } from "@/features/exercises/lib/personalBests";
 import { memo, useMemo, useState } from "react";
 import { Check, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
-import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
+import type { ExerciseSet, PersonalBestData, ExerciseTypeStats } from "@/features/exercises/api";
 import {
   calculateIsPersonalBest,
   EXERCISE_SETS_GRID_CLASSES,
@@ -81,6 +82,7 @@ type ExerciseSetTableProps = {
   setRpeValue: number | null;
   setRirValue: number | null;
   personalBest?: PersonalBestData | null;
+  sidePersonalBests?: ExerciseTypeStats["sidePersonalBests"];
   personalBestUnitId?: number | null;
 };
 
@@ -690,6 +692,7 @@ export const ExerciseSetTable = memo(({
   setRpeValue,
   setRirValue,
   personalBest,
+  sidePersonalBests,
   personalBestUnitId,
 }: ExerciseSetTableProps) => {
   const [isAddingPair, setIsAddingPair] = useState(false);
@@ -706,17 +709,6 @@ export const ExerciseSetTable = memo(({
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
   );
-
-  // PB weight converted once per render instead of per row
-  const pbWeightInCurrentUnit = useMemo(() =>
-    personalBest && personalBestUnitId
-      ? convertIntensityValue(
-        personalBest.weight,
-        personalBestUnitId,
-        currentIntensityUnitId,
-      )
-      : null
-    , [personalBest, personalBestUnitId, currentIntensityUnitId]);
 
   const memoizedSetRows = useMemo(() => {
     return exerciseSets.map((set, index) => {
@@ -741,12 +733,16 @@ export const ExerciseSetTable = memo(({
       const currentReps = !Number.isNaN(parsedReps) ? parsedReps : null;
       const currentDuration = set.duration_seconds ?? null;
 
+      const best = getSetPersonalBest({ personalBest: personalBest ?? null, sidePersonalBests }, set.side);
+      const pbWeightInCurrentUnit = best && personalBestUnitId
+        ? convertIntensityValue(best.weight, personalBestUnitId, currentIntensityUnitId)
+        : null;
       const isPR = calculateIsPersonalBest(
         set,
         currentWeight,
         currentReps,
         currentDuration,
-        personalBest ?? null,
+        best,
         pbWeightInCurrentUnit
       );
 
@@ -772,7 +768,8 @@ export const ExerciseSetTable = memo(({
     durationInputs,
     prefersTimeByDefault,
     personalBest,
-    pbWeightInCurrentUnit
+    sidePersonalBests,
+    personalBestUnitId
   ]);
 
   return (

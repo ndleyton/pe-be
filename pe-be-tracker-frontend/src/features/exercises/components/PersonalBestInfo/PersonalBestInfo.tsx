@@ -8,11 +8,13 @@ import { formatDecimal } from "@/utils/format";
 
 interface PersonalBestInfoProps {
   personalBest: PersonalBestInfoType;
+  label?: string;
   intensityUnit: IntensityUnit;
 }
 
 export const PersonalBestInfo = ({
   personalBest,
+  label = "Personal Record",
   intensityUnit,
 }: PersonalBestInfoProps) => {
   const prDate = new Date(personalBest.date).toLocaleDateString();
@@ -21,7 +23,7 @@ export const PersonalBestInfo = ({
     <div className="space-y-3">
       <div className="text-warning flex items-center gap-2">
         <Trophy className="h-5 w-5" />
-        <span className="text-sm font-medium">Personal Record</span>
+        <span className="text-sm font-medium">{label}</span>
       </div>
 
       <div className="text-muted-foreground text-sm">Achieved on {prDate}</div>

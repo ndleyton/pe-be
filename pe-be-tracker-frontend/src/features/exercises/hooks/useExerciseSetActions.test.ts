@@ -33,6 +33,7 @@ const {
   mockDeleteGuestExercise: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
+    user: { id: 1 },
   },
   mockToastError: vi.fn(),
 }));
@@ -79,6 +80,7 @@ import { useExerciseSetActions } from "./useExerciseSetActions";
 describe("useExerciseSetActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.useFakeTimers();
     mockAuthState.isAuthenticated = true;
     mockCreateExerciseSet.mockResolvedValue(
@@ -551,7 +553,7 @@ describe("useExerciseSetActions", () => {
 
     expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1]);
     expect(mockToastError).toHaveBeenCalledWith(
-      "Couldn't add left and right sets. Please try again.",
+      "Couldn't confirm the pair. Tap Add L+R to retry safely.",
     );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
     expect(onExerciseUpdate).toHaveBeenLastCalledWith(
@@ -559,6 +561,43 @@ describe("useExerciseSetActions", () => {
         exercise_sets: [expect.objectContaining({ id: 1 })],
       }),
     );
+  });
+
+  it("reuses the immutable pair after a lost response and remount without duplicating refetched rows", async () => {
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    mockCreateExerciseSetPair.mockRejectedValueOnce(new Error("response lost"));
+    const first = renderHook(() => useExerciseSetActions({ exercise }));
+    await act(async () => { await first.result.current.addLeftRightPair(1); });
+    const originalRequest = mockCreateExerciseSetPair.mock.calls[0];
+    first.unmount();
+
+    const rows = [
+      makeExerciseSet({ id: 501, exercise_id: 123, side: "left", position: 0 }),
+      makeExerciseSet({ id: 502, exercise_id: 123, side: "right", position: 1, intensity: 75 }),
+    ];
+    mockCreateExerciseSetPair.mockResolvedValueOnce(rows);
+    const retry = renderHook(() => useExerciseSetActions({ exercise: { ...exercise, exercise_sets: rows } }));
+    await act(async () => { await retry.result.current.addLeftRightPair(2); });
+    expect(mockCreateExerciseSetPair.mock.calls[1]).toEqual(originalRequest);
+    expect(retry.result.current.exerciseSets.map((set) => set.id)).toEqual([501, 502]);
+    expect(retry.result.current.exerciseSets[1].intensity).toBe(75);
+
+    mockCreateExerciseSetPair.mockResolvedValueOnce([]);
+    await act(async () => { await retry.result.current.addLeftRightPair(2); });
+    expect(mockCreateExerciseSetPair.mock.calls[2][2]).not.toBe(originalRequest[2]);
+    expect(mockCreateExerciseSetPair.mock.calls[2][1][0].intensity_unit_id).toBe(2);
+  });
+
+  it("does not send a pair when its retry identity cannot be persisted", async () => {
+    const storage = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage full"); });
+    try {
+      const { result } = renderHook(() => useExerciseSetActions({ exercise: makeExercise({ exercise_sets: [] }) }));
+      await act(async () => { await result.current.addLeftRightPair(1); });
+      expect(mockCreateExerciseSetPair).not.toHaveBeenCalled();
+      expect(result.current.exerciseSets).toEqual([]);
+    } finally {
+      storage.mockRestore();
+    }
   });
 
   it("keeps exercise sets sorted when initial props arrive out of order", () => {

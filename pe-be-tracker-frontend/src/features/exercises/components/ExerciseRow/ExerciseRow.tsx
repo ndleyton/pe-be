@@ -187,6 +187,7 @@ const ExerciseRow = ({
               setRpeValue={setRpeValue}
               setRirValue={setRirValue}
               personalBest={stats?.personalBest}
+              sidePersonalBests={stats?.sidePersonalBests}
               personalBestUnitId={stats?.intensityUnit?.id}
             />
           </CardContent>
