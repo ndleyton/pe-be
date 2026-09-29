@@ -1,6 +1,7 @@
 import { getOrCreatePendingPair, clearPendingPair } from "@/features/exercises/lib/pendingSetPair";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { toast } from "sonner";
 
 import {
@@ -29,6 +30,11 @@ import { type SetValueMode } from "@/features/exercises/lib/setValue";
 import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps" | "duration_seconds";
+
+// Responses where the pair endpoint rejected the payload itself: 400/422
+// validation (e.g. unknown intensity unit), 404 exercise not found or not
+// owned, 409 idempotency key bound to a different payload.
+const PAIR_PAYLOAD_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
 
 const areExerciseSetsShallowEqual = (
   left: ExerciseSet[],
@@ -598,6 +604,14 @@ export const useExerciseSetActions = ({
       });
     } catch (error) {
       console.error("Failed to create left/right pair:", error);
+      // Drop the pending pair only when the server definitively rejected this
+      // payload, so replaying it can never succeed. Any other failure (network,
+      // 5xx, 401/403/429, ...) may follow a committed attempt whose response was
+      // lost; the key must survive so the retry replays instead of duplicating.
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (status != null && PAIR_PAYLOAD_REJECTION_STATUSES.has(status)) {
+        clearPendingPair(userId!, exercise.id);
+      }
       const optimisticKeys = new Set(
         optimistic.map((item) => getExerciseSetClientKey(item)),
       );

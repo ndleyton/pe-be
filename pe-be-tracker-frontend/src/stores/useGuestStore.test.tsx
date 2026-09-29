@@ -501,6 +501,25 @@ describe("useGuestStore", () => {
     expect(restoredExercise!.exercise_sets[0].deleted_at).toBeNull();
   });
 
+  it("does not reuse a soft-deleted set's position for a new set", () => {
+    const { result } = renderHook(() => useGuestStore());
+    let exerciseId!: string;
+
+    act(() => {
+      const workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
+      addGuestSet(result.current, exerciseId);
+      const deletedSetId = addGuestSet(result.current, exerciseId);
+      result.current.softDeleteExerciseSet(deletedSetId);
+      addGuestSet(result.current, exerciseId);
+    });
+
+    const positions = result.current
+      .getExercise(exerciseId)!
+      .exercise_sets.map((set) => set.position);
+    expect(positions).toEqual([0, 1, 2]);
+  });
+
   it("ensures clear() produces identical state to fresh initialization", () => {
     const { result: freshResult } = renderHook(() => useGuestStore());
     const { result: clearResult } = renderHook(() => useGuestStore());

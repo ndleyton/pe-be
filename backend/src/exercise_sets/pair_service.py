@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.errors import DomainValidationError
 from src.exercise_sets.models import ExerciseSet, ExerciseSetCreationRequest
 from src.exercise_sets.schemas import (
     ExerciseSetPairCreate,
@@ -106,6 +107,9 @@ async def create_left_right_pair(
     for offset, item in enumerate(payload.sets):
         values = item.model_dump()
         source_unit = await session.get(IntensityUnit, values["intensity_unit_id"])
+        if source_unit is None:
+            await session.rollback()
+            raise DomainValidationError.invalid_reference(field="intensity_unit_id")
         canonical_intensity, canonical_key = normalize_intensity_for_storage(
             values.get("intensity"), source_unit
         )

@@ -1,3 +1,4 @@
+import { AxiosError, AxiosHeaders } from "axios";
 import { act, renderHook } from "@/test/testUtils";
 import {
   makeExercise,
@@ -37,6 +38,15 @@ const {
   },
   mockToastError: vi.fn(),
 }));
+
+const httpError = (status: number) =>
+  new AxiosError(`HTTP ${status}`, undefined, undefined, undefined, {
+    status,
+    statusText: "",
+    data: {},
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+  });
 
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual("@/features/exercises/api");
@@ -587,6 +597,42 @@ describe("useExerciseSetActions", () => {
     expect(mockCreateExerciseSetPair.mock.calls[2][2]).not.toBe(originalRequest[2]);
     expect(mockCreateExerciseSetPair.mock.calls[2][1][0].intensity_unit_id).toBe(2);
   });
+
+  it.each([401, 403, 408, 429])(
+    "keeps the pair key after a lost response followed by a transient %i",
+    async (status) => {
+      const exercise = makeExercise({ id: 123, exercise_sets: [] });
+      mockCreateExerciseSetPair
+        .mockRejectedValueOnce(new Error("response lost"))
+        .mockRejectedValueOnce(httpError(status))
+        .mockResolvedValueOnce([]);
+      const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await act(async () => { await result.current.addLeftRightPair(1); });
+      }
+
+      const keys = mockCreateExerciseSetPair.mock.calls.map((call) => call[2]);
+      expect(new Set(keys).size).toBe(1);
+    },
+  );
+
+  it.each([400, 404, 409, 422])(
+    "drops the pair key after a definitive %i payload rejection",
+    async (status) => {
+      const exercise = makeExercise({ id: 123, exercise_sets: [] });
+      mockCreateExerciseSetPair
+        .mockRejectedValueOnce(httpError(status))
+        .mockResolvedValueOnce([]);
+      const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+
+      await act(async () => { await result.current.addLeftRightPair(1); });
+      await act(async () => { await result.current.addLeftRightPair(1); });
+
+      const [first, second] = mockCreateExerciseSetPair.mock.calls;
+      expect(second[2]).not.toBe(first[2]);
+    },
+  );
 
   it("does not send a pair when its retry identity cannot be persisted", async () => {
     const storage = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage full"); });

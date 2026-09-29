@@ -300,9 +300,10 @@ export const useGuestStore = create<GuestStore>()(
         const parentExercise = state.workouts
           .flatMap((workout) => workout.exercises)
           .find((exercise) => exercise.id === exerciseSet.exercise_id);
+        // Include soft-deleted sets: they are still synced and can be restored,
+        // so reusing their position would create a duplicate.
         const nextPosition = parentExercise
           ? Math.max(-1, ...parentExercise.exercise_sets
-              .filter((item) => !item.deleted_at)
               .map((item, index) => item.position ?? index)) + 1
           : 0;
         const newExerciseSet: GuestExerciseSet = {
