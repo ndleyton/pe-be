@@ -789,4 +789,35 @@ describe("useExerciseSetActions", () => {
     }
   });
 
+  it.each([0, 600])("preserves pending pair option edits when creation takes %i ms", async (delay) => {
+    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
+    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addLeftRightPair(1); });
+    const key = result.current.exerciseSets[0].client_key!;
+    await act(async () => {
+      await result.current.updateSetOptions(key, { side: "both", notes: "Changed side" });
+      await result.current.updateSetOptions(key, { side: null, rpe: 8 });
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    await act(async () => {
+      resolvePair([
+        makeExerciseSet({ id: 901, exercise_id: 123, side: "left", position: 0 }),
+        makeExerciseSet({ id: 902, exercise_id: 123, side: "right", position: 1 }),
+      ]);
+      await creation;
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.exerciseSets[0]).toMatchObject({
+      id: 901, side: null, notes: "Changed side", rpe: 8,
+    });
+    expect(result.current.exerciseSets[1].side).toBe("right");
+    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, {
+      side: null, notes: "Changed side", rpe: 8,
+    });
+  });
+
 });

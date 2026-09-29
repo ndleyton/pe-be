@@ -1316,6 +1316,13 @@ async def get_exercise_type_stats(
                         "_rir": exercise_set.rir,
                     }
 
+        # Planned/empty exercises are not performance sessions, but their
+        # incomplete sets still contribute to the exclusion count above.
+        sessions = {
+            workout_id: item
+            for workout_id, item in sessions.items()
+            if item["sets"] > 0
+        }
         ordered_sessions = sorted(sessions.values(), key=lambda item: item["dateTime"])
         daily: dict[str, dict[str, Any]] = {}
         for item in ordered_sessions:
@@ -1405,6 +1412,15 @@ async def get_exercise_type_stats(
                     "totalReps": item["reps"],
                     "maxWeight": _serialize_numeric(item["maxWeight"]),
                     "totalVolume": _serialize_numeric(item["volume"]),
+                    "sideBreakdown": {
+                        side: {
+                            "sets": values["sets"],
+                            "totalReps": values["reps"],
+                            "maxWeight": _serialize_numeric(values["maxWeight"]),
+                            "totalVolume": _serialize_numeric(values["volume"]),
+                        }
+                        for side, values in item["sides"].items()
+                    },
                 }
                 for workout_id, item in sorted(
                     sessions.items(), key=lambda entry: entry[1]["dateTime"]

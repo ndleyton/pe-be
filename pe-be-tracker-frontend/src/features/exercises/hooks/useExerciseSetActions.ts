@@ -373,6 +373,10 @@ export const useExerciseSetActions = ({
     }
 
     try {
+      if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
+        queueSetUpdate(setId, currentSet.id, updates);
+        return;
+      }
       await updateExerciseSet(currentSet.id, updates);
     } catch (error) {
       console.error("Failed to update exercise set options:", error);

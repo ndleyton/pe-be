@@ -111,83 +111,99 @@ class WorkoutRecapService:
                 stats, current_sets
             )
 
-            current_sets_with_display_intensity = [
-                (
-                    exercise_set,
-                    WorkoutRecapService._get_display_intensity_value(
-                        exercise_set,
-                        target_unit=display_intensity_unit,
-                    ),
+            sets_by_side = {}
+            for exercise_set in current_sets:
+                side = exercise_set.side or "both"
+                sets_by_side.setdefault(side, []).append(exercise_set)
+
+            exercise_notes = list(
+                dict.fromkeys(
+                    item.notes for item in exercise_type_exercises if item.notes
                 )
-                for exercise_set in current_sets
-            ]
-
-            # Find the "top set" using the same display unit as the historical stats.
-            top_set = max(
-                current_sets_with_display_intensity,
-                key=lambda item: (item[1], item[0].reps or 0),
-                default=None,
             )
+            for side_index, (side, side_sets) in enumerate(sets_by_side.items()):
+                current_sets_with_display_intensity = [
+                    (
+                        exercise_set,
+                        WorkoutRecapService._get_display_intensity_value(
+                            exercise_set,
+                            target_unit=display_intensity_unit,
+                        ),
+                    )
+                    for exercise_set in side_sets
+                ]
 
-            current_top_intensity = top_set[1] if top_set else Decimal("0")
-            current_top_set_reps = top_set[0].reps or 0 if top_set else 0
-            current_total_sets = len(current_sets)
-            current_total_reps = sum(s.reps or 0 for s in current_sets)
-            current_total_volume = sum(
-                intensity_value * (exercise_set.reps or 0)
-                for exercise_set, intensity_value in current_sets_with_display_intensity
-            )
+                # Find the "top set" using the same display unit as the historical stats.
+                top_set = max(
+                    current_sets_with_display_intensity,
+                    key=lambda item: (item[1], item[0].reps or 0),
+                    default=None,
+                )
 
-            # Historical stats (progressiveOverload list contains historical points)
-            prior_sessions = [
-                item
-                for item in stats.get("sessions", [])
-                if item["workoutId"] != workout.id
-                and item["date"]
-                < (workout.start_time or workout.created_at).isoformat()
-            ]
-            prev_session = prior_sessions[-1] if prior_sessions else None
+                current_top_intensity = top_set[1] if top_set else Decimal("0")
+                current_top_set_reps = top_set[0].reps or 0 if top_set else 0
+                current_total_sets = len(side_sets)
+                current_total_reps = sum(s.reps or 0 for s in side_sets)
+                current_total_volume = sum(
+                    intensity_value * (exercise_set.reps or 0)
+                    for exercise_set, intensity_value in current_sets_with_display_intensity
+                )
 
-            metric = {
-                "exercise_name": exercise.exercise_type.name,
-                "intensity_unit": display_intensity_unit,
-                "current": {
-                    "sets": current_total_sets,
-                    "total_reps": current_total_reps,
-                    "top_set_intensity_achieved": WorkoutRecapService._serialize_metric_value(
-                        current_top_intensity
-                    ),
-                    "top_set_reps": current_top_set_reps,
-                    "total_volume": WorkoutRecapService._serialize_metric_value(
-                        current_total_volume
-                    ),
-                },
-                "is_pr": False,
-            }
+                # Compare only earlier sessions with measurements for this side.
+                prior_sessions = [
+                    item["sideBreakdown"][side]
+                    for item in stats.get("sessions", [])
+                    if side in item.get("sideBreakdown", {})
+                    and item["workoutId"] != workout.id
+                    and item["date"]
+                    < (workout.start_time or workout.created_at).isoformat()
+                ]
+                prev_session = prior_sessions[-1] if prior_sessions else None
 
-            # Include exercise-level notes
-            if exercise.notes:
-                metric["exercise_notes"] = exercise.notes
-
-            # Include set-level notes if any exist
-            set_notes = [s.notes for s in current_sets if s.notes]
-            if set_notes:
-                metric["set_notes"] = set_notes
-
-            if prev_session:
-                metric["previous"] = {
-                    "max_intensity": prev_session["maxWeight"],
-                    "volume": prev_session["totalVolume"],
+                metric = {
+                    "exercise_name": exercise.exercise_type.name,
+                    "side": side,
+                    "intensity_unit": display_intensity_unit,
+                    "current": {
+                        "sets": current_total_sets,
+                        "total_reps": current_total_reps,
+                        "top_set_intensity_achieved": WorkoutRecapService._serialize_metric_value(
+                            current_top_intensity
+                        ),
+                        "top_set_reps": current_top_set_reps,
+                        "total_volume": WorkoutRecapService._serialize_metric_value(
+                            current_total_volume
+                        ),
+                    },
+                    "is_pr": False,
                 }
-                # PR detection: higher weight or higher volume
-                if current_top_intensity > Decimal(str(prev_session["maxWeight"])):
-                    metric["is_pr"] = True
-                if current_total_volume > Decimal(str(prev_session["totalVolume"])):
-                    metric["volume_increased"] = True
-            else:
-                metric["is_new_exercise"] = True
 
-            metrics.append(metric)
+                # Shared context belongs to the exercise, so include it only once.
+                if side_index == 0 and exercise_notes:
+                    metric["exercise_notes"] = "\n".join(exercise_notes)
+
+                # Include set-level notes if any exist
+                set_notes = [s.notes for s in side_sets if s.notes]
+                if set_notes:
+                    metric["set_notes"] = set_notes
+
+                if prev_session:
+                    metric["previous"] = {
+                        "max_intensity": prev_session["maxWeight"],
+                        "volume": prev_session["totalVolume"],
+                    }
+                    # A weight PR must exceed all earlier records for this side.
+                    previous_max = max(
+                        Decimal(str(item["maxWeight"])) for item in prior_sessions
+                    )
+                    if current_top_intensity > previous_max:
+                        metric["is_pr"] = True
+                    if current_total_volume > Decimal(str(prev_session["totalVolume"])):
+                        metric["volume_increased"] = True
+                else:
+                    metric["is_new_side"] = True
+
+                metrics.append(metric)
 
         # 2. Build prompt
         prompt = f"""You are a supportive and expert fitness coach. Your task is to provide a short, evidence-linked recap of a user's workout.
@@ -204,6 +220,7 @@ Guidelines:
 - Each exercise metric includes `intensity_unit` when a unit is available. Use that unit for any specific numbers you mention.
 - Use `top_set_intensity_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
 - Use `sets` and `total_reps` for general volume highlights.
+- Each metric describes one `side`. Keep left, right, and both-side comparisons separate; name the side when highlighting a PR. A new side is not evidence of a PR.
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
 - Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).
 - Be encouraging but grounded in data.
