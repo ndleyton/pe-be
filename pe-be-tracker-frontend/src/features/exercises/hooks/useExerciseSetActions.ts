@@ -1,4 +1,8 @@
-import { getOrCreatePendingPair, clearPendingPair } from "@/features/exercises/lib/pendingSetPair";
+import {
+  getOrCreatePendingPair,
+  clearPendingPair,
+  markPendingPairSideDeleted,
+} from "@/features/exercises/lib/pendingSetPair";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -423,6 +427,23 @@ export const useExerciseSetActions = ({
     delete pendingUpdatesRef.current[key];
     if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
       pendingDeletionsRef.current.add(key);
+      if (userId != null && currentSet.side) {
+        // Persist the intent with the pair operation so it survives a lost response.
+        const operationKey = currentSet.id.slice(
+          "temp-".length,
+          -(currentSet.side.length + 1),
+        );
+        try {
+          markPendingPairSideDeleted(
+            userId,
+            exercise.id,
+            operationKey,
+            currentSet.side,
+          );
+        } catch (error) {
+          console.error("Could not persist set deletion:", error);
+        }
+      }
       return;
     }
 
@@ -534,6 +555,7 @@ export const useExerciseSetActions = ({
     const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
     const now = new Date().toISOString();
     let operationKey: string = crypto.randomUUID();
+    let deletedSides: string[] = [];
     const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
     const nextDurationSeconds = durationPreferred
       ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
@@ -572,6 +594,7 @@ export const useExerciseSetActions = ({
         const pending = getOrCreatePendingPair(userId, exercise.id, pairSets);
         operationKey = pending.key;
         pairSets = pending.sets;
+        deletedSides = pending.deletedSides ?? [];
       } catch (error) {
         console.error("Could not persist pair operation:", error);
         toast.error("Couldn't save the pending pair. Please try again.");
@@ -593,7 +616,18 @@ export const useExerciseSetActions = ({
       created_at: now,
       updated_at: now,
     } satisfies ExerciseSet));
-    applyLocalExerciseSets([...current, ...optimistic]);
+    // A replayed operation may include sides the user already deleted; they are
+    // created server-side by the idempotent replay, so delete them once confirmed.
+    const deletedKeys = new Set(
+      optimistic
+        .filter((item) => deletedSides.includes(item.side))
+        .map((item) => String(item.client_key)),
+    );
+    deletedKeys.forEach((key) => pendingDeletionsRef.current.add(key));
+    applyLocalExerciseSets([
+      ...current,
+      ...optimistic.filter((item) => !deletedKeys.has(String(item.client_key))),
+    ]);
     if (!isAuthenticated) return;
     pairInFlightRef.current = true;
     try {

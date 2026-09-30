@@ -1263,6 +1263,7 @@ async def get_exercise_type_stats(
                         "reps": 0,
                         "volume": Decimal("0"),
                         "maxWeight": Decimal("0"),
+                        "loadExcludedSets": 0,
                     },
                 )
                 reps = exercise_set.reps or 0
@@ -1272,11 +1273,13 @@ async def get_exercise_type_stats(
                 side_data["reps"] += reps
                 if exercise_set.intensity is None:
                     exclusions["missingLoadSets"] += 1
+                    side_data["loadExcludedSets"] += 1
                     continue
                 if not are_intensity_units_compatible(
                     exercise_set.intensity_unit, stats_intensity_unit
                 ):
                     exclusions["incompatibleLoadSets"] += 1
+                    side_data["loadExcludedSets"] += 1
                     continue
                 converted = _get_stats_intensity_value(
                     exercise_set,
@@ -1284,6 +1287,7 @@ async def get_exercise_type_stats(
                     stats_intensity_unit=stats_intensity_unit,
                 )
                 if converted is None:
+                    side_data["loadExcludedSets"] += 1
                     continue
                 volume = converted * reps
                 session_data["volume"] += volume
@@ -1418,6 +1422,7 @@ async def get_exercise_type_stats(
                             "totalReps": values["reps"],
                             "maxWeight": _serialize_numeric(values["maxWeight"]),
                             "totalVolume": _serialize_numeric(values["volume"]),
+                            "loadExcludedSets": values["loadExcludedSets"],
                         }
                         for side, values in item["sides"].items()
                     },

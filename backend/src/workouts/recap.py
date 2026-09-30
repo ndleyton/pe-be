@@ -225,7 +225,16 @@ class WorkoutRecapService:
                     )
                     if top_set is not None and current_top_intensity > previous_max:
                         metric["is_pr"] = True
-                    if current_total_volume > Decimal(str(prev_session["totalVolume"])):
+                    # Volume is comparable only when neither side omitted any loads.
+                    volume_comparable = not excluded_sets and not prev_session.get(
+                        "loadExcludedSets"
+                    )
+                    if not volume_comparable:
+                        metric["volume_comparison_unavailable"] = True
+                        metric["previous"].pop("volume", None)
+                    elif current_total_volume > Decimal(
+                        str(prev_session["totalVolume"])
+                    ):
                         metric["volume_increased"] = True
                 else:
                     metric["is_new_side"] = True
@@ -247,7 +256,7 @@ Guidelines:
 - Each exercise metric includes `intensity_unit` when a unit is available. Use that unit for any specific numbers you mention.
 - Use `top_set_intensity_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
 - Use `sets` and `total_reps` for general volume highlights.
-- Load metrics exclude sets with missing loads or incompatible/unknown units. When `load_excluded_sets` is present, load and volume metrics cover only eligible sets; missing load metrics are unknown, not zero.
+- Load metrics exclude sets with missing loads or incompatible/unknown units. When `load_excluded_sets` is present, load metrics cover only eligible sets; missing load metrics are unknown, not zero. When `volume_comparison_unavailable` is present, do not compare volume with previous sessions and never claim a volume regression or drop.
 - Each metric describes one `side`. Keep left, right, and both-side comparisons separate; name the side when highlighting a PR. A new side is not evidence of a PR.
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
 - Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).

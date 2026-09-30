@@ -598,7 +598,7 @@ describe("useExerciseSetActions", () => {
     expect(mockCreateExerciseSetPair.mock.calls[2][1][0].intensity_unit_id).toBe(2);
   });
 
-  it("keeps a deleted pair side deleted when the create response is lost and retried", async () => {
+  it.each(["right", "both", null] as const)("keeps a deleted pair side after editing it to %s", async (side) => {
     const exercise = makeExercise({ id: 123, exercise_sets: [] });
     let rejectFirst: (error: Error) => void = () => {};
     mockCreateExerciseSetPair.mockReturnValueOnce(
@@ -610,6 +610,7 @@ describe("useExerciseSetActions", () => {
     let firstAttempt: Promise<void> = Promise.resolve();
     await act(async () => { firstAttempt = result.current.addLeftRightPair(1); });
     const left = result.current.exerciseSets.find((set) => set.side === "left")!;
+    await act(async () => { await result.current.updateSetOptions(left.client_key!, { side }); });
     await act(async () => { await result.current.deleteSet(String(left.client_key ?? left.id)); });
     await act(async () => { rejectFirst(new Error("response lost")); await firstAttempt; });
 
