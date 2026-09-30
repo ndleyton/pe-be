@@ -1,0 +1,17 @@
+/* Tailwind input for the static marketing pages (landing, /alternatives/*).
+   Output: public/static.css — regenerate with `pnpm run build:static-css`. */
+@import "tailwindcss" source(none);
+@source "../public/landing.html";
+@source "../public/alternatives";
+
+/* Tailwind v3 -> v4 parity: v3 (the old CDN build) defaulted borders to gray-200,
+   v4 defaults to currentColor. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}

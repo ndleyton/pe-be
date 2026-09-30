@@ -98,8 +98,10 @@
     }
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static.css">
     <style>
+        /* In the components layer so Tailwind utilities (static.css) can override these rules. */
+        @layer components {
         :root {
             --primary-rose: #CC0033;
             --primary-rose-soft: rgba(204, 0, 51, 0.1);
@@ -110,8 +112,8 @@
             --foreground-rgb: 26, 25, 25;
             --muted-foreground: #666060;
             --border: rgba(0, 0, 0, 0.08);
-            --radius-xl: 0.75rem;
-            --radius-2xl: 1.25rem;
+            --page-radius-xl: 0.75rem;
+            --page-radius-2xl: 1.25rem;
             --glass-blur: 14px;
         }
 
@@ -168,7 +170,7 @@
             backdrop-filter: blur(var(--glass-blur));
             -webkit-backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--border);
-            border-radius: var(--radius-2xl);
+            border-radius: var(--page-radius-2xl);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
             transition: all 0.3s ease;
         }
@@ -183,7 +185,7 @@
             align-items: center;
             justify-content: center;
             padding: 0.75rem 1.5rem;
-            border-radius: var(--radius-xl);
+            border-radius: var(--page-radius-xl);
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -275,6 +277,7 @@
             gap: 0.35rem;
             font-weight: 600;
             color: var(--muted-foreground);
+        }
         }
     </style>
 </head>
