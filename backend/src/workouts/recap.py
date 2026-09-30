@@ -10,7 +10,10 @@ from langfuse import Langfuse
 from src.core.config import settings
 from src.workouts.crud import get_workout_by_id
 from src.exercises.crud import get_exercise_type_stats, get_exercises_for_workout
-from src.exercises.intensity_units import convert_intensity_value
+from src.exercises.intensity_units import (
+    are_intensity_units_compatible,
+    convert_intensity_value,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +56,17 @@ class WorkoutRecapService:
         exercise_set,
         *,
         target_unit: str | None,
-    ) -> Decimal:
+    ) -> Decimal | None:
+        if not are_intensity_units_compatible(
+            getattr(exercise_set, "intensity_unit", None), target_unit
+        ):
+            return None
         converted_intensity = convert_intensity_value(
             getattr(exercise_set, "intensity", None),
             getattr(exercise_set, "intensity_unit", None),
             target_unit,
         )
-        return converted_intensity or Decimal("0")
+        return converted_intensity
 
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
@@ -133,6 +140,12 @@ class WorkoutRecapService:
                     for exercise_set in side_sets
                 ]
 
+                current_sets_with_display_intensity = [
+                    (exercise_set, intensity)
+                    for exercise_set, intensity in current_sets_with_display_intensity
+                    if intensity is not None
+                ]
+
                 # Find the "top set" using the same display unit as the historical stats.
                 top_set = max(
                     current_sets_with_display_intensity,
@@ -178,6 +191,20 @@ class WorkoutRecapService:
                     "is_pr": False,
                 }
 
+                excluded_sets = len(side_sets) - len(
+                    current_sets_with_display_intensity
+                )
+                if excluded_sets:
+                    metric["load_excluded_sets"] = excluded_sets
+                if top_set is None:
+                    # Unknown load is not a measured zero.
+                    for field in (
+                        "top_set_intensity_achieved",
+                        "top_set_reps",
+                        "total_volume",
+                    ):
+                        del metric["current"][field]
+
                 # Shared context belongs to the exercise, so include it only once.
                 if side_index == 0 and exercise_notes:
                     metric["exercise_notes"] = "\n".join(exercise_notes)
@@ -196,7 +223,7 @@ class WorkoutRecapService:
                     previous_max = max(
                         Decimal(str(item["maxWeight"])) for item in prior_sessions
                     )
-                    if current_top_intensity > previous_max:
+                    if top_set is not None and current_top_intensity > previous_max:
                         metric["is_pr"] = True
                     if current_total_volume > Decimal(str(prev_session["totalVolume"])):
                         metric["volume_increased"] = True
@@ -220,6 +247,7 @@ Guidelines:
 - Each exercise metric includes `intensity_unit` when a unit is available. Use that unit for any specific numbers you mention.
 - Use `top_set_intensity_achieved` and `top_set_reps` for specific set highlights (e.g. "165 lbs for 6 reps").
 - Use `sets` and `total_reps` for general volume highlights.
+- Load metrics exclude sets with missing loads or incompatible/unknown units. When `load_excluded_sets` is present, load and volume metrics cover only eligible sets; missing load metrics are unknown, not zero.
 - Each metric describes one `side`. Keep left, right, and both-side comparisons separate; name the side when highlighting a PR. A new side is not evidence of a PR.
 - Mention specific improvements (e.g., "Volume increased by 10%", "New PR on Bench Press").
 - Incorporate qualitative feedback from workout/exercise/set notes if present (e.g., if the user noted a set "felt easy", suggest increasing weight).

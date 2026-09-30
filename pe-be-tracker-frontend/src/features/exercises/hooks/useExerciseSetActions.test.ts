@@ -866,4 +866,83 @@ describe("useExerciseSetActions", () => {
     });
   });
 
+  it.each([0, 600])("preserves completion and deletion during pair creation after %i ms", async (delay) => {
+    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
+    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addLeftRightPair(1); });
+    const [left, right] = result.current.exerciseSets;
+    await act(async () => {
+      await result.current.toggleSetCompletion(left.client_key!);
+      result.current.updateSetField(right.client_key!, "reps", 12);
+      await result.current.toggleSetCompletion(right.client_key!);
+      await result.current.deleteSet(right.client_key!);
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    expect(mockDeleteExerciseSet).not.toHaveBeenCalled();
+    await act(async () => {
+      resolvePair([
+        makeExerciseSet({ id: 901, exercise_id: 123, side: "left", position: 0, done: false }),
+        makeExerciseSet({ id: 902, exercise_id: 123, side: "right", position: 1, done: false }),
+      ]);
+      await creation;
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.exerciseSets).toHaveLength(1);
+    expect(result.current.exerciseSets[0]).toMatchObject({ id: 901, done: true });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, { done: true });
+    expect(mockDeleteExerciseSet).toHaveBeenCalledExactlyOnceWith(902);
+  });
+
+  it("keeps the latest completion toggle when creation resolves before the queue flushes", async () => {
+    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
+    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addLeftRightPair(1); });
+    const key = result.current.exerciseSets[0].client_key!;
+    await act(async () => {
+      await result.current.toggleSetCompletion(key);
+      resolvePair([
+        makeExerciseSet({ id: 901, side: "left", position: 0, done: false }),
+        makeExerciseSet({ id: 902, side: "right", position: 1, done: false }),
+      ]);
+      await creation;
+    });
+    await act(async () => {
+      await result.current.toggleSetCompletion(key);
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.exerciseSets[0].done).toBe(false);
+    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, { done: false });
+  });
+
+  it.each(["complete", "delete"] as const)("preserves %s while a single set is being created", async (action) => {
+    let resolveSet!: (value: ReturnType<typeof makeExerciseSet>) => void;
+    mockCreateExerciseSet.mockImplementationOnce(() => new Promise(resolve => { resolveSet = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addSet(1); });
+    const key = result.current.exerciseSets[0].client_key!;
+    await act(async () => {
+      if (action === "complete") await result.current.toggleSetCompletion(key);
+      else await result.current.deleteSet(key);
+      resolveSet(makeExerciseSet({ id: 901, done: false }));
+      await creation;
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    if (action === "complete") {
+      expect(result.current.exerciseSets[0]).toMatchObject({ id: 901, done: true });
+      expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, { done: true });
+    } else {
+      expect(result.current.exerciseSets).toHaveLength(0);
+      expect(mockDeleteExerciseSet).toHaveBeenCalledExactlyOnceWith(901);
+    }
+  });
+
 });

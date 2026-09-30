@@ -52,6 +52,7 @@ export const useExerciseSetActions = ({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userId = useAuthStore((state) => state.user?.id);
   const pairInFlightRef = useRef(false);
+  const pendingDeletionsRef = useRef(new Set<string>());
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
   const queryClient = useQueryClient();
 
@@ -344,6 +345,14 @@ export const useExerciseSetActions = ({
       return;
     }
 
+    if (
+      (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) ||
+      pendingUpdatesRef.current[String(setId)]
+    ) {
+      queueSetUpdate(setId, currentSet.id, { done: !currentSet.done });
+      return;
+    }
+
     try {
       await updateExerciseSet(currentSet.id, { done: !currentSet.done });
     } catch (error) {
@@ -405,6 +414,15 @@ export const useExerciseSetActions = ({
     );
 
     if (!isAuthenticated) {
+      return;
+    }
+
+    const key = String(setId);
+    const pendingUpdate = pendingUpdatesRef.current[key];
+    if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
+    delete pendingUpdatesRef.current[key];
+    if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
+      pendingDeletionsRef.current.add(key);
       return;
     }
 
@@ -482,11 +500,16 @@ export const useExerciseSetActions = ({
       };
 
       const createdSet = await createExerciseSet(payload);
+      if (pendingDeletionsRef.current.delete(tempId)) {
+        await deleteExerciseSet(createdSet.id);
+        return;
+      }
       applyLocalExerciseSets((existingExerciseSets) =>
         existingExerciseSets.map((set) =>
           getExerciseSetClientKey(set) === String(tempId)
             ? {
                 ...createdSet,
+                ...pendingUpdatesRef.current[tempId]?.data,
                 client_key: set.client_key ?? tempId,
               }
             : set,
@@ -498,6 +521,7 @@ export const useExerciseSetActions = ({
         if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
       }
     } catch (error) {
+      pendingDeletionsRef.current.delete(tempId);
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
     }
@@ -582,8 +606,13 @@ export const useExerciseSetActions = ({
           (item) => getExerciseSetClientKey(item) === getExerciseSetClientKey(set),
         ));
         for (const row of created) {
+          const opt = optimistic.find((item) => item.side === row.side);
+          if (opt && pendingDeletionsRef.current.has(String(opt.client_key))) {
+            const index = result.findIndex((set) => String(set.id) === String(row.id));
+            if (index >= 0) result.splice(index, 1);
+            continue;
+          }
           if (!result.some((set) => String(set.id) === String(row.id))) {
-            const opt = optimistic.find((item) => item.side === row.side);
             const pending = opt && pendingUpdatesRef.current[String(opt.client_key)];
             result.push({ ...row, ...pending?.data, client_key: opt?.client_key });
           }
@@ -591,17 +620,26 @@ export const useExerciseSetActions = ({
         return result;
       });
 
-      optimistic.forEach((optItem) => {
+      for (const optItem of optimistic) {
         const createdMatch = created.find((c) => c.side === optItem.side);
         if (createdMatch) {
           const tempId = String(optItem.client_key);
+          if (pendingDeletionsRef.current.delete(tempId)) {
+            try {
+              await deleteExerciseSet(createdMatch.id);
+            } catch (error) {
+              console.error("Failed to delete exercise set:", error);
+              invalidateExerciseQuery();
+            }
+            continue;
+          }
           const pendingUpdate = pendingUpdatesRef.current[tempId];
           if (pendingUpdate) {
             pendingUpdate.serverSetId = createdMatch.id;
             if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
           }
         }
-      });
+      }
     } catch (error) {
       console.error("Failed to create left/right pair:", error);
       // Drop the pending pair only when the server definitively rejected this
@@ -616,6 +654,7 @@ export const useExerciseSetActions = ({
         optimistic.map((item) => getExerciseSetClientKey(item)),
       );
       optimisticKeys.forEach((key) => {
+        pendingDeletionsRef.current.delete(key);
         const pendingUpdate = pendingUpdatesRef.current[key];
         if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
         delete pendingUpdatesRef.current[key];
