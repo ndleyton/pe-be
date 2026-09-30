@@ -598,33 +598,6 @@ describe("useExerciseSetActions", () => {
     expect(mockCreateExerciseSetPair.mock.calls[2][1][0].intensity_unit_id).toBe(2);
   });
 
-  it("keeps a deleted pair side deleted when the create response is lost and retried", async () => {
-    const exercise = makeExercise({ id: 123, exercise_sets: [] });
-    let rejectFirst: (error: Error) => void = () => {};
-    mockCreateExerciseSetPair.mockReturnValueOnce(
-      new Promise((_, reject) => { rejectFirst = reject; }),
-    );
-    mockDeleteExerciseSet.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
-
-    let firstAttempt: Promise<void> = Promise.resolve();
-    await act(async () => { firstAttempt = result.current.addLeftRightPair(1); });
-    const left = result.current.exerciseSets.find((set) => set.side === "left")!;
-    await act(async () => { await result.current.deleteSet(String(left.client_key ?? left.id)); });
-    await act(async () => { rejectFirst(new Error("response lost")); await firstAttempt; });
-
-    const rows = [
-      makeExerciseSet({ id: 501, exercise_id: 123, side: "left", position: 0 }),
-      makeExerciseSet({ id: 502, exercise_id: 123, side: "right", position: 1 }),
-    ];
-    mockCreateExerciseSetPair.mockResolvedValueOnce(rows);
-    await act(async () => { await result.current.addLeftRightPair(1); });
-
-    expect(mockCreateExerciseSetPair.mock.calls[1][2]).toBe(mockCreateExerciseSetPair.mock.calls[0][2]);
-    expect(mockDeleteExerciseSet).toHaveBeenCalledWith(501);
-    expect(mockDeleteExerciseSet).not.toHaveBeenCalledWith(502);
-    expect(result.current.exerciseSets.map((set) => set.id)).toEqual([502]);
-  });
 
   it.each([401, 403, 408, 429])(
     "keeps the pair key after a lost response followed by a transient %i",
@@ -863,91 +836,8 @@ describe("useExerciseSetActions", () => {
     }
   });
 
-  it.each([0, 600])("preserves pending pair option edits when creation takes %i ms", async (delay) => {
-    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
-    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
-    const exercise = makeExercise({ id: 123, exercise_sets: [] });
-    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
-    let creation!: Promise<void>;
-    act(() => { creation = result.current.addLeftRightPair(1); });
-    const key = result.current.exerciseSets[0].client_key!;
-    await act(async () => {
-      await result.current.updateSetOptions(key, { side: "both", notes: "Changed side" });
-      await result.current.updateSetOptions(key, { side: null, rpe: 8 });
-      await vi.advanceTimersByTimeAsync(delay);
-    });
-    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
-    await act(async () => {
-      resolvePair([
-        makeExerciseSet({ id: 901, exercise_id: 123, side: "left", position: 0 }),
-        makeExerciseSet({ id: 902, exercise_id: 123, side: "right", position: 1 }),
-      ]);
-      await creation;
-      await vi.advanceTimersByTimeAsync(500);
-    });
-    expect(result.current.exerciseSets[0]).toMatchObject({
-      id: 901, side: null, notes: "Changed side", rpe: 8,
-    });
-    expect(result.current.exerciseSets[1].side).toBe("right");
-    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, {
-      side: null, notes: "Changed side", rpe: 8,
-    });
-  });
 
-  it.each([0, 600])("preserves completion and deletion during pair creation after %i ms", async (delay) => {
-    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
-    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
-    const exercise = makeExercise({ id: 123, exercise_sets: [] });
-    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
-    let creation!: Promise<void>;
-    act(() => { creation = result.current.addLeftRightPair(1); });
-    const [left, right] = result.current.exerciseSets;
-    await act(async () => {
-      await result.current.toggleSetCompletion(left.client_key!);
-      result.current.updateSetField(right.client_key!, "reps", 12);
-      await result.current.toggleSetCompletion(right.client_key!);
-      await result.current.deleteSet(right.client_key!);
-      await vi.advanceTimersByTimeAsync(delay);
-    });
-    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
-    expect(mockDeleteExerciseSet).not.toHaveBeenCalled();
-    await act(async () => {
-      resolvePair([
-        makeExerciseSet({ id: 901, exercise_id: 123, side: "left", position: 0, done: false }),
-        makeExerciseSet({ id: 902, exercise_id: 123, side: "right", position: 1, done: false }),
-      ]);
-      await creation;
-      await vi.advanceTimersByTimeAsync(500);
-    });
-    expect(result.current.exerciseSets).toHaveLength(1);
-    expect(result.current.exerciseSets[0]).toMatchObject({ id: 901, done: true });
-    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, { done: true });
-    expect(mockDeleteExerciseSet).toHaveBeenCalledExactlyOnceWith(902);
-  });
 
-  it("keeps the latest completion toggle when creation resolves before the queue flushes", async () => {
-    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
-    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
-    const exercise = makeExercise({ id: 123, exercise_sets: [] });
-    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
-    let creation!: Promise<void>;
-    act(() => { creation = result.current.addLeftRightPair(1); });
-    const key = result.current.exerciseSets[0].client_key!;
-    await act(async () => {
-      await result.current.toggleSetCompletion(key);
-      resolvePair([
-        makeExerciseSet({ id: 901, side: "left", position: 0, done: false }),
-        makeExerciseSet({ id: 902, side: "right", position: 1, done: false }),
-      ]);
-      await creation;
-    });
-    await act(async () => {
-      await result.current.toggleSetCompletion(key);
-      await vi.advanceTimersByTimeAsync(500);
-    });
-    expect(result.current.exerciseSets[0].done).toBe(false);
-    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, { done: false });
-  });
 
   it.each(["complete", "delete"] as const)("preserves %s while a single set is being created", async (action) => {
     let resolveSet!: (value: ReturnType<typeof makeExerciseSet>) => void;
@@ -971,6 +861,44 @@ describe("useExerciseSetActions", () => {
       expect(result.current.exerciseSets).toHaveLength(0);
       expect(mockDeleteExerciseSet).toHaveBeenCalledExactlyOnceWith(901);
     }
+  });
+
+  it.each([true, false])("only blocks server-bound pending pairs (authenticated=%s)", async (authenticated) => {
+    mockAuthState.isAuthenticated = authenticated;
+    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
+    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addLeftRightPair(1); });
+    const key = result.current.exerciseSets[0].client_key!;
+    const original = result.current.exerciseSets[0];
+    expect(result.current.pendingPairSetKeys).toHaveLength(authenticated ? 2 : 0);
+    await act(async () => {
+      result.current.updateSetField(key, "reps", 99);
+      result.current.setSetValueMode(key, "time");
+      await result.current.updateSetOptions(key, { side: null, notes: "edited" });
+      await result.current.toggleSetCompletion(key);
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    if (!authenticated) {
+      expect(result.current.exerciseSets[0]).toMatchObject({ done: true, side: null, notes: "edited" });
+      return;
+    }
+    await act(async () => { await result.current.deleteSet(key); });
+    expect(result.current.exerciseSets[0]).toEqual(original);
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    expect(mockDeleteExerciseSet).not.toHaveBeenCalled();
+    await act(async () => {
+      resolvePair([
+        makeExerciseSet({ id: 901, side: "left", position: 0, done: false }),
+        makeExerciseSet({ id: 902, side: "right", position: 1, done: false }),
+      ]);
+      await creation;
+    });
+    expect(result.current.pendingPairSetKeys).toEqual([]);
+    await act(async () => { await result.current.toggleSetCompletion(key); });
+    expect(mockUpdateExerciseSet).toHaveBeenCalledWith(901, { done: true });
   });
 
 });

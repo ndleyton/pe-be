@@ -1,7 +1,7 @@
 import { getSetPersonalBest } from "@/features/exercises/lib/personalBests";
 import { memo, useMemo, useState } from "react";
 import { DropdownMenu } from "radix-ui";
-import { Check, ChevronDown, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
+import { Check, ChevronDown, Info, LoaderCircle, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
 import type { ExerciseSet, PersonalBestData, ExerciseTypeStats } from "@/features/exercises/api";
 import {
@@ -45,6 +45,7 @@ type ExerciseSetTableProps = {
   currentIntensityUnitId: number;
   durationInputs: Record<string, string>;
   exerciseSets: ExerciseSet[];
+  pendingPairSetKeys?: string[];
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
   onAddSet: () => void;
@@ -96,6 +97,7 @@ type ExerciseSetRowProps = {
   savedRepsValue: string;
   durationValue: string;
   savedDurationValue: string;
+  isPending: boolean;
   isTimeMode: boolean;
   isPR: boolean;
   savedDisplayIntensity: number | null;
@@ -130,6 +132,7 @@ const ExerciseSetRow = memo(({
   durationValue,
   savedDurationValue,
   isTimeMode,
+  isPending,
   isPR,
   savedDisplayIntensity,
   currentIntensityUnitId,
@@ -146,6 +149,7 @@ const ExerciseSetRow = memo(({
 
   return (
     <div
+      aria-busy={isPending}
       className={`grid items-center gap-2 rounded-lg border p-2.5 transition-all duration-200 sm:gap-4 ${EXERCISE_SETS_GRID_CLASSES} ${set.done
         ? isPR
           ? "bg-warning/10 border-warning/30 shadow-inner"
@@ -159,7 +163,11 @@ const ExerciseSetRow = memo(({
           : "bg-muted/40"
           }`}
       >
-        <span
+        {isPending ? (
+          <span role="status" aria-label="Saving set">
+            <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none text-muted-foreground" />
+          </span>
+        ) : <span
           className={`font-black transition-all ${isPR
             ? "text-[10px] tracking-tighter animate-bounce-once"
             : "text-muted-foreground text-xs"
@@ -176,7 +184,7 @@ const ExerciseSetRow = memo(({
               : set.side === "right"
                 ? "R"
                 : index + 1}
-        </span>
+        </span>}
       </div>
       <div className="min-w-0 flex justify-center">
         <Input
@@ -229,7 +237,7 @@ const ExerciseSetRow = memo(({
             }
           }}
           className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[6ch]"
-          disabled={set.done}
+          disabled={set.done || isPending}
         />
       </div>
 
@@ -275,7 +283,7 @@ const ExerciseSetRow = memo(({
               }
             }}
             className="input h-8 max-w-[10ch] min-w-[6ch] text-center sm:min-w-[8ch]"
-            disabled={set.done}
+            disabled={set.done || isPending}
           />
         </div>
       ) : (
@@ -285,7 +293,7 @@ const ExerciseSetRow = memo(({
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
             onClick={() => onDecrementReps(setKey)}
-            disabled={set.done}
+            disabled={set.done || isPending}
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -326,14 +334,14 @@ const ExerciseSetRow = memo(({
               }
             }}
             className="input h-8 max-w-[10ch] min-w-[4ch] text-center sm:min-w-[8ch]"
-            disabled={set.done}
+            disabled={set.done || isPending}
           />
           <Button
             variant="outline"
             size="sm"
             className="border-input h-6 w-6 border bg-transparent p-0"
             onClick={() => onIncrementReps(setKey)}
-            disabled={set.done}
+            disabled={set.done || isPending}
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -345,6 +353,7 @@ const ExerciseSetRow = memo(({
           variant={set.done ? "default" : "ghost"}
           size="sm"
           data-testid="done-button"
+          disabled={isPending}
           aria-label={
             isPR
               ? "Personal Best"
@@ -398,6 +407,7 @@ const ExerciseSetRow = memo(({
           className="hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 dark:hover:bg-gray-700"
           aria-label={`Open options for set ${index + 1}`}
           aria-haspopup="dialog"
+          disabled={isPending}
           onClick={() =>
             onOpenSetOptions(setKey, set.notes || "", set.rpe ?? null, set.rir ?? null)
           }
@@ -668,6 +678,7 @@ export const ExerciseSetTable = memo(({
   currentIntensityUnitId,
   durationInputs,
   exerciseSets,
+  pendingPairSetKeys = [],
   intensityInputs,
   isUnsavedExercise,
   onAddSet,
@@ -795,6 +806,7 @@ export const ExerciseSetTable = memo(({
             <ExerciseSetRow
               key={getExerciseSetClientKey(rowData.set)}
               {...rowData}
+              isPending={pendingPairSetKeys.includes(getExerciseSetClientKey(rowData.set))}
               currentIntensityUnitId={currentIntensityUnitId}
               onSetWeightInputValue={onSetWeightInputValue}
               onUpdateSetField={onUpdateSetField}

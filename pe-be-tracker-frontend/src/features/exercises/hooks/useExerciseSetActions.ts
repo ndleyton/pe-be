@@ -1,7 +1,6 @@
 import {
   getOrCreatePendingPair,
   clearPendingPair,
-  markPendingPairSideDeleted,
 } from "@/features/exercises/lib/pendingSetPair";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ import {
 } from "@/features/exercises/api";
 import {
   getExerciseSetClientKey,
+  isPendingPairSet,
   normalizeExerciseSetClientKeys,
   sortExerciseSets,
   toGuestExerciseSets,
@@ -226,7 +226,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -292,7 +292,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -330,7 +330,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -372,7 +372,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -407,7 +407,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -427,23 +427,6 @@ export const useExerciseSetActions = ({
     delete pendingUpdatesRef.current[key];
     if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
       pendingDeletionsRef.current.add(key);
-      if (userId != null && currentSet.side) {
-        // Persist the intent with the pair operation so it survives a lost response.
-        const operationKey = currentSet.id.slice(
-          "temp-".length,
-          -(currentSet.side.length + 1),
-        );
-        try {
-          markPendingPairSideDeleted(
-            userId,
-            exercise.id,
-            operationKey,
-            currentSet.side,
-          );
-        } catch (error) {
-          console.error("Could not persist set deletion:", error);
-        }
-      }
       return;
     }
 
@@ -738,6 +721,7 @@ export const useExerciseSetActions = ({
   return {
     addSet,
     addLeftRightPair,
+    pendingPairSetKeys: exerciseSets.filter((set) => isPendingPairSet(set, isAuthenticated)).map(getExerciseSetClientKey),
     decrementReps,
     deleteSet,
     exerciseSets,

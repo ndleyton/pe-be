@@ -3,9 +3,7 @@ import type { createExerciseSetPair } from "@/features/exercises/api";
 type PendingPair = {
   key: string;
   sets: Parameters<typeof createExerciseSetPair>[1];
-  // Sides the user deleted before the pair was confirmed. Kept with the
-  // operation so a replay after a lost response deletes them instead of
-  // resurrecting them.
+  // Legacy deletion intents are honored when replaying operations saved by older clients.
   deletedSides?: string[];
 };
 
@@ -29,23 +27,4 @@ export const getOrCreatePendingPair = (
 
 export const clearPendingPair = (userId: number, exerciseId: string | number) => {
   localStorage.removeItem(storageKey(userId, exerciseId));
-};
-
-export const markPendingPairSideDeleted = (
-  userId: number,
-  exerciseId: string | number,
-  operationKey: string,
-  side: string,
-) => {
-  const key = storageKey(userId, exerciseId);
-  const saved = localStorage.getItem(key);
-  if (!saved) return;
-  const pending = JSON.parse(saved) as PendingPair;
-  if (pending.key !== operationKey) return;
-  const deletedSides = new Set(pending.deletedSides ?? []);
-  deletedSides.add(side);
-  localStorage.setItem(
-    key,
-    JSON.stringify({ ...pending, deletedSides: [...deletedSides] }),
-  );
 };
