@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "vite build",
+    "build:static-css": "tailwindcss -i static-site/tailwind.css -o public/static.css --minify && node ./scripts/ensure-trailing-newline.mjs public/static.css",
+    "build:static-site": "pnpm run build:static-css && node ./scripts/build-static-site.mjs",
     "generate:exercise-types-sitemap": "node ./scripts/generate-exercise-types-sitemap.mjs",
     "dev": "vite",
     "dev:test": "vite --mode test",
@@ -57,6 +59,7 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@sentry/vite-plugin": "^5.4.0",
+    "@tailwindcss/cli": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

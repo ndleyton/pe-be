@@ -37,8 +37,10 @@
             window.location.href = "https://app.personalbestie.com";
         }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static.css">
     <style>
+        /* In the components layer so Tailwind utilities (static.css) can override these rules. */
+        @layer components {
         :root {
             --primary-rose: #CC0033;
             --primary-rose-soft: rgba(204, 0, 51, 0.1);
@@ -48,8 +50,8 @@
             --foreground-rgb: 26, 25, 25;
             --muted-foreground: #666060;
             --border: rgba(0, 0, 0, 0.1);
-            --radius-xl: 0.75rem;
-            --radius-2xl: 1.25rem;
+            --page-radius-xl: 0.75rem;
+            --page-radius-2xl: 1.25rem;
             --glass-blur: 12px;
         }
 
@@ -116,7 +118,7 @@
             backdrop-filter: blur(var(--glass-blur));
             -webkit-backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--border);
-            border-radius: var(--radius-2xl);
+            border-radius: var(--page-radius-2xl);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
@@ -131,7 +133,7 @@
             align-items: center;
             justify-content: center;
             padding: 0.75rem 1.5rem;
-            border-radius: var(--radius-xl);
+            border-radius: var(--page-radius-xl);
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -195,7 +197,7 @@
         .metric-card {
             background: rgba(var(--foreground-rgb), 0.03);
             border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
+            border-radius: var(--page-radius-xl);
             padding: 1.25rem;
             transition: all 0.3s ease;
         }
@@ -203,6 +205,7 @@
         .metric-card:hover {
             background: rgba(var(--foreground-rgb), 0.06);
             transform: translateY(-2px);
+        }
         }
     </style>
 </head>
@@ -223,6 +226,8 @@
                         class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Features</a>
                     <a href="#flow"
                         class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">How it works</a>
+                    <a href="https://www.personalbestie.com/alternatives/hevy/"
+                        class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">vs Hevy</a>
                     <a href="https://www.personalbestie.com/blog/"
                         class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Blog</a>
                     <a href="https://app.personalbestie.com/login" class="btn btn-primary">Log In</a>
@@ -441,6 +446,25 @@
                 </div>
             </section>
 
+            <section id="compare" class="mb-16 sm:mb-24">
+                <div class="glass-panel p-8 sm:p-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div class="max-w-2xl">
+                        <div class="caps-label">Switching from another tracker?</div>
+                        <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+                            Frustrated by routine paywalls in Hevy?
+                        </h2>
+                        <p class="mt-4 text-lg leading-relaxed text-[color:var(--muted-foreground)]">
+                            See how PersonalBestie compares to mainstream gym apps. Enjoy unlimited routines, instant local guest logging, and automated AI coaching recaps—free without subscriptions.
+                        </p>
+                    </div>
+                    <div class="shrink-0">
+                        <a href="https://www.personalbestie.com/alternatives/hevy/" class="btn btn-primary px-8 py-4">
+                            PersonalBestie vs Hevy
+                        </a>
+                    </div>
+                </div>
+            </section>
+
             <section class="pb-24">
                 <div class="mb-12 max-w-2xl">
                     <div class="caps-label">From the blog</div>
@@ -494,6 +518,8 @@
                 <div class="flex flex-wrap gap-6">
                     <a href="https://app.personalbestie.com"
                         class="hover:text-[var(--primary-rose)] transition-colors">Open app</a>
+                    <a href="https://www.personalbestie.com/alternatives/hevy/"
+                        class="hover:text-[var(--primary-rose)] transition-colors">Hevy Alternative</a>
                     <a href="https://www.personalbestie.com/blog/"
                         class="hover:text-[var(--primary-rose)] transition-colors">Blog</a>
                     <a href="/llms.txt" class="hover:text-[var(--primary-rose)] transition-colors">LLMs.txt</a>
