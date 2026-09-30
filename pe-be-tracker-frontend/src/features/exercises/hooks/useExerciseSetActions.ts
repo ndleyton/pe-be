@@ -2,7 +2,7 @@ import {
   getOrCreatePendingPair,
   clearPendingPair,
 } from "@/features/exercises/lib/pendingSetPair";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
@@ -606,7 +606,9 @@ export const useExerciseSetActions = ({
         .filter((item) => deletedSides.includes(item.side))
         .map((item) => String(item.client_key)),
     );
-    deletedKeys.forEach((key) => pendingDeletionsRef.current.add(key));
+    if (isAuthenticated) {
+      deletedKeys.forEach((key) => pendingDeletionsRef.current.add(key));
+    }
     applyLocalExerciseSets([
       ...current,
       ...optimistic.filter((item) => !deletedKeys.has(String(item.client_key))),
@@ -718,10 +720,18 @@ export const useExerciseSetActions = ({
     }
   }, [exercise.id, guestDeleteExercise, isAuthenticated, isUnsavedExercise, onExerciseDelete]);
 
+  const pendingPairSetKeys = useMemo(
+    () =>
+      exerciseSets
+        .filter((set) => isPendingPairSet(set, isAuthenticated))
+        .map(getExerciseSetClientKey),
+    [exerciseSets, isAuthenticated],
+  );
+
   return {
     addSet,
     addLeftRightPair,
-    pendingPairSetKeys: exerciseSets.filter((set) => isPendingPairSet(set, isAuthenticated)).map(getExerciseSetClientKey),
+    pendingPairSetKeys,
     decrementReps,
     deleteSet,
     exerciseSets,
