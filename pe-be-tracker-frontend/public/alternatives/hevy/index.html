@@ -62,34 +62,34 @@
                 "mainEntity": [
                     {
                         "@type": "Question",
-                        "name": "Why do lifters look for an alternative to Hevy?",
+                        "name": "How do I switch from Hevy to PersonalBestie?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "The most common reason lifters search for a Hevy alternative is the 4-routine cap on the free tier. Lifters running 4-day to 6-day splits or rotating variations quickly hit a paywall. Others want a cleaner, distraction-free logging experience without a mandatory social feed or account registration."
+                            "text": "Switching takes under two minutes. You can open PersonalBestie, head over to the Routines tab, and recreate your training split with our fast exercise search. You can also paste your workout notes directly into the AI chat, and PersonalBestie will automatically parse and save the routine for you."
                         }
                     },
                     {
                         "@type": "Question",
-                        "name": "Is PersonalBestie completely free to use?",
+                        "name": "Is PersonalBestie really free without hidden paywalls?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Yes. PersonalBestie provides unlimited routines, comprehensive workout logging, personal record (PR) tracking, and progressive overload metrics completely free. You can even try it immediately as a guest without creating an account."
+                            "text": "Yes. PersonalBestie is an open-source project. Unlimited routines, workout history, PR tracking, and routine sharing are free. There is no trial period or arbitrary cap on how many routines you can save."
                         }
                     },
                     {
                         "@type": "Question",
-                        "name": "How does PersonalBestie's AI workout recap differ from Hevy?",
+                        "name": "Does PersonalBestie work offline in the gym?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Hevy offers post-workout charts and set lists, but no automated coaching recap. PersonalBestie calculates volume and PRs deterministically and uses Gemini AI to analyze your notes, fatigue levels, and progression, providing evidence-based insights for your next session."
+                            "text": "Yes. In guest mode, all your training data is stored directly in your browser's IndexedDB storage. You don't need a reliable gym Wi-Fi or cellular connection to log your exercises, check weights, or view routine templates."
                         }
                     },
                     {
                         "@type": "Question",
-                        "name": "Can I use PersonalBestie on my phone without downloading from the App Store?",
+                        "name": "Can I share my routines with training partners?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Yes. PersonalBestie is a modern Progressive Web App (PWA). You can open it in Safari or Chrome, tap 'Add to Home Screen', and get an instant, native-like app experience with offline-first local storage support."
+                            "text": "Yes. Every routine created in PersonalBestie has a shareable link. Your training partner can click the link and instantly inspect your sets, reps, and exercises, or clone it into their own account with a single click."
                         }
                     }
                 ]
@@ -419,14 +419,14 @@
                                 <tr>
                                     <td class="font-semibold">Extensibility & AI Integration</td>
                                     <td><span class="badge-check">✓ Model Context Protocol (MCP)</span></td>
-                                    <td><span class="badge-cross">✕ Proprietary silo</span></td>
-                                    <td><span class="badge-cross">✕ Proprietary silo</span></td>
+                                    <td><span class="badge-cross">✕ No API access</span></td>
+                                    <td><span class="badge-neutral">Public API (Pro); no native MCP</span></td>
                                 </tr>
                                 <tr>
                                     <td class="font-semibold">Routine Sharing Via Web Link</td>
                                     <td><span class="badge-check">✓ One-click cloneable links</span></td>
-                                    <td><span class="badge-neutral">In-app social share</span></td>
-                                    <td><span class="badge-neutral">In-app social share</span></td>
+                                    <td><span class="badge-neutral">Shareable web links</span></td>
+                                    <td><span class="badge-neutral">Shareable web links</span></td>
                                 </tr>
                                 <tr>
                                     <td class="font-semibold">Social Community Feed</td>
@@ -496,7 +496,7 @@
                         </div>
                         <h3 class="text-2xl font-bold">Connect your own AI with MCP</h3>
                         <p class="mt-3 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Unlike closed fitness ecosystems where your data is trapped, PersonalBestie exposes Model Context Protocol (MCP) endpoints. You can connect Claude Desktop or custom AI assistants directly to your workout history, analyze long-term trends in natural language, or generate custom training blocks based on your real logs.
+                            Unlike apps with no native AI integration, PersonalBestie exposes Model Context Protocol (MCP) endpoints. You can connect Claude Desktop or custom AI assistants directly to your workout history, analyze long-term trends in natural language, or generate custom training blocks based on your real logs.
                         </p>
                     </div>
                 </div>
