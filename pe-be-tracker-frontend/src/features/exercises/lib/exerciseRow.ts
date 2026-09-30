@@ -366,3 +366,7 @@ export const getRirDescription = (rir: number | null) => {
 
   return `${count} ${count === 1 ? "rep" : "reps"} left`;
 };
+
+// Guest pairs are saved locally immediately; only server-bound pairs wait.
+export const isPendingPairSet = (set: ExerciseSet, isAuthenticated: boolean): boolean =>
+  isAuthenticated && typeof set.id === "string" && /^temp-.+-(left|right)$/.test(set.id);

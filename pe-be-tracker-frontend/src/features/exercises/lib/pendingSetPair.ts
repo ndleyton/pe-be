@@ -3,6 +3,8 @@ import type { createExerciseSetPair } from "@/features/exercises/api";
 type PendingPair = {
   key: string;
   sets: Parameters<typeof createExerciseSetPair>[1];
+  // Legacy deletion intents are honored when replaying operations saved by older clients.
+  deletedSides?: string[];
 };
 
 const storageKey = (userId: number, exerciseId: string | number) =>

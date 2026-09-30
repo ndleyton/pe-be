@@ -67,7 +67,7 @@ def _build_exercise(
     set_notes=None,
     intensity=165,
     side=None,
-    intensity_unit_abbreviation=None,
+    intensity_unit_abbreviation="kg",
 ):
     return SimpleNamespace(
         exercise_type_id=10,
@@ -427,3 +427,120 @@ async def test_recap_compares_records_only_with_same_side_history(
     assert [
         item["exercise_notes"] for item in metrics.values() if "exercise_notes" in item
     ] == ["Keep a controlled tempo\nPause at the bottom"]
+
+
+@pytest.mark.parametrize(
+    "unit,intensity", [("bw", 50), ("unknown", 50), (None, 50), ("kg", None)]
+)
+@pytest.mark.parametrize("include_valid", [False, True])
+async def test_recap_excludes_invalid_loads_but_retains_completed_counts(
+    monkeypatch, unit, intensity, include_valid
+):
+    workout = SimpleNamespace(
+        id=7,
+        name="Workout",
+        notes=None,
+        start_time=datetime(2026, 4, 3, tzinfo=timezone.utc),
+        recap=None,
+    )
+    exercises = [
+        _build_exercise(
+            intensity=intensity,
+            intensity_unit_abbreviation=unit,
+            side="left",
+            set_notes=["Controlled tempo"],
+        )
+    ]
+    if include_valid:
+        exercises.append(_build_exercise(intensity=5, side="left"))
+    stats = {
+        "intensityUnit": {"abbreviation": "kg"},
+        "sessions": [
+            {
+                "workoutId": 1,
+                "date": "2026-04-02",
+                "sideBreakdown": {"left": {"maxWeight": 10, "totalVolume": 60}},
+            }
+        ],
+    }
+    client = _FakeClient(response_text="Recap")
+    monkeypatch.setattr(settings, "GOOGLE_AI_KEY", "test-key")
+    monkeypatch.setattr(WorkoutRecapService, "_get_langfuse_client", lambda: None)
+    monkeypatch.setattr(recap_module.genai, "Client", lambda **kwargs: client)
+    monkeypatch.setattr(
+        recap_module, "get_workout_by_id", AsyncMock(return_value=workout)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercises_for_workout", AsyncMock(return_value=exercises)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercise_type_stats", AsyncMock(return_value=stats)
+    )
+
+    await WorkoutRecapService.generate_recap(SimpleNamespace(commit=AsyncMock()), 7, 42)
+
+    metric = _extract_metrics_payload(client.models.calls[0]["contents"][0])[0]
+    assert metric["is_pr"] is False
+    assert "volume_increased" not in metric
+    assert metric["volume_comparison_unavailable"] is True
+    assert "volume" not in metric["previous"]
+    assert metric["load_excluded_sets"] == 1
+    assert metric["set_notes"] == ["Controlled tempo"]
+    assert metric["current"]["sets"] == (2 if include_valid else 1)
+    assert metric["current"]["total_reps"] == (12 if include_valid else 6)
+    if include_valid:
+        assert metric["current"]["top_set_intensity_achieved"] == 5
+        assert metric["current"]["total_volume"] == 30
+    else:
+        assert "top_set_intensity_achieved" not in metric["current"]
+        assert "total_volume" not in metric["current"]
+
+
+@pytest.mark.parametrize("previous_excluded, comparable", [(0, True), (2, False)])
+async def test_recap_suppresses_volume_comparison_when_previous_loads_excluded(
+    monkeypatch, previous_excluded, comparable
+):
+    workout = SimpleNamespace(
+        id=7,
+        name="Workout",
+        notes=None,
+        start_time=datetime(2026, 4, 3, tzinfo=timezone.utc),
+        recap=None,
+    )
+    exercises = [_build_exercise(intensity=5, side="left")]
+    stats = {
+        "intensityUnit": {"abbreviation": "kg"},
+        "sessions": [
+            {
+                "workoutId": 1,
+                "date": "2026-04-02",
+                "sideBreakdown": {
+                    "left": {
+                        "maxWeight": 1,
+                        "totalVolume": 1,
+                        "loadExcludedSets": previous_excluded,
+                    }
+                },
+            }
+        ],
+    }
+    client = _FakeClient(response_text="Recap")
+    monkeypatch.setattr(settings, "GOOGLE_AI_KEY", "test-key")
+    monkeypatch.setattr(WorkoutRecapService, "_get_langfuse_client", lambda: None)
+    monkeypatch.setattr(recap_module.genai, "Client", lambda **kwargs: client)
+    monkeypatch.setattr(
+        recap_module, "get_workout_by_id", AsyncMock(return_value=workout)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercises_for_workout", AsyncMock(return_value=exercises)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercise_type_stats", AsyncMock(return_value=stats)
+    )
+
+    await WorkoutRecapService.generate_recap(SimpleNamespace(commit=AsyncMock()), 7, 42)
+
+    metric = _extract_metrics_payload(client.models.calls[0]["contents"][0])[0]
+    assert ("volume_comparison_unavailable" in metric) is (not comparable)
+    assert ("volume_increased" in metric) is comparable
+    assert ("volume" in metric["previous"]) is comparable

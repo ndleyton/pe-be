@@ -1,5 +1,8 @@
-import { getOrCreatePendingPair, clearPendingPair } from "@/features/exercises/lib/pendingSetPair";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getOrCreatePendingPair,
+  clearPendingPair,
+} from "@/features/exercises/lib/pendingSetPair";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
@@ -16,6 +19,7 @@ import {
 } from "@/features/exercises/api";
 import {
   getExerciseSetClientKey,
+  isPendingPairSet,
   normalizeExerciseSetClientKeys,
   sortExerciseSets,
   toGuestExerciseSets,
@@ -52,6 +56,7 @@ export const useExerciseSetActions = ({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userId = useAuthStore((state) => state.user?.id);
   const pairInFlightRef = useRef(false);
+  const pendingDeletionsRef = useRef(new Set<string>());
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
   const queryClient = useQueryClient();
 
@@ -221,7 +226,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -287,7 +292,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -325,7 +330,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -344,6 +349,14 @@ export const useExerciseSetActions = ({
       return;
     }
 
+    if (
+      (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) ||
+      pendingUpdatesRef.current[String(setId)]
+    ) {
+      queueSetUpdate(setId, currentSet.id, { done: !currentSet.done });
+      return;
+    }
+
     try {
       await updateExerciseSet(currentSet.id, { done: !currentSet.done });
     } catch (error) {
@@ -359,7 +372,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -394,7 +407,7 @@ export const useExerciseSetActions = ({
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
     );
-    if (!currentSet) {
+    if (!currentSet || isPendingPairSet(currentSet, isAuthenticated)) {
       return;
     }
 
@@ -405,6 +418,15 @@ export const useExerciseSetActions = ({
     );
 
     if (!isAuthenticated) {
+      return;
+    }
+
+    const key = String(setId);
+    const pendingUpdate = pendingUpdatesRef.current[key];
+    if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
+    delete pendingUpdatesRef.current[key];
+    if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
+      pendingDeletionsRef.current.add(key);
       return;
     }
 
@@ -482,11 +504,16 @@ export const useExerciseSetActions = ({
       };
 
       const createdSet = await createExerciseSet(payload);
+      if (pendingDeletionsRef.current.delete(tempId)) {
+        await deleteExerciseSet(createdSet.id);
+        return;
+      }
       applyLocalExerciseSets((existingExerciseSets) =>
         existingExerciseSets.map((set) =>
           getExerciseSetClientKey(set) === String(tempId)
             ? {
                 ...createdSet,
+                ...pendingUpdatesRef.current[tempId]?.data,
                 client_key: set.client_key ?? tempId,
               }
             : set,
@@ -498,6 +525,7 @@ export const useExerciseSetActions = ({
         if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
       }
     } catch (error) {
+      pendingDeletionsRef.current.delete(tempId);
       console.error("Failed to create exercise set:", error);
       invalidateExerciseQuery();
     }
@@ -510,6 +538,7 @@ export const useExerciseSetActions = ({
     const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
     const now = new Date().toISOString();
     let operationKey: string = crypto.randomUUID();
+    let deletedSides: string[] = [];
     const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
     const nextDurationSeconds = durationPreferred
       ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
@@ -548,6 +577,7 @@ export const useExerciseSetActions = ({
         const pending = getOrCreatePendingPair(userId, exercise.id, pairSets);
         operationKey = pending.key;
         pairSets = pending.sets;
+        deletedSides = pending.deletedSides ?? [];
       } catch (error) {
         console.error("Could not persist pair operation:", error);
         toast.error("Couldn't save the pending pair. Please try again.");
@@ -569,7 +599,20 @@ export const useExerciseSetActions = ({
       created_at: now,
       updated_at: now,
     } satisfies ExerciseSet));
-    applyLocalExerciseSets([...current, ...optimistic]);
+    // A replayed operation may include sides the user already deleted; they are
+    // created server-side by the idempotent replay, so delete them once confirmed.
+    const deletedKeys = new Set(
+      optimistic
+        .filter((item) => deletedSides.includes(item.side))
+        .map((item) => String(item.client_key)),
+    );
+    if (isAuthenticated) {
+      deletedKeys.forEach((key) => pendingDeletionsRef.current.add(key));
+    }
+    applyLocalExerciseSets([
+      ...current,
+      ...optimistic.filter((item) => !deletedKeys.has(String(item.client_key))),
+    ]);
     if (!isAuthenticated) return;
     pairInFlightRef.current = true;
     try {
@@ -582,8 +625,13 @@ export const useExerciseSetActions = ({
           (item) => getExerciseSetClientKey(item) === getExerciseSetClientKey(set),
         ));
         for (const row of created) {
+          const opt = optimistic.find((item) => item.side === row.side);
+          if (opt && pendingDeletionsRef.current.has(String(opt.client_key))) {
+            const index = result.findIndex((set) => String(set.id) === String(row.id));
+            if (index >= 0) result.splice(index, 1);
+            continue;
+          }
           if (!result.some((set) => String(set.id) === String(row.id))) {
-            const opt = optimistic.find((item) => item.side === row.side);
             const pending = opt && pendingUpdatesRef.current[String(opt.client_key)];
             result.push({ ...row, ...pending?.data, client_key: opt?.client_key });
           }
@@ -591,17 +639,26 @@ export const useExerciseSetActions = ({
         return result;
       });
 
-      optimistic.forEach((optItem) => {
+      for (const optItem of optimistic) {
         const createdMatch = created.find((c) => c.side === optItem.side);
         if (createdMatch) {
           const tempId = String(optItem.client_key);
+          if (pendingDeletionsRef.current.delete(tempId)) {
+            try {
+              await deleteExerciseSet(createdMatch.id);
+            } catch (error) {
+              console.error("Failed to delete exercise set:", error);
+              invalidateExerciseQuery();
+            }
+            continue;
+          }
           const pendingUpdate = pendingUpdatesRef.current[tempId];
           if (pendingUpdate) {
             pendingUpdate.serverSetId = createdMatch.id;
             if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
           }
         }
-      });
+      }
     } catch (error) {
       console.error("Failed to create left/right pair:", error);
       // Drop the pending pair only when the server definitively rejected this
@@ -616,6 +673,7 @@ export const useExerciseSetActions = ({
         optimistic.map((item) => getExerciseSetClientKey(item)),
       );
       optimisticKeys.forEach((key) => {
+        pendingDeletionsRef.current.delete(key);
         const pendingUpdate = pendingUpdatesRef.current[key];
         if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
         delete pendingUpdatesRef.current[key];
@@ -662,9 +720,18 @@ export const useExerciseSetActions = ({
     }
   }, [exercise.id, guestDeleteExercise, isAuthenticated, isUnsavedExercise, onExerciseDelete]);
 
+  const pendingPairSetKeys = useMemo(
+    () =>
+      exerciseSets
+        .filter((set) => isPendingPairSet(set, isAuthenticated))
+        .map(getExerciseSetClientKey),
+    [exerciseSets, isAuthenticated],
+  );
+
   return {
     addSet,
     addLeftRightPair,
+    pendingPairSetKeys,
     decrementReps,
     deleteSet,
     exerciseSets,

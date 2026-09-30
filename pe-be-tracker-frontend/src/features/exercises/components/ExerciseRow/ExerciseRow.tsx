@@ -37,6 +37,7 @@ const ExerciseRow = ({
     decrementReps,
     deleteSet,
     exerciseSets,
+    pendingPairSetKeys,
     handleExerciseDelete,
     incrementReps,
     isUnsavedExercise,
@@ -162,6 +163,7 @@ const ExerciseRow = ({
               currentIntensityUnitId={currentIntensityUnit.id}
               durationInputs={durationInputs}
               exerciseSets={exerciseSets}
+              pendingPairSetKeys={pendingPairSetKeys}
               intensityInputs={intensityInputs}
               isUnsavedExercise={isUnsavedExercise}
               onAddSet={handleAddSet}

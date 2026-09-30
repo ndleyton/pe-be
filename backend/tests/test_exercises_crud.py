@@ -1808,6 +1808,18 @@ async def test_v2_stats_exclude_unperformed_sessions_and_preserve_side_history(
         assert stats["lastWorkout"]["date"] == workouts[0].start_time.isoformat()
         assert stats["totalSets"] == 2
         assert stats["sessions"][0]["sideBreakdown"] == {
-            "left": {"sets": 1, "totalReps": 5, "maxWeight": 10, "totalVolume": 50},
-            "right": {"sets": 1, "totalReps": 5, "maxWeight": 20, "totalVolume": 100},
+            "left": {
+                "sets": 1,
+                "totalReps": 5,
+                "maxWeight": 10,
+                "totalVolume": 50,
+                "loadExcludedSets": 0,
+            },
+            "right": {
+                "sets": 1,
+                "totalReps": 5,
+                "maxWeight": 20,
+                "totalVolume": 100,
+                "loadExcludedSets": 0,
+            },
         }
