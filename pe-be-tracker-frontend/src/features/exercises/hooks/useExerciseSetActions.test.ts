@@ -1,3 +1,4 @@
+import { AxiosError, AxiosHeaders } from "axios";
 import { act, renderHook } from "@/test/testUtils";
 import {
   makeExercise,
@@ -15,14 +16,17 @@ import {
 
 const {
   mockCreateExerciseSet,
+  mockCreateExerciseSetPair,
   mockDeleteExercise,
   mockDeleteExerciseSet,
   mockInvalidateQueries,
   mockUpdateExerciseSet,
   mockDeleteGuestExercise,
   mockAuthState,
+  mockToastError,
 } = vi.hoisted(() => ({
   mockCreateExerciseSet: vi.fn(),
+  mockCreateExerciseSetPair: vi.fn(),
   mockDeleteExercise: vi.fn(),
   mockDeleteExerciseSet: vi.fn(),
   mockInvalidateQueries: vi.fn(),
@@ -30,14 +34,26 @@ const {
   mockDeleteGuestExercise: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
+    user: { id: 1 },
   },
+  mockToastError: vi.fn(),
 }));
+
+const httpError = (status: number) =>
+  new AxiosError(`HTTP ${status}`, undefined, undefined, undefined, {
+    status,
+    statusText: "",
+    data: {},
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+  });
 
 vi.mock("@/features/exercises/api", async () => {
   const actual = await vi.importActual("@/features/exercises/api");
   return {
     ...actual,
     createExerciseSet: mockCreateExerciseSet,
+    createExerciseSetPair: mockCreateExerciseSetPair,
     deleteExercise: mockDeleteExercise,
     deleteExerciseSet: mockDeleteExerciseSet,
     updateExerciseSet: mockUpdateExerciseSet,
@@ -63,11 +79,18 @@ vi.mock("@/stores", () => ({
     }),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: mockToastError,
+  },
+}));
+
 import { useExerciseSetActions } from "./useExerciseSetActions";
 
 describe("useExerciseSetActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.useFakeTimers();
     mockAuthState.isAuthenticated = true;
     mockCreateExerciseSet.mockResolvedValue(
@@ -79,6 +102,7 @@ describe("useExerciseSetActions", () => {
         exercise_id: 123,
       }),
     );
+    mockCreateExerciseSetPair.mockResolvedValue([]);
     mockUpdateExerciseSet.mockResolvedValue({});
     mockDeleteExerciseSet.mockResolvedValue(undefined);
     mockDeleteExercise.mockResolvedValue(undefined);
@@ -254,6 +278,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
     expect(onExerciseUpdate).toHaveBeenCalled();
   });
@@ -379,6 +404,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
   });
 
@@ -421,6 +447,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "warmup",
+      side: null,
     });
   });
 
@@ -473,6 +500,7 @@ describe("useExerciseSetActions", () => {
       done: false,
       notes: undefined,
       type: "working",
+      side: null,
     });
   });
 
@@ -513,6 +541,109 @@ describe("useExerciseSetActions", () => {
       reps: null,
       duration_seconds: 600,
     });
+  });
+
+  it("rolls back a failed optimistic pair and shows an error without a workout id", async () => {
+    mockCreateExerciseSetPair.mockRejectedValueOnce(new Error("offline"));
+    const exercise = makeExercise({
+      id: 123,
+      workout_id: 456,
+      exercise_sets: [
+        makeExerciseSet({ id: 1, exercise_id: 123, position: 0 }),
+      ],
+    });
+    const onExerciseUpdate = vi.fn();
+    const { result } = renderHook(() =>
+      useExerciseSetActions({ exercise, onExerciseUpdate }),
+    );
+
+    await act(async () => {
+      await result.current.addLeftRightPair(1);
+    });
+
+    expect(result.current.exerciseSets.map((set) => set.id)).toEqual([1]);
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't confirm the pair. Choose Add left + right sets to retry safely.",
+    );
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    expect(onExerciseUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        exercise_sets: [expect.objectContaining({ id: 1 })],
+      }),
+    );
+  });
+
+  it("reuses the immutable pair after a lost response and remount without duplicating refetched rows", async () => {
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    mockCreateExerciseSetPair.mockRejectedValueOnce(new Error("response lost"));
+    const first = renderHook(() => useExerciseSetActions({ exercise }));
+    await act(async () => { await first.result.current.addLeftRightPair(1); });
+    const originalRequest = mockCreateExerciseSetPair.mock.calls[0];
+    first.unmount();
+
+    const rows = [
+      makeExerciseSet({ id: 501, exercise_id: 123, side: "left", position: 0 }),
+      makeExerciseSet({ id: 502, exercise_id: 123, side: "right", position: 1, intensity: 75 }),
+    ];
+    mockCreateExerciseSetPair.mockResolvedValueOnce(rows);
+    const retry = renderHook(() => useExerciseSetActions({ exercise: { ...exercise, exercise_sets: rows } }));
+    await act(async () => { await retry.result.current.addLeftRightPair(2); });
+    expect(mockCreateExerciseSetPair.mock.calls[1]).toEqual(originalRequest);
+    expect(retry.result.current.exerciseSets.map((set) => set.id)).toEqual([501, 502]);
+    expect(retry.result.current.exerciseSets[1].intensity).toBe(75);
+
+    mockCreateExerciseSetPair.mockResolvedValueOnce([]);
+    await act(async () => { await retry.result.current.addLeftRightPair(2); });
+    expect(mockCreateExerciseSetPair.mock.calls[2][2]).not.toBe(originalRequest[2]);
+    expect(mockCreateExerciseSetPair.mock.calls[2][1][0].intensity_unit_id).toBe(2);
+  });
+
+  it.each([401, 403, 408, 429])(
+    "keeps the pair key after a lost response followed by a transient %i",
+    async (status) => {
+      const exercise = makeExercise({ id: 123, exercise_sets: [] });
+      mockCreateExerciseSetPair
+        .mockRejectedValueOnce(new Error("response lost"))
+        .mockRejectedValueOnce(httpError(status))
+        .mockResolvedValueOnce([]);
+      const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await act(async () => { await result.current.addLeftRightPair(1); });
+      }
+
+      const keys = mockCreateExerciseSetPair.mock.calls.map((call) => call[2]);
+      expect(new Set(keys).size).toBe(1);
+    },
+  );
+
+  it.each([400, 404, 409, 422])(
+    "drops the pair key after a definitive %i payload rejection",
+    async (status) => {
+      const exercise = makeExercise({ id: 123, exercise_sets: [] });
+      mockCreateExerciseSetPair
+        .mockRejectedValueOnce(httpError(status))
+        .mockResolvedValueOnce([]);
+      const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+
+      await act(async () => { await result.current.addLeftRightPair(1); });
+      await act(async () => { await result.current.addLeftRightPair(1); });
+
+      const [first, second] = mockCreateExerciseSetPair.mock.calls;
+      expect(second[2]).not.toBe(first[2]);
+    },
+  );
+
+  it("does not send a pair when its retry identity cannot be persisted", async () => {
+    const storage = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage full"); });
+    try {
+      const { result } = renderHook(() => useExerciseSetActions({ exercise: makeExercise({ exercise_sets: [] }) }));
+      await act(async () => { await result.current.addLeftRightPair(1); });
+      expect(mockCreateExerciseSetPair).not.toHaveBeenCalled();
+      expect(result.current.exerciseSets).toEqual([]);
+    } finally {
+      storage.mockRestore();
+    }
   });
 
   it("keeps exercise sets sorted when initial props arrive out of order", () => {
@@ -702,6 +833,37 @@ describe("useExerciseSetActions", () => {
     } finally {
       error.mockRestore();
     }
+  });
+
+  it.each([0, 600])("preserves pending pair option edits when creation takes %i ms", async (delay) => {
+    let resolvePair!: (value: ReturnType<typeof makeExerciseSet>[]) => void;
+    mockCreateExerciseSetPair.mockImplementationOnce(() => new Promise(resolve => { resolvePair = resolve; }));
+    const exercise = makeExercise({ id: 123, exercise_sets: [] });
+    const { result } = renderHook(() => useExerciseSetActions({ exercise }));
+    let creation!: Promise<void>;
+    act(() => { creation = result.current.addLeftRightPair(1); });
+    const key = result.current.exerciseSets[0].client_key!;
+    await act(async () => {
+      await result.current.updateSetOptions(key, { side: "both", notes: "Changed side" });
+      await result.current.updateSetOptions(key, { side: null, rpe: 8 });
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+    expect(mockUpdateExerciseSet).not.toHaveBeenCalled();
+    await act(async () => {
+      resolvePair([
+        makeExerciseSet({ id: 901, exercise_id: 123, side: "left", position: 0 }),
+        makeExerciseSet({ id: 902, exercise_id: 123, side: "right", position: 1 }),
+      ]);
+      await creation;
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.exerciseSets[0]).toMatchObject({
+      id: 901, side: null, notes: "Changed side", rpe: 8,
+    });
+    expect(result.current.exerciseSets[1].side).toBe("right");
+    expect(mockUpdateExerciseSet).toHaveBeenCalledExactlyOnceWith(901, {
+      side: null, notes: "Changed side", rpe: 8,
+    });
   });
 
 });

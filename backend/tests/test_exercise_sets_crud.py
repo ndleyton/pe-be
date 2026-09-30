@@ -2,6 +2,9 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.errors import DomainValidationError
 from src.exercise_sets import crud
@@ -33,14 +36,6 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         created_at=datetime(2026, 3, 1, tzinfo=timezone.utc),
     )
     deleted_at = datetime(2026, 3, 2, tzinfo=timezone.utc)
-    newer_active_set = await _seed_exercise_set(
-        db_session,
-        exercise_id=exercise.id,
-        intensity_unit_id=unit.id,
-        intensity=80,
-        reps=8,
-        created_at=datetime(2026, 3, 2, 12, 0, tzinfo=timezone.utc),
-    )
     older_active_set = await _seed_exercise_set(
         db_session,
         exercise_id=exercise.id,
@@ -48,6 +43,14 @@ async def test_exercise_set_queries_filter_deleted_and_return_owner_state(db_ses
         intensity=75,
         reps=10,
         created_at=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+    )
+    newer_active_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=exercise.id,
+        intensity_unit_id=unit.id,
+        intensity=80,
+        reps=8,
+        created_at=datetime(2026, 3, 2, 12, 0, tzinfo=timezone.utc),
     )
     deleted_set = await _seed_exercise_set(
         db_session,
@@ -303,6 +306,21 @@ async def test_soft_delete_delete_and_verify_exercise_ownership(db_session):
     await db_session.commit()
 
     assert await crud.soft_delete_exercise_set(db_session, 999999) is False
+    # A reorder holds this same parent lock. Deletion must wait even though
+    # the set row itself is unlocked.
+    await db_session.execute(
+        select(crud.Exercise.id)
+        .where(crud.Exercise.id == exercise.id)
+        .with_for_update()
+    )
+    async with AsyncSession(bind=db_session.bind) as deleting_session:
+        await deleting_session.execute(text("SET LOCAL lock_timeout = '100ms'"))
+        with pytest.raises(DBAPIError, match="lock timeout"):
+            await crud.soft_delete_exercise_set(deleting_session, active_set.id)
+        await deleting_session.rollback()
+    await db_session.commit()
+    unchanged = await crud.get_exercise_set_owner_and_deleted(db_session, active_set.id)
+    assert unchanged == (owner.id, None)
     assert await crud.soft_delete_exercise_set(db_session, active_set.id) is True
     refreshed = await crud.get_exercise_set_owner_and_deleted(db_session, active_set.id)
     assert refreshed is not None

@@ -115,10 +115,10 @@ vi.mock("@tanstack/react-query", async () => {
         if (options.queryKey[1] === 999 || options.queryKey[1] === "999") {
           return {
             data: {
-              personalBest: {
-                weight: 50,
-                reps: 5,
-                date: "2023-01-01",
+              personalBest: null,
+              sidePersonalBests: {
+                left: { weight: 50, reps: 5, date: "2023-01-01" },
+                right: { weight: 150, reps: 5, date: "2023-01-01" },
               },
               intensityUnit: { id: 1, abbreviation: "kg" },
             },
@@ -339,10 +339,46 @@ describe("ExerciseRow", () => {
     expect(screen.getByDisplayValue("10:05")).toBeInTheDocument();
   });
 
+  it.each([
+    [null, "1"],
+    [undefined, "1"],
+    ["both", "1"],
+    ["left", "L"],
+    ["right", "R"],
+  ] as const)("shows the correct set marker for side %s", (side, marker) => {
+    render(
+      <ExerciseRow
+        {...defaultProps}
+        exercise={{
+          ...mockExercise,
+          exercise_sets: [{ ...mockExerciseSet1, side, done: false }],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(marker)).toBeInTheDocument();
+    expect(screen.queryByText("Both")).not.toBeInTheDocument();
+    if (side !== "left") expect(screen.queryByText("L")).not.toBeInTheDocument();
+    if (side !== "right") expect(screen.queryByText("R")).not.toBeInTheDocument();
+  });
+
+  it("opens alternate set actions from the chevron and closes with Escape", async () => {
+    const user = userEvent.setup();
+    render(<ExerciseRow {...defaultProps} />);
+    const trigger = screen.getByRole("button", { name: "More set actions" });
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    await user.click(trigger);
+    expect(screen.getByRole("menuitem", { name: "Add left + right sets" })).toBeInTheDocument();
+    expect(createExerciseSet).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menuitem")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
   it("displays exercise sets in grid format", () => {
     const { container } = render(<ExerciseRow {...defaultProps} />);
 
-    // Check for set numbers
+    // Untagged sets retain their set numbers.
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
 
@@ -545,11 +581,12 @@ describe("ExerciseRow", () => {
       exercise_sets: [
         {
           ...mockExerciseSet1,
+          side: "left",
           intensity: 105.0,
           intensity_unit_id: 1,
           done: false,
         },
-        mockExerciseSet2,
+        { ...mockExerciseSet2, side: "right", intensity: 105, intensity_unit_id: 1, done: true },
       ],
     };
 
@@ -558,6 +595,8 @@ describe("ExerciseRow", () => {
     // Initially shows standard check icon (since it's not done)
     const doneButtons = screen.getAllByTestId("done-button");
     expect(doneButtons[0]).toHaveAttribute("aria-label", "Mark set done");
+
+    expect(doneButtons[1]).not.toHaveAttribute("aria-label", "Personal Best");
 
     // Toggle set 1 completion
     await user.click(doneButtons[0]);
@@ -685,13 +724,11 @@ describe("ExerciseRow", () => {
       await user.click(setNotesButton);
 
       expect(screen.getByText("Set Details")).toBeInTheDocument();
-      expect(screen.getByText("Log intensity and notes for this set.")).toBeInTheDocument();
       expect(screen.getByText("RPE")).toBeInTheDocument();
       expect(screen.getByText("RIR")).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText(/add notes for this set/i),
+        screen.getByPlaceholderText(/add notes/i),
       ).toBeInTheDocument();
-      expect(screen.getByText("Tracking")).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Reps" }),
       ).toHaveAttribute("aria-pressed", "true");
@@ -820,6 +857,7 @@ describe("ExerciseRow", () => {
   it("shows correct set type badges", () => {
     render(<ExerciseRow {...defaultProps} />);
 
+    expect(screen.queryByText("Both")).not.toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });

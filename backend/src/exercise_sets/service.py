@@ -11,6 +11,7 @@ from src.exercise_sets.crud import (
     create_exercise_set,
     update_exercise_set,
     verify_exercise_ownership,
+    reorder_exercise_sets,
 )
 from src.exercise_sets.models import ExerciseSet
 from src.exercise_sets.schemas import ExerciseSetCreate, ExerciseSetUpdate
@@ -124,3 +125,21 @@ class ExerciseSetService:
             raise
 
         return True
+
+    @staticmethod
+    async def reorder_sets(
+        session: AsyncSession,
+        exercise_id: int,
+        ordered_set_ids: list[int],
+        expected_set_ids: list[int],
+        user_id: int,
+    ) -> List[ExerciseSet] | None:
+        exercise = await verify_exercise_ownership(session, exercise_id, user_id)
+        if not exercise:
+            raise HTTPException(status_code=404, detail="Exercise not found")
+        return await reorder_exercise_sets(
+            session,
+            exercise_id=exercise_id,
+            ordered_set_ids=ordered_set_ids,
+            expected_set_ids=expected_set_ids,
+        )

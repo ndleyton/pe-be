@@ -26,8 +26,31 @@ from src.exercises.models import Exercise, ExerciseType, IntensityUnit
 from src.exercise_sets.models import ExerciseSet
 
 
+class RoutineTemplateVersionRequired(Exception):
+    pass
+
+
 class RoutineService:
     """Service layer for routine operations."""
+
+    @staticmethod
+    def _validate_template_tree_contract(routine_data) -> None:
+        if "exercise_templates" not in routine_data.model_fields_set:
+            if getattr(routine_data, "template_tree_version", None) not in (None, 2):
+                raise RoutineTemplateVersionRequired
+            return
+        if getattr(routine_data, "template_tree_version", None) != 2:
+            raise RoutineTemplateVersionRequired
+        for exercise_template in routine_data.exercise_templates or []:
+            positions: list[int] = []
+            for set_template in exercise_template.set_templates:
+                if not {"side", "position"}.issubset(set_template.model_fields_set):
+                    raise RoutineTemplateVersionRequired
+                if set_template.position is None:
+                    raise RoutineTemplateVersionRequired
+                positions.append(set_template.position)
+            if len(positions) != len(set(positions)):
+                raise ValueError("set template positions must be unique")
 
     async def get_visible_routines(
         self,
@@ -73,6 +96,7 @@ class RoutineService:
         self, session: AsyncSession, routine_data: RoutineCreate, user_id: int
     ) -> RoutineRead:
         """Create a new routine."""
+        self._validate_template_tree_contract(routine_data)
         routine = await crud.create_routine(session, routine_data, user_id)
         return RoutineRead.model_validate(routine)
 
@@ -102,6 +126,7 @@ class RoutineService:
             description=clone_request.description if clone_request else None,
             workout_type_id=source_workout.workout_type_id,
             visibility=Routine.RoutineVisibility.private,
+            template_tree_version=2,
             exercise_templates=[
                 ExerciseTemplateCreate(
                     exercise_type_id=exercise.exercise_type_id,
@@ -116,6 +141,8 @@ class RoutineService:
                             intensity_unit_id=exercise_set.intensity_unit_id,
                             notes=None,
                             type=exercise_set.type,
+                            side=exercise_set.side,
+                            position=exercise_set.position,
                         )
                         for exercise_set in exercise.exercise_sets
                         if exercise_set.deleted_at is None
@@ -131,6 +158,7 @@ class RoutineService:
         self, session: AsyncSession, routine_data: AdminRoutineCreate, user_id: int
     ) -> RoutineRead:
         """Create a new routine with admin-only fields."""
+        self._validate_template_tree_contract(routine_data)
         routine = await crud.create_routine_admin(session, routine_data, user_id)
         return RoutineRead.model_validate(routine)
 
@@ -143,6 +171,7 @@ class RoutineService:
         is_superuser: bool = False,
     ) -> Optional[RoutineRead]:
         """Update an existing routine."""
+        self._validate_template_tree_contract(routine_data)
         routine = await crud.update_routine(
             session, routine_id, routine_data, user_id, is_superuser=is_superuser
         )
@@ -193,6 +222,27 @@ class RoutineService:
             await session.rollback()
             raise
         return True
+
+    async def reorder_set_templates(
+        self,
+        session: AsyncSession,
+        *,
+        routine_id: int,
+        exercise_template_id: int,
+        ordered_set_ids: list[int],
+        expected_set_ids: list[int],
+        user_id: int,
+        is_superuser: bool = False,
+    ):
+        return await crud.reorder_set_templates(
+            session,
+            routine_id=routine_id,
+            exercise_template_id=exercise_template_id,
+            ordered_set_ids=ordered_set_ids,
+            expected_set_ids=expected_set_ids,
+            user_id=user_id,
+            is_superuser=is_superuser,
+        )
 
     async def create_workout_from_routine(
         self, session: AsyncSession, user_id: int, routine_id: int
@@ -349,6 +399,8 @@ class RoutineService:
                         else set_template.intensity_unit_id
                     ),
                     rest_time_seconds=None,
+                    side=set_template.side,
+                    position=set_template.position,
                     exercise=exercise,
                     done=False,
                 )

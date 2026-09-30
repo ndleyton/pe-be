@@ -59,6 +59,7 @@ async def test_create_routine_endpoint_success(
             "name": "Integration Routine",
             "description": "Created via integration test",
             "workout_type_id": workout_type.id,
+            "template_tree_version": 2,
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type.id,
@@ -68,11 +69,15 @@ async def test_create_routine_endpoint_success(
                             "duration_seconds": 600,
                             "intensity": 50.0,
                             "intensity_unit_id": intensity_unit.id,
+                            "side": None,
+                            "position": 0,
                         },
                         {
                             "reps": 8,
                             "intensity": 60.0,
                             "intensity_unit_id": intensity_unit.id,
+                            "side": None,
+                            "position": 1,
                         },
                     ],
                 }
@@ -161,6 +166,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
             "name": "Original Routine",
             "description": "Before replace",
             "workout_type_id": workout_type.id,
+            "template_tree_version": 2,
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type_a.id,
@@ -169,6 +175,8 @@ async def test_update_routine_endpoint_replaces_nested_templates(
                             "reps": 10,
                             "intensity": 135.0,
                             "intensity_unit_id": intensity_unit_lb.id,
+                            "side": None,
+                            "position": 0,
                         }
                     ],
                 }
@@ -184,6 +192,7 @@ async def test_update_routine_endpoint_replaces_nested_templates(
             "description": "After replace",
             "workout_type_id": workout_type.id,
             "visibility": "link_only",
+            "template_tree_version": 2,
             "exercise_templates": [
                 {
                     "exercise_type_id": exercise_type_b.id,
@@ -192,11 +201,15 @@ async def test_update_routine_endpoint_replaces_nested_templates(
                             "reps": 8,
                             "intensity": None,
                             "intensity_unit_id": intensity_unit_bw.id,
+                            "side": "left",
+                            "position": 0,
                         },
                         {
                             "reps": 6,
                             "intensity": None,
                             "intensity_unit_id": intensity_unit_bw.id,
+                            "side": "right",
+                            "position": 1,
                         },
                     ],
                 }
@@ -285,6 +298,7 @@ async def test_superuser_can_update_and_delete_other_users_routine(
                 "name": "Owner Routine",
                 "description": "Created by owner",
                 "workout_type_id": workout_type.id,
+                "template_tree_version": 2,
                 "exercise_templates": [
                     {
                         "exercise_type_id": exercise_type.id,
@@ -293,6 +307,8 @@ async def test_superuser_can_update_and_delete_other_users_routine(
                                 "reps": 5,
                                 "intensity": 80.0,
                                 "intensity_unit_id": intensity_unit.id,
+                                "side": None,
+                                "position": 0,
                             }
                         ],
                     }

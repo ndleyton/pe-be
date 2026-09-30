@@ -177,6 +177,22 @@ describe("ExerciseTypeDetailsPage", () => {
     mockToastError.mockReset();
   });
 
+  it("shows side-specific personal records when the v2 legacy record is null", async () => {
+    mockGetExerciseTypeById.mockResolvedValue(makeExerciseType({ id: 12, status: "released", images: [] }));
+    mockGetExerciseTypeStats.mockResolvedValue({
+      progressiveOverload: [], lastWorkout: null, personalBest: null, totalSets: 2,
+      intensityUnit: { id: 1, name: "Kilograms", abbreviation: "kg" },
+      sidePersonalBests: {
+        left: { date: "2026-09-01", weight: 25, reps: 10, volume: 250 },
+        right: { date: "2026-09-01", weight: 20, reps: 10, volume: 200 },
+      },
+    });
+    render(<ExerciseTypeDetailsPage />);
+    expect(await screen.findByText("Left")).toBeInTheDocument();
+    expect(screen.getByText("Right")).toBeInTheDocument();
+    expect(screen.queryByText("No personal best recorded yet.")).not.toBeInTheDocument();
+  });
+
   it("keeps the exercise detail shell visible while data is pending", () => {
     mockGetExerciseTypeById.mockImplementation(
       () => new Promise(() => undefined),

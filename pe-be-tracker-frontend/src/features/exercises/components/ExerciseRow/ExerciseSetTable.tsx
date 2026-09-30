@@ -1,7 +1,9 @@
-import { memo, useMemo } from "react";
-import { Check, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
+import { getSetPersonalBest } from "@/features/exercises/lib/personalBests";
+import { memo, useMemo, useState } from "react";
+import { DropdownMenu } from "radix-ui";
+import { Check, ChevronDown, Info, Minus, MoreVertical, Plus, Trash2, Trophy } from "lucide-react";
 
-import type { ExerciseSet, PersonalBestData } from "@/features/exercises/api";
+import type { ExerciseSet, PersonalBestData, ExerciseTypeStats } from "@/features/exercises/api";
 import {
   calculateIsPersonalBest,
   EXERCISE_SETS_GRID_CLASSES,
@@ -26,7 +28,6 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   Input,
@@ -47,6 +48,7 @@ type ExerciseSetTableProps = {
   intensityInputs: Record<string, string>;
   isUnsavedExercise: boolean;
   onAddSet: () => void;
+  onAddPair: () => void | Promise<void>;
   onCloseSetOptions: () => void;
   onDecrementReps: (setId: string | number) => void;
   onDeleteSet: (setId: string | number) => void | Promise<void>;
@@ -72,11 +74,16 @@ type ExerciseSetTableProps = {
     value: number | null,
     displayUnitId?: number,
   ) => void;
+  onUpdateSetSide: (
+    setId: string | number,
+    side: "left" | "right" | "both" | null,
+  ) => void;
   repsInputs: Record<string, string>;
   setNotesValue: string;
   setRpeValue: number | null;
   setRirValue: number | null;
   personalBest?: PersonalBestData | null;
+  sidePersonalBests?: ExerciseTypeStats["sidePersonalBests"];
   personalBestUnitId?: number | null;
 };
 
@@ -158,7 +165,17 @@ const ExerciseSetRow = memo(({
             : "text-muted-foreground text-xs"
             }`}
         >
-          {isPR ? "PR" : index + 1}
+          {isPR
+            ? set.side === "left"
+              ? "PR L"
+              : set.side === "right"
+                ? "PR R"
+                : "PR"
+            : set.side === "left"
+              ? "L"
+              : set.side === "right"
+                ? "R"
+                : index + 1}
         </span>
       </div>
       <div className="min-w-0 flex justify-center">
@@ -394,7 +411,6 @@ const ExerciseSetRow = memo(({
 
 type SetOptionsDialogContentProps = {
   activeSet: ExerciseSet;
-  activeSetIndex: number;
   prefersTimeByDefault: boolean;
   setNotesValue: string;
   setRpeValue: number | null;
@@ -403,13 +419,14 @@ type SetOptionsDialogContentProps = {
   onSetRpeValueChange: (value: number | null) => void;
   onSetRirValueChange: (value: number | null) => void;
   onSetValueModeChange: (setId: string | number, mode: SetValueMode) => void;
+  // TODO: Add onMoveSet action (move up/down) for RFC 0010 position reordering
   onDeleteSet: (setId: string | number) => void | Promise<void>;
   onCloseSetOptions: () => void;
+  onUpdateSetSide: ExerciseSetTableProps["onUpdateSetSide"];
 };
 
 const SetOptionsDialogContent = ({
   activeSet,
-  activeSetIndex,
   prefersTimeByDefault,
   setNotesValue,
   setRpeValue,
@@ -420,6 +437,7 @@ const SetOptionsDialogContent = ({
   onSetValueModeChange,
   onDeleteSet,
   onCloseSetOptions,
+  onUpdateSetSide,
 }: SetOptionsDialogContentProps) => {
   const activeSetKey = getExerciseSetClientKey(activeSet);
   const setValueMode = resolveSetValueMode(activeSet, prefersTimeByDefault);
@@ -429,15 +447,9 @@ const SetOptionsDialogContent = ({
     <>
       <DialogHeader>
         <DialogTitle>Set Details</DialogTitle>
-        <DialogDescription>
-          Log intensity and notes for this set.
-        </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Tracking
-          </label>
+        <div className="flex gap-3">
           <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
             <button
               type="button"
@@ -464,8 +476,28 @@ const SetOptionsDialogContent = ({
               Time
             </button>
           </div>
+          <div className="bg-muted inline-flex items-center gap-1 rounded-lg border p-1">
+            {([
+              [null, "Both"],
+              ["left", "Left"],
+              ["right", "Right"],
+            ] as const).map(([value, label]) => {
+              const isSelected = (activeSet.side ?? null) === value || (activeSet.side === "both" && value === null);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => onUpdateSetSide(activeSetKey, value)}
+                  className={`rounded-md px-3 py-1 text-sm ${isSelected ? "bg-background shadow" : "text-muted-foreground"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="flex items-stretch justify-center gap-4 sm:gap-12 mb-8">
+        <div className="flex items-stretch justify-center gap-4 sm:gap-12 mb-2">
           {/* RPE Column */}
           <div className={`flex flex-col items-center min-w-0 ${setValueMode === "reps" ? "flex-1" : "w-full max-w-[240px]"}`}>
             <div className="flex w-full items-center justify-between mb-4">
@@ -597,11 +629,11 @@ const SetOptionsDialogContent = ({
             htmlFor={`set-notes-${activeSetKey}`}
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Notes for Set {activeSetIndex + 1}
+            Notes
           </label>
           <Textarea
             id={`set-notes-${activeSetKey}`}
-            placeholder="Add notes for this set..."
+            placeholder="Add notes..."
             value={setNotesValue}
             onChange={(event) =>
               onSetNotesValueChange(event.target.value)
@@ -639,6 +671,7 @@ export const ExerciseSetTable = memo(({
   intensityInputs,
   isUnsavedExercise,
   onAddSet,
+  onAddPair,
   onCloseSetOptions,
   onDecrementReps,
   onDeleteSet,
@@ -654,27 +687,29 @@ export const ExerciseSetTable = memo(({
   onSetWeightInputValue,
   onToggleSetCompletion,
   onUpdateSetField,
+  onUpdateSetSide,
   repsInputs,
   setNotesValue,
   setRpeValue,
   setRirValue,
   personalBest,
+  sidePersonalBests,
   personalBestUnitId,
 }: ExerciseSetTableProps) => {
+  const [isAddingPair, setIsAddingPair] = useState(false);
+  const handleAddPair = async () => {
+    if (isAddingPair) return;
+    setIsAddingPair(true);
+    try {
+      await onAddPair();
+    } finally {
+      setIsAddingPair(false);
+    }
+  };
+
   const prefersTimeByDefault = prefersDurationForIntensityUnit(
     currentIntensityUnitId,
   );
-
-  // PB weight converted once per render instead of per row
-  const pbWeightInCurrentUnit = useMemo(() =>
-    personalBest && personalBestUnitId
-      ? convertIntensityValue(
-        personalBest.weight,
-        personalBestUnitId,
-        currentIntensityUnitId,
-      )
-      : null
-    , [personalBest, personalBestUnitId, currentIntensityUnitId]);
 
   const memoizedSetRows = useMemo(() => {
     return exerciseSets.map((set, index) => {
@@ -699,12 +734,16 @@ export const ExerciseSetTable = memo(({
       const currentReps = !Number.isNaN(parsedReps) ? parsedReps : null;
       const currentDuration = set.duration_seconds ?? null;
 
+      const best = getSetPersonalBest({ personalBest: personalBest ?? null, sidePersonalBests }, set.side);
+      const pbWeightInCurrentUnit = best && personalBestUnitId
+        ? convertIntensityValue(best.weight, personalBestUnitId, currentIntensityUnitId)
+        : null;
       const isPR = calculateIsPersonalBest(
         set,
         currentWeight,
         currentReps,
         currentDuration,
-        personalBest ?? null,
+        best,
         pbWeightInCurrentUnit
       );
 
@@ -730,7 +769,8 @@ export const ExerciseSetTable = memo(({
     durationInputs,
     prefersTimeByDefault,
     personalBest,
-    pbWeightInCurrentUnit
+    sidePersonalBests,
+    personalBestUnitId
   ]);
 
   return (
@@ -784,7 +824,6 @@ export const ExerciseSetTable = memo(({
             return (
               <SetOptionsDialogContent
                 activeSet={activeSet}
-                activeSetIndex={activeSetIndex}
                 prefersTimeByDefault={prefersTimeByDefault}
                 setNotesValue={setNotesValue}
                 setRpeValue={setRpeValue}
@@ -795,22 +834,52 @@ export const ExerciseSetTable = memo(({
                 onSetValueModeChange={onSetValueModeChange}
                 onDeleteSet={onDeleteSet}
                 onCloseSetOptions={onCloseSetOptions}
+                onUpdateSetSide={onUpdateSetSide}
               />
             );
           })()}
         </DialogContent>
       </Dialog>
 
-      <Button
-        variant="glass"
-        className="mt-6 w-full rounded-xl border-border/40 bg-card/60 py-6 text-foreground shadow-sm transition-all hover:scale-[1.01] hover:bg-card/80 dark:bg-card/60 dark:border-border/60"
-        data-testid="add-set-button"
-        disabled={isUnsavedExercise}
-        onClick={onAddSet}
-      >
-        <Plus className="mr-2 h-5 w-5" />
-        <span className="font-bold tracking-tight">Add Set</span>
-      </Button>
+      <div className="mt-6 flex">
+        <Button
+          variant="outline"
+          className="relative flex-1 rounded-l-xl rounded-r-none py-6 focus-visible:z-10"
+          data-testid="add-set-button"
+          disabled={isUnsavedExercise}
+          onClick={onAddSet}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Set
+        </Button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button
+              variant="outline"
+              className="relative w-12 shrink-0 rounded-l-none rounded-r-xl border-l-0 py-6 focus-visible:z-10"
+              disabled={isUnsavedExercise || isAddingPair}
+              aria-label="More set actions"
+            >
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="bg-popover text-popover-foreground border-border z-50 min-w-48 rounded-xl border p-1 shadow-md"
+            >
+              <DropdownMenu.Item
+                className="focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-lg px-3 py-3 text-sm outline-none"
+                disabled={isAddingPair}
+                onSelect={() => void handleAddPair()}
+              >
+                Add left + right sets
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      </div>
     </>
   );
 });

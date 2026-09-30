@@ -123,6 +123,7 @@ describe("SaveRoutineModal", () => {
       expect(mockCreateRoutine).toHaveBeenCalledWith({
         name: "Push Day",
         workout_type_id: 42,
+        template_tree_version: 2,
         exercise_templates: [
           {
             exercise_type_id: 7,
@@ -137,6 +138,8 @@ describe("SaveRoutineModal", () => {
                 notes: null,
                 type: null,
                 intensity_unit_id: 2,
+                side: null,
+                position: 0,
               },
               {
                 reps: 8,
@@ -147,6 +150,8 @@ describe("SaveRoutineModal", () => {
                 notes: null,
                 type: null,
                 intensity_unit_id: 2,
+                side: null,
+                position: 1,
               },
             ],
           },

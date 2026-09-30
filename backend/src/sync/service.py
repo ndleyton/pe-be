@@ -211,7 +211,18 @@ class SyncService:
                     await session.flush()
                     synced_exercises += 1
 
-                    for guest_s in guest_e.exercise_sets:
+                    used_positions: set[int] = set()
+                    for fallback_position, guest_s in enumerate(guest_e.exercise_sets):
+                        position = (
+                            guest_s.position
+                            if guest_s.position is not None
+                            else fallback_position
+                        )
+                        if position < 0 or position in used_positions:
+                            raise ValueError(
+                                "Guest set positions must be unique and nonnegative"
+                            )
+                        used_positions.add(position)
                         exercise_set = ExerciseSet(
                             reps=guest_s.reps,
                             duration_seconds=guest_s.duration_seconds,
@@ -223,6 +234,9 @@ class SyncService:
                             rest_time_seconds=guest_s.rest_time_seconds,
                             done=guest_s.done,
                             notes=guest_s.notes,
+                            type=guest_s.type,
+                            side=guest_s.side,
+                            position=position,
                         )
                         session.add(exercise_set)
                         synced_sets += 1

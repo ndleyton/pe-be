@@ -111,10 +111,12 @@ async def test_create_routine_invalid_workout_type_returns_422(
             "description": "Should fail with 422",
             "workout_type_id": 999999,
             "exercise_templates": [],
+            "template_tree_version": 2,
         }
         response = await async_client.post(
             f"{settings.API_PREFIX}/routines/", json=payload
         )
+        print("API RESPONSE IS:", response.json())
         assert response.status_code == 422
         body = response.json()
         assert body["code"] == "invalid_reference"
@@ -142,6 +144,7 @@ async def test_create_routine_invalid_exercise_type_returns_422(
             "exercise_templates": [
                 {"exercise_type_id": 999999, "set_templates": []},
             ],
+            "template_tree_version": 2,
         }
         response = await async_client.post(
             f"{settings.API_PREFIX}/routines/", json=payload
@@ -189,15 +192,19 @@ async def test_create_routine_invalid_set_template_intensity_unit_returns_422(
                             "reps": 10,
                             "intensity": 50.0,
                             "intensity_unit_id": 999999,
+                            "position": 0,
+                            "side": None,
+                            "type": "working",
                         }
                     ],
                 }
             ],
+            "template_tree_version": 2,
         }
         response = await async_client.post(
             f"{settings.API_PREFIX}/routines/", json=payload
         )
-        assert response.status_code == 422
+        assert response.status_code == 422, response.json()
         body = response.json()
         assert body["code"] == "invalid_reference"
         assert body["field"] == "exercise_templates.set_templates.intensity_unit_id"

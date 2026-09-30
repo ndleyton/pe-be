@@ -66,6 +66,7 @@ def _build_exercise(
     notes=None,
     set_notes=None,
     intensity=165,
+    side=None,
     intensity_unit_abbreviation=None,
 ):
     return SimpleNamespace(
@@ -75,6 +76,8 @@ def _build_exercise(
         exercise_sets=[
             SimpleNamespace(
                 deleted_at=None,
+                done=True,
+                side=side,
                 intensity=intensity,
                 reps=6,
                 notes=note,
@@ -89,6 +92,8 @@ def _build_exercise(
         or [
             SimpleNamespace(
                 deleted_at=None,
+                done=True,
+                side=side,
                 intensity=intensity,
                 reps=6,
                 notes=None,
@@ -122,13 +127,17 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, stri
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
-            "progressiveOverload": [
+            "sessions": [
                 {
+                    "workoutId": 1,
                     "date": "2026-04-02",
                     "maxWeight": 160,
                     "totalVolume": 900,
+                    "sideBreakdown": {"both": {"maxWeight": 160, "totalVolume": 900}},
                 }
             ]
         }
@@ -196,13 +205,17 @@ async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
     async def fake_get_exercises_for_workout(session, workout_id):
         return [exercise]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
         return {
-            "progressiveOverload": [
+            "sessions": [
                 {
+                    "workoutId": 1,
                     "date": "2026-04-02",
                     "maxWeight": 100,
                     "totalVolume": 600,
+                    "sideBreakdown": {"both": {"maxWeight": 100, "totalVolume": 600}},
                 }
             ],
             "intensityUnit": {
@@ -262,8 +275,10 @@ async def test_generate_recap_updates_langfuse_on_error(monkeypatch, strict):
     async def fake_get_exercises_for_workout(session, workout_id):
         return [_build_exercise()]
 
-    async def fake_get_exercise_type_stats(session, exercise_type_id, user_id):
-        return {"progressiveOverload": []}
+    async def fake_get_exercise_type_stats(
+        session, exercise_type_id, user_id, **kwargs
+    ):
+        return {"sessions": []}
 
     def fake_client_factory(*, api_key):
         return _FakeClient(error=RuntimeError("quota exceeded"), api_key=api_key)
@@ -321,7 +336,7 @@ async def test_strict_recap_does_not_save_unavailable_generation(monkeypatch, fa
     monkeypatch.setattr(
         recap_module,
         "get_exercise_type_stats",
-        AsyncMock(return_value={"progressiveOverload": []}),
+        AsyncMock(return_value={"sessions": []}),
     )
     monkeypatch.setattr(
         WorkoutRecapService, "_get_langfuse_client", staticmethod(lambda: None)
@@ -339,3 +354,76 @@ async def test_strict_recap_does_not_save_unavailable_generation(monkeypatch, fa
 
     assert workout.recap is None
     session.commit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("current_weight, is_pr", [(30, False), (45, True)])
+async def test_recap_compares_records_only_with_same_side_history(
+    monkeypatch, current_weight, is_pr
+):
+    workout = SimpleNamespace(
+        id=7,
+        name="Unilateral",
+        notes=None,
+        start_time=datetime(2026, 4, 3, tzinfo=timezone.utc),
+        recap=None,
+    )
+    exercises = [
+        _build_exercise(
+            intensity=current_weight, side="right", notes="Keep a controlled tempo"
+        ),
+        _build_exercise(intensity=100, side="left", notes="Keep a controlled tempo"),
+        _build_exercise(intensity=200, side=None, notes="Pause at the bottom"),
+    ]
+    client = _FakeClient(response_text="Recap")
+
+    # The most recent overall session is left-only. The most recent right
+    # session is lighter than an older right record. Current/future sessions
+    # must never become historical baselines.
+    def prior(workout_id, date, side, weight):
+        return {
+            "workoutId": workout_id,
+            "date": date,
+            "maxWeight": weight,
+            "totalVolume": weight * 6,
+            "sideBreakdown": {side: {"maxWeight": weight, "totalVolume": weight * 6}},
+        }
+
+    stats = {
+        "sessions": [
+            prior(1, "2026-03-30T00:00:00+00:00", "right", 40),
+            prior(2, "2026-03-31T00:00:00+00:00", "right", 25),
+            prior(3, "2026-04-02T00:00:00+00:00", "left", 20),
+            prior(7, "2026-04-03T00:00:00+00:00", "right", current_weight),
+            prior(8, "2026-04-04T00:00:00+00:00", "right", 90),
+        ],
+    }
+    monkeypatch.setattr(settings, "GOOGLE_AI_KEY", "test-key")
+    monkeypatch.setattr(WorkoutRecapService, "_get_langfuse_client", lambda: None)
+    monkeypatch.setattr(recap_module.genai, "Client", lambda **kwargs: client)
+    monkeypatch.setattr(
+        recap_module, "get_workout_by_id", AsyncMock(return_value=workout)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercises_for_workout", AsyncMock(return_value=exercises)
+    )
+    monkeypatch.setattr(
+        recap_module, "get_exercise_type_stats", AsyncMock(return_value=stats)
+    )
+
+    await WorkoutRecapService.generate_recap(SimpleNamespace(commit=AsyncMock()), 7, 42)
+
+    metrics = {
+        item["side"]: item
+        for item in _extract_metrics_payload(client.models.calls[0]["contents"][0])
+    }
+    assert metrics["right"]["is_pr"] is is_pr
+    assert metrics["right"]["previous"] == {"max_intensity": 25, "volume": 150}
+    assert metrics["right"]["current"]["sets"] == 1
+    assert metrics["left"]["is_pr"] is True
+    assert metrics["left"]["previous"]["max_intensity"] == 20
+    assert metrics["both"]["is_pr"] is False
+    assert metrics["both"]["is_new_side"] is True
+    assert "previous" not in metrics["both"]
+    assert [
+        item["exercise_notes"] for item in metrics.values() if "exercise_notes" in item
+    ] == ["Keep a controlled tempo\nPause at the bottom"]

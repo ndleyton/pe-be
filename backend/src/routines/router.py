@@ -7,9 +7,12 @@ from src.routines.schemas import (
     RoutineCreate,
     RoutineUpdate,
     RoutineSummary,
+    SetTemplateRead,
+    SetTemplateOrderUpdate,
 )
 from src.workouts.schemas import WorkoutRead
 from src.routines.service import routine_service
+from src.routines.service import RoutineTemplateVersionRequired
 from src.core.database import get_async_session
 from src.users.router import current_active_user, current_optional_user
 from src.users.models import User
@@ -112,6 +115,10 @@ async def create_routine(
     """Create a new routine"""
     try:
         return await routine_service.create_routine(session, routine_in, user.id)
+    except RoutineTemplateVersionRequired as exc:
+        raise HTTPException(
+            status_code=409, detail="routine_template_version_required"
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -128,6 +135,10 @@ async def update_routine(
         routine = await routine_service.update_routine(
             session, routine_id, routine_in, user.id, is_superuser=user.is_superuser
         )
+    except RoutineTemplateVersionRequired as exc:
+        raise HTTPException(
+            status_code=409, detail="routine_template_version_required"
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not routine:
@@ -153,6 +164,36 @@ async def start_workout_from_routine(
         return workout
     except ValueError:
         raise HTTPException(status_code=404, detail="Routine not found")
+
+
+@router.put(
+    "/{routine_id}/exercise-templates/{exercise_template_id}/set-order",
+    response_model=List[SetTemplateRead],
+)
+async def reorder_routine_set_templates(
+    routine_id: int,
+    exercise_template_id: int,
+    order: SetTemplateOrderUpdate,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        result = await routine_service.reorder_set_templates(
+            session,
+            routine_id=routine_id,
+            exercise_template_id=exercise_template_id,
+            ordered_set_ids=order.ordered_set_ids,
+            expected_set_ids=order.expected_set_ids,
+            user_id=user.id,
+            is_superuser=user.is_superuser,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Routine not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=409, detail="order_changed")
+    return result
 
 
 @router.delete("/{routine_id}", status_code=status.HTTP_204_NO_CONTENT)

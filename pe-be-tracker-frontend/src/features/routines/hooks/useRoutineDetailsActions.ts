@@ -66,6 +66,7 @@ export const useRoutineDetailsActions = ({
         author: author != null ? author.trim() : null,
         category: category != null ? category.trim() : null,
         exercise_templates: buildRoutinePayload(editorTemplates),
+        template_tree_version: 2 as const,
       };
 
       if (isAuthenticated) {

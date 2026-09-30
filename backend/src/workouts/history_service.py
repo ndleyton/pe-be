@@ -30,6 +30,8 @@ def _set_summary(item: ExerciseSet) -> SetSummaryOutput:
         rpe=item.rpe,
         rir=item.rir,
         notes=item.notes,
+        side=item.side,
+        position=item.position,
     )
 
 

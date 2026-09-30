@@ -91,6 +91,7 @@ async def _seed_routine(
             intensity_unit_id=intensity_unit.id,
             exercise_template_id=exercise_template.id,
             notes=f"{name} set notes",
+            position=0,
         )
     )
     await db_session.flush()

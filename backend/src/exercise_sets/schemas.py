@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
 from decimal import Decimal
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, Field, model_validator
 
 
 class ExerciseSetBase(BaseModel):
@@ -18,6 +18,8 @@ class ExerciseSetBase(BaseModel):
     done: bool = False
     notes: Optional[str] = None
     type: Optional[str] = None
+    side: Optional[Literal["left", "right", "both"]] = None
+    position: Optional[int] = Field(default=None, ge=0)
 
 
 class ExerciseSetCreate(ExerciseSetBase):
@@ -27,7 +29,12 @@ class ExerciseSetCreate(ExerciseSetBase):
 
 
 class ExerciseSetUpdate(BaseModel):
-    """Schema for updating exercise sets"""
+    """Schema for updating exercise sets
+
+    Note: `position` is intentionally absent. Set order is managed exclusively
+    through the reorder endpoint (PUT /exercise-sets/exercise/{id}/order) to
+    guarantee the two-phase position swap and conflict detection remain atomic.
+    """
 
     reps: Optional[int] = None
     duration_seconds: Optional[int] = None
@@ -39,6 +46,7 @@ class ExerciseSetUpdate(BaseModel):
     done: Optional[bool] = None
     notes: Optional[str] = None
     type: Optional[str] = None
+    side: Optional[Literal["left", "right", "both"]] = None
 
 
 class ExerciseSetRead(ExerciseSetBase):
@@ -49,3 +57,33 @@ class ExerciseSetRead(ExerciseSetBase):
     updated_at: datetime
     deleted_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class ExerciseSetPairItem(BaseModel):
+    reps: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    intensity: Optional[Decimal] = None
+    rpe: Optional[Decimal] = None
+    rir: Optional[Decimal] = None
+    intensity_unit_id: int
+    rest_time_seconds: Optional[int] = None
+    done: Literal[False] = False
+    notes: Optional[str] = None
+    type: Optional[str] = None
+    side: Literal["left", "right"]
+
+
+class ExerciseSetPairCreate(BaseModel):
+    exercise_id: int
+    sets: tuple[ExerciseSetPairItem, ExerciseSetPairItem]
+
+    @model_validator(mode="after")
+    def validate_left_then_right(self):
+        if [item.side for item in self.sets] != ["left", "right"]:
+            raise ValueError("sets must be ordered left then right")
+        return self
+
+
+class ExerciseSetOrderUpdate(BaseModel):
+    ordered_set_ids: list[int]
+    expected_set_ids: list[int]

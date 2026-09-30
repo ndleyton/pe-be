@@ -34,7 +34,7 @@ from src.genai.google_images import (
     generate_exercise_phase_pair,
 )
 from src.routines.schemas import RoutineRead, AdminRoutineCreate
-from src.routines.service import routine_service
+from src.routines.service import RoutineTemplateVersionRequired, routine_service
 from src.routine_programs.schemas import AdminRoutineProgramCreate, RoutineProgramRead
 from src.routine_programs.service import routine_program_service
 
@@ -229,6 +229,10 @@ async def admin_create_routine(
     """
     try:
         return await routine_service.create_routine_admin(session, routine_in, user.id)
+    except RoutineTemplateVersionRequired as exc:
+        raise HTTPException(
+            status_code=409, detail="routine_template_version_required"
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

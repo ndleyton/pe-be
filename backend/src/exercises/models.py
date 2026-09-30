@@ -163,7 +163,10 @@ class Exercise(Base):
         "ExerciseType", back_populates="exercises", lazy="joined"
     )
     workout: Mapped["Workout"] = relationship(back_populates="exercises")
-    exercise_sets: Mapped[List["ExerciseSet"]] = relationship(back_populates="exercise")
+    exercise_sets: Mapped[List["ExerciseSet"]] = relationship(
+        back_populates="exercise",
+        order_by="(ExerciseSet.position, ExerciseSet.id)",
+    )
 
 
 class IntensityUnit(Base):

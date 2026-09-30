@@ -126,7 +126,7 @@ class WorkoutLogService:
                 session.add(exercise)
                 await session.flush()
 
-                for set_input in exercise_input.sets:
+                for position, set_input in enumerate(exercise_input.sets):
                     unit_cache_key = (
                         set_input.intensity_unit,
                         exercise_type.default_intensity_unit,
@@ -163,6 +163,8 @@ class WorkoutLogService:
                             rest_time_seconds=set_input.rest_time_seconds,
                             notes=set_input.notes,
                             type=set_input.type,
+                            side=set_input.side,
+                            position=position,
                             done=set_input.done,
                         )
                     )

@@ -62,6 +62,8 @@ export const makeGuestSet = (
   exercise_id: nextId("guest-exercise"),
   rest_time_seconds: 60,
   done: false,
+  side: null,
+  position: 0,
   created_at: DEFAULT_TIMESTAMP,
   updated_at: DEFAULT_UPDATED_AT,
   ...overrides,

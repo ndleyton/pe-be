@@ -64,6 +64,7 @@ export const useRoutineCreateActions = ({
         author: author?.trim() || null,
         category: category?.trim() || null,
         exercise_templates: buildRoutinePayload(editorTemplates),
+        template_tree_version: 2 as const,
       };
 
       return createRoutine(payload);

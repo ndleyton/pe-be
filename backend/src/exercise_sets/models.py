@@ -10,6 +10,9 @@ from sqlalchemy import (
     DateTime,
     Numeric,
     Index,
+    CheckConstraint,
+    JSON,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import relationship, Mapped
@@ -31,6 +34,18 @@ class ExerciseSet(Base):
             "ix_exercise_sets_exercise_id_active_id",
             "exercise_id",
             "id",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        CheckConstraint(
+            "side IS NULL OR side IN ('left', 'right', 'both')",
+            name="ck_exercise_sets_side",
+        ),
+        CheckConstraint("position >= 0", name="ck_exercise_sets_position"),
+        Index(
+            "uq_exercise_sets_active_position",
+            "exercise_id",
+            "position",
+            unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
     )
@@ -60,6 +75,8 @@ class ExerciseSet(Base):
     done = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)
     type = Column(String, nullable=True)
+    side = Column(String, nullable=True)
+    position = Column(Integer, nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
@@ -70,3 +87,23 @@ class ExerciseSet(Base):
     canonical_intensity_unit: Mapped["IntensityUnit"] = relationship(
         foreign_keys=[canonical_intensity_unit_id]
     )
+
+
+class ExerciseSetCreationRequest(Base):
+    __tablename__ = "exercise_set_creation_requests"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "operation",
+            "idempotency_key",
+            name="uq_exercise_set_creation_user_operation_key",
+        ),
+    )
+
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    operation = Column(String(64), nullable=False)
+    idempotency_key = Column(String(128), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    result_payload = Column(JSON, nullable=True)

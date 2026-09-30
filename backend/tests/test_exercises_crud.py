@@ -151,6 +151,12 @@ async def _seed_exercise_set(
             .scalar_one()
             .id
         )
+    result = await db_session.execute(
+        select(func.coalesce(func.max(ExerciseSet.position), -1)).where(
+            ExerciseSet.exercise_id == exercise_id
+        )
+    )
+    next_position = result.scalar_one() + 1
     exercise_set = ExerciseSet(
         exercise_id=exercise_id,
         intensity_unit_id=intensity_unit_id,
@@ -158,12 +164,14 @@ async def _seed_exercise_set(
         canonical_intensity=canonical_intensity,
         canonical_intensity_unit_id=canonical_intensity_unit_id,
         reps=reps,
+        position=next_position,
         notes=notes,
         created_at=timestamp,
         updated_at=timestamp,
         deleted_at=deleted_at,
     )
     db_session.add(exercise_set)
+    await db_session.flush()
     await db_session.flush()
     return exercise_set
 
@@ -374,14 +382,6 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         notes="third",
     )
 
-    newer_kept_set = await _seed_exercise_set(
-        db_session,
-        exercise_id=first.id,
-        intensity_unit_id=unit.id,
-        intensity=100,
-        reps=5,
-        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
-    )
     older_kept_set = await _seed_exercise_set(
         db_session,
         exercise_id=first.id,
@@ -389,6 +389,14 @@ async def test_get_exercise_queries_filter_deleted_exercises_and_sets(db_session
         intensity=95,
         reps=8,
         created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+    )
+    newer_kept_set = await _seed_exercise_set(
+        db_session,
+        exercise_id=first.id,
+        intensity_unit_id=unit.id,
+        intensity=100,
+        reps=5,
+        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
     )
     await _seed_exercise_set(
         db_session,
@@ -1048,6 +1056,21 @@ async def test_get_exercise_type_stats_handles_missing_empty_and_populated_cases
         "intensityUnit": {"id": unit.id, "name": "Kilograms", "abbreviation": "kg"},
     }
 
+    empty_v2 = await crud.get_exercise_type_stats(
+        db_session, exercise_type.id, owner.id, metrics_version=2
+    )
+    assert empty_v2 == {
+        **empty,
+        "metricsVersion": 2,
+        "sessions": [],
+        "sidePersonalBests": {},
+        "exclusions": {
+            "incompleteSets": 0,
+            "incompatibleLoadSets": 0,
+            "missingLoadSets": 0,
+        },
+    }
+
     first = await _seed_exercise(
         db_session,
         workout_id=workout.id,
@@ -1419,7 +1442,7 @@ async def test_exercise_owner_queries_respect_user_and_deleted_state(db_session)
     )
 
 
-def test_is_new_personal_best():
+async def test_is_new_personal_best():
     from decimal import Decimal
     from src.exercises.crud import is_new_personal_best
 
@@ -1733,3 +1756,58 @@ async def test_get_recent_exercises_by_type_limits_distinct_workouts_and_orders_
     assert latest_singular is not None
     assert latest_singular.id == exercise_latest_second.id
     assert latest_singular.notes == "Drop sets to failure"
+
+
+@pytest.mark.parametrize("include_completed", [False, True])
+async def test_v2_stats_exclude_unperformed_sessions_and_preserve_side_history(
+    db_session, include_completed
+):
+    user = await _seed_user(db_session, "side-stats@example.com")
+    workout_type = await _seed_workout_type(db_session, "Side stats")
+    unit = await _seed_intensity_unit(db_session)
+    exercise_type = await _seed_exercise_type(
+        db_session, "Side stats", default_intensity_unit=unit.id
+    )
+    workouts = []
+    for day in (1, 2):
+        date = datetime(2026, 4, day, tzinfo=timezone.utc)
+        workout = await _seed_workout(
+            db_session, user.id, workout_type.id, start_time=date
+        )
+        workouts.append(workout)
+        exercise = await _seed_exercise(
+            db_session,
+            workout_id=workout.id,
+            exercise_type_id=exercise_type.id,
+            created_at=date,
+        )
+        for side in ("left", "right"):
+            row = await _seed_exercise_set(
+                db_session,
+                exercise_id=exercise.id,
+                intensity_unit_id=unit.id,
+                intensity=10 if side == "left" else 20,
+                reps=5,
+            )
+            row.side = side
+            row.done = include_completed and day == 1
+    await db_session.commit()
+
+    stats = await crud.get_exercise_type_stats(
+        db_session, exercise_type.id, user.id, metrics_version=2
+    )
+    assert stats["exclusions"]["incompleteSets"] == (2 if include_completed else 4)
+    if not include_completed:
+        assert stats["sessions"] == []
+        assert stats["progressiveOverload"] == []
+        assert stats["lastWorkout"] is None
+        assert stats["totalSets"] == 0
+    else:
+        assert [item["workoutId"] for item in stats["sessions"]] == [workouts[0].id]
+        assert len(stats["progressiveOverload"]) == 1
+        assert stats["lastWorkout"]["date"] == workouts[0].start_time.isoformat()
+        assert stats["totalSets"] == 2
+        assert stats["sessions"][0]["sideBreakdown"] == {
+            "left": {"sets": 1, "totalReps": 5, "maxWeight": 10, "totalVolume": 50},
+            "right": {"sets": 1, "totalReps": 5, "maxWeight": 20, "totalVolume": 100},
+        }

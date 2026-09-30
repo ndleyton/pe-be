@@ -67,7 +67,7 @@ describe("useGuestStore", () => {
     const persistOptions = useGuestStore.persist.getOptions();
     const migrate = persistOptions.migrate;
 
-    expect(persistOptions.version).toBe(4);
+    expect(persistOptions.version).toBe(5);
     expect(migrate).toBeDefined();
 
     const migrated = migrate!(
@@ -499,6 +499,25 @@ describe("useGuestStore", () => {
     expect(result.current.getActiveSets(exerciseId)).toHaveLength(1);
     const restoredExercise = result.current.getExercise(exerciseId);
     expect(restoredExercise!.exercise_sets[0].deleted_at).toBeNull();
+  });
+
+  it("does not reuse a soft-deleted set's position for a new set", () => {
+    const { result } = renderHook(() => useGuestStore());
+    let exerciseId!: string;
+
+    act(() => {
+      const workoutId = addGuestWorkout(result.current);
+      exerciseId = addGuestExercise(result.current, workoutId);
+      addGuestSet(result.current, exerciseId);
+      const deletedSetId = addGuestSet(result.current, exerciseId);
+      result.current.softDeleteExerciseSet(deletedSetId);
+      addGuestSet(result.current, exerciseId);
+    });
+
+    const positions = result.current
+      .getExercise(exerciseId)!
+      .exercise_sets.map((set) => set.position);
+    expect(positions).toEqual([0, 1, 2]);
   });
 
   it("ensures clear() produces identical state to fresh initialization", () => {

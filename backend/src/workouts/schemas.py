@@ -150,6 +150,7 @@ class ParsedExerciseSet(BaseModel):
     intensity_unit: Optional[str] = None
     rest_time_seconds: Optional[int] = None
     notes: Optional[str] = None
+    side: Optional[Literal["left", "right", "both"]] = None
 
 
 class ParsedExercise(BaseModel):
@@ -180,6 +181,7 @@ class ExerciseSetInput(BaseModel):
     rir: Optional[Decimal] = None
     intensity_unit_id: int
     rest_time_seconds: Optional[int] = None
+    side: Optional[Literal["left", "right", "both"]] = None
 
 
 class AddExerciseRequest(BaseModel):

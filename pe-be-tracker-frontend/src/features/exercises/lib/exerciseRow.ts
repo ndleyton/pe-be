@@ -96,6 +96,8 @@ const areExerciseSetsContentEqual = (
   && left.done === right.done
   && left.notes === right.notes
   && left.type === right.type
+  && left.side === right.side
+  && left.position === right.position
   && left.created_at === right.created_at
   && left.updated_at === right.updated_at
   && left.deleted_at === right.deleted_at;
@@ -239,6 +241,8 @@ export const sortExerciseSets = (sets: ExerciseSet[]): ExerciseSet[] =>
   [...sets]
     .map((set, index) => ({ set, index }))
     .sort((left, right) => {
+      const positionDiff = (left.set.position ?? left.index) - (right.set.position ?? right.index);
+      if (positionDiff !== 0) return positionDiff;
       const createdAtDiff =
         parseExerciseSetCreatedAt(left.set.created_at) -
         parseExerciseSetCreatedAt(right.set.created_at);

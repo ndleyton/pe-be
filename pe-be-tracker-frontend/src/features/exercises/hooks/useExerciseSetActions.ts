@@ -1,9 +1,12 @@
+import { getOrCreatePendingPair, clearPendingPair } from "@/features/exercises/lib/pendingSetPair";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { toast } from "sonner";
 
 import {
   createExerciseSet,
+  createExerciseSetPair,
   deleteExercise,
   deleteExerciseSet,
   updateExerciseSet,
@@ -28,6 +31,11 @@ import { useAuthStore, useGuestStore } from "@/stores";
 
 type SetField = "weight" | "reps" | "duration_seconds";
 
+// Responses where the pair endpoint rejected the payload itself: 400/422
+// validation (e.g. unknown intensity unit), 404 exercise not found or not
+// owned, 409 idempotency key bound to a different payload.
+const PAIR_PAYLOAD_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+
 const areExerciseSetsShallowEqual = (
   left: ExerciseSet[],
   right: ExerciseSet[],
@@ -42,6 +50,8 @@ export const useExerciseSetActions = ({
   workoutId,
 }: ExerciseRowProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id);
+  const pairInFlightRef = useRef(false);
   const guestDeleteExercise = useGuestStore((state) => state.deleteExercise);
   const queryClient = useQueryClient();
 
@@ -344,7 +354,7 @@ export const useExerciseSetActions = ({
 
   const updateSetOptions = useCallback(async (
     setId: string | number,
-    updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir">,
+    updates: Pick<UpdateExerciseSetData, "notes" | "rpe" | "rir" | "side">,
   ) => {
     const currentSet = exerciseSetsRef.current.find(
       (set) => getExerciseSetClientKey(set) === String(setId),
@@ -369,6 +379,10 @@ export const useExerciseSetActions = ({
     }
 
     try {
+      if (typeof currentSet.id === "string" && currentSet.id.startsWith("temp-")) {
+        queueSetUpdate(setId, currentSet.id, updates);
+        return;
+      }
       await updateExerciseSet(currentSet.id, updates);
     } catch (error) {
       console.error("Failed to update exercise set options:", error);
@@ -435,6 +449,8 @@ export const useExerciseSetActions = ({
       done: false,
       notes: null,
       type: nextSetType,
+      side: null,
+      position: Math.max(-1, ...currentExerciseSets.map((set, index) => set.position ?? index)) + 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -459,6 +475,7 @@ export const useExerciseSetActions = ({
         done: false,
         notes: undefined,
         type: nextSetType,
+        side: null,
         ...(nextDurationSeconds != null
           ? { duration_seconds: nextDurationSeconds }
           : { reps: nextReps || 0 }),
@@ -485,6 +502,133 @@ export const useExerciseSetActions = ({
       invalidateExerciseQuery();
     }
   }, [applyLocalExerciseSets, exercise.id, isAuthenticated, invalidateExerciseQuery, isUnsavedExercise]);
+
+  const addLeftRightPair = useCallback(async (intensityUnitId: number) => {
+    if (isUnsavedExercise || pairInFlightRef.current) return;
+    const current = exerciseSetsRef.current;
+    const lastSet = current[current.length - 1];
+    const firstPosition = Math.max(-1, ...current.map((set, index) => set.position ?? index)) + 1;
+    const now = new Date().toISOString();
+    let operationKey: string = crypto.randomUUID();
+    const durationPreferred = prefersDurationForIntensityUnit(intensityUnitId);
+    const nextDurationSeconds = durationPreferred
+      ? (lastSet?.duration_seconds ?? DEFAULT_DURATION_SECONDS_FOR_SPEED_SETS)
+      : (lastSet?.duration_seconds ?? null);
+    const nextReps = durationPreferred ? null : (lastSet?.reps ?? null);
+
+    const common = {
+      reps: nextReps,
+      duration_seconds: nextDurationSeconds,
+      intensity: convertIntensityValue(lastSet?.intensity ?? null, lastSet?.intensity_unit_id, intensityUnitId) ?? 0,
+      rpe: lastSet?.rpe ?? null,
+      rir: lastSet?.rir ?? null,
+      intensity_unit_id: intensityUnitId,
+      exercise_id: exercise.id,
+      rest_time_seconds: 0,
+      done: false as const,
+      notes: null,
+      type: current.length === 0 ? "warmup" : "working",
+    };
+    let pairSets: Parameters<typeof createExerciseSetPair>[1] = (["left", "right"] as const).map((side) => ({
+      ...(nextDurationSeconds != null
+        ? { duration_seconds: nextDurationSeconds }
+        : { reps: nextReps || 0 }),
+      intensity: common.intensity,
+      rpe: common.rpe,
+      rir: common.rir,
+      intensity_unit_id: intensityUnitId,
+      rest_time_seconds: 0,
+      done: false,
+      type: common.type,
+      side,
+    }));
+    if (isAuthenticated) {
+      try {
+        if (userId == null) throw new Error("Missing user for pending pair");
+        const pending = getOrCreatePendingPair(userId, exercise.id, pairSets);
+        operationKey = pending.key;
+        pairSets = pending.sets;
+      } catch (error) {
+        console.error("Could not persist pair operation:", error);
+        toast.error("Couldn't save the pending pair. Please try again.");
+        return;
+      }
+    }
+    const optimistic = pairSets.map((item, offset) => ({
+      ...item,
+      exercise_id: exercise.id,
+      reps: item.reps ?? null,
+      duration_seconds: item.duration_seconds ?? null,
+      intensity: item.intensity ?? null,
+      rpe: item.rpe ?? null,
+      rir: item.rir ?? null,
+      rest_time_seconds: item.rest_time_seconds ?? null,
+      id: `temp-${operationKey}-${item.side}`,
+      client_key: `temp-${operationKey}-${item.side}`,
+      position: firstPosition + offset,
+      created_at: now,
+      updated_at: now,
+    } satisfies ExerciseSet));
+    applyLocalExerciseSets([...current, ...optimistic]);
+    if (!isAuthenticated) return;
+    pairInFlightRef.current = true;
+    try {
+      const created = await createExerciseSetPair(exercise.id, pairSets, operationKey);
+      clearPendingPair(userId!, exercise.id);
+      // A refetch may already contain the committed rows after a lost response.
+      // Keep those current values instead of replaying the original response.
+      applyLocalExerciseSets((sets) => {
+        const result = sets.filter((set) => !optimistic.some(
+          (item) => getExerciseSetClientKey(item) === getExerciseSetClientKey(set),
+        ));
+        for (const row of created) {
+          if (!result.some((set) => String(set.id) === String(row.id))) {
+            const opt = optimistic.find((item) => item.side === row.side);
+            const pending = opt && pendingUpdatesRef.current[String(opt.client_key)];
+            result.push({ ...row, ...pending?.data, client_key: opt?.client_key });
+          }
+        }
+        return result;
+      });
+
+      optimistic.forEach((optItem) => {
+        const createdMatch = created.find((c) => c.side === optItem.side);
+        if (createdMatch) {
+          const tempId = String(optItem.client_key);
+          const pendingUpdate = pendingUpdatesRef.current[tempId];
+          if (pendingUpdate) {
+            pendingUpdate.serverSetId = createdMatch.id;
+            if (!pendingUpdate.timeout) void flushSetUpdate(tempId);
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Failed to create left/right pair:", error);
+      // Drop the pending pair only when the server definitively rejected this
+      // payload, so replaying it can never succeed. Any other failure (network,
+      // 5xx, 401/403/429, ...) may follow a committed attempt whose response was
+      // lost; the key must survive so the retry replays instead of duplicating.
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (status != null && PAIR_PAYLOAD_REJECTION_STATUSES.has(status)) {
+        clearPendingPair(userId!, exercise.id);
+      }
+      const optimisticKeys = new Set(
+        optimistic.map((item) => getExerciseSetClientKey(item)),
+      );
+      optimisticKeys.forEach((key) => {
+        const pendingUpdate = pendingUpdatesRef.current[key];
+        if (pendingUpdate?.timeout) clearTimeout(pendingUpdate.timeout);
+        delete pendingUpdatesRef.current[key];
+      });
+      applyLocalExerciseSets((sets) =>
+        sets.filter((set) => !optimisticKeys.has(getExerciseSetClientKey(set))),
+      );
+      toast.error("Couldn't confirm the pair. Choose Add left + right sets to retry safely.");
+      invalidateExerciseQuery();
+    } finally {
+      pairInFlightRef.current = false;
+    }
+  }, [applyLocalExerciseSets, exercise.id, invalidateExerciseQuery, isAuthenticated, isUnsavedExercise, userId]);
 
   const updateExerciseNotes = useCallback((notes: string) => {
     if (!onExerciseUpdate) {
@@ -520,6 +664,7 @@ export const useExerciseSetActions = ({
 
   return {
     addSet,
+    addLeftRightPair,
     decrementReps,
     deleteSet,
     exerciseSets,

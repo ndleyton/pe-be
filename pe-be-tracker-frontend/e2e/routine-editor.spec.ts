@@ -345,6 +345,7 @@ test.describe("Routine editor", () => {
       visibility: "private",
       author: null,
       category: null,
+      template_tree_version: 2,
       exercise_templates: [
         {
           exercise_type_id: 22,
@@ -356,6 +357,8 @@ test.describe("Routine editor", () => {
               intensity_unit_id: 1,
               notes: null,
               type: null,
+              side: null,
+              position: 0,
             },
             {
               reps: 10,
@@ -363,6 +366,8 @@ test.describe("Routine editor", () => {
               intensity_unit_id: 1,
               notes: null,
               type: null,
+              side: null,
+              position: 1,
             },
           ],
         },

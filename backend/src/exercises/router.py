@@ -421,6 +421,7 @@ async def get_similar_exercise_types(
 )
 async def get_exercise_type_stats(
     exercise_type_id: int,
+    metrics_version: int = Query(default=1, ge=1, le=2),
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
@@ -438,7 +439,11 @@ async def get_exercise_type_stats(
         )
 
     return await ExerciseTypeService.get_exercise_type_statistics(
-        session, exercise_type_id, user.id, exercise_type=exercise_type
+        session,
+        exercise_type_id,
+        user.id,
+        exercise_type=exercise_type,
+        metrics_version=metrics_version,
     )
 
 

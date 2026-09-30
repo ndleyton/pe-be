@@ -1,3 +1,4 @@
+import { getPersonalBestEntries } from "@/features/exercises/lib/personalBests";
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
@@ -121,8 +122,8 @@ const ExerciseTypeDetailsPage = () => {
     isLoading: isLoadingStats,
     error: statsError,
   } = useQuery({
-    queryKey: ["exerciseTypeStats", exerciseTypeId],
-    queryFn: () => getExerciseTypeStats(exerciseTypeId!),
+    queryKey: ["exerciseTypeStats", exerciseTypeId, 2],
+    queryFn: () => getExerciseTypeStats(exerciseTypeId!, 2),
     enabled: !!exerciseTypeId && !!exerciseType && isAuthenticated,
     retry: 1,
   });
@@ -1003,11 +1004,12 @@ const ExerciseTypeDetailsPage = () => {
                 </div>
                 <Skeleton className="h-20 w-full" />
               </>
-            ) : stats?.personalBest ? (
-              <PersonalBestInfo
-                personalBest={stats.personalBest}
-                intensityUnit={stats.intensityUnit}
-              />
+            ) : stats && getPersonalBestEntries(stats).length > 0 ? (
+              <div className="space-y-6">
+                {getPersonalBestEntries(stats).map(({ label, best }) => (
+                  <PersonalBestInfo key={label} label={label} personalBest={best} intensityUnit={stats.intensityUnit} />
+                ))}
+              </div>
             ) : (
               <p className="text-muted-foreground">
                 No personal best recorded yet.

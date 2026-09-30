@@ -51,6 +51,7 @@ type RoutineTemplatesCardProps = {
   editorTemplates: RoutineEditorTemplate[];
   onAddExercise: () => void;
   onAddSet: (templateId: string) => void;
+  onAddPair: (templateId: string) => void;
   onChangeExercise: (templateId: string) => void;
   onRemoveSet: (templateId: string, setId: string) => void;
   onRemoveTemplate: (templateId: string) => void;
@@ -408,6 +409,7 @@ type RoutineTemplateSectionProps = {
   template: RoutineEditorTemplate;
   templateIndex: number;
   onAddSet: (templateId: string) => void;
+  onAddPair: (templateId: string) => void;
   onChangeExercise: (templateId: string) => void;
   onOpenSetDetails: (templateId: string, setId: string) => void;
   onRemoveSet: (templateId: string, setId: string) => void;
@@ -430,6 +432,7 @@ const RoutineTemplateSection = memo(
     template,
     templateIndex,
     onAddSet,
+    onAddPair,
     onChangeExercise,
     onOpenSetDetails,
     onRemoveSet,
@@ -561,16 +564,26 @@ const RoutineTemplateSection = memo(
       </div>
 
       {canEdit ? (
-        <Button
-          data-testid={`add-routine-set-${templateIndex}`}
-          variant="secondary"
-          size="sm"
-          className="mt-4 h-10 w-full rounded-xl border border-primary/30 bg-primary/20 text-xs font-bold uppercase tracking-widest transition-all hover:bg-primary/20"
-          onClick={() => onAddSet(template.id)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Set
-        </Button>
+        <>
+          <Button
+            data-testid={`add-routine-set-${templateIndex}`}
+            variant="secondary"
+            size="sm"
+            className="mt-4 h-10 w-full rounded-xl border border-primary/30 bg-primary/20 text-xs font-bold uppercase tracking-widest transition-all hover:bg-primary/20"
+            onClick={() => onAddSet(template.id)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Set
+          </Button>
+          <Button
+            variant="outline"
+            className="mt-2 w-full"
+            onClick={() => onAddPair(template.id)}
+          >
+            Add left + right
+          </Button>
+          {/* TODO: Add Move Up / Move Down UI controls for sets (RFC 0010) */}
+        </>
       ) : null}
     </div>
   ),
@@ -648,6 +661,34 @@ const SetDetailsDialog = ({
               </DialogHeader>
 
               <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <label className="ml-1 block text-[10px] font-black uppercase tracking-widest opacity-40">
+                    Side
+                  </label>
+                  <div className="bg-muted inline-flex flex-wrap items-center gap-1 rounded-lg border p-1">
+                    {([
+                      [null, "Unspecified"],
+                      ["left", "Left"],
+                      ["right", "Right"],
+                      ["both", "Both sides"],
+                    ] as const).map(([side, label]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        aria-pressed={activeSetTemplate.side === side}
+                        onClick={() =>
+                          onUpdateSet(activeTemplate.id, activeSetTemplate.id, { side })
+                        }
+                        className={`rounded-md px-2 py-1 text-sm ${activeSetTemplate.side === side ? "bg-background shadow" : "text-muted-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Both sides together; use separate left and right rows for unilateral work.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <label className="ml-1 block text-[10px] font-black uppercase tracking-widest opacity-40">
                     Tracking
@@ -880,6 +921,7 @@ export const RoutineTemplatesCard = ({
   editorTemplates,
   onAddExercise,
   onAddSet,
+  onAddPair,
   onChangeExercise,
   onRemoveSet,
   onRemoveTemplate,
@@ -917,6 +959,7 @@ export const RoutineTemplatesCard = ({
               template={template}
               templateIndex={templateIndex}
               onAddSet={onAddSet}
+              onAddPair={onAddPair}
               onChangeExercise={onChangeExercise}
               onOpenSetDetails={(templateId, setId) =>
                 setActiveSetTarget({ templateId, setId })

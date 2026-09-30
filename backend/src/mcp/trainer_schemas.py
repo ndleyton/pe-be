@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -17,6 +18,7 @@ class WorkoutSetInput(BaseModel):
     notes: str | None = Field(default=None, max_length=1000)
     type: str | None = Field(default=None, max_length=30)
     done: bool = True
+    side: Literal["left", "right", "both"] | None = None
 
     @model_validator(mode="after")
     def require_reps_or_duration(self) -> "WorkoutSetInput":
@@ -68,6 +70,7 @@ class RoutineSetInput(BaseModel):
     rir: Decimal | None = Field(default=None, ge=0, le=20)
     notes: str | None = Field(default=None, max_length=1000)
     type: str | None = Field(default=None, max_length=30)
+    side: Literal["left", "right", "both"] | None = None
 
 
 class RoutineExerciseInput(BaseModel):
@@ -99,6 +102,8 @@ class SetSummaryOutput(BaseModel):
     rpe: Decimal | None
     rir: Decimal | None
     notes: str | None
+    side: Literal["left", "right", "both"] | None = None
+    position: int
 
 
 class ExerciseSummaryOutput(BaseModel):

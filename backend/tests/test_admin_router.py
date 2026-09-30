@@ -87,11 +87,18 @@ async def test_admin_create_routine_requires_admin_and_accepts_admin_fields(
             "workout_type_id": wt.id,
             "visibility": "public",
             "is_readonly": True,
+            "template_tree_version": 2,
             "exercise_templates": [
                 {
                     "exercise_type_id": et.id,
                     "set_templates": [
-                        {"reps": 5, "intensity": 10.0, "intensity_unit_id": iu.id}
+                        {
+                            "reps": 5,
+                            "intensity": 10.0,
+                            "intensity_unit_id": iu.id,
+                            "side": None,
+                            "position": 0,
+                        }
                     ],
                 }
             ],

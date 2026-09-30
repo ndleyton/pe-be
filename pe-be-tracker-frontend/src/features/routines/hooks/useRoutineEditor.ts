@@ -84,6 +84,14 @@ type RoutineEditorAction =
       };
     }
   | {
+      type: "addPairToTemplate";
+      payload: {
+        templateId: string;
+        availableIntensityUnits: RoutineIntensityUnitOption[];
+      };
+    }
+  // TODO: Add REORDER_SET or MOVE_SET action for RFC 0010 dense position reordering
+  | {
       type: "updateTemplate";
       payload: {
         templateId: string;
@@ -301,13 +309,50 @@ const routineEditorReducer = (
                 ...template,
                 set_templates: [
                   ...template.set_templates,
-                  createDefaultSet(
-                    action.payload.availableIntensityUnits,
-                    template.exercise_type?.default_intensity_unit,
-                  ),
+                  {
+                    ...createDefaultSet(
+                      action.payload.availableIntensityUnits,
+                      template.exercise_type?.default_intensity_unit,
+                    ),
+                    position: template.set_templates.length,
+                  },
                 ],
               },
         ),
+      };
+    case "addPairToTemplate":
+      return {
+        ...state,
+        editorTemplates: state.editorTemplates.map((template) => {
+          if (template.id !== action.payload.templateId) return template;
+
+          const firstSet = createDefaultSet(
+            action.payload.availableIntensityUnits,
+            template.exercise_type?.default_intensity_unit,
+          );
+
+          const secondSet = createDefaultSet(
+            action.payload.availableIntensityUnits,
+            template.exercise_type?.default_intensity_unit,
+          );
+
+          return {
+            ...template,
+            set_templates: [
+              ...template.set_templates,
+              {
+                ...firstSet,
+                side: "left",
+                position: template.set_templates.length,
+              },
+              {
+                ...secondSet,
+                side: "right",
+                position: template.set_templates.length + 1,
+              },
+            ],
+          };
+        }),
       };
     case "removeSetFromTemplate":
       return {
@@ -317,9 +362,9 @@ const routineEditorReducer = (
             ? template
             : {
                 ...template,
-                set_templates: template.set_templates.filter(
-                  (setTemplate) => setTemplate.id !== action.payload.setId,
-                ),
+                set_templates: template.set_templates
+                  .filter((setTemplate) => setTemplate.id !== action.payload.setId)
+                  .map((setTemplate, position) => ({ ...setTemplate, position })),
               },
         ),
       };
@@ -424,6 +469,15 @@ export const useRoutineEditor = ({
     (templateId: string) =>
       dispatch({
         type: "addSetToTemplate",
+        payload: { templateId, availableIntensityUnits },
+      }),
+    [availableIntensityUnits],
+  );
+
+  const addPairToTemplate = useCallback(
+    (templateId: string) =>
+      dispatch({
+        type: "addPairToTemplate",
         payload: { templateId, availableIntensityUnits },
       }),
     [availableIntensityUnits],
@@ -543,6 +597,7 @@ export const useRoutineEditor = ({
     category: state.category,
     unitPickerTarget: state.unitPickerTarget,
     addSetToTemplate,
+    addPairToTemplate,
     closeExercisePicker,
     closeUnitPicker,
     handleExerciseTypeSelected,

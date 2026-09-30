@@ -87,6 +87,7 @@ describe("CreateRoutinePage", () => {
       setName: vi.fn(),
       updateSet: vi.fn(),
       updateTemplate: vi.fn(),
+      addPairToTemplate: vi.fn(),
     } as ReturnType<typeof useRoutineEditor>);
 
     mockUseRoutineCreateActions.mockReturnValue({

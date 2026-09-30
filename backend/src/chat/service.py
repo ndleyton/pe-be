@@ -1070,7 +1070,7 @@ class ChatService:
                     exercise_draft.exercise_type_name
                 )
                 set_templates: list[SetTemplateCreate] = []
-                for set_draft in exercise_draft.sets:
+                for position, set_draft in enumerate(exercise_draft.sets):
                     intensity_unit = (
                         await self._resolve_intensity_unit(set_draft.intensity_unit)
                         if set_draft.intensity_unit
@@ -1092,6 +1092,8 @@ class ChatService:
                             rpe=set_draft.rpe,
                             rir=set_draft.rir,
                             intensity_unit_id=intensity_unit.id,
+                            side=None,
+                            position=position,
                         )
                     )
 
@@ -1109,6 +1111,7 @@ class ChatService:
                     description=self._build_routine_description(draft),
                     workout_type_id=workout_type.id,
                     exercise_templates=exercise_templates,
+                    template_tree_version=2,
                     visibility=Routine.RoutineVisibility.private,
                     is_readonly=False,
                 ),

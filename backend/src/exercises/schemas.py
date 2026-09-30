@@ -1,4 +1,4 @@
-from typing import Optional, List, TYPE_CHECKING, Any, Literal
+from typing import Optional, List, Dict, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
 import logging
 import json
@@ -355,6 +355,9 @@ class ProgressiveOverloadStat(BaseModel):
     max_weight: float = Field(..., alias="maxWeight")
     total_volume: float = Field(..., alias="totalVolume")
     reps: int
+    side_breakdown: Optional[Dict[str, Dict[str, float | int]]] = Field(
+        None, alias="sideBreakdown"
+    )
     model_config = ConfigDict(populate_by_name=True)
 
 
@@ -400,6 +403,12 @@ class ExerciseTypeStats(BaseModel):
     personal_best: Optional[PersonalBestStat] = Field(None, alias="personalBest")
     total_sets: int = Field(..., alias="totalSets")
     intensity_unit: Optional[IntensityUnitSummary] = Field(None, alias="intensityUnit")
+    metrics_version: Optional[int] = Field(None, alias="metricsVersion")
+    side_personal_bests: Optional[Dict[str, PersonalBestStat]] = Field(
+        None, alias="sidePersonalBests"
+    )
+    exclusions: Optional[Dict[str, int]] = None
+    sessions: Optional[List[Dict[str, Any]]] = None
     model_config = ConfigDict(populate_by_name=True)
 
 

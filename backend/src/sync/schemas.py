@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import BaseModel, field_validator
@@ -34,6 +34,9 @@ class GuestExerciseSet(BaseModel):
     rest_time_seconds: Optional[int] = None
     done: bool = False
     notes: Optional[str] = None
+    type: Optional[str] = None
+    side: Optional[Literal["left", "right", "both"]] = None
+    position: Optional[int] = None
 
 
 class GuestExercise(BaseModel):

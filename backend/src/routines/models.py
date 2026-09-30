@@ -9,6 +9,8 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     Index,
+    CheckConstraint,
+    UniqueConstraint,
     desc,
 )
 from sqlalchemy import Enum as SAEnum
@@ -122,7 +124,7 @@ class ExerciseTemplate(Base):
         "SetTemplate",
         back_populates="exercise_template",
         cascade="all, delete-orphan",
-        order_by="SetTemplate.id",
+        order_by="(SetTemplate.position, SetTemplate.id)",
     )
 
 
@@ -133,6 +135,16 @@ class SetTemplate(Base):
 
     __table_args__ = (
         Index("ix_set_templates_exercise_template_id", "exercise_template_id"),
+        CheckConstraint(
+            "side IS NULL OR side IN ('left', 'right', 'both')",
+            name="ck_set_templates_side",
+        ),
+        CheckConstraint("position >= 0", name="ck_set_templates_position"),
+        UniqueConstraint(
+            "exercise_template_id",
+            "position",
+            name="uq_set_templates_position",
+        ),
     )
 
     reps = Column(Integer)
@@ -158,6 +170,8 @@ class SetTemplate(Base):
     )
     notes = Column(Text, nullable=True)
     type = Column(String, nullable=True)
+    side = Column(String, nullable=True)
+    position = Column(Integer, nullable=False)
 
     # Relationships
     intensity_unit: Mapped["IntensityUnit"] = relationship(
