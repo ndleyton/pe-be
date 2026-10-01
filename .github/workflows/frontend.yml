@@ -48,10 +48,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check static page CSS is up to date
+      - name: Check generated static pages and CSS are up to date
         run: |
-          pnpm run build:static-css
-          git diff --exit-code -- public/static.css
+          pnpm run build:static
+          git diff --exit-code -- public/static.css public/alternatives public/sitemap.xml public/llms.txt
 
       - name: Run linting
         run: pnpm run lint

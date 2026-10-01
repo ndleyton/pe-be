@@ -1,0 +1,176 @@
+        :root {
+            --primary-rose: #CC0033;
+            --primary-rose-soft: rgba(204, 0, 51, 0.1);
+            --background: #F7F7F7;
+            --card: rgba(255, 255, 255, 0.75);
+            --card-subtle: rgba(255, 255, 255, 0.5);
+            --foreground: #1A1919;
+            --foreground-rgb: 26, 25, 25;
+            --muted-foreground: #666060;
+            --border: rgba(0, 0, 0, 0.08);
+            --page-radius-xl: 0.75rem;
+            --page-radius-2xl: 1.25rem;
+            --glass-blur: 14px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-rose: #FF3366;
+                --primary-rose-soft: rgba(255, 51, 102, 0.15);
+                --background: #201D1D;
+                --card: rgba(39, 33, 33, 0.75);
+                --card-subtle: rgba(30, 26, 26, 0.6);
+                --foreground: #F2F0F0;
+                --foreground-rgb: 242, 240, 240;
+                --muted-foreground: #A19393;
+                --border: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            background-color: var(--background);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--foreground);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image: linear-gradient(135deg, var(--primary-rose) 0%, var(--background) 100%);
+            opacity: 0.05;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3Cg transform='translate(-75 0)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(0 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(-75 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E");
+            -webkit-mask-size: 35px 35px;
+            mask-size: 35px 35px;
+            -webkit-mask-repeat: repeat;
+            mask-repeat: repeat;
+        }
+
+        .glass-panel {
+            background: var(--card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--border);
+            border-radius: var(--page-radius-2xl);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(var(--foreground-rgb), 0.18);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--page-radius-xl);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--primary-rose);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(204, 0, 51, 0.25);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(204, 0, 51, 0.35);
+        }
+
+        .btn-glass {
+            background: rgba(var(--foreground-rgb), 0.05);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+        }
+
+        .btn-glass:hover {
+            background: rgba(var(--foreground-rgb), 0.1);
+            border-color: rgba(var(--foreground-rgb), 0.2);
+        }
+
+        .text-glow {
+            background: linear-gradient(to bottom, var(--foreground) 0%, rgba(var(--foreground-rgb), 0.65) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .caps-label {
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--primary-rose);
+        }
+
+        .logo-wordmark {
+            color: var(--primary-rose);
+            line-height: 0.9 !important;
+            font-weight: 900;
+            letter-spacing: -0.025em;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 700;
+            color: #10B981;
+        }
+
+        .badge-cross {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 700;
+            color: #EF4444;
+        }
+
+        .badge-neutral {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+            color: var(--muted-foreground);
+        }
