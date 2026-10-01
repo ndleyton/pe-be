@@ -51,7 +51,12 @@ jobs:
       - name: Check generated static pages and CSS are up to date
         run: |
           pnpm run build:static
-          git diff --exit-code -- public/static.css public/alternatives public/sitemap.xml public/llms.txt
+          generated_changes=$(git status --porcelain --untracked-files=all -- public/static.css public/alternatives public/sitemap.xml public/llms.txt)
+          if [ -n "$generated_changes" ]; then
+            echo "Generated static files are out of date. Run pnpm run build:static and commit the generated files."
+            echo "$generated_changes"
+            exit 1
+          fi
 
       - name: Run linting
         run: pnpm run lint
