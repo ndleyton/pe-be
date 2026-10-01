@@ -400,7 +400,7 @@ ${sourcesNote(c)}
 
 export const renderIndexPage = (alternatives) => {
   const description =
-    "Compare PersonalBestie with popular workout trackers and programming apps: routine limits, pricing, guest mode, AI coaching recaps, and more.";
+    "Compare PersonalBestie with other workout apps on features, pricing, and training workflows.";
   const graph = [
     {
       "@type": "CollectionPage",
@@ -430,7 +430,7 @@ export const renderIndexPage = (alternatives) => {
 ${breadcrumb(null, { link: false })}
 
             <section class="max-w-4xl py-6 sm:py-10">
-                <div class="caps-label inline-block">Comparisons · 2026</div>
+                <div class="caps-label inline-block">Comparisons · ${esc(alternatives.map((c) => c.modified).sort().at(-1)?.slice(0, 4) ?? "")}</div>
                 <h1 class="text-glow mt-4 text-4xl font-black tracking-tight sm:text-6xl leading-[1.08]">
                     PersonalBestie vs other workout apps
                 </h1>
@@ -447,7 +447,7 @@ ${cards}
         </main>`;
 
   return shell({
-    title: "Workout App Comparisons: PersonalBestie vs Hevy, Strong, RP Hypertrophy",
+    title: "Workout App Comparisons | PersonalBestie",
     description,
     ogTitle: "Workout App Comparisons | PersonalBestie",
     path: "/alternatives/",

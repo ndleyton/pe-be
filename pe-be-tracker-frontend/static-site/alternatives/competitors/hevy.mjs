@@ -6,7 +6,7 @@ export default {
   verified: "2026-09-30",
   sources: [{ label: "Hevy's in-app plan selection screen" }],
   seo: {
-    title: "Best Free Hevy Alternative: PersonalBestie vs Hevy (2026 Comparison)",
+    title: "Best Free Hevy Alternative: PersonalBestie vs Hevy",
     ogTitle: "Best Free Hevy Alternative: PersonalBestie vs Hevy",
     description:
       "Looking for a Hevy alternative? Compare PersonalBestie vs Hevy: unlimited free routines, instant guest workout logging, and AI coaching recaps without paywalls.",

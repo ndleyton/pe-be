@@ -6,7 +6,7 @@ export default {
   verified: "2026-09-30",
   sources: [{ label: "the RP Hypertrophy App page", url: "https://rpstrength.com/pages/hypertrophy-app" }],
   seo: {
-    title: "Free RP Hypertrophy App Alternative: PersonalBestie vs RP (2026 Comparison)",
+    title: "Free RP Hypertrophy App Alternative: PersonalBestie vs RP",
     ogTitle: "Free RP Hypertrophy App Alternative: PersonalBestie vs RP",
     description:
       "Looking for a free alternative to the RP Hypertrophy app? Compare PersonalBestie vs RP: a free workout tracker with AI coaching recaps, versus a paid auto-progressing hypertrophy program builder.",

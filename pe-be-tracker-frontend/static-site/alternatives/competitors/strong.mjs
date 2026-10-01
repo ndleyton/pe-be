@@ -9,7 +9,7 @@ export default {
     { label: "strong.app", url: "https://www.strong.app/" },
   ],
   seo: {
-    title: "Best Free Strong Alternative: PersonalBestie vs Strong (2026 Comparison)",
+    title: "Best Free Strong Alternative: PersonalBestie vs Strong",
     ogTitle: "Best Free Strong Alternative: PersonalBestie vs Strong",
     description:
       "Looking for a Strong app alternative? Compare PersonalBestie vs Strong: unlimited free routines, instant guest workout logging, and AI coaching recaps without a subscription.",
