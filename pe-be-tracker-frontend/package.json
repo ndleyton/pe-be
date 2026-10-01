@@ -9,8 +9,10 @@
   },
   "scripts": {
     "build": "vite build",
+    "build:alternatives": "node ./scripts/build-alternatives.mjs",
+    "build:static": "pnpm run build:alternatives && pnpm run build:static-css",
     "build:static-css": "tailwindcss -i static-site/tailwind.css -o public/static.css --minify && node ./scripts/ensure-trailing-newline.mjs public/static.css",
-    "build:static-site": "pnpm run build:static-css && node ./scripts/build-static-site.mjs",
+    "build:static-site": "pnpm run build:static && node ./scripts/build-static-site.mjs",
     "generate:exercise-types-sitemap": "node ./scripts/generate-exercise-types-sitemap.mjs",
     "dev": "vite",
     "dev:test": "vite --mode test",
