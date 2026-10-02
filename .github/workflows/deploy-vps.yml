@@ -73,14 +73,29 @@ jobs:
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Write production env file
+        env:
+          ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX: ${{ secrets.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX }}
         run: |
+          set -euo pipefail
+          python3 - <<'PYTHON'
+          import os
+
+          pattern = os.environ["ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX"]
+          if "\n" in pattern or "\r" in pattern:
+              raise SystemExit("CORS origin regex must not contain newlines")
+          # Keep the optional preview exception scoped to this project's hosts.
+          # New patterns require review here; sampling arbitrary origins cannot
+          # prove that an unrestricted regex is safe.
+          approved = r"https://pe-[a-z0-9-]+-ndleytons-projects\.vercel\.app"
+          if pattern not in ("", approved, "^" + approved + "$"):
+              raise SystemExit("CORS origin regex must use the approved project preview pattern or be empty")
+          PYTHON
           cat <<'ENVEOF' > backend/.env.production
           # Public hostnames
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
           FRONTEND_POST_LOGIN_PATH=${{ secrets.FRONTEND_POST_LOGIN_PATH }}
           API_ORIGIN_DOMAIN=${{ secrets.API_ORIGIN_DOMAIN }}
           GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
-          ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX=${{ secrets.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX }}
 
           # Backend runtime
           ENVIRONMENT=production
@@ -153,7 +168,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT || '' }}
           OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS || '' }}
           OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-          OTEL_LOG_LEVEL=${{ secrets.OTEL_LOG_LEVEL || 'debug' }}
+          OTEL_LOG_LEVEL=${{ secrets.OTEL_LOG_LEVEL || 'info' }}
           OTEL_SERVICE_NAME=personalbestie-backend
           OTEL_SERVICE_VERSION=${{ github.sha }}
           OTEL_TRACES_SAMPLER_ARG=${{ secrets.OTEL_TRACES_SAMPLER_ARG || '0.1' }}
@@ -161,6 +176,7 @@ jobs:
           # App settings
           IMAGE_URL_PREFIX=${{ secrets.IMAGE_URL_PREFIX }}
           ENVEOF
+          printf '%s\n' "ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX=$ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX" >> backend/.env.production
 
       - name: Prepare deployment directory on VPS
         env:

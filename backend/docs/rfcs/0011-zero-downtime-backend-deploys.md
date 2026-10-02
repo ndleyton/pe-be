@@ -103,7 +103,21 @@ Keeping both colors running all the time for instant rollback would cost one ext
 Adopt option A now.
 
 1. In `docker-compose.prod.yml`, replace the `backend` service (with its fixed `container_name: pe-be-backend`) with `backend-blue` and `backend-green` services that share the same volumes and env file.
-2. Make the Caddy upstream switchable. For example, `reverse_proxy {$ACTIVE_BACKEND}:8000`, set from a file the deploy rewrites, followed by `caddy reload`.
+2. Make the Caddy upstream switchable with `reverse_proxy {$ACTIVE_BACKEND}:8000`. Persist the selected name (`backend-blue` or `backend-green`) in a deployment-managed environment file and configure the Caddy service to load it on container startup. Rewriting that file does not change an existing container's environment. For each switch, explicitly read and validate the persisted value in the deployment shell, then pass it to the reload process:
+
+   ```bash
+   # config/active-backend.env contains only ACTIVE_BACKEND=backend-blue (or backend-green).
+   ACTIVE_BACKEND=$(sed -n 's/^ACTIVE_BACKEND=//p' config/active-backend.env)
+   case "$ACTIVE_BACKEND" in
+     backend-blue|backend-green) ;;
+     *) echo "Invalid active backend" >&2; exit 1 ;;
+   esac
+   docker compose -f docker-compose.prod.yml exec -T \
+     -e ACTIVE_BACKEND="$ACTIVE_BACKEND" caddy \
+     caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+   ```
+
+   The new reload process adapts the Caddyfile using the explicitly supplied value and submits the resulting configuration to the running Caddy server; it does not rely on the server's original environment. See [Caddy reload](https://caddyserver.com/docs/command-line#caddy-reload) and [environment substitution](https://caddyserver.com/docs/caddyfile/concepts#environment-variables). Ensure future Caddy starts also receive the persisted value: recreate the container when needed to refresh its Compose environment, or use a startup wrapper that rereads the file from a mounted directory. Retain the previous value for rollback and repeat this explicit reload procedure if switching back.
 3. Update `deploy-vps.yml`:
     1. Find the active color, then build and start the idle one.
     2. Run migrations, which must be backwards-compatible.
