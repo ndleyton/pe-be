@@ -1,6 +1,24 @@
 # Infrastructure as Code (Terraform)
 
-This directory contains the Terraform configuration for managing the Hetzner Cloud infrastructure for this project.
+This directory contains a Terraform representation of the project's current Hetzner
+Cloud architecture: a VPS, a cloud firewall, and an SSH key. It is included as
+portfolio documentation and a starting point for possible future infrastructure
+management.
+
+## Current status
+
+The project is running successfully in production on the existing VPS. **This
+Terraform configuration is not currently used to provision or manage that
+infrastructure, or to deploy the application.** The existing infrastructure was
+set up outside Terraform; backend deployment uses the manually dispatched
+[GitHub Actions workflow](../.github/workflows/deploy-vps.yml), SSH, and Docker
+Compose. The frontend deploys separately through Render's Git integration.
+
+This configuration represents the architecture, not a verified Terraform inventory
+of the live resources. Its example defaults must be reconciled with the existing
+VPS before adoption. The setup, shared-state, import, and rotation procedures below
+are prerequisites for future Terraform use, not steps in the current application
+deployment process.
 
 ## Prerequisites
 
@@ -34,7 +52,7 @@ ssh_public_key = "ssh-ed25519 AAAAC3NzaC... user@hostname"
 
 ## Production ownership and state
 
-This module currently uses **local state**. It does not establish a shared backend.
+This module would use **local state** if initialized. It does not configure a shared backend.
 Do not run a production apply from a fresh checkout or an empty state: Terraform
 can create a second server even when `prevent_destroy` protects the original.
 
