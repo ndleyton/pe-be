@@ -290,7 +290,7 @@ class Settings(BaseSettings):
         validation_alias="MEDIA_PUBLIC_BASE_URL",
         description=(
             "Public CDN base URL for published exercise images, e.g. "
-            "https://media.personalbestie.com. Set only after backfilling."
+            "https://media.example.com. Set only after backfilling."
         ),
     )
     R2_ENDPOINT_URL: str = Field("", validation_alias="R2_ENDPOINT_URL")

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Move uploaded and generated images out of the VPS's local Docker volumes and into Cloudflare R2. Public images are served from `https://media.personalbestie.com` through Cloudflare's CDN. Private images are served through short-lived presigned URLs.
+Move uploaded and generated images out of the VPS's local Docker volumes and into Cloudflare R2. Public images are served from `https://media.example.com` through Cloudflare's CDN. Private images are served through short-lived presigned URLs.
 
 The rollout is phased. Phase 1, implemented in this change, mirrors **published exercise images** to the public bucket and can switch their URLs to the CDN once a one-time backfill has run.
 
@@ -29,13 +29,13 @@ The upload pipeline itself is already good and stays unchanged: MIME sniffing, s
 
 | Item | Value |
 | --- | --- |
-| Zone | `personalbestie.com`; SSL Full (strict), Always Use HTTPS, minimum TLS 1.2 |
-| Public bucket | `pe-be-public`, location hint ENAM, custom domain `media.personalbestie.com` |
-| Cache rule | Hostname `media.personalbestie.com`, eligible for cache, Edge TTL follows `Cache-Control` |
+| Zone | `example.com`; SSL Full (strict), Always Use HTTPS, minimum TLS 1.2 |
+| Public bucket | `pe-be-public`, location hint ENAM, custom domain `media.example.com` |
+| Cache rule | Hostname `media.example.com`, eligible for cache, Edge TTL follows `Cache-Control` |
 | Private bucket | `pe-be-private`, ENAM, no public access |
 | API token | Object Read & Write, scoped to both buckets |
 
-Verified: `curl -sI https://media.personalbestie.com/<object>` returns `MISS`, then `HIT`.
+Verified: `curl -sI https://media.example.com/<object>` returns `MISS`, then `HIT`.
 
 ## Design
 
@@ -57,7 +57,7 @@ R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
 R2_PUBLIC_BUCKET=pe-be-public
 R2_PRIVATE_BUCKET=pe-be-private              # used from phase 2
-MEDIA_PUBLIC_BASE_URL=https://media.personalbestie.com   # set only after backfill
+MEDIA_PUBLIC_BASE_URL=https://media.example.com   # set only after backfill
 ```
 
 ### Object keys and caching
@@ -68,7 +68,7 @@ Keys reuse the existing relative storage paths (for example `published/exercise-
 
 | Media | Visibility | Serving |
 | --- | --- | --- |
-| Published exercise images | Public | `media.personalbestie.com/<key>`, cached at the edge for a year |
+| Published exercise images | Public | `media.example.com/<key>`, cached at the edge for a year |
 | Exercise upload/generated candidates | Owner/admin only | Stay on the backend for now (`private, no-store`) |
 | Workout photos | Private | Presigned GET URLs from `pe-be-private`, with the expiry rounded to the hour so URLs stay cacheable |
 | Chat attachments | Private | Presigned GET URLs |
