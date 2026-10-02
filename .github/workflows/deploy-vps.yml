@@ -19,6 +19,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate required configuration
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          FRONTEND_POST_LOGIN_PATH: ${{ secrets.FRONTEND_POST_LOGIN_PATH }}
+          API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_AI_KEY: ${{ secrets.GOOGLE_AI_KEY }}
+          CHAT_MODEL: ${{ secrets.CHAT_MODEL }}
+          MCP_PAT_PEPPER: ${{ secrets.MCP_PAT_PEPPER }}
+        run: |
+          set -euo pipefail
+          required=(
+            VPS_HOST VPS_USER VPS_SSH_KEY DEPLOY_PATH
+            FRONTEND_URL FRONTEND_POST_LOGIN_PATH API_ORIGIN_DOMAIN GOOGLE_REDIRECT_URI
+            SECRET_KEY POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_AI_KEY CHAT_MODEL MCP_PAT_PEPPER
+          )
+          missing=0
+          for name in "${required[@]}"; do
+            value="${!name}"
+            if [[ -z "${value//[[:space:]]/}" ]]; then
+              echo "::error::Missing required configuration: $name"
+              missing=1
+            fi
+          done
+          if (( missing )); then
+            exit 1
+          fi
+          if [[ "$MCP_PAT_PEPPER" == "development-only-mcp-pat-pepper" ]]; then
+            echo "::error::MCP_PAT_PEPPER must not use the development default"
+            exit 1
+          fi
+
       - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -30,7 +73,23 @@ jobs:
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Write production env file
+        env:
+          ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX: ${{ secrets.ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX }}
         run: |
+          set -euo pipefail
+          python3 - <<'PYTHON'
+          import os
+
+          pattern = os.environ["ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX"]
+          if "\n" in pattern or "\r" in pattern:
+              raise SystemExit("CORS origin regex must not contain newlines")
+          # Keep the optional preview exception scoped to this project's hosts.
+          # New patterns require review here; sampling arbitrary origins cannot
+          # prove that an unrestricted regex is safe.
+          approved = r"https://pe-[a-z0-9-]+-ndleytons-projects\.vercel\.app"
+          if pattern not in ("", approved, "^" + approved + "$"):
+              raise SystemExit("CORS origin regex must use the approved project preview pattern or be empty")
+          PYTHON
           cat <<'ENVEOF' > backend/.env.production
           # Public hostnames
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
@@ -58,9 +117,20 @@ jobs:
 
           # AI / tracing
           GOOGLE_AI_KEY=${{ secrets.GOOGLE_AI_KEY }}
+          CHAT_MODEL=${{ secrets.CHAT_MODEL }}
           LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_HOST=${{ secrets.LANGFUSE_HOST || 'https://us.cloud.langfuse.com' }}
+
+          # MCP
+          MCP_ENABLED=true
+          MCP_CATALOG_ENABLED=true
+          MCP_TRAINER_ENABLED=true
+          MCP_PUBLIC_BASE_URL=https://app.personalbestie.com/api/mcp
+          MCP_ALLOWED_HOSTS=app.personalbestie.com,origin-api.personalbestie.com
+          MCP_ALLOWED_ORIGINS=https://app.personalbestie.com
+          MCP_ALLOW_TRUSTED_STDIO_USER=false
+          MCP_PAT_PEPPER=${{ secrets.MCP_PAT_PEPPER }}
 
           # Caddy ingress / edge throttling
           CADDY_TRUSTED_PROXIES=${{ secrets.CADDY_TRUSTED_PROXIES || '' }}
@@ -98,6 +168,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT || '' }}
           OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS || '' }}
           OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+          OTEL_LOG_LEVEL=${{ secrets.OTEL_LOG_LEVEL || 'info' }}
           OTEL_SERVICE_NAME=personalbestie-backend
           OTEL_SERVICE_VERSION=${{ github.sha }}
           OTEL_TRACES_SAMPLER_ARG=${{ secrets.OTEL_TRACES_SAMPLER_ARG || '0.1' }}
@@ -105,6 +176,7 @@ jobs:
           # App settings
           IMAGE_URL_PREFIX=${{ secrets.IMAGE_URL_PREFIX }}
           ENVEOF
+          printf '%s\n' "ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX=$ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX" >> backend/.env.production
 
       - name: Prepare deployment directory on VPS
         env:

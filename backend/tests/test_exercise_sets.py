@@ -37,25 +37,3 @@ class TestExerciseSetsAPI:
         """Test deleting exercise set without authentication."""
         response = client.delete(f"{settings.API_PREFIX}/exercise-sets/1")
         assert response.status_code == 401
-
-    # Note: Add authenticated tests once you have test user fixtures
-    # def test_create_exercise_set_authorized(self, client: TestClient, test_user, test_exercise):
-    #     """Test creating an exercise set with authentication."""
-    #     exercise_set_data = {
-    #         "reps": 10,
-    #         "intensity": 50.0,
-    #         "intensity_unit_id": 1,
-    #         "exercise_id": test_exercise.id,
-    #         "rest_time_seconds": 60,
-    #         "done": False
-    #     }
-    #     response = client.post(
-    #         f"{settings.API_PREFIX}/exercise-sets/",
-    #         json=exercise_set_data,
-    #         headers={"Authorization": f"Bearer {test_user.token}"}
-    #     )
-    #     assert response.status_code == 201
-    #     data = response.json()
-    #     assert data["reps"] == 10
-    #     assert data["intensity"] == 50.0
-    #     assert data["exercise_id"] == test_exercise.id

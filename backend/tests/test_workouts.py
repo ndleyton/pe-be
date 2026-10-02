@@ -27,8 +27,3 @@ class TestWorkoutsAPI:
         update_data = {"end_time": datetime.now().isoformat()}
         response = client.patch(f"{settings.API_PREFIX}/workouts/1", json=update_data)
         assert response.status_code == 401
-
-    # Note: Add authenticated tests once you have test user fixtures
-    # def test_create_workout_authorized(self, client: TestClient, test_user):
-    #     """Test creating workout with authentication."""
-    #     pass
