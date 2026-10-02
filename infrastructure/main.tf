@@ -57,13 +57,24 @@ resource "hcloud_firewall" "web_and_ssh" {
 
 # The VPS Server Instance
 resource "hcloud_server" "web_server" {
-  name        = var.server_name
-  image       = var.image
-  server_type = var.server_type
-  location    = var.location
-  ssh_keys    = [hcloud_ssh_key.default.id]
+  name         = var.server_name
+  image        = var.image
+  server_type  = var.server_type
+  location     = var.location
+  ssh_keys     = [hcloud_ssh_key.default.id]
   firewall_ids = [hcloud_firewall.web_and_ssh.id]
-  
+
+  # This host holds the production database and media volumes.
+  delete_protection  = true
+  rebuild_protection = true
+
+  lifecycle {
+    prevent_destroy = true
+    # Creation-time keys are not live authorized_keys management. Imported
+    # servers may not expose their original key association to Terraform.
+    ignore_changes = [ssh_keys]
+  }
+
   public_net {
     ipv4_enabled = true
     ipv6_enabled = true

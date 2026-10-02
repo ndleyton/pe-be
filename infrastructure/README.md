@@ -32,59 +32,97 @@ hcloud_token   = "your-hetzner-api-token"
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC... user@hostname"
 ```
 
-## Usage
+## Production ownership and state
 
-1. **Initialize Terraform:**
+This module currently uses **local state**. It does not establish a shared backend.
+Do not run a production apply from a fresh checkout or an empty state: Terraform
+can create a second server even when `prevent_destroy` protects the original.
 
-   Downloads the required provider plugins (like the Hetzner Cloud provider).
+Before production use, record an authoritative inventory in the team's restricted
+operations record: Hetzner project, server ID/IP, firewall ID and attachments, SSH
+key ID/fingerprint, state location and workspace, responsible operator, and backup
+recovery location. One resource must belong to only one Terraform state.
+
+Choose and record one ownership model before importing:
+
+- A shared backend with locking, restricted access, versioning, and recoverable
+  state backups. Configure the selected backend, migrate any existing state with
+  `terraform init -migrate-state`, and verify `terraform state list` and resource
+  IDs before planning. Do not start a separate inventory in the new backend.
+- Until that is available, one designated operator and one authoritative checkout
+  may perform imports/applies. Other checkouts must not manage production. Back up
+  the state securely after each import/apply. Handoff requires stopping the old
+  writer, securely transferring the latest state and configuration, verifying IDs,
+  and recording the new owner before any writes resume.
+
+Local locking only coordinates processes using the same state. Never use
+`-lock=false` or force-unlock a live operation. If state is lost, stop applies,
+recover its latest backup or reconcile all resources through imports; do not apply
+an empty state. Do not commit state, saved plans, or credentials to Git. Commit the
+provider dependency lock file after initialization and review provider upgrades.
+
+## Adopt the existing production host
+
+1. Confirm the ownership/state procedure above. Check `terraform state list` first;
+   do not import resources already tracked here or in another state.
+2. Take and verify an off-host database backup and backups of the media volumes and
+   runtime configuration. The [backup runbook](../backend/deploy/backups/README.md)
+   covers database backup and restore checks. A database dump does not include media.
+3. Record the existing server name, type, location, image, network settings,
+   firewall rules/attachments, and cloud SSH key name/public key. Match the Terraform
+   variables and resource configuration to that inventory before planning. Defaults
+   here are examples, not verified production values. Preserve every existing
+   firewall attachment and rule during adoption, including administrative access.
+4. Initialize and import **all three** existing resources into the chosen state,
+   using their actual IDs. Run from this directory. Skip only resources already
+   correctly tracked in this state:
 
    ```bash
    terraform init
-   ```
-
-2. **Format and Validate (Optional):**
-
-   Check that the configuration is valid and correctly formatted.
-
-   ```bash
-   terraform fmt
+   terraform import hcloud_ssh_key.default <SSH_KEY_ID>
+   terraform import hcloud_firewall.web_and_ssh <FIREWALL_ID>
+   terraform import hcloud_server.web_server <SERVER_ID>
+   terraform state list
+   terraform fmt -check
    terraform validate
-   ```
-
-3. **Plan the changes:**
-
-   Preview what Terraform is going to create or modify.
-
-   ```bash
    terraform plan
    ```
 
-4. **Apply the changes:**
+   If the matching cloud SSH key or firewall does not exist, stop and document a
+   separate creation/attachment change. A cloud key import does not prove that key
+   is authorized for the live `deploy` user.
+5. Review the full plan against the recorded IDs. Initial adoption should have no
+   unexpected changes; enabling deletion/rebuild protection is expected if absent.
+   Stop on any create, replacement, deletion, network change, or access change.
+   Reconcile configuration instead of disabling safeguards to make the plan pass.
+6. Once reviewed, save a plan to a restricted location outside the checkout,
+   inspect it with `terraform show`, and apply that exact plan during a maintenance
+   window. Verify server identity/IP, SSH in a fresh session, firewall attachments,
+   and origin/public API readiness afterward. Securely back up the resulting state.
 
-   Execute the plan to create or modify the infrastructure.
+## SSH key rotation and server replacement
 
-   ```bash
-   terraform apply
-   ```
+The server ignores changes to the creation-time `ssh_keys` attribute. This avoids
+replacement when an imported server lacks that association or the cloud key
+changes. It also means Terraform does **not** rotate live SSH access. The provider
+[v1.45.0 server schema](https://github.com/hetznercloud/terraform-provider-hcloud/blob/v1.45.0/internal/server/resource.go)
+marks `ssh_keys`, `image`, and `location` as replacement-triggering fields; review
+the resolved provider version and actual plan as well.
 
-5. **Destroy the infrastructure:**
+For a live key rotation, keep a working administrative session and console/recovery
+access. Add the new public key to the intended host user's `authorized_keys`, test
+it from a second session (including required deployment privileges), update the CI
+SSH credential, and verify access before removing the old host key authorization.
+Manage the cloud key inventory separately: editing a cloud key does not update the
+running host's `authorized_keys`. Keep the recorded fingerprints current.
 
-   **Warning:** This will delete your VPS and all data on it!
+`prevent_destroy` rejects planned server replacement/destruction while this resource
+block remains present. It cannot prevent duplicate creation from empty state or
+protect a resource whose configuration block is removed. Cloud deletion/rebuild
+protection only takes effect after a reviewed apply; it is not proof that the live
+server is already protected.
 
-   ```bash
-   terraform destroy
-   ```
-
-## Next Steps
-
-Right now, this manages the Hetzner Server, SSH keys, and basic Firewall rules. Because our app relies on the existing VPS state and data, if you apply this in a new Hetzner project it will create a fresh server.
-
-To adopt an **existing** Hetzner server into this Terraform state rather than creating a new one, you will need to import the resources:
-
-```bash
-# Example: Import an existing server (replace <SERVER_ID> with the ID from Hetzner console)
-terraform import hcloud_server.web_server <SERVER_ID>
-
-# Import existing firewall
-terraform import hcloud_firewall.web_and_ssh <FIREWALL_ID>
-```
+Do not use routine `terraform destroy` for production. A deliberate replacement
+requires a separate maintenance/migration plan covering restored database and media,
+configuration and systemd jobs, tested administrative access, traffic cutover,
+rollback, and explicit approval before retiring the old host or removing protection.
