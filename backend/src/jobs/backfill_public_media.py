@@ -50,7 +50,9 @@ def _backfill(dry_run: bool) -> BackfillResult:
         return BackfillResult(status="disabled", found=len(relative_paths), uploaded=0)
 
     uploaded = mirror_published_images(relative_paths)
-    logger.info("Backfilled public media found=%s uploaded=%s", len(relative_paths), uploaded)
+    logger.info(
+        "Backfilled public media found=%s uploaded=%s", len(relative_paths), uploaded
+    )
     return BackfillResult(status="ok", found=len(relative_paths), uploaded=uploaded)
 
 
