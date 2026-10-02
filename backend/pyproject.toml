@@ -32,6 +32,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.61b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.61b0",
     "mcp>=2.0.0,<3",
+    "boto3>=1.35,<2",
 ]
 
 [dependency-groups]

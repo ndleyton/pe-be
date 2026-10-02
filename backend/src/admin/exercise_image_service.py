@@ -20,6 +20,7 @@ from src.admin.schemas import (
     AdminExerciseImageOptionsResponse,
 )
 from src.exercises.image_assets import (
+    mirror_published_images,
     parse_image_url_list,
     resolve_exercise_image_url,
     resolve_exercise_image_urls,
@@ -786,6 +787,7 @@ async def apply_reference_or_option(
                 )
                 published_paths.append(published_path)
 
+            await asyncio.to_thread(mirror_published_images, published_paths_written)
             exercise_type.images_url = _image_json(published_paths)
         except Exception:
             for published_path in published_paths_written:
@@ -825,6 +827,7 @@ async def apply_reference_or_option(
             _copy_relative_asset(candidate.storage_path, published_path)
             candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
             published_paths.append(published_path)
+        await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
 
     await session.commit()
