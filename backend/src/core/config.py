@@ -280,6 +280,24 @@ class Settings(BaseSettings):
         validation_alias="IMAGE_URL_PREFIX",
         description="URL prefix for exercise images",
     )
+    MEDIA_STORAGE_BACKEND: str = Field(
+        "local",
+        validation_alias="MEDIA_STORAGE_BACKEND",
+        description="'local' keeps media on disk only; 'r2' also mirrors to R2",
+    )
+    MEDIA_PUBLIC_BASE_URL: str = Field(
+        "",
+        validation_alias="MEDIA_PUBLIC_BASE_URL",
+        description=(
+            "Public CDN base URL for published exercise images, e.g. "
+            "https://media.example.com. Set only after backfilling."
+        ),
+    )
+    R2_ENDPOINT_URL: str = Field("", validation_alias="R2_ENDPOINT_URL")
+    R2_ACCESS_KEY_ID: str = Field("", validation_alias="R2_ACCESS_KEY_ID")
+    R2_SECRET_ACCESS_KEY: str = Field("", validation_alias="R2_SECRET_ACCESS_KEY")
+    R2_PUBLIC_BUCKET: str = Field("", validation_alias="R2_PUBLIC_BUCKET")
+    R2_PRIVATE_BUCKET: str = Field("", validation_alias="R2_PRIVATE_BUCKET")
     EXERCISE_IMAGE_STORAGE_DIR: str = Field(
         str(Path(__file__).resolve().parents[2] / ".exercise_images"),
         validation_alias="EXERCISE_IMAGE_STORAGE_DIR",

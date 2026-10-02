@@ -20,6 +20,7 @@ from src.admin.schemas import (
     AdminExerciseImageOptionsResponse,
 )
 from src.exercises.image_assets import (
+    mirror_published_images,
     parse_image_url_list,
     resolve_exercise_image_url,
     resolve_exercise_image_urls,
@@ -759,6 +760,9 @@ async def apply_reference_or_option(
         )
         published_paths: list[str] = []
         published_paths_written: list[str] = []
+        # Paths that did not exist before this call; only these are safe to
+        # remove on failure; a republish may overwrite a path still referenced.
+        published_paths_created: list[str] = []
         try:
             for reference_image in reference_images:
                 matching_upload = next(
@@ -777,6 +781,8 @@ async def apply_reference_or_option(
                     exercise_type.id,
                     matching_upload.id,
                 )
+                if not _candidate_file_exists(published_path):
+                    published_paths_created.append(published_path)
                 _publish_uploaded_reference(
                     matching_upload.storage_path, published_path
                 )
@@ -786,9 +792,10 @@ async def apply_reference_or_option(
                 )
                 published_paths.append(published_path)
 
+            await asyncio.to_thread(mirror_published_images, published_paths_written)
             exercise_type.images_url = _image_json(published_paths)
         except Exception:
-            for published_path in published_paths_written:
+            for published_path in published_paths_created:
                 try:
                     storage_path_for_relative_url(published_path).unlink(
                         missing_ok=True
@@ -825,6 +832,7 @@ async def apply_reference_or_option(
             _copy_relative_asset(candidate.storage_path, published_path)
             candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
             published_paths.append(published_path)
+        await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
 
     await session.commit()
