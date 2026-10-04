@@ -827,10 +827,12 @@ async def apply_reference_or_option(
 
         await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
-        await session.commit()
     except Exception:
         await asyncio.to_thread(delete_published_images, created_paths)
         raise
 
+    # Outside the cleanup handler: a failed commit may still have landed, so
+    # deleting here could orphan rows. Unreferenced files are harmless.
+    await session.commit()
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)
