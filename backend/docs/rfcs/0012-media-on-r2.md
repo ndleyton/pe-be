@@ -107,6 +107,6 @@ R2 has free egress. Storage costs $0.015/GB-month, writes $4.50 per million and 
 
 - **Republished uploads:** handled. Uploaded references publish to `published/.../uploaded/<candidate_id>-<sha256[:16]>.<ext>`, so changed bytes get a new key and existing immutable objects are never overwritten. Keys published before this change keep their old names.
 - **Request latency:** mirroring adds one R2 PUT per published image to the admin request. This is acceptable for an admin-only path.
-- **Mid-publish failure:** if anything fails up to and including the commit, published files created by that call are deleted from local disk and R2. Pre-existing files are kept. Objects are briefly public before the commit, but their keys are unguessable and not yet linked.
+- **Mid-publish failure:** if anything fails up to and including the commit, published files created by that call are deleted from local disk and R2. Pre-existing files are kept. Objects are briefly public before the commit, but their keys are unguessable and not yet linked. One edge case: if the commit succeeds but the client never receives the confirmation (for example, the connection drops), cleanup still runs and can delete files the committed row now references. Those images return 404 until an admin republishes them, which recreates the same content-addressed keys.
 - **Secrets:** R2 credentials live only in `backend/.env.production` on the VPS.
 - **Open question:** should public profile workout photos use the public bucket? Decide in phase 2.
