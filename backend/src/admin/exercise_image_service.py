@@ -20,6 +20,7 @@ from src.admin.schemas import (
     AdminExerciseImageOptionsResponse,
 )
 from src.exercises.image_assets import (
+    delete_published_images,
     mirror_published_images,
     parse_image_url_list,
     resolve_exercise_image_url,
@@ -122,9 +123,16 @@ def _published_storage_path_for_candidate(
 def _published_storage_path_for_uploaded_reference(
     exercise_type_id: int,
     candidate_id: int,
+    image_bytes: bytes,
 ) -> str:
+    # Content-addressed so a republish with different bytes gets a new key
+    # and never overwrites an object that is cached as immutable.
     extension, _, _ = _published_upload_format_settings()
-    return f"published/exercise-type-{exercise_type_id}/uploaded/{candidate_id}.{extension}"
+    digest = hashlib.sha256(image_bytes).hexdigest()[:16]
+    return (
+        f"published/exercise-type-{exercise_type_id}/uploaded/"
+        f"{candidate_id}-{digest}.{extension}"
+    )
 
 
 def _published_upload_format_settings() -> tuple[str, str, dict[str, object]]:
@@ -160,12 +168,8 @@ def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -
     target_path.write_bytes(source_path.read_bytes())
 
 
-def _publish_uploaded_reference(
-    source_relative_path: str, target_relative_path: str
-) -> None:
+def _render_published_upload(source_relative_path: str) -> bytes:
     source_path = storage_path_for_relative_url(source_relative_path)
-    target_path = storage_path_for_relative_url(target_relative_path)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
     max_edge = settings.EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX
     _, output_format, save_kwargs = _published_upload_format_settings()
 
@@ -177,7 +181,7 @@ def _publish_uploaded_reference(
             normalized = normalized.convert("RGB")
         output = BytesIO()
         normalized.save(output, format=output_format, **save_kwargs)
-        target_path.write_bytes(output.getvalue())
+        return output.getvalue()
 
 
 def _exercise_context(exercise_type: ExerciseType) -> dict:
@@ -737,33 +741,32 @@ async def apply_reference_or_option(
             detail="Exercise type does not have any reference images",
         )
 
-    if use_reference:
-        uploaded_references = (
-            (
-                await session.execute(
-                    select(ExerciseImageCandidate).where(
-                        ExerciseImageCandidate.exercise_type_id == exercise_type.id,
-                        ExerciseImageCandidate.asset_kind
-                        == ExerciseImageCandidate.AssetKind.uploaded_reference.value,
-                        ExerciseImageCandidate.status.in_(
-                            (
-                                ExerciseImageCandidate.AssetStatus.active.value,
-                                ExerciseImageCandidate.AssetStatus.promoted.value,
-                            )
-                        ),
-                        ExerciseImageCandidate.storage_path.in_(reference_images),
+    # Published files this call created. Only these are removed on failure;
+    # pre-existing paths may still be referenced by committed rows.
+    created_paths: list[str] = []
+    try:
+        if use_reference:
+            uploaded_references = (
+                (
+                    await session.execute(
+                        select(ExerciseImageCandidate).where(
+                            ExerciseImageCandidate.exercise_type_id == exercise_type.id,
+                            ExerciseImageCandidate.asset_kind
+                            == ExerciseImageCandidate.AssetKind.uploaded_reference.value,
+                            ExerciseImageCandidate.status.in_(
+                                (
+                                    ExerciseImageCandidate.AssetStatus.active.value,
+                                    ExerciseImageCandidate.AssetStatus.promoted.value,
+                                )
+                            ),
+                            ExerciseImageCandidate.storage_path.in_(reference_images),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        published_paths: list[str] = []
-        published_paths_written: list[str] = []
-        # Paths that did not exist before this call; only these are safe to
-        # remove on failure; a republish may overwrite a path still referenced.
-        published_paths_created: list[str] = []
-        try:
+            published_paths: list[str] = []
             for reference_image in reference_images:
                 matching_upload = next(
                     (
@@ -777,64 +780,57 @@ async def apply_reference_or_option(
                     published_paths.append(reference_image)
                     continue
 
+                image_bytes = _render_published_upload(matching_upload.storage_path)
                 published_path = _published_storage_path_for_uploaded_reference(
                     exercise_type.id,
                     matching_upload.id,
+                    image_bytes,
                 )
                 if not _candidate_file_exists(published_path):
-                    published_paths_created.append(published_path)
-                _publish_uploaded_reference(
-                    matching_upload.storage_path, published_path
-                )
-                published_paths_written.append(published_path)
+                    _write_candidate_bytes(published_path, image_bytes)
+                    created_paths.append(published_path)
                 matching_upload.status = (
                     ExerciseImageCandidate.AssetStatus.promoted.value
                 )
                 published_paths.append(published_path)
+        else:
+            candidates = await _load_candidates(session, exercise_type.id)
+            option_candidates = [c for c in candidates if c.option_key == option_key]
+            if not option_candidates:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Requested image option is incomplete or missing",
+                )
+            option_candidates.sort(key=lambda candidate: candidate.source_image_index)
+            expected_count = _expected_candidate_count(
+                pipeline_key=option_candidates[0].pipeline_key,
+                reference_images=reference_images,
+            )
+            if expected_count == 0 or len(option_candidates) != expected_count:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Requested image option is incomplete or missing",
+                )
+            published_paths = []
+            for candidate in option_candidates:
+                published_path = _published_storage_path_for_candidate(
+                    exercise_type.id,
+                    candidate.option_key,
+                    candidate.source_image_index,
+                    candidate.generation_key,
+                )
+                if not _candidate_file_exists(published_path):
+                    created_paths.append(published_path)
+                _copy_relative_asset(candidate.storage_path, published_path)
+                candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
+                published_paths.append(published_path)
 
-            await asyncio.to_thread(mirror_published_images, published_paths_written)
-            exercise_type.images_url = _image_json(published_paths)
-        except Exception:
-            for published_path in published_paths_created:
-                try:
-                    storage_path_for_relative_url(published_path).unlink(
-                        missing_ok=True
-                    )
-                except OSError:
-                    pass
-            raise
-    else:
-        candidates = await _load_candidates(session, exercise_type.id)
-        option_candidates = [c for c in candidates if c.option_key == option_key]
-        if not option_candidates:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Requested image option is incomplete or missing",
-            )
-        option_candidates.sort(key=lambda candidate: candidate.source_image_index)
-        expected_count = _expected_candidate_count(
-            pipeline_key=option_candidates[0].pipeline_key,
-            reference_images=reference_images,
-        )
-        if expected_count == 0 or len(option_candidates) != expected_count:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Requested image option is incomplete or missing",
-            )
-        published_paths: list[str] = []
-        for candidate in option_candidates:
-            published_path = _published_storage_path_for_candidate(
-                exercise_type.id,
-                candidate.option_key,
-                candidate.source_image_index,
-                candidate.generation_key,
-            )
-            _copy_relative_asset(candidate.storage_path, published_path)
-            candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
-            published_paths.append(published_path)
         await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
+        await session.commit()
+    except Exception:
+        await asyncio.to_thread(delete_published_images, created_paths)
+        raise
 
-    await session.commit()
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)

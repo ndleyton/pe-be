@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from src.core import object_storage
 from src.core.object_storage import PUBLIC_IMMUTABLE_CACHE_CONTROL, ObjectStorage
 from src.exercises.image_assets import (
+    delete_published_images,
     mirror_published_images,
     resolve_exercise_image_url,
 )
 from src.jobs import backfill_public_media
+from src.jobs.shared import JobRunResult
 
 
 class FakeS3Client:
@@ -101,55 +105,92 @@ def test_resolve_published_url_uses_cdn_only_when_configured(monkeypatch):
     )
 
 
-@pytest.mark.asyncio
-async def test_backfill_dry_run_counts_without_uploading(fake_r2, tmp_path):
-    _write(tmp_path, "published/exercise-type-1/a/0-key.png")
-    _write(tmp_path, "generated/exercise-type-1/a/0-key.png")
+class FakeSession:
+    def __init__(self, images_urls):
+        self._rows = [(value,) for value in images_urls]
 
-    result = await backfill_public_media.run(dry_run=True)
+    async def execute(self, statement):
+        return self._rows
 
-    assert (result.status, result.found, result.uploaded) == ("dry_run", 1, 0)
+
+def test_delete_published_images_removes_local_and_r2(fake_r2, tmp_path):
+    _write(tmp_path, "published/a.png")
+    mirror_published_images(["published/a.png"])
+
+    delete_published_images(["published/a.png", "uploads/keep.png"])
+
+    assert not (tmp_path / "published/a.png").exists()
     assert fake_r2.objects == {}
 
 
 @pytest.mark.asyncio
-async def test_backfill_uploads_published_files(fake_r2, tmp_path):
+async def test_referenced_paths_skip_unreferenced_and_missing_files(fake_r2, tmp_path):
     _write(tmp_path, "published/exercise-type-1/a/0-key.png")
-    _write(tmp_path, "published/exercise-type-2/uploaded/5.webp")
+    _write(tmp_path, "published/exercise-type-1/a/orphan.png")
+    session = FakeSession(
+        [
+            json.dumps(
+                [
+                    "published/exercise-type-1/a/0-key.png",
+                    "published/exercise-type-1/a/missing.png",
+                    "uploads/private.png",
+                ]
+            ),
+            json.dumps(["https://legacy.example.com/x.png"]),
+        ]
+    )
 
-    result = await backfill_public_media.run()
+    paths = await backfill_public_media.referenced_published_paths(session)
 
-    assert (result.status, result.found, result.uploaded) == ("ok", 2, 2)
-    assert set(fake_r2.objects) == {
-        "pe-be-public/published/exercise-type-1/a/0-key.png",
-        "pe-be-public/published/exercise-type-2/uploaded/5.webp",
-    }
+    assert paths == ["published/exercise-type-1/a/0-key.png"]
 
 
 @pytest.mark.asyncio
-async def test_backfill_disabled_without_r2(monkeypatch, tmp_path):
-    monkeypatch.setattr("src.core.config.settings.MEDIA_STORAGE_BACKEND", "local")
-    monkeypatch.setattr(
-        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR", str(tmp_path)
-    )
+async def test_backfill_job_dry_run_does_not_upload(fake_r2, tmp_path):
     _write(tmp_path, "published/x.png")
+    session = FakeSession([json.dumps(["published/x.png"])])
+
+    metrics = await backfill_public_media._backfill_job(session, dry_run=True)
+
+    assert metrics == {"found": 1, "uploaded": 0}
+    assert fake_r2.objects == {}
+
+
+@pytest.mark.asyncio
+async def test_backfill_job_uploads_referenced_files(fake_r2, tmp_path):
+    _write(tmp_path, "published/x.png")
+    _write(tmp_path, "published/orphan.png")
+    session = FakeSession([json.dumps(["published/x.png"])])
+
+    metrics = await backfill_public_media._backfill_job(session, dry_run=False)
+
+    assert metrics == {"found": 1, "uploaded": 1}
+    assert set(fake_r2.objects) == {"pe-be-public/published/x.png"}
+
+
+@pytest.mark.asyncio
+async def test_backfill_disabled_without_r2(monkeypatch):
+    monkeypatch.setattr("src.core.config.settings.MEDIA_STORAGE_BACKEND", "local")
 
     result = await backfill_public_media.run()
 
-    assert (result.status, result.found) == ("disabled", 1)
+    assert result.status == "disabled"
 
 
 def test_backfill_main_prints_summary(monkeypatch, capsys):
-    async def fake_run(*, dry_run: bool):
-        return backfill_public_media.BackfillResult("dry_run", 3, 0)
+    result = JobRunResult(
+        job_name="backfill_public_media",
+        status="success",
+        metrics={"found": 3, "uploaded": 0},
+    )
 
     def fake_asyncio_run(coro):
         coro.close()
-        return backfill_public_media.BackfillResult("dry_run", 3, 0)
+        return result
 
-    monkeypatch.setattr(backfill_public_media, "run", fake_run)
+    monkeypatch.setattr(backfill_public_media, "configure_job_runtime", lambda: None)
     monkeypatch.setattr(backfill_public_media.asyncio, "run", fake_asyncio_run)
 
     backfill_public_media.main(["--dry-run"])
 
-    assert "status=dry_run found=3 uploaded=0" in capsys.readouterr().out
+    assert "(dry run): found=3 uploaded=0" in capsys.readouterr().out

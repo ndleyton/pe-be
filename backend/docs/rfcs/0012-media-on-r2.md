@@ -78,7 +78,7 @@ Keys reuse the existing relative storage paths (for example `published/exercise-
 ### Phase 1: published exercise images (this change)
 
 1. When `apply_reference_or_option` publishes images, it writes them locally as before, then mirrors them to `pe-be-public`. If the upload fails, the request fails before commit, as a local write failure does today.
-2. `python -m src.jobs.backfill_public_media [--dry-run]` uploads all existing `published/` files.
+2. `python -m src.jobs.backfill_public_media [--dry-run]` uploads the `published/` files referenced by committed `ExerciseType.images_url` values. Orphaned files are skipped.
 3. Once the backfill has run, setting `MEDIA_PUBLIC_BASE_URL` makes `resolve_exercise_image_url` return CDN URLs for `published/` paths. Unsetting it rolls back immediately, because the local files are still there.
 
 Deploy order:
@@ -105,8 +105,8 @@ R2 has free egress. Storage costs $0.015/GB-month, writes $4.50 per million and 
 
 ## Risks and open questions
 
-- **Republished uploads:** a republished uploaded reference reuses the key `published/.../uploaded/<candidate_id>.<ext>`. If the encoding settings change between publishes, the CDN can serve the old bytes for up to a year. Mitigate by adding a content hash to that key.
+- **Republished uploads:** handled. Uploaded references publish to `published/.../uploaded/<candidate_id>-<sha256[:16]>.<ext>`, so changed bytes get a new key and existing immutable objects are never overwritten. Keys published before this change keep their old names.
 - **Request latency:** mirroring adds one R2 PUT per published image to the admin request. This is acceptable for an admin-only path.
-- **Mid-publish failure:** a failed mirror after a partial publish leaves orphaned objects in R2. They're harmless, because unreferenced published keys are never linked.
+- **Mid-publish failure:** if anything fails up to and including the commit, published files created by that call are deleted from local disk and R2. Pre-existing files are kept. Objects are briefly public before the commit, but their keys are unguessable and not yet linked.
 - **Secrets:** R2 credentials live only in `backend/.env.production` on the VPS.
 - **Open question:** should public profile workout photos use the public bucket? Decide in phase 2.

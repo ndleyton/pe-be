@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Iterable
 
@@ -11,6 +12,8 @@ from src.core.object_storage import (
 )
 
 PUBLISHED_PREFIX = "published/"
+
+logger = logging.getLogger(__name__)
 
 
 def exercise_image_storage_dir() -> Path:
@@ -90,3 +93,28 @@ def mirror_published_images(relative_paths: Iterable[str]) -> int:
         )
         mirrored += 1
     return mirrored
+
+
+def delete_published_images(relative_paths: Iterable[str]) -> None:
+    """Best-effort removal of published images from local disk and R2."""
+    relative_paths = [p for p in relative_paths if p.startswith(PUBLISHED_PREFIX)]
+    if not relative_paths:
+        return
+
+    for relative_path in relative_paths:
+        try:
+            storage_path_for_relative_url(relative_path).unlink(missing_ok=True)
+        except (OSError, ValueError):
+            pass
+
+    try:
+        storage = get_public_media_storage()
+    except RuntimeError:
+        return
+    if storage is None:
+        return
+    for relative_path in relative_paths:
+        try:
+            storage.delete(relative_path)
+        except Exception:
+            logger.warning("Failed to delete public media key=%s", relative_path)

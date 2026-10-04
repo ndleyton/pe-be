@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 from unittest.mock import AsyncMock
 
 import pytest
@@ -550,9 +551,12 @@ async def test_direct_uploaded_reference_publish_uses_configured_format(
         settings.EXERCISE_IMAGE_PUBLISHED_FORMAT = original_format
 
     stored_paths = json.loads(exercise_type.images_url)
-    assert stored_paths == [
-        f"published/exercise-type-{exercise_type.id}/uploaded/{upload.json()['id']}.png"
-    ]
+    assert len(stored_paths) == 1
+    assert re.fullmatch(
+        rf"published/exercise-type-{exercise_type.id}/uploaded/"
+        rf"{upload.json()['id']}-[0-9a-f]{{16}}\.png",
+        stored_paths[0],
+    )
     assert (tmp_path / stored_paths[0]).read_bytes().startswith(b"\x89PNG")
 
 
@@ -599,11 +603,8 @@ async def test_direct_uploaded_reference_publish_cleans_written_file_on_failure(
         app.dependency_overrides.pop(current_active_user, None)
 
     assert upload.status_code == 201, upload.text
-    asset_id = upload.json()["id"]
     await db_session.refresh(exercise_type)
-    published_path = (
-        f"published/exercise-type-{exercise_type.id}/uploaded/{asset_id}.webp"
-    )
+    uploaded_dir = tmp_path / f"published/exercise-type-{exercise_type.id}/uploaded"
 
     def fail_after_images_url_set(target, value, oldvalue, initiator):
         if value and "published/" in value:
@@ -628,7 +629,7 @@ async def test_direct_uploaded_reference_publish_cleans_written_file_on_failure(
         event.remove(ExerciseType.images_url, "set", fail_after_images_url_set)
         await db_session.rollback()
 
-    assert not (tmp_path / published_path).exists()
+    assert not uploaded_dir.exists() or not any(uploaded_dir.iterdir())
 
 
 @pytest.mark.integration
@@ -676,10 +677,8 @@ async def test_direct_uploaded_reference_republish_keeps_existing_file_on_mirror
     assert upload.status_code == 201, upload.text
     asset_id = upload.json()["id"]
     await db_session.refresh(exercise_type)
-    published_path = (
-        f"published/exercise-type-{exercise_type.id}/uploaded/{asset_id}.webp"
-    )
-    existing_file = tmp_path / published_path
+    uploaded_dir = tmp_path / f"published/exercise-type-{exercise_type.id}/uploaded"
+    existing_file = uploaded_dir / f"{asset_id}-0000000000000000.webp"
     existing_file.parent.mkdir(parents=True, exist_ok=True)
     existing_file.write_bytes(b"previously published")
 
@@ -700,4 +699,5 @@ async def test_direct_uploaded_reference_republish_keeps_existing_file_on_mirror
     finally:
         await db_session.rollback()
 
-    assert existing_file.exists()
+    assert existing_file.read_bytes() == b"previously published"
+    assert list(uploaded_dir.iterdir()) == [existing_file]
