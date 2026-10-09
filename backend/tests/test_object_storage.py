@@ -259,3 +259,78 @@ def test_generated_legacy_publication_path_remains_supported():
         _published_storage_path_for_candidate(1, "front", 0, "key")
         == "published/exercise-type-1/front/0-key.png"
     )
+
+
+@pytest.mark.asyncio
+async def test_partial_r2_publish_failure_cleans_only_new_publications(
+    fake_r2, monkeypatch, tmp_path
+):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from src.admin import exercise_image_service as service
+
+    candidates = []
+    published_paths = []
+    for index in range(3):
+        image_bytes = f"image-{index}".encode()
+        candidate = SimpleNamespace(
+            id=index + 1,
+            option_key="front",
+            source_image_index=index,
+            generation_key=f"key-{index}",
+            pipeline_key=service.REFERENCE_PIPELINE_KEY,
+            storage_path=f"generated/source-{index}.png",
+            status="active",
+        )
+        candidates.append(candidate)
+        _write(tmp_path, candidate.storage_path, image_bytes)
+        published_paths.append(
+            service._published_storage_path_for_candidate(
+                1, "front", index, candidate.generation_key, image_bytes
+            )
+        )
+
+    existing_path = published_paths[0]
+    _write(tmp_path, existing_path, b"image-0")
+    mirror_published_images([existing_path])
+    existing_objects = dict(fake_r2.objects)
+    previous_images_url = json.dumps([existing_path])
+    exercise = SimpleNamespace(
+        id=1,
+        images_url=previous_images_url,
+        reference_images_url=json.dumps([f"reference-{i}.png" for i in range(3)]),
+    )
+    session = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
+    monkeypatch.setattr(service, "_load_candidates", AsyncMock(return_value=candidates))
+    response = AsyncMock()
+    monkeypatch.setattr(service, "build_image_options_response", response)
+
+    original_put = fake_r2.put_object
+    put_keys = []
+
+    def failing_put(**kwargs):
+        put_keys.append(kwargs["Key"])
+        original_put(**kwargs)
+        # A write can land even when its response fails.
+        if kwargs["Key"] == published_paths[2]:
+            raise RuntimeError("simulated R2 PUT failure")
+
+    monkeypatch.setattr(fake_r2, "put_object", failing_put)
+
+    with pytest.raises(RuntimeError, match="simulated R2 PUT failure"):
+        await service.apply_reference_or_option(
+            session, exercise, option_key="front", use_reference=False
+        )
+
+    assert put_keys == published_paths
+    assert (tmp_path / existing_path).read_bytes() == b"image-0"
+    assert all(not (tmp_path / path).exists() for path in published_paths[1:])
+    assert fake_r2.objects == existing_objects
+    assert all(
+        (tmp_path / candidate.storage_path).is_file() for candidate in candidates
+    )
+    assert exercise.images_url == previous_images_url
+    session.commit.assert_not_awaited()
+    session.refresh.assert_not_awaited()
+    response.assert_not_awaited()
