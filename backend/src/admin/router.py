@@ -2,7 +2,7 @@
 Admin endpoints for maintenance tasks
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 import logging
@@ -15,6 +15,7 @@ from src.core.config import settings
 from google.genai import errors
 from src.admin.exercise_image_service import (
     apply_reference_or_option,
+    unpublish_images,
     build_image_options_response,
     _exercise_context,
     generate_reference_image_options,
@@ -395,3 +396,25 @@ async def apply_reference_option(
     )
     await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
     return response
+
+
+@router.delete(
+    "/exercise-types/{exercise_type_id}/published-images",
+    summary="Admin: withdraw published exercise images",
+)
+async def withdraw_published_images(
+    exercise_type_id: int,
+    response: Response,
+    user: User = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, int]:
+    exercise_type = await ExerciseTypeService.get_exercise_type(
+        session, exercise_type_id, user=user
+    )
+    if not exercise_type:
+        raise HTTPException(status_code=404, detail="Exercise type not found")
+    result = await unpublish_images(session, exercise_type)
+    if result["failed"]:
+        response.status_code = status.HTTP_202_ACCEPTED
+    await response_cache.invalidate_tags(EXERCISE_PUBLIC_CACHE_TAG)
+    return result

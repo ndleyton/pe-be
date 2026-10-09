@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import hashlib
 import json
 from io import BytesIO
@@ -19,7 +20,16 @@ from src.admin.schemas import (
     AdminExerciseImageOptionSpec,
     AdminExerciseImageOptionsResponse,
 )
+from src.exercises.published_media import (
+    lock_publications,
+    referenced_publications,
+    process_takedowns,
+    published_keys,
+    queue_takedowns,
+)
 from src.exercises.image_assets import (
+    delete_published_images,
+    mirror_published_images,
     parse_image_url_list,
     resolve_exercise_image_url,
     resolve_exercise_image_urls,
@@ -111,19 +121,32 @@ def _published_storage_path_for_candidate(
     option_key: str,
     source_image_index: int,
     generation_key: str,
+    image_bytes: bytes | None = None,
+    *,
+    content_digest: str | None = None,
 ) -> str:
+    if content_digest is None and image_bytes is not None:
+        content_digest = hashlib.sha256(image_bytes).hexdigest()
+    digest_suffix = f"-{content_digest[:16]}" if content_digest else ""
     return (
         f"published/exercise-type-{exercise_type_id}/{option_key}/"
-        f"{source_image_index}-{generation_key}.png"
+        f"{source_image_index}-{generation_key}{digest_suffix}.png"
     )
 
 
 def _published_storage_path_for_uploaded_reference(
     exercise_type_id: int,
     candidate_id: int,
+    image_bytes: bytes,
 ) -> str:
+    # Content-addressed so a republish with different bytes gets a new key
+    # and never overwrites an object that is cached as immutable.
     extension, _, _ = _published_upload_format_settings()
-    return f"published/exercise-type-{exercise_type_id}/uploaded/{candidate_id}.{extension}"
+    digest = hashlib.sha256(image_bytes).hexdigest()[:16]
+    return (
+        f"published/exercise-type-{exercise_type_id}/uploaded/"
+        f"{candidate_id}-{digest}.{extension}"
+    )
 
 
 def _published_upload_format_settings() -> tuple[str, str, dict[str, object]]:
@@ -152,19 +175,8 @@ def _candidate_file_exists(relative_path: str) -> bool:
         return False
 
 
-def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -> None:
+def _render_published_upload(source_relative_path: str) -> bytes:
     source_path = storage_path_for_relative_url(source_relative_path)
-    target_path = storage_path_for_relative_url(target_relative_path)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_bytes(source_path.read_bytes())
-
-
-def _publish_uploaded_reference(
-    source_relative_path: str, target_relative_path: str
-) -> None:
-    source_path = storage_path_for_relative_url(source_relative_path)
-    target_path = storage_path_for_relative_url(target_relative_path)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
     max_edge = settings.EXERCISE_IMAGE_PUBLISHED_MAX_EDGE_PX
     _, output_format, save_kwargs = _published_upload_format_settings()
 
@@ -176,7 +188,7 @@ def _publish_uploaded_reference(
             normalized = normalized.convert("RGB")
         output = BytesIO()
         normalized.save(output, format=output_format, **save_kwargs)
-        target_path.write_bytes(output.getvalue())
+        return output.getvalue()
 
 
 def _exercise_context(exercise_type: ExerciseType) -> dict:
@@ -272,20 +284,37 @@ def _expected_candidate_count(*, pipeline_key: str, reference_images: list[str])
     return 0
 
 
-def _published_option_images(
-    exercise_type_id: int, candidates: list[ExerciseImageCandidate]
+async def _published_option_images(
+    exercise_type_id: int,
+    candidates: list[ExerciseImageCandidate],
+    *,
+    legacy: bool = False,
 ) -> list[str]:
-    return [
-        resolve_exercise_image_url(
-            _published_storage_path_for_candidate(
-                exercise_type_id,
-                candidate.option_key,
-                candidate.source_image_index,
-                candidate.generation_key,
+    images = []
+    for candidate in candidates:
+        digest = None if legacy else candidate.sha256
+        if not legacy and not digest:
+
+            def read_digest(path=candidate.storage_path):
+                if _candidate_file_exists(path):
+                    return hashlib.sha256(
+                        storage_path_for_relative_url(path).read_bytes()
+                    ).hexdigest()
+                return None
+
+            digest = await asyncio.to_thread(read_digest)
+        images.append(
+            resolve_exercise_image_url(
+                _published_storage_path_for_candidate(
+                    exercise_type_id,
+                    candidate.option_key,
+                    candidate.source_image_index,
+                    candidate.generation_key,
+                    content_digest=digest,
+                )
             )
         )
-        for candidate in candidates
-    ]
+    return images
 
 
 async def _load_candidates(
@@ -336,7 +365,7 @@ async def _load_candidates_by_keys(
     return result.scalars().all()
 
 
-def _candidate_groups(
+async def _candidate_groups(
     *,
     exercise_type_id: int,
     candidates: list[ExerciseImageCandidate],
@@ -365,7 +394,9 @@ def _candidate_groups(
             resolve_exercise_image_url(candidate.storage_path)
             for candidate in option_candidates
         ]
-        live_images = _published_option_images(exercise_type_id, option_candidates)
+        live_images = await _published_option_images(
+            exercise_type_id, option_candidates
+        )
         options.append(
             AdminExerciseImageOption(
                 key=option.key,
@@ -382,7 +413,13 @@ def _candidate_groups(
                     if option.option_source == REFERENCE_OPTION_SOURCE
                     else []
                 ),
-                is_current=live_images == current_resolved,
+                is_current=(
+                    live_images == current_resolved
+                    or await _published_option_images(
+                        exercise_type_id, option_candidates, legacy=True
+                    )
+                    == current_resolved
+                ),
             )
         )
 
@@ -408,7 +445,7 @@ async def build_image_options_response(
         reference_images=resolve_exercise_image_urls(reference_images),
         supports_revert_to_reference=bool(reference_images),
         available_options=_available_option_specs(reference_images),
-        options=_candidate_groups(
+        options=await _candidate_groups(
             exercise_type_id=exercise_type.id,
             candidates=candidates,
             current_images=parse_image_url_list(exercise_type.images_url),
@@ -537,6 +574,7 @@ async def generate_reference_image_options(
         ), result in zip(pending_jobs, results, strict=True):
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
+            content_digest = hashlib.sha256(output_bytes).hexdigest()
             now = datetime.now(timezone.utc)
 
             if existing:
@@ -549,6 +587,7 @@ async def generate_reference_image_options(
                 existing.prompt_summary = result.prompt_summary
                 existing.mime_type = result.mime_type
                 existing.storage_path = storage_path
+                existing.sha256 = content_digest
                 existing.updated_at = now
             else:
                 new_candidate_rows.append(
@@ -566,6 +605,7 @@ async def generate_reference_image_options(
                         "prompt_summary": result.prompt_summary,
                         "mime_type": result.mime_type,
                         "storage_path": storage_path,
+                        "sha256": content_digest,
                         "asset_kind": (
                             ExerciseImageCandidate.AssetKind.generated_candidate.value
                         ),
@@ -594,6 +634,7 @@ async def generate_reference_image_options(
                         "prompt_summary": excluded.prompt_summary,
                         "mime_type": excluded.mime_type,
                         "storage_path": excluded.storage_path,
+                        "sha256": excluded.sha256,
                         "asset_kind": excluded.asset_kind,
                         "status": excluded.status,
                         "updated_at": excluded.updated_at,
@@ -671,6 +712,7 @@ async def _generate_phase_fallback_image_options(
 
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
+            content_digest = hashlib.sha256(output_bytes).hexdigest()
 
             if existing:
                 existing.option_label = PHASE_FALLBACK_OPTION_LABEL
@@ -682,6 +724,7 @@ async def _generate_phase_fallback_image_options(
                 existing.prompt_summary = result.prompt_summary
                 existing.mime_type = result.mime_type
                 existing.storage_path = storage_path
+                existing.sha256 = content_digest
             else:
                 session.add(
                     ExerciseImageCandidate(
@@ -698,6 +741,7 @@ async def _generate_phase_fallback_image_options(
                         prompt_summary=result.prompt_summary,
                         mime_type=result.mime_type,
                         storage_path=storage_path,
+                        sha256=content_digest,
                         asset_kind=(
                             ExerciseImageCandidate.AssetKind.generated_candidate.value
                         ),
@@ -729,6 +773,11 @@ async def apply_reference_or_option(
     option_key: str | None,
     use_reference: bool,
 ) -> AdminExerciseImageOptionsResponse:
+    await lock_publications(session)
+    await session.refresh(
+        exercise_type, attribute_names=["images_url", "reference_images_url"]
+    )
+    previous_paths = published_keys(exercise_type.images_url)
     reference_images = _ensure_reference_images(exercise_type)
     if use_reference and not reference_images:
         raise HTTPException(
@@ -736,30 +785,32 @@ async def apply_reference_or_option(
             detail="Exercise type does not have any reference images",
         )
 
-    if use_reference:
-        uploaded_references = (
-            (
-                await session.execute(
-                    select(ExerciseImageCandidate).where(
-                        ExerciseImageCandidate.exercise_type_id == exercise_type.id,
-                        ExerciseImageCandidate.asset_kind
-                        == ExerciseImageCandidate.AssetKind.uploaded_reference.value,
-                        ExerciseImageCandidate.status.in_(
-                            (
-                                ExerciseImageCandidate.AssetStatus.active.value,
-                                ExerciseImageCandidate.AssetStatus.promoted.value,
-                            )
-                        ),
-                        ExerciseImageCandidate.storage_path.in_(reference_images),
+    # Published files this call created. Only these are removed on failure;
+    # pre-existing paths may still be referenced by committed rows.
+    created_paths: list[str] = []
+    try:
+        if use_reference:
+            uploaded_references = (
+                (
+                    await session.execute(
+                        select(ExerciseImageCandidate).where(
+                            ExerciseImageCandidate.exercise_type_id == exercise_type.id,
+                            ExerciseImageCandidate.asset_kind
+                            == ExerciseImageCandidate.AssetKind.uploaded_reference.value,
+                            ExerciseImageCandidate.status.in_(
+                                (
+                                    ExerciseImageCandidate.AssetStatus.active.value,
+                                    ExerciseImageCandidate.AssetStatus.promoted.value,
+                                )
+                            ),
+                            ExerciseImageCandidate.storage_path.in_(reference_images),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        published_paths: list[str] = []
-        published_paths_written: list[str] = []
-        try:
+            published_paths: list[str] = []
             for reference_image in reference_images:
                 matching_upload = next(
                     (
@@ -773,60 +824,110 @@ async def apply_reference_or_option(
                     published_paths.append(reference_image)
                     continue
 
+                image_bytes = _render_published_upload(matching_upload.storage_path)
                 published_path = _published_storage_path_for_uploaded_reference(
                     exercise_type.id,
                     matching_upload.id,
+                    image_bytes,
                 )
-                _publish_uploaded_reference(
-                    matching_upload.storage_path, published_path
-                )
-                published_paths_written.append(published_path)
+                if not _candidate_file_exists(published_path):
+                    _write_candidate_bytes(published_path, image_bytes)
+                    created_paths.append(published_path)
                 matching_upload.status = (
                     ExerciseImageCandidate.AssetStatus.promoted.value
                 )
                 published_paths.append(published_path)
-
-            exercise_type.images_url = _image_json(published_paths)
-        except Exception:
-            for published_path in published_paths_written:
-                try:
-                    storage_path_for_relative_url(published_path).unlink(
-                        missing_ok=True
-                    )
-                except OSError:
-                    pass
-            raise
-    else:
-        candidates = await _load_candidates(session, exercise_type.id)
-        option_candidates = [c for c in candidates if c.option_key == option_key]
-        if not option_candidates:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Requested image option is incomplete or missing",
+        else:
+            candidates = await _load_candidates(session, exercise_type.id)
+            option_candidates = [c for c in candidates if c.option_key == option_key]
+            if not option_candidates:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Requested image option is incomplete or missing",
+                )
+            option_candidates.sort(key=lambda candidate: candidate.source_image_index)
+            expected_count = _expected_candidate_count(
+                pipeline_key=option_candidates[0].pipeline_key,
+                reference_images=reference_images,
             )
-        option_candidates.sort(key=lambda candidate: candidate.source_image_index)
-        expected_count = _expected_candidate_count(
-            pipeline_key=option_candidates[0].pipeline_key,
-            reference_images=reference_images,
+            if expected_count == 0 or len(option_candidates) != expected_count:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Requested image option is incomplete or missing",
+                )
+            published_paths = []
+            for candidate in option_candidates:
+                image_bytes = storage_path_for_relative_url(
+                    candidate.storage_path
+                ).read_bytes()
+                published_path = _published_storage_path_for_candidate(
+                    exercise_type.id,
+                    candidate.option_key,
+                    candidate.source_image_index,
+                    candidate.generation_key,
+                    image_bytes,
+                )
+                if not _candidate_file_exists(published_path):
+                    _write_candidate_bytes(published_path, image_bytes)
+                    created_paths.append(published_path)
+                candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
+                published_paths.append(published_path)
+
+        await asyncio.to_thread(
+            queue_takedowns,
+            created_paths,
+            grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
         )
-        if expected_count == 0 or len(option_candidates) != expected_count:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Requested image option is incomplete or missing",
-            )
-        published_paths: list[str] = []
-        for candidate in option_candidates:
-            published_path = _published_storage_path_for_candidate(
-                exercise_type.id,
-                candidate.option_key,
-                candidate.source_image_index,
-                candidate.generation_key,
-            )
-            _copy_relative_asset(candidate.storage_path, published_path)
-            candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
-            published_paths.append(published_path)
+        await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
+    except Exception:
+        try:
+            live_paths = await referenced_publications(session)
+            await asyncio.to_thread(
+                delete_published_images, set(created_paths) - live_paths
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Unable to check failed publication references; deferring cleanup"
+            )
+        raise
 
+    retired_paths = previous_paths - published_keys(published_paths)
+    await asyncio.to_thread(queue_takedowns, retired_paths)
+    # Records are written before commit. Cleanup checks committed references,
+    # so an ambiguous commit never causes live publications to be deleted.
     await session.commit()
+    try:
+        await process_takedowns(session, keys=retired_paths)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Post-commit publication cleanup failed; deferring to reconciliation"
+        )
+        # A failed cleanup query can leave the new transaction unusable.
+        await session.rollback()
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)
+
+
+async def unpublish_images(
+    session: AsyncSession, exercise_type: ExerciseType
+) -> dict[str, int]:
+    """Withdraw published images; private candidate originals remain private."""
+    await lock_publications(session)
+    await session.refresh(
+        exercise_type, attribute_names=["images_url", "reference_images_url"]
+    )
+    retired_paths = published_keys(exercise_type.images_url) | published_keys(
+        exercise_type.reference_images_url
+    )
+    await asyncio.to_thread(queue_takedowns, retired_paths)
+    exercise_type.images_url = _image_json([])
+    exercise_type.reference_images_url = _image_json(
+        [
+            image
+            for image in parse_image_url_list(exercise_type.reference_images_url)
+            if not published_keys([image])
+        ]
+    )
+    await session.commit()
+    return await process_takedowns(session, keys=retired_paths)
