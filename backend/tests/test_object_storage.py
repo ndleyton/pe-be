@@ -216,6 +216,7 @@ async def test_generated_republish_uses_new_key_for_changed_bytes(
         option_key="front",
         source_image_index=0,
         generation_key="same-inputs",
+        sha256=None,
         pipeline_key=service.REFERENCE_PIPELINE_KEY,
         storage_path="generated/source.png",
         status="active",
@@ -239,7 +240,7 @@ async def test_generated_republish_uses_new_key_for_changed_bytes(
         session, exercise, option_key="front", use_reference=False
     )
     first_path = json.loads(exercise.images_url)[0]
-    assert service._published_option_images(1, [candidate]) == [
+    assert await service._published_option_images(1, [candidate]) == [
         resolve_exercise_image_url(first_path)
     ]
 

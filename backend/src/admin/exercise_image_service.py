@@ -122,12 +122,12 @@ def _published_storage_path_for_candidate(
     source_image_index: int,
     generation_key: str,
     image_bytes: bytes | None = None,
+    *,
+    content_digest: str | None = None,
 ) -> str:
-    digest_suffix = (
-        f"-{hashlib.sha256(image_bytes).hexdigest()[:16]}"
-        if image_bytes is not None
-        else ""
-    )
+    if content_digest is None and image_bytes is not None:
+        content_digest = hashlib.sha256(image_bytes).hexdigest()
+    digest_suffix = f"-{content_digest[:16]}" if content_digest else ""
     return (
         f"published/exercise-type-{exercise_type_id}/{option_key}/"
         f"{source_image_index}-{generation_key}{digest_suffix}.png"
@@ -284,28 +284,36 @@ def _expected_candidate_count(*, pipeline_key: str, reference_images: list[str])
     return 0
 
 
-def _published_option_images(
+async def _published_option_images(
     exercise_type_id: int,
     candidates: list[ExerciseImageCandidate],
     *,
     legacy: bool = False,
 ) -> list[str]:
-    return [
-        resolve_exercise_image_url(
-            _published_storage_path_for_candidate(
-                exercise_type_id,
-                candidate.option_key,
-                candidate.source_image_index,
-                candidate.generation_key,
-                image_bytes=(
-                    storage_path_for_relative_url(candidate.storage_path).read_bytes()
-                    if not legacy and _candidate_file_exists(candidate.storage_path)
-                    else None
-                ),
+    images = []
+    for candidate in candidates:
+        digest = None if legacy else candidate.sha256
+        if not legacy and not digest:
+            def read_digest(path=candidate.storage_path):
+                if _candidate_file_exists(path):
+                    return hashlib.sha256(
+                        storage_path_for_relative_url(path).read_bytes()
+                    ).hexdigest()
+                return None
+
+            digest = await asyncio.to_thread(read_digest)
+        images.append(
+            resolve_exercise_image_url(
+                _published_storage_path_for_candidate(
+                    exercise_type_id,
+                    candidate.option_key,
+                    candidate.source_image_index,
+                    candidate.generation_key,
+                    content_digest=digest,
+                )
             )
         )
-        for candidate in candidates
-    ]
+    return images
 
 
 async def _load_candidates(
@@ -356,7 +364,7 @@ async def _load_candidates_by_keys(
     return result.scalars().all()
 
 
-def _candidate_groups(
+async def _candidate_groups(
     *,
     exercise_type_id: int,
     candidates: list[ExerciseImageCandidate],
@@ -385,7 +393,7 @@ def _candidate_groups(
             resolve_exercise_image_url(candidate.storage_path)
             for candidate in option_candidates
         ]
-        live_images = _published_option_images(exercise_type_id, option_candidates)
+        live_images = await _published_option_images(exercise_type_id, option_candidates)
         options.append(
             AdminExerciseImageOption(
                 key=option.key,
@@ -404,7 +412,7 @@ def _candidate_groups(
                 ),
                 is_current=(
                     live_images == current_resolved
-                    or _published_option_images(
+                    or await _published_option_images(
                         exercise_type_id, option_candidates, legacy=True
                     )
                     == current_resolved
@@ -434,7 +442,7 @@ async def build_image_options_response(
         reference_images=resolve_exercise_image_urls(reference_images),
         supports_revert_to_reference=bool(reference_images),
         available_options=_available_option_specs(reference_images),
-        options=_candidate_groups(
+        options=await _candidate_groups(
             exercise_type_id=exercise_type.id,
             candidates=candidates,
             current_images=parse_image_url_list(exercise_type.images_url),
