@@ -600,3 +600,29 @@ async def test_publish_returns_success_when_post_commit_cleanup_fails(
     session.rollback.assert_awaited_once()
     assert media._record_path(retired).exists()
     assert "deferring to reconciliation" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_reconcile_skips_invalid_local_and_storage_keys(
+    storage, tmp_path, caplog
+):
+    objects, client, purge = storage
+    old = datetime.now(timezone.utc) - timedelta(days=2)
+    invalid_local = "published/bad\\name.png"
+    invalid_storage = "published/../outside.png"
+    local = write(tmp_path, invalid_local)
+    valid_local = write(tmp_path, "published/local-valid.png")
+    objects.update({invalid_storage: old, "published/storage-valid.png": old})
+
+    result = await media.reconcile_publications(Session(), dry_run=False, grace_hours=24)
+
+    assert result == {"orphans": 2, "eligible": 2, "deleted": 2, "failed": 0}
+    assert local.exists()
+    assert not valid_local.exists()
+    assert set(objects) == {invalid_storage}
+    assert invalid_local in caplog.text
+    assert invalid_storage in caplog.text
+    assert caplog.records[0].levelname == "WARNING"
+    assert {call.args[0] for call in client.delete.call_args_list} == {
+        "published/local-valid.png", "published/storage-valid.png"
+    }

@@ -571,6 +571,7 @@ async def generate_reference_image_options(
         ), result in zip(pending_jobs, results, strict=True):
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
+            content_digest = hashlib.sha256(output_bytes).hexdigest()
             now = datetime.now(timezone.utc)
 
             if existing:
@@ -583,6 +584,7 @@ async def generate_reference_image_options(
                 existing.prompt_summary = result.prompt_summary
                 existing.mime_type = result.mime_type
                 existing.storage_path = storage_path
+                existing.sha256 = content_digest
                 existing.updated_at = now
             else:
                 new_candidate_rows.append(
@@ -600,6 +602,7 @@ async def generate_reference_image_options(
                         "prompt_summary": result.prompt_summary,
                         "mime_type": result.mime_type,
                         "storage_path": storage_path,
+                        "sha256": content_digest,
                         "asset_kind": (
                             ExerciseImageCandidate.AssetKind.generated_candidate.value
                         ),
@@ -628,6 +631,7 @@ async def generate_reference_image_options(
                         "prompt_summary": excluded.prompt_summary,
                         "mime_type": excluded.mime_type,
                         "storage_path": excluded.storage_path,
+                        "sha256": excluded.sha256,
                         "asset_kind": excluded.asset_kind,
                         "status": excluded.status,
                         "updated_at": excluded.updated_at,
@@ -705,6 +709,7 @@ async def _generate_phase_fallback_image_options(
 
             output_bytes = decode_generated_image(result)
             _write_candidate_bytes(storage_path, output_bytes)
+            content_digest = hashlib.sha256(output_bytes).hexdigest()
 
             if existing:
                 existing.option_label = PHASE_FALLBACK_OPTION_LABEL
@@ -716,6 +721,7 @@ async def _generate_phase_fallback_image_options(
                 existing.prompt_summary = result.prompt_summary
                 existing.mime_type = result.mime_type
                 existing.storage_path = storage_path
+                existing.sha256 = content_digest
             else:
                 session.add(
                     ExerciseImageCandidate(
@@ -732,6 +738,7 @@ async def _generate_phase_fallback_image_options(
                         prompt_summary=result.prompt_summary,
                         mime_type=result.mime_type,
                         storage_path=storage_path,
+                        sha256=content_digest,
                         asset_kind=(
                             ExerciseImageCandidate.AssetKind.generated_candidate.value
                         ),

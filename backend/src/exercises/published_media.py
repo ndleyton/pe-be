@@ -187,12 +187,22 @@ def orphan_candidates(*, grace_hours: float) -> set[str]:
             path.is_file()
             and datetime.fromtimestamp(path.stat().st_mtime, timezone.utc) < cutoff
         ):
-            keys.add(path.relative_to(root).as_posix())
+            key = path.relative_to(root).as_posix()
+            try:
+                _validate_key(key)
+            except ValueError:
+                logger.warning("Skipping invalid local published media key=%s", key)
+                continue
+            keys.add(key)
     storage = get_public_media_storage()
     if storage is not None:
         for key, modified in storage.list_objects(PUBLISHED_PREFIX):
             if modified < cutoff:
-                _validate_key(key)
+                try:
+                    _validate_key(key)
+                except ValueError:
+                    logger.warning("Skipping invalid storage published media key=%s", key)
+                    continue
                 keys.add(key)
     return keys
 
