@@ -104,7 +104,9 @@ def queue_takedowns(keys, *, grace_hours: float = 0) -> None:
                     raise ValueError("Invalid takedown storage metadata")
         except (ValueError, OSError, KeyError, TypeError):
             # Preserve unreadable retry metadata; the batch reports this record as failed.
-            logger.exception("Unable to update published media takedown record=%s", path)
+            logger.exception(
+                "Unable to update published media takedown record=%s", path
+            )
             continue
         record = {
             "key": key,
@@ -158,7 +160,9 @@ async def process_takedowns(
             _validate_key(key)
             if keys is not None and key not in keys:
                 continue
-            if datetime.fromisoformat(record["not_before"]) > datetime.now(timezone.utc):
+            if datetime.fromisoformat(record["not_before"]) > datetime.now(
+                timezone.utc
+            ):
                 continue
             if key in live_paths:
                 if not dry_run:

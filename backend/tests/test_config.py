@@ -111,4 +111,3 @@ def test_media_storage_backend_r2_with_valid_configuration():
     assert settings.MEDIA_STORAGE_BACKEND == "r2"
     assert settings.R2_PUBLIC_BUCKET == "pe-be-public"
     assert settings.MEDIA_PUBLIC_BASE_URL == "https://media.example.com"
-
