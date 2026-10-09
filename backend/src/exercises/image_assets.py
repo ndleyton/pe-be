@@ -7,7 +7,7 @@ from typing import Iterable
 
 from src.core.config import settings
 from src.core.object_storage import (
-    PUBLIC_IMMUTABLE_CACHE_CONTROL,
+    PUBLIC_MEDIA_CACHE_CONTROL,
     get_public_media_storage,
 )
 
@@ -89,32 +89,21 @@ def mirror_published_images(relative_paths: Iterable[str]) -> int:
         storage.put_bytes(
             relative_path,
             storage_path_for_relative_url(relative_path).read_bytes(),
-            cache_control=PUBLIC_IMMUTABLE_CACHE_CONTROL,
+            cache_control=PUBLIC_MEDIA_CACHE_CONTROL,
         )
         mirrored += 1
     return mirrored
 
 
 def delete_published_images(relative_paths: Iterable[str]) -> None:
-    """Best-effort removal of published images from local disk and R2."""
-    relative_paths = [p for p in relative_paths if p.startswith(PUBLISHED_PREFIX)]
-    if not relative_paths:
-        return
+    """Delete failed publications, retaining a durable retry record on error."""
+    from src.exercises.published_media import delete_queued_publication, queue_takedowns
 
     for relative_path in relative_paths:
+        if not relative_path.startswith(PUBLISHED_PREFIX):
+            continue
         try:
-            storage_path_for_relative_url(relative_path).unlink(missing_ok=True)
-        except (OSError, ValueError):
-            pass
-
-    try:
-        storage = get_public_media_storage()
-    except RuntimeError:
-        return
-    if storage is None:
-        return
-    for relative_path in relative_paths:
-        try:
-            storage.delete(relative_path)
+            queue_takedowns([relative_path])
+            delete_queued_publication(relative_path)
         except Exception:
-            logger.warning("Failed to delete public media key=%s", relative_path)
+            logger.exception("Published media cleanup pending key=%s", relative_path)

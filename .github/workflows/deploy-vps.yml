@@ -150,6 +150,10 @@ jobs:
           R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID || '' }}
           R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY || '' }}
           R2_PUBLIC_BUCKET=${{ secrets.R2_PUBLIC_BUCKET || '' }}
+          CLOUDFLARE_ZONE_ID=${{ secrets.CLOUDFLARE_ZONE_ID || '' }}
+          CLOUDFLARE_CACHE_PURGE_TOKEN=${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN || '' }}
+          JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=${{ secrets.JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED || 'true' }}
+          PUBLIC_MEDIA_ORPHAN_GRACE_HOURS=${{ secrets.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS || '24' }}
 
           # Scheduled jobs
           JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED=${{ secrets.JOB_CHAT_ATTACHMENT_CLEANUP_ENABLED || 'true' }}
@@ -299,11 +303,14 @@ jobs:
           install_systemd_unit backend/deploy/systemd/pe-be-workout-photo-cleanup.service
           install_systemd_unit backend/deploy/systemd/pe-be-workout-photo-cleanup.timer
 
-          sudo systemctl daemon-reload
-          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer
-          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer
+          install_systemd_unit backend/deploy/systemd/pe-be-public-media-reconciliation.service
+          install_systemd_unit backend/deploy/systemd/pe-be-public-media-reconciliation.timer
 
-          for timer in pe-be-chat-attachment-cleanup pe-be-exercise-image-cleanup pe-be-close-stale-open-workouts pe-be-workout-photo-cleanup; do
+          sudo systemctl daemon-reload
+          sudo systemctl enable pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer pe-be-public-media-reconciliation.timer
+          sudo systemctl restart pe-be-chat-attachment-cleanup.timer pe-be-exercise-image-cleanup.timer pe-be-close-stale-open-workouts.timer pe-be-workout-photo-cleanup.timer pe-be-public-media-reconciliation.timer
+
+          for timer in pe-be-chat-attachment-cleanup pe-be-exercise-image-cleanup pe-be-close-stale-open-workouts pe-be-workout-photo-cleanup pe-be-public-media-reconciliation; do
             sudo systemctl is-enabled "${timer}.timer"
             sudo systemctl is-active "${timer}.timer"
           done

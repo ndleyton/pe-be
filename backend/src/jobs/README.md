@@ -176,3 +176,9 @@ Implementation guidelines:
 This package does not own scheduling.
 
 Per RFC 0004, jobs here are intended to be triggered by external VPS scheduling, with `systemd` timers as the preferred production mechanism and host `cron` as a fallback.
+
+## Published media reconciliation
+
+`uv run python -m src.jobs.reconcile_public_media --dry-run` reports orphaned publications and pending takedowns. Remove `--dry-run` to delete eligible local files/R2 objects and purge their CDN URLs. The default orphan grace period is 24 hours; live database references protect images even when local files are absent.
+
+The hourly `pe-be-public-media-reconciliation.timer` is installed and verified by Deploy VPS. Disable scheduled work with `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=false`. Failed deletions and cache purges retain retry records in the persistent image volume and cause the job to fail visibly. See [RFC 0012](../../docs/rfcs/0012-media-on-r2.md) for credentials, cache policy, manual timer installation, and the retry ledger's lifecycle.

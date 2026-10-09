@@ -3,10 +3,11 @@ from __future__ import annotations
 import mimetypes
 from functools import lru_cache
 from typing import Any
+from urllib.parse import quote
 
 from src.core.config import settings
 
-PUBLIC_IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+PUBLIC_MEDIA_CACHE_CONTROL = "public, max-age=300, s-maxage=31536000"
 
 
 class ObjectStorage:
@@ -32,6 +33,12 @@ class ObjectStorage:
         if cache_control:
             extra["CacheControl"] = cache_control
         self._client.put_object(Bucket=self.bucket, Key=key, Body=data, **extra)
+
+    def list_objects(self, prefix: str):
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            for item in page.get("Contents", []):
+                yield item["Key"], item["LastModified"]
 
     def delete(self, key: str) -> None:
         self._client.delete_object(Bucket=self.bucket, Key=key)
@@ -72,3 +79,25 @@ def get_public_media_storage() -> ObjectStorage | None:
     if not settings.R2_PUBLIC_BUCKET:
         raise RuntimeError("MEDIA_STORAGE_BACKEND=r2 requires R2_PUBLIC_BUCKET")
     return ObjectStorage(bucket=settings.R2_PUBLIC_BUCKET, client=_r2_client())
+
+
+def purge_public_media(key: str, *, base_url: str) -> None:
+    import httpx
+
+    if not (
+        base_url
+        and settings.CLOUDFLARE_ZONE_ID
+        and settings.CLOUDFLARE_CACHE_PURGE_TOKEN
+    ):
+        raise RuntimeError(
+            "Public media purge requires MEDIA_PUBLIC_BASE_URL, CLOUDFLARE_ZONE_ID and CLOUDFLARE_CACHE_PURGE_TOKEN"
+        )
+    response = httpx.post(
+        f"https://api.cloudflare.com/client/v4/zones/{settings.CLOUDFLARE_ZONE_ID}/purge_cache",
+        headers={"Authorization": f"Bearer {settings.CLOUDFLARE_CACHE_PURGE_TOKEN}"},
+        json={"files": [f"{base_url.rstrip('/')}/{quote(key, safe='/')}"]},
+        timeout=15,
+    )
+    response.raise_for_status()
+    if response.json().get("success") is not True:
+        raise RuntimeError("Cloudflare cache purge was unsuccessful")

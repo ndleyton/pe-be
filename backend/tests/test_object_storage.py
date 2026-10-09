@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import json
 
 import pytest
 
 from src.core import object_storage
-from src.core.object_storage import PUBLIC_IMMUTABLE_CACHE_CONTROL, ObjectStorage
+from src.core.object_storage import PUBLIC_MEDIA_CACHE_CONTROL, ObjectStorage
 from src.exercises.image_assets import (
     delete_published_images,
     mirror_published_images,
@@ -83,7 +85,7 @@ def test_mirror_uploads_only_published_paths(fake_r2, tmp_path):
     stored = fake_r2.objects["pe-be-public/published/exercise-type-1/a/0-key.png"]
     assert stored["body"] == b"png"
     assert stored["ContentType"] == "image/png"
-    assert stored["CacheControl"] == PUBLIC_IMMUTABLE_CACHE_CONTROL
+    assert stored["CacheControl"] == PUBLIC_MEDIA_CACHE_CONTROL
 
 
 def test_resolve_published_url_uses_cdn_only_when_configured(monkeypatch):
@@ -221,7 +223,12 @@ async def test_generated_republish_uses_new_key_for_changed_bytes(
     exercise = SimpleNamespace(
         id=1, images_url=None, reference_images_url='["reference.png"]'
     )
-    session = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
+    session = SimpleNamespace(
+        commit=AsyncMock(),
+        refresh=AsyncMock(),
+        execute=AsyncMock(return_value=[]),
+        no_autoflush=nullcontext(),
+    )
     monkeypatch.setattr(
         service, "_load_candidates", AsyncMock(return_value=[candidate])
     )
@@ -243,7 +250,7 @@ async def test_generated_republish_uses_new_key_for_changed_bytes(
     )
     second_path = json.loads(exercise.images_url)[0]
     assert second_path != first_path
-    assert (tmp_path / first_path).read_bytes() == b"first image"
+    assert not (tmp_path / first_path).exists()
     assert (tmp_path / second_path).read_bytes() == b"regenerated image"
 
     await service.apply_reference_or_option(
@@ -301,7 +308,12 @@ async def test_partial_r2_publish_failure_cleans_only_new_publications(
         images_url=previous_images_url,
         reference_images_url=json.dumps([f"reference-{i}.png" for i in range(3)]),
     )
-    session = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
+    session = SimpleNamespace(
+        commit=AsyncMock(),
+        refresh=AsyncMock(),
+        execute=AsyncMock(return_value=[]),
+        no_autoflush=nullcontext(),
+    )
     monkeypatch.setattr(service, "_load_candidates", AsyncMock(return_value=candidates))
     response = AsyncMock()
     monkeypatch.setattr(service, "build_image_options_response", response)
@@ -332,5 +344,5 @@ async def test_partial_r2_publish_failure_cleans_only_new_publications(
     )
     assert exercise.images_url == previous_images_url
     session.commit.assert_not_awaited()
-    session.refresh.assert_not_awaited()
+    assert session.refresh.await_count == 1
     response.assert_not_awaited()

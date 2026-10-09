@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Literal
 from pathlib import Path
 from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -280,7 +280,7 @@ class Settings(BaseSettings):
         validation_alias="IMAGE_URL_PREFIX",
         description="URL prefix for exercise images",
     )
-    MEDIA_STORAGE_BACKEND: str = Field(
+    MEDIA_STORAGE_BACKEND: Literal["local", "r2"] = Field(
         "local",
         validation_alias="MEDIA_STORAGE_BACKEND",
         description="'local' keeps media on disk only; 'r2' also mirrors to R2",
@@ -297,6 +297,12 @@ class Settings(BaseSettings):
     R2_ACCESS_KEY_ID: str = Field("", validation_alias="R2_ACCESS_KEY_ID")
     R2_SECRET_ACCESS_KEY: str = Field("", validation_alias="R2_SECRET_ACCESS_KEY")
     R2_PUBLIC_BUCKET: str = Field("", validation_alias="R2_PUBLIC_BUCKET")
+    CLOUDFLARE_ZONE_ID: str = Field("", validation_alias="CLOUDFLARE_ZONE_ID")
+    CLOUDFLARE_CACHE_PURGE_TOKEN: str = Field(
+        "", validation_alias="CLOUDFLARE_CACHE_PURGE_TOKEN"
+    )
+    JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED: bool = Field(True)
+    PUBLIC_MEDIA_ORPHAN_GRACE_HOURS: int = Field(24, ge=1)
     R2_PRIVATE_BUCKET: str = Field("", validation_alias="R2_PRIVATE_BUCKET")
     EXERCISE_IMAGE_STORAGE_DIR: str = Field(
         str(Path(__file__).resolve().parents[2] / ".exercise_images"),
@@ -501,6 +507,16 @@ class Settings(BaseSettings):
             return "jpeg"
         return normalized
 
+    @field_validator("MEDIA_STORAGE_BACKEND", mode="before")
+    @classmethod
+    def normalize_media_storage_backend(cls, v: Any) -> str:
+        if isinstance(v, str):
+            normalized = v.strip().lower()
+            if normalized in ("local", "r2"):
+                return normalized
+            raise ValueError("MEDIA_STORAGE_BACKEND must be one of: local, r2")
+        return v
+
     @model_validator(mode="after")
     def validate_production_mcp_pat_pepper(self) -> "Settings":
         environment = (self.ENVIRONMENT or "").strip().lower()
@@ -510,6 +526,23 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "MCP_PAT_PEPPER must not use the development-only default in production"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_media_storage_configuration(self) -> "Settings":
+        backend = (self.MEDIA_STORAGE_BACKEND or "local").strip().lower()
+        public_bucket = (self.R2_PUBLIC_BUCKET or "").strip()
+        public_base_url = (self.MEDIA_PUBLIC_BASE_URL or "").strip()
+
+        if backend == "r2":
+            if not public_bucket:
+                raise ValueError(
+                    "MEDIA_STORAGE_BACKEND='r2' requires R2_PUBLIC_BUCKET to be set"
+                )
+        elif public_base_url:
+            raise ValueError(
+                "MEDIA_PUBLIC_BASE_URL requires MEDIA_STORAGE_BACKEND='r2' and R2_PUBLIC_BUCKET"
             )
         return self
 

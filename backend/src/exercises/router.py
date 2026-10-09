@@ -207,7 +207,7 @@ async def get_exercise_image_asset(
         raise HTTPException(status_code=404, detail="Exercise image not found")
 
     cache_control = (
-        "public, max-age=31536000, immutable"
+        "public, max-age=300"
         if image_path.startswith("published/")
         else "private, no-store"
         if image_path.startswith("uploads/")

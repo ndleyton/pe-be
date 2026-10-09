@@ -23,6 +23,7 @@ from src.exercises.image_assets import (
     storage_path_for_relative_url,
 )
 from src.exercises.models import ExerciseType
+from src.exercises.published_media import lock_publications
 from src.jobs.shared import JobRunResult, configure_job_runtime, run_managed_job
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ async def referenced_published_paths(session: AsyncSession) -> list[str]:
 
 
 async def _backfill_job(session: AsyncSession, *, dry_run: bool) -> dict[str, int]:
+    await lock_publications(session)
     relative_paths = await referenced_published_paths(session)
     if dry_run:
         return {"found": len(relative_paths), "uploaded": 0}

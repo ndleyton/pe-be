@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import hashlib
 import json
 from io import BytesIO
@@ -18,6 +19,13 @@ from src.admin.schemas import (
     AdminExerciseImageOption,
     AdminExerciseImageOptionSpec,
     AdminExerciseImageOptionsResponse,
+)
+from src.exercises.published_media import (
+    lock_publications,
+    referenced_publications,
+    process_takedowns,
+    published_keys,
+    queue_takedowns,
 )
 from src.exercises.image_assets import (
     delete_published_images,
@@ -747,6 +755,11 @@ async def apply_reference_or_option(
     option_key: str | None,
     use_reference: bool,
 ) -> AdminExerciseImageOptionsResponse:
+    await lock_publications(session)
+    await session.refresh(
+        exercise_type, attribute_names=["images_url", "reference_images_url"]
+    )
+    previous_paths = published_keys(exercise_type.images_url)
     reference_images = _ensure_reference_images(exercise_type)
     if use_reference and not reference_images:
         raise HTTPException(
@@ -842,17 +855,54 @@ async def apply_reference_or_option(
                 candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
                 published_paths.append(published_path)
 
+        await asyncio.to_thread(
+            queue_takedowns,
+            created_paths,
+            grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
+        )
         await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
     except Exception:
-        await asyncio.to_thread(delete_published_images, created_paths)
+        try:
+            live_paths = await referenced_publications(session)
+            await asyncio.to_thread(
+                delete_published_images, set(created_paths) - live_paths
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Unable to check failed publication references; deferring cleanup"
+            )
         raise
 
-    # Outside the cleanup handler: a failed commit may still have landed, so
-    # deleting here could orphan rows. If an admin publish action uploads to R2
-    # and the subsequent DB commit crashes or fails, an unreferenced object
-    # remains in R2. While harmless, an asynchronous reconciliation job in Phase 2
-    # or 3 can sweep unreferenced published/ keys to maintain bucket hygiene.
+    retired_paths = previous_paths - published_keys(published_paths)
+    await asyncio.to_thread(queue_takedowns, retired_paths)
+    # Records are written before commit. Cleanup checks committed references,
+    # so an ambiguous commit never causes live publications to be deleted.
     await session.commit()
+    await process_takedowns(session, keys=retired_paths)
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)
+
+
+async def unpublish_images(
+    session: AsyncSession, exercise_type: ExerciseType
+) -> dict[str, int]:
+    """Withdraw published images; private candidate originals remain private."""
+    await lock_publications(session)
+    await session.refresh(
+        exercise_type, attribute_names=["images_url", "reference_images_url"]
+    )
+    retired_paths = published_keys(exercise_type.images_url) | published_keys(
+        exercise_type.reference_images_url
+    )
+    await asyncio.to_thread(queue_takedowns, retired_paths)
+    exercise_type.images_url = _image_json([])
+    exercise_type.reference_images_url = _image_json(
+        [
+            image
+            for image in parse_image_url_list(exercise_type.reference_images_url)
+            if not published_keys([image])
+        ]
+    )
+    await session.commit()
+    return await process_takedowns(session, keys=retired_paths)
