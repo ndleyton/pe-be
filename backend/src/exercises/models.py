@@ -272,7 +272,9 @@ class ExerciseImageCandidate(Base):
             "asset_kind",
             "sha256",
             unique=True,
-            postgresql_where=text("status = 'active'"),
+            postgresql_where=text(
+                "status = 'active' AND asset_kind = 'uploaded_reference'"
+            ),
         ),
     )
 

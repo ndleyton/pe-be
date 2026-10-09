@@ -89,7 +89,7 @@ def upgrade() -> None:
         """
         CREATE UNIQUE INDEX IF NOT EXISTS uq_exercise_image_candidates_active_upload_hash
         ON exercise_image_candidates (exercise_type_id, asset_kind, sha256)
-        WHERE status = 'active'
+        WHERE status = 'active' AND asset_kind = 'uploaded_reference'
         """
     )
 
