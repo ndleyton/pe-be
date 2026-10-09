@@ -92,6 +92,7 @@ def purge_public_media(key: str, *, base_url: str) -> None:
         raise RuntimeError(
             "Public media purge requires MEDIA_PUBLIC_BASE_URL, CLOUDFLARE_ZONE_ID and CLOUDFLARE_CACHE_PURGE_TOKEN"
         )
+    # shortcut: one purge call per key; batch up to 30 URLs when orphan sweeps grow large.
     response = httpx.post(
         f"https://api.cloudflare.com/client/v4/zones/{settings.CLOUDFLARE_ZONE_ID}/purge_cache",
         headers={"Authorization": f"Bearer {settings.CLOUDFLARE_CACHE_PURGE_TOKEN}"},
