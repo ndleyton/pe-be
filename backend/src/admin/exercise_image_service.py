@@ -113,10 +113,16 @@ def _published_storage_path_for_candidate(
     option_key: str,
     source_image_index: int,
     generation_key: str,
+    image_bytes: bytes | None = None,
 ) -> str:
+    digest_suffix = (
+        f"-{hashlib.sha256(image_bytes).hexdigest()[:16]}"
+        if image_bytes is not None
+        else ""
+    )
     return (
         f"published/exercise-type-{exercise_type_id}/{option_key}/"
-        f"{source_image_index}-{generation_key}.png"
+        f"{source_image_index}-{generation_key}{digest_suffix}.png"
     )
 
 
@@ -159,13 +165,6 @@ def _candidate_file_exists(relative_path: str) -> bool:
         return storage_path_for_relative_url(relative_path).is_file()
     except ValueError:
         return False
-
-
-def _copy_relative_asset(source_relative_path: str, target_relative_path: str) -> None:
-    source_path = storage_path_for_relative_url(source_relative_path)
-    target_path = storage_path_for_relative_url(target_relative_path)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_bytes(source_path.read_bytes())
 
 
 def _render_published_upload(source_relative_path: str) -> bytes:
@@ -278,7 +277,10 @@ def _expected_candidate_count(*, pipeline_key: str, reference_images: list[str])
 
 
 def _published_option_images(
-    exercise_type_id: int, candidates: list[ExerciseImageCandidate]
+    exercise_type_id: int,
+    candidates: list[ExerciseImageCandidate],
+    *,
+    legacy: bool = False,
 ) -> list[str]:
     return [
         resolve_exercise_image_url(
@@ -287,6 +289,11 @@ def _published_option_images(
                 candidate.option_key,
                 candidate.source_image_index,
                 candidate.generation_key,
+                image_bytes=(
+                    storage_path_for_relative_url(candidate.storage_path).read_bytes()
+                    if not legacy and _candidate_file_exists(candidate.storage_path)
+                    else None
+                ),
             )
         )
         for candidate in candidates
@@ -387,7 +394,13 @@ def _candidate_groups(
                     if option.option_source == REFERENCE_OPTION_SOURCE
                     else []
                 ),
-                is_current=live_images == current_resolved,
+                is_current=(
+                    live_images == current_resolved
+                    or _published_option_images(
+                        exercise_type_id, option_candidates, legacy=True
+                    )
+                    == current_resolved
+                ),
             )
         )
 
@@ -813,15 +826,19 @@ async def apply_reference_or_option(
                 )
             published_paths = []
             for candidate in option_candidates:
+                image_bytes = storage_path_for_relative_url(
+                    candidate.storage_path
+                ).read_bytes()
                 published_path = _published_storage_path_for_candidate(
                     exercise_type.id,
                     candidate.option_key,
                     candidate.source_image_index,
                     candidate.generation_key,
+                    image_bytes,
                 )
                 if not _candidate_file_exists(published_path):
+                    _write_candidate_bytes(published_path, image_bytes)
                     created_paths.append(published_path)
-                _copy_relative_asset(candidate.storage_path, published_path)
                 candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
                 published_paths.append(published_path)
 

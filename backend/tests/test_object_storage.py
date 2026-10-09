@@ -194,3 +194,68 @@ def test_backfill_main_prints_summary(monkeypatch, capsys):
     backfill_public_media.main(["--dry-run"])
 
     assert "(dry run): found=3 uploaded=0" in capsys.readouterr().out
+
+
+@pytest.mark.asyncio
+async def test_generated_republish_uses_new_key_for_changed_bytes(
+    monkeypatch, tmp_path
+):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from src.admin import exercise_image_service as service
+
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR", str(tmp_path)
+    )
+    monkeypatch.setattr("src.core.config.settings.MEDIA_STORAGE_BACKEND", "local")
+    candidate = SimpleNamespace(
+        id=1,
+        option_key="front",
+        source_image_index=0,
+        generation_key="same-inputs",
+        pipeline_key=service.REFERENCE_PIPELINE_KEY,
+        storage_path="generated/source.png",
+        status="active",
+    )
+    exercise = SimpleNamespace(
+        id=1, images_url=None, reference_images_url='["reference.png"]'
+    )
+    session = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
+    monkeypatch.setattr(
+        service, "_load_candidates", AsyncMock(return_value=[candidate])
+    )
+    monkeypatch.setattr(service, "build_image_options_response", AsyncMock())
+    _write(tmp_path, candidate.storage_path, b"first image")
+
+    await service.apply_reference_or_option(
+        session, exercise, option_key="front", use_reference=False
+    )
+    first_path = json.loads(exercise.images_url)[0]
+    assert service._published_option_images(1, [candidate]) == [
+        resolve_exercise_image_url(first_path)
+    ]
+
+    # Regeneration keeps its input key but produces different bytes.
+    _write(tmp_path, candidate.storage_path, b"regenerated image")
+    await service.apply_reference_or_option(
+        session, exercise, option_key="front", use_reference=False
+    )
+    second_path = json.loads(exercise.images_url)[0]
+    assert second_path != first_path
+    assert (tmp_path / first_path).read_bytes() == b"first image"
+    assert (tmp_path / second_path).read_bytes() == b"regenerated image"
+
+    await service.apply_reference_or_option(
+        session, exercise, option_key="front", use_reference=False
+    )
+    assert json.loads(exercise.images_url) == [second_path]
+
+
+def test_generated_legacy_publication_path_remains_supported():
+    from src.admin.exercise_image_service import _published_storage_path_for_candidate
+
+    assert (
+        _published_storage_path_for_candidate(1, "front", 0, "key")
+        == "published/exercise-type-1/front/0-key.png"
+    )

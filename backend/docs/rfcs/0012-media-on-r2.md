@@ -62,7 +62,7 @@ MEDIA_PUBLIC_BASE_URL=https://media.example.com   # set only after backfill
 
 ### Object keys and caching
 
-Keys reuse the existing relative storage paths (for example `published/exercise-type-12/front/0-<generation_key>.png`). Published paths include a generation key or candidate id, so their content does not change. They are uploaded with `Cache-Control: public, max-age=31536000, immutable`.
+Keys reuse the existing relative storage paths (for example `published/exercise-type-12/front/0-<generation_key>-<sha256[:16]>.png`). Published paths include a generation key or candidate id, so their content does not change. They are uploaded with `Cache-Control: public, max-age=31536000, immutable`.
 
 ### Serving by image type
 
@@ -80,6 +80,8 @@ Keys reuse the existing relative storage paths (for example `published/exercise-
 1. When `apply_reference_or_option` publishes images, it writes them locally as before, then mirrors them to `pe-be-public`. If the upload fails, the request fails before commit, as a local write failure does today.
 2. `python -m src.jobs.backfill_public_media [--dry-run]` uploads the `published/` files referenced by committed `ExerciseType.images_url` values. Orphaned files are skipped.
 3. Once the backfill has run, setting `MEDIA_PUBLIC_BASE_URL` makes `resolve_exercise_image_url` return CDN URLs for `published/` paths. Unsetting it rolls back immediately, because the local files are still there.
+
+The Deploy VPS workflow reads the phase 1 media settings above from GitHub repository secrets. Configure them before deployment; `MEDIA_STORAGE_BACKEND` defaults to `local`. Set the `MEDIA_PUBLIC_BASE_URL` secret only after backfill.
 
 Deploy order:
 1. Deploy the code with `MEDIA_STORAGE_BACKEND=r2` and no `MEDIA_PUBLIC_BASE_URL`.
@@ -107,7 +109,7 @@ R2 has free egress. Storage costs $0.015/GB-month, writes $4.50 per million and 
 ## Risks and open questions
 
 - **Republished uploads:** handled. Uploaded references publish to `published/.../uploaded/<candidate_id>-<sha256[:16]>.<ext>`, so changed bytes get a new key and existing immutable objects are never overwritten. Keys published before this change keep their old names.
-- **Regenerated candidates:** a generated candidate is regenerated only when its file under `generated/` is missing. The new image can have different bytes but the same `generation_key`, so republishing it overwrites `published/.../<index>-<generation_key>.png` with new bytes. The CDN can then serve the old image for up to a year. This PR keeps the current path format. Follow-up: give generated publications a content hash in their key, as uploaded references now have.
+- **Regenerated candidates:** generated publications include a hash of the published bytes. Regeneration with different bytes gets a new immutable key; existing publications keep their old names.
 - **Request latency:** mirroring adds one R2 PUT per published image to the admin request. This is acceptable for an admin-only path.
 - **Mid-publish failure:** if writing, mirroring or assigning `images_url` fails, published files created by that call are deleted from local disk and R2. Pre-existing files are kept. The commit runs outside that cleanup, because a failed commit may still have landed, and deleting then could leave committed rows pointing at missing files.
 - **Exposure before commit:** publishing uploads the image to the public bucket before the database commit. If an admin publish action uploads to R2 and the subsequent DB commit crashes or fails, an unreferenced object remains in R2 with no committed reference. Its key is deterministic: a `generation_key` hash for generated options, or a content hash for uploaded references. Someone who knows or can guess the inputs could reach it, so the key is not a secret. The local `/exercises/assets/published/...` route has the same property, because it serves any `published/` file on disk without checking committed references. Only owner- or admin-published exercise images reach this path, but they can include user-uploaded reference photos. While unreferenced objects are harmless, an asynchronous reconciliation job in Phase 2 or 3 to sweep unreferenced `published/` keys can keep bucket hygiene clean.

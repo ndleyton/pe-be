@@ -678,9 +678,20 @@ async def test_direct_uploaded_reference_republish_keeps_existing_file_on_mirror
     asset_id = upload.json()["id"]
     await db_session.refresh(exercise_type)
     uploaded_dir = tmp_path / f"published/exercise-type-{exercise_type.id}/uploaded"
-    existing_file = uploaded_dir / f"{asset_id}-0000000000000000.webp"
-    existing_file.parent.mkdir(parents=True, exist_ok=True)
-    existing_file.write_bytes(b"previously published")
+
+    await apply_reference_or_option(
+        db_session,
+        exercise_type,
+        option_key=None,
+        use_reference=True,
+    )
+
+    published_files = list(uploaded_dir.iterdir())
+    assert len(published_files) == 1
+    published_file = published_files[0]
+    assert published_file.name.startswith(f"{asset_id}-")
+    assert published_file.name.endswith(".webp")
+    published_bytes = published_file.read_bytes()
 
     def fail_mirror(relative_paths):
         raise RuntimeError("simulated R2 failure")
@@ -699,5 +710,6 @@ async def test_direct_uploaded_reference_republish_keeps_existing_file_on_mirror
     finally:
         await db_session.rollback()
 
-    assert existing_file.read_bytes() == b"previously published"
-    assert list(uploaded_dir.iterdir()) == [existing_file]
+    assert published_file.is_file()
+    assert published_file.read_bytes() == published_bytes
+    assert list(uploaded_dir.iterdir()) == [published_file]
