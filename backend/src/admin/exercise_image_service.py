@@ -294,6 +294,7 @@ async def _published_option_images(
     for candidate in candidates:
         digest = None if legacy else candidate.sha256
         if not legacy and not digest:
+
             def read_digest(path=candidate.storage_path):
                 if _candidate_file_exists(path):
                     return hashlib.sha256(
@@ -393,7 +394,9 @@ async def _candidate_groups(
             resolve_exercise_image_url(candidate.storage_path)
             for candidate in option_candidates
         ]
-        live_images = await _published_option_images(exercise_type_id, option_candidates)
+        live_images = await _published_option_images(
+            exercise_type_id, option_candidates
+        )
         options.append(
             AdminExerciseImageOption(
                 key=option.key,

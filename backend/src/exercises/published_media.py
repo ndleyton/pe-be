@@ -201,7 +201,9 @@ def orphan_candidates(*, grace_hours: float) -> set[str]:
                 try:
                     _validate_key(key)
                 except ValueError:
-                    logger.warning("Skipping invalid storage published media key=%s", key)
+                    logger.warning(
+                        "Skipping invalid storage published media key=%s", key
+                    )
                     continue
                 keys.add(key)
     return keys

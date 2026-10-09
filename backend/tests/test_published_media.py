@@ -614,7 +614,9 @@ async def test_reconcile_skips_invalid_local_and_storage_keys(
     valid_local = write(tmp_path, "published/local-valid.png")
     objects.update({invalid_storage: old, "published/storage-valid.png": old})
 
-    result = await media.reconcile_publications(Session(), dry_run=False, grace_hours=24)
+    result = await media.reconcile_publications(
+        Session(), dry_run=False, grace_hours=24
+    )
 
     assert result == {"orphans": 2, "eligible": 2, "deleted": 2, "failed": 0}
     assert local.exists()
@@ -624,5 +626,6 @@ async def test_reconcile_skips_invalid_local_and_storage_keys(
     assert invalid_storage in caplog.text
     assert caplog.records[0].levelname == "WARNING"
     assert {call.args[0] for call in client.delete.call_args_list} == {
-        "published/local-valid.png", "published/storage-valid.png"
+        "published/local-valid.png",
+        "published/storage-valid.png",
     }
