@@ -832,7 +832,10 @@ async def apply_reference_or_option(
         raise
 
     # Outside the cleanup handler: a failed commit may still have landed, so
-    # deleting here could orphan rows. Unreferenced files are harmless.
+    # deleting here could orphan rows. If an admin publish action uploads to R2
+    # and the subsequent DB commit crashes or fails, an unreferenced object
+    # remains in R2. While harmless, an asynchronous reconciliation job in Phase 2
+    # or 3 can sweep unreferenced published/ keys to maintain bucket hygiene.
     await session.commit()
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)
