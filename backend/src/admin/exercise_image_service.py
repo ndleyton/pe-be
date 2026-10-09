@@ -879,7 +879,14 @@ async def apply_reference_or_option(
     # Records are written before commit. Cleanup checks committed references,
     # so an ambiguous commit never causes live publications to be deleted.
     await session.commit()
-    await process_takedowns(session, keys=retired_paths)
+    try:
+        await process_takedowns(session, keys=retired_paths)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Post-commit publication cleanup failed; deferring to reconciliation"
+        )
+        # A failed cleanup query can leave the new transaction unusable.
+        await session.rollback()
     await session.refresh(exercise_type)
     return await build_image_options_response(session, exercise_type)
 

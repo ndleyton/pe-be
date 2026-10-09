@@ -109,8 +109,32 @@ async def test_reconcile_preserves_db_references_without_local_files(storage, tm
     assert result == {"orphans": 2, "eligible": 2, "deleted": 2, "failed": 0}
     assert set(objects) == {"published/live.png", "published/reference.png"}
     assert not local.exists()
-    assert session.reads == 3
+    assert session.reads == 2
     assert purge.call_count == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dry_run", [False, True])
+async def test_takedown_batch_reads_references_once(storage, tmp_path, dry_run):
+    objects, client, purge = storage
+    live = "published/live.png"
+    orphans = [f"published/orphan-{index}.png" for index in range(10)]
+    for key in [live, *orphans]:
+        write(tmp_path, key)
+    media.queue_takedowns([live, *orphans])
+    session = Session([(json.dumps([live]), None)])
+
+    result = await media.process_takedowns(session, dry_run=dry_run)
+
+    assert session.reads == 1
+    assert result == {
+        "eligible": 10,
+        "deleted": 0 if dry_run else 10,
+        "failed": 0,
+    }
+    assert (tmp_path / live).exists()
+    for key in orphans:
+        assert (tmp_path / key).exists() == dry_run
 
 
 @pytest.mark.asyncio
@@ -211,6 +235,8 @@ async def test_new_publication_record_respects_grace_and_live_reference(
     ] == 0
     assert not media._record_path(key).exists()
     assert (tmp_path / key).exists()
+    client.delete.assert_not_called()
+    purge.assert_not_called()
 
 
 def test_failed_publish_cleanup_keeps_retry_record(storage, tmp_path):
@@ -382,8 +408,9 @@ async def test_real_reference_query_preserves_r2_only_and_reference_images(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("live", [False, True])
 async def test_failed_publish_preserves_live_r2_path_when_local_copy_was_missing(
-    storage, tmp_path, monkeypatch
+    storage, tmp_path, monkeypatch, live
 ):
     from src.admin import exercise_image_service as service
 
@@ -403,7 +430,7 @@ async def test_failed_publish_preserves_live_r2_path_when_local_copy_was_missing
     exercise = SimpleNamespace(
         id=1, images_url=json.dumps([key]), reference_images_url='["reference.png"]'
     )
-    session = Session([(exercise.images_url, exercise.reference_images_url)])
+    session = Session([(exercise.images_url if live else None, exercise.reference_images_url)])
     session.refresh = AsyncMock()
     session.commit = AsyncMock()
     monkeypatch.setattr(
@@ -416,9 +443,12 @@ async def test_failed_publish_preserves_live_r2_path_when_local_copy_was_missing
         await service.apply_reference_or_option(
             session, exercise, option_key="front", use_reference=False
         )
-    assert (tmp_path / key).read_bytes() == b"image"
-    assert key in objects
-    client.delete.assert_not_called()
+    assert (tmp_path / key).exists() == live
+    assert (key in objects) == live
+    if live:
+        client.delete.assert_not_called()
+    else:
+        client.delete.assert_called_once_with(key)
     session.commit.assert_not_awaited()
 
 
@@ -500,3 +530,57 @@ def test_public_media_cache_policy_limits_browser_retention():
         object_storage.PUBLIC_MEDIA_CACHE_CONTROL
         == "public, max-age=300, s-maxage=31536000"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dry_run", [False, True])
+@pytest.mark.parametrize("contents", ['{', '{"key": "published/bad.png", "not_before": "bad"}'])
+async def test_reconcile_continues_past_corrupt_records(
+    storage, tmp_path, caplog, dry_run, contents
+):
+    key = "published/pending.png"
+    local = write(tmp_path, key)
+    media.queue_takedowns([key])
+    corrupt = media._record_path("published/bad.png")
+    corrupt.write_text(contents)
+    bad_local = write(tmp_path, "published/bad.png")
+    result = await media.reconcile_publications(Session(), dry_run=dry_run, grace_hours=24)
+    assert result == {"orphans": 2, "eligible": 1 + int(dry_run), "deleted": int(not dry_run), "failed": 1}
+    assert local.exists() == dry_run
+    assert bad_local.exists()
+    assert corrupt.read_text() == contents
+    assert str(corrupt) in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_publish_returns_success_when_post_commit_cleanup_fails(
+    storage, monkeypatch, caplog
+):
+    from src.admin import exercise_image_service as service
+
+    retired = "published/retired.png"
+    exercise = SimpleNamespace(
+        id=1, images_url=json.dumps([retired]), reference_images_url='["reference.png"]'
+    )
+    session = Session()
+    session.refresh = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    response = object()
+    session.execute = AsyncMock(return_value=Mock(scalars=lambda: Mock(all=lambda: [])))
+
+    async def fail_cleanup(*args, **kwargs):
+        session.commit.assert_awaited_once()
+        assert media._record_path(retired).exists()
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(service, "mirror_published_images", Mock())
+    monkeypatch.setattr(service, "process_takedowns", fail_cleanup)
+    monkeypatch.setattr(service, "build_image_options_response", AsyncMock(return_value=response))
+    assert await service.apply_reference_or_option(
+        session, exercise, option_key=None, use_reference=True
+    ) is response
+    assert exercise.images_url == '["reference.png"]'
+    session.rollback.assert_awaited_once()
+    assert media._record_path(retired).exists()
+    assert "deferring to reconciliation" in caplog.text

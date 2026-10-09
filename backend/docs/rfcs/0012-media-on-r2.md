@@ -110,7 +110,7 @@ Move the persistent `.published-media-pending/` retry ledger to shared durable s
 
 `python -m src.jobs.reconcile_public_media --dry-run` reports eligible publications without writing retry records, deleting files/objects, or purging cache. Without `--dry-run`, it sweeps local `published/` files and paginated R2 keys older than `PUBLIC_MEDIA_ORPHAN_GRACE_HOURS`, and retries pending takedowns even when origin files/objects are already gone.
 
-Database references in **both** `images_url` and `reference_images_url` protect a publication, even if its local file is missing. Before each deletion the job checks references again under the same PostgreSQL transaction advisory lock used by publishing and backfill. Offline scripts modifying publication references must acquire that lock too, or run with reconciliation stopped.
+Database references in **both** `images_url` and `reference_images_url` protect a publication, even if its local file is missing. Before deleting a batch the job reads references once under the same PostgreSQL transaction advisory lock used by publishing and backfill, and holds that lock through cleanup. Offline scripts modifying publication references must acquire that lock too, or run with reconciliation stopped.
 
 Replacement queues retired paths before commit and attempts takedown after commit. `DELETE /api/v1/admin/exercise-types/{id}/published-images` clears current images and any published references; private candidate originals remain private. It requires an administrator. It returns cleanup counts, with HTTP 202 when deletion or purge remains pending. Shared publications are retained while any row still references them.
 

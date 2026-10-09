@@ -35,6 +35,7 @@ from src.exercises.models import ExerciseType
 
 logger = logging.getLogger(__name__)
 # Shared by all publication writers and deletions; held until commit/rollback.
+# shortcut: one global lock includes network calls; upgrade beyond a few concurrent admins.
 PUBLICATION_LOCK_KEY = 724396802113
 
 
@@ -92,7 +93,19 @@ def queue_takedowns(keys, *, grace_hours: float = 0) -> None:
             continue
         _validate_key(key)
         path = _record_path(key)
-        previous = json.loads(path.read_text()) if path.exists() else {}
+        try:
+            previous = json.loads(path.read_text()) if path.exists() else {}
+            if path.exists():
+                _validate_key(previous["key"])
+                datetime.fromisoformat(previous["not_before"])
+                if not isinstance(previous["r2"], bool) or not isinstance(
+                    previous["base_url"], str
+                ):
+                    raise ValueError("Invalid takedown storage metadata")
+        except (ValueError, OSError, KeyError, TypeError):
+            # Preserve unreadable retry metadata; the batch reports this record as failed.
+            logger.exception("Unable to update published media takedown record=%s", path)
+            continue
         record = {
             "key": key,
             "not_before": (
@@ -136,26 +149,28 @@ async def process_takedowns(
     metrics = {"eligible": 0, "deleted": 0, "failed": 0}
     await lock_publications(session)
     pending_dir = _record_path("published/placeholder").parent
-    records = [json.loads(path.read_text()) for path in pending_dir.glob("*.json")]
-    for record in records:
-        key = record["key"]
-        if keys is not None and key not in keys:
-            continue
-        if datetime.fromisoformat(record["not_before"]) > datetime.now(timezone.utc):
-            continue
-        # Read committed references again immediately before deleting, under the lock.
-        if key in await referenced_publications(session):
+    # Publication writers cannot change references while this transaction holds the lock.
+    live_paths = await referenced_publications(session)
+    for path in pending_dir.glob("*.json"):
+        try:
+            record = json.loads(path.read_text())
+            key = record["key"]
+            _validate_key(key)
+            if keys is not None and key not in keys:
+                continue
+            if datetime.fromisoformat(record["not_before"]) > datetime.now(timezone.utc):
+                continue
+            if key in live_paths:
+                if not dry_run:
+                    path.unlink(missing_ok=True)
+                continue
+            metrics["eligible"] += 1
             if not dry_run:
-                _record_path(key).unlink(missing_ok=True)
-            continue
-        metrics["eligible"] += 1
-        if not dry_run:
-            try:
                 await asyncio.to_thread(delete_queued_publication, key)
                 metrics["deleted"] += 1
-            except Exception:
-                metrics["failed"] += 1
-                logger.exception("Published media takedown pending key=%s", key)
+        except Exception:
+            metrics["failed"] += 1
+            logger.exception("Published media takedown pending record=%s", path)
     return metrics
 
 
@@ -191,11 +206,16 @@ async def reconcile_publications(
         # Pending records and newly discovered orphans can overlap.
         pending_keys = set()
         for path in _record_path("published/placeholder").parent.glob("*.json"):
-            record = json.loads(path.read_text())
-            if datetime.fromisoformat(record["not_before"]) <= datetime.now(
-                timezone.utc
-            ):
-                pending_keys.add(record["key"])
+            try:
+                record = json.loads(path.read_text())
+                _validate_key(record["key"])
+                if datetime.fromisoformat(record["not_before"]) <= datetime.now(
+                    timezone.utc
+                ):
+                    pending_keys.add(record["key"])
+            except Exception:
+                # process_takedowns already counted and logged this bad record.
+                continue
         metrics["eligible"] += len(orphans - pending_keys)
     metrics["orphans"] = len(orphans)
     return metrics
