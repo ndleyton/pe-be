@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 from unittest.mock import AsyncMock
 
 import pytest
@@ -550,9 +551,12 @@ async def test_direct_uploaded_reference_publish_uses_configured_format(
         settings.EXERCISE_IMAGE_PUBLISHED_FORMAT = original_format
 
     stored_paths = json.loads(exercise_type.images_url)
-    assert stored_paths == [
-        f"published/exercise-type-{exercise_type.id}/uploaded/{upload.json()['id']}.png"
-    ]
+    assert len(stored_paths) == 1
+    assert re.fullmatch(
+        rf"published/exercise-type-{exercise_type.id}/uploaded/"
+        rf"{upload.json()['id']}-[0-9a-f]{{16}}\.png",
+        stored_paths[0],
+    )
     assert (tmp_path / stored_paths[0]).read_bytes().startswith(b"\x89PNG")
 
 
@@ -599,11 +603,8 @@ async def test_direct_uploaded_reference_publish_cleans_written_file_on_failure(
         app.dependency_overrides.pop(current_active_user, None)
 
     assert upload.status_code == 201, upload.text
-    asset_id = upload.json()["id"]
     await db_session.refresh(exercise_type)
-    published_path = (
-        f"published/exercise-type-{exercise_type.id}/uploaded/{asset_id}.webp"
-    )
+    uploaded_dir = tmp_path / f"published/exercise-type-{exercise_type.id}/uploaded"
 
     def fail_after_images_url_set(target, value, oldvalue, initiator):
         if value and "published/" in value:
@@ -628,4 +629,87 @@ async def test_direct_uploaded_reference_publish_cleans_written_file_on_failure(
         event.remove(ExerciseType.images_url, "set", fail_after_images_url_set)
         await db_session.rollback()
 
-    assert not (tmp_path / published_path).exists()
+    assert not uploaded_dir.exists() or not any(uploaded_dir.iterdir())
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_direct_uploaded_reference_republish_keeps_existing_file_on_mirror_failure(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.core.config.settings.EXERCISE_IMAGE_STORAGE_DIR",
+        str(tmp_path),
+    )
+    user = User(
+        email="candidate-image-republish-mirror@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    exercise_type = ExerciseType(
+        name="Republish Curl",
+        owner_id=user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    db_session.add(exercise_type)
+    await db_session.commit()
+    await db_session.refresh(exercise_type)
+
+    async def override_user():
+        return user
+
+    app.dependency_overrides[current_active_user] = override_user
+    try:
+        upload = await async_client.post(
+            f"/api/v1/exercises/exercise-types/{exercise_type.id}/images/",
+            files={"file": ("reference.png", TINY_PNG_RED, "image/png")},
+        )
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+    assert upload.status_code == 201, upload.text
+    asset_id = upload.json()["id"]
+    await db_session.refresh(exercise_type)
+    uploaded_dir = tmp_path / f"published/exercise-type-{exercise_type.id}/uploaded"
+
+    await apply_reference_or_option(
+        db_session,
+        exercise_type,
+        option_key=None,
+        use_reference=True,
+    )
+
+    published_files = list(uploaded_dir.iterdir())
+    assert len(published_files) == 1
+    published_file = published_files[0]
+    assert published_file.name.startswith(f"{asset_id}-")
+    assert published_file.name.endswith(".webp")
+    published_bytes = published_file.read_bytes()
+
+    def fail_mirror(relative_paths):
+        raise RuntimeError("simulated R2 failure")
+
+    monkeypatch.setattr(
+        "src.admin.exercise_image_service.mirror_published_images", fail_mirror
+    )
+    try:
+        with pytest.raises(RuntimeError, match="simulated R2 failure"):
+            await apply_reference_or_option(
+                db_session,
+                exercise_type,
+                option_key=None,
+                use_reference=True,
+            )
+    finally:
+        await db_session.rollback()
+
+    assert published_file.is_file()
+    assert published_file.read_bytes() == published_bytes
+    assert list(uploaded_dir.iterdir()) == [published_file]

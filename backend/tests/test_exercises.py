@@ -394,6 +394,7 @@ async def test_generated_assets_require_auth_but_published_assets_remain_public(
             f"{settings.API_PREFIX}/exercises/assets/published/exercise-type-1/live.png"
         )
         assert public_resp.status_code == 200
+        assert public_resp.headers["cache-control"] == "public, max-age=300"
         assert public_resp.content == b"published"
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir

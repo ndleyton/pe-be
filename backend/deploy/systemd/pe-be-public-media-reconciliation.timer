@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PE-BE public media reconciliation hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target
