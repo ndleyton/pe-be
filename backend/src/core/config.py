@@ -551,6 +551,9 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "MEDIA_STORAGE_BACKEND='r2' requires R2_PUBLIC_BUCKET to be set"
                 )
+            if public_base_url and not (self.MEDIA_PURGE_BASE_URL or "").strip():
+                # Rollback unsets the public URL; takedowns still need it to purge the CDN.
+                raise ValueError("MEDIA_PUBLIC_BASE_URL requires MEDIA_PURGE_BASE_URL")
         elif public_base_url:
             raise ValueError(
                 "MEDIA_PUBLIC_BASE_URL requires MEDIA_STORAGE_BACKEND='r2' and R2_PUBLIC_BUCKET"

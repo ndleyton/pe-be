@@ -441,6 +441,14 @@ def test_public_keys_accept_cdn_urls_and_reject_path_escape(monkeypatch):
         media.published_keys('["published/../../secret"]')
 
 
+def test_public_keys_recognize_cdn_urls_after_public_url_rollback(monkeypatch):
+    monkeypatch.setattr(settings, "MEDIA_PUBLIC_BASE_URL", "")
+    monkeypatch.setattr(settings, "MEDIA_PURGE_BASE_URL", "https://media.example.com")
+    assert media.published_keys('["https://media.example.com/published/live.png"]') == {
+        "published/live.png"
+    }
+
+
 @pytest.mark.parametrize("success", [True, False])
 def test_purge_request_and_api_failure(monkeypatch, success):
     monkeypatch.setattr(settings, "CLOUDFLARE_ZONE_ID", "zone")

@@ -58,12 +58,19 @@ def _validate_key(key: str) -> None:
 
 def published_keys(raw_value: str | list[str] | None) -> set[str]:
     keys = set()
-    base = settings.MEDIA_PUBLIC_BASE_URL.rstrip("/")
+    # The purge base outlives a rollback that unsets the public base.
+    bases = {
+        base.rstrip("/")
+        for base in (settings.MEDIA_PUBLIC_BASE_URL, settings.MEDIA_PURGE_BASE_URL)
+        if base
+    }
     for value in parse_image_url_list(raw_value):
-        if base and value.startswith(base + "/"):
-            value = unquote(
-                urlsplit(value).path[len(urlsplit(base).path.rstrip("/")) + 1 :]
-            )
+        for base in bases:
+            if value.startswith(base + "/"):
+                value = unquote(
+                    urlsplit(value).path[len(urlsplit(base).path.rstrip("/")) + 1 :]
+                )
+                break
         if value.startswith(PUBLISHED_PREFIX):
             _validate_key(value)
             keys.add(value)

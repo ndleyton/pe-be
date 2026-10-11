@@ -118,7 +118,21 @@ def test_media_storage_backend_r2_with_valid_configuration():
         MEDIA_STORAGE_BACKEND="r2",
         R2_PUBLIC_BUCKET="pe-be-public",
         MEDIA_PUBLIC_BASE_URL="https://media.example.com",
+        MEDIA_PURGE_BASE_URL="https://media.example.com",
     )
     assert settings.MEDIA_STORAGE_BACKEND == "r2"
     assert settings.R2_PUBLIC_BUCKET == "pe-be-public"
     assert settings.MEDIA_PUBLIC_BASE_URL == "https://media.example.com"
+
+
+def test_media_public_base_url_requires_purge_base_url():
+    with pytest.raises(
+        ValidationError,
+        match="MEDIA_PUBLIC_BASE_URL requires MEDIA_PURGE_BASE_URL",
+    ):
+        Settings(
+            _env_file=None,
+            MEDIA_STORAGE_BACKEND="r2",
+            R2_PUBLIC_BUCKET="pe-be-public",
+            MEDIA_PUBLIC_BASE_URL="https://media.example.com",
+        )
