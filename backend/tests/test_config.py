@@ -5,7 +5,7 @@ from src.core.config import Settings
 
 
 @pytest.mark.parametrize("enabled", [None, "true"])
-def test_public_media_reconciliation_requires_opt_in(monkeypatch, enabled):
+def test_public_media_orphan_scan_requires_opt_in(monkeypatch, enabled):
     monkeypatch.delenv("JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", raising=False)
     if enabled is not None:
         monkeypatch.setenv("JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", enabled)

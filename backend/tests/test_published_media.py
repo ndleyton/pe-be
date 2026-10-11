@@ -507,7 +507,12 @@ async def test_job_with_orphan_scan_disabled_retries_pending_and_preserves_live_
     assert not media._record_path(orphan).exists()
     if dry_run:
         reconcile.assert_awaited_once()
-        assert result.metrics == {"eligible": 2, "deleted": 0, "failed": 0, "orphans": 2}
+        assert result.metrics == {
+            "eligible": 2,
+            "deleted": 0,
+            "failed": 0,
+            "orphans": 2,
+        }
         client.delete.assert_not_called()
         purge.assert_not_called()
     else:
@@ -671,7 +676,9 @@ async def test_withdraw_endpoint_requires_admin_and_reports_pending_purge(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("scan_enabled", [False, True])
 async def test_job_reports_pending_failures(monkeypatch, scan_enabled):
-    monkeypatch.setattr(settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", scan_enabled)
+    monkeypatch.setattr(
+        settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", scan_enabled
+    )
     monkeypatch.setattr(
         reconcile_public_media,
         "reconcile_publications" if scan_enabled else "process_takedowns",
