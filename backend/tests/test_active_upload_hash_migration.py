@@ -78,7 +78,9 @@ async def test_downgrade_requires_conflict_resolution_and_preserves_hashes(
     assert "uploaded_reference" in index_definition
     # Explicitly resolve the conflict, then retry the downgrade.
     await connection.execute(
-        sa.text("UPDATE exercise_image_candidates SET sha256 = 'unique-hash' WHERE id = 2")
+        sa.text(
+            "UPDATE exercise_image_candidates SET sha256 = 'unique-hash' WHERE id = 2"
+        )
     )
     await connection.run_sync(run_migration, migration.downgrade)
 

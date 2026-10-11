@@ -141,7 +141,9 @@ def test_media_public_base_url_requires_purge_base_url():
 
 
 @pytest.mark.parametrize("public_url", ["", "https://media.example.com"])
-@pytest.mark.parametrize("missing", ["CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"])
+@pytest.mark.parametrize(
+    "missing", ["CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"]
+)
 @pytest.mark.parametrize("empty", ["", "   "])
 def test_media_cdn_urls_require_purge_credentials(public_url, missing, empty):
     values = {
@@ -153,7 +155,9 @@ def test_media_cdn_urls_require_purge_credentials(public_url, missing, empty):
         "CLOUDFLARE_CACHE_PURGE_TOKEN": "token",
     }
     values[missing] = empty
-    with pytest.raises(ValidationError, match=f"Configured media CDN URLs require {missing}"):
+    with pytest.raises(
+        ValidationError, match=f"Configured media CDN URLs require {missing}"
+    ):
         Settings(_env_file=None, **values)
 
 
