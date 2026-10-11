@@ -41,6 +41,14 @@ def downgrade() -> None:
     if "exercise_image_candidates" not in tables:
         return
 
+    # Generated hashes were nullable before this release and may now be duplicates.
+    op.execute(
+        """
+        UPDATE exercise_image_candidates
+        SET sha256 = NULL
+        WHERE status = 'active' AND asset_kind = 'generated_candidate'
+        """
+    )
     op.execute("DROP INDEX IF EXISTS uq_exercise_image_candidates_active_upload_hash")
     op.execute(
         """
