@@ -231,7 +231,11 @@ jobs:
         run: |
           ssh "${VPS_USER}@${VPS_HOST}" \
             "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'DEPLOYEOF'
+          # Parse the whole script before running it; otherwise commands that read
+          # stdin (docker compose exec/run) consume the rest of the script and bash exits 0.
+          main() {
           set -euo pipefail
+          deploy_started=$(date -u +%s)
 
           cd "${DEPLOY_PATH}"
 
@@ -278,6 +282,11 @@ jobs:
 
           # Bring up backend and caddy
           docker compose -f docker-compose.prod.yml up -d --force-recreate backend caddy
+          backend_created=$(date -u -d "$(docker inspect -f '{{.Created}}' pe-be-backend)" +%s)
+          if (( backend_created < deploy_started )); then
+            echo "Backend container was not recreated by this deploy" >&2
+            exit 1
+          fi
 
           # Show running containers
           docker compose -f docker-compose.prod.yml ps
@@ -318,6 +327,8 @@ jobs:
 
           echo ""
           echo "VPS updates complete; external ingress verification follows."
+          }
+          main < /dev/null
           DEPLOYEOF
 
       - name: Verify origin and public API ingress
