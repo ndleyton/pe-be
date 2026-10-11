@@ -71,7 +71,8 @@ We propose the following cost-optimized configuration mapping in `backend/.env.p
 CHAT_MODEL=gemini-2.5-flash
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite
 WORKOUT_RECAP_MODEL=gemini-2.5-flash-lite
-EXERCISE_IMAGE_PHASE_MODEL=gemini-3.1-flash-image
+EXERCISE_IMAGE_PHASE_MODEL=gemini-nano-banana-2.1
+EXERCISE_IMAGE_REFERENCE_MODEL=gemini-nano-banana-2.1
 ```
 
 ### `backend/.env.production.template` (Option A: Extreme Budget)
@@ -79,5 +80,6 @@ EXERCISE_IMAGE_PHASE_MODEL=gemini-3.1-flash-image
 CHAT_MODEL=gemini-3.1-flash-lite
 WORKOUT_PARSER_MODEL=gemini-2.5-flash-lite
 WORKOUT_RECAP_MODEL=gemini-2.5-flash-lite
-EXERCISE_IMAGE_PHASE_MODEL=gemini-3.1-flash-image
+EXERCISE_IMAGE_PHASE_MODEL=gemini-nano-banana-2.1
+EXERCISE_IMAGE_REFERENCE_MODEL=gemini-nano-banana-2.1
 ```
