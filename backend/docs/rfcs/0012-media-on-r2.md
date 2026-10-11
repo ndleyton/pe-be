@@ -58,6 +58,7 @@ R2_SECRET_ACCESS_KEY=...
 R2_PUBLIC_BUCKET=pe-be-public
 R2_PRIVATE_BUCKET=pe-be-private              # used from phase 2
 MEDIA_PUBLIC_BASE_URL=https://media.example.com   # set only after backfill
+MEDIA_PURGE_BASE_URL=https://media.example.com    # required with public URL; retain during rollback
 CLOUDFLARE_ZONE_ID=...
 CLOUDFLARE_CACHE_PURGE_TOKEN=...             # Cache Purge permission, scoped to the zone
 JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=false # opt in after reviewing a production dry-run
@@ -82,16 +83,16 @@ Keys reuse the existing relative storage paths (for example `published/exercise-
 ### Phase 1: published exercise images (this change)
 
 1. When `apply_reference_or_option` publishes images, it writes them locally as before, then mirrors them to `pe-be-public`. If the upload fails, the request fails before commit, as a local write failure does today.
-2. `python -m src.jobs.backfill_public_media [--dry-run]` uploads the `published/` files referenced by committed `ExerciseType.images_url` values. Orphaned files are skipped.
-3. Once the backfill has run, setting `MEDIA_PUBLIC_BASE_URL` makes `resolve_exercise_image_url` return CDN URLs for `published/` paths. Unsetting it rolls back immediately, because the local files are still there. When rolling back, set `MEDIA_PURGE_BASE_URL` to the same CDN URL first, so later takedowns still purge objects the CDN already cached.
+2. `python -m src.jobs.backfill_public_media [--dry-run]` uploads the `published/` files referenced by committed `ExerciseType.images_url` or `ExerciseType.reference_images_url` values. Orphaned files are skipped.
+3. Once the backfill has run, set both `MEDIA_PUBLIC_BASE_URL` and `MEDIA_PURGE_BASE_URL` to the same CDN URL. The public base makes `resolve_exercise_image_url` return CDN URLs for `published/` paths, and configuration requires the purge base whenever the public base is set. Unsetting only `MEDIA_PUBLIC_BASE_URL` rolls back immediately, because the local files are still there. Keep `MEDIA_PURGE_BASE_URL` set during rollback so later takedowns still purge objects the CDN already cached.
 
-The Deploy VPS workflow reads the phase 1 media settings above from GitHub repository secrets. Configure them before deployment; `MEDIA_STORAGE_BACKEND` defaults to `local`. Set the `MEDIA_PUBLIC_BASE_URL` secret only after backfill.
+The Deploy VPS workflow reads the phase 1 media settings above from GitHub repository secrets. Configure them before deployment; `MEDIA_STORAGE_BACKEND` defaults to `local`. Set both the `MEDIA_PUBLIC_BASE_URL` and `MEDIA_PURGE_BASE_URL` secrets to the same CDN URL only after backfill. Retain the purge secret if the public secret is cleared for rollback.
 
 Deploy order:
 1. Deploy the code with `MEDIA_STORAGE_BACKEND=r2` and no `MEDIA_PUBLIC_BASE_URL`.
 2. Run the backfill with `docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.backfill_public_media`.
 3. Spot-check a few keys with `curl`.
-4. Set `MEDIA_PUBLIC_BASE_URL` and restart.
+4. Set both `MEDIA_PUBLIC_BASE_URL` and `MEDIA_PURGE_BASE_URL` to the same CDN URL and restart (or redeploy through Deploy VPS when using repository secrets).
 5. Keep orphan scanning disabled until a recoverable media backup exists and a production dry-run has been reviewed. Follow the [reconciliation activation steps](../../src/jobs/README.md#published-media-reconciliation), checking candidate keys against stored references before setting `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true`.
 
 ### Phase 2: workout photos and chat attachments
