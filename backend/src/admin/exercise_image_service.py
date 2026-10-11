@@ -831,8 +831,13 @@ async def apply_reference_or_option(
                     image_bytes,
                 )
                 if not _candidate_file_exists(published_path):
-                    _write_candidate_bytes(published_path, image_bytes)
+                    await asyncio.to_thread(
+                        queue_takedowns,
+                        [published_path],
+                        grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
+                    )
                     created_paths.append(published_path)
+                    _write_candidate_bytes(published_path, image_bytes)
                 matching_upload.status = (
                     ExerciseImageCandidate.AssetStatus.promoted.value
                 )
@@ -868,16 +873,16 @@ async def apply_reference_or_option(
                     image_bytes,
                 )
                 if not _candidate_file_exists(published_path):
-                    _write_candidate_bytes(published_path, image_bytes)
+                    await asyncio.to_thread(
+                        queue_takedowns,
+                        [published_path],
+                        grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
+                    )
                     created_paths.append(published_path)
+                    _write_candidate_bytes(published_path, image_bytes)
                 candidate.status = ExerciseImageCandidate.AssetStatus.promoted.value
                 published_paths.append(published_path)
 
-        await asyncio.to_thread(
-            queue_takedowns,
-            created_paths,
-            grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
-        )
         await asyncio.to_thread(mirror_published_images, published_paths)
         exercise_type.images_url = _image_json(published_paths)
     except Exception:

@@ -70,6 +70,9 @@ def test_media_storage_backend_accepts_valid_values_normalized():
         _env_file=None,
         MEDIA_STORAGE_BACKEND=" R2 ",
         R2_PUBLIC_BUCKET="pe-be-public",
+        R2_ENDPOINT_URL="https://r2.example.com",
+        R2_ACCESS_KEY_ID="access-key",
+        R2_SECRET_ACCESS_KEY="secret-key",
     )
     assert settings_r2.MEDIA_STORAGE_BACKEND == "r2"
 
@@ -117,6 +120,9 @@ def test_media_storage_backend_r2_with_valid_configuration():
         _env_file=None,
         MEDIA_STORAGE_BACKEND="r2",
         R2_PUBLIC_BUCKET="pe-be-public",
+        R2_ENDPOINT_URL="https://r2.example.com",
+        R2_ACCESS_KEY_ID="access-key",
+        R2_SECRET_ACCESS_KEY="secret-key",
         MEDIA_PUBLIC_BASE_URL="https://media.example.com",
         MEDIA_PURGE_BASE_URL="https://media.example.com",
         CLOUDFLARE_ZONE_ID="zone",
@@ -136,6 +142,9 @@ def test_media_public_base_url_requires_purge_base_url():
             _env_file=None,
             MEDIA_STORAGE_BACKEND="r2",
             R2_PUBLIC_BUCKET="pe-be-public",
+            R2_ENDPOINT_URL="https://r2.example.com",
+            R2_ACCESS_KEY_ID="access-key",
+            R2_SECRET_ACCESS_KEY="secret-key",
             MEDIA_PUBLIC_BASE_URL="https://media.example.com",
         )
 
@@ -149,6 +158,9 @@ def test_media_cdn_urls_require_purge_credentials(public_url, missing, empty):
     values = {
         "MEDIA_STORAGE_BACKEND": "r2",
         "R2_PUBLIC_BUCKET": "pe-be-public",
+        "R2_ENDPOINT_URL": "https://r2.example.com",
+        "R2_ACCESS_KEY_ID": "access-key",
+        "R2_SECRET_ACCESS_KEY": "secret-key",
         "MEDIA_PUBLIC_BASE_URL": public_url,
         "MEDIA_PURGE_BASE_URL": "https://media.example.com",
         "CLOUDFLARE_ZONE_ID": "zone",
@@ -166,6 +178,9 @@ def test_media_rollback_with_purge_credentials_is_valid():
         _env_file=None,
         MEDIA_STORAGE_BACKEND="r2",
         R2_PUBLIC_BUCKET="pe-be-public",
+        R2_ENDPOINT_URL="https://r2.example.com",
+        R2_ACCESS_KEY_ID="access-key",
+        R2_SECRET_ACCESS_KEY="secret-key",
         MEDIA_PUBLIC_BASE_URL="",
         MEDIA_PURGE_BASE_URL="https://media.example.com",
         CLOUDFLARE_ZONE_ID="zone",
@@ -173,3 +188,20 @@ def test_media_rollback_with_purge_credentials_is_valid():
     )
     assert settings.MEDIA_PUBLIC_BASE_URL == ""
     assert settings.MEDIA_PURGE_BASE_URL == "https://media.example.com"
+
+
+@pytest.mark.parametrize(
+    "missing", ["R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]
+)
+@pytest.mark.parametrize("empty", ["", "   "])
+def test_r2_requires_connection_settings_at_startup(missing, empty):
+    values = {
+        "MEDIA_STORAGE_BACKEND": "r2",
+        "R2_PUBLIC_BUCKET": "pe-be-public",
+        "R2_ENDPOINT_URL": "https://r2.example.com",
+        "R2_ACCESS_KEY_ID": "access-key",
+        "R2_SECRET_ACCESS_KEY": "secret-key",
+    }
+    values[missing] = empty
+    with pytest.raises(ValidationError, match=f"requires {missing} to be set"):
+        Settings(_env_file=None, **values)

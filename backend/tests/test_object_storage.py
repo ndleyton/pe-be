@@ -66,13 +66,6 @@ def test_public_storage_disabled_by_default(monkeypatch):
     assert mirror_published_images(["published/x.png"]) == 0
 
 
-def test_r2_requires_public_bucket(monkeypatch):
-    monkeypatch.setattr("src.core.config.settings.MEDIA_STORAGE_BACKEND", "r2")
-    monkeypatch.setattr("src.core.config.settings.R2_PUBLIC_BUCKET", "")
-    with pytest.raises(RuntimeError, match="R2_PUBLIC_BUCKET"):
-        object_storage.get_public_media_storage()
-
-
 def test_mirror_uploads_only_published_paths(fake_r2, tmp_path):
     _write(tmp_path, "published/exercise-type-1/a/0-key.png", b"png")
     _write(tmp_path, "uploads/private.png")

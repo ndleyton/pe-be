@@ -820,3 +820,82 @@ async def test_reconcile_skips_invalid_local_and_storage_keys(
         "published/local-valid.png",
         "published/storage-valid.png",
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_reference", [False, True])
+@pytest.mark.parametrize("fail_on_write", [1, 2])
+async def test_early_publish_failure_keeps_retry_records_without_reference_query(
+    storage, tmp_path, monkeypatch, use_reference, fail_on_write
+):
+    from src.admin import exercise_image_service as service
+
+    candidates = [
+        SimpleNamespace(
+            id=index + 1,
+            option_key="front",
+            source_image_index=index,
+            generation_key=f"key-{index}",
+            pipeline_key=service.REFERENCE_PIPELINE_KEY,
+            storage_path=f"generated/source-{index}.png",
+            status="active",
+        )
+        for index in range(2)
+    ]
+    for candidate in candidates:
+        write(tmp_path, candidate.storage_path)
+    exercise = SimpleNamespace(
+        id=1,
+        images_url="[]",
+        reference_images_url=json.dumps([c.storage_path for c in candidates]),
+    )
+    session = Session()
+    session.refresh = AsyncMock()
+    session.commit = AsyncMock()
+    original_execute = session.execute
+
+    async def execute(statement):
+        if "exercise_image_candidates" in str(statement):
+            return SimpleNamespace(
+                scalars=lambda: SimpleNamespace(all=lambda: candidates)
+            )
+        return await original_execute(statement)
+
+    session.execute = execute
+    monkeypatch.setattr(service, "_load_candidates", AsyncMock(return_value=candidates))
+    monkeypatch.setattr(service, "_render_published_upload", lambda path: b"image")
+    monkeypatch.setattr(
+        service,
+        "referenced_publications",
+        AsyncMock(side_effect=RuntimeError("DB aborted")),
+    )
+    attempted = []
+    original_write = service._write_candidate_bytes
+
+    def failing_write(key, data):
+        # The durable retry record must exist even before a partial write fails.
+        assert media._record_path(key).exists()
+        attempted.append(key)
+        original_write(key, data)
+        if len(attempted) == fail_on_write:
+            raise OSError("write failed")
+
+    monkeypatch.setattr(service, "_write_candidate_bytes", failing_write)
+    with pytest.raises(OSError, match="write failed"):
+        await service.apply_reference_or_option(
+            session, exercise, option_key="front", use_reference=use_reference
+        )
+    session.commit.assert_not_awaited()
+    assert len(attempted) == fail_on_write
+    for key in attempted:
+        path = media._record_path(key)
+        record = json.loads(path.read_text())
+        assert datetime.fromisoformat(record["not_before"]) > datetime.now(timezone.utc)
+        # Simulate expiry, then retry with orphan scanning disabled.
+        record["not_before"] = datetime.now(timezone.utc).isoformat()
+        path.write_text(json.dumps(record))
+    result = await media.process_takedowns(Session())
+    assert result == {"eligible": fail_on_write, "deleted": fail_on_write, "failed": 0}
+    for key in attempted:
+        assert not (tmp_path / key).exists()
+        assert not media._record_path(key).exists()

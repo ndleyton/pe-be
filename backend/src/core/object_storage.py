@@ -53,15 +53,6 @@ def _r2_client() -> Any:
     import boto3
     from botocore.config import Config
 
-    if not (
-        settings.R2_ENDPOINT_URL
-        and settings.R2_ACCESS_KEY_ID
-        and settings.R2_SECRET_ACCESS_KEY
-    ):
-        raise RuntimeError(
-            "MEDIA_STORAGE_BACKEND=r2 requires R2_ENDPOINT_URL, "
-            "R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY"
-        )
     return boto3.client(
         "s3",
         endpoint_url=settings.R2_ENDPOINT_URL,
@@ -76,8 +67,6 @@ def get_public_media_storage() -> ObjectStorage | None:
     """Return the public media bucket, or None when R2 mirroring is off."""
     if not r2_enabled():
         return None
-    if not settings.R2_PUBLIC_BUCKET:
-        raise RuntimeError("MEDIA_STORAGE_BACKEND=r2 requires R2_PUBLIC_BUCKET")
     return ObjectStorage(bucket=settings.R2_PUBLIC_BUCKET, client=_r2_client())
 
 
