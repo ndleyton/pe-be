@@ -470,18 +470,52 @@ def test_r2_listing_follows_all_pages():
 
 
 @pytest.mark.asyncio
-async def test_reconciliation_job_disabled(monkeypatch):
+@pytest.mark.parametrize("dry_run", [False, True])
+async def test_job_with_orphan_scan_disabled_retries_pending_and_preserves_live_keys(
+    storage, tmp_path, monkeypatch, dry_run
+):
     monkeypatch.setattr(settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", False)
-    managed = AsyncMock(
-        return_value=JobRunResult(
-            job_name="reconcile_public_media", status="success", metrics={}
+    objects, client, purge = storage
+    pending = "published/pending.png"
+    live = "published/live.png"
+    orphan = "published/unqueued-orphan.png"
+    for key in [pending, live, orphan]:
+        write(tmp_path, key)
+        objects[key] = datetime.now(timezone.utc) - timedelta(days=2)
+    media.queue_takedowns([pending, live])
+    session = Session([(json.dumps([live]), None)])
+    reconcile = AsyncMock(wraps=media.reconcile_publications)
+    monkeypatch.setattr(reconcile_public_media, "reconcile_publications", reconcile)
+
+    async def managed(**kwargs):
+        metrics = await kwargs["job_callable"](session)
+        return JobRunResult(
+            job_name="reconcile_public_media", status="success", metrics=metrics
         )
-    )
+
     monkeypatch.setattr(reconcile_public_media, "run_managed_job", managed)
-    assert (await reconcile_public_media.run()).status == "disabled"
-    managed.assert_not_awaited()
-    assert (await reconcile_public_media.run(dry_run=True)).status == "success"
-    managed.assert_awaited_once()
+    result = await reconcile_public_media.run(dry_run=dry_run)
+
+    assert result.status == "success"
+    assert result.metrics["failed"] == 0
+    assert (tmp_path / live).exists()
+    assert (tmp_path / orphan).exists()
+    assert live in objects and orphan in objects
+    assert (tmp_path / pending).exists() == dry_run
+    assert media._record_path(pending).exists() == dry_run
+    assert media._record_path(live).exists() == dry_run
+    assert not media._record_path(orphan).exists()
+    if dry_run:
+        reconcile.assert_awaited_once()
+        assert result.metrics == {"eligible": 2, "deleted": 0, "failed": 0, "orphans": 2}
+        client.delete.assert_not_called()
+        purge.assert_not_called()
+    else:
+        reconcile.assert_not_awaited()
+        assert result.metrics == {"eligible": 1, "deleted": 1, "failed": 0}
+        client.delete.assert_called_once_with(pending)
+        purge.assert_called_once()
+        assert pending not in objects
 
 
 def test_reconciliation_main_dry_run(monkeypatch, capsys):
@@ -635,11 +669,12 @@ async def test_withdraw_endpoint_requires_admin_and_reports_pending_purge(
 
 
 @pytest.mark.asyncio
-async def test_job_reports_pending_failures(monkeypatch):
-    monkeypatch.setattr(settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", True)
+@pytest.mark.parametrize("scan_enabled", [False, True])
+async def test_job_reports_pending_failures(monkeypatch, scan_enabled):
+    monkeypatch.setattr(settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", scan_enabled)
     monkeypatch.setattr(
         reconcile_public_media,
-        "reconcile_publications",
+        "reconcile_publications" if scan_enabled else "process_takedowns",
         AsyncMock(return_value={"failed": 1}),
     )
 

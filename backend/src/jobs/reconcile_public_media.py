@@ -7,7 +7,7 @@ import asyncio
 import logging
 
 from src.core.config import settings
-from src.exercises.published_media import reconcile_publications
+from src.exercises.published_media import process_takedowns, reconcile_publications
 from src.jobs.shared import JobRunResult, configure_job_runtime, run_managed_job
 
 logger = logging.getLogger(__name__)
@@ -15,15 +15,15 @@ JOB_NAME = "reconcile_public_media"
 
 
 async def run(*, dry_run: bool = False) -> JobRunResult:
-    if not dry_run and not settings.JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED:
-        return JobRunResult(job_name=JOB_NAME, status="disabled", metrics={})
-
     async def job(session):
-        metrics = await reconcile_publications(
-            session,
-            dry_run=dry_run,
-            grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
-        )
+        if dry_run or settings.JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED:
+            metrics = await reconcile_publications(
+                session,
+                dry_run=dry_run,
+                grace_hours=settings.PUBLIC_MEDIA_ORPHAN_GRACE_HOURS,
+            )
+        else:
+            metrics = await process_takedowns(session)
         if metrics["failed"]:
             raise RuntimeError(
                 f"{metrics['failed']} public media takedowns remain pending"
