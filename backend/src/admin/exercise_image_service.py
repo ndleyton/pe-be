@@ -930,4 +930,15 @@ async def unpublish_images(
         ]
     )
     await session.commit()
-    return await process_takedowns(session, keys=retired_paths)
+    try:
+        return await process_takedowns(session, keys=retired_paths)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Post-commit withdrawal cleanup failed; deferring to reconciliation"
+        )
+        await session.rollback()
+        return {
+            "eligible": len(retired_paths),
+            "deleted": 0,
+            "failed": len(retired_paths),
+        }

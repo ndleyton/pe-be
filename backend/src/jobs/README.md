@@ -179,6 +179,13 @@ Per RFC 0004, jobs here are intended to be triggered by external VPS scheduling,
 
 ## Published media reconciliation
 
-`uv run python -m src.jobs.reconcile_public_media --dry-run` reports orphaned publications and pending takedowns. Remove `--dry-run` to delete eligible local files/R2 objects and purge their CDN URLs. The default orphan grace period is 24 hours; live database references protect images even when local files are absent.
+`uv run python -m src.jobs.reconcile_public_media --dry-run` reports counts and logs the keys of orphaned publications and eligible pending takedowns without changing files, R2 objects, or retry records. Dry-run works while the job is disabled. The default orphan grace period is 24 hours; live database references protect images even when local files are absent.
 
-The hourly `pe-be-public-media-reconciliation.timer` is installed and verified by Deploy VPS. Disable scheduled work with `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=false`. Failed deletions and cache purges retain retry records in the persistent image volume and cause the job to fail visibly. See [RFC 0012](../../docs/rfcs/0012-media-on-r2.md) for credentials, cache policy, manual timer installation, and the retry ledger's lifecycle.
+The hourly `pe-be-public-media-reconciliation.timer` is installed and verified by Deploy VPS, but scheduled work defaults to disabled. Before enabling it:
+
+1. Preserve a recoverable backup of the exercise image volume and R2 media; database dumps do not include media.
+2. Run `docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.reconcile_public_media --dry-run` on the VPS.
+3. Review the logged candidate keys against production `images_url` and `reference_images_url` values, including absolute URLs and legacy formats. A plausible `orphans` count alone is insufficient. Resolve missed references before enabling deletion.
+4. Set the GitHub repository secret `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true` and redeploy. For manual installs, update the production env file used by Compose. Non-dry-run CLI calls also require this flag.
+
+Setting the flag to `false` disables scheduled orphan sweeps and pending takedown retries; explicit withdrawal still attempts immediate cleanup. Failed deletions and cache purges retain retry records in the persistent image volume and cause the job to fail visibly. See [RFC 0012](../../docs/rfcs/0012-media-on-r2.md) for credentials, cache policy, manual timer installation, and the retry ledger's lifecycle.

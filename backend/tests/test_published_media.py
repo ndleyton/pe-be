@@ -153,8 +153,9 @@ async def test_grace_period_preserves_recent_files_and_objects(storage, tmp_path
 
 @pytest.mark.asyncio
 async def test_dry_run_changes_neither_files_objects_nor_retry_records(
-    storage, tmp_path
+    storage, tmp_path, caplog
 ):
+    caplog.set_level("INFO", logger=media.__name__)
     objects, client, purge = storage
     objects["published/orphan.png"] = datetime.now(timezone.utc) - timedelta(days=2)
     orphan = write(tmp_path, "published/orphan.png")
@@ -163,6 +164,10 @@ async def test_dry_run_changes_neither_files_objects_nor_retry_records(
     contents = pending.read_bytes()
     result = await media.reconcile_publications(Session(), dry_run=True, grace_hours=24)
     assert result["eligible"] == 2
+    assert "Public media dry-run orphan key=published/orphan.png" in caplog.text
+    assert (
+        "Public media dry-run pending takedown key=published/pending.png" in caplog.text
+    )
     assert orphan.exists()
     assert pending.read_bytes() == contents
     assert not media._record_path("published/orphan.png").exists()
@@ -196,6 +201,58 @@ async def test_failures_remain_pending_and_retry_after_origins_disappear(
     assert result["deleted"] == 1
     assert not media._record_path(key).exists()
     assert not objects
+
+
+@pytest.mark.asyncio
+async def test_takedown_without_public_base_url_completes(
+    storage, tmp_path, monkeypatch
+):
+    objects, client, purge = storage
+    monkeypatch.setattr(settings, "MEDIA_PUBLIC_BASE_URL", "")
+    key = "published/not-public.png"
+    local = write(tmp_path, key)
+    objects[key] = datetime.now(timezone.utc)
+    media.queue_takedowns([key])
+
+    result = await media.process_takedowns(Session())
+
+    assert result == {"eligible": 1, "deleted": 1, "failed": 0}
+    assert not local.exists()
+    assert key not in objects
+    assert not media._record_path(key).exists()
+    client.delete.assert_called_once_with(key)
+    purge.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("url_source", ["record", "settings"])
+@pytest.mark.parametrize(
+    "missing_setting", ["CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"]
+)
+async def test_takedown_with_public_url_requires_purge_credentials(
+    storage, monkeypatch, url_source, missing_setting
+):
+    key = "published/public.png"
+    monkeypatch.setattr(
+        settings,
+        "MEDIA_PUBLIC_BASE_URL",
+        "https://media.example.com" if url_source == "record" else "",
+    )
+    media.queue_takedowns([key])
+    monkeypatch.setattr(
+        settings,
+        "MEDIA_PUBLIC_BASE_URL",
+        "https://media.example.com" if url_source == "settings" else "",
+    )
+    monkeypatch.setattr(settings, "CLOUDFLARE_ZONE_ID", "zone")
+    monkeypatch.setattr(settings, "CLOUDFLARE_CACHE_PURGE_TOKEN", "token")
+    monkeypatch.setattr(settings, missing_setting, "")
+    monkeypatch.setattr(media, "purge_public_media", object_storage.purge_public_media)
+
+    result = await media.process_takedowns(Session())
+
+    assert result == {"eligible": 1, "deleted": 0, "failed": 1}
+    assert media._record_path(key).exists()
 
 
 @pytest.mark.asyncio
@@ -300,6 +357,64 @@ async def test_unpublish_commit_failure_does_not_delete_live_publication(
     assert (tmp_path / key).exists()
 
 
+@pytest.mark.asyncio
+async def test_withdraw_cleanup_query_failure_returns_202_and_invalidates_cache(
+    storage, tmp_path, monkeypatch, caplog
+):
+    from fastapi import FastAPI
+    from src.admin import router as admin_router
+
+    _, client, purge = storage
+    key = "published/withdraw-query-failure.png"
+    local = write(tmp_path, key)
+    exercise = SimpleNamespace(images_url=json.dumps([key]), reference_images_url=None)
+    session = Session()
+    session.refresh = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    execute = session.execute
+
+    async def fail_post_commit_query(statement):
+        if session.commit.await_count:
+            assert exercise.images_url == "[]"
+            assert media._record_path(key).exists()
+            raise RuntimeError("cleanup database unavailable")
+        return await execute(statement)
+
+    session.execute = fail_post_commit_query
+    monkeypatch.setattr(
+        admin_router.ExerciseTypeService,
+        "get_exercise_type",
+        AsyncMock(return_value=exercise),
+    )
+    invalidate = AsyncMock()
+    monkeypatch.setattr(admin_router.response_cache, "invalidate_tags", invalidate)
+    app = FastAPI()
+    app.include_router(admin_router.router, prefix="/api/v1")
+    app.dependency_overrides[admin_router._require_superuser] = lambda: object()
+    app.dependency_overrides[admin_router.get_async_session] = lambda: session
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as http_client:
+        response = await http_client.delete(
+            "/api/v1/admin/exercise-types/1/published-images"
+        )
+
+    assert response.status_code == 202
+    assert response.json() == {"eligible": 1, "deleted": 0, "failed": 1}
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    invalidate.assert_awaited_once_with(admin_router.EXERCISE_PUBLIC_CACHE_TAG)
+    assert exercise.images_url == "[]"
+    assert exercise.reference_images_url == "[]"
+    assert local.exists()
+    assert media._record_path(key).exists()
+    client.delete.assert_not_called()
+    purge.assert_not_called()
+    assert "Post-commit withdrawal cleanup failed" in caplog.text
+
+
 def test_public_keys_accept_cdn_urls_and_reject_path_escape(monkeypatch):
     monkeypatch.setattr(settings, "MEDIA_PUBLIC_BASE_URL", "https://media.example.com")
     assert media.published_keys('["https://media.example.com/published/a.png"]') == {
@@ -357,7 +472,16 @@ def test_r2_listing_follows_all_pages():
 @pytest.mark.asyncio
 async def test_reconciliation_job_disabled(monkeypatch):
     monkeypatch.setattr(settings, "JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", False)
+    managed = AsyncMock(
+        return_value=JobRunResult(
+            job_name="reconcile_public_media", status="success", metrics={}
+        )
+    )
+    monkeypatch.setattr(reconcile_public_media, "run_managed_job", managed)
     assert (await reconcile_public_media.run()).status == "disabled"
+    managed.assert_not_awaited()
+    assert (await reconcile_public_media.run(dry_run=True)).status == "success"
+    managed.assert_awaited_once()
 
 
 def test_reconciliation_main_dry_run(monkeypatch, capsys):

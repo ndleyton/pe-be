@@ -60,7 +60,7 @@ R2_PRIVATE_BUCKET=pe-be-private              # used from phase 2
 MEDIA_PUBLIC_BASE_URL=https://media.example.com   # set only after backfill
 CLOUDFLARE_ZONE_ID=...
 CLOUDFLARE_CACHE_PURGE_TOKEN=...             # Cache Purge permission, scoped to the zone
-JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true # default: true; false disables scheduled cleanup
+JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=false # opt in after reviewing a production dry-run
 PUBLIC_MEDIA_ORPHAN_GRACE_HOURS=24           # minimum: 1
 ```
 
@@ -92,6 +92,7 @@ Deploy order:
 2. Run the backfill with `docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.backfill_public_media`.
 3. Spot-check a few keys with `curl`.
 4. Set `MEDIA_PUBLIC_BASE_URL` and restart.
+5. Keep reconciliation disabled until a recoverable media backup exists and a production dry-run has been reviewed. Follow the [reconciliation activation steps](../../src/jobs/README.md#published-media-reconciliation), checking candidate keys against stored references before setting `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true`.
 
 ### Phase 2: workout photos and chat attachments
 
@@ -108,15 +109,15 @@ Move the persistent `.published-media-pending/` retry ledger to shared durable s
 
 ## Reconciliation and takedowns
 
-`python -m src.jobs.reconcile_public_media --dry-run` reports eligible publications without writing retry records, deleting files/objects, or purging cache. Without `--dry-run`, it sweeps local `published/` files and paginated R2 keys older than `PUBLIC_MEDIA_ORPHAN_GRACE_HOURS`, and retries pending takedowns even when origin files/objects are already gone.
+`python -m src.jobs.reconcile_public_media --dry-run` reports counts and logs orphan keys and eligible pending takedown keys without writing retry records, deleting files/objects, or purging cache. Dry-run works even when reconciliation is disabled, which is the default. Once explicitly enabled, runs without `--dry-run` sweep local `published/` files and paginated R2 keys older than `PUBLIC_MEDIA_ORPHAN_GRACE_HOURS`, and retry pending takedowns even when origin files/objects are already gone. The grace period measures file/object age, not time since deployment.
 
 Database references in **both** `images_url` and `reference_images_url` protect a publication, even if its local file is missing. Before deleting a batch the job reads references once under the same PostgreSQL transaction advisory lock used by publishing and backfill, and holds that lock through cleanup. Offline scripts modifying publication references must acquire that lock too, or run with reconciliation stopped.
 
 Replacement queues retired paths before commit and attempts takedown after commit. `DELETE /api/v1/admin/exercise-types/{id}/published-images` clears current images and any published references; private candidate originals remain private. It requires an administrator. It returns cleanup counts, with HTTP 202 when deletion or purge remains pending. Shared publications are retained while any row still references them.
 
-Each takedown has an atomic, fsynced JSON record in `.published-media-pending/` on the existing persistent image volume. Records remain until local deletion, R2 deletion, and Cloudflare URL purge all succeed. The hourly job retries failures and exits unsuccessfully if any attempts still fail. This ledger is intentionally tied to Phase 1's persistent local volume and must be migrated before retiring that volume.
+Each takedown has an atomic, fsynced JSON record in `.published-media-pending/` on the existing persistent image volume. Records remain until local deletion, R2 deletion, and any required Cloudflare URL purge all succeed. The hourly job retries failures and exits unsuccessfully if any attempts still fail. This ledger is intentionally tied to Phase 1's persistent local volume and must be migrated before retiring that volume.
 
-The deployment workflow installs, reloads, enables, restarts, and verifies `pe-be-public-media-reconciliation.timer`. Configure the zone ID and Cache Purge token before enabling R2 in production. Set the public media base URL after backfill, as in the rollout above; until it is set, purge attempts remain pending and are retried. Disabling R2 does not cancel pending R2 takedowns; restore the R2 settings to finish those retries.
+The deployment workflow installs, reloads, enables, restarts, and verifies `pe-be-public-media-reconciliation.timer`. Configure the zone ID and Cache Purge token before enabling R2 in production. Set the public media base URL after backfill, as in the rollout above. During the initial rollout, takedowns skip CDN purge when both the recorded base URL and the current setting are empty; this assumes those objects have not previously been publicly served. If either URL is present, purge is required and missing credentials keep the takedown pending. Disabling R2 does not cancel pending R2 takedowns; restore the R2 settings to finish those retries.
 
 Browser copies and prior downloads cannot be recalled. The five-minute browser TTL applies to new responses. For existing objects, rerun backfill to update their cache metadata and purge their CDN URLs; already cached browser responses can retain their original one-year policy. Configure Cloudflare's Browser Cache TTL to respect the origin's shorter policy, and keep the CDN cache key at its default so URL purges cover it.
 

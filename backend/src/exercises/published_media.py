@@ -132,16 +132,16 @@ def queue_takedowns(keys, *, grace_hours: float = 0) -> None:
 def delete_queued_publication(key: str) -> None:
     _validate_key(key)
     record = json.loads(_record_path(key).read_text())
-    # The record survives until origin deletion AND cache purge succeed.
+    # The record survives until origin deletion and any required cache purge succeed.
     storage_path_for_relative_url(key).unlink(missing_ok=True)
     if record["r2"]:
         storage = get_public_media_storage()
         if storage is None:
             raise RuntimeError("Pending R2 takedown requires MEDIA_STORAGE_BACKEND=r2")
         storage.delete(key)
-        purge_public_media(
-            key, base_url=record["base_url"] or settings.MEDIA_PUBLIC_BASE_URL
-        )
+        base_url = record["base_url"] or settings.MEDIA_PUBLIC_BASE_URL
+        if base_url:
+            purge_public_media(key, base_url=base_url)
     _record_path(key).unlink(missing_ok=True)
 
 
@@ -169,7 +169,9 @@ async def process_takedowns(
                     path.unlink(missing_ok=True)
                 continue
             metrics["eligible"] += 1
-            if not dry_run:
+            if dry_run:
+                logger.info("Public media dry-run pending takedown key=%s", key)
+            else:
                 await asyncio.to_thread(delete_queued_publication, key)
                 metrics["deleted"] += 1
         except Exception:
@@ -215,7 +217,10 @@ async def reconcile_publications(
     candidates = await asyncio.to_thread(orphan_candidates, grace_hours=grace_hours)
     await lock_publications(session)
     orphans = candidates - await referenced_publications(session)
-    if not dry_run:
+    if dry_run:
+        for key in sorted(orphans):
+            logger.info("Public media dry-run orphan key=%s", key)
+    else:
         await asyncio.to_thread(queue_takedowns, orphans)
     metrics = await process_takedowns(session, dry_run=dry_run)
     if dry_run:

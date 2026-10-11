@@ -4,6 +4,17 @@ from pydantic import ValidationError
 from src.core.config import Settings
 
 
+@pytest.mark.parametrize("enabled", [None, "true"])
+def test_public_media_reconciliation_requires_opt_in(monkeypatch, enabled):
+    monkeypatch.delenv("JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", raising=False)
+    if enabled is not None:
+        monkeypatch.setenv("JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED", enabled)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED is (enabled == "true")
+
+
 def test_workout_photo_optimized_max_edge_px_must_be_positive():
     with pytest.raises(ValidationError):
         Settings(_env_file=None, WORKOUT_PHOTO_OPTIMIZED_MAX_EDGE_PX=0)

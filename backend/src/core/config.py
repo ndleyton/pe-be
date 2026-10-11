@@ -301,7 +301,7 @@ class Settings(BaseSettings):
     CLOUDFLARE_CACHE_PURGE_TOKEN: str = Field(
         "", validation_alias="CLOUDFLARE_CACHE_PURGE_TOKEN"
     )
-    JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED: bool = Field(True)
+    JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED: bool = Field(False)
     PUBLIC_MEDIA_ORPHAN_GRACE_HOURS: int = Field(24, ge=1)
     R2_PRIVATE_BUCKET: str = Field("", validation_alias="R2_PRIVATE_BUCKET")
     EXERCISE_IMAGE_STORAGE_DIR: str = Field(
