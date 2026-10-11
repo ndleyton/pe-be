@@ -41,14 +41,23 @@ def downgrade() -> None:
     if "exercise_image_candidates" not in tables:
         return
 
-    # Generated hashes were nullable before this release and may now be duplicates.
-    op.execute(
-        """
-        UPDATE exercise_image_candidates
-        SET sha256 = NULL
-        WHERE status = 'active' AND asset_kind = 'generated_candidate'
-        """
+    conflicts = connection.scalar(
+        sa.text(
+            """
+            SELECT 1 FROM exercise_image_candidates
+            WHERE status = 'active' AND asset_kind = 'generated_candidate'
+                AND sha256 IS NOT NULL
+            GROUP BY exercise_type_id, sha256
+            HAVING COUNT(*) > 1
+            LIMIT 1
+            """
+        )
     )
+    if conflicts:
+        raise RuntimeError(
+            "Cannot downgrade: conflicting active generated-candidate hashes. "
+            "Resolve duplicate hashes explicitly before retrying."
+        )
     op.execute("DROP INDEX IF EXISTS uq_exercise_image_candidates_active_upload_hash")
     op.execute(
         """

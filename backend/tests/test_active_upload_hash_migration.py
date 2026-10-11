@@ -17,7 +17,7 @@ spec.loader.exec_module(migration)
 
 
 @pytest.mark.asyncio
-async def test_downgrade_accepts_duplicate_generated_hashes_and_preserves_uploads(
+async def test_downgrade_requires_conflict_resolution_and_preserves_hashes(
     db_session,
 ):
     connection = await db_session.connection()
@@ -56,14 +56,38 @@ async def test_downgrade_accepts_duplicate_generated_hashes_and_preserves_upload
             """
         )
     )
+    with pytest.raises(RuntimeError, match="Resolve duplicate hashes explicitly"):
+        await connection.run_sync(run_migration, migration.downgrade)
+
+    rows = await connection.execute(
+        sa.text("SELECT id, sha256 FROM exercise_image_candidates ORDER BY id")
+    )
+    assert rows.all() == [
+        (1, "same-generated-hash"),
+        (2, "same-generated-hash"),
+        (3, "upload-hash"),
+        (4, "promoted-hash"),
+    ]
+    index_definition = await connection.scalar(
+        sa.text(
+            "SELECT indexdef FROM pg_indexes "
+            "WHERE schemaname = 'upload_hash_migration_test' "
+            "AND indexname = 'uq_exercise_image_candidates_active_upload_hash'"
+        )
+    )
+    assert "uploaded_reference" in index_definition
+    # Explicitly resolve the conflict, then retry the downgrade.
+    await connection.execute(
+        sa.text("UPDATE exercise_image_candidates SET sha256 = 'unique-hash' WHERE id = 2")
+    )
     await connection.run_sync(run_migration, migration.downgrade)
 
     rows = await connection.execute(
         sa.text("SELECT id, sha256 FROM exercise_image_candidates ORDER BY id")
     )
     assert rows.all() == [
-        (1, None),
-        (2, None),
+        (1, "same-generated-hash"),
+        (2, "unique-hash"),
         (3, "upload-hash"),
         (4, "promoted-hash"),
     ]

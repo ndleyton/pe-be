@@ -119,6 +119,8 @@ def test_media_storage_backend_r2_with_valid_configuration():
         R2_PUBLIC_BUCKET="pe-be-public",
         MEDIA_PUBLIC_BASE_URL="https://media.example.com",
         MEDIA_PURGE_BASE_URL="https://media.example.com",
+        CLOUDFLARE_ZONE_ID="zone",
+        CLOUDFLARE_CACHE_PURGE_TOKEN="token",
     )
     assert settings.MEDIA_STORAGE_BACKEND == "r2"
     assert settings.R2_PUBLIC_BUCKET == "pe-be-public"
@@ -136,3 +138,34 @@ def test_media_public_base_url_requires_purge_base_url():
             R2_PUBLIC_BUCKET="pe-be-public",
             MEDIA_PUBLIC_BASE_URL="https://media.example.com",
         )
+
+
+@pytest.mark.parametrize("public_url", ["", "https://media.example.com"])
+@pytest.mark.parametrize("missing", ["CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"])
+@pytest.mark.parametrize("empty", ["", "   "])
+def test_media_cdn_urls_require_purge_credentials(public_url, missing, empty):
+    values = {
+        "MEDIA_STORAGE_BACKEND": "r2",
+        "R2_PUBLIC_BUCKET": "pe-be-public",
+        "MEDIA_PUBLIC_BASE_URL": public_url,
+        "MEDIA_PURGE_BASE_URL": "https://media.example.com",
+        "CLOUDFLARE_ZONE_ID": "zone",
+        "CLOUDFLARE_CACHE_PURGE_TOKEN": "token",
+    }
+    values[missing] = empty
+    with pytest.raises(ValidationError, match=f"Configured media CDN URLs require {missing}"):
+        Settings(_env_file=None, **values)
+
+
+def test_media_rollback_with_purge_credentials_is_valid():
+    settings = Settings(
+        _env_file=None,
+        MEDIA_STORAGE_BACKEND="r2",
+        R2_PUBLIC_BUCKET="pe-be-public",
+        MEDIA_PUBLIC_BASE_URL="",
+        MEDIA_PURGE_BASE_URL="https://media.example.com",
+        CLOUDFLARE_ZONE_ID="zone",
+        CLOUDFLARE_CACHE_PURGE_TOKEN="token",
+    )
+    assert settings.MEDIA_PUBLIC_BASE_URL == ""
+    assert settings.MEDIA_PURGE_BASE_URL == "https://media.example.com"

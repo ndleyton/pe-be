@@ -558,6 +558,10 @@ class Settings(BaseSettings):
             raise ValueError(
                 "MEDIA_PUBLIC_BASE_URL requires MEDIA_STORAGE_BACKEND='r2' and R2_PUBLIC_BUCKET"
             )
+        if public_base_url or (self.MEDIA_PURGE_BASE_URL or "").strip():
+            for name in ("CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"):
+                if not (getattr(self, name) or "").strip():
+                    raise ValueError(f"Configured media CDN URLs require {name}")
         return self
 
 
