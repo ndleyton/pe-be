@@ -225,6 +225,23 @@ async def test_takedown_without_public_base_url_completes(
 
 
 @pytest.mark.asyncio
+async def test_takedown_purges_with_purge_base_url_after_public_url_rollback(
+    storage, monkeypatch
+):
+    objects, client, purge = storage
+    key = "published/was-public.png"
+    objects[key] = datetime.now(timezone.utc)
+    monkeypatch.setattr(settings, "MEDIA_PUBLIC_BASE_URL", "")
+    monkeypatch.setattr(settings, "MEDIA_PURGE_BASE_URL", "https://media.example.com")
+    media.queue_takedowns([key])
+
+    result = await media.process_takedowns(Session())
+
+    assert result == {"eligible": 1, "deleted": 1, "failed": 0}
+    purge.assert_called_once_with(key, base_url="https://media.example.com")
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("url_source", ["record", "settings"])
 @pytest.mark.parametrize(
     "missing_setting", ["CLOUDFLARE_ZONE_ID", "CLOUDFLARE_CACHE_PURGE_TOKEN"]

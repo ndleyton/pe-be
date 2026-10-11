@@ -146,6 +146,7 @@ jobs:
           # Public media (enable CDN URLs only after backfill)
           MEDIA_STORAGE_BACKEND=${{ secrets.MEDIA_STORAGE_BACKEND || 'local' }}
           MEDIA_PUBLIC_BASE_URL=${{ secrets.MEDIA_PUBLIC_BASE_URL || '' }}
+          MEDIA_PURGE_BASE_URL=${{ secrets.MEDIA_PURGE_BASE_URL || '' }}
           R2_ENDPOINT_URL=${{ secrets.R2_ENDPOINT_URL || '' }}
           R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID || '' }}
           R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY || '' }}

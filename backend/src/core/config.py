@@ -293,6 +293,14 @@ class Settings(BaseSettings):
             "https://media.example.com. Set only after backfilling."
         ),
     )
+    MEDIA_PURGE_BASE_URL: str = Field(
+        "",
+        validation_alias="MEDIA_PURGE_BASE_URL",
+        description=(
+            "CDN base URL to purge on takedown. Keep it set once the CDN has served "
+            "media, even if MEDIA_PUBLIC_BASE_URL is unset to roll back."
+        ),
+    )
     R2_ENDPOINT_URL: str = Field("", validation_alias="R2_ENDPOINT_URL")
     R2_ACCESS_KEY_ID: str = Field("", validation_alias="R2_ACCESS_KEY_ID")
     R2_SECRET_ACCESS_KEY: str = Field("", validation_alias="R2_SECRET_ACCESS_KEY")

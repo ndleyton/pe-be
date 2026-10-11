@@ -108,8 +108,13 @@ def test_resolve_published_url_uses_cdn_only_when_configured(monkeypatch):
 
 
 class FakeSession:
+    no_autoflush = nullcontext()
+
     def __init__(self, images_urls):
-        self._rows = [(value,) for value in images_urls]
+        self._rows = [
+            value if isinstance(value, tuple) else (value, None)
+            for value in images_urls
+        ]
 
     async def execute(self, statement):
         return self._rows
@@ -139,12 +144,17 @@ async def test_referenced_paths_skip_unreferenced_and_missing_files(fake_r2, tmp
                 ]
             ),
             json.dumps(["https://legacy.example.com/x.png"]),
+            (None, json.dumps(["published/exercise-type-1/ref/1-only.png"])),
         ]
     )
+    _write(tmp_path, "published/exercise-type-1/ref/1-only.png")
 
     paths = await backfill_public_media.referenced_published_paths(session)
 
-    assert paths == ["published/exercise-type-1/a/0-key.png"]
+    assert paths == [
+        "published/exercise-type-1/a/0-key.png",
+        "published/exercise-type-1/ref/1-only.png",
+    ]
 
 
 @pytest.mark.asyncio

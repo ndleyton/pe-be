@@ -12,18 +12,14 @@ import argparse
 import asyncio
 import logging
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.object_storage import r2_enabled
 from src.exercises.image_assets import (
-    PUBLISHED_PREFIX,
     mirror_published_images,
-    parse_image_url_list,
     storage_path_for_relative_url,
 )
-from src.exercises.models import ExerciseType
-from src.exercises.published_media import lock_publications
+from src.exercises.published_media import lock_publications, referenced_publications
 from src.jobs.shared import JobRunResult, configure_job_runtime, run_managed_job
 
 logger = logging.getLogger(__name__)
@@ -31,21 +27,9 @@ JOB_NAME = "backfill_public_media"
 
 
 async def referenced_published_paths(session: AsyncSession) -> list[str]:
-    """Published paths referenced by committed exercise types and present on disk."""
-    rows = await session.execute(
-        select(ExerciseType.images_url).where(ExerciseType.images_url.is_not(None))
-    )
-    paths: set[str] = set()
-    for (images_url,) in rows:
-        for image_path in parse_image_url_list(images_url):
-            if not image_path.startswith(PUBLISHED_PREFIX):
-                continue
-            try:
-                if storage_path_for_relative_url(image_path).is_file():
-                    paths.add(image_path)
-            except ValueError:
-                continue
-    return sorted(paths)
+    """Published keys referenced by images_url or reference_images_url and on disk."""
+    keys = await referenced_publications(session)
+    return sorted(k for k in keys if storage_path_for_relative_url(k).is_file())
 
 
 async def _backfill_job(session: AsyncSession, *, dry_run: bool) -> dict[str, int]:

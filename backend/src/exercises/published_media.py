@@ -139,7 +139,12 @@ def delete_queued_publication(key: str) -> None:
         if storage is None:
             raise RuntimeError("Pending R2 takedown requires MEDIA_STORAGE_BACKEND=r2")
         storage.delete(key)
-        base_url = record["base_url"] or settings.MEDIA_PUBLIC_BASE_URL
+        # MEDIA_PURGE_BASE_URL outlives a rollback that unsets MEDIA_PUBLIC_BASE_URL.
+        base_url = (
+            record["base_url"]
+            or settings.MEDIA_PURGE_BASE_URL
+            or settings.MEDIA_PUBLIC_BASE_URL
+        )
         if base_url:
             purge_public_media(key, base_url=base_url)
     _record_path(key).unlink(missing_ok=True)
