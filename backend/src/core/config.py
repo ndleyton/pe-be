@@ -55,12 +55,12 @@ class Settings(BaseSettings):
         description="Gemini model for chat interactions",
     )
     WORKOUT_PARSER_MODEL: str = Field(
-        "gemini-2.5-flash-lite",
+        "gemini-3.5-flash-lite",
         validation_alias="WORKOUT_PARSER_MODEL",
         description="Gemini model for workout text parsing",
     )
     WORKOUT_RECAP_MODEL: str = Field(
-        "gemini-2.5-flash-lite",
+        "gemini-3.5-flash-lite",
         validation_alias="WORKOUT_RECAP_MODEL",
         description="Gemini model for workout recap generation",
     )
