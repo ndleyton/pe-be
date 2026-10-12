@@ -10,6 +10,12 @@ vi.mock("@/features/workouts", () => ({
   useMyWorkoutsData: () => mockUseMyWorkoutsData(),
 }));
 
+// ScrollRestoration needs a data router; these tests render under MemoryRouter.
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  ScrollRestoration: () => null,
+}));
+
 const MockComponent = () => <div>Mock Content</div>;
 
 describe("AppLayout", () => {
