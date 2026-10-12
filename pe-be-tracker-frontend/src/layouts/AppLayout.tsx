@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, ScrollRestoration } from "react-router-dom";
 import { useUIStore } from "@/stores";
 import { useMyWorkoutsData } from "@/features/workouts";
 import AppBar from "../shared/components/layout/AppBar";
@@ -66,6 +66,9 @@ const AppLayout = () => {
 
         {/* Bottom Navigation (mobile only) */}
         <BottomNav />
+
+        {/* New navigations start at top; back/forward restore their saved offset */}
+        <ScrollRestoration />
       </div>
     </div>
   );

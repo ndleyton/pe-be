@@ -90,7 +90,7 @@ async def create_left_right_pair(
         select(Exercise)
         .join(Workout, Exercise.workout_id == Workout.id)
         .where(Exercise.id == payload.exercise_id, Workout.owner_id == user_id)
-        .with_for_update()
+        .with_for_update(of=Exercise)
     )
     if exercise is None:
         await session.rollback()
