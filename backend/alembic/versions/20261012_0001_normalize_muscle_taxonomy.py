@@ -98,7 +98,8 @@ def _merge_triceps(conn: sa.engine.Connection) -> None:
 
 
 def _fill_missing_exercise_muscles(conn: sa.engine.Connection) -> None:
-    # ON CONFLICT keeps re-runs and hand-edited rows safe. The NOT EXISTS guard
+    # ON CONFLICT keeps re-runs safe and promotes an existing row to primary
+    # when the exercise has none. The NOT EXISTS guard
     # keeps a single primary muscle per exercise.
     insert_stmt = sa.text(
         """
@@ -116,7 +117,9 @@ def _fill_missing_exercise_muscles(conn: sa.engine.Connection) -> None:
                   WHERE em.exercise_type_id = et.id AND em.is_primary
               )
           )
-        ON CONFLICT (exercise_type_id, muscle_id) DO NOTHING
+        ON CONFLICT (exercise_type_id, muscle_id) DO UPDATE
+            SET is_primary = TRUE, updated_at = now()
+            WHERE EXCLUDED.is_primary AND NOT exercise_muscles.is_primary
         """
     )
     for exercise_name, muscle_name, is_primary in MISSING_EXERCISE_MUSCLES:
@@ -133,8 +136,9 @@ def _fill_missing_exercise_muscles(conn: sa.engine.Connection) -> None:
 def upgrade() -> None:
     connection = op.get_bind()
     tables = sa.inspect(connection).get_table_names()
-    if not {"muscles", "exercise_muscles", "exercise_types"}.issubset(tables):
-        return
+    missing = {"muscles", "exercise_muscles", "exercise_types"} - set(tables)
+    if missing:
+        raise RuntimeError(f"Missing required tables: {', '.join(sorted(missing))}")
 
     _merge_triceps(connection)
     _fill_missing_exercise_muscles(connection)
