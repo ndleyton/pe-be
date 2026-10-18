@@ -127,19 +127,38 @@ export const useChatComposer = ({
     mutationFn: ({
       conversationId: nextConversationId,
       messages,
+      streamId,
     }: {
       conversationId?: number;
       messages: ChatApiMessage[];
-    }) => sendChatMessage(messages, nextConversationId),
-    onSuccess: (response) => {
+      streamId: string;
+    }) =>
+      sendChatMessage(messages, nextConversationId, (text) => {
+        setMessages((current) => {
+          const streaming = current.find((message) => message.id === streamId);
+          const content = (streaming?.content ?? "") + text;
+          const message: ChatMessage = {
+            id: streamId,
+            role: "assistant",
+            content,
+            parts: [{ type: "text", text: content }],
+            timestamp: streaming?.timestamp ?? new Date(),
+          };
+          return streaming
+            ? current.map((item) => (item.id === streamId ? message : item))
+            : [...current, message];
+        });
+      }),
+    onSuccess: (response, { streamId }) => {
       void queryClient.invalidateQueries({ queryKey: ["chat-history", userId] });
       setConversationId((current) =>
         current === response.conversation_id ? current : response.conversation_id,
       );
+      // The final message replaces streamed text, which may include tool-turn chatter.
       setMessages((current) => [
-        ...current,
+        ...current.filter((message) => message.id !== streamId),
         {
-          id: `${Date.now()}-assistant`,
+          id: streamId,
           role: "assistant",
           content: response.message,
           parts: [{ type: "text", text: response.message }],
@@ -149,7 +168,7 @@ export const useChatComposer = ({
       ]);
       setIsLoading(false);
     },
-    onError: (error) => {
+    onError: (error, { streamId }) => {
       const message = normalizeChatCopy(
         extractErrorMessage(
           error,
@@ -158,7 +177,7 @@ export const useChatComposer = ({
       );
 
       setMessages((current) => [
-        ...current,
+        ...current.filter((message) => message.id !== streamId),
         {
           id: `${Date.now()}-error`,
           role: "assistant",
@@ -304,6 +323,7 @@ export const useChatComposer = ({
               },
             ],
             conversationId,
+            streamId: `${Date.now()}-assistant`,
           });
 
           // Do not erase newer edits made while this request was in flight.

@@ -23,6 +23,7 @@ from src.chat.crud import (
     update_chat_attachment_provider_ref,
 )
 from src.chat.llm_client import (
+    TextChunkHandler,
     ContentPart,
     ConversationMessage,
     GeminiGenAIClient,
@@ -1325,6 +1326,7 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         messages: List[Dict[str, Any]],
         conversation_id: Optional[int] = None,
         save_to_db: bool = True,
+        on_text: Optional[TextChunkHandler] = None,
     ) -> Dict[str, Any]:
         if not settings.GOOGLE_AI_KEY:
             raise ValueError("Google AI API key not configured")
@@ -1413,7 +1415,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         response_text = "I completed the requested operation."
                     break
 
-                response = await llm_client.acomplete(llm_messages, tools)
+                response = await llm_client.acomplete(
+                    llm_messages, tools, on_text=on_text
+                )
                 llm_metadata = response.metadata
                 llm_messages.append(response.message)
 

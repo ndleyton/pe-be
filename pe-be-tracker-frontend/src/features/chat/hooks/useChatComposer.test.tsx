@@ -90,6 +90,42 @@ describe("useChatComposer", () => {
     });
   });
 
+  it("shows streamed text, then replaces it with the final response", async () => {
+    let finish: (value: unknown) => void = () => {};
+    mockSendChatMessage.mockImplementationOnce(
+      (_messages: unknown, _conversationId: unknown, onDelta: (text: string) => void) => {
+        onDelta("Checking ");
+        onDelta("your log...");
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      },
+    );
+
+    const { result } = renderComposer();
+    act(() => {
+      result.current.handleInputChange("How did I do?");
+    });
+    let submit: Promise<void> = Promise.resolve();
+    act(() => {
+      submit = result.current.handleSubmitMessage();
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages.at(-1)?.content).toBe("Checking your log...");
+    });
+
+    await act(async () => {
+      finish({ message: "Great session.", conversation_id: 7 });
+      await submit;
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages[1]).toEqual(
+      expect.objectContaining({ role: "assistant", content: "Great session." }),
+    );
+  });
+
   it("sends a text-only authenticated message and appends the response", async () => {
     mockSendChatMessage.mockResolvedValueOnce({
       message: "Here is a plan.",
@@ -124,6 +160,7 @@ describe("useChatComposer", () => {
         },
       ],
       undefined,
+      expect.any(Function),
     );
     expect(result.current.conversationId).toBe(12);
     expect(result.current.messages[0]).toEqual(

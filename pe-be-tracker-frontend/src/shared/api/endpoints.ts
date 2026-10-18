@@ -107,6 +107,7 @@ export const endpoints = {
 
   // Chat endpoints
   chat: "/chat",
+  chatStream: "/chat/stream",
   chatConversations: "/conversations",
   chatConversationById: (id: string | number) => `/conversations/${id}`,
   chatAttachments: "/chat/attachments",

@@ -1,3 +1,4 @@
+import json
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
@@ -526,3 +527,61 @@ async def test_conversation_reads_are_scoped_to_authenticated_owner(
     assert denied.status_code == 404
     allowed = await async_client.get(f"/api/v1/conversations/{own.id}")
     assert allowed.status_code == 200
+
+
+async def test_chat_stream_endpoint_emits_deltas_then_done(
+    async_client: AsyncClient, authenticated_user, monkeypatch
+):
+    class FakeChatService:
+        def __init__(self, user_id, session):
+            pass
+
+        async def generate_response(
+            self, messages, conversation_id, save_to_db, on_text
+        ):
+            await on_text("Plan ")
+            await on_text("ready.")
+            return {"message": "Plan ready.", "conversation_id": 5, "events": []}
+
+    monkeypatch.setattr("src.chat.router.ChatService", FakeChatService)
+
+    response = await async_client.post(
+        "/api/v1/chat/stream",
+        json={"messages": [{"role": "user", "content": "Plan my week"}]},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("application/x-ndjson")
+    assert [json.loads(line) for line in response.text.splitlines()] == [
+        {"type": "delta", "text": "Plan "},
+        {"type": "delta", "text": "ready."},
+        {
+            "type": "done",
+            "message": "Plan ready.",
+            "conversation_id": 5,
+            "events": [],
+        },
+    ]
+
+
+async def test_chat_stream_endpoint_emits_error_event(
+    async_client: AsyncClient, authenticated_user, monkeypatch
+):
+    class FakeChatService:
+        def __init__(self, user_id, session):
+            pass
+
+        async def generate_response(self, **_kwargs):
+            raise ValueError("The AI service is currently busy.")
+
+    monkeypatch.setattr("src.chat.router.ChatService", FakeChatService)
+
+    response = await async_client.post(
+        "/api/v1/chat/stream",
+        json={"messages": [{"role": "user", "content": "Hi"}]},
+    )
+
+    assert response.status_code == 200
+    assert [json.loads(line) for line in response.text.splitlines()] == [
+        {"type": "error", "detail": "The AI service is currently busy."}
+    ]

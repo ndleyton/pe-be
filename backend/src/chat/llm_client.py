@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 ChatRole = Literal["system", "user", "assistant", "tool"]
 MessagePartType = Literal["text", "image"]
 ToolHandler = Callable[..., Awaitable[str]]
+TextChunkHandler = Callable[[str], Awaitable[None]]
 
 
 @dataclass(slots=True)
@@ -208,8 +209,9 @@ class LLMClient(Protocol):
         self,
         messages: Sequence[ConversationMessage],
         tools: Sequence[ToolDefinition],
+        on_text: Optional[TextChunkHandler] = None,
     ) -> LLMResponse:
-        """Generate the next assistant message for the given conversation."""
+        """Generate the next assistant message; stream text chunks to on_text."""
 
     async def aupload_file(
         self,
@@ -244,6 +246,7 @@ class GeminiGenAIClient:
         self,
         messages: Sequence[ConversationMessage],
         tools: Sequence[ToolDefinition],
+        on_text: Optional[TextChunkHandler] = None,
     ) -> LLMResponse:
         system_instruction: Optional[str] = None
         contents: list[types.Content] = []
@@ -305,13 +308,23 @@ class GeminiGenAIClient:
             ),
         )
 
+        emitted_text = False
+
+        async def emit(text: str) -> None:
+            nonlocal emitted_text
+            emitted_text = True
+            await on_text(text)
+
         for attempt in range(self.max_retries + 1):
             try:
-                response = await self.client.aio.models.generate_content(
-                    model=self.model_name,
-                    contents=contents,
-                    config=config,
-                )
+                if on_text is None:
+                    response = await self.client.aio.models.generate_content(
+                        model=self.model_name,
+                        contents=contents,
+                        config=config,
+                    )
+                else:
+                    response = await self._agenerate_streamed(contents, config, emit)
                 normalized_response = self._normalize_response(response)
                 if self._is_malformed_function_call_response(normalized_response):
                     if attempt >= self.max_retries:
@@ -331,8 +344,10 @@ class GeminiGenAIClient:
 
                 return normalized_response
             except Exception as exc:
+                # Text already sent to the caller cannot be retracted, so no retry.
                 if (
-                    not self._is_retryable_provider_error(exc)
+                    emitted_text
+                    or not self._is_retryable_provider_error(exc)
                     or attempt >= self.max_retries
                 ):
                     raise
@@ -350,6 +365,72 @@ class GeminiGenAIClient:
                 await asyncio.sleep(wait_seconds)
 
         raise RuntimeError("Gemini generate_content retry loop exhausted unexpectedly")
+
+    async def _agenerate_streamed(
+        self,
+        contents: list[types.Content],
+        config: types.GenerateContentConfig,
+        on_text: TextChunkHandler,
+    ) -> types.GenerateContentResponse:
+        """Stream a generation, forwarding visible text, and merge the chunks."""
+        stream = await self.client.aio.models.generate_content_stream(
+            model=self.model_name,
+            contents=contents,
+            config=config,
+        )
+        parts: list[types.Part] = []
+        last_chunk: Any = None
+        last_candidate: Any = None
+        async for chunk in stream:
+            last_chunk = chunk
+            candidates = getattr(chunk, "candidates", None) or []
+            if not candidates:
+                continue
+            last_candidate = candidates[0]
+            content = getattr(last_candidate, "content", None)
+            for part in getattr(content, "parts", None) or []:
+                if part.text and not part.thought:
+                    await on_text(part.text)
+                parts = self._append_streamed_part(parts, part)
+
+        candidate = types.Candidate(
+            content=types.Content(role="model", parts=parts),
+            finish_reason=getattr(last_candidate, "finish_reason", None),
+            safety_ratings=getattr(last_candidate, "safety_ratings", None),
+        )
+        return types.GenerateContentResponse(
+            candidates=[candidate],
+            usage_metadata=getattr(last_chunk, "usage_metadata", None),
+            prompt_feedback=getattr(last_chunk, "prompt_feedback", None),
+            model_version=getattr(last_chunk, "model_version", None),
+            response_id=getattr(last_chunk, "response_id", None),
+        )
+
+    @staticmethod
+    def _append_streamed_part(
+        parts: list[types.Part], part: types.Part
+    ) -> list[types.Part]:
+        # Streamed text arrives as many small parts; join consecutive ones so
+        # replayed history matches what a non-streamed response would contain.
+        previous = parts[-1] if parts else None
+        if (
+            previous is not None
+            and previous.text is not None
+            and part.text is not None
+            and bool(previous.thought) == bool(part.thought)
+            and not previous.function_call
+            and not part.function_call
+        ):
+            parts[-1] = previous.model_copy(
+                update={
+                    "text": previous.text + part.text,
+                    "thought_signature": part.thought_signature
+                    or previous.thought_signature,
+                }
+            )
+            return parts
+        parts.append(part)
+        return parts
 
     async def aupload_file(
         self,

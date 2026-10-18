@@ -151,7 +151,8 @@ const ChatSession = () => {
 
           {messages.length > 0 && (
             <ChatTranscript
-              isLoading={isLoading}
+              // Streamed text replaces the typing indicator once it starts arriving.
+              isLoading={isLoading && messages.at(-1)?.role !== "assistant"}
               messages={messages}
               messagesEndRef={messagesEndRef}
             />
