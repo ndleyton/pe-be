@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pytest
 import pytest_asyncio
@@ -585,3 +586,37 @@ async def test_chat_stream_endpoint_emits_error_event(
     assert [json.loads(line) for line in response.text.splitlines()] == [
         {"type": "error", "detail": "The AI service is currently busy."}
     ]
+
+
+async def test_chat_stream_disconnect_waits_for_generation_cleanup(monkeypatch):
+    from src.chat.router import handle_chat_stream
+    from src.chat.schemas import ChatRequest
+
+    cleanup = {"done": False}
+
+    class FakeChatService:
+        def __init__(self, user_id, session):
+            pass
+
+        async def generate_response(self, on_text, **_kwargs):
+            await on_text("Partial")
+            try:
+                await asyncio.Event().wait()
+            finally:
+                await asyncio.sleep(0)  # cleanup that itself awaits
+                cleanup["done"] = True
+
+    monkeypatch.setattr("src.chat.router.ChatService", FakeChatService)
+    monkeypatch.setattr("src.chat.router.rate_limiter.check", AsyncMock())
+
+    response = await handle_chat_stream(
+        ChatRequest(messages=[{"role": "user", "content": "Hi"}]),
+        user=SimpleNamespace(id=1),
+        session=MagicMock(),
+    )
+    body = response.body_iterator
+    assert json.loads(await body.__anext__()) == {"type": "delta", "text": "Partial"}
+
+    await body.aclose()  # what Starlette does when the client disconnects
+
+    assert cleanup["done"] is True

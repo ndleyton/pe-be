@@ -1,7 +1,10 @@
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
+
+import anyio
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
@@ -180,8 +183,12 @@ async def handle_chat_stream(
             while (event := await events.get()) is not None:
                 yield json.dumps(event) + "\n"
         finally:
-            # Client disconnected: stop generating before the DB session closes.
+            # Client disconnected: stop generating and wait for it to unwind
+            # before the request's DB session closes.
             task.cancel()
+            with anyio.CancelScope(shield=True):
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
     return StreamingResponse(
         body(),

@@ -34,7 +34,7 @@ async def test_tool_execution_fallback_message_on_no_model_response(monkeypatch)
                 LLMResponse(message=ConversationMessage(role="assistant", content="")),
             ]
 
-        async def acomplete(self, _messages, _tools):
+        async def acomplete(self, _messages, _tools, on_text=None):
             return self._responses.pop(0)
 
     svc = ChatService(user_id=1, session=None, llm_client=FakeClient())
