@@ -450,7 +450,7 @@ async def test_generate_response_happy_path_without_persistence(monkeypatch):
     class FakeClient:
         model_name = "test-model"
 
-        async def acomplete(self, _messages, _tools):
+        async def acomplete(self, _messages, _tools, on_text=None):
             return LLMResponse(
                 message=ConversationMessage(
                     role="assistant", content="Use progressive overload."
@@ -489,7 +489,7 @@ async def test_generate_response_happy_path_with_persistence(monkeypatch):
     class FakeClient:
         model_name = "test-model"
 
-        async def acomplete(self, _messages, _tools):
+        async def acomplete(self, _messages, _tools, on_text=None):
             return LLMResponse(
                 message=ConversationMessage(
                     role="assistant", content="Pull day logged."

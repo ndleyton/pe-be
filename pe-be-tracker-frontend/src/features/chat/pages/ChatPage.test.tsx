@@ -12,6 +12,9 @@ import {
 } from "../lib/chatSession";
 import ChatPage from "./ChatPage";
 
+const streamBody = (response: object) =>
+  `${JSON.stringify({ type: "done", ...response })}\n`;
+
 const { mockGet, mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockPost: vi.fn(),
@@ -88,7 +91,7 @@ describe("ChatPage", () => {
 
   it("renders a workout widget when the assistant returns a workout-created event", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "I created a workout for you.",
         conversation_id: 12,
         events: [
@@ -105,7 +108,7 @@ describe("ChatPage", () => {
             },
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
@@ -135,7 +138,7 @@ describe("ChatPage", () => {
 
   it("renders a routine widget when the assistant returns a routine-created event", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "I created a routine for you.",
         conversation_id: 12,
         events: [
@@ -153,7 +156,7 @@ describe("ChatPage", () => {
             },
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
@@ -187,7 +190,7 @@ describe("ChatPage", () => {
 
   it("renders a substitution widget when the assistant returns grounded exercise substitutions", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "Here are a few grounded options.",
         conversation_id: 12,
         events: [
@@ -212,7 +215,7 @@ describe("ChatPage", () => {
             ],
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
@@ -310,7 +313,7 @@ describe("ChatPage", () => {
 
   it("starts a substitution handoff with a local assistant follow-up, then sends a grounded request after the user answers", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "I found grounded substitutions for you.",
         conversation_id: 12,
         events: [
@@ -335,7 +338,7 @@ describe("ChatPage", () => {
             ],
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
@@ -391,7 +394,7 @@ describe("ChatPage", () => {
       expect(mockPost).toHaveBeenCalledTimes(1);
     });
 
-    expect(mockPost.mock.calls[0][0]).toBe("/chat");
+    expect(mockPost.mock.calls[0][0]).toBe("/chat/stream");
     expect(mockPost.mock.calls[0][1]).toEqual({
       messages: [
         {
@@ -666,7 +669,7 @@ describe("ChatPage", () => {
     mockGet.mockResolvedValue({ data: { conversations: [], total: 0, limit: 20, offset: 0 } });
     mockPost.mockImplementation(async () => {
       mockGet.mockResolvedValue({ data: { conversations: [{ id: 42, title: "New workout advice", updated_at: "2024-01-02" }], total: 1, limit: 20, offset: 0 } });
-      return { data: { conversation_id: 42, message: "Here is your plan" } };
+      return { data: streamBody({ conversation_id: 42, message: "Here is your plan" }) };
     });
     renderChatPage();
     await userEvent.click(screen.getByRole("button", { name: "History" }));

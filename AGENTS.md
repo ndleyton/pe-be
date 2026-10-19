@@ -81,7 +81,7 @@ Notes:
 - The backend uses feature slices under `backend/src`, including `users`, `workouts`, `exercises`, `exercise_sets`, `routines`, `chat`, `admin`, and `health`.
 - The API mounts under `/api/v1` by default.
 - User-facing routines are implemented with the `Routine`, `ExerciseTemplate`, and `SetTemplate` models. The legacy backing table remains `recipes`, and `exercise_templates.recipe_id` remains a legacy column name.
-- AI-related backend code currently uses `langchain-google-genai` and `langfuse`; do not assume `openai` is the only active integration.
+- AI-related backend code calls Gemini directly through the `google-genai` SDK (chat, workout parsing, recap, exercise images) and traces chat with `langfuse`. LangChain is not used; `openai` is a dependency but currently unused.
 - **Post-Workout AI Recap**: The backend features an automated, evidence-based coaching recap triggered asynchronously upon workout completion.
   - **Service**: `src/workouts/recap.py` (WorkoutRecapService) handles metric gathering and Gemini generation.
   - **Data Grounding**: The recap is grounded in deterministic metrics (sets, volume, PR detection) and incorporates qualitative feedback from workout/exercise/set notes.

@@ -1,7 +1,13 @@
+import asyncio
+import contextlib
+import json
 import logging
+from typing import Any
+
+import anyio
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.chat.crud import (
@@ -115,6 +121,80 @@ async def handle_chat(
         raise HTTPException(
             status_code=500, detail="An unexpected error occurred."
         ) from exc
+
+
+@router.post("/chat/stream")
+async def handle_chat_stream(
+    request: ChatRequest,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Stream the reply as NDJSON: `delta` text chunks, then `done` or `error`.
+
+    `done` carries the full ChatResponse; clients should replace the streamed
+    text with its `message`, since text from tool-calling turns is not final.
+    """
+    try:
+        await rate_limiter.check(
+            scope="chat",
+            key=str(user.id),
+            limit=settings.CHAT_RATE_LIMIT_MAX_REQUESTS,
+            window_seconds=settings.CHAT_RATE_LIMIT_WINDOW_SECONDS,
+        )
+    except RateLimitExceededError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many chat requests. Please slow down.",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        )
+
+    chat_service = ChatService(user_id=user.id, session=session)
+    events: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+
+    async def on_text(text: str) -> None:
+        await events.put({"type": "delta", "text": text})
+
+    async def run() -> None:
+        try:
+            result = await chat_service.generate_response(
+                messages=[
+                    message.model_dump(exclude_none=True)
+                    for message in request.messages
+                ],
+                conversation_id=request.conversation_id,
+                save_to_db=True,
+                on_text=on_text,
+            )
+            response = ChatResponse(**result).model_dump(mode="json")
+            await events.put({"type": "done", **response})
+        except ValueError as exc:
+            await events.put({"type": "error", "detail": str(exc)})
+        except Exception:
+            logger.exception("Chat stream failed user_id=%s", user.id)
+            await events.put(
+                {"type": "error", "detail": "An unexpected error occurred."}
+            )
+        finally:
+            await events.put(None)
+
+    async def body():
+        task = asyncio.create_task(run())
+        try:
+            while (event := await events.get()) is not None:
+                yield json.dumps(event) + "\n"
+        finally:
+            # Client disconnected: stop generating and wait for it to unwind
+            # before the request's DB session closes.
+            task.cancel()
+            with anyio.CancelScope(shield=True):
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+    return StreamingResponse(
+        body(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/chat/attachments", response_model=ChatAttachmentUploadResponse)

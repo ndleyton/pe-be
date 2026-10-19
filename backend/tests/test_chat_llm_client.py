@@ -531,3 +531,95 @@ async def test_tool_ainvoke():
     )
     res = await tool.ainvoke({"a": 42})
     assert res == "result_42"
+
+
+def _stream_of(*chunks):
+    async def _iterate():
+        for chunk in chunks:
+            yield chunk
+
+    return AsyncMock(return_value=_iterate())
+
+
+def _chunk(*parts, finish_reason=None):
+    return types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                content=types.Content(role="model", parts=list(parts)),
+                finish_reason=finish_reason,
+            )
+        ]
+    )
+
+
+async def test_gemini_client_streams_text_and_merges_chunks():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None)
+    client.client = MagicMock()
+    client.client.aio.models.generate_content_stream = _stream_of(
+        _chunk(types.Part.from_text(text="Hel")),
+        _chunk(
+            types.Part(text="lo", thought_signature=b"sig"),
+            finish_reason=types.FinishReason.STOP,
+        ),
+    )
+    chunks: list[str] = []
+
+    async def on_text(text: str) -> None:
+        chunks.append(text)
+
+    response = await client.acomplete(
+        messages=[ConversationMessage(role="user", content="Hi")],
+        tools=[],
+        on_text=on_text,
+    )
+
+    assert chunks == ["Hel", "lo"]
+    assert response.message.content == "Hello"
+    assert len(response.message.provider_parts) == 1
+    assert response.message.provider_parts[0].thought_signature == b"sig"
+    assert response.metadata["finish_reason"] == "STOP"
+
+
+async def test_gemini_client_streamed_function_call_is_kept_separate():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None)
+    client.client = MagicMock()
+    client.client.aio.models.generate_content_stream = _stream_of(
+        _chunk(types.Part.from_text(text="Checking.")),
+        _chunk(
+            types.Part.from_function_call(
+                name="get_workout_summary", args={"workout_date": "2026-01-01"}
+            )
+        ),
+    )
+
+    response = await client.acomplete(
+        messages=[ConversationMessage(role="user", content="Hi")],
+        tools=[],
+        on_text=AsyncMock(),
+    )
+
+    assert response.message.content == "Checking."
+    assert [call.name for call in response.tool_calls] == ["get_workout_summary"]
+
+
+async def test_gemini_client_does_not_retry_after_streaming_text():
+    client = GeminiGenAIClient(api_key="test-key", rate_limiter=None, max_retries=2)
+    client.client = MagicMock()
+
+    async def _failing():
+        yield _chunk(types.Part.from_text(text="Partial"))
+        raise RuntimeError("503 UNAVAILABLE")
+
+    client.client.aio.models.generate_content_stream = AsyncMock(
+        return_value=_failing()
+    )
+
+    with patch("src.chat.llm_client.asyncio.sleep", new=AsyncMock()) as sleep_mock:
+        with pytest.raises(RuntimeError, match="503"):
+            await client.acomplete(
+                messages=[ConversationMessage(role="user", content="Hi")],
+                tools=[],
+                on_text=AsyncMock(),
+            )
+
+    sleep_mock.assert_not_awaited()
