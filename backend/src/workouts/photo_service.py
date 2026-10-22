@@ -47,7 +47,9 @@ class WorkoutPhotoService:
             raise LookupError("Workout not found")
 
         declared_mime_type = (content_type or "").split(";")[0].strip().lower()
-        width, height, detected_mime_type = self._inspect_image(data)
+        width, height, detected_mime_type = await asyncio.to_thread(
+            self._inspect_image, data
+        )
         if detected_mime_type not in settings.WORKOUT_PHOTO_ALLOWED_MIME_TYPES:
             raise ValueError("Unsupported image type")
         if declared_mime_type and declared_mime_type != detected_mime_type:

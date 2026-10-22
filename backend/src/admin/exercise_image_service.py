@@ -824,7 +824,9 @@ async def apply_reference_or_option(
                     published_paths.append(reference_image)
                     continue
 
-                image_bytes = _render_published_upload(matching_upload.storage_path)
+                image_bytes = await asyncio.to_thread(
+                    _render_published_upload, matching_upload.storage_path
+                )
                 published_path = _published_storage_path_for_uploaded_reference(
                     exercise_type.id,
                     matching_upload.id,

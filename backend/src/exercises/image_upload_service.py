@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from datetime import datetime, timedelta, timezone
@@ -128,7 +129,8 @@ async def upload_candidate_image(
 ) -> ExerciseImageCandidate:
     _assert_can_manage_uploads(exercise_type, user)
     try:
-        sanitized = sanitize_image_upload(
+        sanitized = await asyncio.to_thread(
+            sanitize_image_upload,
             data,
             declared_mime_type=content_type,
             allowed_mime_types=settings.EXERCISE_IMAGE_UPLOAD_ALLOWED_MIME_TYPES,
