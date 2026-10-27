@@ -66,6 +66,7 @@ router.include_router(
         settings.SECRET_KEY,
         is_verified_by_default=True,
         redirect_url=settings.GOOGLE_REDIRECT_URI,
+        csrf_token_cookie_secure=settings.COOKIE_SECURE,
     ),
     prefix="/auth/google",
     tags=["auth"],
