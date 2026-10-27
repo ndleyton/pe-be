@@ -522,7 +522,9 @@ async def generate_exercise_phase_pair(
 
     # Step 2: generate second phase using anchor
     anchor_bytes = decode_generated_image(first_result)
-    anchor_fingerprint = _normalized_image_fingerprint(anchor_bytes)
+    anchor_fingerprint = await asyncio.to_thread(
+        _normalized_image_fingerprint, anchor_bytes
+    )
     anchor_mime = first_result.mime_type or DEFAULT_MIME
     second_result: ExerciseImageResult | None = None
     max_anchor_attempts = 2
@@ -546,10 +548,10 @@ async def generate_exercise_phase_pair(
             prompt=second_prompt,
             seed=attempt_seed,
         )
-        if (
-            _normalized_image_fingerprint(decode_generated_image(second_result))
-            != anchor_fingerprint
-        ):
+        second_fingerprint = await asyncio.to_thread(
+            _normalized_image_fingerprint, decode_generated_image(second_result)
+        )
+        if second_fingerprint != anchor_fingerprint:
             break
 
         logger.warning(
@@ -565,10 +567,10 @@ async def generate_exercise_phase_pair(
     if second_result is None:
         raise RuntimeError("Anchored phase generation did not return a result")
 
-    if (
-        _normalized_image_fingerprint(decode_generated_image(second_result))
-        == anchor_fingerprint
-    ):
+    second_fingerprint = await asyncio.to_thread(
+        _normalized_image_fingerprint, decode_generated_image(second_result)
+    )
+    if second_fingerprint == anchor_fingerprint:
         raise RuntimeError(
             "Anchored phase generation produced the same image as the anchor after retries"
         )
