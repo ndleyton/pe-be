@@ -1,10 +1,124 @@
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import jwt
 import pytest
 
 from src.core import security
+
+
+@pytest.mark.asyncio
+async def test_auth_strategy_accepts_real_signed_token():
+    strategy = security.get_jwt_strategy()
+    user = SimpleNamespace(id=123)
+    user_manager = _UserManagerStub(user=user)
+
+    token = await strategy.write_token(user)
+
+    assert strategy.algorithm == "HS256"
+    assert await strategy.read_token(token, user_manager) is user
+    assert user_manager.requested_ids == [123]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "case",
+    [
+        "expired",
+        "wrong-signature",
+        "tampered-payload",
+        "unexpected-algorithm",
+        "unsigned",
+        "wrong-audience",
+        "reset-audience",
+        "verification-audience",
+        "missing-subject",
+        "malformed",
+    ],
+)
+async def test_auth_strategy_rejects_invalid_real_tokens(case):
+    strategy = security.get_jwt_strategy()
+    user_manager = _UserManagerStub(user=SimpleNamespace(id=123))
+    payload = {
+        "sub": "123",
+        "aud": strategy.token_audience,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
+    key = strategy.encode_key
+    algorithm = "HS256"
+    if case == "expired":
+        payload["exp"] = datetime.now(timezone.utc) - timedelta(minutes=5)
+    elif case == "wrong-signature":
+        key = "a-different-signing-secret-at-least-32-bytes-long"
+    elif case == "unexpected-algorithm":
+        algorithm = "HS512"
+    elif case == "unsigned":
+        algorithm, key = "none", ""
+    elif case == "wrong-audience":
+        payload["aud"] = "another-service"
+    elif case == "reset-audience":
+        payload["aud"] = security.UserManager.reset_password_token_audience
+    elif case == "verification-audience":
+        payload["aud"] = security.UserManager.verification_token_audience
+    elif case == "missing-subject":
+        del payload["sub"]
+
+    token = jwt.encode(payload, key, algorithm=algorithm)
+    if case == "tampered-payload":
+        header, _, signature = token.split(".")
+        changed = {**payload, "sub": "456"}
+        changed_payload = jwt.encode(changed, key, algorithm=algorithm).split(".")[1]
+        token = f"{header}.{changed_payload}.{signature}"
+    elif case == "malformed":
+        token = "not-a-jwt"
+
+    assert await strategy.read_token(token, user_manager) is None
+    assert user_manager.parsed_ids == []
+    assert user_manager.requested_ids == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("purpose", ["reset", "verification"])
+@pytest.mark.parametrize(
+    "case", ["expired", "wrong-signature", "unexpected-algorithm", "auth-audience"]
+)
+async def test_account_actions_reject_invalid_real_tokens(purpose, case):
+    user_db = AsyncMock()
+    manager = security.UserManager(user_db)
+    audience = (
+        manager.reset_password_token_audience
+        if purpose == "reset"
+        else manager.verification_token_audience
+    )
+    payload = {
+        "sub": "123",
+        "email": "user@example.com",
+        "password_fgpt": "fingerprint",
+        "aud": audience,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
+    key = security.SECRET
+    algorithm = "HS256"
+    if case == "expired":
+        payload["exp"] = datetime.now(timezone.utc) - timedelta(minutes=5)
+    elif case == "wrong-signature":
+        key = "a-different-signing-secret-at-least-32-bytes-long"
+    elif case == "unexpected-algorithm":
+        algorithm = "HS512"
+    elif case == "auth-audience":
+        payload["aud"] = security.get_jwt_strategy().token_audience
+    token = jwt.encode(payload, key, algorithm=algorithm)
+
+    if purpose == "reset":
+        with pytest.raises(security.exceptions.InvalidResetPasswordToken):
+            await manager.reset_password(token, "new-password")
+    else:
+        with pytest.raises(security.exceptions.InvalidVerifyToken):
+            await manager.verify(token)
+
+    assert user_db.mock_calls == []
 
 
 class _SpanStub:
