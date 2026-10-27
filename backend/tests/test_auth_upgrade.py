@@ -74,7 +74,9 @@ async def test_google_oauth_csrf_cookie_round_trip(
 ):
     oauth = security.google_oauth_client
     monkeypatch.setattr(
-        oauth, "get_access_token", AsyncMock(return_value={"access_token": "google-token"})
+        oauth,
+        "get_access_token",
+        AsyncMock(return_value={"access_token": "google-token"}),
     )
     get_identity = AsyncMock(return_value=("google-id", "oauth@example.com"))
     monkeypatch.setattr(oauth, "get_id_email", get_identity)
