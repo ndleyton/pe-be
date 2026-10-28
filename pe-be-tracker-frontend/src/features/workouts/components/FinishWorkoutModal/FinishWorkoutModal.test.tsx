@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { makeExerciseForSummary, makeWorkoutPhoto } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
 
+const { googleSignIn } = vi.hoisted(() => ({ googleSignIn: vi.fn() }));
+
+vi.mock("@/features/auth/hooks", () => ({
+  useGoogleSignIn: () => googleSignIn,
+}));
+
 const defaultProps = {
   isOpen: true,
   onConfirm: vi.fn(),
@@ -487,7 +493,7 @@ describe("FinishWorkoutModal", () => {
       expect(screen.queryByText("1 sets")).not.toBeInTheDocument();
     });
 
-    it("shows a logged-in-only message for recap generation in guest mode", () => {
+    it("offers Google sign-in after a guest completes sets", () => {
       render(
         <FinishWorkoutModal
           {...defaultProps}
@@ -497,8 +503,29 @@ describe("FinishWorkoutModal", () => {
       );
 
       expect(
-        screen.getByText("AI recaps are available for logged-in users."),
+        screen.getByText("Save this workout to your account and unlock AI recaps."),
       ).toBeInTheDocument();
+    });
+
+    it("finishes the guest workout before starting Google sign-in", () => {
+      const onConfirm = vi.fn();
+      render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} onConfirm={onConfirm} />);
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(googleSignIn).toHaveBeenCalledTimes(1);
+      expect(onConfirm.mock.invocationCallOrder[0]).toBeLessThan(googleSignIn.mock.invocationCallOrder[0]);
+    });
+
+    it("lets guests finish without signing in", () => {
+      render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} />);
+      fireEvent.click(screen.getByRole("button", { name: "Keep using guest mode" }));
+      expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
+      expect(googleSignIn).not.toHaveBeenCalled();
+    });
+
+    it("hides sign-in when no sets are completed", () => {
+      render(<FinishWorkoutModal {...defaultProps} exercises={[]} />);
+      expect(screen.queryByRole("button", { name: "Continue with Google" })).not.toBeInTheDocument();
     });
 
     it("shows the generic recap fallback for authenticated users", () => {
@@ -513,6 +540,7 @@ describe("FinishWorkoutModal", () => {
       expect(
         screen.getByText("Recap generation skipped or failed."),
       ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Continue with Google" })).not.toBeInTheDocument();
     });
   });
 

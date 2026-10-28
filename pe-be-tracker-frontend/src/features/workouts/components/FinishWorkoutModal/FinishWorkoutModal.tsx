@@ -15,6 +15,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
+import { useGoogleSignIn } from "@/features/auth/hooks";
 import { toast } from "sonner";
 import {
   createWorkoutSummaryFile,
@@ -64,6 +65,7 @@ const FinishWorkoutModal = ({
   isRecapLoading = false,
   onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
+  const googleSignIn = useGoogleSignIn();
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
   const workoutPhotoLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -413,9 +415,23 @@ const FinishWorkoutModal = ({
                     &ldquo;{recap}&rdquo;
                   </p>
                 ) : !isAuthenticated ? (
-                  <p className="text-muted-foreground text-[11px] italic opacity-70">
-                    AI recaps are available for logged-in users.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold">Nice work!</p>
+                    <p className="text-muted-foreground text-sm">
+                      Save this workout to your account and unlock AI recaps.
+                    </p>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={isLoading}
+                      onClick={() => {
+                        onConfirm();
+                        void googleSignIn();
+                      }}
+                    >
+                      Continue with Google
+                    </Button>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-[11px] italic opacity-70">
                     Recap generation skipped or failed.
@@ -447,21 +463,24 @@ const FinishWorkoutModal = ({
           )}
         </div>
         {/* Footer */}
-        <div className="flex shrink-0 justify-end gap-3 px-6 py-5">
+        <div className="flex shrink-0 flex-wrap justify-end gap-3 px-6 py-5">
           <Button
             onClick={onCancel}
             disabled={isLoading}
             variant="glass"
-            className="rounded-xl px-6"
+            className="rounded-xl px-4"
           >
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"
+            variant={!isAuthenticated && totalSets > 0 ? "ghost" : "default"}
+            className={!isAuthenticated && totalSets > 0
+              ? "rounded-xl px-4 font-bold"
+              : "bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"}
           >
-            {isLoading ? "Finishing..." : "Finish Workout"}
+            {isLoading ? "Finishing..." : !isAuthenticated && totalSets > 0 ? "Keep using guest mode" : "Finish Workout"}
           </Button>
         </div>
       </div>
