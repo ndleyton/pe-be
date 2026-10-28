@@ -36,7 +36,7 @@
 - `DATABASE_URL`: PostgreSQL database connection string
 
 ### Optional Variables
-- `API_PREFIX`: API route prefix (default: `/api/v1`)
+- `API_VERSION`: API version segment; the route prefix is `/api/<API_VERSION>` (default: `v1`, i.e. `/api/v1`)
 - `FRONTEND_URL`: Frontend URL for CORS (default: `http://localhost:5173`)
 - `ENVIRONMENT`: Environment indicator (default: `development`)
 
@@ -54,8 +54,9 @@ Set `GOOGLE_REDIRECT_URI` to
 `https://app.example.com/api/v1/auth/google/callback` (using your actual public
 hostname), and register that exact URI with Google. Keep the browser-facing
 callback on the frontend proxy rather than the backend origin hostname. The proxy
-must forward `Set-Cookie` from `/auth/google/authorize` and the browser's `Cookie`
-header on `/auth/google/callback`.
+must forward `Set-Cookie` from `/api/v1/auth/google/authorize` and the browser's
+`Cookie` header on `/api/v1/auth/google/callback` (with the default prefix; the
+prefix is `/api/<API_VERSION>`).
 
 FastAPI Users 15 requires the host-only `fastapiusersoauthcsrf` cookie from the
 authorization response on the callback. It uses `HttpOnly`, `SameSite=lax`, and
