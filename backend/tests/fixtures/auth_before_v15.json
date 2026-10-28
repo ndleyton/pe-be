@@ -1,0 +1,14 @@
+{
+  "generated_with": {
+    "fastapi-users": "14.0.2",
+    "PyJWT": "2.10.1",
+    "pwdlib": "0.2.1"
+  },
+  "secret": "upgrade-compatibility-test-secret-at-least-64-characters-long-123456",
+  "password": "existing-user-password",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6NDA3MDkwODgwMH0.cS_QGewjPDjmZUBrf9yhYbDaaApLHRyLaf6PEnD6lV8",
+  "hashes": {
+    "argon2": "$argon2id$v=19$m=65536,t=3,p=4$obvKJn8aALsmp3ROOFFSgQ$A1GSKcbJqcSO6x6PKIHD3DParYhycnbjc/wUNC/8tuw",
+    "bcrypt": "$2b$12$Wg/DnU414aeKW5SMNGsj0O9rLI8Ha8cvw2Q92YkmrLAXcC5dwhtQS"
+  }
+}

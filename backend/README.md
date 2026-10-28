@@ -27,7 +27,7 @@
 ## Environment Variables
 
 ### Security Configuration
-- `COOKIE_SECURE`: Set to `true` for production to enable secure cookies over HTTPS (default: `false` for development)
+- `COOKIE_SECURE`: Set to `true` for production to enable secure session and OAuth CSRF cookies over HTTPS (default: `false` for development)
 
 ### Required Variables
 - `SECRET_KEY`: Secret key for JWT authentication
@@ -36,7 +36,7 @@
 - `DATABASE_URL`: PostgreSQL database connection string
 
 ### Optional Variables
-- `API_PREFIX`: API route prefix (default: `/api/v1`)
+- `API_VERSION`: API version segment; the route prefix is `/api/<API_VERSION>` (default: `v1`, i.e. `/api/v1`)
 - `FRONTEND_URL`: Frontend URL for CORS (default: `http://localhost:5173`)
 - `ENVIRONMENT`: Environment indicator (default: `development`)
 
@@ -48,6 +48,24 @@ COOKIE_SECURE=true
 SECRET_KEY=your-strong-secret-key
 DATABASE_URL=your-production-db-url
 ```
+
+Google OAuth authorization and callback must use the same public API host.
+Set `GOOGLE_REDIRECT_URI` to
+`https://app.example.com/api/v1/auth/google/callback` (using your actual public
+hostname), and register that exact URI with Google. Keep the browser-facing
+callback on the frontend proxy rather than the backend origin hostname. The proxy
+must forward `Set-Cookie` from both `/api/v1/auth/google/authorize` (the OAuth CSRF
+cookie) and `/api/v1/auth/google/callback` (the `personalbestie_session` login
+cookie), and must forward the browser's `Cookie` header on
+`/api/v1/auth/google/callback`. These are the default paths; the prefix is
+`/api/<API_VERSION>`. Custom proxies need all three behaviors.
+
+FastAPI Users 15 requires the host-only `fastapiusersoauthcsrf` cookie from the
+authorization response on the callback. It uses `HttpOnly`, `SameSite=lax`, and
+`Path=/`; its `Secure` flag follows `COOKIE_SECURE`. Locally, use the same hostname
+for both endpoints (do not mix `localhost` and `127.0.0.1`). After upgrading,
+smoke-test Google login through the public proxy; an OAuth flow started before
+the upgrade may need to be restarted to obtain this cookie.
 
 ## Operator Commands
 
