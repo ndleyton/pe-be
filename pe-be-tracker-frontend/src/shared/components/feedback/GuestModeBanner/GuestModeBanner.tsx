@@ -15,15 +15,22 @@ const GuestModeBanner = () => {
 
   // Re-check dismissal on mount
   useEffect(() => {
-    const dismissed = sessionStorage.getItem("guest-mode-banner-dismissed");
-    if (dismissed === "true") {
-      setIsDismissed(true);
+    try {
+      if (localStorage.getItem("guest-mode-banner-dismissed") === "true") {
+        setIsDismissed(true);
+      }
+    } catch {
+      // storage unavailable (private mode); banner stays dismissable per mount
     }
   }, []);
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    sessionStorage.setItem("guest-mode-banner-dismissed", "true");
+    try {
+      localStorage.setItem("guest-mode-banner-dismissed", "true");
+    } catch {
+      // ignore: dismissal just won't persist
+    }
   };
 
   useEffect(() => {
@@ -37,7 +44,14 @@ const GuestModeBanner = () => {
     setShowBanner(false);
   }, [authLoading, isAuthenticated]);
 
-  if (isAuthenticated || authLoading || !showBanner || isDismissed) {
+  // Wait until the guest has data worth saving before nudging sign-in.
+  if (
+    isAuthenticated ||
+    authLoading ||
+    !showBanner ||
+    isDismissed ||
+    safeWorkouts.length === 0
+  ) {
     return null;
   }
 
