@@ -54,9 +54,11 @@ Set `GOOGLE_REDIRECT_URI` to
 `https://app.example.com/api/v1/auth/google/callback` (using your actual public
 hostname), and register that exact URI with Google. Keep the browser-facing
 callback on the frontend proxy rather than the backend origin hostname. The proxy
-must forward `Set-Cookie` from `/api/v1/auth/google/authorize` and the browser's
-`Cookie` header on `/api/v1/auth/google/callback` (with the default prefix; the
-prefix is `/api/<API_VERSION>`).
+must forward `Set-Cookie` from both `/api/v1/auth/google/authorize` (the OAuth CSRF
+cookie) and `/api/v1/auth/google/callback` (the `personalbestie_session` login
+cookie), and must forward the browser's `Cookie` header on
+`/api/v1/auth/google/callback`. These are the default paths; the prefix is
+`/api/<API_VERSION>`. Custom proxies need all three behaviors.
 
 FastAPI Users 15 requires the host-only `fastapiusersoauthcsrf` cookie from the
 authorization response on the callback. It uses `HttpOnly`, `SameSite=lax`, and
