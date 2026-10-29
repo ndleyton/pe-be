@@ -1,5 +1,5 @@
 export { useAuthStore, initializeAuth } from "./useAuthStore";
-export { useGuestStore } from "./useGuestStore";
+export { useGuestStore, flushGuestPersist } from "./useGuestStore";
 export { useUIStore } from "./useUIStore";
 export { useNavigationStore } from "./useNavigationStore";
 export { useAppHistoryStore } from "./useAppHistoryStore";

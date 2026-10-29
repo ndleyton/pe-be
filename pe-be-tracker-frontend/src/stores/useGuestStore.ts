@@ -171,6 +171,17 @@ interface GuestActions {
 type GuestStore = GuestState & GuestActions;
 let syncWithServerPromise: Promise<boolean> | null = null;
 
+const guestStorage = createIndexedDBStorage();
+let pendingGuestWrite: Promise<unknown> = Promise.resolve();
+const trackedGuestStorage = {
+  ...guestStorage,
+  setItem: (name: string, value: string) =>
+    (pendingGuestWrite = Promise.resolve(guestStorage.setItem(name, value))),
+};
+
+/** Resolves once the latest guest-state write has reached storage. */
+export const flushGuestPersist = () => pendingGuestWrite;
+
 export const useGuestStore = create<GuestStore>()(
   persist(
     (set, get) => ({
@@ -562,7 +573,7 @@ export const useGuestStore = create<GuestStore>()(
     }),
     {
       name: "pe-guest-data",
-      storage: createJSONStorage(() => createIndexedDBStorage()),
+      storage: createJSONStorage(() => trackedGuestStorage),
       // Persist only data fields; exclude ephemeral flags/actions
       partialize: (state) => ({
         workouts: state.workouts,

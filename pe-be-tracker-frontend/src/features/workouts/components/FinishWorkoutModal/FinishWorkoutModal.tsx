@@ -32,7 +32,7 @@ interface Exercise {
 
 interface FinishWorkoutModalProps {
   isOpen: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
   isAuthenticated?: boolean;
@@ -425,8 +425,8 @@ const FinishWorkoutModal = ({
                       type="button"
                       className="w-full"
                       disabled={isLoading}
-                      onClick={() => {
-                        onConfirm();
+                      onClick={async () => {
+                        await onConfirm();
                         void googleSignIn();
                       }}
                     >

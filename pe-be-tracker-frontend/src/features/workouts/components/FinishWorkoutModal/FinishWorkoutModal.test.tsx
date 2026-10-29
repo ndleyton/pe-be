@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@/test/testUtils";
+import { render, screen, fireEvent, waitFor } from "@/test/testUtils";
 import userEvent from "@testing-library/user-event";
 import { makeExerciseForSummary, makeWorkoutPhoto } from "@/test/fixtures";
 import FinishWorkoutModal from "./FinishWorkoutModal";
@@ -507,13 +507,17 @@ describe("FinishWorkoutModal", () => {
       ).toBeInTheDocument();
     });
 
-    it("finishes the guest workout before starting Google sign-in", () => {
-      const onConfirm = vi.fn();
+    it("waits for the guest workout to persist before starting Google sign-in", async () => {
+      let finishPersist: () => void = () => {};
+      const onConfirm = vi.fn(
+        () => new Promise<void>((resolve) => { finishPersist = resolve; }),
+      );
       render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} onConfirm={onConfirm} />);
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
-      expect(googleSignIn).toHaveBeenCalledTimes(1);
-      expect(onConfirm.mock.invocationCallOrder[0]).toBeLessThan(googleSignIn.mock.invocationCallOrder[0]);
+      expect(googleSignIn).not.toHaveBeenCalled();
+      finishPersist();
+      await waitFor(() => expect(googleSignIn).toHaveBeenCalledTimes(1));
     });
 
     it("lets guests finish without signing in", () => {

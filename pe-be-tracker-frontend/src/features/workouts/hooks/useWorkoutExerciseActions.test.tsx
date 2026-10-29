@@ -56,6 +56,7 @@ vi.mock("@/features/exercises/api", async () => {
 });
 
 vi.mock("@/stores", () => ({
+  flushGuestPersist: () => Promise.resolve(),
   useGuestStore: (
     selector: (
       state: {

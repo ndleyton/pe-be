@@ -13,7 +13,7 @@ import {
 } from "@/features/exercises/api";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import type { Workout } from "@/features/workouts/types";
-import { useGuestStore } from "@/stores";
+import { flushGuestPersist, useGuestStore } from "@/stores";
 import type { GuestExerciseType } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -389,7 +389,7 @@ export const useWorkoutExerciseActions = ({
     });
   }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
 
-  const handleFinishWorkout = useCallback(() => {
+  const handleFinishWorkout = useCallback(async () => {
     if (!workoutId) {
       console.error("No workoutId available");
       return;
@@ -403,6 +403,7 @@ export const useWorkoutExerciseActions = ({
     guestUpdateWorkout(workoutId, {
       end_time: getCurrentUTCTimestamp(),
     });
+    await flushGuestPersist();
     onFinishModalClose();
     navigate("/workouts");
   }, [
