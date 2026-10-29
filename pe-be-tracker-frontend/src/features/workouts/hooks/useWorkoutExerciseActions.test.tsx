@@ -160,7 +160,7 @@ describe("useWorkoutExerciseActions", () => {
     );
 
     await act(async () => {
-      await result.current.handleFinishWorkout();
+      expect(await result.current.handleFinishWorkout()).toBe(false);
     });
 
     expect(mockToastError).toHaveBeenCalledWith(
@@ -168,6 +168,12 @@ describe("useWorkoutExerciseActions", () => {
     );
     expect(closeFinishModal).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      expect(await result.current.handleFinishWorkout()).toBe(true);
+    });
+    expect(closeFinishModal).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/workouts");
   });
 
   it("adds a guest exercise without going through the server mutation flow", () => {

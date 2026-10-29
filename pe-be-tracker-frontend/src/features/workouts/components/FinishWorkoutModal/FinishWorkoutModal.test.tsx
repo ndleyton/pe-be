@@ -508,16 +508,31 @@ describe("FinishWorkoutModal", () => {
     });
 
     it("waits for the guest workout to persist before starting Google sign-in", async () => {
-      let finishPersist: () => void = () => {};
+      let finishPersist: (success: boolean) => void = () => {};
       const onConfirm = vi.fn(
-        () => new Promise<void>((resolve) => { finishPersist = resolve; }),
+        () => new Promise<boolean>((resolve) => { finishPersist = resolve; }),
       );
       render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} onConfirm={onConfirm} />);
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
       expect(googleSignIn).not.toHaveBeenCalled();
-      finishPersist();
+      finishPersist(true);
       await waitFor(() => expect(googleSignIn).toHaveBeenCalledTimes(1));
+    });
+
+    it("does not start sign-in after a failed save and lets the guest retry", async () => {
+      const onConfirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} onConfirm={onConfirm} />);
+      const signInButton = screen.getByRole("button", { name: "Continue with Google" });
+
+      await userEvent.click(signInButton);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(googleSignIn).not.toHaveBeenCalled();
+      expect(signInButton).toBeInTheDocument();
+
+      await userEvent.click(signInButton);
+      await waitFor(() => expect(googleSignIn).toHaveBeenCalledTimes(1));
+      expect(onConfirm).toHaveBeenCalledTimes(2);
     });
 
     it("lets guests finish without signing in", () => {

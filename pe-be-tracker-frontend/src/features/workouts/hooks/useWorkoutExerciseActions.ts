@@ -393,12 +393,12 @@ export const useWorkoutExerciseActions = ({
   const handleFinishWorkout = useCallback(async () => {
     if (!workoutId) {
       console.error("No workoutId available");
-      return;
+      return false;
     }
 
     if (isAuthenticated) {
       finishWorkoutMutation.mutate(workoutId);
-      return;
+      return true;
     }
 
     guestUpdateWorkout(workoutId, {
@@ -408,10 +408,11 @@ export const useWorkoutExerciseActions = ({
       await flushGuestPersist();
     } catch {
       toast.error("Couldn't save your workout. Please try again.");
-      return;
+      return false;
     }
     onFinishModalClose();
     navigate("/workouts");
+    return true;
   }, [
     finishWorkoutMutation,
     guestUpdateWorkout,
