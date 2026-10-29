@@ -6,7 +6,7 @@ import {
   addGuestWorkout,
   makeRoutine,
 } from "@/test/fixtures";
-import { useGuestStore } from "./useGuestStore";
+import { useGuestStore, flushGuestPersist } from "./useGuestStore";
 import { syncGuestDataToServer } from "@/utils/syncGuestData";
 import type { SyncResult } from "@/utils/syncGuestData";
 
@@ -14,13 +14,14 @@ const mocks = vi.hoisted(() => ({
   authState: {
     user: null as null | { id: number; email: string },
   },
+  setItem: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock IndexedDB storage
 vi.mock("./indexedDBStorage", () => ({
   createIndexedDBStorage: () => ({
     getItem: vi.fn().mockResolvedValue(null),
-    setItem: vi.fn().mockResolvedValue(undefined),
+    setItem: (name: string, value: string) => mocks.setItem(name, value),
     removeItem: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -51,6 +52,27 @@ describe("useGuestStore", () => {
     }
     // Also manually reset the store to initial state
     useGuestStore.getState().clear();
+  });
+
+  it("flushGuestPersist waits until the latest guest write reaches storage", async () => {
+    let finishWrite: () => void = () => {};
+    mocks.setItem.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { finishWrite = resolve; }),
+    );
+    const flushed = vi.fn();
+
+    const { result } = renderHook(() => useGuestStore());
+    act(() => {
+      addGuestWorkout(result.current);
+    });
+    flushGuestPersist().then(flushed);
+
+    await Promise.resolve();
+    expect(flushed).not.toHaveBeenCalled();
+
+    finishWrite();
+    await flushGuestPersist();
+    expect(flushed).toHaveBeenCalledTimes(1);
   });
 
   it("initializes with default data", () => {

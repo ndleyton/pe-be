@@ -18,6 +18,8 @@ const {
   mockGuestDeleteExercise,
   mockGuestUpdateExercise,
   mockGuestUpdateWorkout,
+  mockFlushGuestPersist,
+  mockToastError,
 } = vi.hoisted(() => ({
   mockCreateExercise: vi.fn(),
   mockGetExerciseTypes: vi.fn(),
@@ -25,7 +27,11 @@ const {
   mockGuestDeleteExercise: vi.fn(),
   mockGuestUpdateExercise: vi.fn(),
   mockGuestUpdateWorkout: vi.fn(),
+  mockFlushGuestPersist: vi.fn(() => Promise.resolve()),
+  mockToastError: vi.fn(),
 }));
+
+vi.mock("sonner", () => ({ toast: { error: mockToastError } }));
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>(
@@ -56,7 +62,7 @@ vi.mock("@/features/exercises/api", async () => {
 });
 
 vi.mock("@/stores", () => ({
-  flushGuestPersist: () => Promise.resolve(),
+  flushGuestPersist: () => mockFlushGuestPersist(),
   useGuestStore: (
     selector: (
       state: {
@@ -135,6 +141,33 @@ describe("useWorkoutExerciseActions", () => {
       expect(closeFinishModal).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith("/workouts");
     });
+  });
+
+  it("keeps the finish modal open and shows an error when the guest save fails", async () => {
+    const closeFinishModal = vi.fn();
+    mockFlushGuestPersist.mockRejectedValueOnce(new Error("disk full"));
+    const { result } = renderHook(
+      () =>
+        useWorkoutExerciseActions({
+          exercises: [],
+          isAuthenticated: false,
+          onFinishModalClose: closeFinishModal,
+          serverWorkout: undefined,
+          showFinishModal: false,
+          workoutId: "123",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await act(async () => {
+      await result.current.handleFinishWorkout();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't save your workout. Please try again.",
+    );
+    expect(closeFinishModal).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("adds a guest exercise without going through the server mutation flow", () => {

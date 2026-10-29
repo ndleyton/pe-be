@@ -14,16 +14,10 @@ export const useGoogleSignIn = () => {
   return useCallback(async () => {
     try {
       const { data } = await api.get(endpoints.auth.googleAuthorize);
-      if (data.authorization_url) {
-        window.location.href = data.authorization_url;
-      } else {
-        // eslint-disable-next-line no-console
-        console.error(
-          "Google sign-in failed",
-          new Error("Authorization URL missing in response"),
-        );
-        toast.error(SIGN_IN_ERROR);
+      if (!data.authorization_url) {
+        throw new Error("Authorization URL missing in response");
       }
+      window.location.href = data.authorization_url;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Google sign-in failed", error);

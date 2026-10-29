@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
@@ -403,7 +404,12 @@ export const useWorkoutExerciseActions = ({
     guestUpdateWorkout(workoutId, {
       end_time: getCurrentUTCTimestamp(),
     });
-    await flushGuestPersist();
+    try {
+      await flushGuestPersist();
+    } catch {
+      toast.error("Couldn't save your workout. Please try again.");
+      return;
+    }
     onFinishModalClose();
     navigate("/workouts");
   }, [
