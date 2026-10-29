@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openWorkoutForm, renameWorkout } from "./utils/workouts";
 
 test.describe("Guest Mode Landing", () => {
   test("should show workouts page for a guest user", async ({ page }) => {
@@ -35,8 +36,20 @@ test.describe("Guest Mode Landing", () => {
       timeout: 10000,
     });
 
-    // Guest banner appears after auth initializes and a display delay.
-    // Wait explicitly to avoid flakiness across browsers.
+    // A guest with no workouts gets no banner yet.
+    await page.waitForTimeout(1200);
+    await expect(page.getByText(/Guest Mode/i)).toBeHidden();
+
+    // Create a workout; the banner appears once the guest has one.
+    await openWorkoutForm(page);
+    await renameWorkout(page, `Banner Workout ${Date.now()}`);
+    await page.getByTestId("open-workout-type-modal").click();
+    await page.getByTestId("workout-type-strength-training").click();
+    await page.getByTestId("start-workout-button").click();
+    await expect(page).toHaveURL(/\/workouts\/.+/, { timeout: 10000 });
+
+    await page.goto("/workouts");
+    await page.waitForLoadState("networkidle");
     await page.waitForTimeout(1200);
     await expect(
       page.getByText(/Guest Mode/i),
