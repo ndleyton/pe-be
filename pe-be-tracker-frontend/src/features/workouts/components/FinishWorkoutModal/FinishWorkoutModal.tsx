@@ -66,6 +66,32 @@ const FinishWorkoutModal = ({
   onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
   const googleSignIn = useGoogleSignIn();
+  const signInIntentRef = useRef(false);
+  const confirmingRef = useRef(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleCancel = () => {
+    signInIntentRef.current = false;
+    onCancel();
+  };
+
+  const handleConfirm = async (signIn = false) => {
+    if (!signIn) signInIntentRef.current = false;
+    if (confirmingRef.current) return;
+
+    signInIntentRef.current = signIn;
+    confirmingRef.current = true;
+    setIsConfirming(true);
+    try {
+      if (await onConfirm() && signInIntentRef.current) {
+        void googleSignIn();
+      }
+    } finally {
+      confirmingRef.current = false;
+      signInIntentRef.current = false;
+      setIsConfirming(false);
+    }
+  };
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
   const workoutPhotoLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -215,7 +241,7 @@ const FinishWorkoutModal = ({
 
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onCancel();
+      handleCancel();
     }
   };
 
@@ -424,12 +450,8 @@ const FinishWorkoutModal = ({
                     <Button
                       type="button"
                       className="w-full"
-                      disabled={isLoading}
-                      onClick={async () => {
-                        if (await onConfirm()) {
-                          void googleSignIn();
-                        }
-                      }}
+                      disabled={isLoading || isConfirming}
+                      onClick={() => handleConfirm(true)}
                     >
                       Continue with Google
                     </Button>
@@ -467,7 +489,7 @@ const FinishWorkoutModal = ({
         {/* Footer */}
         <div className="flex shrink-0 flex-wrap justify-end gap-3 px-6 py-5">
           <Button
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isLoading}
             variant="glass"
             className="rounded-xl px-4"
@@ -475,7 +497,7 @@ const FinishWorkoutModal = ({
             Cancel
           </Button>
           <Button
-            onClick={onConfirm}
+            onClick={() => handleConfirm()}
             disabled={isLoading}
             variant={isGuestFinish ? "ghost" : "default"}
             className={

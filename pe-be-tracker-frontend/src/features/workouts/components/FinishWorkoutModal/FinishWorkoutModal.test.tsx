@@ -516,9 +516,29 @@ describe("FinishWorkoutModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
       expect(googleSignIn).not.toHaveBeenCalled();
+      const signInButton = screen.getByRole("button", { name: "Continue with Google" });
+      expect(signInButton).toBeDisabled();
+      fireEvent.click(signInButton);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
       finishPersist(true);
       await waitFor(() => expect(googleSignIn).toHaveBeenCalledTimes(1));
     });
+
+    it.each(["Cancel", "Keep using guest mode"])(
+      "revokes pending sign-in when %s is selected",
+      async (choice) => {
+        let finishPersist: (success: boolean) => void = () => {};
+        const onConfirm = vi.fn(() => new Promise<boolean>((resolve) => { finishPersist = resolve; }));
+        render(<FinishWorkoutModal {...defaultProps} exercises={mockExercisesWithSets} onConfirm={onConfirm} />);
+        fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+        fireEvent.click(screen.getByRole("button", { name: choice }));
+        finishPersist(true);
+        await waitFor(() => expect(screen.getByRole("button", { name: "Continue with Google" })).toBeEnabled());
+        expect(googleSignIn).not.toHaveBeenCalled();
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        if (choice === "Cancel") expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
+      },
+    );
 
     it("does not start sign-in after a failed save and lets the guest retry", async () => {
       const onConfirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
