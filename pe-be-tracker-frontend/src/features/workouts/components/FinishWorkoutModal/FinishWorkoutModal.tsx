@@ -168,6 +168,7 @@ const FinishWorkoutModal = ({
     (sum, group) => sum + group.setCount,
     0,
   );
+  const isGuestFinish = !isAuthenticated && totalSets > 0;
   const canUploadWorkoutPhoto = isAuthenticated && Boolean(onUploadWorkoutPhoto);
 
   const handleShare = async () => {
@@ -475,12 +476,18 @@ const FinishWorkoutModal = ({
           <Button
             onClick={onConfirm}
             disabled={isLoading}
-            variant={!isAuthenticated && totalSets > 0 ? "ghost" : "default"}
-            className={!isAuthenticated && totalSets > 0
-              ? "rounded-xl px-4 font-bold"
-              : "bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"}
+            variant={isGuestFinish ? "ghost" : "default"}
+            className={
+              isGuestFinish
+                ? "rounded-xl px-4 font-bold"
+                : "bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"
+            }
           >
-            {isLoading ? "Finishing..." : !isAuthenticated && totalSets > 0 ? "Keep using guest mode" : "Finish Workout"}
+            {isLoading
+              ? "Finishing..."
+              : isGuestFinish
+                ? "Keep using guest mode"
+                : "Finish Workout"}
           </Button>
         </div>
       </div>

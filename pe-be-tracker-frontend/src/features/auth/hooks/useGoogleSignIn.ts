@@ -1,6 +1,9 @@
 import { useCallback } from "react";
+import { toast } from "sonner";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
+
+const SIGN_IN_ERROR = "Couldn't start Google sign-in. Please try again.";
 
 /**
  * Returns a memoized callback that initiates the Google OAuth flow.
@@ -19,10 +22,12 @@ export const useGoogleSignIn = () => {
           "Google sign-in failed",
           new Error("Authorization URL missing in response"),
         );
+        toast.error(SIGN_IN_ERROR);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Google sign-in failed", error);
+      toast.error(SIGN_IN_ERROR);
     }
   }, []);
 };
