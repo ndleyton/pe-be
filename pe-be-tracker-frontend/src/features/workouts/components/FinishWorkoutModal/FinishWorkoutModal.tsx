@@ -15,6 +15,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
+import { useGoogleSignIn } from "@/features/auth/hooks";
 import { toast } from "sonner";
 import {
   createWorkoutSummaryFile,
@@ -31,7 +32,7 @@ interface Exercise {
 
 interface FinishWorkoutModalProps {
   isOpen: boolean;
-  onConfirm: () => void;
+  onConfirm: () => boolean | Promise<boolean>;
   onCancel: () => void;
   isLoading?: boolean;
   isAuthenticated?: boolean;
@@ -64,6 +65,33 @@ const FinishWorkoutModal = ({
   isRecapLoading = false,
   onRegenerateRecap,
 }: FinishWorkoutModalProps) => {
+  const googleSignIn = useGoogleSignIn();
+  const signInIntentRef = useRef(false);
+  const confirmingRef = useRef(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleCancel = () => {
+    signInIntentRef.current = false;
+    onCancel();
+  };
+
+  const handleConfirm = async (signIn = false) => {
+    if (!signIn) signInIntentRef.current = false;
+    if (confirmingRef.current) return;
+
+    signInIntentRef.current = signIn;
+    confirmingRef.current = true;
+    setIsConfirming(true);
+    try {
+      if (await onConfirm() && signInIntentRef.current) {
+        void googleSignIn();
+      }
+    } finally {
+      confirmingRef.current = false;
+      signInIntentRef.current = false;
+      setIsConfirming(false);
+    }
+  };
   const downloadAreaRef = useRef<HTMLDivElement>(null);
   const workoutPhotoInputRef = useRef<HTMLInputElement>(null);
   const workoutPhotoLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -166,6 +194,7 @@ const FinishWorkoutModal = ({
     (sum, group) => sum + group.setCount,
     0,
   );
+  const isGuestFinish = !isAuthenticated && totalSets > 0;
   const canUploadWorkoutPhoto = isAuthenticated && Boolean(onUploadWorkoutPhoto);
 
   const handleShare = async () => {
@@ -212,7 +241,7 @@ const FinishWorkoutModal = ({
 
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onCancel();
+      handleCancel();
     }
   };
 
@@ -413,9 +442,20 @@ const FinishWorkoutModal = ({
                     &ldquo;{recap}&rdquo;
                   </p>
                 ) : !isAuthenticated ? (
-                  <p className="text-muted-foreground text-[11px] italic opacity-70">
-                    AI recaps are available for logged-in users.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold">Nice work!</p>
+                    <p className="text-muted-foreground text-sm">
+                      Save this workout to your account and unlock AI recaps.
+                    </p>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={isLoading || isConfirming}
+                      onClick={() => handleConfirm(true)}
+                    >
+                      Continue with Google
+                    </Button>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-[11px] italic opacity-70">
                     Recap generation skipped or failed.
@@ -447,21 +487,30 @@ const FinishWorkoutModal = ({
           )}
         </div>
         {/* Footer */}
-        <div className="flex shrink-0 justify-end gap-3 px-6 py-5">
+        <div className="flex shrink-0 flex-wrap justify-end gap-3 px-6 py-5">
           <Button
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isLoading}
             variant="glass"
-            className="rounded-xl px-6"
+            className="rounded-xl px-4"
           >
             Cancel
           </Button>
           <Button
-            onClick={onConfirm}
+            onClick={() => handleConfirm()}
             disabled={isLoading}
-            className="bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"
+            variant={isGuestFinish ? "ghost" : "default"}
+            className={
+              isGuestFinish
+                ? "rounded-xl px-4 font-bold"
+                : "bg-primary/90 hover:bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20 backdrop-blur-md transition-all active:scale-95"
+            }
           >
-            {isLoading ? "Finishing..." : "Finish Workout"}
+            {isLoading
+              ? "Finishing..."
+              : isGuestFinish
+                ? "Keep using guest mode"
+                : "Finish Workout"}
           </Button>
         </div>
       </div>

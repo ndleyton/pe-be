@@ -28,7 +28,7 @@ describe("GuestModeBanner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    sessionStorage.clear();
+    localStorage.clear();
     mockAuthenticated = false;
     mockAuthLoading = false;
     mockAuthInitialized = true;
@@ -47,7 +47,16 @@ describe("GuestModeBanner", () => {
     expect(screen.queryByText(/Guest Mode/i)).not.toBeInTheDocument();
   });
 
+  it("does not render for guests without workouts", () => {
+    render(<GuestModeBanner />);
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    expect(screen.queryByText(/Guest Mode/i)).not.toBeInTheDocument();
+  });
+
   it("renders after delay when guest and not loading", async () => {
+    mockWorkouts = [{}];
     render(<GuestModeBanner />);
 
     // Initially not showing due to delay
@@ -72,7 +81,8 @@ describe("GuestModeBanner", () => {
     expect(screen.getByText(/2 Workouts/i)).toBeInTheDocument();
   });
 
-  it("dismisses and persists to sessionStorage when X is clicked", async () => {
+  it("dismisses and persists to localStorage when X is clicked", async () => {
+    mockWorkouts = [{}];
     render(<GuestModeBanner />);
 
     act(() => {
@@ -83,11 +93,12 @@ describe("GuestModeBanner", () => {
     fireEvent.click(closeButton);
 
     expect(screen.queryByText(/Guest Mode/i)).not.toBeInTheDocument();
-    expect(sessionStorage.getItem("guest-mode-banner-dismissed")).toBe("true");
+    expect(localStorage.getItem("guest-mode-banner-dismissed")).toBe("true");
   });
 
-  it("honors existing dismissal from sessionStorage on mount", async () => {
-    sessionStorage.setItem("guest-mode-banner-dismissed", "true");
+  it("honors existing dismissal from localStorage on mount", async () => {
+    mockWorkouts = [{}];
+    localStorage.setItem("guest-mode-banner-dismissed", "true");
     render(<GuestModeBanner />);
 
     act(() => {

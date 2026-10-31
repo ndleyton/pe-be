@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
@@ -13,7 +14,7 @@ import {
 } from "@/features/exercises/api";
 import { EXERCISE_TYPE_MODAL_INITIAL_LIMIT } from "@/features/exercises/constants";
 import type { Workout } from "@/features/workouts/types";
-import { useGuestStore } from "@/stores";
+import { flushGuestPersist, useGuestStore } from "@/stores";
 import type { GuestExerciseType } from "@/stores";
 import { getCurrentUTCTimestamp } from "@/utils/date";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -389,22 +390,29 @@ export const useWorkoutExerciseActions = ({
     });
   }, [guestUpdateExercise, isAuthenticated, queryClient, workoutId]);
 
-  const handleFinishWorkout = useCallback(() => {
+  const handleFinishWorkout = useCallback(async () => {
     if (!workoutId) {
       console.error("No workoutId available");
-      return;
+      return false;
     }
 
     if (isAuthenticated) {
       finishWorkoutMutation.mutate(workoutId);
-      return;
+      return true;
     }
 
     guestUpdateWorkout(workoutId, {
       end_time: getCurrentUTCTimestamp(),
     });
+    try {
+      await flushGuestPersist();
+    } catch {
+      toast.error("Couldn't save your workout. Please try again.");
+      return false;
+    }
     onFinishModalClose();
     navigate("/workouts");
+    return true;
   }, [
     finishWorkoutMutation,
     guestUpdateWorkout,

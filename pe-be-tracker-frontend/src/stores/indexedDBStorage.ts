@@ -73,10 +73,12 @@ export class IndexedDBStorage implements StateStorage {
       const store = transaction.objectStore(STORE_NAME);
       const request = operation(store);
 
-      request.onsuccess = () => resolve(request.result);
+      transaction.oncomplete = () => resolve(request.result);
       request.onerror = () =>
         reject(new Error(request.error?.message || "Transaction failed"));
 
+      transaction.onabort = () =>
+        reject(new Error(transaction.error?.message || "Transaction aborted"));
       transaction.onerror = () =>
         reject(new Error(transaction.error?.message || "Transaction failed"));
     });

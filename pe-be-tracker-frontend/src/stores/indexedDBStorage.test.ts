@@ -127,3 +127,34 @@ describe("createIndexedDBStorage", () => {
     expect(localRemoveSpy).toHaveBeenCalledWith("foo");
   });
 });
+
+
+describe("IndexedDBStorage transaction completion", () => {
+  it.each(["complete", "abort"])("settles writes on transaction %s, after request success", async (outcome) => {
+    const request = { result: undefined, onsuccess: null as (() => void) | null };
+    const transaction = {
+      objectStore: () => ({ put: () => request }),
+      oncomplete: null as (() => void) | null,
+      onabort: null as (() => void) | null,
+      error: null,
+    };
+    const storage = new IndexedDBStorage();
+    vi.spyOn(storage as unknown as { getDB: () => Promise<IDBDatabase> }, "getDB")
+      .mockResolvedValue({ transaction: () => transaction } as unknown as IDBDatabase);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let settled = false;
+    const write = storage.setItem("guest", "workout");
+    const result = write.then(() => { settled = true; return "saved"; }, (error: Error) => {
+      settled = true;
+      return error.message;
+    });
+    await Promise.resolve();
+    request.onsuccess?.();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    if (outcome === "complete") transaction.oncomplete?.();
+    else transaction.onabort?.();
+    expect(await result).toBe(outcome === "complete" ? "saved" : "Transaction aborted");
+    vi.restoreAllMocks();
+  });
+});
