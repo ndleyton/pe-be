@@ -234,7 +234,14 @@ class SyncService:
                     )
                 )
                 if log:
-                    if log.request_fingerprint not in (None, fingerprint):
+                    if log.request_fingerprint is None:
+                        # Logs from before key binding can't prove which request
+                        # created them; the client keeps its data and retries
+                        # with a fresh key.
+                        raise ValueError(
+                            "Cannot confirm the request for this idempotency key"
+                        )
+                    if log.request_fingerprint != fingerprint:
                         raise ValueError(
                             "Idempotency key was already used for a different request"
                         )

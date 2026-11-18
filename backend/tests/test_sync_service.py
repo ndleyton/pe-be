@@ -518,7 +518,7 @@ async def test_concurrent_retries_share_workout(db_session, second_key):
     )
 
 
-async def test_counts_only_replay_requires_durable_mapping(db_session):
+async def test_legacy_key_replay_is_unconfirmed(db_session):
     from src.sync.models import SyncLog
 
     user = await _seed_user(db_session)
@@ -536,11 +536,16 @@ async def test_counts_only_replay_requires_durable_mapping(db_session):
     )
     result = await SyncService.sync_guest_data(db_session, payload, user_id, "legacy")
     assert not result.success and result.workoutIdMap == {}
+    assert "Cannot confirm" in result.error
     assert await db_session.scalar(select(func.count()).select_from(Workout)) == 0
+
+    # A fresh key imports the workout; the legacy key still can't claim it.
     fresh = await SyncService.sync_guest_data(db_session, payload, user_id, "fresh")
     replay = await SyncService.sync_guest_data(db_session, payload, user_id, "legacy")
-    assert fresh.success and replay.success
-    assert replay.workoutIdMap == fresh.workoutIdMap
+    assert fresh.success
+    assert not replay.success and replay.workoutIdMap == {}
+    assert "Cannot confirm" in replay.error
+    assert await db_session.scalar(select(func.count()).select_from(Workout)) == 1
 
 
 @pytest.mark.parametrize("status", ["candidate", "in_review"])
