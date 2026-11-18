@@ -176,6 +176,33 @@ async def test_literal_custom_types_and_stable_replay(db_session):
     assert await db_session.scalar(select(func.count()).select_from(ExerciseType)) == 4
 
 
+async def test_workout_type_names_are_literal(db_session):
+    user = await _seed_user(db_session)
+    await _seed_intensity_unit(db_session)
+    db_session.add(WorkoutType(name="Strength Training"))
+    await db_session.flush()
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="w",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="wt",
+                exercises=[],
+            )
+        ],
+        workoutTypes=[GuestWorkoutType(id="wt", name="%")],
+    )
+    result = await SyncService.sync_guest_data(db_session, payload, user.id)
+    assert result.success
+    workout = await db_session.get(Workout, result.workoutIdMap["w"])
+    assert (
+        await db_session.scalar(
+            select(WorkoutType.name).where(WorkoutType.id == workout.workout_type_id)
+        )
+        == "%"
+    )
+
+
 async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
     user = await _seed_user(db_session, email="user3@example.com")
