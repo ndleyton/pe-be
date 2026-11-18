@@ -594,3 +594,38 @@ async def test_second_device_reuses_private_type(db_session, status):
         private.id,
         private.id,
     ]
+
+
+async def test_legacy_seed_names_map_to_released_types(db_session):
+    user = await _seed_user(db_session)
+    squat = ExerciseType(name="Barbell Squat", status="released")
+    db_session.add(squat)
+    await db_session.flush()
+    refs = {"old-seed": "Squat", "seed": "Barbell Squat", "custom": "squat"}
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="g",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="wt",
+                exercises=[GuestExercise(id=r, exercise_type_id=r) for r in refs],
+            )
+        ],
+        exerciseTypes=[GuestExerciseType(id=r, name=n) for r, n in refs.items()],
+    )
+    result = await SyncService.sync_guest_data(db_session, payload, user.id)
+    assert result.success
+    rows = dict(
+        (
+            await db_session.execute(
+                select(Exercise.id, ExerciseType)
+                .join(ExerciseType, Exercise.exercise_type_id == ExerciseType.id)
+                .order_by(Exercise.id)
+            )
+        ).all()
+    )
+    types = list(rows.values())
+    # Exact seed names (current and pre-#443) reuse the released type.
+    assert types[0].id == types[1].id == squat.id
+    # A custom name that only differs in case stays private.
+    assert types[2].status == "candidate" and types[2].owner_id == user.id

@@ -13,6 +13,53 @@ from src.workouts.models import Workout, WorkoutType
 
 logger = logging.getLogger(__name__)
 
+# The retired guest seed (pe-be-tracker-frontend/src/stores/seeds/exerciseTypes.ts):
+# released catalog name -> seed description. Seeds carry no server ID, so an exact
+# (name, description) match is the only way to recognize one; custom types get
+# "Custom exercise" and never match.
+_SEED_DESCRIPTIONS = {
+    "Push-ups": "Upper body bodyweight exercise",
+    "Barbell Squat": "Lower body exercise",
+    "Bench Press": "Upper body strength exercise",
+    "Barbell Deadlift": "Full body strength exercise",
+    "Pull-ups": "Upper body bodyweight pulling exercise",
+    "Barbell Row": "Back strength exercise",
+    "Wide-Grip Lat Pulldown": "Upper back and lat exercise",
+    "Face Pull": "Rear deltoid and upper back exercise",
+    "Dumbbell Bicep Curl": "Bicep isolation exercise",
+    "Hammer Curls": "Bicep and forearm exercise",
+    "Overhead Press": "Shoulder and tricep exercise",
+    "Dips": "Tricep and chest bodyweight exercise",
+    "Barbell Incline Bench Press - Medium Grip": "Upper chest strength exercise",
+    "Machine Triceps Extension": "Tricep isolation exercise",
+    "Side Lateral Raise": "Side deltoid exercise",
+    "Bulgarian Split Squats": "Single leg quad and glute exercise",
+    "Romanian Deadlift": "Hamstring and glute exercise",
+    "Walking Lunges": "Dynamic leg and glute exercise",
+    "Leg Press": "Quad and glute machine exercise",
+    "Standing Calf Raises": "Calf muscle exercise",
+    "Leg Curls": "Hamstring isolation exercise",
+    "Leg Extensions": "Quadricep isolation exercise",
+}
+# Seed names before #443 renamed them to the catalog names.
+_PRE_443_NAMES = {
+    "Squat": "Barbell Squat",
+    "Deadlift": "Barbell Deadlift",
+    "Lat Pulldowns": "Wide-Grip Lat Pulldown",
+    "Face Pulls": "Face Pull",
+    "Bicep Curls": "Dumbbell Bicep Curl",
+    "Incline Bench Press": "Barbell Incline Bench Press - Medium Grip",
+    "Tricep Extensions": "Machine Triceps Extension",
+    "Lateral Raises": "Side Lateral Raise",
+    "Romanian Deadlifts": "Romanian Deadlift",
+    "Calf Raises": "Standing Calf Raises",
+}
+# (seed name, seed description) -> released catalog name
+LEGACY_SEEDS = {
+    (seed_name, _SEED_DESCRIPTIONS[name]): name
+    for seed_name, name in {n: n for n in _SEED_DESCRIPTIONS} | _PRE_443_NAMES.items()
+}
+
 
 async def _resolve_exercise_types(session, workouts, definitions, user_id):
     refs = {e.exercise_type_id for workout in workouts for e in workout.exercises}
@@ -61,6 +108,29 @@ async def _resolve_exercise_types(session, workouts, definitions, user_id):
             server_ids[ref] = targets.pop()
         elif definition is None:
             raise ValueError(f"Missing exercise type definition for {ref}")
+
+    seed_refs = {
+        ref: LEGACY_SEEDS[key]
+        for ref in refs - server_ids.keys()
+        if (key := (by_id[ref].name, by_id[ref].description)) in LEGACY_SEEDS
+    }
+    if seed_refs:
+        # At most one released type per lower(name): uq_exercise_types_released_lower_name.
+        released = dict(
+            (
+                await session.execute(
+                    select(func.lower(ExerciseType.name), ExerciseType.id).where(
+                        ExerciseType.status == "released",
+                        func.lower(ExerciseType.name).in_(
+                            {name.lower() for name in seed_refs.values()}
+                        ),
+                    )
+                )
+            ).all()
+        )
+        for ref, name in seed_refs.items():
+            if name.lower() in released:
+                server_ids[ref] = released[name.lower()]
 
     if server_ids:
         visible = set(
