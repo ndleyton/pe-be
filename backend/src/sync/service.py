@@ -290,9 +290,7 @@ class SyncService:
                     continue
                 stmt = (
                     select(WorkoutType)
-                    .where(
-                        func.lower(WorkoutType.name) == func.lower(guest_wt.name)
-                    )
+                    .where(func.lower(WorkoutType.name) == func.lower(guest_wt.name))
                     .limit(1)
                 )
                 result = await session.execute(stmt)

@@ -371,9 +371,12 @@ async def test_retries_do_not_recreate_a_deleted_workout(db_session):
         assert not replay.success
         assert replay.deletedWorkoutIds == ["deleted-workout"]
         assert replay.workoutIdMap == {}
-    assert await db_session.scalar(
-        select(func.count()).select_from(Workout).where(Workout.owner_id == user_id)
-    ) == 0
+    assert (
+        await db_session.scalar(
+            select(func.count()).select_from(Workout).where(Workout.owner_id == user_id)
+        )
+        == 0
+    )
 
 
 async def test_sync_guest_data_uses_external_id(db_session: AsyncSession):
