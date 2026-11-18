@@ -1,7 +1,7 @@
 import logging
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exercise_sets.models import ExerciseSet
@@ -79,23 +79,36 @@ async def _resolve_exercise_types(session, workouts, definitions, user_id):
     for ref in sorted(local_ids - mapped.keys()):
         if ref not in server_ids:
             definition = by_id[ref]
-            candidate = ExerciseType(
-                name=definition.name,
-                description=definition.description,
-                default_intensity_unit=definition.default_intensity_unit,
-                owner_id=user_id,
-                status="candidate",
+            # Target the partial unique index used by the private exercise editor.
+            insert_candidate = (
+                insert(ExerciseType)
+                .values(
+                    name=definition.name,
+                    description=definition.description,
+                    default_intensity_unit=definition.default_intensity_unit,
+                    owner_id=user_id,
+                    status="candidate",
+                )
+                .on_conflict_do_nothing(
+                    index_elements=[
+                        ExerciseType.owner_id,
+                        func.lower(ExerciseType.name),
+                    ],
+                    index_where=text(
+                        "owner_id IS NOT NULL AND status IN ('candidate', 'in_review')"
+                    ),
+                )
+                .returning(ExerciseType.id)
             )
-            session.add(candidate)
-            try:
-                await session.flush()
-            except IntegrityError as exc:
-                if "uq_exercise_types_owner_lower_name_nonreleased" in str(exc.orig):
-                    raise ValueError(
-                        f"A private exercise named {definition.name!r} already exists"
-                    ) from exc
-                raise
-            server_ids[ref] = candidate.id
+            candidate_id = await session.scalar(insert_candidate)
+            if candidate_id is None:
+                existing = select(ExerciseType.id).where(
+                    ExerciseType.owner_id == user_id,
+                    ExerciseType.status.in_(("candidate", "in_review")),
+                    func.lower(ExerciseType.name) == func.lower(definition.name),
+                )
+                candidate_id = (await session.execute(existing)).scalar_one()
+            server_ids[ref] = candidate_id
         session.add(
             GuestExerciseTypeMapping(
                 user_id=user_id, guest_id=ref, exercise_type_id=server_ids[ref]
@@ -149,18 +162,13 @@ class SyncService:
                     )
                 )
                 if log:
-                    replay_map = (
-                        log.workout_id_map
-                        if log.workout_id_map is not None
-                        else workout_ids
-                    )
-                    if replay_map.keys() != submitted.keys():
+                    if workout_ids.keys() != submitted.keys():
                         raise ValueError(
                             "Cannot confirm every workout for this idempotency key"
                         )
                     result = SyncResult(
                         success=log.success,
-                        workoutIdMap=replay_map,
+                        workoutIdMap=workout_ids,
                         syncedWorkouts=log.synced_workouts,
                         syncedExercises=log.synced_exercises,
                         syncedSets=log.synced_sets,
@@ -298,7 +306,6 @@ class SyncService:
                     synced_workouts=synced_workouts,
                     synced_exercises=synced_exercises,
                     synced_sets=synced_sets,
-                    workout_id_map=workout_ids,
                     synced_routines=0,
                 )
                 session.add(sync_log)

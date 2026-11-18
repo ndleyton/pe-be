@@ -1,4 +1,4 @@
-"""Remember guest import identities and request results."""
+"""Remember guest import identities."""
 
 from alembic import op
 import sqlalchemy as sa
@@ -38,16 +38,10 @@ def upgrade():
                 ),
                 sa.UniqueConstraint("user_id", "guest_id"),
             )
-    if "workout_id_map" not in {c["name"] for c in inspector.get_columns("sync_logs")}:
-        op.add_column(
-            "sync_logs", sa.Column("workout_id_map", sa.JSON(), nullable=True)
-        )
 
 
 def downgrade():
     inspector = sa.inspect(op.get_bind())
-    if "workout_id_map" in {c["name"] for c in inspector.get_columns("sync_logs")}:
-        op.drop_column("sync_logs", "workout_id_map")
     for table, _, _ in MAPPINGS:
         if inspector.has_table(table):
             op.drop_table(table)

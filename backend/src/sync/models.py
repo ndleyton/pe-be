@@ -1,12 +1,4 @@
-from sqlalchemy import (
-    JSON,
-    Column,
-    Integer,
-    String,
-    ForeignKey,
-    Boolean,
-    UniqueConstraint,
-)
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, UniqueConstraint
 from src.core.database import Base
 
 
@@ -23,7 +15,6 @@ class SyncLog(Base):
     success = Column(Boolean, nullable=False, default=True)
     synced_workouts = Column(Integer, default=0)
     synced_exercises = Column(Integer, default=0)
-    workout_id_map = Column(JSON, nullable=True)
     synced_sets = Column(Integer, default=0)
     synced_routines = Column(Integer, default=0)
 

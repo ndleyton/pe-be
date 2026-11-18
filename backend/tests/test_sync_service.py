@@ -542,25 +542,55 @@ async def test_counts_only_replay_requires_durable_mapping(db_session):
     assert replay.workoutIdMap == fresh.workoutIdMap
 
 
-async def test_conflicting_candidate_name_rolls_back(db_session):
+@pytest.mark.parametrize("status", ["candidate", "in_review"])
+async def test_second_device_reuses_private_type(db_session, status):
+    from src.sync.models import GuestExerciseTypeMapping
+
     user = await _seed_user(db_session)
-    payload = GuestSyncPayload(
-        workouts=[
-            GuestWorkout(
-                id="g",
-                start_time=datetime.now(timezone.utc),
-                workout_type_id="wt",
-                exercises=[
-                    GuestExercise(id=ref, exercise_type_id=ref) for ref in ("a", "b")
-                ],
-            )
-        ],
-        exerciseTypes=[
-            GuestExerciseType(id="a", name="Bench"),
-            GuestExerciseType(id="b", name="bench"),
-        ],
+    other = await _seed_user(db_session, "other@example.com")
+    db_session.add_all(
+        [
+            ExerciseType(name="Bench", status="released"),
+            ExerciseType(name="Bench", status="candidate", owner_id=other.id),
+        ]
     )
-    await db_session.commit()
-    result = await SyncService.sync_guest_data(db_session, payload, user.id)
-    assert not result.success and "already exists" in result.error
-    assert await db_session.scalar(select(func.count()).select_from(ExerciseType)) == 0
+    await db_session.flush()
+
+    for ref, name in [("device-a", "Bench"), ("device-b", "BENCH")]:
+        payload = GuestSyncPayload(
+            workouts=[
+                GuestWorkout(
+                    id=ref,
+                    start_time=datetime.now(timezone.utc),
+                    workout_type_id="wt",
+                    exercises=[GuestExercise(id=ref, exercise_type_id=ref)],
+                )
+            ],
+            exerciseTypes=[GuestExerciseType(id=ref, name=name, description=ref)],
+        )
+        result = await SyncService.sync_guest_data(db_session, payload, user.id)
+        assert result.success, result.error
+        private = (
+            await db_session.scalars(
+                select(ExerciseType).where(ExerciseType.owner_id == user.id)
+            )
+        ).one()
+        if ref == "device-a":
+            private.status = status
+            await db_session.commit()
+
+    assert (private.name, private.description, private.status) == (
+        "Bench",
+        "device-a",
+        status,
+    )
+    mappings = await db_session.execute(
+        select(
+            GuestExerciseTypeMapping.guest_id, GuestExerciseTypeMapping.exercise_type_id
+        ).where(GuestExerciseTypeMapping.user_id == user.id)
+    )
+    assert dict(mappings.all()) == {"device-a": private.id, "device-b": private.id}
+    assert list(await db_session.scalars(select(Exercise.exercise_type_id))) == [
+        private.id,
+        private.id,
+    ]
