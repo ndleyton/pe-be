@@ -226,6 +226,14 @@ class SyncService:
                     )
                 ).all()
             )
+            deleted_ids = [ref for ref, target in workout_ids.items() if target is None]
+            if deleted_ids:
+                await session.rollback()
+                return SyncResult(
+                    success=False,
+                    deletedWorkoutIds=sorted(deleted_ids),
+                    error="Previously imported workouts were deleted",
+                )
             if idempotency_key:
                 log = await session.scalar(
                     select(SyncLog).where(

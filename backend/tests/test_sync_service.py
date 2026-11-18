@@ -15,6 +15,7 @@ from src.sync.schemas import (
     GuestWorkoutType,
 )
 from src.workouts.models import Workout, WorkoutType
+from src.workouts.crud import delete_workout
 from src.exercises.models import Exercise, ExerciseType, IntensityUnit
 from src.exercise_sets.models import ExerciseSet
 from src.users.models import User
@@ -341,6 +342,34 @@ async def test_sync_guest_data_is_idempotent(db_session: AsyncSession):
     stmt = select(Workout).where(Workout.owner_id == user_id)
     workouts = (await db_session.execute(stmt)).scalars().all()
     assert len(workouts) == 1
+
+
+async def test_retries_do_not_recreate_a_deleted_workout(db_session):
+    user = await _seed_user(db_session)
+    user_id = user.id
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="deleted-workout",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="strength",
+            )
+        ]
+    )
+    result = await SyncService.sync_guest_data(db_session, payload, user_id, "original")
+    assert result.success
+    assert await delete_workout(
+        db_session, result.workoutIdMap["deleted-workout"], user_id
+    )
+
+    for key in ("fresh", "original"):
+        replay = await SyncService.sync_guest_data(db_session, payload, user_id, key)
+        assert not replay.success
+        assert replay.deletedWorkoutIds == ["deleted-workout"]
+        assert replay.workoutIdMap == {}
+    assert await db_session.scalar(
+        select(func.count()).select_from(Workout).where(Workout.owner_id == user_id)
+    ) == 0
 
 
 async def test_sync_guest_data_uses_external_id(db_session: AsyncSession):

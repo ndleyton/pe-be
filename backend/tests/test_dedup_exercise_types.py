@@ -172,7 +172,7 @@ def test_apply_dedup_plan_updates_references_transfers_usage_and_deletes_duplica
             exercise_image_candidates=5,
         ),
     )
-    cursor = FakeApplyCursor([3, 2, 1, 5, 1, 1])
+    cursor = FakeApplyCursor([1, 3, 2, 1, 5, 1, 2, 1])
 
     applied = script.apply_dedup_plan(cursor, plan)
 
@@ -184,14 +184,20 @@ def test_apply_dedup_plan_updates_references_transfers_usage_and_deletes_duplica
         released_rows_updated=1,
         deleted_exercise_types=1,
     )
-    assert len(cursor.executed) == 6
-    assert "UPDATE exercises" in cursor.executed[0][0]
-    assert cursor.executed[0][1][0] == 5
-    assert cursor.executed[0][1][2] == 8
-    assert "INSERT INTO exercise_muscles" in cursor.executed[2][0]
-    assert cursor.executed[4][1][0] == 4
-    assert cursor.executed[4][1][2] == 5
-    assert cursor.executed[5][1] == (8,)
+    assert len(cursor.executed) == 8
+    assert cursor.executed[0][0].endswith("FOR UPDATE")
+    assert cursor.executed[0][1] == (8,)
+    assert "UPDATE exercises" in cursor.executed[1][0]
+    assert cursor.executed[1][1][0] == 5
+    assert cursor.executed[1][1][2] == 8
+    assert "INSERT INTO exercise_muscles" in cursor.executed[3][0]
+    assert cursor.executed[5][1][0] == 4
+    assert cursor.executed[5][1][2] == 5
+    mapping_update, params = cursor.executed[-2]
+    assert "UPDATE guest_exercise_type_mappings" in mapping_update
+    assert "WHERE exercise_type_id = %s" in mapping_update
+    assert (params[0], params[2]) == (5, 8)
+    assert cursor.executed[-1] == ("DELETE FROM exercise_types WHERE id = %s", (8,))
 
 
 def test_apply_dedup_plan_merges_empty_target_fields_when_flag_enabled():
@@ -216,7 +222,7 @@ def test_apply_dedup_plan_merges_empty_target_fields_when_flag_enabled():
             exercise_image_candidates=5,
         ),
     )
-    cursor = FakeApplyCursor([3, 2, 1, 5, 1, 1, 1])
+    cursor = FakeApplyCursor([1, 3, 2, 1, 5, 1, 1, 2, 1])
 
     applied = script.apply_dedup_plan(
         cursor,
@@ -232,13 +238,13 @@ def test_apply_dedup_plan_merges_empty_target_fields_when_flag_enabled():
         released_rows_updated=1,
         deleted_exercise_types=1,
     )
-    assert len(cursor.executed) == 7
-    assert "UPDATE exercise_types AS target" in cursor.executed[5][0]
-    assert "description = COALESCE" in cursor.executed[5][0]
-    assert "default_intensity_unit = COALESCE" in cursor.executed[5][0]
-    assert "images_url = COALESCE" in cursor.executed[5][0]
-    assert cursor.executed[5][1][1:] == (5, 8)
-    assert cursor.executed[6][1] == (8,)
+    assert len(cursor.executed) == 9
+    assert "UPDATE exercise_types AS target" in cursor.executed[6][0]
+    assert "description = COALESCE" in cursor.executed[6][0]
+    assert "default_intensity_unit = COALESCE" in cursor.executed[6][0]
+    assert "images_url = COALESCE" in cursor.executed[6][0]
+    assert cursor.executed[6][1][1:] == (5, 8)
+    assert cursor.executed[-1][1] == (8,)
 
 
 def test_run_dedup_dry_run_prints_report_and_rolls_back(monkeypatch):
@@ -312,7 +318,7 @@ def test_run_dedup_apply_commits_and_prints_applied_counts(monkeypatch):
             }
         ],
         reference_counts=(10, 4, 2, 3),
-        apply_rowcounts=[10, 4, 2, 3, 1, 1, 1],
+        apply_rowcounts=[1, 10, 4, 2, 3, 1, 1, 2, 1],
     )
     connection = FakeRunConnection(cursor)
     monkeypatch.setattr(script, "connect_target_database", lambda args: connection)
@@ -352,8 +358,8 @@ def test_apply_dedup_plan_raises_if_released_row_not_updated():
         non_released=make_match(row_id=8, name="N", status="candidate"),
         reference_counts=script.ReferenceCounts(0, 0, 0, 0),
     )
-    # Cursor returns 0 for the UPDATE of released row (the 5th call)
-    cursor = FakeApplyCursor([0, 0, 0, 0, 0, 1])
+    # Cursor returns 0 for the UPDATE of released row (the 6th call)
+    cursor = FakeApplyCursor([1, 0, 0, 0, 0, 0])
 
     with pytest.raises(RuntimeError, match="Expected exactly 1 released row"):
         script.apply_dedup_plan(cursor, plan)
@@ -365,8 +371,8 @@ def test_apply_dedup_plan_raises_if_non_released_row_not_deleted():
         non_released=make_match(row_id=8, name="N", status="candidate"),
         reference_counts=script.ReferenceCounts(0, 0, 0, 0),
     )
-    # Cursor returns 0 for the DELETE of non-released row (the 6th call)
-    cursor = FakeApplyCursor([0, 0, 0, 0, 1, 0])
+    # Cursor returns 0 for the DELETE of non-released row (the last call)
+    cursor = FakeApplyCursor([1, 0, 0, 0, 0, 1, 0, 0])
 
     with pytest.raises(RuntimeError, match="Expected exactly 1 non-released row"):
         script.apply_dedup_plan(cursor, plan)
@@ -378,7 +384,7 @@ def test_apply_dedup_plan_raises_if_field_merge_target_not_updated():
         non_released=make_match(row_id=8, name="N", status="candidate"),
         reference_counts=script.ReferenceCounts(0, 0, 0, 0),
     )
-    cursor = FakeApplyCursor([0, 0, 0, 0, 1, 0, 1])
+    cursor = FakeApplyCursor([1, 0, 0, 0, 0, 1, 0])
 
     with pytest.raises(
         RuntimeError,

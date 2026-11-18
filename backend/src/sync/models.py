@@ -36,7 +36,7 @@ class GuestWorkoutMapping(Base):
     )
     guest_id = Column(String, nullable=False)
     workout_id = Column(
-        Integer, ForeignKey("workouts.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("workouts.id", ondelete="SET NULL"), nullable=True
     )
 
 

@@ -37,8 +37,10 @@ def upgrade():
                 sa.Column(
                     column,
                     sa.Integer(),
-                    sa.ForeignKey(target, ondelete="CASCADE"),
-                    nullable=False,
+                    sa.ForeignKey(
+                        target, ondelete="SET NULL" if column == "workout_id" else "CASCADE"
+                    ),
+                    nullable=column == "workout_id",
                 ),
                 sa.UniqueConstraint("user_id", "guest_id"),
             )

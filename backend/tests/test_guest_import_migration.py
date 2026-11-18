@@ -77,6 +77,13 @@ async def test_guest_import_migration_round_trip(db_session):
                 upgraded = direction == "upgrade"
                 assert schema.has_table("guest_workout_mappings") == upgraded
                 assert schema.has_table("guest_exercise_type_mappings") == upgraded
+                if upgraded:
+                    workout_fk = next(
+                        fk
+                        for fk in schema.get_foreign_keys("guest_workout_mappings")
+                        if fk["constrained_columns"] == ["workout_id"]
+                    )
+                    assert workout_fk["options"]["ondelete"] == "SET NULL"
                 assert (
                     "request_fingerprint"
                     in {col["name"] for col in schema.get_columns("sync_logs")}

@@ -346,6 +346,12 @@ def apply_dedup_plan(
 ) -> AppliedChanges:
     now = datetime.now(timezone.utc)
 
+    # Block new foreign-key references to the source while moving existing ones.
+    cursor.execute(
+        "SELECT id FROM exercise_types WHERE id = %s FOR UPDATE",
+        (plan.non_released.id,),
+    )
+
     cursor.execute(
         """
         UPDATE exercises
@@ -447,6 +453,15 @@ def apply_dedup_plan(
                 "Expected exactly 1 released row to be updated during field merge, "
                 f"but got {merged_field_rows_updated}"
             )
+
+    cursor.execute(
+        """
+        UPDATE guest_exercise_type_mappings
+        SET exercise_type_id = %s, updated_at = %s
+        WHERE exercise_type_id = %s
+        """,
+        (plan.released.id, now, plan.non_released.id),
+    )
 
     cursor.execute(
         "DELETE FROM exercise_types WHERE id = %s",

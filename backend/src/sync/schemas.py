@@ -92,6 +92,7 @@ class GuestSyncPayload(BaseModel):
 class SyncResult(BaseModel):
     success: bool
     workoutIdMap: dict[str, int] = Field(default_factory=dict)
+    deletedWorkoutIds: list[str] = Field(default_factory=list)
     syncedWorkouts: Optional[int] = None
     syncedExercises: Optional[int] = None
     syncedSets: Optional[int] = None
