@@ -35,7 +35,9 @@ async def test_guest_import_migration_round_trip(db_session):
     await db_session.flush()
     db_session.add_all(
         [
-            ExerciseSet(exercise_id=exercise.id, intensity_unit_id=unit.id, reps=8),
+            ExerciseSet(
+                exercise_id=exercise.id, intensity_unit_id=unit.id, reps=8, position=0
+            ),
             SyncLog(
                 user_id=user.id,
                 idempotency_key="old",
