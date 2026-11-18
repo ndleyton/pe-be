@@ -17,6 +17,8 @@ class SyncLog(Base):
     synced_exercises = Column(Integer, default=0)
     synced_sets = Column(Integer, default=0)
     synced_routines = Column(Integer, default=0)
+    # SHA-256 of the payload; NULL on logs written before key binding.
+    request_fingerprint = Column(String(64), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(

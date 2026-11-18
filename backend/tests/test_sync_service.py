@@ -641,3 +641,31 @@ async def test_legacy_seeds_map_to_released_types(db_session):
         "other-case": "candidate",
         "custom": "candidate",
     }
+
+
+async def test_idempotency_key_is_bound_to_its_payload(db_session):
+    user_id = (await _seed_user(db_session)).id
+
+    def payload(guest_id):
+        return GuestSyncPayload(
+            workouts=[
+                GuestWorkout(
+                    id=guest_id,
+                    start_time=datetime.now(timezone.utc),
+                    workout_type_id="wt",
+                )
+            ]
+        )
+
+    first, second = payload("a"), payload("b")
+    a = await SyncService.sync_guest_data(db_session, first, user_id, "key-a")
+    b = await SyncService.sync_guest_data(db_session, second, user_id, "key-b")
+    assert a.success and b.success
+
+    # Workout B is already mapped, but key A belongs to workout A's request.
+    reused = await SyncService.sync_guest_data(db_session, second, user_id, "key-a")
+    assert not reused.success and "different request" in reused.error
+    assert reused.workoutIdMap == {}
+
+    replay = await SyncService.sync_guest_data(db_session, first, user_id, "key-a")
+    assert replay.success and replay.workoutIdMap == a.workoutIdMap

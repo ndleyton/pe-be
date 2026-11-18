@@ -61,7 +61,13 @@ async def test_guest_import_migration_round_trip(db_session):
             select(Workout.__table__),
             select(Exercise.__table__),
             select(ExerciseSet.__table__),
-            select(SyncLog.__table__),
+            select(
+                *(
+                    col
+                    for col in SyncLog.__table__.columns
+                    if col.name != "request_fingerprint"
+                )
+            ),
         ]
         previous = [connection.execute(stmt).all() for stmt in checks]
         with Operations.context(MigrationContext.configure(connection)):
@@ -71,6 +77,10 @@ async def test_guest_import_migration_round_trip(db_session):
                 upgraded = direction == "upgrade"
                 assert schema.has_table("guest_workout_mappings") == upgraded
                 assert schema.has_table("guest_exercise_type_mappings") == upgraded
+                assert (
+                    "request_fingerprint"
+                    in {col["name"] for col in schema.get_columns("sync_logs")}
+                ) == upgraded
                 assert [connection.execute(stmt).all() for stmt in checks] == previous
 
     await (await db_session.connection()).run_sync(round_trip)

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exercise_sets.models import ExerciseSet
 from src.exercises.models import Exercise, ExerciseType
+from src.mcp.idempotency import request_fingerprint
 from src.sync.models import GuestExerciseTypeMapping, GuestWorkoutMapping, SyncLog
 from src.sync.schemas import GuestSyncPayload, GuestWorkout, SyncResult
 from src.users.models import User
@@ -195,6 +196,7 @@ class SyncService:
         user_id: int,
         idempotency_key: str | None = None,
     ) -> SyncResult:
+        fingerprint = request_fingerprint(payload)
         try:
             # Serialize imports for this account across request keys and server processes.
             await session.execute(
@@ -232,6 +234,10 @@ class SyncService:
                     )
                 )
                 if log:
+                    if log.request_fingerprint not in (None, fingerprint):
+                        raise ValueError(
+                            "Idempotency key was already used for a different request"
+                        )
                     if workout_ids.keys() != submitted.keys():
                         raise ValueError(
                             "Cannot confirm every workout for this idempotency key"
@@ -377,6 +383,7 @@ class SyncService:
                     synced_exercises=synced_exercises,
                     synced_sets=synced_sets,
                     synced_routines=0,
+                    request_fingerprint=fingerprint,
                 )
                 session.add(sync_log)
 
