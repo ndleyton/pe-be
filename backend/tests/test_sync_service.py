@@ -147,12 +147,16 @@ async def test_literal_custom_types_and_stable_replay(db_session):
         exerciseTypes=[*definitions, GuestExerciseType(id="unused", name="Seed")],
     )
     first = await SyncService.sync_guest_data(db_session, payload, user.id, "key")
-    assert first.success
-    assert first == await SyncService.sync_guest_data(
-        db_session, payload, user.id, "key"
+    assert first.success and first.importedWorkoutIds == ["first"]
+    replay = await SyncService.sync_guest_data(db_session, payload, user.id, "key")
+    # Mapping-only replays never confirm submitted content.
+    assert replay == first.model_copy(update={"importedWorkoutIds": []})
+    edited = workout.model_copy(update={"notes": "edited during sync"})
+    retry = await SyncService.sync_guest_data(
+        db_session, payload.model_copy(update={"workouts": [edited]}), user.id, "fresh"
     )
-    retry = await SyncService.sync_guest_data(db_session, payload, user.id, "fresh")
     assert retry.success and retry.workoutIdMap == first.workoutIdMap
+    assert retry.importedWorkoutIds == []
     assert retry.syncedWorkouts == retry.syncedExercises == retry.syncedSets == 0
     for model, count in [
         (Workout, 1),
@@ -660,15 +664,17 @@ async def test_second_device_reuses_private_type(db_session, status):
 
 async def test_legacy_seeds_map_to_released_types(db_session):
     user = await _seed_user(db_session)
+    await _seed_intensity_unit(db_session)
     squat = ExerciseType(name="Barbell Squat", status="released")
-    db_session.add(squat)
+    db_session.add_all([squat, IntensityUnit(id=2, name="Pounds", abbreviation="lb")])
     await db_session.flush()
     seed = "Lower body exercise"
     refs = {
-        "old-seed": ("Squat", seed),
-        "seed": ("Barbell Squat", seed),
-        "other-case": ("squat", seed),
-        "custom": ("Barbell Squat", "Custom exercise"),
+        "old-seed": ("Squat", seed, 1),
+        "seed": ("Barbell Squat", seed, 1),
+        "other-case": ("squat", seed, 1),
+        "custom": ("Barbell Squat", "Custom exercise", 1),
+        "edited-unit": ("Barbell Squat", seed, 2),
     }
     payload = GuestSyncPayload(
         workouts=[
@@ -680,7 +686,8 @@ async def test_legacy_seeds_map_to_released_types(db_session):
             )
         ],
         exerciseTypes=[
-            GuestExerciseType(id=r, name=n, description=d) for r, (n, d) in refs.items()
+            GuestExerciseType(id=r, name=n, description=d, default_intensity_unit=u)
+            for r, (n, d, u) in refs.items()
         ],
     )
     result = await SyncService.sync_guest_data(db_session, payload, user.id)
@@ -701,6 +708,7 @@ async def test_legacy_seeds_map_to_released_types(db_session):
         "seed": "released",
         "other-case": "candidate",
         "custom": "candidate",
+        "edited-unit": "candidate",
     }
 
 

@@ -15,32 +15,32 @@ from src.workouts.models import Workout, WorkoutType
 logger = logging.getLogger(__name__)
 
 # The retired guest seed (pe-be-tracker-frontend/src/stores/seeds/exerciseTypes.ts):
-# released catalog name -> seed description. Seeds carry no server ID, so an exact
-# (name, description) match is the only way to recognize one; custom types get
-# "Custom exercise" and never match.
-_SEED_DESCRIPTIONS = {
-    "Push-ups": "Upper body bodyweight exercise",
-    "Barbell Squat": "Lower body exercise",
-    "Bench Press": "Upper body strength exercise",
-    "Barbell Deadlift": "Full body strength exercise",
-    "Pull-ups": "Upper body bodyweight pulling exercise",
-    "Barbell Row": "Back strength exercise",
-    "Wide-Grip Lat Pulldown": "Upper back and lat exercise",
-    "Face Pull": "Rear deltoid and upper back exercise",
-    "Dumbbell Bicep Curl": "Bicep isolation exercise",
-    "Hammer Curls": "Bicep and forearm exercise",
-    "Overhead Press": "Shoulder and tricep exercise",
-    "Dips": "Tricep and chest bodyweight exercise",
-    "Barbell Incline Bench Press - Medium Grip": "Upper chest strength exercise",
-    "Machine Triceps Extension": "Tricep isolation exercise",
-    "Side Lateral Raise": "Side deltoid exercise",
-    "Bulgarian Split Squats": "Single leg quad and glute exercise",
-    "Romanian Deadlift": "Hamstring and glute exercise",
-    "Walking Lunges": "Dynamic leg and glute exercise",
-    "Leg Press": "Quad and glute machine exercise",
-    "Standing Calf Raises": "Calf muscle exercise",
-    "Leg Curls": "Hamstring isolation exercise",
-    "Leg Extensions": "Quadricep isolation exercise",
+# released catalog name -> (seed description, default unit). Seeds carry no server ID,
+# so an exact (name, description, unit) match is the only way to recognize one; custom
+# types get "Custom exercise" and edited seeds differ, so both stay private candidates.
+_SEEDS = {
+    "Push-ups": ("Upper body bodyweight exercise", 5),
+    "Barbell Squat": ("Lower body exercise", 1),
+    "Bench Press": ("Upper body strength exercise", 1),
+    "Barbell Deadlift": ("Full body strength exercise", 1),
+    "Pull-ups": ("Upper body bodyweight pulling exercise", 5),
+    "Barbell Row": ("Back strength exercise", 1),
+    "Wide-Grip Lat Pulldown": ("Upper back and lat exercise", 2),
+    "Face Pull": ("Rear deltoid and upper back exercise", 2),
+    "Dumbbell Bicep Curl": ("Bicep isolation exercise", 2),
+    "Hammer Curls": ("Bicep and forearm exercise", 2),
+    "Overhead Press": ("Shoulder and tricep exercise", 1),
+    "Dips": ("Tricep and chest bodyweight exercise", 5),
+    "Barbell Incline Bench Press - Medium Grip": ("Upper chest strength exercise", 2),
+    "Machine Triceps Extension": ("Tricep isolation exercise", 2),
+    "Side Lateral Raise": ("Side deltoid exercise", 2),
+    "Bulgarian Split Squats": ("Single leg quad and glute exercise", 2),
+    "Romanian Deadlift": ("Hamstring and glute exercise", 2),
+    "Walking Lunges": ("Dynamic leg and glute exercise", 1),
+    "Leg Press": ("Quad and glute machine exercise", 2),
+    "Standing Calf Raises": ("Calf muscle exercise", 2),
+    "Leg Curls": ("Hamstring isolation exercise", 2),
+    "Leg Extensions": ("Quadricep isolation exercise", 2),
 }
 # Seed names before #443 renamed them to the catalog names.
 _PRE_443_NAMES = {
@@ -55,10 +55,10 @@ _PRE_443_NAMES = {
     "Romanian Deadlifts": "Romanian Deadlift",
     "Calf Raises": "Standing Calf Raises",
 }
-# (seed name, seed description) -> released catalog name
+# (seed name, seed description, default unit) -> released catalog name
 LEGACY_SEEDS = {
-    (seed_name, _SEED_DESCRIPTIONS[name]): name
-    for seed_name, name in ({n: n for n in _SEED_DESCRIPTIONS} | _PRE_443_NAMES).items()
+    (seed_name, *_SEEDS[name]): name
+    for seed_name, name in ({n: n for n in _SEEDS} | _PRE_443_NAMES).items()
 }
 
 
@@ -113,7 +113,14 @@ async def _resolve_exercise_types(session, workouts, definitions, user_id):
     seed_refs = {
         ref: LEGACY_SEEDS[key]
         for ref in refs - server_ids.keys()
-        if (key := (by_id[ref].name, by_id[ref].description)) in LEGACY_SEEDS
+        if (
+            key := (
+                by_id[ref].name,
+                by_id[ref].description,
+                by_id[ref].default_intensity_unit,
+            )
+        )
+        in LEGACY_SEEDS
     }
     if seed_refs:
         # At most one released type per lower(name): uq_exercise_types_released_lower_name.
@@ -244,8 +251,9 @@ class SyncService:
                 if log:
                     if log.request_fingerprint is None:
                         # Logs from before key binding can't prove which request
-                        # created them; the client keeps its data and retries
-                        # with a fresh key.
+                        # created them. The client keeps its local data and pauses
+                        # automatic retries for these workouts until durable
+                        # evidence links the original server workout to them.
                         raise ValueError(
                             "Cannot confirm the request for this idempotency key"
                         )
@@ -257,9 +265,11 @@ class SyncService:
                         raise ValueError(
                             "Cannot confirm every workout for this idempotency key"
                         )
+                    # A replay only returns mappings; it confirms no submitted edits.
                     result = SyncResult(
                         success=log.success,
                         workoutIdMap=workout_ids,
+                        importedWorkoutIds=[],
                         syncedWorkouts=log.synced_workouts,
                         syncedExercises=log.synced_exercises,
                         syncedSets=log.synced_sets,
@@ -412,6 +422,9 @@ class SyncService:
                 syncedExercises=synced_exercises,
                 syncedSets=synced_sets,
                 workoutIdMap=workout_ids,
+                # Already-mapped workouts are left unchanged, so only these
+                # guest IDs have their submitted content saved by this request.
+                importedWorkoutIds=[w.id for w in pending],
                 syncedRoutines=0,
             )
         except ValueError as exc:
