@@ -4,6 +4,7 @@ from decimal import Decimal
 from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.sync.models import GuestExerciseTypeMapping
 from src.sync.service import SyncService
 from src.sync.schemas import (
     GuestSyncPayload,
@@ -596,12 +597,18 @@ async def test_second_device_reuses_private_type(db_session, status):
     ]
 
 
-async def test_legacy_seed_names_map_to_released_types(db_session):
+async def test_legacy_seeds_map_to_released_types(db_session):
     user = await _seed_user(db_session)
     squat = ExerciseType(name="Barbell Squat", status="released")
     db_session.add(squat)
     await db_session.flush()
-    refs = {"old-seed": "Squat", "seed": "Barbell Squat", "custom": "squat"}
+    seed = "Lower body exercise"
+    refs = {
+        "old-seed": ("Squat", seed),
+        "seed": ("Barbell Squat", seed),
+        "other-case": ("squat", seed),
+        "custom": ("Barbell Squat", "Custom exercise"),
+    }
     payload = GuestSyncPayload(
         workouts=[
             GuestWorkout(
@@ -611,21 +618,26 @@ async def test_legacy_seed_names_map_to_released_types(db_session):
                 exercises=[GuestExercise(id=r, exercise_type_id=r) for r in refs],
             )
         ],
-        exerciseTypes=[GuestExerciseType(id=r, name=n) for r, n in refs.items()],
+        exerciseTypes=[
+            GuestExerciseType(id=r, name=n, description=d) for r, (n, d) in refs.items()
+        ],
     )
     result = await SyncService.sync_guest_data(db_session, payload, user.id)
     assert result.success
-    rows = dict(
+    mapped = dict(
         (
             await db_session.execute(
-                select(Exercise.id, ExerciseType)
-                .join(ExerciseType, Exercise.exercise_type_id == ExerciseType.id)
-                .order_by(Exercise.id)
+                select(GuestExerciseTypeMapping.guest_id, ExerciseType.status).join(
+                    ExerciseType,
+                    GuestExerciseTypeMapping.exercise_type_id == ExerciseType.id,
+                )
             )
         ).all()
     )
-    types = list(rows.values())
-    # Exact seed names (current and pre-#443) reuse the released type.
-    assert types[0].id == types[1].id == squat.id
-    # A custom name that only differs in case stays private.
-    assert types[2].status == "candidate" and types[2].owner_id == user.id
+    # Exact seed definitions, current or pre-#443 name, reuse the released type.
+    assert mapped == {
+        "old-seed": "released",
+        "seed": "released",
+        "other-case": "candidate",
+        "custom": "candidate",
+    }

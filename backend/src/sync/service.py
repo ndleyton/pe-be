@@ -57,7 +57,7 @@ _PRE_443_NAMES = {
 # (seed name, seed description) -> released catalog name
 LEGACY_SEEDS = {
     (seed_name, _SEED_DESCRIPTIONS[name]): name
-    for seed_name, name in {n: n for n in _SEED_DESCRIPTIONS} | _PRE_443_NAMES.items()
+    for seed_name, name in ({n: n for n in _SEED_DESCRIPTIONS} | _PRE_443_NAMES).items()
 }
 
 
