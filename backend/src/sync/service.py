@@ -1,15 +1,107 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Dict, Optional
 
-from src.sync.schemas import GuestSyncPayload, SyncResult
-from src.workouts.models import Workout, WorkoutType
-from src.exercises.models import Exercise, ExerciseType
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.exercise_sets.models import ExerciseSet
-from src.sync.models import SyncLog
+from src.exercises.models import Exercise, ExerciseType
+from src.sync.models import GuestExerciseTypeMapping, GuestWorkoutMapping, SyncLog
+from src.sync.schemas import GuestSyncPayload, GuestWorkout, SyncResult
+from src.users.models import User
+from src.workouts.models import Workout, WorkoutType
 
 logger = logging.getLogger(__name__)
+
+
+async def _resolve_exercise_types(session, workouts, definitions, user_id):
+    refs = {e.exercise_type_id for workout in workouts for e in workout.exercises}
+    by_id = {}
+    for definition in definitions:
+        if definition.id in refs:
+            if definition.id in by_id and by_id[definition.id] != definition:
+                raise ValueError(
+                    f"Conflicting definitions for exercise type {definition.id}"
+                )
+            by_id[definition.id] = definition
+
+    local_ids = {ref for ref in refs if not ref.isdecimal()}
+    mapped = (
+        dict(
+            (
+                await session.execute(
+                    select(
+                        GuestExerciseTypeMapping.guest_id,
+                        GuestExerciseTypeMapping.exercise_type_id,
+                    ).where(
+                        GuestExerciseTypeMapping.user_id == user_id,
+                        GuestExerciseTypeMapping.guest_id.in_(local_ids),
+                    )
+                )
+            ).all()
+        )
+        if local_ids
+        else {}
+    )
+
+    server_ids = {}
+    for ref in refs:
+        definition = by_id.get(ref)
+        explicit = definition.external_id if definition else None
+        if explicit is not None and not explicit.isdecimal():
+            raise ValueError(f"Invalid external exercise type ID for {ref}")
+        targets = {
+            int(id_)
+            for id_ in (ref if ref.isdecimal() else None, explicit, mapped.get(ref))
+            if id_ is not None
+        }
+        if len(targets) > 1:
+            raise ValueError(f"Conflicting server exercise type IDs for {ref}")
+        if targets:
+            server_ids[ref] = targets.pop()
+        elif definition is None:
+            raise ValueError(f"Missing exercise type definition for {ref}")
+
+    if server_ids:
+        visible = set(
+            await session.scalars(
+                select(ExerciseType.id).where(
+                    ExerciseType.id.in_(set(server_ids.values())),
+                    (ExerciseType.status == "released")
+                    | (ExerciseType.owner_id == user_id),
+                )
+            )
+        )
+        for ref, server_id in server_ids.items():
+            if server_id not in visible:
+                raise ValueError(f"Exercise type {ref} is unavailable")
+
+    for ref in sorted(local_ids - mapped.keys()):
+        if ref not in server_ids:
+            definition = by_id[ref]
+            candidate = ExerciseType(
+                name=definition.name,
+                description=definition.description,
+                default_intensity_unit=definition.default_intensity_unit,
+                owner_id=user_id,
+                status="candidate",
+            )
+            session.add(candidate)
+            try:
+                await session.flush()
+            except IntegrityError as exc:
+                if "uq_exercise_types_owner_lower_name_nonreleased" in str(exc.orig):
+                    raise ValueError(
+                        f"A private exercise named {definition.name!r} already exists"
+                    ) from exc
+                raise
+            server_ids[ref] = candidate.id
+        session.add(
+            GuestExerciseTypeMapping(
+                user_id=user_id, guest_id=ref, exercise_type_id=server_ids[ref]
+            )
+        )
+    return server_ids
 
 
 class SyncService:
@@ -18,109 +110,96 @@ class SyncService:
         session: AsyncSession,
         payload: GuestSyncPayload,
         user_id: int,
-        idempotency_key: Optional[str] = None,
+        idempotency_key: str | None = None,
     ) -> SyncResult:
-        """
-        Synchronize guest data to the server in a single transaction.
-        Supports request-level idempotency via an idempotency key.
-        """
-        # 0. Check for existing idempotency key
-        if idempotency_key:
-            stmt = select(SyncLog).where(
-                SyncLog.user_id == user_id, SyncLog.idempotency_key == idempotency_key
+        try:
+            # Serialize imports for this account across request keys and server processes.
+            await session.execute(
+                select(User.id)
+                .where(User.id == user_id)
+                .with_for_update(key_share=True)
             )
-            existing_log = (await session.execute(stmt)).scalar_one_or_none()
-            if existing_log:
-                logger.info(
-                    f"Returning cached sync result for idempotency key: {idempotency_key}"
-                )
-                return SyncResult(
-                    success=existing_log.success,
-                    syncedWorkouts=existing_log.synced_workouts,
-                    syncedExercises=existing_log.synced_exercises,
-                    syncedSets=existing_log.synced_sets,
-                    syncedRoutines=existing_log.synced_routines,
-                )
-
-        synced_workouts = 0
-        synced_exercises = 0
-        synced_sets = 0
-        # TODO: Implement routine synchronization
-        synced_routines = 0
-
-        # 1. Map Exercise Types
-        # We need to map guest UUIDs to server IDs
-        exercise_type_map: Dict[str, int] = {}
-
-        for guest_et in payload.exerciseTypes:
-            existing_et = None
-
-            # 1a. Try to find by external_id (server ID)
-            if guest_et.external_id and guest_et.external_id.isdigit():
-                stmt = select(ExerciseType).where(
-                    ExerciseType.id == int(guest_et.external_id)
-                )
-                existing_et = (await session.execute(stmt)).scalar_one_or_none()
-
-            # 1b. Try to find by name (case-insensitive) if not found by ID
-            if not existing_et:
-                stmt = (
-                    select(ExerciseType)
-                    .where(
-                        (ExerciseType.name.ilike(guest_et.name))
-                        & (
-                            (ExerciseType.owner_id == user_id)
-                            | (ExerciseType.status == "released")
+            submitted: dict[str, GuestWorkout] = {}
+            for workout_data in payload.workouts:
+                if (
+                    workout_data.id in submitted
+                    and submitted[workout_data.id] != workout_data
+                ):
+                    raise ValueError(
+                        f"Conflicting workouts with guest ID {workout_data.id}"
+                    )
+                submitted[workout_data.id] = workout_data
+            workout_ids = dict(
+                (
+                    await session.execute(
+                        select(
+                            GuestWorkoutMapping.guest_id, GuestWorkoutMapping.workout_id
+                        ).where(
+                            GuestWorkoutMapping.user_id == user_id,
+                            GuestWorkoutMapping.guest_id.in_(submitted),
                         )
                     )
+                ).all()
+            )
+            if idempotency_key:
+                log = await session.scalar(
+                    select(SyncLog).where(
+                        SyncLog.user_id == user_id,
+                        SyncLog.idempotency_key == idempotency_key,
+                    )
+                )
+                if log:
+                    replay_map = (
+                        log.workout_id_map
+                        if log.workout_id_map is not None
+                        else workout_ids
+                    )
+                    if replay_map.keys() != submitted.keys():
+                        raise ValueError(
+                            "Cannot confirm every workout for this idempotency key"
+                        )
+                    result = SyncResult(
+                        success=log.success,
+                        workoutIdMap=replay_map,
+                        syncedWorkouts=log.synced_workouts,
+                        syncedExercises=log.synced_exercises,
+                        syncedSets=log.synced_sets,
+                        syncedRoutines=log.synced_routines,
+                    )
+                    await session.commit()
+                    return result
+
+            pending = [w for ref, w in submitted.items() if ref not in workout_ids]
+            exercise_type_map = await _resolve_exercise_types(
+                session, pending, payload.exerciseTypes, user_id
+            )
+            synced_workouts = synced_exercises = synced_sets = 0
+            workout_type_map: dict[str, int] = {}
+            needed_types = {workout.workout_type_id for workout in pending}
+            for guest_wt in payload.workoutTypes:
+                if guest_wt.id not in needed_types:
+                    continue
+                stmt = (
+                    select(WorkoutType)
+                    .where(WorkoutType.name.ilike(guest_wt.name))
                     .limit(1)
                 )
                 result = await session.execute(stmt)
-                existing_et = result.scalar_one_or_none()
+                existing_wt = result.scalar_one_or_none()
 
-            if existing_et:
-                exercise_type_map[guest_et.id] = existing_et.id
-            else:
-                # Create a new candidate exercise type
-                new_et = ExerciseType(
-                    name=guest_et.name,
-                    description=guest_et.description or "Synced from guest data",
-                    default_intensity_unit=guest_et.default_intensity_unit,
-                    owner_id=user_id,
-                    status="candidate",
-                )
-                session.add(new_et)
-                await session.flush()  # Get the ID
-                exercise_type_map[guest_et.id] = new_et.id
+                if existing_wt:
+                    workout_type_map[guest_wt.id] = existing_wt.id
+                else:
+                    # Workout types are usually globally defined
+                    new_wt = WorkoutType(
+                        name=guest_wt.name,
+                        description=guest_wt.description or "Synced from guest data",
+                    )
+                    session.add(new_wt)
+                    await session.flush()
+                    workout_type_map[guest_wt.id] = new_wt.id
 
-        # 2. Map Workout Types
-        workout_type_map: Dict[str, int] = {}
-        for guest_wt in payload.workoutTypes:
-            stmt = (
-                select(WorkoutType)
-                .where(WorkoutType.name.ilike(guest_wt.name))
-                .limit(1)
-            )
-            result = await session.execute(stmt)
-            existing_wt = result.scalar_one_or_none()
-
-            if existing_wt:
-                workout_type_map[guest_wt.id] = existing_wt.id
-            else:
-                # Workout types are usually globally defined
-                new_wt = WorkoutType(
-                    name=guest_wt.name,
-                    description=guest_wt.description or "Synced from guest data",
-                )
-                session.add(new_wt)
-                await session.flush()
-                workout_type_map[guest_wt.id] = new_wt.id
-
-        # 3. Create Workouts, Exercises, and Sets (Atomic)
-        from sqlalchemy.exc import IntegrityError
-
-        try:
-            for guest_w in payload.workouts:
+            for guest_w in pending:
                 server_wt_id = workout_type_map.get(guest_w.workout_type_id)
 
                 # Fallback: if not in map, maybe it's already a server ID
@@ -151,20 +230,6 @@ class SyncService:
                         await session.flush()
                         server_wt_id = new_st.id
 
-                # Idempotency check: Don't create if a workout with same start_time exists for user
-                stmt = select(Workout).where(
-                    Workout.owner_id == user_id,
-                    Workout.start_time == guest_w.start_time,
-                    # Ensure we don't pick up soft-deleted workouts?
-                    # Workout.deleted_at.is_(None) is usually implicit but depends on global filters
-                )
-                existing_workout = (await session.execute(stmt)).scalar_one_or_none()
-                if existing_workout:
-                    logger.info(
-                        f"Skipping duplicate workout with start_time {guest_w.start_time}"
-                    )
-                    continue
-
                 workout = Workout(
                     name=guest_w.name,
                     notes=guest_w.notes,
@@ -175,36 +240,19 @@ class SyncService:
                 )
                 session.add(workout)
                 await session.flush()
+                workout_ids[guest_w.id] = workout.id
+                session.add(
+                    GuestWorkoutMapping(
+                        user_id=user_id, guest_id=guest_w.id, workout_id=workout.id
+                    )
+                )
                 synced_workouts += 1
 
                 for guest_e in guest_w.exercises:
-                    server_et_id = exercise_type_map.get(guest_e.exercise_type_id)
-
-                    # Fallback: if not in map, maybe it's already a server ID
-                    if not server_et_id and guest_e.exercise_type_id.isdigit():
-                        candidate_id = int(guest_e.exercise_type_id)
-                        # Verify it exists and is accessible
-                        stmt = select(ExerciseType).where(
-                            (ExerciseType.id == candidate_id)
-                            & (
-                                (ExerciseType.owner_id == user_id)
-                                | (ExerciseType.status == "released")
-                            )
-                        )
-                        existing = (await session.execute(stmt)).scalar_one_or_none()
-                        if existing:
-                            server_et_id = existing.id
-
-                    if not server_et_id:
-                        logger.warning(
-                            f"Skipping exercise with unknown type: {guest_e.exercise_type_id}"
-                        )
-                        continue
-
                     exercise = Exercise(
                         timestamp=guest_e.timestamp or guest_w.start_time,
                         notes=guest_e.notes,
-                        exercise_type_id=server_et_id,
+                        exercise_type_id=exercise_type_map[guest_e.exercise_type_id],
                         workout_id=workout.id,
                     )
                     session.add(exercise)
@@ -250,7 +298,8 @@ class SyncService:
                     synced_workouts=synced_workouts,
                     synced_exercises=synced_exercises,
                     synced_sets=synced_sets,
-                    synced_routines=synced_routines,
+                    workout_id_map=workout_ids,
+                    synced_routines=0,
                 )
                 session.add(sync_log)
 
@@ -261,37 +310,13 @@ class SyncService:
                 syncedWorkouts=synced_workouts,
                 syncedExercises=synced_exercises,
                 syncedSets=synced_sets,
-                syncedRoutines=synced_routines,
+                workoutIdMap=workout_ids,
+                syncedRoutines=0,
             )
-        except IntegrityError:
-            # Handle race condition for duplicate idempotency key
+        except ValueError as exc:
             await session.rollback()
-            if idempotency_key:
-                stmt = select(SyncLog).where(
-                    SyncLog.user_id == user_id,
-                    SyncLog.idempotency_key == idempotency_key,
-                )
-                existing_log = (await session.execute(stmt)).scalar_one_or_none()
-                if existing_log:
-                    logger.info(
-                        "Sync race: returning persistent winner for idempotency key"
-                    )
-                    return SyncResult(
-                        success=existing_log.success,
-                        syncedWorkouts=existing_log.synced_workouts,
-                        syncedExercises=existing_log.synced_exercises,
-                        syncedSets=existing_log.synced_sets,
-                        syncedRoutines=existing_log.synced_routines,
-                    )
-            # If it's not the idempotency key, re-raise as a generic error
-            logger.exception(
-                "Bulk sync hit integrity error not related to idempotency key"
-            )
-            return SyncResult(success=False, error="Integrity error during sync commit")
-        except Exception as e:
+            return SyncResult(success=False, error=str(exc))
+        except Exception:
             logger.exception("Bulk sync failed")
             await session.rollback()
-            return SyncResult(
-                success=False,
-                error=str(e),
-            )
+            return SyncResult(success=False, error="Guest import failed")

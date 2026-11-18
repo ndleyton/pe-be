@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timezone
 from decimal import Decimal
-from sqlalchemy import select
+from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.sync.service import SyncService
@@ -117,61 +117,62 @@ async def test_sync_guest_data_creates_new_records(db_session: AsyncSession):
     assert es.done is True
 
 
-async def test_sync_guest_data_reuses_existing_types(db_session: AsyncSession):
+async def test_literal_custom_types_and_stable_replay(db_session):
+    user = await _seed_user(db_session)
     await _seed_intensity_unit(db_session)
-    user = await _seed_user(db_session, email="user2@example.com")
-    user_id = user.id
-
-    # Create existing exercise type
-    et = ExerciseType(name="Barbell Squat", status="released", default_intensity_unit=1)
-    db_session.add(et)
-
-    wt = WorkoutType(name="Legs", description="Leg workout")
-    db_session.add(wt)
+    released = ExerciseType(name="Bench", status="released")
+    db_session.add(released)
     await db_session.flush()
-
-    # Payload referencing the existing types by name
-    payload = GuestSyncPayload(
-        workouts=[
-            GuestWorkout(
-                id="guest-w2",
-                name="Leg Day",
-                start_time=datetime.now(timezone.utc),
-                workout_type_id="guest-wt-legs",
-                exercises=[
-                    GuestExercise(
-                        id="guest-ex2",
-                        exercise_type_id="guest-et-squat",
-                        exercise_sets=[
-                            GuestExerciseSet(id="guest-s2", reps=5, intensity_unit_id=1)
-                        ],
-                    )
-                ],
-            )
-        ],
-        exerciseTypes=[
-            GuestExerciseType(
-                id="guest-et-squat",
-                name="Barbell Squat",  # Matches existing by name
-            )
-        ],
-        workoutTypes=[
-            GuestWorkoutType(
-                id="guest-wt-legs",
-                name="Legs",  # Matches existing by name
-            )
-        ],
+    definitions = [
+        GuestExerciseType(id=f"local-{name}", name=name) for name in ("Bench", "%", "_")
+    ]
+    exercises = [
+        GuestExercise(
+            id=ref,
+            exercise_type_id=ref,
+            exercise_sets=[GuestExerciseSet(id="set", reps=5, intensity_unit_id=1)],
+        )
+        for ref in [d.id for d in definitions] + [str(released.id)]
+    ]
+    workout = GuestWorkout(
+        id="first",
+        start_time=datetime.now(timezone.utc),
+        workout_type_id="wt",
+        exercises=exercises,
     )
-
-    result = await SyncService.sync_guest_data(db_session, payload, user_id)
-
-    assert result.success is True
-
-    # Verify no new exercise types were created (we only want one 'Barbell Squat')
-    stmt = select(ExerciseType).where(ExerciseType.name == "Barbell Squat")
-    results = (await db_session.execute(stmt)).scalars().all()
-    assert len(results) == 1
-    assert results[0].id == et.id
+    payload = GuestSyncPayload(
+        workouts=[workout],
+        exerciseTypes=[*definitions, GuestExerciseType(id="unused", name="Seed")],
+    )
+    first = await SyncService.sync_guest_data(db_session, payload, user.id, "key")
+    assert first.success
+    assert first == await SyncService.sync_guest_data(
+        db_session, payload, user.id, "key"
+    )
+    retry = await SyncService.sync_guest_data(db_session, payload, user.id, "fresh")
+    assert retry.success and retry.workoutIdMap == first.workoutIdMap
+    assert retry.syncedWorkouts == retry.syncedExercises == retry.syncedSets == 0
+    for model, count in [
+        (Workout, 1),
+        (Exercise, 4),
+        (ExerciseSet, 4),
+        (ExerciseType, 4),
+    ]:
+        assert await db_session.scalar(select(func.count()).select_from(model)) == count
+    candidates = (
+        await db_session.scalars(
+            select(ExerciseType).where(ExerciseType.owner_id == user.id)
+        )
+    ).all()
+    assert {(et.name, et.status) for et in candidates} == {
+        (name, "candidate") for name in ("Bench", "%", "_")
+    }
+    payload.workouts = [workout.model_copy(update={"id": "second"})]
+    second = await SyncService.sync_guest_data(db_session, payload, user.id)
+    assert (
+        second.success and second.workoutIdMap["second"] != first.workoutIdMap["first"]
+    )
+    assert await db_session.scalar(select(func.count()).select_from(ExerciseType)) == 4
 
 
 async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
@@ -235,7 +236,7 @@ async def test_sync_guest_data_rolls_back_on_error(db_session: AsyncSession):
     assert workout is None
 
 
-async def test_sync_guest_data_skips_duplicate_workouts(db_session: AsyncSession):
+async def test_timestamp_collision_with_unmapped_workout(db_session: AsyncSession):
     await _seed_intensity_unit(db_session)
     user = await _seed_user(db_session, email="skip@example.com")
     user_id = user.id
@@ -270,12 +271,8 @@ async def test_sync_guest_data_skips_duplicate_workouts(db_session: AsyncSession
 
     result = await SyncService.sync_guest_data(db_session, payload, user_id)
     assert result.success is True
-    assert result.syncedWorkouts == 0  # Should have been skipped
-
-    # Verify name remains the old one
-    stmt = select(Workout).where(Workout.owner_id == user_id)
-    workout = (await db_session.execute(stmt)).scalar_one()
-    assert workout.name == "Existing"
+    assert result.syncedWorkouts == 1
+    assert result.workoutIdMap["g1"] != existing.id
 
 
 async def test_sync_guest_data_is_idempotent(db_session: AsyncSession):
@@ -419,3 +416,151 @@ async def test_sync_guest_data_falls_back_to_server_id(db_session: AsyncSession)
     stmt = select(Exercise).where(Exercise.workout_id == workout.id)
     exercise = (await db_session.execute(stmt)).scalar_one()
     assert exercise.exercise_type_id == et.id
+
+
+async def test_visibility_lookup_batched_across_workouts(db_session):
+    user = await _seed_user(db_session)
+    types = [ExerciseType(name=name, status="released") for name in ("A", "B")]
+    db_session.add_all(types)
+    await db_session.flush()
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id=wid,
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="wt",
+                exercises=[
+                    GuestExercise(id=str(et.id), exercise_type_id=str(et.id))
+                    for et in types
+                ],
+            )
+            for wid in ("one", "two")
+        ]
+    )
+    statements = []
+
+    def capture(conn, cursor, statement, params, context, many):
+        if "FROM exercise_types" in statement and "exercise_types.status" in statement:
+            statements.append(statement)
+
+    engine = db_session.bind.sync_engine
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        result = await SyncService.sync_guest_data(db_session, payload, user.id)
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+    assert result.success and len(statements) == 1
+    for wid in ("one", "two"):
+        ids = await db_session.scalars(
+            select(Exercise.exercise_type_id)
+            .where(Exercise.workout_id == result.workoutIdMap[wid])
+            .order_by(Exercise.id)
+        )
+        assert list(ids) == [et.id for et in types]
+
+
+@pytest.mark.parametrize("reference", ["direct", "external", "missing"])
+async def test_unavailable_reference_aborts_import(db_session, reference):
+    user = await _seed_user(db_session)
+    other = await _seed_user(db_session, "other@example.com")
+    private = ExerciseType(name="Private", status="candidate", owner_id=other.id)
+    db_session.add(private)
+    await db_session.commit()
+    ref = str(private.id) if reference == "direct" else "local"
+    definitions = (
+        [GuestExerciseType(id=ref, name="Private", external_id=str(private.id))]
+        if reference == "external"
+        else []
+    )
+    payload = GuestSyncPayload(
+        exerciseTypes=definitions,
+        workouts=[
+            GuestWorkout(
+                id="w",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="wt",
+                exercises=[GuestExercise(id="e", exercise_type_id=ref)],
+            )
+        ],
+    )
+    result = await SyncService.sync_guest_data(db_session, payload, user.id)
+    assert not result.success
+    assert await db_session.scalar(select(func.count()).select_from(Workout)) == 0
+
+
+@pytest.mark.parametrize("second_key", ["first-key", "fresh-key"])
+async def test_concurrent_retries_share_workout(db_session, second_key):
+    import asyncio
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    user = await _seed_user(db_session)
+    user_id = user.id
+    await db_session.commit()
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="guest", start_time=datetime.now(timezone.utc), workout_type_id="wt"
+            )
+        ]
+    )
+    sessions = async_sessionmaker(db_session.bind)
+    async with sessions() as first, sessions() as second:
+        a, b = await asyncio.gather(
+            SyncService.sync_guest_data(first, payload, user_id, "first-key"),
+            SyncService.sync_guest_data(second, payload, user_id, second_key),
+        )
+    assert a.success and b.success
+    assert a.workoutIdMap == b.workoutIdMap
+    assert await db_session.scalar(select(func.count()).select_from(Workout)) == 1
+    assert sorted([a.syncedWorkouts, b.syncedWorkouts]) == (
+        [1, 1] if second_key == "first-key" else [0, 1]
+    )
+
+
+async def test_counts_only_replay_requires_durable_mapping(db_session):
+    from src.sync.models import SyncLog
+
+    user = await _seed_user(db_session)
+    user_id = user.id
+    db_session.add(
+        SyncLog(user_id=user_id, idempotency_key="legacy", synced_workouts=1)
+    )
+    await db_session.commit()
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="g", start_time=datetime.now(timezone.utc), workout_type_id="wt"
+            )
+        ]
+    )
+    result = await SyncService.sync_guest_data(db_session, payload, user_id, "legacy")
+    assert not result.success and result.workoutIdMap == {}
+    assert await db_session.scalar(select(func.count()).select_from(Workout)) == 0
+    fresh = await SyncService.sync_guest_data(db_session, payload, user_id, "fresh")
+    replay = await SyncService.sync_guest_data(db_session, payload, user_id, "legacy")
+    assert fresh.success and replay.success
+    assert replay.workoutIdMap == fresh.workoutIdMap
+
+
+async def test_conflicting_candidate_name_rolls_back(db_session):
+    user = await _seed_user(db_session)
+    payload = GuestSyncPayload(
+        workouts=[
+            GuestWorkout(
+                id="g",
+                start_time=datetime.now(timezone.utc),
+                workout_type_id="wt",
+                exercises=[
+                    GuestExercise(id=ref, exercise_type_id=ref) for ref in ("a", "b")
+                ],
+            )
+        ],
+        exerciseTypes=[
+            GuestExerciseType(id="a", name="Bench"),
+            GuestExerciseType(id="b", name="bench"),
+        ],
+    )
+    await db_session.commit()
+    result = await SyncService.sync_guest_data(db_session, payload, user.id)
+    assert not result.success and "already exists" in result.error
+    assert await db_session.scalar(select(func.count()).select_from(ExerciseType)) == 0

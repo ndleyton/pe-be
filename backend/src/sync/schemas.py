@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional
 from datetime import datetime, timezone
 from decimal import Decimal
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class GuestIntensityUnit(BaseModel):
@@ -91,6 +91,7 @@ class GuestSyncPayload(BaseModel):
 
 class SyncResult(BaseModel):
     success: bool
+    workoutIdMap: dict[str, int] = Field(default_factory=dict)
     syncedWorkouts: Optional[int] = None
     syncedExercises: Optional[int] = None
     syncedSets: Optional[int] = None
