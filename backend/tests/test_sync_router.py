@@ -58,3 +58,10 @@ async def test_sync_endpoint_success(
     data = response.json()
     assert data["success"] is True
     assert data["syncedWorkouts"] == 1
+    from sqlalchemy import select
+    from src.workouts.models import Workout
+
+    workout_id = await db_session.scalar(
+        select(Workout.id).where(Workout.owner_id == user.id)
+    )
+    assert data["workoutIdMap"] == {"g-w1": workout_id}
