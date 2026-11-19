@@ -12,6 +12,7 @@ from src.core.object_storage import (
 )
 
 PUBLISHED_PREFIX = "published/"
+PRIVATE_IMAGE_PREFIXES = ("generated/", "uploads/")
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,36 @@ def parse_image_url_list(raw_value: str | list[str] | None) -> list[str]:
         return []
 
     return [item for item in parsed if isinstance(item, str) and item]
+
+
+def is_private_exercise_image_url(image_url: str) -> bool:
+    """Return True when an image reference points to auth-gated storage."""
+    normalized = image_url.lstrip("/")
+    if normalized.startswith(PRIVATE_IMAGE_PREFIXES):
+        return True
+
+    for asset_prefix in {
+        f"{settings.API_PREFIX.strip('/')}/exercises/assets/".lstrip("/"),
+        "api/v1/exercises/assets/",
+    }:
+        if normalized.startswith(asset_prefix):
+            return normalized[len(asset_prefix) :].startswith(PRIVATE_IMAGE_PREFIXES)
+    return False
+
+
+def parse_public_image_url_list(raw_value: str | list[str] | None) -> list[str]:
+    """Parse an image list while omitting private generated or uploaded paths."""
+    return [
+        image
+        for image in parse_image_url_list(raw_value)
+        if not is_private_exercise_image_url(image)
+    ]
+
+
+def public_image_urls_json(raw_value: str | list[str] | None) -> str | None:
+    """Serialize public-safe image URLs as JSON, or None when none remain."""
+    public_images = parse_public_image_url_list(raw_value)
+    return json.dumps(public_images) if public_images else None
 
 
 def storage_path_for_relative_url(relative_url: str) -> Path:

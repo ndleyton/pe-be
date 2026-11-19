@@ -1,7 +1,6 @@
 from typing import Optional, List, Dict, TYPE_CHECKING, Any, Literal
 from datetime import datetime, timezone, date
 import logging
-import json
 from pydantic import (
     ConfigDict,
     field_validator,
@@ -11,7 +10,8 @@ from pydantic import (
     model_validator,
 )
 from src.exercises.image_assets import (
-    parse_image_url_list,
+    parse_public_image_url_list,
+    public_image_urls_json,
     resolve_exercise_image_urls,
 )
 from src.exercises.models import ExerciseType as ExerciseTypeModel
@@ -218,11 +218,7 @@ class ExerciseTypeRead(BaseModel):
     def extract_muscles_from_relationship(cls, data: Any) -> Any:
         """Extract muscles from exercise_muscles relationship with TaxonomyCache fallback."""
         if isinstance(data, dict):
-            result = dict(data)
-            result["reference_images_url"] = cls._public_reference_images_json(
-                result.get("reference_images_url")
-            )
-            return result
+            return data
 
         # Handle SQLAlchemy model objects
         if hasattr(data, "exercise_muscles") and hasattr(data, "__dict__"):
@@ -293,34 +289,29 @@ class ExerciseTypeRead(BaseModel):
 
             result["muscles"] = serialized_muscles
             result["primary_muscle"] = primary_muscle
-            result["reference_images_url"] = cls._public_reference_images_json(
-                result.get("reference_images_url")
-            )
 
             return result
 
         return data
 
-    @staticmethod
-    def _public_reference_images_json(raw_value: Any) -> str | None:
-        reference_images = [
-            image
-            for image in parse_image_url_list(raw_value)
-            if not image.startswith("uploads/")
-        ]
-        return json.dumps(reference_images) if reference_images else None
+    @field_validator("images_url", "reference_images_url", mode="before")
+    @classmethod
+    def sanitize_public_image_urls(cls, value: Any) -> str | None:
+        return public_image_urls_json(value)
 
     @computed_field
     @property
     def images(self) -> List[str]:
         """Process image URLs with IMAGE_URL_PREFIX for relative URLs"""
-        return resolve_exercise_image_urls(parse_image_url_list(self.images_url))
+        return resolve_exercise_image_urls(
+            parse_public_image_url_list(self.images_url)
+        )
 
     @computed_field
     @property
     def reference_images(self) -> List[str]:
         return resolve_exercise_image_urls(
-            parse_image_url_list(self.reference_images_url)
+            parse_public_image_url_list(self.reference_images_url)
         )
 
     model_config = ConfigDict(from_attributes=True)

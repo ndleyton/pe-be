@@ -168,6 +168,17 @@ async def test_exercise_type_and_intensity_unit_service_wrappers(monkeypatch):
     )
 
     fake_get_exercise_types.assert_awaited_once_with(session, "row", 7, "name", 5, 10)
+    assert (
+        await ExerciseTypeService.get_all_exercise_types(
+            session,
+            name="Bench Press",
+            exact_name=True,
+        )
+        is paginated
+    )
+    fake_get_exercise_types.assert_awaited_with(
+        session, "Bench Press", None, "usage", 0, 100, exact_name=True
+    )
     fake_get_exercise_type_by_id.assert_awaited_once_with(session, 5)
     fake_get_exercise_type_stats.assert_awaited_once_with(
         session, 5, 12, exercise_type=None, metrics_version=1

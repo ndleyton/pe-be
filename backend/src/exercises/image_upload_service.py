@@ -12,6 +12,7 @@ from src.core.config import settings
 from src.exercises.image_assets import (
     exercise_image_storage_dir,
     parse_image_url_list,
+    parse_public_image_url_list,
     resolve_exercise_image_url,
     storage_path_for_relative_url,
 )
@@ -245,7 +246,7 @@ async def list_exercise_type_images(
                 status="active",
                 url=resolve_exercise_image_url(image),
             )
-            for image in parse_image_url_list(exercise_type.images_url)
+            for image in parse_public_image_url_list(exercise_type.images_url)
         ]
         return ExerciseTypeImagesResponse(
             exercise_type_id=exercise_type.id, images=images

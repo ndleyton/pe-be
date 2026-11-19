@@ -276,12 +276,17 @@ async def get_exercise_types(
         default=False,
         description="Restrict results to released exercise types only",
     ),
+    exact_name: bool = Query(
+        default=False,
+        description="Match exercise type name by exact normalized equality only",
+    ),
     user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
     is_anonymous = user is None
-    cacheable = name is None and (released_only or is_anonymous)
+    is_exact_name = exact_name is True
+    cacheable = name is None and not is_exact_name and (released_only or is_anonymous)
     cache_control, vary = _exercise_types_cache_headers(
         released_only=released_only,
         is_anonymous=is_anonymous,
@@ -321,6 +326,7 @@ async def get_exercise_types(
         limit,
         user=user,
         released_only=released_only,
+        **({"exact_name": True} if is_exact_name else {}),
     )
     response_payload = traced_model_dump(
         response_model,

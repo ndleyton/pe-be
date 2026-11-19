@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, delete, desc, or_, select, true, update
+from sqlalchemy import and_, case, delete, desc, func, or_, select, true, update
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
@@ -569,8 +569,21 @@ async def get_exercise_types(
     user_id: Optional[int] = None,
     is_admin: bool = False,
     released_only: bool = False,
+    exact_name: bool = False,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
+    normalized_name = _normalized_exercise_type_name(name) if name is not None else ""
+    if exact_name and not normalized_name:
+        return _build_paginated_exercise_types_response(
+            exercise_types=[],
+            next_cursor=None,
+            offset=offset,
+            limit=limit,
+            name=name,
+            muscle_group_id=muscle_group_id,
+            order_by=order_by,
+        )
+
     visibility_clause = _exercise_type_visibility_clause(
         user_id=user_id,
         is_admin=is_admin,
@@ -592,9 +605,10 @@ async def get_exercise_types(
         with tracer.start_as_current_span(
             "exercises.crud.get_exercise_types.fetch_candidates"
         ) as span:
-            span.set_attribute(
-                "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
-            )
+            if not exact_name:
+                span.set_attribute(
+                    "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
+                )
             candidate_query = select(
                 ExerciseType.id,
                 ExerciseType.name,
@@ -610,9 +624,16 @@ async def get_exercise_types(
                         )
                     )
                 )
-            result = await session.execute(
-                candidate_query.limit(MAX_FUZZY_SEARCH_RESULTS)
+            exact_name_expr = (
+                func.lower(func.btrim(ExerciseType.name)) == normalized_name
             )
+            if exact_name:
+                candidate_query = candidate_query.where(exact_name_expr)
+            else:
+                candidate_query = candidate_query.order_by(
+                    case((exact_name_expr, 0), else_=1)
+                ).limit(MAX_FUZZY_SEARCH_RESULTS)
+            result = await session.execute(candidate_query)
             candidate_rows = result.all()
             span.set_attribute(
                 "exercise_types.search.candidate_count", len(candidate_rows)
@@ -631,7 +652,8 @@ async def get_exercise_types(
                 (
                     row
                     for row in candidate_rows
-                    if row[1] and row[1].lower() == name.lower()
+                    if row[1]
+                    and _normalized_exercise_type_name(row[1]) == normalized_name
                 ),
                 key=lambda row: _exact_match_sort_key(
                     status=row[2],
@@ -642,7 +664,7 @@ async def get_exercise_types(
                 ),
             )
         ]
-        if exact_match_ids:
+        if exact_match_ids or exact_name:
             total_results = len(exact_match_ids)
             paged_exact_match_ids = exact_match_ids[offset : offset + limit]
             exercise_types = await _hydrate_exercise_types_by_ids(

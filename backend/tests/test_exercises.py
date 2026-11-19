@@ -887,6 +887,195 @@ async def test_get_exercise_types_route_forwards_muscle_group_filter(monkeypatch
     assert fake_get_all.await_args.args[1:] == (None, 9, "usage", 2, 5)
 
 
+def test_get_exercise_types_route_forwards_exact_name_filter(
+    client: TestClient, monkeypatch
+):
+    from src.core.database import get_async_session
+    from src.exercises.schemas import PaginatedExerciseTypesResponse
+
+    fake_get_all = AsyncMock(
+        return_value=PaginatedExerciseTypesResponse(data=[], next_cursor=None)
+    )
+    monkeypatch.setattr(
+        "src.exercises.router.ExerciseTypeService.get_all_exercise_types",
+        fake_get_all,
+    )
+
+    async def _override_session():
+        yield object()
+
+    app.dependency_overrides[get_async_session] = _override_session
+    try:
+        response = client.get(
+            f"{settings.API_PREFIX}/exercises/exercise-types/?name=Bench%20Press&exact_name=true"
+        )
+    finally:
+        app.dependency_overrides.pop(get_async_session, None)
+
+    assert response.status_code == 200
+    fake_get_all.assert_awaited_once()
+    assert fake_get_all.await_args.args[1:] == ("Bench Press", None, "usage", 0, 100)
+    assert fake_get_all.await_args.kwargs["exact_name"] is True
+
+
+def test_exercise_type_read_omits_private_image_paths_while_keeping_published():
+    from src.routines.schemas import ExerciseTypeRead as RoutineExerciseTypeRead
+
+    base = {
+        "id": 10,
+        "name": "Incline Press",
+        "description": "Chest",
+        "default_intensity_unit": 1,
+        "times_used": 3,
+        "status": "released",
+        "created_at": "2026-03-24T10:00:00+00:00",
+        "updated_at": "2026-03-24T10:00:00+00:00",
+    }
+    mixed = ExerciseTypeRead.model_validate(
+        {
+            **base,
+            "images_url": json.dumps(
+                [
+                    "generated/exercise-type-10/private.png",
+                    "uploads/exercise-type-candidates/user-1/exercise-type-10/ref.png",
+                    f"{settings.API_PREFIX}/exercises/assets/generated/exercise-type-10/a.png",
+                    "published/exercise-type-10/live.png",
+                    "https://example.com/public.png",
+                ]
+            ),
+            "reference_images_url": json.dumps(
+                [
+                    "uploads/exercise-type-candidates/user-1/exercise-type-10/ref.png",
+                    "generated/exercise-type-10/preview.png",
+                    "https://example.com/reference.png",
+                ]
+            ),
+        }
+    )
+
+    assert json.loads(mixed.images_url) == [
+        "published/exercise-type-10/live.png",
+        "https://example.com/public.png",
+    ]
+    assert mixed.images == [
+        f"{settings.API_PREFIX}/exercises/assets/published/exercise-type-10/live.png",
+        "https://example.com/public.png",
+    ]
+    assert json.loads(mixed.reference_images_url) == [
+        "https://example.com/reference.png"
+    ]
+    assert mixed.reference_images == ["https://example.com/reference.png"]
+
+    private_only = ExerciseTypeRead.model_validate(
+        {
+            **base,
+            "images_url": json.dumps(["generated/exercise-type-10/only.png"]),
+            "reference_images_url": json.dumps(
+                ["uploads/exercise-type-candidates/user-1/exercise-type-10/only.png"]
+            ),
+        }
+    )
+    assert private_only.images_url is None
+    assert private_only.images == []
+    assert private_only.reference_images_url is None
+    assert private_only.reference_images == []
+
+    routine_type = RoutineExerciseTypeRead.model_validate(
+        {
+            "id": 10,
+            "name": "Incline Press",
+            "description": "Chest",
+            "default_intensity_unit": 1,
+            "times_used": 3,
+            "images_url": json.dumps(
+                [
+                    "generated/exercise-type-10/private.png",
+                    "published/exercise-type-10/live.png",
+                ]
+            ),
+        }
+    )
+    assert json.loads(routine_type.images_url) == [
+        "published/exercise-type-10/live.png"
+    ]
+    assert routine_type.images == [
+        f"{settings.API_PREFIX}/exercises/assets/published/exercise-type-10/live.png"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_anonymous_released_catalog_serves_published_thumbnails_and_omits_private_images(
+    async_client: AsyncClient, db_session, tmp_path, monkeypatch
+):
+    from src.exercises.service import ExerciseTypeService
+
+    monkeypatch.setattr(ExerciseTypeService, "_metadata_cache", {})
+    monkeypatch.setattr(settings, "EXERCISE_IMAGE_STORAGE_DIR", str(tmp_path))
+
+    published_type = ExerciseType(
+        name="Catalog Published Squat",
+        status=ExerciseType.ExerciseTypeStatus.released,
+        images_url=json.dumps(
+            [
+                "generated/exercise-type-1/private.png",
+                "published/exercise-type-1/live.png",
+            ]
+        ),
+    )
+    private_only_type = ExerciseType(
+        name="Catalog Private Only Squat",
+        status=ExerciseType.ExerciseTypeStatus.released,
+        images_url=json.dumps(["generated/exercise-type-2/private.png"]),
+        reference_images_url=json.dumps(
+            ["uploads/exercise-type-candidates/user-1/exercise-type-2/ref.png"]
+        ),
+    )
+    db_session.add_all([published_type, private_only_type])
+    await db_session.commit()
+    await db_session.refresh(published_type)
+    await db_session.refresh(private_only_type)
+
+    private_asset = tmp_path / "generated/exercise-type-1/private.png"
+    published_asset = tmp_path / "published/exercise-type-1/live.png"
+    private_asset.parent.mkdir(parents=True, exist_ok=True)
+    published_asset.parent.mkdir(parents=True, exist_ok=True)
+    private_asset.write_bytes(b"private")
+    published_asset.write_bytes(b"published")
+
+    for url in (
+        f"{settings.API_PREFIX}/exercises/exercise-types/",
+        f"{settings.API_PREFIX}/exercises/exercise-types/?name=Catalog",
+    ):
+        response = await async_client.get(url)
+        assert response.status_code == 200
+        by_id = {item["id"]: item for item in response.json()["data"]}
+        assert by_id[published_type.id]["images"] == [
+            f"{settings.API_PREFIX}/exercises/assets/published/exercise-type-1/live.png"
+        ]
+        assert by_id[private_only_type.id]["images"] == []
+        assert by_id[private_only_type.id]["images_url"] is None
+        assert by_id[private_only_type.id]["reference_images"] == []
+        assert by_id[private_only_type.id]["reference_images_url"] is None
+
+    detail_response = await async_client.get(
+        f"{settings.API_PREFIX}/exercises/exercise-types/{private_only_type.id}"
+    )
+    assert detail_response.status_code == 200
+    assert detail_response.json()["images"] == []
+    assert detail_response.json()["images_url"] is None
+
+    published_fetch = await async_client.get(
+        by_id[published_type.id]["images"][0]
+    )
+    assert published_fetch.status_code == 200
+    assert published_fetch.content == b"published"
+
+    private_fetch = await async_client.get(
+        f"{settings.API_PREFIX}/exercises/assets/generated/exercise-type-1/private.png"
+    )
+    assert private_fetch.status_code == 401
+
+
 @pytest.mark.asyncio
 async def test_get_muscle_groups_route_returns_service_data(monkeypatch):
     from src.exercises import router as exercises_router
