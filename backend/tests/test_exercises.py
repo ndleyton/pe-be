@@ -918,9 +918,13 @@ def test_get_exercise_types_route_forwards_exact_name_filter(
     assert fake_get_all.await_args.kwargs["exact_name"] is True
 
 
-def test_exercise_type_read_omits_private_image_paths_while_keeping_published():
+def test_exercise_type_read_omits_private_image_paths_while_keeping_published(
+    monkeypatch,
+):
     from src.routines.schemas import ExerciseTypeRead as RoutineExerciseTypeRead
 
+    monkeypatch.setattr(settings, "FRONTEND_URL", "https://app.example.com")
+    assets = f"https://app.example.com{settings.API_PREFIX}/exercises/assets"
     base = {
         "id": 10,
         "name": "Incline Press",
@@ -947,6 +951,8 @@ def test_exercise_type_read_omits_private_image_paths_while_keeping_published():
                 [
                     "uploads/exercise-type-candidates/user-1/exercise-type-10/ref.png",
                     "generated/exercise-type-10/preview.png",
+                    f"{assets}/generated/exercise-type-10/private.png?version=1",
+                    f"{assets}/uploads/exercise-type-candidates/ref.png",
                     "https://example.com/reference.png",
                 ]
             ),
@@ -1064,9 +1070,7 @@ async def test_anonymous_released_catalog_serves_published_thumbnails_and_omits_
     assert detail_response.json()["images"] == []
     assert detail_response.json()["images_url"] is None
 
-    published_fetch = await async_client.get(
-        by_id[published_type.id]["images"][0]
-    )
+    published_fetch = await async_client.get(by_id[published_type.id]["images"][0])
     assert published_fetch.status_code == 200
     assert published_fetch.content == b"published"
 

@@ -303,9 +303,7 @@ class ExerciseTypeRead(BaseModel):
     @property
     def images(self) -> List[str]:
         """Process image URLs with IMAGE_URL_PREFIX for relative URLs"""
-        return resolve_exercise_image_urls(
-            parse_public_image_url_list(self.images_url)
-        )
+        return resolve_exercise_image_urls(parse_public_image_url_list(self.images_url))
 
     @computed_field
     @property

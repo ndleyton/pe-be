@@ -728,7 +728,7 @@ async def test_get_exercise_types_exact_name_matches_normalized_visibility_witho
     other_user = await _seed_user(db_session, "exact-lookup-other@example.com")
     released = await _seed_exercise_type(
         db_session,
-        "  Bench Press  ",
+        "\u00a0 Bench Press\t",
         released_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     owner_candidate = await _seed_exercise_type(
@@ -744,6 +744,7 @@ async def test_get_exercise_types_exact_name_matches_normalized_visibility_witho
         status=ExerciseType.ExerciseTypeStatus.candidate,
     )
     await _seed_exercise_type(db_session, "Bench Presser")
+    dotted_i = await _seed_exercise_type(db_session, "İtiş")
     await db_session.commit()
 
     monkeypatch.setattr(
@@ -759,6 +760,12 @@ async def test_get_exercise_types_exact_name_matches_normalized_visibility_witho
     )
     assert [item.id for item in anonymous_match.data] == [released.id]
     assert anonymous_match.next_cursor is None
+
+    for exact_name in (True, False):
+        unicode_match = await crud.get_exercise_types(
+            db_session, name="İtiş", exact_name=exact_name
+        )
+        assert [item.id for item in unicode_match.data] == [dotted_i.id]
 
     owner_match = await crud.get_exercise_types(
         db_session, name="BENCH PRESS", user_id=owner.id, exact_name=True

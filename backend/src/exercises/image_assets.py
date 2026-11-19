@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import unquote, urlsplit
 
 from src.core.config import settings
 from src.core.object_storage import (
@@ -67,8 +68,19 @@ def parse_image_url_list(raw_value: str | list[str] | None) -> list[str]:
 
 def is_private_exercise_image_url(image_url: str) -> bool:
     """Return True when an image reference points to auth-gated storage."""
-    normalized = image_url.lstrip("/")
-    if normalized.startswith(PRIVATE_IMAGE_PREFIXES):
+    try:
+        url = urlsplit(image_url)
+    except ValueError:
+        return True  # An invalid URL cannot supply a usable public thumbnail.
+    normalized = unquote(url.path).lstrip("/")
+    if url.netloc:
+        app_hosts = {
+            urlsplit(settings.FRONTEND_URL).hostname,
+            urlsplit(settings.GOOGLE_REDIRECT_URI).hostname,
+        }
+        if url.hostname not in app_hosts:
+            return False
+    elif normalized.startswith(PRIVATE_IMAGE_PREFIXES):
         return True
 
     for asset_prefix in {

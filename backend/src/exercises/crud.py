@@ -102,8 +102,13 @@ def _exercise_type_visibility_clause(
     )
 
 
-def _normalized_exercise_type_name(name: str) -> str:
-    return name.strip().lower()
+# PostgreSQL btrim defaults to just the space character. Share the whitespace
+# recognized by Python str.strip() so stored names and search input match.
+_NAME_WHITESPACE = (
+    " \t\n\r\v\f\x1c\x1d\x1e\x1f\x85\xa0\u1680"
+    "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000"
+)
 
 
 def _exercise_type_relationship_option(deep: bool = False):
@@ -572,8 +577,7 @@ async def get_exercise_types(
     exact_name: bool = False,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
-    normalized_name = _normalized_exercise_type_name(name) if name is not None else ""
-    if exact_name and not normalized_name:
+    if exact_name and (name is None or not name.strip(_NAME_WHITESPACE)):
         return _build_paginated_exercise_types_response(
             exercise_types=[],
             next_cursor=None,
@@ -609,12 +613,16 @@ async def get_exercise_types(
                 span.set_attribute(
                     "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
                 )
+            exact_name_expr = func.lower(
+                func.btrim(ExerciseType.name, _NAME_WHITESPACE)
+            ) == func.lower(func.btrim(name, _NAME_WHITESPACE))
             candidate_query = select(
                 ExerciseType.id,
                 ExerciseType.name,
                 ExerciseType.status,
                 ExerciseType.owner_id,
                 ExerciseType.updated_at,
+                exact_name_expr.label("matches_exact_name"),
             ).where(visibility_clause)
             if muscle_group_id is not None:
                 candidate_query = candidate_query.where(
@@ -624,9 +632,6 @@ async def get_exercise_types(
                         )
                     )
                 )
-            exact_name_expr = (
-                func.lower(func.btrim(ExerciseType.name)) == normalized_name
-            )
             if exact_name:
                 candidate_query = candidate_query.where(exact_name_expr)
             else:
@@ -641,25 +646,14 @@ async def get_exercise_types(
 
         # Quick path: exact (case-insensitive) name match for determinism
         exact_match_ids = [
-            exercise_type_id
-            for (
-                exercise_type_id,
-                candidate_name,
-                candidate_status,
-                candidate_owner_id,
-                candidate_updated_at,
-            ) in sorted(
-                (
-                    row
-                    for row in candidate_rows
-                    if row[1]
-                    and _normalized_exercise_type_name(row[1]) == normalized_name
-                ),
+            row.id
+            for row in sorted(
+                (row for row in candidate_rows if row.matches_exact_name),
                 key=lambda row: _exact_match_sort_key(
-                    status=row[2],
-                    owner_id=row[3],
-                    updated_at=row[4],
-                    exercise_type_id=row[0],
+                    status=row.status,
+                    owner_id=row.owner_id,
+                    updated_at=row.updated_at,
+                    exercise_type_id=row.id,
                     user_id=user_id,
                 ),
             )
@@ -687,15 +681,9 @@ async def get_exercise_types(
 
         # Filter out None/empty names to avoid TypeError from thefuzz
         valid_candidates = [
-            (exercise_type_id, candidate_name)
-            for (
-                exercise_type_id,
-                candidate_name,
-                _candidate_status,
-                _candidate_owner_id,
-                _candidate_updated_at,
-            ) in candidate_rows
-            if isinstance(candidate_name, str) and candidate_name.strip()
+            (row.id, row.name)
+            for row in candidate_rows
+            if isinstance(row.name, str) and row.name.strip()
         ]
 
         # Use name->id mapping and pass only names to thefuzz to avoid tuple-order

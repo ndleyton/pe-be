@@ -28,9 +28,7 @@ class ExerciseTypeRead(BaseModel):
     @computed_field
     @property
     def images(self) -> List[str]:
-        return resolve_exercise_image_urls(
-            parse_public_image_url_list(self.images_url)
-        )
+        return resolve_exercise_image_urls(parse_public_image_url_list(self.images_url))
 
     model_config = ConfigDict(from_attributes=True)
 
