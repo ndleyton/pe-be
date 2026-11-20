@@ -11,7 +11,7 @@ const describeCompletion = (syncedCount: number, keptCount: number) => {
       ? "Your data has been synced successfully"
       : "Successfully signed in";
   }
-  const kept = `${workouts(keptCount)} ${keptCount === 1 ? "is" : "are"} kept on this device and ${keptCount === 1 ? "wasn't" : "weren't"} uploaded.`;
+  const kept = `${workouts(keptCount)} ${keptCount === 1 ? "is" : "are"} kept on this device.`;
   return syncedCount > 0 ? `Synced ${workouts(syncedCount)}. ${kept}` : kept;
 };
 

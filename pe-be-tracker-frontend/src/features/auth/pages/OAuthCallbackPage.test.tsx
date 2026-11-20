@@ -208,7 +208,7 @@ describe("OAuthCallbackPage", () => {
 
     renderPostLoginRoute();
 
-    expect(await screen.findByText("1 workout is kept on this device and wasn't uploaded.")).toBeInTheDocument();
+    expect(await screen.findByText("1 workout is kept on this device.")).toBeInTheDocument();
     expect(mocks.guestState.syncWithServer).not.toHaveBeenCalled();
   });
 
@@ -223,13 +223,13 @@ describe("OAuthCallbackPage", () => {
       "nothing uploaded",
       [{ id: "guest-workout-1" }, { id: "guest-workout-2" }],
       makeSyncResult({ deletedWorkoutIds: ["guest-workout-1", "guest-workout-2"] }),
-      "2 workouts are kept on this device and weren't uploaded.",
+      "2 workouts are kept on this device.",
     ],
     [
       "some workouts uploaded",
       [{ id: "guest-workout-2" }],
       makeSyncResult({ syncedWorkouts: 1, deletedWorkoutIds: ["guest-workout-2"] }),
-      "Synced 1 workout. 1 workout is kept on this device and wasn't uploaded.",
+      "Synced 1 workout. 1 workout is kept on this device.",
     ],
   ])(
     "describes the sync outcome when %s",

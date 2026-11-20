@@ -16,7 +16,7 @@ interface UsePostLoginCompletionResult {
   initialGuestWorkoutCount: number;
   /** Workouts the server imported in this sign-in. */
   syncedWorkoutCount: number;
-  /** Guest workouts still stored only on this device after sync. */
+  /** Guest workouts still stored on this device after sync. */
   keptWorkoutCount: number;
   syncStatus: PostLoginStatus;
 }
