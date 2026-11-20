@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
   const guestState = {
     hydrated: true,
     workouts: [] as Array<{ id: string }>,
+    syncBlockedWorkoutIdsByUser: {} as Record<string, string[]>,
     syncWithServer: vi.fn(),
   };
   const consumePostLoginDestination = vi.fn();
@@ -58,6 +59,7 @@ describe("usePostLoginCompletion", () => {
     mocks.authState.refresh.mockReset();
     mocks.guestState.hydrated = true;
     mocks.guestState.workouts = [];
+    mocks.guestState.syncBlockedWorkoutIdsByUser = {};
     mocks.guestState.syncWithServer.mockReset();
     mocks.consumePostLoginDestination.mockReturnValue(null);
   });

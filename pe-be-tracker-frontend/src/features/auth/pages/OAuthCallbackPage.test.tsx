@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const guestState = {
     hydrated: true,
     workouts: [] as Array<{ id: string }>,
+    syncBlockedWorkoutIdsByUser: {} as Record<string, string[]>,
     syncWithServer: vi.fn(),
   };
   const consumePostLoginDestination = vi.fn();
@@ -96,6 +97,7 @@ describe("OAuthCallbackPage", () => {
     mocks.authState.refresh.mockReset();
     mocks.guestState.hydrated = true;
     mocks.guestState.workouts = [];
+    mocks.guestState.syncBlockedWorkoutIdsByUser = {};
     mocks.guestState.syncWithServer.mockReset();
     mocks.consumePostLoginDestination.mockReturnValue(null);
   });
@@ -196,4 +198,60 @@ describe("OAuthCallbackPage", () => {
       expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("completes sign-in without starting sync when all workouts are blocked for this account", async () => {
+    mocks.guestState.workouts = [{ id: "guest-workout-1" }];
+    mocks.guestState.syncBlockedWorkoutIdsByUser = { 1: ["guest-workout-1"] };
+    mocks.authState.refresh.mockImplementation(async () => {
+      mocks.authState.user = { id: 1, email: "user@example.com" };
+    });
+
+    renderPostLoginRoute();
+
+    expect(await screen.findByText("1 workout is kept on this device and wasn't uploaded.")).toBeInTheDocument();
+    expect(mocks.guestState.syncWithServer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "every workout uploaded",
+      [] as Array<{ id: string }>,
+      makeSyncResult({ syncedWorkouts: 2 }),
+      "Your data has been synced successfully",
+    ],
+    [
+      "nothing uploaded",
+      [{ id: "guest-workout-1" }, { id: "guest-workout-2" }],
+      makeSyncResult({ deletedWorkoutIds: ["guest-workout-1", "guest-workout-2"] }),
+      "2 workouts are kept on this device and weren't uploaded.",
+    ],
+    [
+      "some workouts uploaded",
+      [{ id: "guest-workout-2" }],
+      makeSyncResult({ syncedWorkouts: 1, deletedWorkoutIds: ["guest-workout-2"] }),
+      "Synced 1 workout. 1 workout is kept on this device and wasn't uploaded.",
+    ],
+  ])(
+    "describes the sync outcome when %s",
+    async (_label, workoutsAfterSync, syncResult, expectedMessage) => {
+      mocks.guestState.workouts = [
+        { id: "guest-workout-1" },
+        { id: "guest-workout-2" },
+      ];
+      mocks.authState.refresh.mockImplementation(async () => {
+        mocks.authState.user = { id: 1, email: "user@example.com" };
+      });
+      mocks.guestState.syncWithServer.mockImplementation(async () => {
+        mocks.guestState.workouts = workoutsAfterSync;
+        return syncResult;
+      });
+
+      renderPostLoginRoute();
+
+      await waitFor(() => {
+        expect(screen.getByText("You're all set!")).toBeInTheDocument();
+      });
+      expect(screen.getByText(expectedMessage)).toBeInTheDocument();
+    },
+  );
 });

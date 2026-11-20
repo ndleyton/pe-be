@@ -33,6 +33,16 @@ export const emptySyncResult = (
   ...overrides,
 });
 
+export const getSyncableGuestWorkouts = (
+  state: Pick<GuestData, "workouts"> & {
+    syncBlockedWorkoutIdsByUser: Record<string, string[]>;
+  },
+  userId: number,
+) => {
+  const blocked = new Set(state.syncBlockedWorkoutIdsByUser[userId]);
+  return state.workouts.filter((workout) => !blocked.has(workout.id));
+};
+
 const describeSyncError = (error: unknown) => {
   if (error instanceof Error) {
     return {
@@ -123,10 +133,10 @@ export async function syncGuestDataToServer(
     const deletedWorkoutIds: string[] = result.deletedWorkoutIds ?? [];
     if (result.success) {
       return emptySyncResult({
-        syncedWorkouts: result.syncedWorkouts,
-        syncedExercises: result.syncedExercises,
-        syncedSets: result.syncedSets,
-        syncedRoutines: result.syncedRoutines,
+        syncedWorkouts: result.syncedWorkouts ?? 0,
+        syncedExercises: result.syncedExercises ?? 0,
+        syncedSets: result.syncedSets ?? 0,
+        syncedRoutines: result.syncedRoutines ?? 0,
         workoutIdMap: result.workoutIdMap ?? {},
         importedWorkoutIds: result.importedWorkoutIds ?? [],
         deletedWorkoutIds,

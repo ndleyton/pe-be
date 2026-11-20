@@ -89,7 +89,7 @@ describe("syncGuestDataToServer", () => {
         syncedWorkouts: 1,
         syncedExercises: 1,
         syncedSets: 1,
-        syncedRoutines: 0
+        syncedRoutines: null
       }
     });
 
@@ -166,6 +166,18 @@ describe("syncGuestDataToServer", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Database transaction failed");
+  });
+
+  it("defaults missing and null sync counts to zero", async () => {
+    (api.post as any).mockResolvedValueOnce({
+      data: { success: true, syncedWorkouts: null, syncedSets: null },
+    });
+
+    const result = await syncGuestDataToServer(
+      makeGuestData({ workouts: [makeGuestWorkout()] }),
+    );
+
+    expect(result).toEqual(makeSyncResult());
   });
 
   it("passes through the workout map, imported IDs and deleted IDs", async () => {
