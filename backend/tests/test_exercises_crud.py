@@ -721,6 +721,86 @@ async def test_get_exercise_types_exact_match_prefers_released_before_owned_draf
     assert [item.id for item in second_page.data] == [owner_candidate.id]
 
 
+async def test_get_exercise_types_exact_name_matches_normalized_visibility_without_fuzzy_fallback(
+    db_session, monkeypatch
+):
+    owner = await _seed_user(db_session, "exact-lookup-owner@example.com")
+    other_user = await _seed_user(db_session, "exact-lookup-other@example.com")
+    released = await _seed_exercise_type(
+        db_session,
+        "\u00a0 Bench Press\t",
+        released_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    owner_candidate = await _seed_exercise_type(
+        db_session,
+        "Bench Press",
+        owner_id=owner.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    other_candidate = await _seed_exercise_type(
+        db_session,
+        "Secret Press",
+        owner_id=other_user.id,
+        status=ExerciseType.ExerciseTypeStatus.candidate,
+    )
+    await _seed_exercise_type(db_session, "Bench Presser")
+    dotted_i = await _seed_exercise_type(db_session, "İtiş")
+    await db_session.commit()
+
+    monkeypatch.setattr(
+        crud.process,
+        "extractBests",
+        lambda *args, **kwargs: pytest.fail(
+            "Fuzzy fallback should not run for exact_name queries"
+        ),
+    )
+
+    anonymous_match = await crud.get_exercise_types(
+        db_session, name="  bench press ", exact_name=True
+    )
+    assert [item.id for item in anonymous_match.data] == [released.id]
+    assert anonymous_match.next_cursor is None
+
+    for exact_name in (True, False):
+        unicode_match = await crud.get_exercise_types(
+            db_session, name="İtiş", exact_name=exact_name
+        )
+        assert [item.id for item in unicode_match.data] == [dotted_i.id]
+
+    owner_match = await crud.get_exercise_types(
+        db_session, name="BENCH PRESS", user_id=owner.id, exact_name=True
+    )
+    assert [item.id for item in owner_match.data] == [released.id, owner_candidate.id]
+
+    hidden_match = await crud.get_exercise_types(
+        db_session,
+        name=other_candidate.name,
+        user_id=owner.id,
+        exact_name=True,
+    )
+    assert hidden_match.data == []
+
+    no_fuzzy = await crud.get_exercise_types(
+        db_session, name="Bench Pres", user_id=owner.id, exact_name=True
+    )
+    assert no_fuzzy.data == []
+    assert no_fuzzy.next_cursor is None
+
+    blank_exact = await crud.get_exercise_types(
+        db_session, name="   ", user_id=owner.id, exact_name=True
+    )
+    assert blank_exact.data == []
+
+    monkeypatch.setattr(crud, "MAX_FUZZY_SEARCH_RESULTS", 1)
+    untruncated_exact = await crud.get_exercise_types(
+        db_session, name="bench press", user_id=owner.id, exact_name=True
+    )
+    assert [item.id for item in untruncated_exact.data] == [
+        released.id,
+        owner_candidate.id,
+    ]
+
+
 async def test_create_exercise_type_creates_muscles_and_is_idempotent(db_session):
     unit = await _seed_intensity_unit(db_session, "Pounds", "lb")
     group = await _seed_muscle_group(db_session, "Upper Body")

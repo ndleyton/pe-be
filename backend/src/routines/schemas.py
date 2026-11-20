@@ -1,9 +1,10 @@
-from typing import Literal, Optional, List
+from typing import Any, Literal, Optional, List
 from datetime import datetime
 from decimal import Decimal
-from pydantic import ConfigDict, BaseModel, Field, computed_field
+from pydantic import ConfigDict, BaseModel, Field, computed_field, field_validator
 from src.exercises.image_assets import (
-    parse_image_url_list,
+    parse_public_image_url_list,
+    public_image_urls_json,
     resolve_exercise_image_urls,
 )
 from src.routines.models import Routine as RoutineModel
@@ -19,10 +20,15 @@ class ExerciseTypeRead(BaseModel):
     times_used: int
     images_url: Optional[str] = None
 
+    @field_validator("images_url", mode="before")
+    @classmethod
+    def sanitize_public_images_url(cls, value: Any) -> str | None:
+        return public_image_urls_json(value)
+
     @computed_field
     @property
     def images(self) -> List[str]:
-        return resolve_exercise_image_urls(parse_image_url_list(self.images_url))
+        return resolve_exercise_image_urls(parse_public_image_url_list(self.images_url))
 
     model_config = ConfigDict(from_attributes=True)
 

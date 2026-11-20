@@ -31,6 +31,7 @@ from src.core.observability import (
     traced_model_validate_many,
 )
 from src.exercises.image_assets import (
+    exercise_image_storage_dir,
     resolve_exercise_image_url,
     storage_path_for_relative_url,
 )
@@ -151,6 +152,13 @@ async def get_exercise_image_asset(
     user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
+    try:
+        file_path = storage_path_for_relative_url(image_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Exercise image not found") from exc
+    # Check access on the resolved path so "published/../generated/" can't skip auth.
+    image_path = file_path.relative_to(exercise_image_storage_dir()).as_posix()
+
     if image_path.startswith("generated/") and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -158,6 +166,9 @@ async def get_exercise_image_asset(
         )
 
     generated_match = re.match(r"^generated/exercise-type-(\d+)/", image_path)
+    if image_path.startswith("generated/") and not generated_match:
+        # Only per-exercise generated assets have a visibility check; serve nothing else.
+        raise HTTPException(status_code=404, detail="Exercise image not found")
     if generated_match and user is not None:
         exercise_type = await ExerciseTypeService.get_exercise_type(
             session,
@@ -197,11 +208,9 @@ async def get_exercise_image_asset(
             PROMOTED_STATUS,
         ):
             raise HTTPException(status_code=404, detail="Exercise image not found")
-
-    try:
-        file_path = storage_path_for_relative_url(image_path)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="Exercise image not found") from exc
+    elif image_path.startswith("uploads/"):
+        # Only candidate uploads have an ownership check; serve nothing else there.
+        raise HTTPException(status_code=404, detail="Exercise image not found")
 
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="Exercise image not found")
@@ -276,12 +285,17 @@ async def get_exercise_types(
         default=False,
         description="Restrict results to released exercise types only",
     ),
+    exact_name: bool = Query(
+        default=False,
+        description="Match exercise type name by exact normalized equality only",
+    ),
     user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all exercise types from the database with pagination."""
     is_anonymous = user is None
-    cacheable = name is None and (released_only or is_anonymous)
+    is_exact_name = exact_name is True
+    cacheable = name is None and not is_exact_name and (released_only or is_anonymous)
     cache_control, vary = _exercise_types_cache_headers(
         released_only=released_only,
         is_anonymous=is_anonymous,
@@ -321,6 +335,7 @@ async def get_exercise_types(
         limit,
         user=user,
         released_only=released_only,
+        **({"exact_name": True} if is_exact_name else {}),
     )
     response_payload = traced_model_dump(
         response_model,

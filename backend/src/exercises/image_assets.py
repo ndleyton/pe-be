@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import posixpath
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import unquote, urlsplit
 
 from src.core.config import settings
 from src.core.object_storage import (
@@ -12,6 +14,7 @@ from src.core.object_storage import (
 )
 
 PUBLISHED_PREFIX = "published/"
+PRIVATE_IMAGE_PREFIXES = ("generated/", "uploads/")
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,56 @@ def parse_image_url_list(raw_value: str | list[str] | None) -> list[str]:
         return []
 
     return [item for item in parsed if isinstance(item, str) and item]
+
+
+def is_private_exercise_image_url(image_url: str) -> bool:
+    """Return True when an image reference points to auth-gated storage."""
+    try:
+        url = urlsplit(image_url)
+    except ValueError:
+        return True  # An invalid URL cannot supply a usable public thumbnail.
+    if (url.netloc or url.scheme in ("http", "https")) and not url.hostname:
+        return True
+
+    if url.netloc:
+        app_hosts = {
+            host
+            for host in (
+                urlsplit(settings.FRONTEND_URL).hostname,
+                urlsplit(settings.GOOGLE_REDIRECT_URI).hostname,
+            )
+            if host
+        }
+        if url.hostname not in app_hosts:
+            return False
+    normalized = posixpath.normpath(unquote(url.path).lstrip("/"))
+    if normalized == ".." or normalized.startswith("../"):
+        return True
+    if not url.netloc and normalized.startswith(PRIVATE_IMAGE_PREFIXES):
+        return True
+
+    for asset_prefix in {
+        f"{settings.API_PREFIX.strip('/')}/exercises/assets/".lstrip("/"),
+        "api/v1/exercises/assets/",
+    }:
+        if normalized.startswith(asset_prefix):
+            return normalized[len(asset_prefix) :].startswith(PRIVATE_IMAGE_PREFIXES)
+    return False
+
+
+def parse_public_image_url_list(raw_value: str | list[str] | None) -> list[str]:
+    """Parse an image list while omitting private generated or uploaded paths."""
+    return [
+        image
+        for image in parse_image_url_list(raw_value)
+        if not is_private_exercise_image_url(image)
+    ]
+
+
+def public_image_urls_json(raw_value: str | list[str] | None) -> str | None:
+    """Serialize public-safe image URLs as JSON, or None when none remain."""
+    public_images = parse_public_image_url_list(raw_value)
+    return json.dumps(public_images) if public_images else None
 
 
 def storage_path_for_relative_url(relative_url: str) -> Path:

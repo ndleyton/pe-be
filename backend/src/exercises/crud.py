@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, delete, desc, or_, select, true, update
+from sqlalchemy import and_, case, delete, desc, func, or_, select, true, update
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from thefuzz import process, fuzz
@@ -102,8 +102,13 @@ def _exercise_type_visibility_clause(
     )
 
 
-def _normalized_exercise_type_name(name: str) -> str:
-    return name.strip().lower()
+# PostgreSQL btrim defaults to just the space character. Share the whitespace
+# recognized by Python str.strip() so stored names and search input match.
+_NAME_WHITESPACE = (
+    " \t\n\r\v\f\x1c\x1d\x1e\x1f\x85\xa0\u1680"
+    "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000"
+)
 
 
 def _exercise_type_relationship_option(deep: bool = False):
@@ -569,8 +574,20 @@ async def get_exercise_types(
     user_id: Optional[int] = None,
     is_admin: bool = False,
     released_only: bool = False,
+    exact_name: bool = False,
 ) -> PaginatedExerciseTypesResponse:
     """Get all exercise types with optional filtering, ordering and pagination"""
+    if exact_name and (name is None or not name.strip(_NAME_WHITESPACE)):
+        return _build_paginated_exercise_types_response(
+            exercise_types=[],
+            next_cursor=None,
+            offset=offset,
+            limit=limit,
+            name=name,
+            muscle_group_id=muscle_group_id,
+            order_by=order_by,
+        )
+
     visibility_clause = _exercise_type_visibility_clause(
         user_id=user_id,
         is_admin=is_admin,
@@ -592,15 +609,20 @@ async def get_exercise_types(
         with tracer.start_as_current_span(
             "exercises.crud.get_exercise_types.fetch_candidates"
         ) as span:
-            span.set_attribute(
-                "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
-            )
+            if not exact_name:
+                span.set_attribute(
+                    "exercise_types.search.candidate_limit", MAX_FUZZY_SEARCH_RESULTS
+                )
+            exact_name_expr = func.lower(
+                func.btrim(ExerciseType.name, _NAME_WHITESPACE)
+            ) == func.lower(func.btrim(name, _NAME_WHITESPACE))
             candidate_query = select(
                 ExerciseType.id,
                 ExerciseType.name,
                 ExerciseType.status,
                 ExerciseType.owner_id,
                 ExerciseType.updated_at,
+                exact_name_expr.label("matches_exact_name"),
             ).where(visibility_clause)
             if muscle_group_id is not None:
                 candidate_query = candidate_query.where(
@@ -610,9 +632,13 @@ async def get_exercise_types(
                         )
                     )
                 )
-            result = await session.execute(
-                candidate_query.limit(MAX_FUZZY_SEARCH_RESULTS)
-            )
+            if exact_name:
+                candidate_query = candidate_query.where(exact_name_expr)
+            else:
+                candidate_query = candidate_query.order_by(
+                    case((exact_name_expr, 0), else_=1)
+                ).limit(MAX_FUZZY_SEARCH_RESULTS)
+            result = await session.execute(candidate_query)
             candidate_rows = result.all()
             span.set_attribute(
                 "exercise_types.search.candidate_count", len(candidate_rows)
@@ -620,29 +646,19 @@ async def get_exercise_types(
 
         # Quick path: exact (case-insensitive) name match for determinism
         exact_match_ids = [
-            exercise_type_id
-            for (
-                exercise_type_id,
-                candidate_name,
-                candidate_status,
-                candidate_owner_id,
-                candidate_updated_at,
-            ) in sorted(
-                (
-                    row
-                    for row in candidate_rows
-                    if row[1] and row[1].lower() == name.lower()
-                ),
+            row.id
+            for row in sorted(
+                (row for row in candidate_rows if row.matches_exact_name),
                 key=lambda row: _exact_match_sort_key(
-                    status=row[2],
-                    owner_id=row[3],
-                    updated_at=row[4],
-                    exercise_type_id=row[0],
+                    status=row.status,
+                    owner_id=row.owner_id,
+                    updated_at=row.updated_at,
+                    exercise_type_id=row.id,
                     user_id=user_id,
                 ),
             )
         ]
-        if exact_match_ids:
+        if exact_match_ids or exact_name:
             total_results = len(exact_match_ids)
             paged_exact_match_ids = exact_match_ids[offset : offset + limit]
             exercise_types = await _hydrate_exercise_types_by_ids(
@@ -665,15 +681,9 @@ async def get_exercise_types(
 
         # Filter out None/empty names to avoid TypeError from thefuzz
         valid_candidates = [
-            (exercise_type_id, candidate_name)
-            for (
-                exercise_type_id,
-                candidate_name,
-                _candidate_status,
-                _candidate_owner_id,
-                _candidate_updated_at,
-            ) in candidate_rows
-            if isinstance(candidate_name, str) and candidate_name.strip()
+            (row.id, row.name)
+            for row in candidate_rows
+            if isinstance(row.name, str) and row.name.strip()
         ]
 
         # Use name->id mapping and pass only names to thefuzz to avoid tuple-order

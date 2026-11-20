@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.database import async_session_maker
 from src.exercises.crud import get_exercise_types, get_muscle_groups
+from src.exercises.image_assets import public_image_urls_json
 from src.exercises.models import ExerciseMuscle, ExerciseType, Muscle
 from src.exercises.substitution_service import ExerciseSubstitutionService
 from src.mcp.catalog_schemas import (
@@ -39,7 +40,7 @@ def _public_dto(exercise_type: ExerciseType) -> PublicExerciseTypeDTO:
         equipment=exercise_type.equipment,
         category=exercise_type.category,
         instructions=exercise_type.instructions,
-        images_url=exercise_type.images_url,
+        images_url=public_image_urls_json(exercise_type.images_url),
         muscles=[
             PublicMuscleDTO(
                 id=association.muscle.id,

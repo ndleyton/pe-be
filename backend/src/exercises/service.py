@@ -170,6 +170,7 @@ class ExerciseTypeService:
         *,
         user: Optional["User"] = None,
         released_only: bool = False,
+        exact_name: bool = False,
     ) -> PaginatedExerciseTypesResponse:
         """Get all exercise types with optional filtering, ordering and pagination"""
         await TaxonomyCache.ensure_loaded(session)
@@ -179,6 +180,8 @@ class ExerciseTypeService:
             kwargs["is_admin"] = bool(getattr(user, "is_superuser", False))
         if released_only:
             kwargs["released_only"] = True
+        if exact_name:
+            kwargs["exact_name"] = True
         return await get_exercise_types(
             session,
             name,
