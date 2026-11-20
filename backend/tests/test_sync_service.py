@@ -366,6 +366,14 @@ async def test_retries_do_not_recreate_a_deleted_workout(db_session):
         db_session, result.workoutIdMap["deleted-workout"], user_id
     )
 
+    # A new workout alongside the deleted one must not be saved: the import rolls back.
+    payload.workouts.append(
+        GuestWorkout(
+            id="new-workout",
+            start_time=datetime.now(timezone.utc),
+            workout_type_id="strength",
+        )
+    )
     for key in ("fresh", "original"):
         replay = await SyncService.sync_guest_data(db_session, payload, user_id, key)
         assert not replay.success
