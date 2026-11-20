@@ -112,7 +112,7 @@ describe("useGuestStore", () => {
     ) as ReturnType<typeof useGuestStore.getState>;
 
     expect(migrated.routines).toEqual([]);
-    expect(migrated.syncBlockedWorkoutIdsByUser).toEqual({});
+    expect(migrated.syncClaimedWorkoutIds).toEqual([]);
     expect(migrated.hasAttemptedSync).toBe(true);
   });
 
@@ -128,7 +128,7 @@ describe("useGuestStore", () => {
     await useGuestStore.persist.rehydrate();
 
     expect(useGuestStore.getState().workouts).toEqual(workouts);
-    expect(useGuestStore.getState().syncBlockedWorkoutIdsByUser).toEqual({});
+    expect(useGuestStore.getState().syncClaimedWorkoutIds).toEqual([]);
   });
 
   it("adds a workout", () => {
@@ -763,23 +763,38 @@ describe("useGuestStore", () => {
       ).toBe(12);
     });
 
-    it("does not drop an unsynced edit when a later sync only replays the mapping", async () => {
-      const { edited, workoutIdMap } = await syncEditingMidFlight((ids) => ids);
+    it("keeps an edited workout local and never imports it into any account again", async () => {
+      const { edited } = await syncEditingMidFlight((ids) => ids);
+      expect(useGuestStore.getState().syncClaimedWorkoutIds).toEqual([
+        edited.workoutId,
+      ]);
 
-      // Second attempt: the server already has the pre-edit copy and saves nothing new.
-      useGuestStore.setState({ hasAttemptedSync: false });
-      mockSyncGuestDataToServer.mockResolvedValueOnce(
-        makeSyncResult({
-          workoutIdMap: { [edited.workoutId]: workoutIdMap[edited.workoutId] },
-          importedWorkoutIds: [],
-        }),
-      );
-      await useGuestStore.getState().syncWithServer();
+      // Neither the same account nor another one signing in later resends it.
+      for (const user of [
+        { id: 1, email: "user@example.com" },
+        { id: 2, email: "other@example.com" },
+      ]) {
+        mocks.authState.user = user;
+        useGuestStore.setState({ hasAttemptedSync: false });
+        await useGuestStore.getState().syncWithServer();
+      }
 
+      expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(1);
       expect(useGuestStore.getState().workouts.map((w) => w.id)).toEqual([
         edited.workoutId,
       ]);
       expect(editedReps()).toBe(12);
+    });
+
+    it("leaves workouts unclaimed when the sync fails", async () => {
+      addWorkoutWithSet("Failed");
+      mockSyncGuestDataToServer.mockResolvedValueOnce(
+        makeSyncResult({ success: false, error: "boom" }),
+      );
+
+      await useGuestStore.getState().syncWithServer();
+
+      expect(useGuestStore.getState().syncClaimedWorkoutIds).toEqual([]);
     });
 
     it("keeps workouts created during sync, routines and the types they reference", async () => {
@@ -870,9 +885,9 @@ describe("useGuestStore", () => {
       // Simulate a reload from the persisted snapshot.
       await flushGuestPersist();
       const persisted = mocks.setItem.mock.calls.at(-1)?.[1] as string;
-      expect(JSON.parse(persisted).state.syncBlockedWorkoutIdsByUser).toEqual({
-        1: [deleted.workoutId],
-      });
+      expect(JSON.parse(persisted).state.syncClaimedWorkoutIds).toEqual([
+        deleted.workoutId,
+      ]);
       useGuestStore.getState().clear();
       mocks.getItem.mockResolvedValue(persisted);
       await useGuestStore.persist.rehydrate();
@@ -884,15 +899,14 @@ describe("useGuestStore", () => {
       await useGuestStore.getState().syncWithServer();
       expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(2);
 
-      // A different account on the reloaded device can import the local copy.
+      // A different account on the reloaded device must not import it either.
       mocks.authState.user = { id: 2, email: "other@example.com" };
-      mockSyncGuestDataToServer.mockResolvedValueOnce(makeSyncResult());
+      useGuestStore.setState({ hasAttemptedSync: false });
       await useGuestStore.getState().syncWithServer();
-      expect(mockSyncGuestDataToServer.mock.calls[2][0].workouts.map((w) => w.id))
-        .toEqual([deleted.workoutId]);
+      expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(2);
 
       useGuestStore.getState().deleteWorkout(deleted.workoutId);
-      expect(useGuestStore.getState().syncBlockedWorkoutIdsByUser).toEqual({});
+      expect(useGuestStore.getState().syncClaimedWorkoutIds).toEqual([]);
     });
 
     it("completes when the retry reports that all remaining workouts were deleted", async () => {

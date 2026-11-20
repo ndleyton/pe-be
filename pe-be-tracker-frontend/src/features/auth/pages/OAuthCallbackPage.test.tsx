@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
   const guestState = {
     hydrated: true,
     workouts: [] as Array<{ id: string }>,
-    syncBlockedWorkoutIdsByUser: {} as Record<string, string[]>,
+    syncClaimedWorkoutIds: [] as string[],
     syncWithServer: vi.fn(),
   };
   const consumePostLoginDestination = vi.fn();
@@ -97,7 +97,7 @@ describe("OAuthCallbackPage", () => {
     mocks.authState.refresh.mockReset();
     mocks.guestState.hydrated = true;
     mocks.guestState.workouts = [];
-    mocks.guestState.syncBlockedWorkoutIdsByUser = {};
+    mocks.guestState.syncClaimedWorkoutIds = [];
     mocks.guestState.syncWithServer.mockReset();
     mocks.consumePostLoginDestination.mockReturnValue(null);
   });
@@ -199,9 +199,9 @@ describe("OAuthCallbackPage", () => {
     });
   });
 
-  it("completes sign-in without starting sync when all workouts are blocked for this account", async () => {
+  it("completes sign-in without starting sync when every kept workout is already claimed", async () => {
     mocks.guestState.workouts = [{ id: "guest-workout-1" }];
-    mocks.guestState.syncBlockedWorkoutIdsByUser = { 1: ["guest-workout-1"] };
+    mocks.guestState.syncClaimedWorkoutIds = ["guest-workout-1"];
     mocks.authState.refresh.mockImplementation(async () => {
       mocks.authState.user = { id: 1, email: "user@example.com" };
     });

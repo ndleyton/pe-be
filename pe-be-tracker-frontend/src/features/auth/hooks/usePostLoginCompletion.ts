@@ -59,7 +59,6 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
 
         const syncableWorkouts = getSyncableGuestWorkouts(
           useGuestStore.getState(),
-          user.id,
         );
         if (syncableWorkouts.length > 0) {
           setGuestCount(syncableWorkouts.length);

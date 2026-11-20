@@ -117,8 +117,8 @@ export interface GuestData {
 
 interface GuestState extends GuestData {
   hasAttemptedSync: boolean;
-  /** Workouts reported as deleted, keyed by the account that imported them. */
-  syncBlockedWorkoutIdsByUser: Record<string, string[]>;
+  /** Kept workouts an account already holds or deleted; no account may import them again. */
+  syncClaimedWorkoutIds: string[];
   // Ephemeral flag set true after persisted state finishes rehydrating on client
   hydrated: boolean;
 }
@@ -194,7 +194,7 @@ export const useGuestStore = create<GuestStore>()(
     (set, get) => ({
       ...createInitialGuestData(generateRandomId),
       hasAttemptedSync: false,
-      syncBlockedWorkoutIdsByUser: {},
+      syncClaimedWorkoutIds: [],
       hydrated: false,
 
       addWorkout: (workout) => {
@@ -243,13 +243,8 @@ export const useGuestStore = create<GuestStore>()(
       deleteWorkout: (id) => {
         set((state) => ({
           workouts: state.workouts.filter((workout) => workout.id !== id),
-          syncBlockedWorkoutIdsByUser: Object.fromEntries(
-            Object.entries(state.syncBlockedWorkoutIdsByUser)
-              .map(([userId, ids]) => [
-                userId,
-                ids.filter((blockedId) => blockedId !== id),
-              ] as const)
-              .filter(([, ids]) => ids.length > 0),
+          syncClaimedWorkoutIds: state.syncClaimedWorkoutIds.filter(
+            (claimedId) => claimedId !== id,
           ),
         }));
       },
@@ -503,7 +498,7 @@ export const useGuestStore = create<GuestStore>()(
         set({
           ...initialData,
           hasAttemptedSync: false,
-          syncBlockedWorkoutIdsByUser: {},
+          syncClaimedWorkoutIds: [],
         });
       },
 
@@ -567,7 +562,7 @@ export const useGuestStore = create<GuestStore>()(
 
         // Cleanup compares against exactly what was sent.
         const submitted = structuredClone(
-          getSyncableGuestWorkouts(state, user.id),
+          getSyncableGuestWorkouts(state),
         );
         if (submitted.length === 0) return emptySyncResult();
 
@@ -592,20 +587,6 @@ export const useGuestStore = create<GuestStore>()(
               remaining
                 .filter((workout) => rejected.has(workout.id))
                 .forEach((workout) => deletedIds.add(workout.id));
-              set((current) => ({
-                syncBlockedWorkoutIdsByUser: {
-                  ...current.syncBlockedWorkoutIdsByUser,
-                  [user.id]: [
-                    ...new Set([
-                      ...(current.syncBlockedWorkoutIdsByUser[user.id] ?? []),
-                      ...current.workouts
-                        .filter((workout) => deletedIds.has(workout.id))
-                        .map((workout) => workout.id),
-                    ]),
-                  ],
-                },
-              }));
-
               remaining = retry;
               if (remaining.length === 0) {
                 result = emptySyncResult();
@@ -619,10 +600,28 @@ export const useGuestStore = create<GuestStore>()(
             }
             result = { ...result, deletedWorkoutIds: [...deletedIds] };
 
+            // Whatever stays local but is mapped or deleted on this account must
+            // never be imported into another account signing in on this device.
+            const claimedIds = new Set([
+              ...deletedIds,
+              ...(result.success ? Object.keys(result.workoutIdMap) : []),
+            ]);
+            set((current) => {
+              const workouts = removeSyncedWorkouts(current.workouts, remaining, result);
+              return {
+                workouts,
+                syncClaimedWorkoutIds: [
+                  ...new Set([
+                    ...current.syncClaimedWorkoutIds,
+                    ...workouts
+                      .filter((workout) => claimedIds.has(workout.id))
+                      .map((workout) => workout.id),
+                  ]),
+                ],
+              };
+            });
+
             if (result.success) {
-              set((current) => ({
-                workouts: removeSyncedWorkouts(current.workouts, remaining, result),
-              }));
               showSyncSuccessToast(result);
               return result;
             }
@@ -655,7 +654,7 @@ export const useGuestStore = create<GuestStore>()(
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
         routines: state.routines,
-        syncBlockedWorkoutIdsByUser: state.syncBlockedWorkoutIdsByUser,
+        syncClaimedWorkoutIds: state.syncClaimedWorkoutIds,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         if (persistedVersion == null || persistedVersion < 5) {
@@ -663,7 +662,7 @@ export const useGuestStore = create<GuestStore>()(
           return {
             ...createInitialGuestData(generateRandomId),
             ...guest,
-            syncBlockedWorkoutIdsByUser: {},
+            syncClaimedWorkoutIds: [] as string[],
             hasAttemptedSync: Boolean(
               (persistedState as any)?.hasAttemptedSync,
             ),
@@ -671,7 +670,7 @@ export const useGuestStore = create<GuestStore>()(
         }
         // Older deletion markers have no account ID.
         const { syncBlockedWorkoutIds: _legacyBlockedIds, ...data } = persistedState;
-        return { ...data, syncBlockedWorkoutIdsByUser: {} } as GuestState;
+        return { ...data, syncClaimedWorkoutIds: [] } as GuestState;
       },
       version: 6,
       onRehydrateStorage: () => (state, _error) => {

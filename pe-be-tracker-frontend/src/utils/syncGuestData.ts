@@ -34,13 +34,10 @@ export const emptySyncResult = (
 });
 
 export const getSyncableGuestWorkouts = (
-  state: Pick<GuestData, "workouts"> & {
-    syncBlockedWorkoutIdsByUser: Record<string, string[]>;
-  },
-  userId: number,
+  state: Pick<GuestData, "workouts"> & { syncClaimedWorkoutIds: string[] },
 ) => {
-  const blocked = new Set(state.syncBlockedWorkoutIdsByUser[userId]);
-  return state.workouts.filter((workout) => !blocked.has(workout.id));
+  const claimed = new Set(state.syncClaimedWorkoutIds);
+  return state.workouts.filter((workout) => !claimed.has(workout.id));
 };
 
 const describeSyncError = (error: unknown) => {
