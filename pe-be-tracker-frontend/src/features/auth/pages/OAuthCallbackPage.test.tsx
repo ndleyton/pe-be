@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeSyncResult } from "@/test/fixtures";
+import type { SyncResult } from "@/utils/syncGuestData";
 import OAuthCallbackPage from "./OAuthCallbackPage";
 
 const mocks = vi.hoisted(() => {
@@ -99,7 +101,7 @@ describe("OAuthCallbackPage", () => {
   });
 
   it("refreshes auth, waits for guest sync, and redirects to the stored destination", async () => {
-    let resolveSync: (value: boolean) => void = () => {};
+    let resolveSync: (value: SyncResult) => void = () => {};
 
     mocks.consumePostLoginDestination.mockReturnValue("/chat");
     mocks.guestState.workouts = [{ id: "guest-workout-1" }];
@@ -108,7 +110,7 @@ describe("OAuthCallbackPage", () => {
     });
     mocks.guestState.syncWithServer.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<SyncResult>((resolve) => {
           resolveSync = resolve;
         }),
     );
@@ -123,7 +125,7 @@ describe("OAuthCallbackPage", () => {
     });
     expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
 
-    resolveSync(true);
+    resolveSync(makeSyncResult());
 
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent("/chat");
@@ -152,7 +154,7 @@ describe("OAuthCallbackPage", () => {
     mocks.authState.refresh.mockImplementation(async () => {
       mocks.authState.user = { id: 1, email: "user@example.com" };
     });
-    mocks.guestState.syncWithServer.mockResolvedValue(true);
+    mocks.guestState.syncWithServer.mockResolvedValue(makeSyncResult());
 
     const view = renderPostLoginRoute();
 

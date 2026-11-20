@@ -6,6 +6,7 @@ import type {
   GuestWorkout,
   GuestWorkoutType,
 } from "@/stores/useGuestStore";
+import type { SyncResult } from "@/utils/syncGuestData";
 
 const DEFAULT_TIMESTAMP = "2024-01-01T10:00:00Z";
 const DEFAULT_UPDATED_AT = "2024-01-01T10:00:00Z";
@@ -209,3 +210,17 @@ export const getGuestExercise = (workout: GuestWorkout, exerciseId: string) =>
 
 export const getGuestSet = (exercise: GuestExercise, setId: string) =>
   exercise.exercise_sets.find((set) => set.id === setId)!;
+
+export const makeSyncResult = (
+  overrides: Partial<SyncResult> = {},
+): SyncResult => ({
+  success: true,
+  syncedWorkouts: 0,
+  syncedExercises: 0,
+  syncedSets: 0,
+  syncedRoutines: 0,
+  workoutIdMap: {},
+  importedWorkoutIds: [],
+  deletedWorkoutIds: [],
+  ...overrides,
+});

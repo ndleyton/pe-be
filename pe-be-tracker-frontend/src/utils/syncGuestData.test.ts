@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { syncGuestDataToServer } from "./syncGuestData";
+import { removeSyncedWorkouts, syncGuestDataToServer } from "./syncGuestData";
 import { endpoints } from "@/shared/api/endpoints";
 import type { GuestData } from "@/stores/useGuestStore";
 import {
@@ -9,6 +9,7 @@ import {
   makeGuestExerciseType,
   makeGuestWorkout,
   makeGuestWorkoutType,
+  makeSyncResult,
 } from "@/test/fixtures";
 
 // Mock the API client
@@ -27,8 +28,6 @@ vi.mock("@/utils/date", () => ({
 import api from "@/shared/api/client";
 
 describe("syncGuestDataToServer", () => {
-  const mockClearGuestData = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -37,18 +36,9 @@ describe("syncGuestDataToServer", () => {
     const emptyGuestData: GuestData = makeGuestData({ workouts: [] });
 
     const result = await syncGuestDataToServer(
-      emptyGuestData,
-      mockClearGuestData,
-    );
+      emptyGuestData);
 
-    expect(result).toEqual({
-      success: true,
-      syncedWorkouts: 0,
-      syncedExercises: 0,
-      syncedSets: 0,
-      syncedRoutines: 0,
-    });
-    expect(mockClearGuestData).not.toHaveBeenCalled();
+    expect(result).toEqual(makeSyncResult());
   });
 
   it("syncs all data in a single bulk request successfully", async () => {
@@ -104,19 +94,12 @@ describe("syncGuestDataToServer", () => {
     });
 
     const result = await syncGuestDataToServer(
-      mockGuestData,
-      mockClearGuestData,
+      mockGuestData);
+
+    // Missing map/list fields from the server are treated as empty.
+    expect(result).toEqual(
+      makeSyncResult({ syncedWorkouts: 1, syncedExercises: 1, syncedSets: 1 }),
     );
-
-    expect(result).toEqual({
-      success: true,
-      syncedWorkouts: 1,
-      syncedExercises: 1,
-      syncedSets: 1,
-      syncedRoutines: 0,
-    });
-
-    expect(mockClearGuestData).toHaveBeenCalled();
 
     // Verify correct bulk payload was sent
     expect(api.post).toHaveBeenCalledTimes(1);
@@ -160,13 +143,10 @@ describe("syncGuestDataToServer", () => {
     (api.post as any).mockRejectedValue(new Error("Network error"));
 
     const result = await syncGuestDataToServer(
-      mockGuestData,
-      mockClearGuestData,
-    );
+      mockGuestData);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Network error");
-    expect(mockClearGuestData).not.toHaveBeenCalled();
   });
 
   it("handles successful response with success=false", async () => {
@@ -182,12 +162,133 @@ describe("syncGuestDataToServer", () => {
       });
 
     const result = await syncGuestDataToServer(
-      mockGuestData,
-      mockClearGuestData,
-    );
+      mockGuestData);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Database transaction failed");
-    expect(mockClearGuestData).not.toHaveBeenCalled();
+  });
+
+  it("passes through the workout map, imported IDs and deleted IDs", async () => {
+    (api.post as any).mockResolvedValueOnce({
+      data: {
+        success: false,
+        error: "Workouts were deleted",
+        deletedWorkoutIds: ["w1"],
+        workoutIdMap: {},
+        importedWorkoutIds: [],
+      },
+    });
+
+    const result = await syncGuestDataToServer(
+      makeGuestData({ workouts: [makeGuestWorkout({ id: "w1" })] }),
+    );
+
+    expect(result).toEqual(
+      makeSyncResult({
+        success: false,
+        error: "Workouts were deleted",
+        deletedWorkoutIds: ["w1"],
+      }),
+    );
+  });
+});
+
+describe("removeSyncedWorkouts", () => {
+  const makeWorkoutWithSet = (id: string, reps: number) =>
+    makeGuestWorkout({
+      id,
+      exercises: [
+        makeGuestExercise({
+          id: `${id}-exercise`,
+          workout_id: id,
+          exercise_sets: [
+            makeGuestExerciseSet({ id: `${id}-set`, reps }),
+            makeGuestExerciseSet({ id: `${id}-set-2`, reps: 5 }),
+          ],
+        }),
+      ],
+    });
+
+  const editReps = (workout: ReturnType<typeof makeGuestWorkout>, reps: number) => ({
+    ...workout,
+    exercises: workout.exercises.map((exercise) => ({
+      ...exercise,
+      exercise_sets: exercise.exercise_sets.map((set, index) =>
+        index === 0 ? { ...set, reps } : set,
+      ),
+    })),
+  });
+
+  const submitted = [makeWorkoutWithSet("a", 10), makeWorkoutWithSet("b", 10)];
+  const snapshot = structuredClone(submitted);
+
+  it("keeps a workout edited during sync even when imported, and removes the unchanged one", () => {
+    const current = [structuredClone(submitted[0]), editReps(submitted[1], 12)];
+
+    const remaining = removeSyncedWorkouts(
+      current,
+      snapshot,
+      makeSyncResult({
+        workoutIdMap: { a: 1, b: 2 },
+        importedWorkoutIds: ["a", "b"],
+      }),
+    );
+
+    expect(remaining.map((w) => w.id)).toEqual(["b"]);
+    expect(remaining[0].exercises[0].exercise_sets[0].reps).toBe(12);
+  });
+
+  it("does not treat a mapping-only replay as confirmation of local edits", () => {
+    const current = [submitted[0], editReps(submitted[1], 12)];
+
+    const remaining = removeSyncedWorkouts(
+      current,
+      snapshot,
+      makeSyncResult({ workoutIdMap: { a: 1, b: 2 }, importedWorkoutIds: [] }),
+    );
+
+    expect(remaining.map((w) => w.id)).toEqual(["b"]);
+  });
+
+  it("treats reordered sets as a change", () => {
+    const reordered = {
+      ...submitted[0],
+      exercises: [
+        {
+          ...submitted[0].exercises[0],
+          exercise_sets: [...submitted[0].exercises[0].exercise_sets].reverse(),
+        },
+      ],
+    };
+
+    const remaining = removeSyncedWorkouts(
+      [reordered],
+      snapshot,
+      makeSyncResult({ workoutIdMap: { a: 1 }, importedWorkoutIds: ["a"] }),
+    );
+
+    expect(remaining).toEqual([reordered]);
+  });
+
+  it("keeps workouts missing from the map and workouts created during sync", () => {
+    const created = makeWorkoutWithSet("c", 3);
+
+    const remaining = removeSyncedWorkouts(
+      [...submitted, created],
+      snapshot,
+      makeSyncResult({ workoutIdMap: { a: 1 }, importedWorkoutIds: ["a"] }),
+    );
+
+    expect(remaining.map((w) => w.id)).toEqual(["b", "c"]);
+  });
+
+  it("keeps everything on failure", () => {
+    const remaining = removeSyncedWorkouts(
+      submitted,
+      snapshot,
+      makeSyncResult({ success: false, deletedWorkoutIds: ["a"] }),
+    );
+
+    expect(remaining).toBe(submitted);
   });
 });

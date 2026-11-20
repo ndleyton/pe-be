@@ -67,8 +67,8 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
         if (currentWorkouts.length > 0) {
           setGuestCount(currentWorkouts.length);
           setSyncStatus("syncing");
-          const syncSucceeded = await syncWithServer();
-          if (!syncSucceeded) {
+          const syncResult = await syncWithServer();
+          if (!syncResult.success) {
             throw new Error("Failed to sync guest data");
           }
         }

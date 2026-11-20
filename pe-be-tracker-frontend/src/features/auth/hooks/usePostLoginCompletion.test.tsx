@@ -2,6 +2,8 @@ import { type ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeSyncResult } from "@/test/fixtures";
+import type { SyncResult } from "@/utils/syncGuestData";
 import { usePostLoginCompletion } from "./usePostLoginCompletion";
 
 const mocks = vi.hoisted(() => {
@@ -61,7 +63,7 @@ describe("usePostLoginCompletion", () => {
   });
 
   it("waits for guest store hydration before snapshotting workouts and syncing", async () => {
-    let resolveSync: (value: boolean) => void = () => {};
+    let resolveSync: (value: SyncResult) => void = () => {};
 
     mocks.guestState.hydrated = false;
     mocks.authState.refresh.mockImplementation(async () => {
@@ -69,7 +71,7 @@ describe("usePostLoginCompletion", () => {
     });
     mocks.guestState.syncWithServer.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<SyncResult>((resolve) => {
           resolveSync = resolve;
         }),
     );
@@ -95,7 +97,7 @@ describe("usePostLoginCompletion", () => {
     expect(result.current.initialGuestWorkoutCount).toBe(1);
     expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
 
-    resolveSync(true);
+    resolveSync(makeSyncResult());
   });
 
   it("returns error state when the backend session does not materialize", async () => {
@@ -112,4 +114,32 @@ describe("usePostLoginCompletion", () => {
       "We couldn't confirm your session. Please try signing in again.",
     );
   });
+
+  it.each([
+    ["success", makeSyncResult({ syncedWorkouts: 1 }), "complete", ""],
+    [
+      "failure",
+      makeSyncResult({ success: false, error: "boom" }),
+      "error",
+      "Failed to sync guest data",
+    ],
+  ])(
+    "maps a structured %s sync result to the completion state",
+    async (_label, syncResult, expectedStatus, expectedError) => {
+      mocks.guestState.workouts = [{ id: "guest-workout-1" }];
+      mocks.authState.refresh.mockImplementation(async () => {
+        mocks.authState.user = { id: 1, email: "user@example.com" };
+      });
+      mocks.guestState.syncWithServer.mockResolvedValue(syncResult);
+
+      const { result } = renderHook(() => usePostLoginCompletion(), {
+        wrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.syncStatus).toBe(expectedStatus);
+      });
+      expect(result.current.errorMessage).toBe(expectedError);
+    },
+  );
 });

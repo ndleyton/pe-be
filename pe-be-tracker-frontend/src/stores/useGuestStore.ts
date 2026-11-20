@@ -4,6 +4,10 @@ import {
   syncGuestDataToServer,
   showSyncSuccessToast,
   showSyncErrorToast,
+  showSyncDeletedWorkoutsToast,
+  emptySyncResult,
+  removeSyncedWorkouts,
+  type SyncResult,
 } from "@/utils/syncGuestData";
 import {
   generateRandomId,
@@ -112,6 +116,8 @@ export interface GuestData {
 
 interface GuestState extends GuestData {
   hasAttemptedSync: boolean;
+  /** Workouts the server reported as deleted; persisted so automatic sync skips them after reload. */
+  syncBlockedWorkoutIds: string[];
   // Ephemeral flag set true after persisted state finishes rehydrating on client
   hydrated: boolean;
 }
@@ -164,12 +170,12 @@ interface GuestActions {
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
-  syncWithServer: () => Promise<boolean>;
+  syncWithServer: () => Promise<SyncResult>;
   setHydrated: (hydrated: boolean) => void;
 }
 
 type GuestStore = GuestState & GuestActions;
-let syncWithServerPromise: Promise<boolean> | null = null;
+let syncWithServerPromise: Promise<SyncResult> | null = null;
 
 const guestStorage = createIndexedDBStorage();
 let pendingGuestWrite: Promise<unknown> = Promise.resolve();
@@ -187,6 +193,7 @@ export const useGuestStore = create<GuestStore>()(
     (set, get) => ({
       ...createInitialGuestData(generateRandomId),
       hasAttemptedSync: false,
+      syncBlockedWorkoutIds: [],
       hydrated: false,
 
       addWorkout: (workout) => {
@@ -484,7 +491,7 @@ export const useGuestStore = create<GuestStore>()(
 
       clear: () => {
         const initialData = createInitialGuestData(generateRandomId);
-        set({ ...initialData, hasAttemptedSync: false });
+        set({ ...initialData, hasAttemptedSync: false, syncBlockedWorkoutIds: [] });
       },
 
       getWorkout: (id) => {
@@ -541,27 +548,58 @@ export const useGuestStore = create<GuestStore>()(
           return syncWithServerPromise;
         }
 
-        if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
-          return true;
+        const blocked = new Set(state.syncBlockedWorkoutIds);
+        // Immutable copy of exactly what is sent; cleanup compares against it.
+        const submitted = structuredClone(
+          state.workouts.filter((workout) => !blocked.has(workout.id)),
+        );
+
+        if (!user || state.hasAttemptedSync || submitted.length === 0) {
+          return emptySyncResult();
         }
 
         set({ hasAttemptedSync: true });
 
         syncWithServerPromise = (async () => {
           try {
-            const result = await syncGuestDataToServer(state, get().clear);
+            const result = await syncGuestDataToServer({
+              ...state,
+              workouts: submitted,
+            });
             if (result.success) {
+              set((current) => ({
+                workouts: removeSyncedWorkouts(
+                  current.workouts,
+                  submitted,
+                  result,
+                ),
+              }));
               showSyncSuccessToast(result);
-              return true;
+              return result;
             }
 
-            showSyncErrorToast(result.error ?? "Unknown error");
+            if (result.deletedWorkoutIds.length > 0) {
+              set((current) => ({
+                syncBlockedWorkoutIds: [
+                  ...new Set([
+                    ...current.syncBlockedWorkoutIds,
+                    ...result.deletedWorkoutIds,
+                  ]),
+                ],
+              }));
+              showSyncDeletedWorkoutsToast(result.deletedWorkoutIds.length);
+            } else {
+              showSyncErrorToast(result.error ?? "Unknown error");
+            }
             set({ hasAttemptedSync: false });
-            return false;
+            return result;
           } catch (error) {
             console.error("Sync failed:", error);
             set({ hasAttemptedSync: false });
-            return false;
+            return emptySyncResult({
+              success: false,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
           } finally {
             syncWithServerPromise = null;
           }
@@ -580,6 +618,7 @@ export const useGuestStore = create<GuestStore>()(
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
         routines: state.routines,
+        syncBlockedWorkoutIds: state.syncBlockedWorkoutIds,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
         // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)

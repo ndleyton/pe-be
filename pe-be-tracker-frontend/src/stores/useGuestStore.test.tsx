@@ -5,9 +5,13 @@ import {
   addGuestSet,
   addGuestWorkout,
   makeRoutine,
+  makeSyncResult,
 } from "@/test/fixtures";
 import { useGuestStore, flushGuestPersist } from "./useGuestStore";
-import { syncGuestDataToServer } from "@/utils/syncGuestData";
+import {
+  showSyncDeletedWorkoutsToast,
+  syncGuestDataToServer,
+} from "@/utils/syncGuestData";
 import type { SyncResult } from "@/utils/syncGuestData";
 
 const mocks = vi.hoisted(() => ({
@@ -15,22 +19,26 @@ const mocks = vi.hoisted(() => ({
     user: null as null | { id: number; email: string },
   },
   setItem: vi.fn().mockResolvedValue(undefined),
+  getItem: vi.fn().mockResolvedValue(null),
 }));
 
 // Mock IndexedDB storage
 vi.mock("./indexedDBStorage", () => ({
   createIndexedDBStorage: () => ({
-    getItem: vi.fn().mockResolvedValue(null),
+    getItem: (name: string) => mocks.getItem(name),
     setItem: (name: string, value: string) => mocks.setItem(name, value),
     removeItem: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
 // Mock sync utilities
-vi.mock("@/utils/syncGuestData", () => ({
+// Keep the real cleanup helpers; stub only the network call and toasts.
+vi.mock("@/utils/syncGuestData", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/syncGuestData")>()),
   syncGuestDataToServer: vi.fn(),
   showSyncSuccessToast: vi.fn(),
   showSyncErrorToast: vi.fn(),
+  showSyncDeletedWorkoutsToast: vi.fn(),
 }));
 
 // Mock auth store
@@ -45,6 +53,7 @@ describe("useGuestStore", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.getItem.mockResolvedValue(null);
     mocks.authState.user = null;
     // Reset store state between tests
     if (useGuestStore.persist && useGuestStore.persist.clearStorage) {
@@ -653,15 +662,174 @@ describe("useGuestStore", () => {
     await Promise.resolve();
     expect(secondResolved).toBe(false);
 
-    resolveSync?.({
-      success: true,
-      syncedWorkouts: 1,
-      syncedExercises: 0,
-      syncedSets: 0,
-      syncedRoutines: 0,
+    const syncResult = makeSyncResult({ syncedWorkouts: 1 });
+    resolveSync?.(syncResult);
+
+    await expect(firstSyncPromise).resolves.toBe(syncResult);
+    await expect(secondSyncPromise).resolves.toBe(syncResult);
+  });
+
+  describe("targeted cleanup after sync", () => {
+    const deferSync = () => {
+      let resolve: (value: SyncResult) => void = () => {};
+      mockSyncGuestDataToServer.mockImplementationOnce(
+        () =>
+          new Promise<SyncResult>((r) => {
+            resolve = r;
+          }),
+      );
+      return (value: SyncResult) => resolve(value);
+    };
+
+    const addWorkoutWithSet = (name: string) => {
+      const store = useGuestStore.getState();
+      const workoutId = addGuestWorkout(store, { name });
+      const exerciseId = addGuestExercise(useGuestStore.getState(), workoutId);
+      const setId = addGuestSet(useGuestStore.getState(), exerciseId, {
+        reps: 10,
+      });
+      return { workoutId, setId };
+    };
+
+    beforeEach(() => {
+      mocks.authState.user = { id: 1, email: "user@example.com" };
     });
 
-    await expect(firstSyncPromise).resolves.toBe(true);
-    await expect(secondSyncPromise).resolves.toBe(true);
+    it.each([
+      ["imported", (ids: string[]) => ids],
+      ["mapping-only replay", () => []],
+    ])(
+      "keeps a workout edited during sync and removes the unchanged one (%s)",
+      async (_label, importedIds) => {
+        const unchanged = addWorkoutWithSet("Unchanged");
+        const edited = addWorkoutWithSet("Edited");
+        const resolveSync = deferSync();
+
+        const syncPromise = useGuestStore.getState().syncWithServer();
+        useGuestStore.getState().updateExerciseSet(edited.setId, { reps: 12 });
+
+        // The dispatched payload is the pre-edit snapshot.
+        const sent = mockSyncGuestDataToServer.mock.calls[0][0].workouts;
+        expect(
+          sent.find((w) => w.id === edited.workoutId)?.exercises[0]
+            .exercise_sets[0].reps,
+        ).toBe(10);
+
+        const ids = [unchanged.workoutId, edited.workoutId];
+        resolveSync(
+          makeSyncResult({
+            syncedWorkouts: 2,
+            workoutIdMap: { [ids[0]]: 101, [ids[1]]: 102 },
+            importedWorkoutIds: importedIds(ids),
+          }),
+        );
+        await syncPromise;
+
+        const { workouts } = useGuestStore.getState();
+        expect(workouts.map((w) => w.id)).toEqual([edited.workoutId]);
+        expect(workouts[0].exercises[0].exercise_sets[0].reps).toBe(12);
+      },
+    );
+
+    it("keeps workouts created during sync, routines and the types they reference", async () => {
+      const synced = addWorkoutWithSet("Synced");
+      const routine = makeRoutine();
+      useGuestStore.setState({ routines: [routine] });
+      const resolveSync = deferSync();
+
+      const syncPromise = useGuestStore.getState().syncWithServer();
+      const { exerciseTypes, workoutTypes } = useGuestStore.getState();
+      const exerciseType = exerciseTypes[1];
+      const workoutType = workoutTypes[workoutTypes.length - 1];
+      const createdId = addGuestWorkout(useGuestStore.getState(), {
+        name: "Created during sync",
+        workout_type: workoutType,
+        workout_type_id: workoutType.id,
+      });
+      addGuestExercise(useGuestStore.getState(), createdId, {
+        exercise_type: exerciseType,
+        exercise_type_id: exerciseType.id,
+      });
+
+      resolveSync(
+        makeSyncResult({
+          syncedWorkouts: 1,
+          workoutIdMap: { [synced.workoutId]: 101 },
+          importedWorkoutIds: [synced.workoutId],
+        }),
+      );
+      await syncPromise;
+
+      const state = useGuestStore.getState();
+      expect(state.workouts.map((w) => w.id)).toEqual([createdId]);
+      expect(state.routines).toEqual([routine]);
+      expect(state.exerciseTypes.map((t) => t.id)).toContain(exerciseType.id);
+      expect(state.workoutTypes.map((t) => t.id)).toContain(workoutType.id);
+    });
+
+    it("keeps a submitted workout the server omits from the map", async () => {
+      const mapped = addWorkoutWithSet("Mapped");
+      const omitted = addWorkoutWithSet("Omitted");
+      mockSyncGuestDataToServer.mockResolvedValueOnce(
+        makeSyncResult({
+          workoutIdMap: { [mapped.workoutId]: 101 },
+          importedWorkoutIds: [mapped.workoutId],
+        }),
+      );
+
+      await useGuestStore.getState().syncWithServer();
+
+      expect(useGuestStore.getState().workouts.map((w) => w.id)).toEqual([
+        omitted.workoutId,
+      ]);
+    });
+
+    it("keeps data, warns and stops retrying workouts deleted on the server, across reloads", async () => {
+      const deleted = addWorkoutWithSet("Deleted on server");
+      const other = addWorkoutWithSet("Other");
+      mockSyncGuestDataToServer.mockResolvedValueOnce(
+        makeSyncResult({
+          success: false,
+          error: "Workouts were deleted",
+          deletedWorkoutIds: [deleted.workoutId],
+        }),
+      );
+
+      const result = await useGuestStore.getState().syncWithServer();
+
+      expect(result.success).toBe(false);
+      expect(showSyncDeletedWorkoutsToast).toHaveBeenCalledWith(1);
+      const state = useGuestStore.getState();
+      expect(state.workouts.map((w) => w.id)).toEqual([
+        deleted.workoutId,
+        other.workoutId,
+      ]);
+      expect(state.hasAttemptedSync).toBe(false);
+
+      // Simulate a reload from the persisted snapshot.
+      await flushGuestPersist();
+      const persisted = mocks.setItem.mock.calls.at(-1)?.[1] as string;
+      expect(JSON.parse(persisted).state.syncBlockedWorkoutIds).toEqual([
+        deleted.workoutId,
+      ]);
+      useGuestStore.getState().clear();
+      mocks.getItem.mockResolvedValue(persisted);
+      await useGuestStore.persist.rehydrate();
+      expect(useGuestStore.getState().workouts).toHaveLength(2);
+
+      mockSyncGuestDataToServer.mockResolvedValueOnce(makeSyncResult());
+      await useGuestStore.getState().syncWithServer();
+
+      expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(2);
+      expect(
+        mockSyncGuestDataToServer.mock.calls[1][0].workouts.map((w) => w.id),
+      ).toEqual([other.workoutId]);
+
+      // With only the deleted workout left, no request is sent at all.
+      useGuestStore.getState().deleteWorkout(other.workoutId);
+      useGuestStore.setState({ hasAttemptedSync: false });
+      await useGuestStore.getState().syncWithServer();
+      expect(mockSyncGuestDataToServer).toHaveBeenCalledTimes(2);
+    });
   });
 });
