@@ -31,6 +31,7 @@ from src.core.observability import (
     traced_model_validate_many,
 )
 from src.exercises.image_assets import (
+    exercise_image_storage_dir,
     resolve_exercise_image_url,
     storage_path_for_relative_url,
 )
@@ -151,6 +152,13 @@ async def get_exercise_image_asset(
     user: User | None = Depends(current_optional_user),
     session: AsyncSession = Depends(get_async_session),
 ):
+    try:
+        file_path = storage_path_for_relative_url(image_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Exercise image not found") from exc
+    # Check access on the resolved path so "published/../generated/" can't skip auth.
+    image_path = file_path.relative_to(exercise_image_storage_dir()).as_posix()
+
     if image_path.startswith("generated/") and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -197,11 +205,9 @@ async def get_exercise_image_asset(
             PROMOTED_STATUS,
         ):
             raise HTTPException(status_code=404, detail="Exercise image not found")
-
-    try:
-        file_path = storage_path_for_relative_url(image_path)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="Exercise image not found") from exc
+    elif image_path.startswith("uploads/"):
+        # Only candidate uploads have an ownership check; serve nothing else there.
+        raise HTTPException(status_code=404, detail="Exercise image not found")
 
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="Exercise image not found")

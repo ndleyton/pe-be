@@ -396,6 +396,18 @@ async def test_generated_assets_require_auth_but_published_assets_remain_public(
         assert public_resp.status_code == 200
         assert public_resp.headers["cache-control"] == "public, max-age=300"
         assert public_resp.content == b"published"
+
+        # Dot segments must not route around the generated/uploads auth checks.
+        for private in ("generated/exercise-type-1/candidate.png", "uploads/x.png"):
+            direct = f"{settings.API_PREFIX}/exercises/assets/{private}"
+            (tmp_path / private).parent.mkdir(parents=True, exist_ok=True)
+            (tmp_path / private).write_bytes(b"private")
+            traversal_resp = await async_client.get(
+                f"{settings.API_PREFIX}/exercises/assets/published/%2E%2E/{private}"
+            )
+            assert traversal_resp.status_code in (401, 404)
+            assert traversal_resp.content != b"private"
+            assert (await async_client.get(direct)).status_code in (401, 404)
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
 
