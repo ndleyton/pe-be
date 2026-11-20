@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeSyncResult } from "@/test/fixtures";
+import type { SyncResult } from "@/utils/syncGuestData";
 import OAuthCallbackPage from "./OAuthCallbackPage";
 
 const mocks = vi.hoisted(() => {
@@ -11,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const guestState = {
     hydrated: true,
     workouts: [] as Array<{ id: string }>,
+    syncClaimedWorkoutIds: [] as string[],
     syncWithServer: vi.fn(),
   };
   const consumePostLoginDestination = vi.fn();
@@ -94,12 +97,13 @@ describe("OAuthCallbackPage", () => {
     mocks.authState.refresh.mockReset();
     mocks.guestState.hydrated = true;
     mocks.guestState.workouts = [];
+    mocks.guestState.syncClaimedWorkoutIds = [];
     mocks.guestState.syncWithServer.mockReset();
     mocks.consumePostLoginDestination.mockReturnValue(null);
   });
 
   it("refreshes auth, waits for guest sync, and redirects to the stored destination", async () => {
-    let resolveSync: (value: boolean) => void = () => {};
+    let resolveSync: (value: SyncResult) => void = () => {};
 
     mocks.consumePostLoginDestination.mockReturnValue("/chat");
     mocks.guestState.workouts = [{ id: "guest-workout-1" }];
@@ -108,7 +112,7 @@ describe("OAuthCallbackPage", () => {
     });
     mocks.guestState.syncWithServer.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<SyncResult>((resolve) => {
           resolveSync = resolve;
         }),
     );
@@ -123,7 +127,7 @@ describe("OAuthCallbackPage", () => {
     });
     expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
 
-    resolveSync(true);
+    resolveSync(makeSyncResult());
 
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent("/chat");
@@ -152,7 +156,7 @@ describe("OAuthCallbackPage", () => {
     mocks.authState.refresh.mockImplementation(async () => {
       mocks.authState.user = { id: 1, email: "user@example.com" };
     });
-    mocks.guestState.syncWithServer.mockResolvedValue(true);
+    mocks.guestState.syncWithServer.mockResolvedValue(makeSyncResult());
 
     const view = renderPostLoginRoute();
 
@@ -194,4 +198,60 @@ describe("OAuthCallbackPage", () => {
       expect(mocks.guestState.syncWithServer).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("completes sign-in without starting sync when every kept workout is already claimed", async () => {
+    mocks.guestState.workouts = [{ id: "guest-workout-1" }];
+    mocks.guestState.syncClaimedWorkoutIds = ["guest-workout-1"];
+    mocks.authState.refresh.mockImplementation(async () => {
+      mocks.authState.user = { id: 1, email: "user@example.com" };
+    });
+
+    renderPostLoginRoute();
+
+    expect(await screen.findByText("1 workout is kept on this device.")).toBeInTheDocument();
+    expect(mocks.guestState.syncWithServer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "every workout uploaded",
+      [] as Array<{ id: string }>,
+      makeSyncResult({ syncedWorkouts: 2 }),
+      "Your data has been synced successfully",
+    ],
+    [
+      "nothing uploaded",
+      [{ id: "guest-workout-1" }, { id: "guest-workout-2" }],
+      makeSyncResult({ deletedWorkoutIds: ["guest-workout-1", "guest-workout-2"] }),
+      "2 workouts are kept on this device.",
+    ],
+    [
+      "some workouts uploaded",
+      [{ id: "guest-workout-2" }],
+      makeSyncResult({ syncedWorkouts: 1, deletedWorkoutIds: ["guest-workout-2"] }),
+      "Synced 1 workout. 1 workout is kept on this device.",
+    ],
+  ])(
+    "describes the sync outcome when %s",
+    async (_label, workoutsAfterSync, syncResult, expectedMessage) => {
+      mocks.guestState.workouts = [
+        { id: "guest-workout-1" },
+        { id: "guest-workout-2" },
+      ];
+      mocks.authState.refresh.mockImplementation(async () => {
+        mocks.authState.user = { id: 1, email: "user@example.com" };
+      });
+      mocks.guestState.syncWithServer.mockImplementation(async () => {
+        mocks.guestState.workouts = workoutsAfterSync;
+        return syncResult;
+      });
+
+      renderPostLoginRoute();
+
+      await waitFor(() => {
+        expect(screen.getByText("You're all set!")).toBeInTheDocument();
+      });
+      expect(screen.getByText(expectedMessage)).toBeInTheDocument();
+    },
+  );
 });

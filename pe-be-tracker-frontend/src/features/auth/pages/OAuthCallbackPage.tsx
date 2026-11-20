@@ -2,9 +2,27 @@ import { usePostLoginCompletion } from "@/features/auth/hooks";
 import { HomeLogo } from "@/shared/components/layout";
 import { CheckCircle, AlertTriangle } from "lucide-react";
 
+const workouts = (count: number) =>
+  `${count} workout${count === 1 ? "" : "s"}`;
+
+const describeCompletion = (syncedCount: number, keptCount: number) => {
+  if (keptCount === 0) {
+    return syncedCount > 0
+      ? "Your data has been synced successfully"
+      : "Successfully signed in";
+  }
+  const kept = `${workouts(keptCount)} ${keptCount === 1 ? "is" : "are"} kept on this device.`;
+  return syncedCount > 0 ? `Synced ${workouts(syncedCount)}. ${kept}` : kept;
+};
+
 const PostLoginPage = () => {
-  const { errorMessage, initialGuestWorkoutCount, syncStatus } =
-    usePostLoginCompletion();
+  const {
+    errorMessage,
+    initialGuestWorkoutCount,
+    keptWorkoutCount,
+    syncStatus,
+    syncedWorkoutCount,
+  } = usePostLoginCompletion();
 
   const getStatusContent = () => {
     switch (syncStatus) {
@@ -42,9 +60,7 @@ const PostLoginPage = () => {
         return {
           icon: <CheckCircle className="mx-auto h-12 w-12 text-primary" />,
           title: "You're all set!",
-          description: initialGuestWorkoutCount > 0
-            ? "Your data has been synced successfully"
-            : "Successfully signed in",
+          description: describeCompletion(syncedWorkoutCount, keptWorkoutCount),
         };
       case "error":
         return {

@@ -4,6 +4,11 @@ import {
   syncGuestDataToServer,
   showSyncSuccessToast,
   showSyncErrorToast,
+  showSyncDeletedWorkoutsToast,
+  emptySyncResult,
+  getSyncableGuestWorkouts,
+  removeSyncedWorkouts,
+  type SyncResult,
 } from "@/utils/syncGuestData";
 import {
   generateRandomId,
@@ -112,6 +117,8 @@ export interface GuestData {
 
 interface GuestState extends GuestData {
   hasAttemptedSync: boolean;
+  /** Kept workouts an account already holds or deleted; no account may import them again. */
+  syncClaimedWorkoutIds: string[];
   // Ephemeral flag set true after persisted state finishes rehydrating on client
   hydrated: boolean;
 }
@@ -164,12 +171,12 @@ interface GuestActions {
   clear: () => void;
   getWorkout: (id: string) => GuestWorkout | undefined;
   getExercise: (id: string) => GuestExercise | undefined;
-  syncWithServer: () => Promise<boolean>;
+  syncWithServer: () => Promise<SyncResult>;
   setHydrated: (hydrated: boolean) => void;
 }
 
 type GuestStore = GuestState & GuestActions;
-let syncWithServerPromise: Promise<boolean> | null = null;
+let syncWithServerPromise: Promise<SyncResult> | null = null;
 
 const guestStorage = createIndexedDBStorage();
 let pendingGuestWrite: Promise<unknown> = Promise.resolve();
@@ -187,6 +194,7 @@ export const useGuestStore = create<GuestStore>()(
     (set, get) => ({
       ...createInitialGuestData(generateRandomId),
       hasAttemptedSync: false,
+      syncClaimedWorkoutIds: [],
       hydrated: false,
 
       addWorkout: (workout) => {
@@ -235,6 +243,9 @@ export const useGuestStore = create<GuestStore>()(
       deleteWorkout: (id) => {
         set((state) => ({
           workouts: state.workouts.filter((workout) => workout.id !== id),
+          syncClaimedWorkoutIds: state.syncClaimedWorkoutIds.filter(
+            (claimedId) => claimedId !== id,
+          ),
         }));
       },
 
@@ -484,7 +495,11 @@ export const useGuestStore = create<GuestStore>()(
 
       clear: () => {
         const initialData = createInitialGuestData(generateRandomId);
-        set({ ...initialData, hasAttemptedSync: false });
+        set({
+          ...initialData,
+          hasAttemptedSync: false,
+          syncClaimedWorkoutIds: [],
+        });
       },
 
       getWorkout: (id) => {
@@ -541,27 +556,86 @@ export const useGuestStore = create<GuestStore>()(
           return syncWithServerPromise;
         }
 
-        if (!user || state.hasAttemptedSync || state.workouts.length === 0) {
-          return true;
+        if (!user || state.hasAttemptedSync) {
+          return emptySyncResult();
         }
+
+        // Cleanup compares against exactly what was sent.
+        const submitted = structuredClone(
+          getSyncableGuestWorkouts(state),
+        );
+        if (submitted.length === 0) return emptySyncResult();
 
         set({ hasAttemptedSync: true });
 
         syncWithServerPromise = (async () => {
           try {
-            const result = await syncGuestDataToServer(state, get().clear);
+            const deletedIds = new Set<string>();
+            let remaining = submitted;
+            let result = emptySyncResult();
+            while (remaining.length > 0) {
+              result = await syncGuestDataToServer({
+                ...state,
+                workouts: remaining,
+              });
+              if (result.success) break;
+
+              const rejected = new Set(result.deletedWorkoutIds);
+              const retry = remaining.filter((workout) => !rejected.has(workout.id));
+              if (retry.length === remaining.length) break;
+
+              remaining
+                .filter((workout) => rejected.has(workout.id))
+                .forEach((workout) => deletedIds.add(workout.id));
+              remaining = retry;
+              if (remaining.length === 0) {
+                result = emptySyncResult();
+              } else if (useAuthStore.getState().user?.id !== user.id) {
+                break;
+              }
+            }
+
+            if (deletedIds.size > 0) {
+              showSyncDeletedWorkoutsToast(deletedIds.size);
+            }
+            result = { ...result, deletedWorkoutIds: [...deletedIds] };
+
+            // Whatever stays local but is mapped or deleted on this account must
+            // never be imported into another account signing in on this device.
+            const claimedIds = new Set([
+              ...deletedIds,
+              ...(result.success ? Object.keys(result.workoutIdMap) : []),
+            ]);
+            set((current) => {
+              const workouts = removeSyncedWorkouts(current.workouts, remaining, result);
+              return {
+                workouts,
+                syncClaimedWorkoutIds: [
+                  ...new Set([
+                    ...current.syncClaimedWorkoutIds,
+                    ...workouts
+                      .filter((workout) => claimedIds.has(workout.id))
+                      .map((workout) => workout.id),
+                  ]),
+                ],
+              };
+            });
+
             if (result.success) {
               showSyncSuccessToast(result);
-              return true;
+              return result;
             }
 
             showSyncErrorToast(result.error ?? "Unknown error");
             set({ hasAttemptedSync: false });
-            return false;
+            return result;
           } catch (error) {
             console.error("Sync failed:", error);
             set({ hasAttemptedSync: false });
-            return false;
+            return emptySyncResult({
+              success: false,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
           } finally {
             syncWithServerPromise = null;
           }
@@ -580,23 +654,25 @@ export const useGuestStore = create<GuestStore>()(
         exerciseTypes: state.exerciseTypes,
         workoutTypes: state.workoutTypes,
         routines: state.routines,
+        syncClaimedWorkoutIds: state.syncClaimedWorkoutIds,
       }),
       migrate: (persistedState: any, persistedVersion?: number) => {
-        // Only run migration when version is missing/older (e.g., test seeds or pre-v1 data)
         if (persistedVersion == null || persistedVersion < 5) {
           const guest = migrateGuestData(persistedState);
           return {
             ...createInitialGuestData(generateRandomId),
             ...guest,
+            syncClaimedWorkoutIds: [] as string[],
             hasAttemptedSync: Boolean(
               (persistedState as any)?.hasAttemptedSync,
             ),
           } as GuestState;
         }
-        // Already at current version — return as-is
-        return persistedState as GuestState;
+        // Older deletion markers have no account ID.
+        const { syncBlockedWorkoutIds: _legacyBlockedIds, ...data } = persistedState;
+        return { ...data, syncClaimedWorkoutIds: [] } as GuestState;
       },
-      version: 5,
+      version: 6,
       onRehydrateStorage: () => (state, _error) => {
         // Mark hydrated regardless of storage success or failure
         state?.setHydrated(true);
