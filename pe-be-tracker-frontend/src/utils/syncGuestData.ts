@@ -166,9 +166,10 @@ const isDeepEqual = (a: unknown, b: unknown): boolean => {
 };
 
 /**
- * Drops workouts the server holds exactly as they are now stored locally:
- * mapped by the server and unchanged since the dispatch snapshot. Anything
- * edited or created during sync stays local; types and routines are untouched.
+ * Drops workouts the server holds exactly as they are now stored locally: the
+ * server saved this request's content (importedWorkoutIds) and the workout is
+ * unchanged since the dispatch snapshot. Anything else stays local; types and
+ * routines are untouched.
  */
 export const removeSyncedWorkouts = (
   current: GuestWorkout[],
@@ -176,14 +177,17 @@ export const removeSyncedWorkouts = (
   result: SyncResult,
 ): GuestWorkout[] => {
   if (!result.success) return current;
+  const imported = new Set(result.importedWorkoutIds);
   const snapshots = new Map(submitted.map((workout) => [workout.id, workout]));
   return current.filter((workout) => {
     const snapshot = snapshots.get(workout.id);
     const confirmed =
       snapshot !== undefined &&
       workout.id in result.workoutIdMap &&
+      imported.has(workout.id) &&
       isDeepEqual(workout, snapshot);
-    // An edited workout stays local even when listed in importedWorkoutIds: that confirms only the snapshot.
+    // A mapped-only ID was not updated: the server may hold an older version, so the local copy is the only one.
+    // An edited workout stays local even when imported: that confirms only the snapshot.
     // Follow-up: PATCH the edited version to result.workoutIdMap[workout.id] and remove it once the server confirms it.
     return !confirmed;
   });

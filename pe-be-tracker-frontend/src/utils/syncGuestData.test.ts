@@ -238,7 +238,7 @@ describe("removeSyncedWorkouts", () => {
     expect(remaining[0].exercises[0].exercise_sets[0].reps).toBe(12);
   });
 
-  it("does not treat a mapping-only replay as confirmation of local edits", () => {
+  it("keeps every workout on a mapping-only replay, since the server did not save this content", () => {
     const current = [submitted[0], editReps(submitted[1], 12)];
 
     const remaining = removeSyncedWorkouts(
@@ -247,7 +247,7 @@ describe("removeSyncedWorkouts", () => {
       makeSyncResult({ workoutIdMap: { a: 1, b: 2 }, importedWorkoutIds: [] }),
     );
 
-    expect(remaining.map((w) => w.id)).toEqual(["b"]);
+    expect(remaining).toEqual(current);
   });
 
   it("treats reordered sets as a change", () => {

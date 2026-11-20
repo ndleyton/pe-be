@@ -118,6 +118,12 @@ describe("usePostLoginCompletion", () => {
   it.each([
     ["success", makeSyncResult({ syncedWorkouts: 1 }), "complete", ""],
     [
+      "success with workouts kept after server deletion",
+      makeSyncResult({ deletedWorkoutIds: ["guest-workout-1"] }),
+      "complete",
+      "",
+    ],
+    [
       "failure",
       makeSyncResult({ success: false, error: "boom" }),
       "error",

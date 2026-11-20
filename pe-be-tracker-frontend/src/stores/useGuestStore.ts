@@ -562,33 +562,41 @@ export const useGuestStore = create<GuestStore>()(
 
         syncWithServerPromise = (async () => {
           try {
-            const result = await syncGuestDataToServer({
-              ...state,
-              workouts: submitted,
-            });
+            const deletedIds = new Set<string>();
+            const blockDeleted = (attempt: SyncResult) => {
+              if (attempt.success || attempt.deletedWorkoutIds.length === 0) return;
+              attempt.deletedWorkoutIds.forEach((id) => deletedIds.add(id));
+              set((current) => ({
+                syncBlockedWorkoutIds: [
+                  ...new Set([...current.syncBlockedWorkoutIds, ...deletedIds]),
+                ],
+              }));
+            };
+
+            let remaining = submitted;
+            let result = await syncGuestDataToServer({ ...state, workouts: remaining });
+            blockDeleted(result);
+            if (deletedIds.size > 0) {
+              // The server rejects the whole batch when any workout was deleted there; retry the rest once without them.
+              remaining = remaining.filter((workout) => !deletedIds.has(workout.id));
+              result =
+                remaining.length > 0
+                  ? await syncGuestDataToServer({ ...state, workouts: remaining })
+                  : emptySyncResult();
+              blockDeleted(result);
+              showSyncDeletedWorkoutsToast(deletedIds.size);
+            }
+            result = { ...result, deletedWorkoutIds: [...deletedIds] };
+
             if (result.success) {
               set((current) => ({
-                workouts: removeSyncedWorkouts(
-                  current.workouts,
-                  submitted,
-                  result,
-                ),
+                workouts: removeSyncedWorkouts(current.workouts, remaining, result),
               }));
               showSyncSuccessToast(result);
               return result;
             }
 
-            if (result.deletedWorkoutIds.length > 0) {
-              set((current) => ({
-                syncBlockedWorkoutIds: [
-                  ...new Set([
-                    ...current.syncBlockedWorkoutIds,
-                    ...result.deletedWorkoutIds,
-                  ]),
-                ],
-              }));
-              showSyncDeletedWorkoutsToast(result.deletedWorkoutIds.length);
-            } else {
+            if (remaining.some((workout) => !deletedIds.has(workout.id))) {
               showSyncErrorToast(result.error ?? "Unknown error");
             }
             set({ hasAttemptedSync: false });
