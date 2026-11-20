@@ -166,6 +166,9 @@ async def get_exercise_image_asset(
         )
 
     generated_match = re.match(r"^generated/exercise-type-(\d+)/", image_path)
+    if image_path.startswith("generated/") and not generated_match:
+        # Only per-exercise generated assets have a visibility check; serve nothing else.
+        raise HTTPException(status_code=404, detail="Exercise image not found")
     if generated_match and user is not None:
         exercise_type = await ExerciseTypeService.get_exercise_type(
             session,

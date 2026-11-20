@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import posixpath
 from pathlib import Path
 from typing import Iterable
 from urllib.parse import unquote, urlsplit
@@ -72,15 +73,24 @@ def is_private_exercise_image_url(image_url: str) -> bool:
         url = urlsplit(image_url)
     except ValueError:
         return True  # An invalid URL cannot supply a usable public thumbnail.
-    normalized = unquote(url.path).lstrip("/")
+    if (url.netloc or url.scheme in ("http", "https")) and not url.hostname:
+        return True
+
     if url.netloc:
         app_hosts = {
-            urlsplit(settings.FRONTEND_URL).hostname,
-            urlsplit(settings.GOOGLE_REDIRECT_URI).hostname,
+            host
+            for host in (
+                urlsplit(settings.FRONTEND_URL).hostname,
+                urlsplit(settings.GOOGLE_REDIRECT_URI).hostname,
+            )
+            if host
         }
         if url.hostname not in app_hosts:
             return False
-    elif normalized.startswith(PRIVATE_IMAGE_PREFIXES):
+    normalized = posixpath.normpath(unquote(url.path).lstrip("/"))
+    if normalized == ".." or normalized.startswith("../"):
+        return True
+    if not url.netloc and normalized.startswith(PRIVATE_IMAGE_PREFIXES):
         return True
 
     for asset_prefix in {

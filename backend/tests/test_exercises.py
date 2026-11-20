@@ -26,7 +26,7 @@ from src.genai.google_images import (
     REFERENCE_PROMPT_VERSION,
 )
 from src.main import app
-from src.users.router import current_active_user
+from src.users.router import current_active_user, current_optional_user
 
 
 def _request(method: str = "GET", headers: dict[str, str] | None = None) -> Request:
@@ -408,6 +408,20 @@ async def test_generated_assets_require_auth_but_published_assets_remain_public(
             assert traversal_resp.status_code in (401, 404)
             assert traversal_resp.content != b"private"
             assert (await async_client.get(direct)).status_code in (401, 404)
+
+        # Generated files outside a per-exercise folder are never served, even signed in.
+        stray = tmp_path / "generated" / "stray.png"
+        stray.write_bytes(b"stray")
+        app.dependency_overrides[current_optional_user] = lambda: SimpleNamespace(
+            id=1, is_superuser=False
+        )
+        try:
+            stray_resp = await async_client.get(
+                f"{settings.API_PREFIX}/exercises/assets/generated/stray.png"
+            )
+        finally:
+            app.dependency_overrides.pop(current_optional_user, None)
+        assert stray_resp.status_code == 404
     finally:
         settings.EXERCISE_IMAGE_STORAGE_DIR = original_dir
 
