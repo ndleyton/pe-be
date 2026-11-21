@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useShallow } from "zustand/react/shallow";
 import { consumePostLoginDestination } from "@/features/auth/lib/postLoginRedirect";
 import { NAV_PATHS } from "@/shared/navigation/constants";
 import { useAuthStore, useGuestStore } from "@/stores";
+import { getSyncableGuestWorkouts } from "@/utils/syncGuestData";
 
 export type PostLoginStatus =
   | "processing"
@@ -14,6 +14,10 @@ export type PostLoginStatus =
 interface UsePostLoginCompletionResult {
   errorMessage: string;
   initialGuestWorkoutCount: number;
+  /** Workouts the server imported in this sign-in. */
+  syncedWorkoutCount: number;
+  /** Guest workouts still stored on this device after sync. */
+  keptWorkoutCount: number;
   syncStatus: PostLoginStatus;
 }
 
@@ -21,28 +25,19 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
   const navigate = useNavigate();
   const refreshAuth = useAuthStore((state) => state.refresh);
   const syncWithServer = useGuestStore((state) => state.syncWithServer);
-  const { hydrated, workouts: rawWorkouts } = useGuestStore(
-    useShallow((state) => ({
-      hydrated: state.hydrated,
-      workouts: state.workouts,
-    })),
-  );
+  const hydrated = useGuestStore((state) => state.hydrated);
   const hasStartedRef = useRef(false);
   const redirectTimeoutRef = useRef<number | null>(null);
-  const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
 
   const [syncStatus, setSyncStatus] = useState<PostLoginStatus>("processing");
   const [errorMessage, setErrorMessage] = useState("");
   const [guestCount, setGuestCount] = useState(0);
+  const [syncedWorkoutCount, setSyncedWorkoutCount] = useState(0);
+  const [keptWorkoutCount, setKeptWorkoutCount] = useState(0);
 
   useEffect(() => {
     if (!hydrated || hasStartedRef.current) {
       return;
-    }
-
-    // Once hydrated, if we have workouts, show them in the UI state
-    if (guestCount === 0 && workouts.length > 0) {
-      setGuestCount(workouts.length);
     }
 
     hasStartedRef.current = true;
@@ -62,16 +57,19 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
           );
         }
 
-        // Check workouts again here to be absolutely sure we use latest state
-        const currentWorkouts = useGuestStore.getState().workouts;
-        if (currentWorkouts.length > 0) {
-          setGuestCount(currentWorkouts.length);
+        const syncableWorkouts = getSyncableGuestWorkouts(
+          useGuestStore.getState(),
+        );
+        if (syncableWorkouts.length > 0) {
+          setGuestCount(syncableWorkouts.length);
           setSyncStatus("syncing");
-          const syncSucceeded = await syncWithServer();
-          if (!syncSucceeded) {
+          const syncResult = await syncWithServer();
+          if (!syncResult.success) {
             throw new Error("Failed to sync guest data");
           }
+          setSyncedWorkoutCount(syncResult.syncedWorkouts);
         }
+        setKeptWorkoutCount(useGuestStore.getState().workouts.length);
 
         setSyncStatus("complete");
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -97,11 +95,13 @@ export const usePostLoginCompletion = (): UsePostLoginCompletionResult => {
         window.clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [hydrated, navigate, refreshAuth, syncWithServer, workouts.length]);
+  }, [hydrated, navigate, refreshAuth, syncWithServer]);
 
   return {
     errorMessage,
     initialGuestWorkoutCount: guestCount,
+    syncedWorkoutCount,
+    keptWorkoutCount,
     syncStatus,
   };
 };
