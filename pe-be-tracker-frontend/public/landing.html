@@ -51,8 +51,6 @@
 }
 </style>
 <link rel="stylesheet" href="assets/ui/base.css">
-<link rel="stylesheet" href="assets/ui/window/fragment.css">
-<link rel="stylesheet" href="assets/ui/checklist/fragment.css">
 <link rel="stylesheet" href="assets/ui/stat/fragment.css">
 <link rel="stylesheet" href="assets/ui/notify/fragment.css">
 <link rel="stylesheet" href="assets/ui/chat/fragment.css">
@@ -66,51 +64,51 @@
 <link rel="stylesheet" href="assets/moments/iris-opens/moment.css">
 <style>
   .nav__logo img { width: 28px; height: 28px; }
-  /* app-frame recipe (sections-library.md) */
-  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
-  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
-  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
-  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
-  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
-  @media (max-width: 1023px) {
-    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-    .app > .app__pane--list { max-height: 252px; }
-    .app > .app__pane--list::after { display: none; }
-    .app .ui-win__side { display: none; }
-    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
-    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
-  }
-  @media (max-width: 639px) {
-    .app.ui { grid-template-rows: minmax(0, 1fr); }
-    .app > .app__pane--list { display: none; }
-    .app > .app__pane + .app__pane { border-top: 0; }
-  }
   /* the hero window: PersonalBestie's own chat, drawn in its colours */
   .hero__window { background: radial-gradient(120% 60% at 70% 118%, #6f7f3a 0 40%, transparent 41%), radial-gradient(90% 50% at 10% 108%, #57703f 0 42%, transparent 43%), linear-gradient(#5f93cc, #a9c7e4 70%, #c8d6dd); }
-  .pb-win { background: #f7f7f7; color: #1a1919; border-radius: 16px; overflow: hidden; font: 400 14px/1.45 var(--font-text); box-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 30px 70px -30px rgb(0 0 0 / .45); }
-  .pb-win__bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-bottom: 1px solid rgb(0 0 0 / .08); font-size: 13px; color: #666060; background: #fff; }
-  .pb-win__bar b { color: #1a1919; font-weight: 500; } .pb-win__bar .sp { flex: 1; }
-  .pb-dots { display: flex; gap: 6px; } .pb-dots i { width: 10px; height: 10px; border-radius: 50%; background: #dcd8d8; }
-  .pb-win__body { display: grid; grid-template-columns: 250px 1fr; min-height: 420px; }
-  .pb-list { border-right: 1px solid rgb(0 0 0 / .07); padding: 10px; display: grid; align-content: start; gap: 2px; background: #fff; }
-  .pb-list__q { height: 34px; margin-bottom: 6px; border-radius: 9px; background: #f0eeee; display: flex; align-items: center; padding: 0 10px; color: #666060; font-size: 13px; }
-  .pb-t { display: grid; grid-template-columns: 30px 1fr auto; gap: 1px 10px; padding: 9px 8px; border-radius: 9px; font-size: 13px; }
-  .pb-t.is-on { background: #fbe9ed; }
-  .pb-t i { grid-row: 1 / span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 500 13px/1 var(--font-text); font-style: normal; color: #cc0033; background: #fbe0e6; }
-  .pb-t b { font-weight: 500; } .pb-t time { color: #666060; }
-  .pb-t span { grid-column: 2 / -1; color: #666060; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the phone: PersonalBestie is a mobile-first web app, drawn as it looks on a phone */
+  .pb-phone { width: 320px; background: #f7f7f7; color: #1a1919; border: 8px solid #1a1919; border-bottom: 0; border-radius: 44px 44px 0 0; overflow: hidden; font: 400 14px/1.45 var(--font-text); box-shadow: 0 30px 70px -30px rgb(0 0 0 / .45); }
+  .pb-appbar { display: grid; grid-template-columns: 24px 1fr 24px; align-items: center; height: 56px; padding: 14px 16px 0; border-bottom: 1px solid rgb(204 0 51 / .15); }
+  .pb-burger { width: 16px; height: 10px; border-block: 2px solid #1a1919; position: relative; } .pb-burger::after { content: ""; position: absolute; inset: 2px 0 auto; border-top: 2px solid #1a1919; }
+  .pb-brand { justify-self: center; display: flex; align-items: center; gap: 6px; color: #e11d48; font: 700 13px/0.95 var(--font-display); letter-spacing: -0.02em; }
+  .pb-screen { padding: 14px; display: grid; gap: 10px; align-content: start; }
+  .pb-screen__head { display: flex; align-items: center; justify-content: space-between; } .pb-screen__head b { font-size: 18px; font-weight: 500; }
+  .pb-pill { padding: 6px 12px; border-radius: 99px; background: #cc0033; color: #fff; font-size: 13px; font-weight: 500; }
+  .pb-timer { padding: 4px 10px; border-radius: 99px; background: #fbe0e6; color: #b3002d; font: 500 13px/1.3 var(--font-mono); }
+  .pb-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .pb-cards li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid rgb(0 0 0 / .07); }
+  .pb-cards li.is-on { border-color: rgb(204 0 51 / .45); }
+  .pb-cards b { font-weight: 500; } .pb-cards span { grid-column: 1; color: #4d4848; font-size: 13px; } .pb-cards em { grid-row: 1; grid-column: 2; font-style: normal; font-size: 13px; color: #4d4848; }
+  .pb-cards li.is-on em { color: #b3002d; }
+  .pb-search { height: 36px; border-radius: 10px; background: #ecebeb; display: flex; align-items: center; padding: 0 12px; color: #4d4848; font-size: 13px; }
+  .pb-ex { padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid rgb(0 0 0 / .07); display: grid; gap: 6px; }
+  .pb-ex__head { display: flex; justify-content: space-between; align-items: baseline; } .pb-ex__head b { font-weight: 500; } .pb-ex__head span { font-size: 13px; color: #4d4848; }
+  .pb-sets { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .pb-set { display: grid; grid-template-columns: 36px 1fr 44px 22px; align-items: center; padding: 4px 6px; border-radius: 8px; font-size: 13px; }
+  .pb-set.is-done { background: #fbe9ed; }
+  .pb-set--head { color: #4d4848; padding-block: 0; }
+  .pb-set__ok { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid #c9c4c4; }
+  .pb-set.is-done .pb-set__ok { border-color: #cc0033; background: #cc0033 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4.5 8.2 2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
+  /* the hero's phone rises out of the painted frame, cut by its fade */
+  .hero--centred .hero__window > .pb-phone--hero { width: min(360px, calc(100% - 2 * var(--s-4))); }
+  @media (max-width: 639px) { .hero--centred .hero__window > .pb-phone--hero { left: 50%; transform: translateX(-50%); } }
+  /* three phones in one frame for the logging section */
+  .pb-phones { display: flex; justify-content: center; gap: var(--s-6); margin-top: var(--s-7); padding-top: var(--s-7); overflow: hidden; border-radius: var(--r-lg); background: var(--p-surface); -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+  .pb-phones > .pb-phone { flex: none; }
+  @media (max-width: 1279px) { .pb-phone--ex { display: none; } }
+  @media (max-width: 639px) { .pb-phone--list { display: none; } .pb-phones { padding-top: var(--s-5); } .pb-phones > .pb-phone { width: calc(100% - 2 * var(--s-4)); } }
   .pb-chat { display: grid; gap: 8px; align-content: start; padding: 14px 18px; min-width: 0; }
   .pb-msg { max-width: 80%; padding: 9px 14px; border-radius: 18px; }
   .pb-msg--me { justify-self: end; background: #cc0033; color: #fff; border-bottom-right-radius: 6px; }
   .pb-msg--bot { background: #e9e5e5; border-bottom-left-radius: 6px; }
-  .pb-tool { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666060; }
+  .pb-tool { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4d4848; }
   .pb-tool::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #cc0033; border-right-color: transparent; }
   .pb-logged { display: flex; align-items: center; gap: 12px; max-width: 80%; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid rgb(0 0 0 / .08); }
   .pb-logged__ico { width: 36px; height: 36px; border-radius: 10px; background: #fbe0e6 url(assets/logo.svg) center / 18px no-repeat; flex: none; }
-  .pb-logged > span:nth-child(2) { display: grid; line-height: 1.3; flex: 1; } .pb-logged small { font-size: 13px; color: #666060; } .pb-logged em { font-style: normal; font-size: 13px; color: #666060; }
+  .pb-logged > span:nth-child(2) { display: grid; line-height: 1.3; flex: 1; } .pb-logged small { font-size: 13px; color: #4d4848; }
   .pb-logged__btn { padding: 6px 12px; border-radius: 99px; background: #f0eeee; font-size: 13px; font-weight: 500; white-space: nowrap; }
-  @media (max-width: 639px) { .pb-win__body { grid-template-columns: 1fr; } .pb-list, .pb-tool, .pb-date { display: none; } .pb-chat { font-size: 13px; padding: 12px 14px; } .pb-msg, .pb-logged { max-width: 92%; } }
+  .pb-phone .pb-chat { padding: 14px 12px; } .pb-phone .pb-msg, .pb-phone .pb-logged { max-width: 88%; }
+  @media (max-width: 639px) { .pb-tool { display: none; } .pb-chat { font-size: 13px; } }
   /* the recap, drawn as the app shows it after Finish workout */
   .pb-recap { background: #272626; color: #f2f0f0; border-radius: 16px; padding: 20px; font: 400 15px/1.5 var(--font-text); box-shadow: 0 0 0 1px rgb(255 255 255 / .08); display: grid; gap: 12px; }
   .pb-recap__head { display: flex; justify-content: space-between; align-items: baseline; } .pb-recap__head b { font-size: 18px; font-weight: 500; } .pb-recap__head span { color: #a19393; font-size: 14px; }
@@ -162,21 +160,13 @@
         <div class="btn-row"><a class="btn btn--primary" href="https://app.personalbestie.com/chat">Log your first workout</a><a class="btn btn--secondary" href="https://app.personalbestie.com/workouts">Try it as a guest</a></div>
       </div>
       <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="11" role="img" aria-label="PersonalBestie chat turning a message about squats, bench press and rows into a saved workout">
-        <div class="ly-piece pb-win" aria-hidden="true">
-          <div class="pb-win__bar"><span class="pb-dots"><i></i><i></i><i></i></span><span><b>Chat</b> · Push day</span><span class="sp"></span><span class="pb-date">Nov 21</span></div>
-          <div class="pb-win__body">
-            <div class="pb-list">
-              <div class="pb-list__q">Workouts</div>
-              <div class="pb-t is-on"><i>PD</i><b>Push day</b><time>Today</time><span>Squat, bench press, rows</span></div>
-              <div class="pb-t"><i>ER</i><b>Easy run</b><time>Wed</time><span>3 miles in 24 minutes</span></div>
-              <div class="pb-t"><i>PL</i><b>Pull day</b><time>Mon</time><span>Recap ready · 1 new record</span></div>
-            </div>
-            <div class="pb-chat" data-ly-steps="900">
-              <div class="pb-msg pb-msg--me">squat 3x8 @ 60kg, bench 5x5 @ 50, rows 3x10 @ 40. knees felt good</div>
-              <div class="pb-tool" data-step>Saving 3 exercises and 11 sets to Push day</div>
-              <div class="pb-msg pb-msg--bot" data-step>Logged. Your squat matched your best set at 60 kg, so try 62.5 kg next week.</div>
-              <div class="pb-logged" data-step><span class="pb-logged__ico"></span><span><small>Workout logged</small><b>Push day</b><em>Nov 21 · 11 sets</em></span><span class="pb-logged__btn">Open workout</span></div>
-            </div>
+        <div class="ly-piece pb-phone pb-phone--hero" aria-hidden="true">
+          <div class="pb-appbar"><span class="pb-burger"></span><span class="pb-brand"><img src="assets/logo.svg" alt="" width="22" height="22"><span>Personal<br>Bestie</span></span><span class="pb-appbar__end"></span></div>
+          <div class="pb-chat" data-ly-steps="900">
+            <div class="pb-msg pb-msg--me">squat 3x8 @ 60kg, bench 5x5 @ 50, rows 3x10 @ 40. knees felt good</div>
+            <div class="pb-tool" data-step>Saving 11 sets to Push day</div>
+            <div class="pb-msg pb-msg--bot" data-step>Logged. Your squat matched your best set at 60 kg, so try 62.5 kg next week.</div>
+            <div class="pb-logged" data-step><span class="pb-logged__ico"></span><span><small>Workout logged</small><b>Push day</b></span><span class="pb-logged__btn">Open</span></div>
           </div>
         </div>
       </div>
@@ -187,64 +177,44 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="log-h" class="span-5">Every workout, logged from one message</h2>
-        <p class="span-6 start-7 muted">Write sets the way you already do. PersonalBestie adds them to today’s workout, where you fix a weight or tick off each set before you finish. <a class="link" href="#features">See what it tracks</a></p>
+        <p class="span-6 start-7 muted">Write sets the way you already do. PersonalBestie adds them to today’s workout on your phone, where you fix a weight or tick off each set before you finish. <a class="link" href="#features">See what it tracks</a></p>
       </div>
-      <div class="ui app fill" role="img" aria-label="The workout list beside today’s push day, its sets ticked off one by one" data-ui-pause-host>
-        <div class="app__pane app__pane--list">
-          <div class="ui ui-panel ui-win" data-ui="window" data-ui-still data-open="In progress" data-work="Saving" data-done="Logged">
-            <div class="ui-win__bar">
-              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="ui-win__crumb">Workouts <i>/</i> <b>November</b></span>
-              <span class="ui-spacer"></span>
-              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Search</span><span class="ui-kbd">/</span></span>
-            </div>
-            <div class="ui-win__body">
-              <nav class="ui-win__side" aria-hidden="true">
-                <span class="ui-win__nav is-on">Workouts<em>14</em></span>
-                <span class="ui-win__nav">Routines<em>4</em></span>
-                <span class="ui-win__nav">Exercises</span>
-                <span class="ui-win__nav">Chat</span>
-                <span class="ui-win__label">Types</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Strength</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Running</span>
-              </nav>
-              <div class="ui-win__main">
-                <div class="ui-win__cols" aria-hidden="true"><span>Workout</span><span>Exercises</span><span>Status</span><span>Date</span></div>
-                <ul class="ui-win__rows">
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">PD</span><span class="ui-win__who">Push day</span><span class="ui-win__sub">Squat, bench, rows · 11 sets</span><span class="ui-win__st is-you" data-st>In progress</span><span class="ui-win__age">Today</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">ER</span><span class="ui-win__who">Easy run</span><span class="ui-win__sub">3 miles in 24:00</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Wed</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">PL</span><span class="ui-win__who">Pull day</span><span class="ui-win__sub">Rows, pulldowns · 1 record</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Mon</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">LG</span><span class="ui-win__who">Legs</span><span class="ui-win__sub">Squat, lunges · 13 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 14</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">UP</span><span class="ui-win__who">Upper</span><span class="ui-win__sub">Bench, rows, press · 12 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 12</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">LR</span><span class="ui-win__who">Long run</span><span class="ui-win__sub">6 miles in 51:20</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 9</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">PD</span><span class="ui-win__who">Push day</span><span class="ui-win__sub">Bench, dips · 10 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 7</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">PL</span><span class="ui-win__who">Pull day</span><span class="ui-win__sub">Deadlift, rows · 9 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 5</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">MB</span><span class="ui-win__who">Mobility</span><span class="ui-win__sub">Hips, shoulders · 20 min</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 3</span></li>
-                </ul>
-              </div>
-            </div>
+      <div class="ui pb-phones fill" role="img" aria-label="Three PersonalBestie phone screens: the workout list, today’s push day with its sets ticked off, and the exercise library">
+        <div class="pb-phone pb-phone--list" aria-hidden="true">
+          <div class="pb-appbar"><span class="pb-burger"></span><span class="pb-brand"><img src="assets/logo.svg" alt="" width="22" height="22"><span>Personal<br>Bestie</span></span><span class="pb-appbar__end"></span></div>
+          <div class="pb-screen">
+            <div class="pb-screen__head"><b>Workouts</b><span class="pb-pill">Start workout</span></div>
+            <ul class="pb-cards">
+              <li class="is-on"><b>Push day</b><span>Squat, bench, rows · 11 sets</span><em>In progress</em></li>
+              <li><b>Easy run</b><span>3 miles in 24:00</span><em>Wed</em></li>
+              <li><b>Pull day</b><span>Rows, pulldowns · 1 record</span><em>Mon</em></li>
+              <li><b>Legs</b><span>Squat, lunges · 13 sets</span><em>Nov 14</em></li>
+              <li><b>Upper</b><span>Bench, rows, press · 12 sets</span><em>Nov 12</em></li>
+            </ul>
           </div>
         </div>
-        <div class="app__pane app__pane--open" data-ui-loop>
-          <div class="ui ui-panel ui-checks" data-ui="checklist">
-            <div class="ui-checks__head">
-              <div class="ui-title">Push day · Nov 21</div>
-              <span class="ui-spacer"></span>
-              <div class="ui-meta" data-checks-count>4 of 11 sets</div>
-            </div>
-            <div class="ui-checks__bar"><i data-checks-bar style="--k:0.36"></i></div>
-            <ul class="ui-checks__list">
-              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 1 · 8 reps at 60 kg</span></li>
-              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 2 · 8 reps at 60 kg</span></li>
-              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 3 · 8 reps at 60 kg</span></li>
-              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 1 · 5 reps at 50 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 2 · 5 reps at 50 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 3 · 5 reps at 50 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 4 · 5 reps at 50 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 5 · 5 reps at 50 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 1 · 10 reps at 40 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 2 · 10 reps at 40 kg</span></li>
-              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 3 · 10 reps at 40 kg</span></li>
+        <div class="pb-phone pb-phone--log" aria-hidden="true">
+          <div class="pb-appbar"><span class="pb-burger"></span><span class="pb-brand"><img src="assets/logo.svg" alt="" width="22" height="22"><span>Personal<br>Bestie</span></span><span class="pb-appbar__end"></span></div>
+          <div class="pb-screen">
+            <div class="pb-screen__head"><b>Push day</b><span class="pb-timer">42:10</span></div>
+            <div class="pb-ex"><div class="pb-ex__head"><b>Squat</b><span>Best 60 kg × 8</span></div>
+              <ul class="pb-sets"><li class="pb-set pb-set--head"><span>Set</span><span>Weight</span><span>Reps</span><span></span></li><li class="pb-set is-done"><span>1</span><span>60 kg</span><span>8</span><span class="pb-set__ok"></span></li><li class="pb-set is-done"><span>2</span><span>60 kg</span><span>8</span><span class="pb-set__ok"></span></li><li class="pb-set is-done"><span>3</span><span>60 kg</span><span>8</span><span class="pb-set__ok"></span></li></ul></div>
+            <div class="pb-ex"><div class="pb-ex__head"><b>Bench press</b><span>Note: slow down</span></div>
+              <ul class="pb-sets"><li class="pb-set is-done"><span>1</span><span>50 kg</span><span>5</span><span class="pb-set__ok"></span></li><li class="pb-set"><span>2</span><span>50 kg</span><span>5</span><span class="pb-set__ok"></span></li><li class="pb-set"><span>3</span><span>50 kg</span><span>5</span><span class="pb-set__ok"></span></li><li class="pb-set"><span>4</span><span>50 kg</span><span>5</span><span class="pb-set__ok"></span></li></ul></div>
+          </div>
+        </div>
+        <div class="pb-phone pb-phone--ex" aria-hidden="true">
+          <div class="pb-appbar"><span class="pb-burger"></span><span class="pb-brand"><img src="assets/logo.svg" alt="" width="22" height="22"><span>Personal<br>Bestie</span></span><span class="pb-appbar__end"></span></div>
+          <div class="pb-screen">
+            <div class="pb-screen__head"><b>Exercises</b></div>
+            <div class="pb-search">Search exercises</div>
+            <ul class="pb-cards pb-cards--ex">
+              <li><b>Barbell squat</b><span>Quads, glutes</span><em>60 kg</em></li>
+              <li><b>Bench press</b><span>Chest, triceps</span><em>52.5 kg</em></li>
+              <li><b>Barbell row</b><span>Back, biceps</span><em>45 kg</em></li>
+              <li><b>Lat pulldown</b><span>Back</span><em>55 kg</em></li>
+              <li><b>Romanian deadlift</b><span>Hamstrings, glutes</span><em>70 kg</em></li>
+              <li><b>Overhead press</b><span>Shoulders</span><em>32.5 kg</em></li>
             </ul>
           </div>
         </div>
@@ -291,15 +261,15 @@
             <p>Each exercise keeps its best weight, reps and volume, with the session it came from.</p>
             <div class="panel">
               <div class="stage stage--fade-b"><div class="at-rise fit to-edge" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:56px;--ay-sm:24px" data-ui-loop>
-                <div class="ui ui-panel ui-stat" data-ui="stat" data-from="55" data-to="62.5" data-suffix=" kg" data-ui-opts='{"fill":true}'>
+                <div class="ui ui-panel ui-stat" data-ui="stat" data-from="55" data-to="60" data-suffix=" kg" data-ui-opts='{"fill":true}'>
                   <div class="ui-stat__head">
                     <div class="ui-stat__top">
                       <span class="ui-stat__label">Squat, best set</span>
                       <span class="ui-stat__range">Last 12 weeks</span>
                     </div>
                     <div class="ui-stat__line">
-                      <span class="ui-stat__num" data-stat-num>62.5 kg</span>
-                      <span class="ui-chip ui-chip--plain ui-stat__delta"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 9.5v-7M3 5.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>7.5 kg</span>
+                      <span class="ui-stat__num" data-stat-num>60 kg</span>
+                      <span class="ui-chip ui-chip--plain ui-stat__delta"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 9.5v-7M3 5.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>5 kg</span>
                       <span class="ui-stat__sub">since September</span>
                     </div>
                   </div>
