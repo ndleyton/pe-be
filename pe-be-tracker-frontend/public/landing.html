@@ -1,605 +1,444 @@
-<!DOCTYPE html>
-<html lang="en">
-
+<!doctype html>
+<html lang="en" data-type="software" data-radius="round" data-ground="painting" data-buttons="tonal" data-motion>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
-    <link rel="shortcut icon" type="image/png" href="assets/icon-192.png">
-    <link rel="mask-icon" href="favicon.svg" color="#cc0033">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="PersonalBestie">
-    <meta name="theme-color" content="#f7f7f7">
-    <title>PersonalBestie | Turn workout notes into progress</title>
-    <meta name="description"
-        content="Keep logging the way you already do. Paste your workout notes into chat with your PersonalBestie AI coach and get a structured log, tracked personal bests, and coaching based on your training.">
-    <meta property="og:title" content="PersonalBestie | Turn workout notes into progress">
-    <meta property="og:description"
-        content="Keep logging the way you already do. Paste your workout notes into chat with your PersonalBestie AI coach and get a structured log, tracked personal bests, and coaching based on your training.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.personalbestie.com/">
-    <meta property="og:image" content="https://www.personalbestie.com/assets/icon-512.png">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="PersonalBestie | Turn workout notes into progress">
-    <meta name="twitter:description"
-        content="Keep logging the way you already do. Paste your workout notes into chat with your PersonalBestie AI coach and get a structured log, tracked personal bests, and coaching based on your training.">
-    <meta name="twitter:image" content="https://www.personalbestie.com/assets/icon-512.png">
-    <link rel="canonical" href="https://www.personalbestie.com/">
-    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt">
-    <script>
-        const hasAuthCookie = document.cookie.split("; ").some((row) => row.startsWith("personalbestie_session="));
-        if (hasAuthCookie) {
-            window.location.href = "https://app.personalbestie.com";
-        }
-    </script>
-    <link rel="stylesheet" href="/static.css">
-    <style>
-        /* In the components layer so Tailwind utilities (static.css) can override these rules. */
-        @layer components {
-        :root {
-            --primary-rose: #CC0033;
-            --primary-rose-soft: rgba(204, 0, 51, 0.1);
-            --background: #F7F7F7;
-            --card: rgba(255, 255, 255, 0.7);
-            --foreground: #1A1919;
-            --foreground-rgb: 26, 25, 25;
-            --muted-foreground: #666060;
-            --border: rgba(0, 0, 0, 0.1);
-            --page-radius-xl: 0.75rem;
-            --page-radius-2xl: 1.25rem;
-            --glass-blur: 12px;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --primary-rose: #FF3366;
-                --primary-rose-soft: rgba(255, 51, 102, 0.15);
-                --background: #201D1D;
-                --card: rgba(39, 33, 33, 0.7);
-                --foreground: #F2F0F0;
-                --foreground-rgb: 242, 240, 240;
-                --muted-foreground: #A19393;
-                --border: rgba(255, 255, 255, 0.1);
-            }
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            background-color: var(--background);
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            color: var(--foreground);
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            pointer-events: none;
-            background-image: linear-gradient(135deg, var(--primary-rose) 0%, var(--background) 100%);
-            opacity: 0.05;
-            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3Cg transform='translate(-75 0)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(0 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(-75 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 75'%3E%3Cg fill='none' stroke='black' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3Cg transform='translate(-75 0)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(0 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3Cg transform='translate(-75 -75)'%3E%3Cpolyline points='20,8 56,8 65,17 56,26 56,56 65,65 56,74 20,74 11,65 20,56 20,26 11,17 20,8' transform='rotate(45 38 41)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            -webkit-mask-size: 35px 35px;
-            mask-size: 35px 35px;
-            -webkit-mask-repeat: repeat;
-            mask-repeat: repeat;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body::before {
-                opacity: 0.08;
-                background-image: linear-gradient(135deg, var(--primary-rose) 0%, var(--background) 100%);
-            }
-        }
-
-        .bg-glow-container {
-            display: none;
-        }
-
-        .glass-panel {
-            background: var(--card);
-            backdrop-filter: blur(var(--glass-blur));
-            -webkit-backdrop-filter: blur(var(--glass-blur));
-            border: 1px solid var(--border);
-            border-radius: var(--page-radius-2xl);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-        }
-
-        .glass-panel:hover {
-            border-color: rgba(var(--foreground-rgb), 0.2);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.12);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--page-radius-xl);
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.9rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
-        }
-
-        .btn-primary {
-            background: var(--primary-rose);
-            color: white;
-            box-shadow: 0 4px 14px 0 rgba(204, 0, 51, 0.25);
-        }
-
-        .btn-primary:hover {
-            filter: brightness(1.1);
-            box-shadow: 0 6px 20px rgba(204, 0, 51, 0.35);
-        }
-
-        .btn-glass {
-            background: rgba(var(--foreground-rgb), 0.05);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid var(--border);
-            color: var(--foreground);
-        }
-
-        .btn-glass:hover {
-            background: rgba(var(--foreground-rgb), 0.1);
-            border-color: rgba(var(--foreground-rgb), 0.2);
-        }
-
-        .text-glow {
-            background: linear-gradient(to bottom, var(--foreground) 0%, rgba(var(--foreground-rgb), 0.6) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            filter: drop-shadow(0 0 15px rgba(var(--foreground-rgb), 0.05));
-        }
-
-        .caps-label {
-            font-size: 0.7rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            color: var(--primary-rose);
-            opacity: 0.9;
-        }
-
-        .logo-wordmark {
-            color: var(--primary-rose);
-            line-height: 0.9 !important;
-            font-weight: 900;
-            letter-spacing: -0.025em;
-        }
-
-        .metric-card {
-            background: rgba(var(--foreground-rgb), 0.03);
-            border: 1px solid var(--border);
-            border-radius: var(--page-radius-xl);
-            padding: 1.25rem;
-            transition: all 0.3s ease;
-        }
-
-        .metric-card:hover {
-            background: rgba(var(--foreground-rgb), 0.06);
-            transform: translateY(-2px);
-        }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PersonalBestie: AI workout log for people who lift and run</title>
+<meta name="description" content="Send your sets to PersonalBestie in chat and it saves the workout, tracks every personal best and writes a recap from your own training.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.personalbestie.com/">
+<meta property="og:title" content="PersonalBestie: AI workout log for people who lift and run">
+<meta property="og:description" content="Send your sets in chat. PersonalBestie saves the workout, tracks personal bests and writes a recap.">
+<meta property="og:image" content="https://www.personalbestie.com/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.personalbestie.com/share.jpg">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="PersonalBestie">
+<meta name="theme-color" content="#f7f7f7">
+<link rel="canonical" href="https://www.personalbestie.com/">
+<link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<script>
+  if (document.cookie.split("; ").some((row) => row.startsWith("personalbestie_session="))) {
+    window.location.href = "https://app.personalbestie.com";
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/system.css">
+<link rel="stylesheet" href="assets/ui/cards.css">
+<link rel="stylesheet" href="assets/motion/motion.css">
+<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="assets/layout/layout.css">
+<link rel="stylesheet" href="assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #f7f7f7; --p-surface: #eaeaea; --p-ink: #1a1919; --p-muted: #4d4848;
+  --p-accent: #cc0033; --p-accent-ink: #f7f7f7; --p-action: #cc0033; --p-action-ink: #f7f7f7;
+  --p-inv-bg: #1a1919; --p-inv-surface: #272626; --p-inv-ink: #f7f7f7; --p-inv-muted: #9b9a9a;
+  --p-inv-accent: #cc0033; --p-inv-accent-ink: #f7f7f7; --p-inv-action: #cc0033; --p-inv-action-ink: #f7f7f7;
+  --font-display: "Figtree", system-ui, sans-serif;
+  --font-text: "Figtree", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.025em;
+  --display-tracking-xl: -0.035em;
+}
+</style>
+<link rel="stylesheet" href="assets/ui/base.css">
+<link rel="stylesheet" href="assets/ui/window/fragment.css">
+<link rel="stylesheet" href="assets/ui/checklist/fragment.css">
+<link rel="stylesheet" href="assets/ui/stat/fragment.css">
+<link rel="stylesheet" href="assets/ui/notify/fragment.css">
+<link rel="stylesheet" href="assets/ui/chat/fragment.css">
+<link rel="stylesheet" href="assets/diagrams/diagram.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="assets/moments/moments.js">
+<link rel="modulepreload" href="assets/moments/lib.js">
+<link rel="modulepreload" href="assets/moments/iris-opens/moment.js">
+<link rel="stylesheet" href="assets/moments/iris-opens/moment.css">
+<style>
+  .nav__logo img { width: 28px; height: 28px; }
+  /* app-frame recipe (sections-library.md) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+  }
+  /* the hero window: PersonalBestie's own chat, drawn in its colours */
+  .hero__window { background: radial-gradient(120% 60% at 70% 118%, #6f7f3a 0 40%, transparent 41%), radial-gradient(90% 50% at 10% 108%, #57703f 0 42%, transparent 43%), linear-gradient(#5f93cc, #a9c7e4 70%, #c8d6dd); }
+  .pb-win { background: #f7f7f7; color: #1a1919; border-radius: 16px; overflow: hidden; font: 400 14px/1.45 var(--font-text); box-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 30px 70px -30px rgb(0 0 0 / .45); }
+  .pb-win__bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-bottom: 1px solid rgb(0 0 0 / .08); font-size: 13px; color: #666060; background: #fff; }
+  .pb-win__bar b { color: #1a1919; font-weight: 500; } .pb-win__bar .sp { flex: 1; }
+  .pb-dots { display: flex; gap: 6px; } .pb-dots i { width: 10px; height: 10px; border-radius: 50%; background: #dcd8d8; }
+  .pb-win__body { display: grid; grid-template-columns: 250px 1fr; min-height: 420px; }
+  .pb-list { border-right: 1px solid rgb(0 0 0 / .07); padding: 10px; display: grid; align-content: start; gap: 2px; background: #fff; }
+  .pb-list__q { height: 34px; margin-bottom: 6px; border-radius: 9px; background: #f0eeee; display: flex; align-items: center; padding: 0 10px; color: #666060; font-size: 13px; }
+  .pb-t { display: grid; grid-template-columns: 30px 1fr auto; gap: 1px 10px; padding: 9px 8px; border-radius: 9px; font-size: 13px; }
+  .pb-t.is-on { background: #fbe9ed; }
+  .pb-t i { grid-row: 1 / span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 500 13px/1 var(--font-text); font-style: normal; color: #cc0033; background: #fbe0e6; }
+  .pb-t b { font-weight: 500; } .pb-t time { color: #666060; }
+  .pb-t span { grid-column: 2 / -1; color: #666060; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pb-chat { display: grid; gap: 8px; align-content: start; padding: 14px 18px; min-width: 0; }
+  .pb-msg { max-width: 80%; padding: 9px 14px; border-radius: 18px; }
+  .pb-msg--me { justify-self: end; background: #cc0033; color: #fff; border-bottom-right-radius: 6px; }
+  .pb-msg--bot { background: #e9e5e5; border-bottom-left-radius: 6px; }
+  .pb-tool { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666060; }
+  .pb-tool::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #cc0033; border-right-color: transparent; }
+  .pb-logged { display: flex; align-items: center; gap: 12px; max-width: 80%; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid rgb(0 0 0 / .08); }
+  .pb-logged__ico { width: 36px; height: 36px; border-radius: 10px; background: #fbe0e6 url(assets/logo.svg) center / 18px no-repeat; flex: none; }
+  .pb-logged > span:nth-child(2) { display: grid; line-height: 1.3; flex: 1; } .pb-logged small { font-size: 13px; color: #666060; } .pb-logged em { font-style: normal; font-size: 13px; color: #666060; }
+  .pb-logged__btn { padding: 6px 12px; border-radius: 99px; background: #f0eeee; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  @media (max-width: 639px) { .pb-win__body { grid-template-columns: 1fr; } .pb-list, .pb-tool, .pb-date { display: none; } .pb-chat { font-size: 13px; padding: 12px 14px; } .pb-msg, .pb-logged { max-width: 92%; } }
+  /* the recap, drawn as the app shows it after Finish workout */
+  .pb-recap { background: #272626; color: #f2f0f0; border-radius: 16px; padding: 20px; font: 400 15px/1.5 var(--font-text); box-shadow: 0 0 0 1px rgb(255 255 255 / .08); display: grid; gap: 12px; }
+  .pb-recap__head { display: flex; justify-content: space-between; align-items: baseline; } .pb-recap__head b { font-size: 18px; font-weight: 500; } .pb-recap__head span { color: #a19393; font-size: 14px; }
+  .pb-recap__rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .pb-recap__rows li { display: flex; justify-content: space-between; padding: 9px 14px; border-radius: 12px; background: #322e2e; } .pb-recap__rows b { color: #ff3366; font-weight: 500; }
+  .pb-recap__note { border-radius: 14px; padding: 14px 16px; background: #3a2329; box-shadow: inset 0 0 0 1px rgb(255 51 102 / .3); display: grid; gap: 8px; }
+  .pb-recap__note p { margin: 0; } .pb-recap__label { display: flex; align-items: center; gap: 8px; color: #ff6b8e; font-size: 13px; font-weight: 500; }
+  .pb-recap__spark { width: 22px; height: 22px; border-radius: 7px; background: rgb(255 51 102 / .2); }
+  #features .panel { --p-h: 336px; }
+  #features .frame__img { object-position: 50% 28%; }
+  @media (min-width: 1024px) and (max-width: 1279px) { #features .panel { --p-h: 300px; } #assistant .frame--split { --ratio: 110%; } }
+  @media (max-width: 639px) { .pb-logged small { display: none; } #features .panel { --p-h: 188px; } #features .ui-chat__day { display: none; } }
+</style>
 </head>
+<body>
+<!-- type: software (AI workout tracker app)
+     deal: hero centred, nav nav-centre (dealt nav-cards: one product, not 2-4, so dealt again), close close-type,
+     footer footer-dark, rhythm dark-band, buttons tonal, mark initial (replaced by the client's logo), palette: the
+     client's own rose and near-black (start.mjs brand), type figtree, effect painterly-landscape in the hero window
+     moments: iris-opens on #recap (the dark band) -->
 
-<body class="antialiased">
-    <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
-        <header class="py-6">
-            <div class="glass-panel flex items-center justify-between px-6 py-4">
-                <a href="https://www.personalbestie.com/" class="flex items-center gap-2 text-lg font-bold">
-                    <img alt="PBestie Logo" class="h-8 w-8" src="assets/logo.svg" width="32" height="32">
-                    <div class="logo-wordmark flex flex-col items-start leading-none">
-                        <span>Personal</span>
-                        <span>Bestie</span>
-                    </div>
-                </a>
-                <div class="flex items-center gap-6">
-                    <a href="#features"
-                        class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Features</a>
-                    <a href="#flow"
-                        class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">How it works</a>
-                    <a href="https://www.personalbestie.com/alternatives/hevy/"
-                        class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">vs Hevy</a>
-                    <a href="https://www.personalbestie.com/blog/"
-                        class="hidden text-sm font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity md:inline">Blog</a>
-                    <a href="https://app.personalbestie.com/login" class="btn btn-primary">Log In</a>
-                </div>
-            </div>
-        </header>
-
-        <main class="flex-1 py-12">
-            <section class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-                <div>
-                    <div class="caps-label inline-block">
-                        Your AI training partner
-                    </div>
-                    <h1
-                        class="text-glow mt-6 max-w-4xl text-5xl font-black tracking-tighter sm:text-6xl lg:text-7xl leading-[1.05]">
-                        Your workout notes. Now with progress tracking.
-                    </h1>
-                    <p class="mt-8 max-w-2xl text-xl leading-relaxed text-[color:var(--muted-foreground)]">
-                        Paste what you trained—“squats 3×8 at 60 kg”—and PersonalBestie turns it into a workout log.
-                        Track your personal bests and get suggestions based on your training history.
-                    </p>
-                    <div class="mt-10 flex flex-col gap-4 sm:flex-row">
-                        <a href="https://app.personalbestie.com" class="btn btn-primary px-8 py-4">
-                            Log your first workout
-                        </a>
-                        <a href="https://app.personalbestie.com" class="btn btn-glass px-8 py-4">
-                            Explore as a guest
-                        </a>
-                    </div>
-                    <p class="mt-4 text-sm text-[color:var(--muted-foreground)]">
-                        Sign in to log through chat. Or explore manual tracking as a guest.
-                    </p>
-                    <div class="mt-12 grid gap-4 sm:grid-cols-3">
-                        <div class="metric-card">
-                            <div class="caps-label text-[10px]">Text to workout</div>
-                            <div class="mt-1 text-base font-bold">Your sets, saved</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="caps-label text-[10px]">Personal bests</div>
-                            <div class="mt-1 text-base font-bold">See your records grow</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="caps-label text-[10px]">AI coach</div>
-                            <div class="mt-1 text-base font-bold">Ideas for your next session</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-panel p-2 max-w-[360px] w-full mx-auto sm:max-w-[380px] lg:ml-auto shadow-2xl flex flex-col gap-3">
-                    <div class="overflow-hidden rounded-[1.25rem] relative bg-[var(--background)] shrink-0 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
-                        <!-- Slide 1 (Chat) - Sets the container frame size natively -->
-                        <picture class="relative block transition-transform duration-500 ease-in-out translate-x-0 js-hero-slide pointer-events-auto">
-                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="chat-dark.avif">
-                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="chat-light.avif">
-                            <img src="chat-light.avif" alt="AI chat logging the workout" width="430" height="850"
-                                class="block h-auto w-full object-cover"
-                                decoding="async" fetchpriority="high">
-                        </picture>
-                        <!-- Slide 2 (Finish Workout) -->
-                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
-                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-workout-dark.avif">
-                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-workout-light.avif">
-                            <img src="finish-workout-light.avif" alt="Workout summary" width="430" height="850"
-                                class="block h-full w-full object-cover"
-                                decoding="async">
-                        </picture>
-                        <!-- Slide 3 (Finish Recap) -->
-                        <picture class="absolute inset-0 transition-transform duration-500 ease-in-out translate-x-full js-hero-slide pointer-events-none">
-                            <source media="(prefers-color-scheme: dark)" type="image/avif" srcset="finish-recap-dark.avif">
-                            <source media="(prefers-color-scheme: light)" type="image/avif" srcset="finish-recap-light.avif">
-                            <img src="finish-recap-light.avif" alt="Workout AI Recap" width="430" height="850"
-                                class="block h-full w-full object-cover"
-                                decoding="async">
-                        </picture>
-                    </div>
-                    <!-- Controls -->
-                    <div class="flex justify-center gap-2 pb-1">
-                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--primary-rose)] transition-colors cursor-pointer" aria-label="View Chat Slide"></button>
-                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--foreground)] opacity-20 hover:opacity-50 transition-all cursor-pointer" aria-label="View Summary Slide"></button>
-                        <button class="js-tab-btn h-1.5 w-8 rounded-full bg-[var(--foreground)] opacity-20 hover:opacity-50 transition-all cursor-pointer" aria-label="View AI Recap Slide"></button>
-                    </div>
-                </div>
-            </section>
-
-            <section id="features" class="mt-24 sm:mt-32">
-                <div class="mb-12 max-w-2xl">
-                    <div class="caps-label">Why it works</div>
-                    <h2 class="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-                        See what changes as you keep training.
-                    </h2>
-                </div>
-                <div class="grid gap-6 lg:grid-cols-3">
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Your AI coach</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">Get help with your next session.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Ask for a routine, find an exercise alternative, or talk through your progress.
-                            Your coach uses your training history to help you decide what to try next.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Text to workout</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">A workout history you can build on.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Keep your exercises, sets, reps, and weights together in an editable workout log.
-                            Add notes about how each exercise felt so you have that context next time.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Personal bests</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">Give every new best a place to live.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Keep a record of your personal bests for each exercise. See the sets behind your
-                            milestones and know what you're working toward next.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Interactive progress</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">See how your training adds up.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Explore your exercise history in interactive charts. Switch between max weight and
-                            total volume to see how your training changes from session to session.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Shareable routines</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">Build a routine. Make it repeatable.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Create a routine yourself or ask AI to help, then use it for your next workout. Share it
-                            with a link anyone can open in their browser.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">AI workout recaps</div>
-                        <h3 class="mt-4 text-2xl font-bold leading-tight">Finish with a clearer next step.</h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Finish your workout to get a recap grounded in your sets, volume, personal records, and
-                            notes. See what stood out and get suggestions for your next session.
-                        </p>
-                    </article>
-                </div>
-            </section>
-
-            <section id="flow" class="mt-16 pb-16 sm:mt-20 sm:pb-24">
-                <div class="grid gap-4 lg:grid-cols-[0.88fr_1.12fr]">
-                    <div class="glass-panel p-6 sm:p-8">
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--primary-rose)]">How
-                            it works</div>
-                        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Make each session useful for the next.</h2>
-                        <p class="mt-4 leading-7 text-[color:var(--muted-foreground)]">
-                            Your saved workouts give you a starting point each time you train.
-                            Look back at what you lifted, see how it has changed, and choose what to work toward.
-                        </p>
-                    </div>
-                    <div class="grid gap-4">
-                        <div class="glass-panel p-6">
-                            <div class="flex items-start gap-4">
-                                <div
-                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose)] text-sm font-semibold text-white shadow-sm">
-                                    01</div>
-                                <div>
-                                    <h3 class="text-xl font-semibold">Log what you trained</h3>
-                                    <p class="mt-2 leading-7 text-[color:var(--muted-foreground)]">Send your exercises,
-                                        sets, reps, and weights to your Bestie in chat. Use the shorthand you already
-                                        know—no template needed.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="glass-panel p-6">
-                            <div class="flex items-start gap-4">
-                                <div
-                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose-soft)] text-sm font-semibold text-[var(--primary-rose)] shadow-sm">
-                                    02</div>
-                                <div>
-                                    <h3 class="text-xl font-semibold">Check the details</h3>
-                                    <p class="mt-2 leading-7 text-[color:var(--muted-foreground)]">Open the workout log
-                                        to check the exercises, weights, and reps. Correct anything that needs changing
-                                        and mark the sets you completed.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="glass-panel p-6">
-                            <div class="flex items-start gap-4">
-                                <div
-                                    class="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-rose)] text-sm font-semibold text-white shadow-sm">
-                                    03</div>
-                                <div>
-                                    <h3 class="text-xl font-semibold">Find your next step</h3>
-                                    <p class="mt-2 leading-7 text-[color:var(--muted-foreground)]">Review what stood out
-                                        in your workout recap. Compare your progress with earlier sessions and ask
-                                        your Bestie what you could try next time.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="mcp" class="mb-16 sm:mb-24">
-                <div class="glass-panel p-8 sm:p-16 flex flex-col items-center text-center">
-                    <div class="caps-label">Bring your own AI assistant</div>
-                    <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
-                        Your training. Your AI assistant.
-                    </h2>
-                    <p class="mt-6 max-w-2xl text-lg leading-relaxed text-[color:var(--muted-foreground)]">
-                        Connect PersonalBestie to an MCP-compatible AI assistant. Review your workout history, find exercise alternatives, create routines, and log sessions—all in the conversation.
-                    </p>
-                    <p class="mt-2 max-w-2xl text-base leading-relaxed text-[color:var(--muted-foreground)]">
-                        You control access. Choose read-only or read-and-write permissions, and revoke access anytime.
-                    </p>
-                    <div class="mt-10">
-                        <a href="https://app.personalbestie.com/profile?utm_source=landing&utm_medium=cta&utm_campaign=mcp" class="btn btn-primary px-8 py-4">
-                            Connect your assistant
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <section id="compare" class="mb-16 sm:mb-24">
-                <div class="glass-panel p-8 sm:p-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                    <div class="max-w-2xl">
-                        <div class="caps-label">Switching from another tracker?</div>
-                        <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                            Frustrated by routine paywalls in Hevy?
-                        </h2>
-                        <p class="mt-4 text-lg leading-relaxed text-[color:var(--muted-foreground)]">
-                            See how PersonalBestie compares to mainstream gym apps. Enjoy unlimited routines, instant local guest logging, and automated AI coaching recaps—free without subscriptions.
-                        </p>
-                    </div>
-                    <div class="shrink-0">
-                        <a href="https://www.personalbestie.com/alternatives/hevy/" class="btn btn-primary px-8 py-4">
-                            PersonalBestie vs Hevy
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <section class="pb-24">
-                <div class="mb-12 max-w-2xl">
-                    <div class="caps-label">From the blog</div>
-                    <h2 class="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-                        Practical guides.
-                    </h2>
-                </div>
-                <div class="grid gap-6 lg:grid-cols-3">
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">AI Coaching</div>
-                        <h3 class="mt-4 text-2xl font-bold">
-                            <a href="https://www.personalbestie.com/blog/ai-workout-recaps/"
-                                class="hover:text-[var(--primary-rose)] transition-colors">AI workout recaps that
-                                actually help</a>
-                        </h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            Why grounded session data matters more than generic coaching language.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Workout Tracking</div>
-                        <h3 class="mt-4 text-2xl font-bold">
-                            <a href="https://www.personalbestie.com/blog/progressive-overload-workout-tracker/"
-                                class="hover:text-[var(--primary-rose)] transition-colors">Track progressive overload
-                                properly</a>
-                        </h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            A cleaner approach to seeing progression through sets, reps, and intensity.
-                        </p>
-                    </article>
-                    <article class="glass-panel p-8">
-                        <div class="caps-label">Routine Sharing</div>
-                        <h3 class="mt-4 text-2xl font-bold">
-                            <a href="https://www.personalbestie.com/blog/share-workout-routines/"
-                                class="hover:text-[var(--primary-rose)] transition-colors">How to share routines</a>
-                        </h3>
-                        <p class="mt-4 leading-relaxed text-[color:var(--muted-foreground)]">
-                            What a shareable routine page should include if you want someone else to actually use it.
-                        </p>
-                    </article>
-                </div>
-                <div class="mt-12">
-                    <a href="https://www.personalbestie.com/blog/" class="btn btn-glass px-8 py-4">Read more</a>
-                </div>
-            </section>
-        </main>
-
-        <footer class="mt-12 border-t border-[var(--border)] py-12 text-sm text-[color:var(--muted-foreground)]">
-            <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>&copy; <span id="year"></span> PersonalBestie · Built by Nicolas Leyton</div>
-                <div class="flex flex-wrap gap-6">
-                    <a href="https://app.personalbestie.com"
-                        class="hover:text-[var(--primary-rose)] transition-colors">Open app</a>
-                    <a href="https://www.personalbestie.com/alternatives/"
-                        class="hover:text-[var(--primary-rose)] transition-colors">Alternatives</a>
-                    <a href="https://www.personalbestie.com/blog/"
-                        class="hover:text-[var(--primary-rose)] transition-colors">Blog</a>
-                    <a href="/llms.txt" class="hover:text-[var(--primary-rose)] transition-colors">LLMs.txt</a>
-                    <a href="mailto:ndleyton@uc.cl" class="hover:text-[var(--primary-rose)] transition-colors">Email</a>
-                    <a href="https://www.linkedin.com/in/nicolas-d-leyton/" target="_blank" rel="noopener noreferrer"
-                        class="hover:text-[var(--primary-rose)] transition-colors">LinkedIn</a>
-                </div>
-            </div>
-        </footer>
+<header class="nav nav--centre">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">Skip to content</a>
+    <a class="nav__logo" href="#top"><img src="assets/logo.svg" alt="" width="28" height="28">PersonalBestie</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item"><a class="nav__link" href="#log">Logging</a></div>
+      <div class="nav__item"><a class="nav__link" href="#recap">Recaps</a></div>
+      <div class="nav__item"><a class="nav__link" href="#features">Features</a></div>
+      <div class="nav__item"><a class="nav__link" href="#assistant">Assistants</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="nav__link" href="https://app.personalbestie.com/login">Sign in</a>
+      <a class="btn btn--primary" href="https://app.personalbestie.com/chat">Log your first workout</a>
     </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
 
-    <script>
-        document.getElementById("year").textContent = new Date().getFullYear();
+<main id="top">
+  <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text">
+      <div class="hero__c">
+        <a class="pill" href="#compare"><span>Free, with unlimited routines</span><span class="muted">Compare with Hevy</span></a>
+        <h1 id="hero-h">AI workout log that reads your notes</h1>
+        <p class="hero__lead">Send “squat 3×8 at 60 kg” in chat. PersonalBestie saves the sets, tracks each personal best and writes a recap when you finish.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="https://app.personalbestie.com/chat">Log your first workout</a><a class="btn btn--secondary" href="https://app.personalbestie.com/workouts">Try it as a guest</a></div>
+      </div>
+      <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="11" role="img" aria-label="PersonalBestie chat turning a message about squats, bench press and rows into a saved workout">
+        <div class="ly-piece pb-win" aria-hidden="true">
+          <div class="pb-win__bar"><span class="pb-dots"><i></i><i></i><i></i></span><span><b>Chat</b> · Push day</span><span class="sp"></span><span class="pb-date">Nov 21</span></div>
+          <div class="pb-win__body">
+            <div class="pb-list">
+              <div class="pb-list__q">Workouts</div>
+              <div class="pb-t is-on"><i>PD</i><b>Push day</b><time>Today</time><span>Squat, bench press, rows</span></div>
+              <div class="pb-t"><i>ER</i><b>Easy run</b><time>Wed</time><span>3 miles in 24 minutes</span></div>
+              <div class="pb-t"><i>PL</i><b>Pull day</b><time>Mon</time><span>Recap ready · 1 new record</span></div>
+            </div>
+            <div class="pb-chat" data-ly-steps="900">
+              <div class="pb-msg pb-msg--me">squat 3x8 @ 60kg, bench 5x5 @ 50, rows 3x10 @ 40. knees felt good</div>
+              <div class="pb-tool" data-step>Saving 3 exercises and 11 sets to Push day</div>
+              <div class="pb-msg pb-msg--bot" data-step>Logged. Your squat matched your best set at 60 kg, so try 62.5 kg next week.</div>
+              <div class="pb-logged" data-step><span class="pb-logged__ico"></span><span><small>Workout logged</small><b>Push day</b><em>Nov 21 · 11 sets</em></span><span class="pb-logged__btn">Open workout</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
 
-        // Hero Manual Carousel (Native Swipe)
-        const slides = document.querySelectorAll('.js-hero-slide');
-        const tabs = document.querySelectorAll('.js-tab-btn');
+  <section class="section" id="log" aria-labelledby="log-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="log-h" class="span-5">Every workout, logged from one message</h2>
+        <p class="span-6 start-7 muted">Write sets the way you already do. PersonalBestie adds them to today’s workout, where you fix a weight or tick off each set before you finish. <a class="link" href="#features">See what it tracks</a></p>
+      </div>
+      <div class="ui app fill" role="img" aria-label="The workout list beside today’s push day, its sets ticked off one by one" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="ui ui-panel ui-win" data-ui="window" data-ui-still data-open="In progress" data-work="Saving" data-done="Logged">
+            <div class="ui-win__bar">
+              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ui-win__crumb">Workouts <i>/</i> <b>November</b></span>
+              <span class="ui-spacer"></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Search</span><span class="ui-kbd">/</span></span>
+            </div>
+            <div class="ui-win__body">
+              <nav class="ui-win__side" aria-hidden="true">
+                <span class="ui-win__nav is-on">Workouts<em>14</em></span>
+                <span class="ui-win__nav">Routines<em>4</em></span>
+                <span class="ui-win__nav">Exercises</span>
+                <span class="ui-win__nav">Chat</span>
+                <span class="ui-win__label">Types</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Strength</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Running</span>
+              </nav>
+              <div class="ui-win__main">
+                <div class="ui-win__cols" aria-hidden="true"><span>Workout</span><span>Exercises</span><span>Status</span><span>Date</span></div>
+                <ul class="ui-win__rows">
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">PD</span><span class="ui-win__who">Push day</span><span class="ui-win__sub">Squat, bench, rows · 11 sets</span><span class="ui-win__st is-you" data-st>In progress</span><span class="ui-win__age">Today</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">ER</span><span class="ui-win__who">Easy run</span><span class="ui-win__sub">3 miles in 24:00</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Wed</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">PL</span><span class="ui-win__who">Pull day</span><span class="ui-win__sub">Rows, pulldowns · 1 record</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Mon</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">LG</span><span class="ui-win__who">Legs</span><span class="ui-win__sub">Squat, lunges · 13 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 14</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">UP</span><span class="ui-win__who">Upper</span><span class="ui-win__sub">Bench, rows, press · 12 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 12</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">LR</span><span class="ui-win__who">Long run</span><span class="ui-win__sub">6 miles in 51:20</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 9</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">PD</span><span class="ui-win__who">Push day</span><span class="ui-win__sub">Bench, dips · 10 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 7</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">PL</span><span class="ui-win__who">Pull day</span><span class="ui-win__sub">Deadlift, rows · 9 sets</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 5</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">MB</span><span class="ui-win__who">Mobility</span><span class="ui-win__sub">Hips, shoulders · 20 min</span><span class="ui-win__st is-done" data-st>Logged</span><span class="ui-win__age">Nov 3</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open" data-ui-loop>
+          <div class="ui ui-panel ui-checks" data-ui="checklist">
+            <div class="ui-checks__head">
+              <div class="ui-title">Push day · Nov 21</div>
+              <span class="ui-spacer"></span>
+              <div class="ui-meta" data-checks-count>4 of 11 sets</div>
+            </div>
+            <div class="ui-checks__bar"><i data-checks-bar style="--k:0.36"></i></div>
+            <ul class="ui-checks__list">
+              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 1 · 8 reps at 60 kg</span></li>
+              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 2 · 8 reps at 60 kg</span></li>
+              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Squat · set 3 · 8 reps at 60 kg</span></li>
+              <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 1 · 5 reps at 50 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 2 · 5 reps at 50 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 3 · 5 reps at 50 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 4 · 5 reps at 50 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Bench press · set 5 · 5 reps at 50 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 1 · 10 reps at 40 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 2 · 10 reps at 40 kg</span></li>
+              <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Barbell row · set 3 · 10 reps at 40 kg</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-        if (slides.length > 1 && tabs.length === slides.length) {
-            let activeIndex = 0;
+  <section class="section ground-inverse" id="recap" data-moment="iris-opens" data-moment-opts='{"from": "base"}' aria-labelledby="recap-h">
+    <div class="wrap">
+      <div class="grid">
+        <div class="span-5 stack-4">
+          <h2 id="recap-h">AI workout recaps from your own sets</h2>
+          <p class="t-lead">Finish a workout and PersonalBestie reads its sets, volume, records and your notes, then says what stood out and what to try next time.</p>
+          <p>New records are named with the exercise and the set behind them.</p>
+          <p>Notes like “felt tired” or “knees good” change the advice.</p>
+          <p><a class="link" href="https://www.personalbestie.com/blog/ai-workout-recaps/">Read how recaps are written</a></p>
+        </div>
+        <div class="frame frame--split span-6 start-7">
+          <div class="stage stage--fade-b"><div class="at-rise to-edge" style="--w: 440px; --ay: 48px; --ay-sm: 24px">
+            <div class="pb-recap" role="img" aria-label="Recap of a strength session: 44 sets, a new record on bent-over barbell rows, and a suggestion to add weight to the top sets of one-arm lat pulldowns">
+              <div class="pb-recap__head"><b>Strength training</b><span>Aug 11 · 44 sets</span></div>
+              <ul class="pb-recap__rows"><li><span>Back</span><b>13 sets</b></li><li><span>Arms</span><b>12 sets</b></li><li><span>Shoulders</span><b>11 sets</b></li></ul>
+              <div class="pb-recap__note">
+                <p class="pb-recap__label"><span class="pb-recap__spark"></span>PersonalBestie recap</p>
+                <p>You hit a new record on bent-over barbell rows, with more volume than last session. One-arm lat pulldowns reached 89 reps across 6 sets.</p>
+                <p>Next time, add a little weight to your top sets where you felt strong.</p>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-            const goToSlide = (index) => {
-                if (index === activeIndex) return;
+  <section class="section g2" id="features" aria-labelledby="features-h">
+    <div class="wrap">
+      <div class="group">
+        <div class="section-head">
+          <h2 id="features-h">Your workout history in one place. <span class="muted">Records, routines and every muscle you worked.</span></h2>
+        </div>
+        <div class="grid">
+          <article class="card card--row card--open span-6">
+            <h3>Records every personal best</h3>
+            <p>Each exercise keeps its best weight, reps and volume, with the session it came from.</p>
+            <div class="panel">
+              <div class="stage stage--fade-b"><div class="at-rise fit to-edge" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:56px;--ay-sm:24px" data-ui-loop>
+                <div class="ui ui-panel ui-stat" data-ui="stat" data-from="55" data-to="62.5" data-suffix=" kg" data-ui-opts='{"fill":true}'>
+                  <div class="ui-stat__head">
+                    <div class="ui-stat__top">
+                      <span class="ui-stat__label">Squat, best set</span>
+                      <span class="ui-stat__range">Last 12 weeks</span>
+                    </div>
+                    <div class="ui-stat__line">
+                      <span class="ui-stat__num" data-stat-num>62.5 kg</span>
+                      <span class="ui-chip ui-chip--plain ui-stat__delta"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 9.5v-7M3 5.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>7.5 kg</span>
+                      <span class="ui-stat__sub">since September</span>
+                    </div>
+                  </div>
+                  <div class="ui-stat__chart">
+                    <svg class="ui-stat__svg" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+                      <path class="ui-stat__grid" d="M0 30.5H400M0 60.5H400M0 90.5H400"/>
+                      <path class="ui-stat__cover" fill-rule="evenodd" d=""/>
+                      <g class="ui-stat__bars"><rect rx="3" x="0.00" y="49.04" width="21.14" height="70.96"/><rect rx="3" x="29.14" y="49.04" width="21.14" height="70.96"/><rect rx="3" x="58.29" y="44.95" width="21.14" height="75.05"/><rect rx="3" x="87.43" y="44.95" width="21.14" height="75.05"/><rect rx="3" x="116.57" y="40.86" width="21.14" height="79.14"/><rect rx="3" x="145.71" y="40.86" width="21.14" height="79.14"/><rect rx="3" x="174.86" y="36.76" width="21.14" height="83.24"/><rect rx="3" x="204.00" y="36.76" width="21.14" height="83.24"/><rect rx="3" x="233.14" y="32.67" width="21.14" height="87.33"/><rect rx="3" x="262.29" y="32.67" width="21.14" height="87.33"/><rect rx="3" x="291.43" y="28.58" width="21.14" height="91.42"/><rect rx="3" x="320.57" y="24.49" width="21.14" height="95.51"/><rect rx="3" x="349.71" y="24.49" width="21.14" height="95.51"/><rect rx="3" x="378.86" y="16.30" width="21.14" height="103.70"/></g>
+                    </svg>
+                    <div class="ui-stat__axis" aria-hidden="true"><span>Sep 1</span><span>Oct 13</span><span>Today</span></div>
+                  </div>
+                </div>
+              </div></div>
+            </div>
+          </article>
+          <article class="card card--row card--open span-6">
+            <h3>Shows a muscle map for each workout</h3>
+            <p>When you finish, a body map lights up every muscle group and counts its sets.</p>
+            <div class="panel">
+              <img class="frame__img" src="finish-workout-light.avif" alt="Body map with back, arms and shoulders marked, above a list of sets per muscle group" width="430" height="932" loading="lazy" data-source="client" data-subject="PersonalBestie muscle map screen">
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6">
+          <h3>Builds workout routines you can share</h3>
+          <p>Make one yourself or ask the coach for it, then send a link anyone can open.</p>
+          <div class="panel">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-agent ui-note__av" aria-hidden="true"></span><span class="ui-note__text"><span class="ui-note__title">Routine ready: Push day<time>now</time></span><span class="ui-note__body">5 exercises, about 50 minutes</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Share</span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Link copied<time>1m</time></span><span class="ui-note__body">Opens in any browser, no app needed</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4 2.5h8v11H4z"/><path d="M6 6h4M6 9h4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Started from routine<time>2d</time></span><span class="ui-note__body">Pull day, sets filled from last time</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6">
+          <h3>Suggests exercise swaps in AI chat</h3>
+          <p>No barbell free? Ask for an alternative that works the same muscles.</p>
+          <div class="panel">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:56px;--ay-sm:24px">
+              <div class="ui ui-panel ui-chat" data-ui="chat">
+                <div class="ui-head"><span class="ui-agent" aria-hidden="true"></span><div class="ui-title">PersonalBestie</div><span class="ui-chat__online">Online</span><span class="ui-spacer"></span></div>
+                <div class="ui-chat__body">
+                  <div class="ui-chat__day">Today, 18:05</div>
+                  <div class="ui-msg ui-msg--me" data-chat-q><span class="ui-msg__text">The bench is taken. What can I do instead?</span></div>
+                  <div class="ui-msg ui-msg--bot" data-chat-a>
+                    <span class="ui-agent ui-msg__av" aria-hidden="true"></span>
+                    <span class="ui-msg__col">
+                      <span class="ui-chat__typing" aria-hidden="true"><i></i><i></i><i></i></span>
+                      <span class="ui-chat__answer">Try <b>dumbbell bench press</b>, 5 × 5 at 22 kg each hand. Same chest and triceps work.</span>
+                      <span class="ui-chat__srcs"><span class="ui-chat__src"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>Exercise library</span></span>
+                    </span>
+                  </div>
+                </div>
+                <div class="ui-chat__input"><span class="ui-chat__ph">Message</span><span class="ui-chat__send" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
 
-                // Update Slides Directionally
-                slides.forEach((s, i) => {
-                    // Strip transform classes
-                    s.classList.remove('translate-x-0', 'translate-x-full', '-translate-x-full');
+  <section class="section" id="compare" aria-labelledby="compare-h">
+    <div class="wrap">
+      <div class="grid">
+        <div class="span-5 stack-4">
+          <h2 id="compare-h">Questions before you start</h2>
+          <p class="muted">Anything else, write to Nicolas, who builds PersonalBestie.</p>
+          <p><a class="link" href="mailto:ndleyton@uc.cl">Email a question</a></p>
+        </div>
+        <div class="faq span-6 start-7">
+        <div class="faq__item"><h3>Do I need an account to log workouts?</h3><p>No. As a guest you log workouts by hand, saved in your browser. Sign in to log through chat, get recaps and keep your history on every device.</p></div>
+        <div class="faq__item"><h3>What does PersonalBestie cost?</h3><p>Nothing. There is no subscription and no cap on routines.</p></div>
+        <div class="faq__item"><h3>How is PersonalBestie different from Hevy?</h3><p>Hevy limits routines on its free plan. PersonalBestie adds chat logging and AI recaps. <a class="link" href="https://www.personalbestie.com/alternatives/hevy/">Compare PersonalBestie and Hevy</a></p></div>
+        <div class="faq__item"><h3>What can I type in a workout message?</h3><p>Your own shorthand, like “bench 5x5 @ 50” or “ran 3 miles in 24 min”. You check the log before you finish.</p></div>
+          <div class="faq__item"><h3>Does it track running workouts?</h3><p>Yes. Write the distance and time, and the run is saved beside your strength sessions.</p></div>
+          <div class="faq__item"><h3>Can I edit a workout after it is logged?</h3><p>Yes. Open the workout to change any exercise, weight or rep, and add a note to any set.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section" id="assistant" aria-labelledby="assistant-h">
+    <div class="wrap">
+      <div class="grid">
+        <div class="span-5 stack-4">
+          <h2 id="assistant-h">Works with your own AI assistant</h2>
+          <p class="t-lead">Connect any assistant that speaks MCP with a token from your profile. It can read your history, build routines and log sessions in the conversation.</p>
+          <p>You pick read-only or read and write, and revoke the token at any time.</p>
+          <p><a class="link" href="https://app.personalbestie.com/profile?utm_source=landing&amp;utm_medium=cta&amp;utm_campaign=mcp">Connect your assistant</a></p>
+        </div>
+        <div class="frame frame--split span-6 start-7">
+          <div class="dg" data-dg-still data-diagram='{"layout":"lanes","alt":"Your AI assistant sends a request to PersonalBestie, which logs a session, saves a routine and reads your history.","input":{"label":"Assistant","icon":"ui:bot","sub":"MCP"},"core":{"label":"PersonalBestie","icon":"ui:dumbbell"},"motion":{"pulse":"none"},"lanes":[{"label":"Logged","icon":"ui:list-checks","done":true,"sub":"Push day"},{"label":"Routine","icon":"ui:clipboard-list","done":true,"sub":"5 exercises"},{"label":"History","icon":"ui:history","done":true,"sub":"Last 30 days"}]}'></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-                    if (i < index) {
-                        s.classList.add('-translate-x-full');
-                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
-                    } else if (i > index) {
-                        s.classList.add('translate-x-full');
-                        s.classList.replace('pointer-events-auto', 'pointer-events-none');
-                    } else {
-                        s.classList.add('translate-x-0');
-                        s.classList.replace('pointer-events-none', 'pointer-events-auto');
-                    }
-                });
+</main>
 
-                // Update Tab Visuals
-                tabs.forEach(t => {
-                    t.classList.replace('bg-[var(--primary-rose)]', 'bg-[var(--foreground)]');
-                    t.classList.add('opacity-20');
-                });
+<footer class="footer closing footer--dark ground-inverse" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head">
+        <h2 id="close-h">Start with today’s workout</h2>
+        <p>Paste what you trained into chat. One message is enough.</p>
+      </div>
+      <a class="btn btn--primary btn--xl" href="https://app.personalbestie.com/chat">Log your first workout</a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top"><img src="assets/logo.svg" alt="" width="28" height="28">PersonalBestie</a>
+          <p class="footer__lede">An AI workout log by Nicolas Leyton.</p>
+        </div>
+        <div class="span-2 footer__col"><h3>Product</h3><ul><li><a href="#log">Logging</a></li><li><a href="#recap">Recaps</a></li><li><a href="#features">Features</a></li><li><a href="#assistant">Assistants</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Compare</h3><ul><li><a href="https://www.personalbestie.com/alternatives/hevy/">vs Hevy</a></li><li><a href="https://www.personalbestie.com/alternatives/strong/">vs Strong</a></li><li><a href="https://www.personalbestie.com/alternatives/">All alternatives</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Read</h3><ul><li><a href="https://www.personalbestie.com/blog/">Blog</a></li><li><a href="/llms.txt">LLMs.txt</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Contact</h3><ul><li><a href="mailto:ndleyton@uc.cl">Email</a></li><li><a href="https://www.linkedin.com/in/nicolas-d-leyton/" rel="noopener noreferrer">LinkedIn</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 PersonalBestie</span>
+      </div>
+    </div>
+  </div>
+</footer>
 
-                tabs[index].classList.replace('bg-[var(--foreground)]', 'bg-[var(--primary-rose)]');
-                tabs[index].classList.remove('opacity-20');
+<nav class="actionbar" aria-label="Quick actions">
+  <a class="btn btn--primary" href="https://app.personalbestie.com/chat">Log your first workout</a>
+</nav>
 
-                activeIndex = index;
-            };
-
-            tabs.forEach((tab, index) => {
-                tab.addEventListener('click', () => goToSlide(index));
-            });
-
-            // Touch Swipe Support
-            const carouselContainer = slides[0].parentElement;
-            let touchStartX = 0;
-
-            carouselContainer.addEventListener('touchstart', e => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, { passive: true });
-
-            carouselContainer.addEventListener('touchend', e => {
-                const touchEndX = e.changedTouches[0].screenX;
-                const swipeDistance = touchStartX - touchEndX;
-
-                // Minimum swipe distance of 50px
-                if (Math.abs(swipeDistance) > 50) {
-                    if (swipeDistance > 0 && activeIndex < slides.length - 1) {
-                        goToSlide(activeIndex + 1); // Swiped Left -> go right
-                    } else if (swipeDistance < 0 && activeIndex > 0) {
-                        goToSlide(activeIndex - 1); // Swiped Right -> go left
-                    }
-                }
-            }, { passive: true });
-        }
-    </script>
+<script type="module" src="assets/system.js"></script>
+<script type="module" src="assets/motion/motion.js"></script>
+<script type="module" src="assets/layout/layout.js"></script>
+<script type="module" src="assets/diagrams/mount.js"></script>
 </body>
-
 </html>

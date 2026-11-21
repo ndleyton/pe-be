@@ -30,3 +30,6 @@ playwright-report/
 
 .env
 stats.html
+
+# taste-skill design checks (local only)
+.taste-skill/
