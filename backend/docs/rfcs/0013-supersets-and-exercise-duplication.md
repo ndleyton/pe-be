@@ -33,7 +33,7 @@ These are proposed decisions, not implemented behavior.
 | [Add exercise flow](../../../pe-be-tracker-frontend/src/features/workouts/hooks/useWorkoutExerciseActions.ts) | `handleSelectExerciseType` creates one exercise via API (optimistic) or guest store; no dedupe of exercise type | The same type can already appear twice; duplication is a new entry point, not a new capability |
 | [ExerciseList](../../../pe-be-tracker-frontend/src/features/exercises/components/ExerciseList/ExerciseList.tsx) / [ExerciseRow](../../../pe-be-tracker-frontend/src/features/exercises/components/ExerciseRow/ExerciseRow.tsx) | Flat list of independent cards, each with its own `useExerciseSetActions` | Grouping can wrap existing rows; set logic does not need to change |
 | [Workout recap](../../src/workouts/recap.py) | Groups current exercises by `exercise_type_id` before computing metrics | Duplicated cards already aggregate correctly in the recap |
-| [Exercise stats](../../src/exercises/crud.py), `get_exercise_type_stats` | Groups by exercise type; "last workout" uses the latest exercise instance | With duplicate cards, "last workout" may show only the later block's sets. Needs a fix if duplication ships (see below) |
+| [Exercise stats](../../src/exercises/crud.py), `get_exercise_type_stats` | Metrics v1 (`metrics_version=1`): "last workout" uses the single latest `Exercise` row. Metrics v2 builds sessions keyed by `workout.id` and derives `lastWorkout` from the latest session | v1 with duplicate cards shows only one block's sets; the Phase 1 fix is scoped to v1. v2 already aggregates every exercise in the workout and needs no change |
 | [Guest store](../../../pe-be-tracker-frontend/src/stores/useGuestStore.ts), [sync](../../../pe-be-tracker-frontend/src/utils/syncGuestData.ts) | `GuestExercise` fields are enumerated manually during sync | New fields must be added to the interface **and** the sync mapper |
 | [MCP trainer tools](../../src/mcp/) and chat tools | Read and log workouts | Should expose grouping read-only; logging can ignore it initially |
 
@@ -86,18 +86,28 @@ superset_group  SMALLINT NULL     CHECK (superset_group IS NULL OR superset_grou
 
 - Backfill `position` with `ROW_NUMBER() OVER (PARTITION BY workout_id ORDER BY id) - 1` (and `PARTITION BY recipe_id` for templates).
 - Index: replace the ordering use of `ix_exercises_workout_id_active_id` with a query that orders by `(position, id)`. The existing index still covers the filter. A unique active-position index, like the one on sets, is optional. Skip it at first, because guest sync and concurrent inserts make it a source of 409s for little benefit.
-- `superset_group` is a small integer allocated per workout as `max + 1`. It needs no UUID and no cross-workout meaning. Guest IDs map 1:1 during sync.
+- `superset_group` is a small integer with no cross-workout meaning. **The server assigns labels; clients never invent persisted labels.**
+  - Allocation: every write that creates or changes groups first takes `SELECT ... FOR UPDATE` on the parent `workouts` row (routines: the `recipes` row, which `update_routine` already locks). A new group gets `max(superset_group) + 1` read under that lock. Concurrent writers to the same workout are serialized by the row lock, so two new groups cannot receive the same label.
+  - `ExerciseCreate` takes `superset_with_exercise_id` rather than a raw label: the server joins that exercise's group or allocates a new label for the pair.
+  - The exercise-order endpoint treats submitted `superset_group` values as request-scoped keys. Under the lock it renumbers groups densely (`0..n-1` by first member's position), so labels are always derived server-side.
+  - Guest sync creates exercises ungrouped, then sends one exercise-order request with the guest labels as request-scoped keys.
 - Follow the defensive migration pattern in `AGENTS.md`: inspector-guarded `add_column`, add the column nullable, backfill, then set `NOT NULL` with a server default of `0` for old clients.
 
 ### API
 
 - `ExerciseRead` / `ExerciseTemplateRead`: add `position`, `superset_group`.
-- `ExerciseCreate`: optional `position` (default: append) and `superset_group`.
-- `ExerciseUpdate`: allow `superset_group`.
+- `ExerciseCreate`: optional `position` (default: append) and `superset_with_exercise_id` (see allocation above).
+- `ExerciseUpdate`: allow `superset_group: null` only (leave group). Joining or reshaping groups goes through the exercise-order endpoint.
 - New `PATCH /api/v1/workouts/{workout_id}/exercise-order` taking `[{exercise_id, position, superset_group}]`, applied in one transaction with normalization. It mirrors the existing `reorder_set_templates` pattern. Routines get the equivalent field in the template-tree schema, plus an optional reorder endpoint if the editor needs it.
 - All read paths order exercises by `(position, id)`. Add `order_by="(ExerciseTemplate.position, ExerciseTemplate.id)"` to `Routine.exercise_templates`.
 
-Old clients that omit the fields keep working. New exercises append, and `superset_group` stays `NULL`.
+Compatibility for clients that omit the new fields:
+
+- Workout exercises: new exercises append and `superset_group` stays `NULL`. Existing rows are untouched, because exercise writes are per row.
+- Routine full-tree saves (`exercise_templates` supplied): templates are deleted and recreated, and the payload carries no template ids, so old values cannot be matched back. The server therefore:
+  - sets `position` from array order when omitted (old clients already send templates in display order);
+  - if **no** template in the payload sets `superset_group` (checked via `model_fields_set`) **and** the routine currently has any grouped template, rejects the save with `409 superset_groups_would_be_lost` and leaves the routine unchanged. The client must upgrade to edit that routine's templates.
+- Old clients can still edit any ungrouped routine and any routine's non-tree fields (name, description, visibility). They cannot silently drop groups.
 
 ## Implementation plan
 
@@ -105,8 +115,8 @@ Old clients that omit the fields keep working. New exercises append, and `supers
 
 1. `useWorkoutExerciseActions`: add `handleDuplicateExercise(exercise, { copySets })`. Signed-in: reuse `addExerciseMutation`, then create sets. Prefer one request: extend `ExerciseCreate` with optional `exercise_sets` if not already accepted; otherwise sequential set POSTs. Guest: `guestAddExercise` with cloned sets that get new IDs.
 2. `ExerciseRowHeader`: add a "Duplicate" menu item next to delete.
-3. Stats: make "last workout" in `get_exercise_type_stats` aggregate all exercise instances of that type in the latest workout, not just the latest exercise row. Without this, duplicated cards show partial history.
-4. Tests: hook tests for both guest and signed-in branches (shared fixtures in `src/test/fixtures/`), plus a backend stats test with two same-type exercises in one workout.
+3. Stats (metrics v1 only): make v1 "last workout" in `get_exercise_type_stats` aggregate all exercise instances of that type in the latest workout, not just the latest exercise row. Metrics v2 already groups by workout and is unchanged.
+4. Tests: hook tests for both guest and signed-in branches (shared fixtures in `src/test/fixtures/`), plus a backend stats test with two same-type exercises in one workout for v1 (and a v2 regression assertion).
 
 ### Phase 2: Supersets
 
@@ -114,7 +124,7 @@ Old clients that omit the fields keep working. New exercises append, and `supers
 2. Order all exercise reads by `(position, id)`: `get_exercises_for_workout`, the routine relationship, the routine preview query, and history/MCP readers.
 3. Copy `position` and `superset_group` in `create_workout_from_routine`, `clone_public_workout_to_private_routine`, `_clone_routine` / `clone_program`, and routine full-tree updates.
 4. Exercise-order endpoint with normalization (contiguous groups, dense positions, drop singleton groups).
-5. Guest store: add the fields to `GuestExercise`, set `position` on add, write a persisted-store migration that backfills positions from array order, and update `syncGuestData` to send both fields.
+5. Guest store: add the fields to `GuestExercise`, set `position` on add, write a persisted-store migration that backfills positions from array order, and update `syncGuestData` to send `position` on create, then one exercise-order request carrying the guest group labels.
 6. Frontend:
    - `lib/groupExercises.ts`: a pure helper that turns ordered exercises into `Array<Exercise | { group, members }>`.
    - `lib/nextSupersetSet.ts`: a pure helper for the round cue.
