@@ -122,7 +122,7 @@ Old clients that omit the fields keep working. New exercises append, and `supers
    - Header menu items "Superset with…" and "Ungroup".
    - Unit tests for both helpers.
 7. Routine editor: same grouping UI and the same reorder.
-8. Optional: a read-only `superset_group` in MCP/chat workout summaries, so the coach and recap can say "you supersetted A with B".
+8. Optional: a read-only `superset_group` in MCP/chat workout summaries.
 
 ### Rollout
 
@@ -130,13 +130,13 @@ Release the backend first; the fields are additive and old frontends ignore them
 
 ## Open questions
 
-1. Should "Superset with…" also be offered when a user adds an exercise (picker option "add as superset with the current exercise")? It adds discoverability at the cost of one more picker state.
-2. Should drag-to-reorder exercises ship with Phase 2? `position` enables it, but it is a separate UX effort and not required for supersets.
-3. Round cue: visual highlight only, or also auto-scroll/focus the next member's set input? Auto-scroll may fight the user on mobile.
-4. Should the recap prompt mention supersets? It is low value until the coach has rest-time data.
+1. Should drag-to-reorder exercises ship with Phase 2? `position` enables it, but it is a separate UX effort and not required for supersets.
+2. Round cue: visual highlight only, or also auto-scroll/focus the next member's set input? Auto-scroll may fight the user on mobile.
 
 ## Out of scope
 
 - Group-level rest timers, EMOM/AMRAP/circuit timing.
 - Drop sets and cluster sets (these are set-level semantics, not exercise grouping).
 - Cross-workout or catalog-level "superset templates" separate from routines.
+- Offering "Superset with…" inside the global Add Exercise picker (skipped for Phase 2; the card-level "Superset with…" entry point is clearer and avoids adding modal state to the global picker).
+- Mentioning supersets in the post-workout AI recap (deferred until rest/round timing data exists so the coach has something actionable to say).
