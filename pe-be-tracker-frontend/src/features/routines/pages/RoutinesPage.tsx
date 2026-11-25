@@ -44,7 +44,6 @@ const RoutinesPage = () => {
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authInitialized = useAuthStore((state) => state.initialized);
   const handleBack = useAppBackNavigation("/workouts");
 
   const setActiveTab = (view: RoutinesView) => {
@@ -61,10 +60,10 @@ const RoutinesPage = () => {
     isFetchingNextPage,
     error,
   } = useInfiniteScroll<RoutineSummary>({
-    queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
+    queryKey: ["routines", orderBy],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
-    enabled: authInitialized && activeTab === "routines",
+    enabled: activeTab === "routines",
   });
 
   const {
@@ -73,10 +72,10 @@ const RoutinesPage = () => {
     isFetchingNextPage: programsFetchingNextPage,
     error: programsError,
   } = useInfiniteScroll<RoutineProgramSummary>({
-    queryKey: ["routine-programs", orderBy, isAuthenticated ? "auth" : "guest"],
+    queryKey: ["routine-programs", orderBy],
     queryFn: (cursor, limit) => getRoutinePrograms(orderBy, cursor, limit),
     limit: 100,
-    enabled: authInitialized && activeTab === "programs",
+    enabled: activeTab === "programs",
   });
 
   const filteredRoutines = useMemo(() => {

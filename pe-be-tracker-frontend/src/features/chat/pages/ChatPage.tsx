@@ -26,6 +26,7 @@ const EXAMPLE_PROMPTS = [
 
 const ChatSession = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authInitialized = useAuthStore((state) => state.initialized);
   const userId = useAuthStore((state) => state.user?.id);
   const location = useLocation();
   const navigate = useNavigate();
@@ -145,7 +146,10 @@ const ChatSession = () => {
             <ChatEmptyState
               examplePrompts={EXAMPLE_PROMPTS}
               isAuthenticated={isAuthenticated}
-              onExamplePrompt={handleExamplePrompt}
+              showSignInNotice={authInitialized && !isAuthenticated}
+              onExamplePrompt={(prompt) => {
+                if (authInitialized) handleExamplePrompt(prompt);
+              }}
             />
           )}
 
@@ -163,7 +167,7 @@ const ChatSession = () => {
       <ChatComposer
         attachmentError={attachmentError}
         canAddAttachments={canAddAttachments}
-        canSubmit={canSubmitMessage && restorationResolved}
+        canSubmit={canSubmitMessage && restorationResolved && authInitialized}
         fileInputRef={fileInputRef}
         inputValue={inputValue}
         isLoading={isLoading || !restorationResolved || !draftsHydrated}
@@ -171,7 +175,7 @@ const ChatSession = () => {
         onInputChange={handleInputChange}
         onRemoveAttachment={handleRemoveAttachment}
         onSubmit={() => {
-          if (restorationResolved) void handleSubmitMessage();
+          if (restorationResolved && authInitialized) void handleSubmitMessage();
         }}
         pendingAttachments={pendingAttachments}
       />
@@ -183,17 +187,6 @@ const ChatSession = () => {
 const ChatPage = () => {
   const userId = useAuthStore((state) => state.user?.id);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const initialized = useAuthStore((state) => state.initialized);
-  if (!initialized) {
-    return (
-      <>
-        <ChatHeader disableNewChat />
-        <p role="status" className="text-muted-foreground p-4 text-center text-sm">
-          Checking your session...
-        </p>
-      </>
-    );
-  }
   return <ChatSession key={`${isAuthenticated}:${userId ?? "guest"}`} />;
 };
 

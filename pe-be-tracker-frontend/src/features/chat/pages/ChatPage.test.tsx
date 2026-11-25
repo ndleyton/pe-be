@@ -91,14 +91,31 @@ describe("ChatPage", () => {
     );
   };
 
-  it("shows the chat header while the initial session check is pending", () => {
+  it("renders the chat shell immediately while session check is pending without flashing the sign-in notice", () => {
     mockAuthState.initialized = false;
     mockAuthState.isAuthenticated = false;
-    renderChatPage();
+    const { rerender } = renderChatPage();
 
     expect(screen.getByRole("heading", { name: "Personal Bestie" })).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent("Checking your session");
+    expect(screen.getByText("Meet Personal Bestie")).toBeVisible();
     expect(screen.queryByText(/Sign in to use chat/)).not.toBeInTheDocument();
+
+    mockAuthState.initialized = true;
+    rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+          })
+        }
+      >
+        <MemoryRouter initialEntries={["/chat"]}>
+          <ChatPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(/Sign in to use chat/)).toBeVisible();
   });
 
   it("renders a workout widget when the assistant returns a workout-created event", async () => {

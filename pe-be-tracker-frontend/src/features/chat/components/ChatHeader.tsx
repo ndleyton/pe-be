@@ -6,7 +6,7 @@ interface ChatHeaderProps {
   disableNewChat: boolean;
   onToggleHistory?: () => void;
   historyOpen?: boolean;
-  onStartNewChat?: () => void;
+  onStartNewChat: () => void;
 }
 
 export const ChatHeader = ({

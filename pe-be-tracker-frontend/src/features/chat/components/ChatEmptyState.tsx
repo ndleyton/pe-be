@@ -4,6 +4,7 @@ interface ChatEmptyStateProps {
   examplePrompts: string[];
   isAuthenticated: boolean;
   isRestoring?: boolean;
+  showSignInNotice?: boolean;
   onExamplePrompt: (prompt: string) => void;
 }
 
@@ -11,6 +12,7 @@ export const ChatEmptyState = ({
   examplePrompts,
   isAuthenticated,
   isRestoring = false,
+  showSignInNotice = !isAuthenticated,
   onExamplePrompt,
 }: ChatEmptyStateProps) => {
   if (isRestoring) {
@@ -51,7 +53,7 @@ export const ChatEmptyState = ({
           </button>
         ))}
       </div>
-      {!isAuthenticated && (
+      {showSignInNotice && (
         <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
           <p className="text-destructive text-sm">
             Sign in to use chat and image uploads. This feature is for logged-in

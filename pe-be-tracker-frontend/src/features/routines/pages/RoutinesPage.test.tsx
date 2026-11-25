@@ -77,11 +77,21 @@ describe("RoutinesPage", () => {
     });
 
     mockAuth.initialized = false;
+    mockAuth.isAuthenticated = false;
     const { container, rerender } = render(<RoutinesPage />);
-    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.enabled)).toEqual([false, false]);
+    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.enabled)).toEqual([false, true]);
+    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.queryKey)).toEqual([
+      ["routines", "createdAt"],
+      ["routine-programs", "createdAt"],
+    ]);
+
     mockAuth.initialized = true;
+    mockAuth.isAuthenticated = true;
     rerender(<RoutinesPage />);
-    expect(mockUseInfiniteScroll.mock.calls.slice(-2).map(([query]) => query.enabled)).toEqual([false, true]);
+    expect(mockUseInfiniteScroll.mock.calls.slice(-2).map(([query]) => query.queryKey)).toEqual([
+      ["routines", "createdAt"],
+      ["routine-programs", "createdAt"],
+    ]);
 
     expect(
       screen.getByRole("heading", { name: /routines/i, level: 1 }),
