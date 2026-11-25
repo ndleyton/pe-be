@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { RoutineDetailsLoadingState } from "@/features/routines/components/skeletons/RoutineDetailsLoadingState";
 import { Button } from "@/shared/components/ui/button";
 import { useAppBackNavigation } from "@/shared/hooks";
 
@@ -124,7 +125,9 @@ const CreateRoutinePage = () => {
     }
   };
 
-  const templatesEditable = !isAuthenticated || !unitsPending;
+  if (!authInitialized || !isAuthenticated) {
+    return <RoutineDetailsLoadingState title="New Routine" subtitle="Create a custom plan" />;
+  }
 
   return (
     <>
@@ -168,7 +171,7 @@ const CreateRoutinePage = () => {
             </Alert>
           )}
 
-          {isAuthenticated && unitsPending && (
+          {unitsPending && (
             <Alert className="rounded-2xl border-primary/20 bg-primary/5 backdrop-blur-md">
               <AlertTitle className="text-xs font-bold uppercase tracking-wider">
                 Preparing editor
@@ -201,7 +204,6 @@ const CreateRoutinePage = () => {
               onCancel={handleCancel}
               saveDisabled={
                 hasInvalidTemplates ||
-                !isAuthenticated ||
                 unitsPending ||
                 saveMutation.isPending
               }
@@ -227,7 +229,7 @@ const CreateRoutinePage = () => {
             </div>
 
             <RoutineTemplatesCard
-              canEdit={templatesEditable}
+              canEdit={!unitsPending}
               editorTemplates={editorTemplates}
               onAddExercise={() => openExercisePicker({ mode: "add" })}
               onAddSet={addSetToTemplate}

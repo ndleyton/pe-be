@@ -20,6 +20,7 @@ const { mockGet, mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
   mockPost: vi.fn(),
   mockNavigate: vi.fn(),
   mockAuthState: {
+    initialized: true,
     isAuthenticated: true,
   },
 }));
@@ -55,6 +56,7 @@ describe("ChatPage", () => {
     await useChatDraftStore.persist.rehydrate();
     useChatDraftStore.setState({ texts: {}, attachments: {}, hydrated: true });
     vi.clearAllMocks();
+    mockAuthState.initialized = true;
     mockAuthState.isAuthenticated = true;
     mockNavigate.mockReset();
     mockGet.mockRejectedValue(new Error("Unauthorized"));
@@ -88,6 +90,16 @@ describe("ChatPage", () => {
       </QueryClientProvider>,
     );
   };
+
+  it("shows the chat header while the initial session check is pending", () => {
+    mockAuthState.initialized = false;
+    mockAuthState.isAuthenticated = false;
+    renderChatPage();
+
+    expect(screen.getByRole("heading", { name: "Personal Bestie" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking your session");
+    expect(screen.queryByText(/Sign in to use chat/)).not.toBeInTheDocument();
+  });
 
   it("renders a workout widget when the assistant returns a workout-created event", async () => {
     mockPost.mockResolvedValueOnce({

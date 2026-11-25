@@ -307,7 +307,7 @@ const ProfilePage = () => {
               <div className="text-left">
                 <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Storage Sync</label>
                 <p className="text-lg font-black text-foreground">
-                  {isAuthenticated ? "Authenticated Session" : "Guest Mode (Stored Locally)"}
+                  {loading ? "Checking your session..." : isAuthenticated ? "Authenticated Session" : "Guest Mode (Stored Locally)"}
                 </p>
               </div>
               <div className={cn(
@@ -318,7 +318,7 @@ const ProfilePage = () => {
 
             <PublicProfileSettings enabled={!loading && isAuthenticated} />
 
-            {!isAuthenticated && (
+            {!loading && !isAuthenticated && (
               <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-5 text-left">
                 <AlertTitle className="text-primary flex items-center gap-2 font-black text-sm uppercase tracking-wider mb-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">!</span>

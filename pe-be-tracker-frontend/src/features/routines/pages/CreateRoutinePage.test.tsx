@@ -117,6 +117,7 @@ describe("CreateRoutinePage", () => {
     expect(
       screen.getByRole("heading", { name: /new routine/i, level: 1 }),
     ).toBeInTheDocument();
+    expect(screen.queryByTestId("routine-info-card")).not.toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -135,6 +136,7 @@ describe("CreateRoutinePage", () => {
 
     render(<CreateRoutinePage />);
 
+    expect(screen.queryByTestId("routine-info-card")).not.toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith("/routines", { replace: true });
   });
 

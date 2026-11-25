@@ -70,6 +70,8 @@ const PublicActivityPage = () => {
   const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  const authPending = useAuthStore((state) => !state.initialized || state.loading);
+
   const activityQuery = useQuery({
     queryKey: ["public-profile-activity", username, workoutId],
     queryFn: () => getPublicActivity(username, workoutId),
@@ -135,9 +137,9 @@ const PublicActivityPage = () => {
             onClick={() =>
               isAuthenticated
                 ? saveMutation.mutate()
-                : navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)
+                : navigate(`/login?next=${encodeURIComponent(location.pathname)}`)
             }
-            disabled={saveMutation.isPending}
+            disabled={authPending || saveMutation.isPending}
             className="flex-1 sm:flex-initial"
           >
             <BookmarkPlus className="mr-2 h-4 w-4" />

@@ -183,6 +183,17 @@ const ChatSession = () => {
 const ChatPage = () => {
   const userId = useAuthStore((state) => state.user?.id);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const initialized = useAuthStore((state) => state.initialized);
+  if (!initialized) {
+    return (
+      <>
+        <ChatHeader disableNewChat />
+        <p role="status" className="text-muted-foreground p-4 text-center text-sm">
+          Checking your session...
+        </p>
+      </>
+    );
+  }
   return <ChatSession key={`${isAuthenticated}:${userId ?? "guest"}`} />;
 };
 

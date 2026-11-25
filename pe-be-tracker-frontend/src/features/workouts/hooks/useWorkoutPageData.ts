@@ -257,7 +257,7 @@ export const useWorkoutPageData = ({
     : guestHydrated && Boolean(guestWorkout);
 
   const workoutErrorStatus = getErrorStatus(workoutError);
-  const pagePending = !authInitialized || (isAuthenticated && workoutPending);
+  const pagePending = !authInitialized || (isAuthenticated ? workoutPending : !guestHydrated);
   const showNotFound = !workoutId
     || (authInitialized && !isAuthenticated && guestHydrated && !guestWorkout)
     || (isAuthenticated

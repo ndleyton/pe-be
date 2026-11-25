@@ -44,6 +44,7 @@ const RoutinesPage = () => {
   const startWorkoutFromRoutine = useStartWorkoutFromRoutine();
   const [orderBy, setOrderBy] = useState<"createdAt" | "name">("createdAt");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authInitialized = useAuthStore((state) => state.initialized);
   const handleBack = useAppBackNavigation("/workouts");
 
   const setActiveTab = (view: RoutinesView) => {
@@ -63,7 +64,7 @@ const RoutinesPage = () => {
     queryKey: ["routines", orderBy, isAuthenticated ? "auth" : "guest"],
     queryFn: (cursor, limit) => getRoutines(orderBy, cursor, limit),
     limit: 100,
-    enabled: activeTab === "routines",
+    enabled: authInitialized && activeTab === "routines",
   });
 
   const {
@@ -75,7 +76,7 @@ const RoutinesPage = () => {
     queryKey: ["routine-programs", orderBy, isAuthenticated ? "auth" : "guest"],
     queryFn: (cursor, limit) => getRoutinePrograms(orderBy, cursor, limit),
     limit: 100,
-    enabled: activeTab === "programs",
+    enabled: authInitialized && activeTab === "programs",
   });
 
   const filteredRoutines = useMemo(() => {

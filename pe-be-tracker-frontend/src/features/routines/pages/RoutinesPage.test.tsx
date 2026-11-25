@@ -27,9 +27,11 @@ vi.mock("@/shared/hooks", async () => {
   };
 });
 
+const mockAuth = { initialized: true, isAuthenticated: true };
+
 vi.mock("@/stores", () => ({
   useAuthStore: (selector: (state: { isAuthenticated: boolean }) => unknown) =>
-    selector({ isAuthenticated: true }),
+    selector(mockAuth),
   useAppHistoryStore: (selector: (state: unknown) => unknown) =>
     selector({
       entries: [],
@@ -58,6 +60,7 @@ const RoutinesPageWithLocation = () => {
 describe("RoutinesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.initialized = true;
     mockUseStartWorkoutFromRoutine.mockReturnValue(vi.fn());
   });
 
@@ -73,7 +76,12 @@ describe("RoutinesPage", () => {
       reset: vi.fn(),
     });
 
-    const { container } = render(<RoutinesPage />);
+    mockAuth.initialized = false;
+    const { container, rerender } = render(<RoutinesPage />);
+    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.enabled)).toEqual([false, false]);
+    mockAuth.initialized = true;
+    rerender(<RoutinesPage />);
+    expect(mockUseInfiniteScroll.mock.calls.slice(-2).map(([query]) => query.enabled)).toEqual([false, true]);
 
     expect(
       screen.getByRole("heading", { name: /routines/i, level: 1 }),
