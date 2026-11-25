@@ -13,7 +13,7 @@ import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, SquarePen, Sparkles, Share2, Play } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2, Play, Loader2 } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -478,7 +478,22 @@ const WorkoutPage = () => {
         </FloatingActionButton>
       )}
       {/* Local boundary: the lazy chunk must not suspend the whole page. */}
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          showFinishModal ? (
+            <div
+              role="status"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-background/60"
+            >
+              <Loader2
+                aria-hidden="true"
+                className="h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
+              />
+              <span className="sr-only">Loading finish workout</span>
+            </div>
+          ) : null
+        }
+      >
       <FinishWorkoutModal
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}

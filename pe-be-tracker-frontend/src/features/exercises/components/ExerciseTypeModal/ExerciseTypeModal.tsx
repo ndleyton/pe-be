@@ -386,10 +386,15 @@ const ExerciseTypeModal = ({
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center md:pl-5 pl-4 z-10">
               {/* Swap the search icon for a spinner so background search activity takes no extra input space. */}
               {isAuthenticated && isSearchActive && isSearchFetching ? (
-                <Loader2
-                  aria-hidden="true"
-                  className="text-primary md:h-6 md:w-6 h-5 w-5 animate-spin motion-reduce:animate-none"
-                />
+                <>
+                  <Loader2
+                    aria-hidden="true"
+                    className="text-primary md:h-6 md:w-6 h-5 w-5 animate-spin motion-reduce:animate-none"
+                  />
+                  <span role="status" className="sr-only">
+                    Searching exercises
+                  </span>
+                </>
               ) : (
                 <Search className="text-primary group-focus-within:text-primary md:h-6 md:w-6 h-5 w-5 transition-all duration-300 group-focus-within:scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.4)]" />
               )}
