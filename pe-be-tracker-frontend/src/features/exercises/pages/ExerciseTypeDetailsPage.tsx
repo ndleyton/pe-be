@@ -20,7 +20,6 @@ import {
   type Exercise,
   type IntensityUnit,
 } from "@/features/exercises/api";
-import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -384,10 +383,6 @@ const ExerciseTypeDetailsPage = () => {
         </Alert>
       </div>
     );
-  }
-
-  if (isPageDataPending) {
-    return <ExerciseTypeDetailsLoadingState />;
   }
 
   const statusLabel =

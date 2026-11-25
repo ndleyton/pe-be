@@ -1,8 +1,14 @@
 import React from "react";
 import { Dumbbell } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const LoadingThrobber: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={`flex flex-col items-center justify-center space-y-4 py-12 ${className}`}>
+  <div
+    className={cn(
+      "flex flex-col items-center justify-center space-y-4 py-12 motion-reduce:[&_*]:animate-none",
+      className,
+    )}
+  >
     <div className="relative flex items-center justify-center">
       {/* Expanding Ripple Rings */}
       <div className="absolute h-16 w-16 animate-ping rounded-full bg-primary/20 duration-1000" />

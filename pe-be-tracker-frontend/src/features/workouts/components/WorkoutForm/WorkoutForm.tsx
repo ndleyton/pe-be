@@ -408,7 +408,8 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
             type="button"
             onClick={() => setShowModal(true)}
             variant="outline"
-            className="bg-card/40 text-foreground border-border/50 hover:bg-accent/60 w-full justify-start rounded-2xl py-6"
+            // Same height as the selected-type card (h-12 icon + p-4 + border) so auto-select doesn't shift the form.
+            className="bg-card/40 text-foreground border-border/50 hover:bg-accent/60 h-auto min-h-[82px] w-full justify-start rounded-2xl py-6"
             data-testid="open-workout-type-modal"
           >
             Select Workout Type

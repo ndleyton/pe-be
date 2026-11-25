@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
@@ -111,10 +112,7 @@ const IntensityUnitModal = ({
         {isAuthenticated && isLoading ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 4 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="bg-muted h-24 animate-pulse rounded-2xl"
-              />
+              <Skeleton key={idx} className="h-24 rounded-2xl" />
             ))}
           </div>
         ) : null}

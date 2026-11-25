@@ -388,6 +388,12 @@ const ExerciseTypeModal = ({
             </div>
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+              {isAuthenticated && isSearchActive && isSearchFetching && (
+                <Loader2
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none"
+                />
+              )}
               {searchTerm && !showCreateButton && (
                 <div className="relative">
                   <button
@@ -397,12 +403,6 @@ const ExerciseTypeModal = ({
                   >
                     <X className="h-5 w-5" />
                   </button>
-
-                  {isAuthenticated && isSearchActive && isSearchFetching && (
-                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-background/20">
-                      <Loader2 className="text-muted-foreground/10 h-8 w-8 animate-spin" />
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -414,7 +414,10 @@ const ExerciseTypeModal = ({
                   title={`Create "${trimmedSearchTerm}"`}
                 >
                   {isAuthenticated && createMutation.isPending ? (
-                    <Plus className="h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                      Creating...
+                    </>
                   ) : (
                     <>
                       <Plus className="h-4 w-4" />

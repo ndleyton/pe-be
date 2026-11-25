@@ -200,7 +200,7 @@ describe("ExerciseTypeDetailsPage", () => {
 
     const { container } = render(<ExerciseTypeDetailsPage />);
 
-    expect(screen.getByRole("link", { name: /go back/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /progressive overload/i }),
     ).toBeInTheDocument();
