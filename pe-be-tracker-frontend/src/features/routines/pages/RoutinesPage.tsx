@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, ArrowLeft, Plus, Layers3, ClipboardList } from "lucide-react";
+import { Search, ArrowLeft, Plus, Layers3, ClipboardList, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAppBackNavigation, useInfiniteScroll } from "@/shared/hooks";
 import { getRoutinePrograms, getRoutines } from "@/features/routines/api";
@@ -270,7 +270,7 @@ const RoutinesPage = () => {
               {/* Loading more indicator index scroll */}
               {activeFetchingNextPage && (
                 <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg"></span>
+                  <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none" />
                 </div>
               )}
 

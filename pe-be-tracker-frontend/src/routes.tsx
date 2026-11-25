@@ -1,4 +1,5 @@
 import { Suspense, lazy, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -83,10 +84,7 @@ const LoadingFallback = () => (
       </div>
       {/* Keep a spinner for SR and visual cue */}
       <div className="flex justify-center py-4" role="status">
-        <div
-          className="loading loading-spinner loading-lg"
-          aria-label="Loading"
-        ></div>
+        <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none" /><span className="sr-only">Loading</span>
       </div>
     </div>
   </div>

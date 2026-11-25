@@ -1,4 +1,5 @@
 import { useState, useEffect, memo } from "react";
+import { Loader2 } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import {
   Carousel,
@@ -56,7 +57,7 @@ export const ExerciseRowImagePanel = memo(({
       >
         {!firstImageLoaded ? (
           <div className="flex h-full w-full items-center justify-center">
-            <span className="loading loading-spinner loading-md opacity-20"></span>
+            <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none opacity-20" />
           </div>
         ) : (
           <Carousel

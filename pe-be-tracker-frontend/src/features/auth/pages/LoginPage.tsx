@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GoogleSignInButton } from "@/features/auth/components";
 import { useGoogleSignIn } from "@/features/auth/hooks";
@@ -23,7 +24,7 @@ const LoginPageStatus = ({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="loading loading-spinner loading-lg" />
+      <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none" />
       <div className="space-y-2">
         <h1 className="text-foreground text-xl font-semibold">{title}</h1>
         <p className="text-muted-foreground text-sm">{description}</p>

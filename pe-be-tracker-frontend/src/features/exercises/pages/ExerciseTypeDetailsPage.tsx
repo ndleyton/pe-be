@@ -6,7 +6,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag } from "lucide-react";
+import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag, Loader2 } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import { toast } from "sonner";
 import {
@@ -421,13 +421,11 @@ const ExerciseTypeDetailsPage = () => {
     hasExerciseType &&
     isAuthenticated &&
     isOwner &&
-    exerciseType.status === "candidate" &&
-    !requestEvaluationMutation.isPending;
+    exerciseType.status === "candidate";
   const canRelease =
     hasExerciseType &&
     isSuperuser &&
-    exerciseType.status !== "released" &&
-    !releaseMutation.isPending;
+    exerciseType.status !== "released";
   const editIntro =
     hasExerciseType && exerciseType.status === "released"
       ? "Admin edits apply directly to this released exercise type."
@@ -629,6 +627,7 @@ const ExerciseTypeDetailsPage = () => {
                   variant="glass"
                   className="w-full rounded-xl sm:w-auto"
                   onClick={() => requestEvaluationMutation.mutate()}
+                  disabled={requestEvaluationMutation.isPending}
                 >
                   {requestEvaluationMutation.isPending
                     ? "Requesting..."
@@ -640,6 +639,7 @@ const ExerciseTypeDetailsPage = () => {
                   variant="glass"
                   className="w-full rounded-xl sm:w-auto"
                   onClick={() => releaseMutation.mutate()}
+                  disabled={releaseMutation.isPending}
                 >
                   {releaseMutation.isPending ? "Releasing..." : "Release"}
                 </Button>
@@ -845,7 +845,7 @@ const ExerciseTypeDetailsPage = () => {
                   if (!firstImageLoaded) {
                     return (
                       <div className="flex h-full w-full items-center justify-center">
-                        <span className="loading loading-spinner loading-md"></span>
+                        <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none" />
                       </div>
                     );
                   }
@@ -952,7 +952,7 @@ const ExerciseTypeDetailsPage = () => {
             {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-4">
-                  <span className="loading loading-spinner loading-md"></span>
+                  <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none" />
                 </div>
                 <Skeleton className="h-48 w-full" />
               </>
@@ -979,7 +979,7 @@ const ExerciseTypeDetailsPage = () => {
             {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-2">
-                  <span className="loading loading-spinner loading-sm"></span>
+                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                 </div>
                 <Skeleton className="h-24 w-full" />
               </>
@@ -1000,7 +1000,7 @@ const ExerciseTypeDetailsPage = () => {
             {isPageDataPending || isLoadingStats ? (
               <>
                 <div className="flex justify-center py-2">
-                  <span className="loading loading-spinner loading-sm"></span>
+                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                 </div>
                 <Skeleton className="h-20 w-full" />
               </>

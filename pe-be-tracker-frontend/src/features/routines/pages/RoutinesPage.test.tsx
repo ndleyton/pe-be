@@ -79,7 +79,7 @@ describe("RoutinesPage", () => {
       screen.getByRole("heading", { name: /routines/i, level: 1 }),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search programs/i)).toBeInTheDocument();
-    expect(container.querySelector(".loading-spinner")).not.toBeInTheDocument();
+    expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 

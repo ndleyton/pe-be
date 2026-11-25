@@ -55,6 +55,24 @@ describe("RoutineQuickStartCard", () => {
     );
   });
 
+  it("re-enables the start button when starting resolves without navigating", async () => {
+    // useStartWorkoutFromRoutine swallows errors, so the card only sees a resolved promise.
+    const onStartWorkout = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <RoutineQuickStartCard
+        routine={makeRoutineSummary({ id: 9, name: "Pull Day" })}
+        onStartWorkout={onStartWorkout}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /start workout/i }));
+
+    expect(
+      await screen.findByRole("button", { name: /start workout/i }),
+    ).toBeEnabled();
+  });
+
   it("shows the backend-truncated remainder count from exercise_count", () => {
     render(
       <RoutineQuickStartCard
