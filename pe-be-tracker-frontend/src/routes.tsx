@@ -164,7 +164,13 @@ const appRoutes: RouteObject[] = [
       },
       {
         path: "routines/new",
-        element: withSuspense(<CreateRoutinePage />, <RoutinesPageSkeleton />),
+        element: withSuspense(
+          <CreateRoutinePage />,
+          <RoutineDetailsLoadingState
+            title="New Routine"
+            subtitle="Create a custom plan"
+          />,
+        ),
       },
       {
         path: "chat",

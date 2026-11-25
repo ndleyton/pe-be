@@ -1,36 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { screen } from "@testing-library/react";
 
 import { render } from "@/test/testUtils";
 
 import { RoutineDetailsPageSkeleton } from "./RoutineDetailsPageSkeleton";
 
 describe("RoutineDetailsPageSkeleton", () => {
-  it("stacks the template header placeholders before the small breakpoint", () => {
+  it("models the read-only view mode the details page opens in", () => {
     const { container } = render(<RoutineDetailsPageSkeleton />);
 
-    const wrappers = Array.from(container.querySelectorAll("div"));
+    expect(screen.getByText("Exercise Sequence")).toBeInTheDocument();
+    // View mode has no per-set input grids or "Add Set" buttons.
+    expect(container.querySelector(".md\\:grid-cols-3")).not.toBeInTheDocument();
     expect(
-      wrappers.some((element) => {
-        const className = element.className;
-        return (
-          typeof className === "string" &&
-          className.includes("flex-col") &&
-          className.includes("items-start") &&
-          className.includes("sm:flex-row")
-        );
-      }),
-    ).toBe(true);
-
-    const skeletons = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'),
-    );
-    expect(
-      skeletons.some((element) => {
-        const className = element.className;
-        return (
-          className.includes("w-full") && className.includes("max-w-[8rem]")
-        );
-      }),
-    ).toBe(true);
+      container.querySelectorAll('[data-slot="skeleton"].h-10.w-full'),
+    ).toHaveLength(6);
   });
 });

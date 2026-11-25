@@ -5,7 +5,13 @@ import { Button } from "@/shared/components/ui/button";
 
 import { RoutineDetailsPageSkeleton } from "./RoutineDetailsPageSkeleton";
 
-export const RoutineDetailsLoadingState = () => (
+export const RoutineDetailsLoadingState = ({
+  title = "Routine Details",
+  subtitle = "Plan Overview",
+}: {
+  title?: string;
+  subtitle?: string;
+}) => (
   <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 md:py-8">
     <div className="mb-8 flex items-center gap-4 text-left">
       <Button
@@ -22,11 +28,11 @@ export const RoutineDetailsLoadingState = () => (
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-black tracking-tight text-glow bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent truncate">
-            Routine Details
+            {title}
           </h1>
         </div>
         <p className="text-muted-foreground/70 mt-1 text-xs font-bold uppercase tracking-widest">
-          Plan Overview
+          {subtitle}
         </p>
       </div>
     </div>
