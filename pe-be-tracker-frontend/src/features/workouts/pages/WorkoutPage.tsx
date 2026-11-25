@@ -477,9 +477,8 @@ const WorkoutPage = () => {
           <span className="text-lg">✓</span>
         </FloatingActionButton>
       )}
-
-
-
+      {/* Local boundary: the lazy chunk must not suspend the whole page. */}
+      <Suspense fallback={null}>
       <FinishWorkoutModal
         isOpen={showFinishModal}
         onConfirm={handleFinishWorkout}
@@ -497,6 +496,7 @@ const WorkoutPage = () => {
         isRecapLoading={generateRecapMutation.isPending}
         onRegenerateRecap={handleRegenerateRecap}
       />
+      </Suspense>
 
       {showSaveRoutineModal ? (
         <Suspense fallback={null}>
