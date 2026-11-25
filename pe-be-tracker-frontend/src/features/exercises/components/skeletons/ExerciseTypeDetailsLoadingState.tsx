@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/shared/components/ui/button";
@@ -69,25 +69,16 @@ const ExerciseTypeDetailsLoadingState = () => (
       <div className="space-y-6">
         <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold">Progressive Overload</h2>
-          <div className="flex justify-center py-4">
-            <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none" />
-          </div>
           <Skeleton className="h-48 w-full" />
         </div>
 
         <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold">Last Workout</h2>
-          <div className="flex justify-center py-2">
-            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-          </div>
           <Skeleton className="h-24 w-full" />
         </div>
 
         <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold">Personal Best</h2>
-          <div className="flex justify-center py-2">
-            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-          </div>
           <Skeleton className="h-20 w-full" />
         </div>
       </div>

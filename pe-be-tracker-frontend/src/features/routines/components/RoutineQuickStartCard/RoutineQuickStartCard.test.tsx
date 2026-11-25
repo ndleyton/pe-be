@@ -55,9 +55,9 @@ describe("RoutineQuickStartCard", () => {
     );
   });
 
-  it("re-enables the start button when starting resolves without navigating", async () => {
-    // useStartWorkoutFromRoutine swallows errors, so the card only sees a resolved promise.
-    const onStartWorkout = vi.fn().mockResolvedValue(undefined);
+  it("re-enables the start button when starting fails", async () => {
+    const onStartWorkout = vi.fn().mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     render(
       <RoutineQuickStartCard

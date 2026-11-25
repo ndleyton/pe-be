@@ -48,6 +48,7 @@ describe("ProfilePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState.loading = false;
+    mockAuthState.initialized = true;
     mockAuthState.isAuthenticated = true;
 
     mockUseAuthStore.mockImplementation((selector: any) =>
@@ -92,12 +93,21 @@ describe("ProfilePage", () => {
   });
 
   it("waits for the session before showing guest account information", () => {
+    mockAuthState.initialized = false;
     mockAuthState.loading = true;
     mockAuthState.isAuthenticated = false;
     render(<ProfilePage />);
     expect(screen.getByText("Checking your session...")).toBeVisible();
     expect(screen.queryByText(/Guest Mode \(Stored Locally\)/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Unlock More With Sign-In/)).not.toBeInTheDocument();
+  });
+
+  it("keeps account information during a later session refresh", () => {
+    // useAuthStore.refresh sets loading=true again after the first check.
+    mockAuthState.loading = true;
+    render(<ProfilePage />);
+    expect(screen.getByText("Authenticated Session")).toBeVisible();
+    expect(screen.queryByText("Checking your session...")).not.toBeInTheDocument();
   });
 
   it("renders skeletons for stats cards while workout data is loading", () => {

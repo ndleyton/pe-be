@@ -70,7 +70,7 @@ const PublicActivityPage = () => {
   const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const authPending = useAuthStore((state) => !state.initialized || state.loading);
+  const authPending = useAuthStore((state) => !state.initialized);
 
   const activityQuery = useQuery({
     queryKey: ["public-profile-activity", username, workoutId],

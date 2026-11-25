@@ -45,8 +45,7 @@ export const RoutineQuickStartCard = ({
       await onStartWorkout(routine);
     } catch (error) {
       console.error("Failed to start workout:", error);
-    } finally {
-      // onStartWorkout may swallow its own errors, so always re-enable.
+      // Only reset on failure: on success the card unmounts on navigation.
       setIsStarting(false);
     }
   };

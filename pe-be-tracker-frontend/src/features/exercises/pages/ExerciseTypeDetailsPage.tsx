@@ -945,12 +945,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Progressive Overload</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-4">
-                  <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none" />
-                </div>
-                <Skeleton className="h-48 w-full" />
-              </>
+              <Skeleton className="h-48 w-full" />
             ) : stats?.progressiveOverload &&
               stats.progressiveOverload.length > 0 ? (
               <Suspense fallback={<Skeleton className="h-48 w-full" />}>
@@ -972,12 +967,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Last Workout</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-2">
-                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-                </div>
-                <Skeleton className="h-24 w-full" />
-              </>
+              <Skeleton className="h-24 w-full" />
             ) : stats?.lastWorkout ? (
               <LastWorkoutInfo
                 lastWorkout={stats.lastWorkout}
@@ -993,12 +983,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Personal Best</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-2">
-                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-                </div>
-                <Skeleton className="h-20 w-full" />
-              </>
+              <Skeleton className="h-20 w-full" />
             ) : stats && getPersonalBestEntries(stats).length > 0 ? (
               <div className="space-y-6">
                 {getPersonalBestEntries(stats).map(({ label, best }) => (
