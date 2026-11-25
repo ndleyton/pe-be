@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { useGuestStore, useAuthStore } from "@/stores";
 import { getMyWorkouts } from "../api";
 import { type Workout } from "../types";
@@ -25,12 +26,12 @@ const getActiveWorkout = (workouts: Workout[]): Workout | null =>
 
 export const useMyWorkoutsData = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
   const authInitialized = useAuthStore((state) => state.initialized);
+  const hasSessionHint = useAuthStore((state) => Boolean(state.hasSessionHint));
   const guestHydrated = useGuestStore((state) => state.hydrated);
   const guestWorkouts = useGuestStore((state) => state.workouts);
 
-  const authResolved = authInitialized && !authLoading;
+  const assumeAuthenticated = authInitialized ? isAuthenticated : hasSessionHint;
   const queryClient = useQueryClient();
 
   const {
@@ -70,15 +71,24 @@ export const useMyWorkoutsData = () => {
     },
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-    enabled: authInitialized && !authLoading && isAuthenticated,
+    enabled: assumeAuthenticated,
+    retry: (failureCount, queryError) => {
+      if (queryClient.getDefaultOptions().queries?.retry === false) {
+        return false;
+      }
+      if (
+        axios.isAxiosError(queryError) &&
+        (queryError.response?.status === 401 ||
+          queryError.response?.status === 403)
+      ) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
 
   const workouts: Workout[] = useMemo(() => {
-    if (!authResolved) {
-      return [];
-    }
-
-    if (isAuthenticated) {
+    if (assumeAuthenticated) {
       if (!serverWorkoutsResponse?.pages) {
         return [];
       }
@@ -97,12 +107,12 @@ export const useMyWorkoutsData = () => {
       created_at: gw.created_at || getCurrentUTCTimestamp(),
       updated_at: gw.updated_at || getCurrentUTCTimestamp(),
     }));
-  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestWorkouts]);
+  }, [assumeAuthenticated, serverWorkoutsResponse, guestWorkouts]);
 
-  const isLoading =
-    !authResolved || (isAuthenticated ? isPending : !guestHydrated);
-  const hasLoadedWorkouts =
-    authResolved && (isAuthenticated ? status === "success" : guestHydrated);
+  const isLoading = assumeAuthenticated ? isPending : !guestHydrated;
+  const hasLoadedWorkouts = assumeAuthenticated
+    ? status === "success"
+    : guestHydrated;
   const activeWorkout = useMemo(
     () => getActiveWorkout(workouts),
     [workouts],

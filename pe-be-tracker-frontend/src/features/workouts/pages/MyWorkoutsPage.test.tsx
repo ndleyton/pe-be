@@ -267,12 +267,14 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
-  it("keeps the loading shell while auth is still resolving", async () => {
+  it("keeps the loading shell and starts fetching workouts while auth resolves with a session hint", async () => {
+    mockGetMyWorkouts.mockReturnValue(new Promise(() => {}));
     Object.assign(mockAuthState, {
       isAuthenticated: false,
       user: null,
       loading: true,
       initialized: false,
+      hasSessionHint: true,
     });
 
     render(<MyWorkoutsPage />);
@@ -283,6 +285,23 @@ describe("MyWorkoutsPage", () => {
       "false",
     );
 
+    await waitFor(() => {
+      expect(mockGetMyWorkouts).toHaveBeenCalledWith(undefined, 25);
+    });
+  });
+
+  it("shows local guest state immediately while auth resolves without a session hint", async () => {
+    Object.assign(mockAuthState, {
+      isAuthenticated: false,
+      user: null,
+      loading: true,
+      initialized: false,
+      hasSessionHint: false,
+    });
+
+    render(<MyWorkoutsPage />);
+
+    expect(screen.queryByTestId("workout-list-skeleton")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(mockGetMyWorkouts).not.toHaveBeenCalled();
     });

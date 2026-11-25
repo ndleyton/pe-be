@@ -1,21 +1,28 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { render } from "@/test/testUtils";
 import ProfilePage from "./ProfilePage";
-import { getMyWorkouts } from "@/features/workouts";
+import { useMyWorkoutsData } from "@/features/workouts";
 import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
-import { useAuthStore, useGuestStore } from "@/stores";
+import { useAuthStore } from "@/stores";
 
 vi.mock("@/features/workouts", () => ({
-  getMyWorkouts: vi.fn(),
+  useMyWorkoutsData: vi.fn(),
 }));
 
 vi.mock("@/features/profile/hooks/usePublicProfileSettings", () => ({
   usePublicProfileSettings: vi.fn(),
 }));
 
+const mockPatSettings = vi.fn(({ enabled }: { enabled: boolean }) => (
+  <div data-testid="pat-settings" data-enabled={String(enabled)}>
+    PAT Settings Mock
+  </div>
+));
+
 vi.mock("@/features/mcp/components/PersonalAccessTokensSettings", () => ({
-  PersonalAccessTokensSettings: () => <div>PAT Settings Mock</div>,
+  PersonalAccessTokensSettings: (props: { enabled: boolean }) =>
+    mockPatSettings(props),
 }));
 
 vi.mock("@/shared/components/WeekTracking", () => ({
@@ -24,7 +31,6 @@ vi.mock("@/shared/components/WeekTracking", () => ({
 
 vi.mock("@/stores", () => ({
   useAuthStore: vi.fn(),
-  useGuestStore: vi.fn(),
 }));
 
 const mockAuthState = {
@@ -32,17 +38,25 @@ const mockAuthState = {
   user: { id: 1, email: "test@example.com" },
   loading: false,
   initialized: true,
+  hasSessionHint: true,
 };
 
-const mockGuestState = {
-  hydrated: true,
-  workouts: [],
-};
-
-const mockGetMyWorkouts = vi.mocked(getMyWorkouts);
+const mockUseMyWorkoutsData = vi.mocked(useMyWorkoutsData);
 const mockUsePublicProfileSettings = vi.mocked(usePublicProfileSettings);
 const mockUseAuthStore = vi.mocked(useAuthStore);
-const mockUseGuestStore = vi.mocked(useGuestStore);
+
+const defaultWorkouts = [
+  {
+    id: 1,
+    name: "Leg Day",
+    notes: "",
+    start_time: "2026-01-01T10:00:00Z",
+    end_time: "2026-01-01T11:00:00Z",
+    workout_type_id: 1,
+    created_at: "2026-01-01T10:00:00Z",
+    updated_at: "2026-01-01T11:00:00Z",
+  },
+];
 
 describe("ProfilePage", () => {
   beforeEach(() => {
@@ -50,13 +64,10 @@ describe("ProfilePage", () => {
     mockAuthState.loading = false;
     mockAuthState.initialized = true;
     mockAuthState.isAuthenticated = true;
+    mockAuthState.hasSessionHint = true;
 
     mockUseAuthStore.mockImplementation((selector: any) =>
       selector ? selector(mockAuthState) : mockAuthState,
-    );
-
-    mockUseGuestStore.mockImplementation((selector: any) =>
-      selector ? selector(mockGuestState) : mockGuestState,
     );
 
     mockUsePublicProfileSettings.mockReturnValue({
@@ -75,20 +86,17 @@ describe("ProfilePage", () => {
       username: "lifter123",
     });
 
-    mockGetMyWorkouts.mockResolvedValue({
-      data: [
-        {
-          id: 1,
-          name: "Leg Day",
-          notes: "",
-          start_time: "2026-01-01T10:00:00Z",
-          end_time: "2026-01-01T11:00:00Z",
-          workout_type_id: 1,
-          created_at: "2026-01-01T10:00:00Z",
-          updated_at: "2026-01-01T11:00:00Z",
-        },
-      ],
-      next_cursor: null,
+    mockUseMyWorkoutsData.mockReturnValue({
+      workouts: defaultWorkouts,
+      activeWorkout: null,
+      hasLoadedWorkouts: true,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isAuthenticated: true,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
     });
   });
 
@@ -96,10 +104,23 @@ describe("ProfilePage", () => {
     mockAuthState.initialized = false;
     mockAuthState.loading = true;
     mockAuthState.isAuthenticated = false;
+    mockAuthState.hasSessionHint = false;
     render(<ProfilePage />);
     expect(screen.getByText("Checking your session...")).toBeVisible();
     expect(screen.queryByText(/Guest Mode \(Stored Locally\)/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Unlock More With Sign-In/)).not.toBeInTheDocument();
+    expect(mockUsePublicProfileSettings).toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "false");
+  });
+
+  it("starts authenticated settings in parallel when a session hint is present", () => {
+    mockAuthState.initialized = false;
+    mockAuthState.loading = true;
+    mockAuthState.isAuthenticated = false;
+    mockAuthState.hasSessionHint = true;
+    render(<ProfilePage />);
+    expect(mockUsePublicProfileSettings).toHaveBeenCalledWith(true);
+    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "true");
   });
 
   it("keeps account information during a later session refresh", () => {
@@ -108,11 +129,23 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
     expect(screen.getByText("Authenticated Session")).toBeVisible();
     expect(screen.queryByText("Checking your session...")).not.toBeInTheDocument();
+    expect(mockUsePublicProfileSettings).toHaveBeenCalledWith(true);
+    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "true");
   });
 
   it("renders skeletons for stats cards while workout data is loading", () => {
-    // Return pending promise so query stays in loading state
-    mockGetMyWorkouts.mockReturnValue(new Promise(() => {}));
+    mockUseMyWorkoutsData.mockReturnValue({
+      workouts: [],
+      activeWorkout: null,
+      hasLoadedWorkouts: false,
+      isLoading: true,
+      error: null,
+      refetch: vi.fn(),
+      isAuthenticated: true,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
 
     const { container } = render(<ProfilePage />);
 
@@ -148,13 +181,10 @@ describe("ProfilePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders settled stats and public profile info once loaded", async () => {
+  it("renders settled stats and public profile info once loaded", () => {
     render(<ProfilePage />);
 
-    await waitFor(() => {
-      expect(screen.getAllByText("1")).toHaveLength(2); // Total Workouts and Completed
-    });
-
+    expect(screen.getAllByText("1")).toHaveLength(2); // Total Workouts and Completed
     expect(screen.getByText("60")).toBeInTheDocument(); // 60 min average duration
     expect(screen.getByText("@lifter123")).toBeInTheDocument();
   });
