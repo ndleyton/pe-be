@@ -53,12 +53,22 @@ describe("useMyWorkoutsData", () => {
     mockGuestState.hydrated = true;
   });
 
-  it("returns local guest workouts immediately when uninitialized without a session hint", () => {
-    const { result } = renderHook(() => useMyWorkoutsData(), {
+  it("stays in loading state without exposing guest workouts while uninitialized and without a session hint", () => {
+    const { result, rerender } = renderHook(() => useMyWorkoutsData(), {
       wrapper: createWrapper(),
     });
 
     expect(mockGetMyWorkouts).not.toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.hasLoadedWorkouts).toBe(false);
+    expect(result.current.workouts).toEqual([]);
+    expect(result.current.activeWorkout).toBeNull();
+
+    mockAuthState.initialized = true;
+    mockAuthState.loading = false;
+    mockAuthState.isAuthenticated = false;
+    rerender();
+
     expect(result.current.isLoading).toBe(false);
     expect(result.current.hasLoadedWorkouts).toBe(true);
     expect(result.current.workouts).toHaveLength(1);
@@ -195,6 +205,57 @@ describe("useMyWorkoutsData", () => {
         message: "Workouts pagination returned repeated cursor 100",
       }),
     );
+  });
+
+  it("does not let a discarded next-page request poison a newer cursor sequence", async () => {
+    mockAuthState.initialized = true;
+    mockAuthState.loading = false;
+    mockAuthState.isAuthenticated = true;
+
+    let resolveStalePage!: (value: Awaited<ReturnType<typeof getMyWorkouts>>) => void;
+    const firstPage = {
+      data: [makeWorkout({ id: 101, name: "Page 1" })],
+      next_cursor: 100,
+    };
+    const secondPage = {
+      data: [makeWorkout({ id: 100, name: "Page 2" })],
+      next_cursor: null,
+    };
+    mockGetMyWorkouts
+      .mockResolvedValueOnce(firstPage)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { resolveStalePage = resolve; }),
+      )
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce(secondPage);
+
+    const { result } = renderHook(() => useMyWorkoutsData(), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.workouts).toHaveLength(1));
+
+    // Start page 2, then refetch from page 1 while it is still in flight.
+    act(() => {
+      void result.current.fetchNextPage();
+    });
+    await waitFor(() => expect(mockGetMyWorkouts).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    // The discarded page-2 request settles after the new sequence started.
+    await act(async () => {
+      resolveStalePage(secondPage);
+    });
+
+    let nextPageResult: Awaited<ReturnType<typeof result.current.fetchNextPage>>;
+    await act(async () => {
+      nextPageResult = await result.current.fetchNextPage();
+    });
+
+    expect(nextPageResult!.isError).toBe(false);
+    await waitFor(() => expect(result.current.workouts).toHaveLength(2));
+    expect(mockGetMyWorkouts).toHaveBeenCalledTimes(4);
   });
 
   it("rejects a cursor repeated during a refetch sequence", async () => {

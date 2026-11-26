@@ -32,6 +32,7 @@ export const useMyWorkoutsData = () => {
   const guestWorkouts = useGuestStore((state) => state.workouts);
 
   const assumeAuthenticated = authInitialized ? isAuthenticated : hasSessionHint;
+  const authPendingWithoutHint = !authInitialized && !hasSessionHint;
   const queryClient = useQueryClient();
   const sequenceCursorsRef = useRef<Set<number> | null>(null);
 
@@ -68,14 +69,16 @@ export const useMyWorkoutsData = () => {
         sequenceCursorsRef.current = initialCursors;
       }
 
-      if (sequenceCursorsRef.current.has(cursor)) {
+      // Capture this sequence: a page-one refetch may replace the ref while we await.
+      const sequenceCursors = sequenceCursorsRef.current;
+      if (sequenceCursors.has(cursor)) {
         throw new Error(
           `Workouts pagination returned repeated cursor ${cursor}`,
         );
       }
 
       const response = await getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
-      sequenceCursorsRef.current.add(cursor);
+      sequenceCursors.add(cursor);
       return response;
     },
     initialPageParam: undefined as number | undefined,
@@ -101,6 +104,10 @@ export const useMyWorkoutsData = () => {
   });
 
   const workouts: Workout[] = useMemo(() => {
+    if (authPendingWithoutHint) {
+      return [];
+    }
+
     if (assumeAuthenticated) {
       if (!serverWorkoutsResponse?.pages) {
         return [];
@@ -120,12 +127,12 @@ export const useMyWorkoutsData = () => {
       created_at: gw.created_at || getCurrentUTCTimestamp(),
       updated_at: gw.updated_at || getCurrentUTCTimestamp(),
     }));
-  }, [assumeAuthenticated, serverWorkoutsResponse, guestWorkouts]);
+  }, [authPendingWithoutHint, assumeAuthenticated, serverWorkoutsResponse, guestWorkouts]);
 
-  const isLoading = assumeAuthenticated ? isPending : !guestHydrated;
-  const hasLoadedWorkouts = assumeAuthenticated
-    ? status === "success"
-    : guestHydrated;
+  const isLoading =
+    authPendingWithoutHint || (assumeAuthenticated ? isPending : !guestHydrated);
+  const hasLoadedWorkouts =
+    !authPendingWithoutHint && (assumeAuthenticated ? status === "success" : guestHydrated);
   const activeWorkout = useMemo(
     () => getActiveWorkout(workouts),
     [workouts],

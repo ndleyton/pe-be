@@ -290,7 +290,7 @@ describe("MyWorkoutsPage", () => {
     });
   });
 
-  it("shows local guest state immediately while auth resolves without a session hint", async () => {
+  it("keeps the loading shell while auth resolves without a session hint", async () => {
     Object.assign(mockAuthState, {
       isAuthenticated: false,
       user: null,
@@ -301,7 +301,11 @@ describe("MyWorkoutsPage", () => {
 
     render(<MyWorkoutsPage />);
 
-    expect(screen.queryByTestId("workout-list-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByTestId("workout-list-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("routines-section")).toHaveAttribute(
+      "data-auto-open",
+      "false",
+    );
     await waitFor(() => {
       expect(mockGetMyWorkouts).not.toHaveBeenCalled();
     });
