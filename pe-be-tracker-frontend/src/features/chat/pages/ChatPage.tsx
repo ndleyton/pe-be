@@ -14,14 +14,19 @@ import { type ChatPageLocationState } from "../types";
 import { useAuthStore } from "@/stores";
 import { LoadingStatus } from "@/shared/components/ui/loading-status";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 
 import { ChatHistory } from "../components/ChatHistory";
 
+const loadChatTranscript = () => import("../components/ChatTranscript");
+
 const ChatTranscript = lazy(() =>
-  import("../components/ChatTranscript").then((module) => ({
+  loadChatTranscript().then((module) => ({
     default: module.ChatTranscript,
   })),
 );
+
+const preloadChatTranscript = createIntentPreload(loadChatTranscript);
 
 const ChatTranscriptFallback = () => (
   <div className="space-y-4 py-2" aria-busy="true">
@@ -95,6 +100,10 @@ const ChatSession = () => {
     setConversationId,
     setMessages,
   });
+
+  useEffect(() => {
+    preloadChatTranscript();
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

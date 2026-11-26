@@ -1,5 +1,5 @@
 import { useChatDraftStore } from "@/stores/useChatDraftStore";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -52,6 +52,10 @@ vi.mock("@/stores", () => ({
 }));
 
 describe("ChatPage", () => {
+  beforeAll(async () => {
+    await import("../components/ChatTranscript");
+  });
+
   beforeEach(async () => {
     await useChatDraftStore.persist.rehydrate();
     useChatDraftStore.setState({ texts: {}, attachments: {}, hydrated: true });
