@@ -6,6 +6,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 import LoginPage from "./features/auth/pages/LoginPage";
 import OAuthCallbackPage from "./features/auth/pages/OAuthCallbackPage";
+import ChatPageSkeleton from "@/features/chat/components/skeletons/ChatPageSkeleton";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
@@ -23,10 +24,10 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 // These pages are not lazy loaded as they are core pages
 import MyWorkoutsPage from "./features/workouts/pages/MyWorkoutsPage";
-import ChatPage from "./features/chat/pages/ChatPage";
 import AboutPage from "./features/about/pages/AboutPage";
 
 // Lazy load other components with error boundaries
+const ChatPage = lazy(() => import("./features/chat/pages/ChatPage"));
 const WorkoutPage = lazy(() => import("./features/workouts/pages/WorkoutPage"));
 const ExerciseTypesPage = lazy(
   () => import("./features/exercises/pages/ExerciseTypesPage"),
@@ -174,7 +175,7 @@ const appRoutes: RouteObject[] = [
       },
       {
         path: "chat",
-        element: <ChatPage />,
+        element: withSuspense(<ChatPage />, <ChatPageSkeleton />),
       },
       {
         path: "profile",
