@@ -19,7 +19,7 @@ import {
 } from "@/shared/components/ui";
 
 const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
-  import("@/features/exercises/pages"),
+  import("@/features/exercises/pages/ExerciseTypeDetailsPage"),
 );
 
 type ExerciseRowHeaderProps = {
