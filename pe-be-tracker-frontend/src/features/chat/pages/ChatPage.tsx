@@ -1,28 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  ChatComposer,
-  ChatEmptyState,
-  ChatHeader,
-  ChatTranscript,
-} from "../components";
+import { ChatComposer } from "../components/ChatComposer";
+import { ChatEmptyState } from "../components/ChatEmptyState";
+import { ChatHeader } from "../components/ChatHeader";
 import {
   useChatComposer,
   useChatSessionRestore,
   useChatSubstitutionIntent,
 } from "../hooks";
+import { CHAT_EXAMPLE_PROMPTS } from "../lib/chatCopy";
 import { type ChatPageLocationState } from "../types";
 import { useAuthStore } from "@/stores";
+import { LoadingStatus } from "@/shared/components/ui/loading-status";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { ChatHistory } from "../components/ChatHistory";
 
-const EXAMPLE_PROMPTS = [
-  "I did 3 sets of bench press: 135lbs x 8, 155lbs x 6, 165lbs x 4. Then squats: 3 sets of 185lbs x 10.",
-  "What exercises should I do to improve my bench press?",
-  "I ran 3 miles in 24 minutes today, feeling great!",
-  "Can you suggest a good leg workout based on my recent training?",
-];
+const ChatTranscript = lazy(() =>
+  import("../components/ChatTranscript").then((module) => ({
+    default: module.ChatTranscript,
+  })),
+);
+
+const ChatTranscriptFallback = () => (
+  <div className="space-y-4 py-2" aria-busy="true">
+    <LoadingStatus message="Loading conversation" />
+    <div className="flex justify-end" aria-hidden="true">
+      <Skeleton className="h-12 w-2/3 max-w-md rounded-2xl" />
+    </div>
+    <div className="flex justify-start" aria-hidden="true">
+      <Skeleton className="h-24 w-3/4 max-w-xl rounded-2xl" />
+    </div>
+  </div>
+);
 
 const ChatSession = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -135,7 +146,7 @@ const ChatSession = () => {
         <div className="mx-auto max-w-4xl">
           {showRestoringState && (
             <ChatEmptyState
-              examplePrompts={EXAMPLE_PROMPTS}
+              examplePrompts={CHAT_EXAMPLE_PROMPTS}
               isAuthenticated={isAuthenticated}
               isRestoring={true}
               onExamplePrompt={handleExamplePrompt}
@@ -144,7 +155,7 @@ const ChatSession = () => {
 
           {showEmptyState && (
             <ChatEmptyState
-              examplePrompts={EXAMPLE_PROMPTS}
+              examplePrompts={CHAT_EXAMPLE_PROMPTS}
               isAuthenticated={isAuthenticated}
               showSignInNotice={authInitialized && !isAuthenticated}
               disablePrompts={!authInitialized || isLoading}
@@ -153,12 +164,14 @@ const ChatSession = () => {
           )}
 
           {messages.length > 0 && (
-            <ChatTranscript
-              // Streamed text replaces the typing indicator once it starts arriving.
-              isLoading={isLoading && messages.at(-1)?.role !== "assistant"}
-              messages={messages}
-              messagesEndRef={messagesEndRef}
-            />
+            <Suspense fallback={<ChatTranscriptFallback />}>
+              <ChatTranscript
+                // Streamed text replaces the typing indicator once it starts arriving.
+                isLoading={isLoading && messages.at(-1)?.role !== "assistant"}
+                messages={messages}
+                messagesEndRef={messagesEndRef}
+              />
+            </Suspense>
           )}
         </div>
       </div>
