@@ -1,8 +1,9 @@
-# RFC 0004: High-Performance Exercise Type Thumbnails
+# RFC 0015: High-Performance Exercise Type Thumbnails
 
 - Status: Proposed
 - Date: 2026-04-03
 - Owners: Frontend, Backend
+- Implemented so far: backend `thumbnail_key` column, inference in `src/exercises/thumbnail_keys.py` (primary muscle group first, whole-word cardio match), create/update/import wiring, and the `src.scripts.backfill_exercise_type_thumbnail_keys` dry-run/apply backfill. Not yet: compact list schema, frontend sprite, explicit overrides (the key is always recomputed on create/update).
 
 ## Summary
 

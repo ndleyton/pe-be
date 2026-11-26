@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import psycopg2
+from psycopg2.extras import execute_values
 
 from src.core.config import settings
 from src.exercises.thumbnail_keys import determine_thumbnail_key
@@ -198,20 +199,22 @@ def print_report(
 
 
 def apply_updates(cursor, updates: Iterable[PlannedUpdate]) -> int:
-    applied = 0
-
-    for update in updates:
-        cursor.execute(
-            """
-            UPDATE exercise_types
-            SET thumbnail_key = %s
-            WHERE id = %s
-            """,
-            (update.to_thumbnail_key, update.exercise_type_id),
-        )
-        applied += cursor.rowcount
-
-    return applied
+    rows = [(u.exercise_type_id, u.to_thumbnail_key) for u in updates]
+    if not rows:
+        return 0
+    # One statement instead of a round trip per row.
+    execute_values(
+        cursor,
+        """
+        UPDATE exercise_types AS et
+        SET thumbnail_key = v.thumbnail_key
+        FROM (VALUES %s) AS v(id, thumbnail_key)
+        WHERE et.id = v.id
+        """,
+        rows,
+        page_size=len(rows),
+    )
+    return cursor.rowcount
 
 
 def main() -> int:
