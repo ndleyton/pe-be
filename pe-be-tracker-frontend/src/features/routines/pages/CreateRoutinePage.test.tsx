@@ -190,7 +190,9 @@ describe("CreateRoutinePage", () => {
 
     render(<CreateRoutinePage />);
 
-    expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /unsaved changes/i }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /stay/i }));
     expect(reset).toHaveBeenCalledTimes(1);
