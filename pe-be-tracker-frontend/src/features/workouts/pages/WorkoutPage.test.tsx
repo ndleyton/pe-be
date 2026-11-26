@@ -822,7 +822,7 @@ describe("WorkoutPage", () => {
     });
   });
 
-  it("renders an accessible cancellable dialog fallback while FinishWorkoutModal chunk is loading", async () => {
+  it("keeps the workout page mounted without suspending while FinishWorkoutModal chunk is loading", async () => {
     vi.resetModules();
     vi.doMock(
       "@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal",
@@ -832,24 +832,13 @@ describe("WorkoutPage", () => {
     const { default: FreshWorkoutPage } = await import("./WorkoutPage");
     render(<FreshWorkoutPage />);
 
-    fireEvent.click(await screen.findByLabelText(/floating action button/i));
+    const fab = await screen.findByLabelText(/floating action button/i);
+    expect(fab).toBeInTheDocument();
 
-    const dialog = await screen.findByRole("dialog", {
-      name: /loading finish workout/i,
-    });
-    expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    fireEvent.click(fab);
 
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    expect(cancelButton).toHaveFocus();
-
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: /loading finish workout/i }),
-      ).not.toBeInTheDocument();
-    });
+    expect(screen.getByTestId("exercise-list")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     vi.doUnmock(
       "@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal",

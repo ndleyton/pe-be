@@ -11,16 +11,9 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, SquarePen, Sparkles, Share2, Play, Loader2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Sparkles, Share2, Play } from "lucide-react";
 import FloatingActionButton from "@/shared/components/FloatingActionButton";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -485,67 +478,24 @@ const WorkoutPage = () => {
         </FloatingActionButton>
       )}
       {/* Local boundary: the lazy chunk must not suspend the whole page. */}
-      <Suspense
-        fallback={
-          showFinishModal ? (
-            <Dialog
-              open
-              onOpenChange={(open) => {
-                if (!open) {
-                  handleCancelFinish();
-                }
-              }}
-            >
-              <DialogContent
-                showCloseButton={false}
-                className="flex max-w-xs flex-col items-center gap-4 text-center"
-              >
-                <DialogHeader className="items-center text-center">
-                  <DialogTitle>Loading finish workout</DialogTitle>
-                  <DialogDescription className="sr-only">
-                    Please wait while the finish workout dialog loads, or cancel
-                    to return to your workout.
-                  </DialogDescription>
-                </DialogHeader>
-                <div
-                  role="status"
-                  className="flex items-center justify-center py-2"
-                >
-                  <Loader2
-                    aria-hidden="true"
-                    className="h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
-                  />
-                  <span className="sr-only">Loading finish workout</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelFinish}
-                >
-                  Cancel
-                </Button>
-              </DialogContent>
-            </Dialog>
-          ) : null
-        }
-      >
-      <FinishWorkoutModal
-        isOpen={showFinishModal}
-        onConfirm={handleFinishWorkout}
-        onCancel={handleCancelFinish}
-        isLoading={isAuthenticated && finishWorkoutMutation.isPending}
-        isAuthenticated={isAuthenticated}
-        exercises={exercises}
-        onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
-        workoutName={workoutName || undefined}
-        workoutPhoto={serverWorkout?.photo}
-        workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
-        onUploadWorkoutPhoto={isAuthenticated ? uploadWorkoutPhoto : undefined}
-        isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
-        recap={serverWorkout?.recap}
-        isRecapLoading={generateRecapMutation.isPending}
-        onRegenerateRecap={handleRegenerateRecap}
-      />
+      <Suspense fallback={null}>
+        <FinishWorkoutModal
+          isOpen={showFinishModal}
+          onConfirm={handleFinishWorkout}
+          onCancel={handleCancelFinish}
+          isLoading={isAuthenticated && finishWorkoutMutation.isPending}
+          isAuthenticated={isAuthenticated}
+          exercises={exercises}
+          onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
+          workoutName={workoutName || undefined}
+          workoutPhoto={serverWorkout?.photo}
+          workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
+          onUploadWorkoutPhoto={isAuthenticated ? uploadWorkoutPhoto : undefined}
+          isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
+          recap={serverWorkout?.recap}
+          isRecapLoading={generateRecapMutation.isPending}
+          onRegenerateRecap={handleRegenerateRecap}
+        />
       </Suspense>
 
       {showSaveRoutineModal ? (
