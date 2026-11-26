@@ -1,5 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { getIntensityUnits, IntensityUnit } from "@/features/exercises/api";
 import { GUEST_INTENSITY_UNITS } from "@/features/exercises/constants";
 import {
@@ -65,10 +66,7 @@ const ExerciseTypeMore = ({
         {isAuthenticated && isLoading && (
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="bg-muted h-10 animate-pulse rounded-lg"
-              />
+              <Skeleton key={idx} className="h-10 rounded-lg" />
             ))}
           </div>
         )}

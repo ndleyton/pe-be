@@ -45,6 +45,7 @@ export const RoutineQuickStartCard = ({
       await onStartWorkout(routine);
     } catch (error) {
       console.error("Failed to start workout:", error);
+    } finally {
       setIsStarting(false);
     }
   };

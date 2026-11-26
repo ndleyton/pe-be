@@ -477,26 +477,26 @@ const WorkoutPage = () => {
           <span className="text-lg">✓</span>
         </FloatingActionButton>
       )}
-
-
-
-      <FinishWorkoutModal
-        isOpen={showFinishModal}
-        onConfirm={handleFinishWorkout}
-        onCancel={handleCancelFinish}
-        isLoading={isAuthenticated && finishWorkoutMutation.isPending}
-        isAuthenticated={isAuthenticated}
-        exercises={exercises}
-        onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
-        workoutName={workoutName || undefined}
-        workoutPhoto={serverWorkout?.photo}
-        workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
-        onUploadWorkoutPhoto={isAuthenticated ? uploadWorkoutPhoto : undefined}
-        isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
-        recap={serverWorkout?.recap}
-        isRecapLoading={generateRecapMutation.isPending}
-        onRegenerateRecap={handleRegenerateRecap}
-      />
+      {/* Local boundary: the lazy chunk must not suspend the whole page. */}
+      <Suspense fallback={null}>
+        <FinishWorkoutModal
+          isOpen={showFinishModal}
+          onConfirm={handleFinishWorkout}
+          onCancel={handleCancelFinish}
+          isLoading={isAuthenticated && finishWorkoutMutation.isPending}
+          isAuthenticated={isAuthenticated}
+          exercises={exercises}
+          onSaveRoutine={isAuthenticated ? handleSaveRoutine : undefined}
+          workoutName={workoutName || undefined}
+          workoutPhoto={serverWorkout?.photo}
+          workoutPhotoPreviewUrl={workoutPhotoPreviewUrl}
+          onUploadWorkoutPhoto={isAuthenticated ? uploadWorkoutPhoto : undefined}
+          isUploadingWorkoutPhoto={isUploadingWorkoutPhoto}
+          recap={serverWorkout?.recap}
+          isRecapLoading={generateRecapMutation.isPending}
+          onRegenerateRecap={handleRegenerateRecap}
+        />
+      </Suspense>
 
       {showSaveRoutineModal ? (
         <Suspense fallback={null}>

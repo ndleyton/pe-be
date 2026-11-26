@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ExerciseTypeCard } from "@/features/exercises/components";
 import {
@@ -128,7 +128,10 @@ const ExerciseTypesPage = () => {
               >
                 <div className="flex items-center gap-1.5 bg-primary px-3 py-2 rounded-xl text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-lg active:scale-95">
                   {createMutation.isPending ? (
-                    <Plus className="h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                      Creating...
+                    </>
                   ) : (
                     <>
                       <Plus className="h-4 w-4" />
@@ -236,7 +239,7 @@ const ExerciseTypesPage = () => {
         {/* Loading more indicator */}
         {!isInitialLoading && isFetchingNextPage && (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent loading-spinner" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent motion-reduce:animate-none" />
           </div>
         )}
 

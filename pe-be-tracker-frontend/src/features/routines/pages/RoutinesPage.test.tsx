@@ -27,9 +27,11 @@ vi.mock("@/shared/hooks", async () => {
   };
 });
 
+const mockAuth = { initialized: true, isAuthenticated: true };
+
 vi.mock("@/stores", () => ({
   useAuthStore: (selector: (state: { isAuthenticated: boolean }) => unknown) =>
-    selector({ isAuthenticated: true }),
+    selector(mockAuth),
   useAppHistoryStore: (selector: (state: unknown) => unknown) =>
     selector({
       entries: [],
@@ -58,6 +60,7 @@ const RoutinesPageWithLocation = () => {
 describe("RoutinesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.initialized = true;
     mockUseStartWorkoutFromRoutine.mockReturnValue(vi.fn());
   });
 
@@ -73,13 +76,28 @@ describe("RoutinesPage", () => {
       reset: vi.fn(),
     });
 
-    const { container } = render(<RoutinesPage />);
+    mockAuth.initialized = false;
+    mockAuth.isAuthenticated = false;
+    const { container, rerender } = render(<RoutinesPage />);
+    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.enabled)).toEqual([false, true]);
+    expect(mockUseInfiniteScroll.mock.calls.map(([query]) => query.queryKey)).toEqual([
+      ["routines", "createdAt"],
+      ["routine-programs", "createdAt"],
+    ]);
+
+    mockAuth.initialized = true;
+    mockAuth.isAuthenticated = true;
+    rerender(<RoutinesPage />);
+    expect(mockUseInfiniteScroll.mock.calls.slice(-2).map(([query]) => query.queryKey)).toEqual([
+      ["routines", "createdAt"],
+      ["routine-programs", "createdAt"],
+    ]);
 
     expect(
       screen.getByRole("heading", { name: /routines/i, level: 1 }),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search programs/i)).toBeInTheDocument();
-    expect(container.querySelector(".loading-spinner")).not.toBeInTheDocument();
+    expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 

@@ -191,7 +191,7 @@ describe("useWorkoutPageData", () => {
     });
     const routine = makeRoutine({ id: 44, name: "Push Day" });
 
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
       () =>
         useWorkoutPageData({
           pathname: "/workouts/guest-123",
@@ -203,11 +203,13 @@ describe("useWorkoutPageData", () => {
       },
     );
 
+    expect(result.current.listStatus).toBe("pending");
     expect(mockCreateExercisesFromRoutine).not.toHaveBeenCalled();
 
     mockGuestState.hydrated = true;
     mockGuestState.workouts = [guestWorkout];
     rerender();
+    expect(result.current.listStatus).toBe("success");
 
     await waitFor(() => {
       expect(mockCreateExercisesFromRoutine).toHaveBeenCalledWith(

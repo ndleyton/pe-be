@@ -1,5 +1,5 @@
 import { useChatDraftStore } from "@/stores/useChatDraftStore";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ const { mockGet, mockPost, mockAuthState, mockNavigate } = vi.hoisted(() => ({
   mockPost: vi.fn(),
   mockNavigate: vi.fn(),
   mockAuthState: {
+    initialized: true,
     isAuthenticated: true,
   },
 }));
@@ -51,10 +52,15 @@ vi.mock("@/stores", () => ({
 }));
 
 describe("ChatPage", () => {
+  beforeAll(async () => {
+    await import("../components/ChatTranscript");
+  });
+
   beforeEach(async () => {
     await useChatDraftStore.persist.rehydrate();
     useChatDraftStore.setState({ texts: {}, attachments: {}, hydrated: true });
     vi.clearAllMocks();
+    mockAuthState.initialized = true;
     mockAuthState.isAuthenticated = true;
     mockNavigate.mockReset();
     mockGet.mockRejectedValue(new Error("Unauthorized"));
@@ -88,6 +94,41 @@ describe("ChatPage", () => {
       </QueryClientProvider>,
     );
   };
+
+  it("renders the chat shell immediately while session check is pending without flashing the sign-in notice", () => {
+    mockAuthState.initialized = false;
+    mockAuthState.isAuthenticated = false;
+    const { rerender } = renderChatPage();
+
+    expect(screen.getByRole("heading", { name: "Personal Bestie" })).toBeVisible();
+    expect(screen.getByText("Meet Personal Bestie")).toBeVisible();
+    expect(screen.queryByText(/Sign in to use chat/)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Message...")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /bench press: 135lbs/i }),
+    ).toBeDisabled();
+
+    mockAuthState.initialized = true;
+    rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+          })
+        }
+      >
+        <MemoryRouter initialEntries={["/chat"]}>
+          <ChatPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(/Sign in to use chat/)).toBeVisible();
+    expect(screen.getByPlaceholderText("Message...")).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /bench press: 135lbs/i }),
+    ).not.toBeDisabled();
+  });
 
   it("renders a workout widget when the assistant returns a workout-created event", async () => {
     mockPost.mockResolvedValueOnce({

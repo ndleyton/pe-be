@@ -1,13 +1,11 @@
-import { useMemo, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/features/auth/components";
 import { PersonalAccessTokensSettings } from "@/features/mcp/components/PersonalAccessTokensSettings";
 import { usePublicProfileSettings } from "@/features/profile/hooks/usePublicProfileSettings";
-import { getMyWorkouts, type Workout } from "@/features/workouts";
+import { useMyWorkoutsData } from "@/features/workouts";
 import { WeekTracking } from "@/shared/components/WeekTracking";
-import { useAuthStore, useGuestStore } from "@/stores";
+import { useAuthStore } from "@/stores";
 import {
   Alert,
   AlertDescription,
@@ -20,11 +18,6 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { LoadingStatus } from "@/shared/components/ui/loading-status";
-
-const fetchWorkouts = async (): Promise<Workout[]> => {
-  const { data } = await getMyWorkouts(undefined, 25);
-  return data;
-};
 
 const PublicProfileSettings = ({
   enabled,
@@ -135,62 +128,25 @@ const PublicProfileSettings = ({
   );
 };
 
+const PROFILE_WORKOUTS_WINDOW = 25;
+
 const ProfilePage = () => {
   const { theme, setTheme } = useTheme();
-  // Use new store structure
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const loading = useAuthStore((state) => state.loading);
-  const guestWorkouts = useGuestStore((state) => state.workouts);
+  const authInitialized = useAuthStore((state) => state.initialized);
+  const isConfirmedAuthenticated = authInitialized && isAuthenticated;
 
   const {
-    data: serverWorkouts = [],
-    isLoading,
+    workouts,
+    isLoading: isStatsLoading,
     error,
-  } = useQuery({
-    queryKey: ["profile-workouts"],
-    queryFn: fetchWorkouts,
-    // Only fetch server workouts if user is authenticated
-    enabled: !loading && isAuthenticated,
-    retry: (failureCount, error: unknown) => {
-      if (
-        axios.isAxiosError(error) &&
-        (error.response?.status === 401 || error.response?.status === 403)
-      ) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-  });
+  } = useMyWorkoutsData();
 
-  const workouts: Workout[] = useMemo(() => {
-    // Don't compute workouts until auth loading is complete
-    if (loading) return [];
-
-    if (isAuthenticated) {
-      // For authenticated users, use server data (will be empty array until loaded)
-      return Array.isArray(serverWorkouts) ? serverWorkouts : [];
-    } else {
-      // For guest users, use guest data immediately
-      return Array.isArray(guestWorkouts)
-        ? guestWorkouts.map((gw) => ({
-          id: gw.id,
-          name: gw.name,
-          notes: gw.notes,
-          start_time: gw.start_time,
-          end_time: gw.end_time,
-          workout_type_id: Number(gw.workout_type_id),
-          created_at: gw.created_at || new Date().toISOString(),
-          updated_at: gw.updated_at || new Date().toISOString(),
-        }))
-        : [];
-    }
-  }, [loading, isAuthenticated, serverWorkouts, guestWorkouts]);
-
-  // defensive programming to ensure arrays are always arrays
-  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
+  const safeWorkouts = Array.isArray(workouts)
+    ? workouts.slice(0, PROFILE_WORKOUTS_WINDOW)
+    : [];
   const completedWorkouts = safeWorkouts.filter((w) => w.end_time);
   const totalWorkouts = safeWorkouts.length;
-  const isStatsLoading = loading || (isAuthenticated && isLoading);
   const averageWorkoutTime =
     completedWorkouts.length > 0
       ? completedWorkouts.reduce((sum, workout) => {
@@ -206,19 +162,6 @@ const ProfilePage = () => {
       (1000 * 60) // Convert to minutes
       : 0;
 
-  if (isAuthenticated && error) {
-    return (
-      <div className="p-4">
-        <div className="mx-auto max-w-4xl">
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>Failed to load profile data</AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <div className="mx-auto max-w-4xl">
@@ -228,11 +171,18 @@ const ProfilePage = () => {
 
         <WeekTracking
           workouts={workouts}
-          loading={loading || isLoading}
+          loading={isStatsLoading}
           className="mb-8"
         />
 
         {/* Stats Cards */}
+        {/* Workout errors only affect the stats; account settings stay usable. */}
+        {isAuthenticated && error ? (
+          <Alert variant="destructive" className="mb-4 text-left">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>Failed to load workout statistics</AlertDescription>
+          </Alert>
+        ) : null}
         {isStatsLoading && <LoadingStatus message="Loading workout statistics" />}
         <div
           className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3"
@@ -307,7 +257,7 @@ const ProfilePage = () => {
               <div className="text-left">
                 <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Storage Sync</label>
                 <p className="text-lg font-black text-foreground">
-                  {isAuthenticated ? "Authenticated Session" : "Guest Mode (Stored Locally)"}
+                  {!authInitialized ? "Checking your session..." : isAuthenticated ? "Authenticated Session" : "Guest Mode (Stored Locally)"}
                 </p>
               </div>
               <div className={cn(
@@ -316,9 +266,9 @@ const ProfilePage = () => {
               )} />
             </div>
 
-            <PublicProfileSettings enabled={!loading && isAuthenticated} />
+            <PublicProfileSettings enabled={isConfirmedAuthenticated} />
 
-            {!isAuthenticated && (
+            {authInitialized && !isAuthenticated && (
               <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-5 text-left">
                 <AlertTitle className="text-primary flex items-center gap-2 font-black text-sm uppercase tracking-wider mb-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">!</span>
@@ -436,7 +386,7 @@ const ProfilePage = () => {
           </div>
 
           <PersonalAccessTokensSettings
-            enabled={!loading && isAuthenticated}
+            enabled={isConfirmedAuthenticated}
           />
         </div>
       </div>

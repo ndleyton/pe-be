@@ -4,6 +4,8 @@ interface ChatEmptyStateProps {
   examplePrompts: string[];
   isAuthenticated: boolean;
   isRestoring?: boolean;
+  showSignInNotice?: boolean;
+  disablePrompts?: boolean;
   onExamplePrompt: (prompt: string) => void;
 }
 
@@ -11,6 +13,8 @@ export const ChatEmptyState = ({
   examplePrompts,
   isAuthenticated,
   isRestoring = false,
+  showSignInNotice = !isAuthenticated,
+  disablePrompts = false,
   onExamplePrompt,
 }: ChatEmptyStateProps) => {
   if (isRestoring) {
@@ -44,14 +48,16 @@ export const ChatEmptyState = ({
         {examplePrompts.map((prompt) => (
           <button
             key={prompt}
+            type="button"
+            disabled={disablePrompts}
             onClick={() => onExamplePrompt(prompt)}
-            className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors"
+            className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
           >
             {prompt}
           </button>
         ))}
       </div>
-      {!isAuthenticated && (
+      {showSignInNotice && (
         <div className="bg-destructive/10 mx-auto mt-6 max-w-md rounded-2xl px-4 py-3">
           <p className="text-destructive text-sm">
             Sign in to use chat and image uploads. This feature is for logged-in

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { render } from "@/test/testUtils";
 import CreateRoutinePage from "./CreateRoutinePage";
@@ -117,6 +117,7 @@ describe("CreateRoutinePage", () => {
     expect(
       screen.getByRole("heading", { name: /new routine/i, level: 1 }),
     ).toBeInTheDocument();
+    expect(screen.queryByTestId("routine-info-card")).not.toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -135,6 +136,7 @@ describe("CreateRoutinePage", () => {
 
     render(<CreateRoutinePage />);
 
+    expect(screen.queryByTestId("routine-info-card")).not.toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith("/routines", { replace: true });
   });
 
@@ -164,5 +166,38 @@ describe("CreateRoutinePage", () => {
         saveDisabled: true,
       }),
     );
+  });
+
+  it("keeps the blocked-navigation dialog available when auth is lost", () => {
+    const reset = vi.fn();
+    const proceed = vi.fn();
+    mockUseBlocker.mockReturnValue({
+      state: "blocked",
+      reset,
+      proceed,
+    });
+    mockUseRoutineDetailsData.mockReturnValue({
+      availableIntensityUnits: [],
+      authInitialized: true,
+      canEdit: false,
+      editAccessMessage: null,
+      isAuthenticated: false,
+      routine: null,
+      routineError: null,
+      routinePending: false,
+      unitsPending: false,
+    });
+
+    render(<CreateRoutinePage />);
+
+    expect(
+      screen.getByRole("heading", { name: /unsaved changes/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /stay/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /leave/i }));
+    expect(proceed).toHaveBeenCalledTimes(1);
   });
 });

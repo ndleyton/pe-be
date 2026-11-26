@@ -1,6 +1,6 @@
 import { usePostLoginCompletion } from "@/features/auth/hooks";
 import { HomeLogo } from "@/shared/components/layout";
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 
 const workouts = (count: number) =>
   `${count} workout${count === 1 ? "" : "s"}`;
@@ -35,7 +35,7 @@ const PostLoginPage = () => {
               aria-live="polite"
               aria-busy="true"
             >
-              <div className="loading loading-spinner loading-lg mx-auto"></div>
+              <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none mx-auto" />
             </div>
           ),
           title: "Signing you in...",
@@ -50,7 +50,7 @@ const PostLoginPage = () => {
               aria-live="polite"
               aria-busy="true"
             >
-              <div className="loading loading-spinner loading-lg mx-auto text-primary"></div>
+              <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none mx-auto text-primary" />
             </div>
           ),
           title: "Syncing your data...",
@@ -70,7 +70,7 @@ const PostLoginPage = () => {
         };
       default:
         return {
-          icon: <div className="loading loading-spinner loading-lg"></div>,
+          icon: <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none" />,
           title: "Loading...",
           description: "",
         };

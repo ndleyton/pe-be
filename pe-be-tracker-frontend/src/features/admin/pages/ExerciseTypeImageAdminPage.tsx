@@ -162,14 +162,19 @@ const OptionSelector = ({
   </div>
 );
 
-const LoadingState = () => (
+// Mirrors the loaded layout: back button, header, then stacked cards.
+const LoadingState = ({ onBack }: { onBack: () => void }) => (
   <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6 lg:p-8">
-    <Skeleton className="h-8 w-72" />
-    <Skeleton className="h-24 w-full rounded-xl" />
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Skeleton className="h-96 w-full rounded-xl" />
-      <Skeleton className="h-96 w-full rounded-xl" />
+    <div className="space-y-2">
+      <Button variant="ghost" className="px-0" onClick={onBack}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to exercise
+      </Button>
+      <Skeleton className="h-9 w-72" />
+      <Skeleton className="h-4 w-full max-w-2xl" />
     </div>
+    <Skeleton className="h-48 w-full rounded-xl" />
+    <Skeleton className="h-96 w-full rounded-xl" />
     <Skeleton className="h-96 w-full rounded-xl" />
   </div>
 );
@@ -276,7 +281,7 @@ const ExerciseTypeImageAdminPage = () => {
     selectedGenerationOption?.label ?? "the selected style";
 
   if (!initialized) {
-    return <LoadingState />;
+    return <LoadingState onBack={handleBack} />;
   }
 
   if (!isAdmin) {
@@ -293,7 +298,7 @@ const ExerciseTypeImageAdminPage = () => {
   }
 
   if (optionsQuery.isLoading) {
-    return <LoadingState />;
+    return <LoadingState onBack={handleBack} />;
   }
 
   if (optionsQuery.isError || !data) {

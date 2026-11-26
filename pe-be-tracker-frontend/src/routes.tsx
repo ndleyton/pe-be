@@ -1,10 +1,12 @@
 import { Suspense, lazy, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { type RouteObject, Navigate } from "react-router-dom";
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEFAULT_SKELETON_COUNT } from "@/shared/constants";
 import LoginPage from "./features/auth/pages/LoginPage";
 import OAuthCallbackPage from "./features/auth/pages/OAuthCallbackPage";
+import ChatPageSkeleton from "@/features/chat/components/skeletons/ChatPageSkeleton";
 import ExerciseTypesPageSkeleton from "@/features/exercises/components/skeletons/ExerciseTypesPageSkeleton";
 import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import ProfilePageSkeleton from "@/features/profile/components/skeletons/ProfilePageSkeleton";
@@ -22,10 +24,10 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 // These pages are not lazy loaded as they are core pages
 import MyWorkoutsPage from "./features/workouts/pages/MyWorkoutsPage";
-import ChatPage from "./features/chat/pages/ChatPage";
 import AboutPage from "./features/about/pages/AboutPage";
 
 // Lazy load other components with error boundaries
+const ChatPage = lazy(() => import("./features/chat/pages/ChatPage"));
 const WorkoutPage = lazy(() => import("./features/workouts/pages/WorkoutPage"));
 const ExerciseTypesPage = lazy(
   () => import("./features/exercises/pages/ExerciseTypesPage"),
@@ -83,10 +85,7 @@ const LoadingFallback = () => (
       </div>
       {/* Keep a spinner for SR and visual cue */}
       <div className="flex justify-center py-4" role="status">
-        <div
-          className="loading loading-spinner loading-lg"
-          aria-label="Loading"
-        ></div>
+        <Loader2 aria-hidden="true" className="h-10 w-10 animate-spin motion-reduce:animate-none" /><span className="sr-only">Loading</span>
       </div>
     </div>
   </div>
@@ -166,11 +165,17 @@ const appRoutes: RouteObject[] = [
       },
       {
         path: "routines/new",
-        element: withSuspense(<CreateRoutinePage />, <RoutinesPageSkeleton />),
+        element: withSuspense(
+          <CreateRoutinePage />,
+          <RoutineDetailsLoadingState
+            title="New Routine"
+            subtitle="Create a custom plan"
+          />,
+        ),
       },
       {
         path: "chat",
-        element: <ChatPage />,
+        element: withSuspense(<ChatPage />, <ChatPageSkeleton />),
       },
       {
         path: "profile",

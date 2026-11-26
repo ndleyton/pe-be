@@ -821,4 +821,27 @@ describe("WorkoutPage", () => {
       });
     });
   });
+
+  it("keeps the workout page mounted without suspending while FinishWorkoutModal chunk is loading", async () => {
+    vi.resetModules();
+    vi.doMock(
+      "@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal",
+      () => new Promise(() => {}),
+    );
+
+    const { default: FreshWorkoutPage } = await import("./WorkoutPage");
+    render(<FreshWorkoutPage />);
+
+    const fab = await screen.findByLabelText(/floating action button/i);
+    expect(fab).toBeInTheDocument();
+
+    fireEvent.click(fab);
+
+    expect(screen.getByTestId("exercise-list")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    vi.doUnmock(
+      "@/features/workouts/components/FinishWorkoutModal/FinishWorkoutModal",
+    );
+  });
 });

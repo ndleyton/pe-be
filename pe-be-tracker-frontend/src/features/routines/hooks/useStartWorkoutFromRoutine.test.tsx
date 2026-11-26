@@ -48,6 +48,10 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+const { mockToastError } = vi.hoisted(() => ({ mockToastError: vi.fn() }));
+
+vi.mock("sonner", () => ({ toast: { error: mockToastError } }));
+
 vi.mock("@/features/routines/api", () => ({
   startWorkoutFromRoutine: mockStartWorkoutFromRoutine,
   getRoutine: mockGetRoutine,
@@ -109,6 +113,21 @@ describe("useStartWorkoutFromRoutine", () => {
     expect(mockStartWorkoutFromRoutine).toHaveBeenCalledWith(42);
     expect(mockAddWorkout).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith("/workouts/321");
+  });
+
+  it("reports and rethrows failures so callers can reset pending state", async () => {
+    const failure = new Error("network down");
+    mockStartWorkoutFromRoutine.mockRejectedValueOnce(failure);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { result } = renderHook(() => useStartWorkoutFromRoutine(), {
+      wrapper: createWrapper(),
+    });
+
+    await expect(
+      result.current(makeRoutineSummary({ id: 42, name: "Push Day" })),
+    ).rejects.toBe(failure);
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("creates a guest workout with the preferred default workout type", async () => {

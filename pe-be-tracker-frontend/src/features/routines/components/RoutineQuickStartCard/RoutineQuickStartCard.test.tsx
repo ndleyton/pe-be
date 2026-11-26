@@ -55,6 +55,61 @@ describe("RoutineQuickStartCard", () => {
     );
   });
 
+  it("disables the start button while starting and re-enables it when starting fails", async () => {
+    let rejectStart!: (reason?: unknown) => void;
+    const onStartWorkout = vi.fn(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectStart = reject;
+        }),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(
+      <RoutineQuickStartCard
+        routine={makeRoutineSummary({ id: 9, name: "Pull Day" })}
+        onStartWorkout={onStartWorkout}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /start workout/i }));
+
+    expect(screen.getByRole("button", { name: /starting/i })).toBeDisabled();
+
+    rejectStart(new Error("boom"));
+
+    expect(
+      await screen.findByRole("button", { name: /start workout/i }),
+    ).toBeEnabled();
+  });
+
+  it("re-enables the start button when onStartWorkout resolves without unmounting", async () => {
+    let resolveStart!: () => void;
+    const onStartWorkout = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStart = resolve;
+        }),
+    );
+
+    render(
+      <RoutineQuickStartCard
+        routine={makeRoutineSummary({ id: 9, name: "Pull Day" })}
+        onStartWorkout={onStartWorkout}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /start workout/i }));
+
+    expect(screen.getByRole("button", { name: /starting/i })).toBeDisabled();
+
+    resolveStart();
+
+    expect(
+      await screen.findByRole("button", { name: /start workout/i }),
+    ).toBeEnabled();
+  });
+
   it("shows the backend-truncated remainder count from exercise_count", () => {
     render(
       <RoutineQuickStartCard

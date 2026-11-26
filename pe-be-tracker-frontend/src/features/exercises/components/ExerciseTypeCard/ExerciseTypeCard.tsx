@@ -5,7 +5,7 @@ import { MUSCLE_DISPLAY_LIMIT } from "@/shared/constants";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 
 const preloadExerciseTypeDetailsPage = createIntentPreload(() =>
-  import("@/features/exercises/pages"),
+  import("@/features/exercises/pages/ExerciseTypeDetailsPage"),
 );
 
 interface ExerciseTypeCardProps {

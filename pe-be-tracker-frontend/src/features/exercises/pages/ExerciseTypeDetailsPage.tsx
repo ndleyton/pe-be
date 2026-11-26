@@ -6,7 +6,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag } from "lucide-react";
+import { ArrowLeft, Dumbbell, Image, ImagePlus, Plus, Tag, Loader2 } from "lucide-react";
 import Fade from "embla-carousel-fade";
 import { toast } from "sonner";
 import {
@@ -20,7 +20,6 @@ import {
   type Exercise,
   type IntensityUnit,
 } from "@/features/exercises/api";
-import ExerciseTypeDetailsLoadingState from "@/features/exercises/components/skeletons/ExerciseTypeDetailsLoadingState";
 import { useAuthStore } from "@/stores";
 import { lazy, Suspense } from "react";
 import { createIntentPreload } from "@/shared/lib/createIntentPreload";
@@ -386,10 +385,6 @@ const ExerciseTypeDetailsPage = () => {
     );
   }
 
-  if (isPageDataPending) {
-    return <ExerciseTypeDetailsLoadingState />;
-  }
-
   const statusLabel =
     exerciseType?.status === "candidate"
       ? "Candidate"
@@ -421,13 +416,11 @@ const ExerciseTypeDetailsPage = () => {
     hasExerciseType &&
     isAuthenticated &&
     isOwner &&
-    exerciseType.status === "candidate" &&
-    !requestEvaluationMutation.isPending;
+    exerciseType.status === "candidate";
   const canRelease =
     hasExerciseType &&
     isSuperuser &&
-    exerciseType.status !== "released" &&
-    !releaseMutation.isPending;
+    exerciseType.status !== "released";
   const editIntro =
     hasExerciseType && exerciseType.status === "released"
       ? "Admin edits apply directly to this released exercise type."
@@ -629,6 +622,7 @@ const ExerciseTypeDetailsPage = () => {
                   variant="glass"
                   className="w-full rounded-xl sm:w-auto"
                   onClick={() => requestEvaluationMutation.mutate()}
+                  disabled={requestEvaluationMutation.isPending}
                 >
                   {requestEvaluationMutation.isPending
                     ? "Requesting..."
@@ -640,6 +634,7 @@ const ExerciseTypeDetailsPage = () => {
                   variant="glass"
                   className="w-full rounded-xl sm:w-auto"
                   onClick={() => releaseMutation.mutate()}
+                  disabled={releaseMutation.isPending}
                 >
                   {releaseMutation.isPending ? "Releasing..." : "Release"}
                 </Button>
@@ -845,7 +840,7 @@ const ExerciseTypeDetailsPage = () => {
                   if (!firstImageLoaded) {
                     return (
                       <div className="flex h-full w-full items-center justify-center">
-                        <span className="loading loading-spinner loading-md"></span>
+                        <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin motion-reduce:animate-none" />
                       </div>
                     );
                   }
@@ -950,12 +945,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Progressive Overload</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-4">
-                  <span className="loading loading-spinner loading-md"></span>
-                </div>
-                <Skeleton className="h-48 w-full" />
-              </>
+              <Skeleton className="h-48 w-full" />
             ) : stats?.progressiveOverload &&
               stats.progressiveOverload.length > 0 ? (
               <Suspense fallback={<Skeleton className="h-48 w-full" />}>
@@ -977,12 +967,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Last Workout</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-2">
-                  <span className="loading loading-spinner loading-sm"></span>
-                </div>
-                <Skeleton className="h-24 w-full" />
-              </>
+              <Skeleton className="h-24 w-full" />
             ) : stats?.lastWorkout ? (
               <LastWorkoutInfo
                 lastWorkout={stats.lastWorkout}
@@ -998,12 +983,7 @@ const ExerciseTypeDetailsPage = () => {
           <div className="bg-card border-border/20 rounded-2xl border p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold">Personal Best</h2>
             {isPageDataPending || isLoadingStats ? (
-              <>
-                <div className="flex justify-center py-2">
-                  <span className="loading loading-spinner loading-sm"></span>
-                </div>
-                <Skeleton className="h-20 w-full" />
-              </>
+              <Skeleton className="h-20 w-full" />
             ) : stats && getPersonalBestEntries(stats).length > 0 ? (
               <div className="space-y-6">
                 {getPersonalBestEntries(stats).map(({ label, best }) => (

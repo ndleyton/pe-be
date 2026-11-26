@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { useGuestStore, useAuthStore } from "@/stores";
 import { getMyWorkouts } from "../api";
 import { type Workout } from "../types";
@@ -25,13 +26,15 @@ const getActiveWorkout = (workouts: Workout[]): Workout | null =>
 
 export const useMyWorkoutsData = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const authLoading = useAuthStore((state) => state.loading);
   const authInitialized = useAuthStore((state) => state.initialized);
+  const hasSessionHint = useAuthStore((state) => Boolean(state.hasSessionHint));
   const guestHydrated = useGuestStore((state) => state.hydrated);
   const guestWorkouts = useGuestStore((state) => state.workouts);
 
-  const authResolved = authInitialized && !authLoading;
+  const assumeAuthenticated = authInitialized ? isAuthenticated : hasSessionHint;
+  const authPendingWithoutHint = !authInitialized && !hasSessionHint;
   const queryClient = useQueryClient();
+  const sequenceCursorsRef = useRef<Set<number> | null>(null);
 
   const {
     data: serverWorkoutsResponse,
@@ -46,39 +49,66 @@ export const useMyWorkoutsData = () => {
     queryKey: ["workouts"],
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as number | undefined;
-      if (cursor !== undefined && cursor !== null) {
+      if (cursor === undefined || cursor === null) {
+        sequenceCursorsRef.current = new Set<number>();
+        return getMyWorkouts(undefined, WORKOUTS_PAGE_SIZE);
+      }
+
+      if (sequenceCursorsRef.current === null) {
         const cachedData = queryClient.getQueryData<{
-          pages: { next_cursor?: number | null }[];
+          pageParams?: Array<number | undefined>;
         }>(["workouts"]);
-        const fetchedCursors = new Set<number | undefined>();
-        fetchedCursors.add(undefined);
-        if (cachedData?.pages) {
-          for (let i = 0; i < cachedData.pages.length - 1; i++) {
-            const nextCursor = cachedData.pages[i].next_cursor;
-            if (nextCursor !== undefined && nextCursor !== null) {
-              fetchedCursors.add(nextCursor);
+        const initialCursors = new Set<number>();
+        if (Array.isArray(cachedData?.pageParams)) {
+          for (const param of cachedData.pageParams) {
+            if (typeof param === "number") {
+              initialCursors.add(param);
             }
           }
         }
-        if (fetchedCursors.has(cursor)) {
-          throw new Error(
-            `Workouts pagination returned repeated cursor ${cursor}`
-          );
-        }
+        sequenceCursorsRef.current = initialCursors;
       }
-      return getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+
+      // Capture this sequence: a page-one refetch may replace the ref while we await.
+      const sequenceCursors = sequenceCursorsRef.current;
+      if (sequenceCursors.has(cursor)) {
+        throw new Error(
+          `Workouts pagination returned repeated cursor ${cursor}`,
+        );
+      }
+
+      const response = await getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+      sequenceCursors.add(cursor);
+      return response;
     },
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-    enabled: authInitialized && !authLoading && isAuthenticated,
+    enabled: assumeAuthenticated,
+    retry: (failureCount, queryError) => {
+      if (
+        axios.isAxiosError(queryError) &&
+        (queryError.response?.status === 401 ||
+          queryError.response?.status === 403)
+      ) {
+        return false;
+      }
+      const defaultRetry = queryClient.getDefaultOptions().queries?.retry;
+      if (defaultRetry === false) {
+        return false;
+      }
+      if (typeof defaultRetry === "number") {
+        return failureCount < defaultRetry;
+      }
+      return failureCount < 1;
+    },
   });
 
   const workouts: Workout[] = useMemo(() => {
-    if (!authResolved) {
+    if (authPendingWithoutHint) {
       return [];
     }
 
-    if (isAuthenticated) {
+    if (assumeAuthenticated) {
       if (!serverWorkoutsResponse?.pages) {
         return [];
       }
@@ -97,12 +127,12 @@ export const useMyWorkoutsData = () => {
       created_at: gw.created_at || getCurrentUTCTimestamp(),
       updated_at: gw.updated_at || getCurrentUTCTimestamp(),
     }));
-  }, [authResolved, isAuthenticated, serverWorkoutsResponse, guestWorkouts]);
+  }, [authPendingWithoutHint, assumeAuthenticated, serverWorkoutsResponse, guestWorkouts]);
 
   const isLoading =
-    !authResolved || (isAuthenticated ? isPending : !guestHydrated);
+    authPendingWithoutHint || (assumeAuthenticated ? isPending : !guestHydrated);
   const hasLoadedWorkouts =
-    authResolved && (isAuthenticated ? status === "success" : guestHydrated);
+    !authPendingWithoutHint && (assumeAuthenticated ? status === "success" : guestHydrated);
   const activeWorkout = useMemo(
     () => getActiveWorkout(workouts),
     [workouts],

@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { startWorkoutFromRoutine as startWorkoutFromRoutineRequest, getRoutine } from "@/features/routines/api";
 import type { RoutineReference } from "@/features/routines/types";
@@ -59,6 +60,9 @@ export const useStartWorkoutFromRoutine = () => {
         navigate(`/workouts/${newWorkoutId}`, { state: { routine: fullRoutine } });
       } catch (error) {
         console.error("Failed to start workout from routine:", error);
+        toast.error("Couldn't start the workout. Please try again.");
+        // Rethrow so callers can reset their pending state.
+        throw error;
       }
     },
     [addGuestWorkout, guestWorkoutTypes, isAuthenticated, navigate],

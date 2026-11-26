@@ -186,7 +186,8 @@ const RoutineProgramDetailsPage = () => {
     (program?.visibility === "public" || program?.visibility === "link_only");
 
   const handleStartDay = (day: RoutineProgramDay) => {
-    startWorkoutFromRoutine({ id: day.routine_id });
+    // The hook already reports failures with a toast.
+    startWorkoutFromRoutine({ id: day.routine_id }).catch(() => undefined);
   };
 
   if (programQuery.isPending) {
