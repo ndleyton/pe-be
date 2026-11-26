@@ -203,4 +203,28 @@ describe("ProfilePage", () => {
     expect(screen.getByText("60")).toBeInTheDocument(); // 60 min average duration
     expect(screen.getByText("@lifter123")).toBeInTheDocument();
   });
+
+  it("renders workout stats errors inline and keeps account settings visible when workouts are populated", () => {
+    mockUseMyWorkoutsData.mockReturnValue({
+      workouts: defaultWorkouts,
+      activeWorkout: null,
+      hasLoadedWorkouts: true,
+      isLoading: false,
+      error: new Error("Failed to refresh workouts"),
+      refetch: vi.fn(),
+      isAuthenticated: true,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+
+    render(<ProfilePage />);
+
+    expect(
+      screen.getByText("Failed to load workout statistics"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("@lifter123")).toBeInTheDocument();
+    expect(screen.getByText("Visual Theme")).toBeInTheDocument();
+    expect(screen.getByTestId("pat-settings")).toBeInTheDocument();
+  });
 });
