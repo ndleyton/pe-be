@@ -113,14 +113,14 @@ describe("ProfilePage", () => {
     expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "false");
   });
 
-  it("starts authenticated settings in parallel when a session hint is present", () => {
+  it("keeps signed-in-only settings disabled until auth resolves even with a stale session hint", () => {
     mockAuthState.initialized = false;
     mockAuthState.loading = true;
     mockAuthState.isAuthenticated = false;
     mockAuthState.hasSessionHint = true;
     render(<ProfilePage />);
-    expect(mockUsePublicProfileSettings).toHaveBeenCalledWith(true);
-    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "true");
+    expect(mockUsePublicProfileSettings).toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "false");
   });
 
   it("keeps account information during a later session refresh", () => {
@@ -179,6 +179,21 @@ describe("ProfilePage", () => {
     expect(
       screen.getByLabelText("Loading public profile settings"),
     ).toBeInTheDocument();
+  });
+
+  it("keeps account settings visible when workout statistics fail to load", () => {
+    mockUseMyWorkoutsData.mockReturnValue({
+      ...mockUseMyWorkoutsData(),
+      error: new Error("next page failed"),
+    });
+
+    render(<ProfilePage />);
+
+    expect(screen.getByText("Failed to load workout statistics")).toBeInTheDocument();
+    expect(screen.getAllByText("1")).toHaveLength(2); // stats from loaded workouts
+    expect(screen.getByText("@lifter123")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dark/i })).toBeInTheDocument();
+    expect(screen.getByTestId("pat-settings")).toHaveAttribute("data-enabled", "true");
   });
 
   it("renders settled stats and public profile info once loaded", () => {

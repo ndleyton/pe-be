@@ -5,6 +5,7 @@ interface ChatEmptyStateProps {
   isAuthenticated: boolean;
   isRestoring?: boolean;
   showSignInNotice?: boolean;
+  disablePrompts?: boolean;
   onExamplePrompt: (prompt: string) => void;
 }
 
@@ -13,6 +14,7 @@ export const ChatEmptyState = ({
   isAuthenticated,
   isRestoring = false,
   showSignInNotice = !isAuthenticated,
+  disablePrompts = false,
   onExamplePrompt,
 }: ChatEmptyStateProps) => {
   if (isRestoring) {
@@ -46,8 +48,10 @@ export const ChatEmptyState = ({
         {examplePrompts.map((prompt) => (
           <button
             key={prompt}
+            type="button"
+            disabled={disablePrompts}
             onClick={() => onExamplePrompt(prompt)}
-            className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors"
+            className="bg-muted/50 hover:bg-muted w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
           >
             {prompt}
           </button>

@@ -11,6 +11,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { ExerciseList } from "@/features/exercises/components";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
 import { LoadingThrobber } from "@/shared/components/ui/LoadingThrobber";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ArrowLeft, SquarePen, Sparkles, Share2, Play, Loader2 } from "lucide-react";
@@ -481,16 +488,44 @@ const WorkoutPage = () => {
       <Suspense
         fallback={
           showFinishModal ? (
-            <div
-              role="status"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-background/60"
+            <Dialog
+              open
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleCancelFinish();
+                }
+              }}
             >
-              <Loader2
-                aria-hidden="true"
-                className="h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
-              />
-              <span className="sr-only">Loading finish workout</span>
-            </div>
+              <DialogContent
+                showCloseButton={false}
+                className="flex max-w-xs flex-col items-center gap-4 text-center"
+              >
+                <DialogHeader className="items-center text-center">
+                  <DialogTitle>Loading finish workout</DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Please wait while the finish workout dialog loads, or cancel
+                    to return to your workout.
+                  </DialogDescription>
+                </DialogHeader>
+                <div
+                  role="status"
+                  className="flex items-center justify-center py-2"
+                >
+                  <Loader2
+                    aria-hidden="true"
+                    className="h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
+                  />
+                  <span className="sr-only">Loading finish workout</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelFinish}
+                >
+                  Cancel
+                </Button>
+              </DialogContent>
+            </Dialog>
           ) : null
         }
       >

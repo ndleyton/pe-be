@@ -128,12 +128,13 @@ const PublicProfileSettings = ({
   );
 };
 
+const PROFILE_WORKOUTS_WINDOW = 25;
+
 const ProfilePage = () => {
   const { theme, setTheme } = useTheme();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authInitialized = useAuthStore((state) => state.initialized);
-  const hasSessionHint = useAuthStore((state) => Boolean(state.hasSessionHint));
-  const assumeAuthenticated = authInitialized ? isAuthenticated : hasSessionHint;
+  const isConfirmedAuthenticated = authInitialized && isAuthenticated;
 
   const {
     workouts,
@@ -141,7 +142,9 @@ const ProfilePage = () => {
     error,
   } = useMyWorkoutsData();
 
-  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
+  const safeWorkouts = Array.isArray(workouts)
+    ? workouts.slice(0, PROFILE_WORKOUTS_WINDOW)
+    : [];
   const completedWorkouts = safeWorkouts.filter((w) => w.end_time);
   const totalWorkouts = safeWorkouts.length;
   const averageWorkoutTime =
@@ -159,19 +162,6 @@ const ProfilePage = () => {
       (1000 * 60) // Convert to minutes
       : 0;
 
-  if (isAuthenticated && error) {
-    return (
-      <div className="p-4">
-        <div className="mx-auto max-w-4xl">
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>Failed to load profile data</AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 text-center sm:p-8">
       <div className="mx-auto max-w-4xl">
@@ -186,6 +176,13 @@ const ProfilePage = () => {
         />
 
         {/* Stats Cards */}
+        {/* Workout errors only affect the stats; account settings stay usable. */}
+        {isAuthenticated && error ? (
+          <Alert variant="destructive" className="mb-4 text-left">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>Failed to load workout statistics</AlertDescription>
+          </Alert>
+        ) : null}
         {isStatsLoading && <LoadingStatus message="Loading workout statistics" />}
         <div
           className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3"
@@ -269,7 +266,7 @@ const ProfilePage = () => {
               )} />
             </div>
 
-            <PublicProfileSettings enabled={assumeAuthenticated} />
+            <PublicProfileSettings enabled={isConfirmedAuthenticated} />
 
             {authInitialized && !isAuthenticated && (
               <Alert className="rounded-2xl border-primary/20 bg-primary/5 p-5 text-left">
@@ -389,7 +386,7 @@ const ProfilePage = () => {
           </div>
 
           <PersonalAccessTokensSettings
-            enabled={assumeAuthenticated}
+            enabled={isConfirmedAuthenticated}
           />
         </div>
       </div>

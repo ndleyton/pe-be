@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useGuestStore, useAuthStore } from "@/stores";
@@ -33,6 +33,7 @@ export const useMyWorkoutsData = () => {
 
   const assumeAuthenticated = authInitialized ? isAuthenticated : hasSessionHint;
   const queryClient = useQueryClient();
+  const sequenceCursorsRef = useRef<Set<number> | null>(null);
 
   const {
     data: serverWorkoutsResponse,
@@ -47,41 +48,53 @@ export const useMyWorkoutsData = () => {
     queryKey: ["workouts"],
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as number | undefined;
-      if (cursor !== undefined && cursor !== null) {
+      if (cursor === undefined || cursor === null) {
+        sequenceCursorsRef.current = new Set<number>();
+        return getMyWorkouts(undefined, WORKOUTS_PAGE_SIZE);
+      }
+
+      if (sequenceCursorsRef.current === null) {
         const cachedData = queryClient.getQueryData<{
-          pages: { next_cursor?: number | null }[];
+          pageParams?: Array<number | undefined>;
         }>(["workouts"]);
-        const fetchedCursors = new Set<number | undefined>();
-        fetchedCursors.add(undefined);
-        if (cachedData?.pages) {
-          for (let i = 0; i < cachedData.pages.length - 1; i++) {
-            const nextCursor = cachedData.pages[i].next_cursor;
-            if (nextCursor !== undefined && nextCursor !== null) {
-              fetchedCursors.add(nextCursor);
+        const initialCursors = new Set<number>();
+        if (Array.isArray(cachedData?.pageParams)) {
+          for (const param of cachedData.pageParams) {
+            if (typeof param === "number") {
+              initialCursors.add(param);
             }
           }
         }
-        if (fetchedCursors.has(cursor)) {
-          throw new Error(
-            `Workouts pagination returned repeated cursor ${cursor}`
-          );
-        }
+        sequenceCursorsRef.current = initialCursors;
       }
-      return getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+
+      if (sequenceCursorsRef.current.has(cursor)) {
+        throw new Error(
+          `Workouts pagination returned repeated cursor ${cursor}`,
+        );
+      }
+
+      const response = await getMyWorkouts(cursor, WORKOUTS_PAGE_SIZE);
+      sequenceCursorsRef.current.add(cursor);
+      return response;
     },
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: assumeAuthenticated,
     retry: (failureCount, queryError) => {
-      if (queryClient.getDefaultOptions().queries?.retry === false) {
-        return false;
-      }
       if (
         axios.isAxiosError(queryError) &&
         (queryError.response?.status === 401 ||
           queryError.response?.status === 403)
       ) {
         return false;
+      }
+      const defaultRetry = queryClient.getDefaultOptions().queries?.retry;
+      if (defaultRetry === false) {
+        return false;
+      }
+      if (typeof defaultRetry === "number") {
+        return failureCount < defaultRetry;
       }
       return failureCount < 1;
     },

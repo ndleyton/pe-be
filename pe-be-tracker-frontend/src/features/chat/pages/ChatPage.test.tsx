@@ -99,6 +99,10 @@ describe("ChatPage", () => {
     expect(screen.getByRole("heading", { name: "Personal Bestie" })).toBeVisible();
     expect(screen.getByText("Meet Personal Bestie")).toBeVisible();
     expect(screen.queryByText(/Sign in to use chat/)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Message...")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /bench press: 135lbs/i }),
+    ).toBeDisabled();
 
     mockAuthState.initialized = true;
     rerender(
@@ -116,6 +120,10 @@ describe("ChatPage", () => {
     );
 
     expect(screen.getByText(/Sign in to use chat/)).toBeVisible();
+    expect(screen.getByPlaceholderText("Message...")).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /bench press: 135lbs/i }),
+    ).not.toBeDisabled();
   });
 
   it("renders a workout widget when the assistant returns a workout-created event", async () => {

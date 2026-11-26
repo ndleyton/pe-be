@@ -125,8 +125,52 @@ const CreateRoutinePage = () => {
     }
   };
 
+  const unsavedChangesDialog = (
+    <AlertDialog open={blocker.state === "blocked" || showExitConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes in your new routine. Are you sure you
+            want to leave? Your progress will be lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            onClick={() => {
+              if (blocker.state === "blocked") blocker.reset?.();
+              setShowExitConfirm(false);
+            }}
+          >
+            Stay
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (blocker.state === "blocked") {
+                blocker.proceed?.();
+              } else {
+                setShowExitConfirm(false);
+                handleBack();
+              }
+            }}
+          >
+            Leave
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   if (!authInitialized || !isAuthenticated) {
-    return <RoutineDetailsLoadingState title="New Routine" subtitle="Create a custom plan" />;
+    return (
+      <>
+        <RoutineDetailsLoadingState
+          title="New Routine"
+          subtitle="Create a custom plan"
+        />
+        {unsavedChangesDialog}
+      </>
+    );
   }
 
   return (
@@ -252,39 +296,7 @@ const CreateRoutinePage = () => {
         </div>
       </div>
 
-      <AlertDialog open={blocker.state === "blocked" || showExitConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes in your new routine. Are you sure you
-              want to leave? Your progress will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                if (blocker.state === "blocked") blocker.reset?.();
-                setShowExitConfirm(false);
-              }}
-            >
-              Stay
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (blocker.state === "blocked") {
-                  blocker.proceed?.();
-                } else {
-                  setShowExitConfirm(false);
-                  handleBack();
-                }
-              }}
-            >
-              Leave
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {unsavedChangesDialog}
 
       {exercisePickerTarget !== null ? (
         <Suspense fallback={null}>

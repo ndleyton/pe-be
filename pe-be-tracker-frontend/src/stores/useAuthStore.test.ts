@@ -37,16 +37,33 @@ describe("useAuthStore session hint", () => {
     expect(window.localStorage.getItem(AUTH_SESSION_HINT_KEY)).toBe("1");
   });
 
-  it("clears the session hint when refresh fails", async () => {
+  it("clears the session hint when refresh fails with 401", async () => {
     window.localStorage.setItem(AUTH_SESSION_HINT_KEY, "1");
     useAuthStore.setState({ hasSessionHint: true });
-    mockGet.mockRejectedValueOnce(new Error("Unauthorized"));
+    mockGet.mockRejectedValueOnce(
+      Object.assign(new Error("Unauthorized"), {
+        isAxiosError: true,
+        response: { status: 401 },
+      }),
+    );
 
     await useAuthStore.getState().refresh();
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().hasSessionHint).toBe(false);
     expect(window.localStorage.getItem(AUTH_SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it("keeps the session hint when refresh fails due to a network or server error", async () => {
+    window.localStorage.setItem(AUTH_SESSION_HINT_KEY, "1");
+    useAuthStore.setState({ hasSessionHint: true });
+    mockGet.mockRejectedValueOnce(new Error("Network Error"));
+
+    await useAuthStore.getState().refresh();
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().hasSessionHint).toBe(true);
+    expect(window.localStorage.getItem(AUTH_SESSION_HINT_KEY)).toBe("1");
   });
 
   it("updates the session hint when setUser is called", () => {

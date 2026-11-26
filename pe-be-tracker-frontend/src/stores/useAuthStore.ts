@@ -1,3 +1,4 @@
+import axios from "axios";
 import { create } from "zustand";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
@@ -80,15 +81,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           initialized: true,
           hasSessionHint: true,
         });
-      } catch {
-        writeSessionHint(false);
-        set({
+      } catch (error) {
+        const isAuthRejection =
+          axios.isAxiosError(error) &&
+          (error.response?.status === 401 || error.response?.status === 403);
+        if (isAuthRejection) {
+          writeSessionHint(false);
+        }
+        set((state) => ({
           user: null,
           loading: false,
           isAuthenticated: false,
           initialized: true,
-          hasSessionHint: false,
-        });
+          hasSessionHint: isAuthRejection ? false : state.hasSessionHint,
+        }));
       } finally {
         refreshPromise = null;
       }

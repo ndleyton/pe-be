@@ -147,9 +147,8 @@ const ChatSession = () => {
               examplePrompts={EXAMPLE_PROMPTS}
               isAuthenticated={isAuthenticated}
               showSignInNotice={authInitialized && !isAuthenticated}
-              onExamplePrompt={(prompt) => {
-                if (authInitialized) handleExamplePrompt(prompt);
-              }}
+              disablePrompts={!authInitialized || isLoading}
+              onExamplePrompt={handleExamplePrompt}
             />
           )}
 
@@ -170,7 +169,7 @@ const ChatSession = () => {
         canSubmit={canSubmitMessage && restorationResolved && authInitialized}
         fileInputRef={fileInputRef}
         inputValue={inputValue}
-        isLoading={isLoading || !restorationResolved || !draftsHydrated}
+        isLoading={isLoading || !restorationResolved || !draftsHydrated || !authInitialized}
         onFileChange={handleFileChange}
         onInputChange={handleInputChange}
         onRemoveAttachment={handleRemoveAttachment}
