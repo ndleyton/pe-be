@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import type { Routine } from "@/features/routines/types";
 import api from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
+import { createIntentPreload } from "@/shared/lib/createIntentPreload";
 import {
   toUTCISOString,
   toLocalDateTimeInputValue,
@@ -46,11 +47,16 @@ const createWorkout = async (data: WorkoutFormData) => {
   return response.data;
 };
 
+const preloadWorkoutPage = createIntentPreload(() =>
+  import("@/features/workouts/pages/WorkoutPage"),
+);
+
 const WorkoutForm: React.FC<WorkoutFormProps> = ({
   onWorkoutCreated,
   routine,
 }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // Get state from stores
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const guestData = useGuestStore();
@@ -60,6 +66,10 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
     WorkoutType | GuestWorkoutType | null
   >(null);
   const [isEditingName, setIsEditingName] = useState(false);
+
+  useEffect(() => {
+    preloadWorkoutPage();
+  }, []);
 
   const { data: serverWorkoutTypes = [] } = useQuery({
     queryKey: ["workoutTypes"],
@@ -150,6 +160,11 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({
     mutationFn: createWorkout,
     onSuccess: (data) => {
       const newWorkoutId = data.id;
+      const workoutKey = String(newWorkoutId);
+      queryClient.setQueryData(["workout", workoutKey], data);
+      if (!routine) {
+        queryClient.setQueryData(["exercises", workoutKey], []);
+      }
       resetForm();
       onWorkoutCreated(newWorkoutId);
       navigate(`/workouts/${newWorkoutId}`, {

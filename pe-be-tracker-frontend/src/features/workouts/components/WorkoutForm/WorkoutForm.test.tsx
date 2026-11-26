@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient } from "@tanstack/react-query";
 import { render } from "@/test/testUtils";
+import api from "@/shared/api/client";
+import { useAuthStore } from "@/stores";
 import WorkoutForm from "./WorkoutForm";
 
 interface WorkoutType {
@@ -16,6 +19,12 @@ interface WorkoutTypeModalProps {
   onSelect: (workoutType: WorkoutType) => void;
 }
 
+vi.mock("@/shared/api/client", () => ({
+  default: {
+    post: vi.fn(),
+  },
+}));
+
 vi.mock("../WorkoutTypeModal/WorkoutTypeModal", () => ({
   default: ({ isOpen, onClose }: WorkoutTypeModalProps) =>
     isOpen ? (
@@ -23,7 +32,11 @@ vi.mock("../WorkoutTypeModal/WorkoutTypeModal", () => ({
         <button onClick={onClose}>Close Modal</button>
       </div>
     ) : null,
-  fetchWorkoutTypes: vi.fn(() => Promise.resolve([])),
+  fetchWorkoutTypes: vi.fn(() =>
+    Promise.resolve([
+      { id: 1, name: "Strength Training", description: "Lifting" },
+    ]),
+  ),
 }));
 
 const mockNavigate = vi.fn();
@@ -40,6 +53,12 @@ describe("WorkoutForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      loading: false,
+      initialized: true,
+    });
   });
 
   it("renders the form with all required fields", () => {
@@ -61,5 +80,51 @@ describe("WorkoutForm", () => {
     await user.click(workoutTypeCard!);
 
     expect(screen.getByTestId("workout-type-modal")).toBeInTheDocument();
+  });
+
+  it("seeds workout and empty exercises caches on authenticated creation", async () => {
+    const user = userEvent.setup();
+    const createdWorkout = {
+      id: 77,
+      name: "Upper Body",
+      notes: null,
+      start_time: "2026-11-26T19:00:00Z",
+      end_time: null,
+      workout_type_id: 1,
+      created_at: "2026-11-26T19:00:00Z",
+      updated_at: "2026-11-26T19:00:00Z",
+    };
+    vi.mocked(api.post).mockResolvedValueOnce({ data: createdWorkout });
+    useAuthStore.setState({
+      user: { id: 1, email: "lifter@example.com" },
+      isAuthenticated: true,
+      loading: false,
+      initialized: true,
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    render(<WorkoutForm onWorkoutCreated={mockOnWorkoutCreated} />, {
+      queryClient,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workout-name-heading")).toHaveTextContent(
+        /strength training/i,
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: /start workout/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/workouts/77", {
+        state: { knownEmptyExercises: true },
+      });
+    });
+
+    expect(queryClient.getQueryData(["workout", "77"])).toEqual(createdWorkout);
+    expect(queryClient.getQueryData(["exercises", "77"])).toEqual([]);
   });
 });
