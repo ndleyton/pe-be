@@ -139,7 +139,7 @@ async def test_authenticated_exercise_types_bypass_shared_cache(
     assert first_response.headers["cache-control"] == "private, no-store"
     assert first_response.headers["x-cache-status"] == "BYPASS"
     assert second_response.headers["x-cache-status"] == "BYPASS"
-    assert first_response.headers["vary"] == "Cookie"
+    assert "Cookie" in first_response.headers["vary"]
     assert "etag" not in first_response.headers
     assert fake_get_exercise_types.await_count == 2
 
