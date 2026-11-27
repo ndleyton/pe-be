@@ -315,8 +315,7 @@ async def test_parse_workout_and_save_exception(mock_create, chat_service_with_d
 async def test_generate_response_empty_final_message_has_generation(chat_service_no_db):
     chat_service_no_db.langfuse = MagicMock()
     mock_trace = MagicMock()
-    mock_trace.generation.return_value = MagicMock()
-    chat_service_no_db.langfuse.trace.return_value = mock_trace
+    chat_service_no_db.langfuse.start_observation.return_value = mock_trace
 
     mock_llm = AsyncMock()
     mock_llm.model_name = "test"
@@ -333,7 +332,11 @@ async def test_generate_response_empty_final_message_has_generation(chat_service
         await chat_service_no_db.generate_response(
             [{"role": "user", "content": "hi"}], save_to_db=False
         )
-        mock_trace.generation().end.assert_called_with(output="(no content)")
+        generation_kwargs = mock_trace.start_observation.call_args.kwargs
+        assert generation_kwargs["as_type"] == "generation"
+        assert generation_kwargs["output"] == "(no content)"
+        mock_trace.start_observation.return_value.end.assert_called_once()
+        mock_trace.end.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -362,10 +365,10 @@ async def test_get_llm_client_lazy_initialization():
 
 @pytest.mark.asyncio
 @patch("src.chat.service.ChatService._get_llm_client")
-async def test_generate_response_without_generation_end(
+async def test_generate_response_records_generation_and_ends_trace(
     mock_get_llm, chat_service_no_db
 ):
-    """Test the case where tracing is enabled but trace.generation returns None"""
+    """Tracing enabled: a root span with one ended generation child is recorded"""
     mock_llm = AsyncMock()
     mock_llm.model_name = "test"
     mock_tool_call_response = MagicMock()
@@ -376,19 +379,20 @@ async def test_generate_response_without_generation_end(
 
     chat_service_no_db.langfuse = MagicMock()
     mock_trace = MagicMock()
-
-    # Critical: make trace.generation return None so we hit line 527 "if generation" -> False condition
-    mock_trace.generation.return_value = None
-    chat_service_no_db.langfuse.trace.return_value = mock_trace
+    chat_service_no_db.langfuse.start_observation.return_value = mock_trace
 
     with patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key", create=True):
         result = await chat_service_no_db.generate_response(
             [{"role": "user", "content": "hi"}], save_to_db=False
         )
         assert result["message"] == "hi from llm"
-        # Ensure generation object's end method was not called by checking trace generation wasn't hit differently
-        # We can't check .end on NoneType directly. It's covered by the run completing successfully
-        assert mock_trace.generation.call_count == 1
+        root_kwargs = chat_service_no_db.langfuse.start_observation.call_args.kwargs
+        assert root_kwargs["name"] == "fitness-chat-conversation"
+        assert root_kwargs["as_type"] == "span"
+        assert mock_trace.start_observation.call_count == 1
+        assert mock_trace.start_observation.call_args.kwargs["output"] == "hi from llm"
+        mock_trace.start_observation.return_value.end.assert_called_once()
+        mock_trace.end.assert_called_once()
 
 
 @pytest.mark.asyncio

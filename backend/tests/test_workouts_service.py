@@ -3,7 +3,9 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from opentelemetry import trace as otel_trace
 
+from src.core import llm_tracing
 from src.core.config import settings
 import src.exercise_sets.crud as exercise_sets_crud
 import src.exercises.crud as exercises_crud
@@ -44,9 +46,14 @@ class _FakeTrace:
     def __init__(self):
         self.generations = []
         self.updates = []
+        self.ended = False
 
-    def generation(self, **kwargs):
+    def start_observation(self, **kwargs):
         self.generations.append(kwargs)
+        return SimpleNamespace(end=lambda: None)
+
+    def end(self):
+        self.ended = True
 
     def update(self, **kwargs):
         self.updates.append(kwargs)
@@ -58,7 +65,10 @@ class _FakeLangfuse:
         self.prompt_error = prompt_error
         self.trace_obj = _FakeTrace()
 
-    def trace(self, **kwargs):
+    def create_trace_id(self):
+        return "0" * 32
+
+    def start_observation(self, **kwargs):
         self.trace_kwargs = kwargs
         return self.trace_obj
 
@@ -576,10 +586,11 @@ async def test_get_langfuse_client_handles_configured_and_missing_keys(monkeypat
     captured = {}
 
     class FakeLangfuse:
-        def __init__(self, public_key, secret_key, host):
-            captured["args"] = (public_key, secret_key, host)
+        def __init__(self, public_key, secret_key, base_url, tracer_provider):
+            captured["args"] = (public_key, secret_key, base_url)
+            captured["tracer_provider"] = tracer_provider
 
-    monkeypatch.setattr(workouts_service, "Langfuse", FakeLangfuse)
+    monkeypatch.setattr(llm_tracing, "Langfuse", FakeLangfuse)
     monkeypatch.setattr(settings, "LANGFUSE_PUBLIC_KEY", "pub")
     monkeypatch.setattr(settings, "LANGFUSE_SECRET_KEY", "sec")
     monkeypatch.setattr(settings, "LANGFUSE_HOST", "https://langfuse.test")
@@ -587,6 +598,8 @@ async def test_get_langfuse_client_handles_configured_and_missing_keys(monkeypat
     client = WorkoutParsingService._get_langfuse_client()
     assert isinstance(client, FakeLangfuse)
     assert captured["args"] == ("pub", "sec", "https://langfuse.test")
+    # Langfuse must not share (or replace) the app's global OTel tracer provider.
+    assert captured["tracer_provider"] is not otel_trace.get_tracer_provider()
 
     monkeypatch.setattr(settings, "LANGFUSE_PUBLIC_KEY", "")
     monkeypatch.setattr(settings, "LANGFUSE_SECRET_KEY", "")
@@ -626,6 +639,7 @@ async def test_parse_workout_text_uses_langfuse_prompt_and_records_success(monke
         trace_langfuse.trace_obj.generations[1]["name"] == "workout-parsing-generation"
     )
     assert trace_langfuse.trace_obj.updates[-1]["metadata"]["status"] == "success"
+    assert trace_langfuse.trace_obj.ended
     assert llm_holder["llm"].kwargs["google_api_key"] == "google-key"
     assert llm_holder["llm"].messages[0].content == "Prompt body"
 

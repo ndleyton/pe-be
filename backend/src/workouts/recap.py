@@ -8,6 +8,7 @@ from google.genai import types
 from langfuse import Langfuse
 
 from src.core.config import settings
+from src.core.llm_tracing import get_langfuse_client, start_langfuse_trace
 from src.workouts.crud import get_workout_by_id
 from src.exercises.crud import get_exercise_type_stats, get_exercises_for_workout
 from src.exercises.intensity_units import (
@@ -70,13 +71,7 @@ class WorkoutRecapService:
 
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
-        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
-            return Langfuse(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST,
-            )
-        return None
+        return get_langfuse_client()
 
     @staticmethod
     async def generate_recap(
@@ -277,7 +272,8 @@ Recap:"""
         trace = None
         try:
             if langfuse:
-                trace = langfuse.trace(
+                trace = start_langfuse_trace(
+                    langfuse,
                     name="workout-recap",
                     user_id=str(user_id),
                     metadata={
@@ -305,8 +301,9 @@ Recap:"""
             )
 
             if trace:
-                trace.generation(
+                trace.start_observation(
                     name="workout-recap-generation",
+                    as_type="generation",
                     model=settings.WORKOUT_RECAP_MODEL,
                     input=[{"role": "user", "content": prompt}],
                     output=recap_text,
@@ -314,7 +311,7 @@ Recap:"""
                         "temperature": 0.7,
                         "max_tokens": 300,
                     },
-                )
+                ).end()
                 trace.update(
                     output={"recap": recap_text},
                     metadata={"status": "success"},
@@ -331,12 +328,17 @@ Recap:"""
         except Exception as e:
             if trace:
                 trace.update(
+                    level="ERROR",
+                    status_message=str(e),
                     metadata={
                         "status": "error",
                         "error": str(e),
-                    }
+                    },
                 )
             logger.exception("Error generating workout recap")
             if raise_on_error:
                 raise
             return f"Error generating recap: {str(e)}"
+        finally:
+            if trace:
+                trace.end()

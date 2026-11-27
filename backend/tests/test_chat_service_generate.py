@@ -861,7 +861,7 @@ async def test_generate_response_langfuse_trace_error(mock_get_llm, chat_service
 
     mock_trace = MagicMock()
     chat_service_no_db.langfuse = MagicMock()
-    chat_service_no_db.langfuse.trace.return_value = mock_trace
+    chat_service_no_db.langfuse.start_observation.return_value = mock_trace
 
     with (
         patch("src.chat.service.settings.GOOGLE_AI_KEY", "test_key"),
@@ -874,5 +874,8 @@ async def test_generate_response_langfuse_trace_error(mock_get_llm, chat_service
             )
 
     mock_trace.update.assert_called_once_with(
-        metadata={"status": "error", "error": "General error"}
+        level="ERROR",
+        status_message="General error",
+        metadata={"status": "error", "error": "General error"},
     )
+    mock_trace.end.assert_called_once()
