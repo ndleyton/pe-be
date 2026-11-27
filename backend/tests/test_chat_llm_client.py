@@ -424,14 +424,13 @@ async def test_gemini_3_chat_uses_low_thinking_level_when_supported(
     mock_client.aio = mock_aio
     mock_client_class.return_value = mock_client
 
-    with patch.dict(types.ThinkingConfig.model_fields, {"thinking_level": MagicMock()}):
-        client = GeminiGenAIClient(api_key="test", model_name="gemini-3-test")
-        client.client = mock_client
+    client = GeminiGenAIClient(api_key="test", model_name="gemini-3-test")
+    client.client = mock_client
 
-        await client.acomplete(
-            messages=[ConversationMessage(role="user", content="Hello")],
-            tools=[],
-        )
+    await client.acomplete(
+        messages=[ConversationMessage(role="user", content="Hello")],
+        tools=[],
+    )
 
     config = mock_aio.models.generate_content.await_args.kwargs["config"]
     assert config.thinking_config is not None
