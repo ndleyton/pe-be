@@ -5,13 +5,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    ignore:
-      # Sentry v11 needs an explicit dataCollection migration.
-      - dependency-name: "@sentry/react"
-        update-types: ["version-update:semver-major"]
-      # Sentry v11 bundler plugin is a deliberate migration, not a routine bump.
-      - dependency-name: "@sentry/vite-plugin"
-        update-types: ["version-update:semver-major"]
     groups:
       frontend-dependencies:
         patterns:
