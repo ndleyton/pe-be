@@ -16,9 +16,14 @@ class _FakeTrace:
     def __init__(self):
         self.generations = []
         self.updates = []
+        self.ended = False
 
-    def generation(self, **kwargs):
+    def start_observation(self, **kwargs):
         self.generations.append(kwargs)
+        return SimpleNamespace(end=lambda: None)
+
+    def end(self):
+        self.ended = True
 
     def update(self, **kwargs):
         self.updates.append(kwargs)
@@ -29,7 +34,10 @@ class _FakeLangfuse:
         self.trace_obj = _FakeTrace()
         self.trace_kwargs = None
 
-    def trace(self, **kwargs):
+    def create_trace_id(self):
+        return "0" * 32
+
+    def start_observation(self, **kwargs):
         self.trace_kwargs = kwargs
         return self.trace_obj
 
@@ -163,6 +171,14 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, stri
         recap_module, "get_exercise_type_stats", fake_get_exercise_type_stats
     )
     monkeypatch.setattr(recap_module.genai, "Client", fake_client_factory)
+    trace_calls = []
+    real_start_trace = recap_module.start_langfuse_trace
+
+    def spy_start_trace(client, **kwargs):
+        trace_calls.append(kwargs)
+        return real_start_trace(client, **kwargs)
+
+    monkeypatch.setattr(recap_module, "start_langfuse_trace", spy_start_trace)
 
     recap = await WorkoutRecapService.generate_recap(
         session, 7, 42, raise_on_error=strict
@@ -178,11 +194,14 @@ async def test_generate_recap_records_langfuse_trace_and_saves(monkeypatch, stri
         session.flush.assert_not_awaited()
     assert client_holder["client"].api_key == "google-key"
     assert langfuse.trace_kwargs["name"] == "workout-recap"
-    assert langfuse.trace_kwargs["user_id"] == "42"
+    assert trace_calls[0]["user_id"] == "42"
+    assert langfuse.trace_kwargs["as_type"] == "span"
+    assert langfuse.trace_obj.generations[0]["as_type"] == "generation"
     assert langfuse.trace_obj.generations[0]["name"] == "workout-recap-generation"
     assert "Push Day" in langfuse.trace_obj.generations[0]["input"][0]["content"]
     assert langfuse.trace_obj.generations[0]["output"] == recap
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "success"
+    assert langfuse.trace_obj.ended
 
 
 async def test_generate_recap_converts_current_metrics_into_prompt_display_unit(
@@ -310,6 +329,8 @@ async def test_generate_recap_updates_langfuse_on_error(monkeypatch, strict):
     assert langfuse.trace_obj.generations == []
     assert langfuse.trace_obj.updates[-1]["metadata"]["status"] == "error"
     assert langfuse.trace_obj.updates[-1]["metadata"]["error"] == "quota exceeded"
+    assert langfuse.trace_obj.updates[-1]["level"] == "ERROR"
+    assert langfuse.trace_obj.ended
 
 
 @pytest.mark.parametrize("failure", ["missing_key", "empty_response", "blank_response"])

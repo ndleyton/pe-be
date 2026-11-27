@@ -28,6 +28,7 @@ from src.workouts.schemas import (
     AddExerciseRequest,
 )
 from src.core.config import settings
+from src.core.llm_tracing import get_langfuse_client, start_langfuse_trace
 from src.exercises.crud import (
     create_exercise,
     get_exercise_types,
@@ -534,13 +535,7 @@ class WorkoutParsingService:
     @staticmethod
     def _get_langfuse_client() -> Optional[Langfuse]:
         """Get initialized Langfuse client if configured"""
-        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
-            return Langfuse(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST,
-            )
-        return None
+        return get_langfuse_client()
 
     @staticmethod
     async def parse_workout_text(workout_text: str) -> WorkoutParseResponse:
@@ -554,7 +549,8 @@ class WorkoutParsingService:
         try:
             # Initialize Langfuse trace if available
             if langfuse:
-                trace = langfuse.trace(
+                trace = start_langfuse_trace(
+                    langfuse,
                     name="workout-parsing",
                     metadata={
                         "model": settings.WORKOUT_PARSER_MODEL,
@@ -570,14 +566,15 @@ class WorkoutParsingService:
 
                     # Log prompt usage. Pass the Prompt object, not its internal content list/string
                     if trace:
-                        trace.generation(
+                        trace.start_observation(
                             name="prompt-fetch",
+                            as_type="generation",
                             prompt=prompt,
                             metadata={
                                 "prompt_name": "parser-to-json",
                                 "label": "production",
                             },
-                        )
+                        ).end()
                 except Exception:
                     # Fallback to hardcoded prompt if Langfuse fails
                     logger.warning(
@@ -608,8 +605,9 @@ class WorkoutParsingService:
 
             # Log generation to Langfuse
             if trace:
-                trace.generation(
+                trace.start_observation(
                     name="workout-parsing-generation",
+                    as_type="generation",
                     model=settings.WORKOUT_PARSER_MODEL,
                     input=[
                         {"role": "system", "content": system_prompt},
@@ -623,7 +621,7 @@ class WorkoutParsingService:
                         "temperature": 0.1,
                         "max_tokens": 1000,
                     },
-                )
+                ).end()
 
             # Try to extract JSON if there's extra text
             if response_text.startswith("```json"):
@@ -651,13 +649,24 @@ class WorkoutParsingService:
         except json.JSONDecodeError as e:
             error_msg = f"Failed to parse LLM response as JSON: {e}"
             if trace:
-                trace.update(metadata={"status": "error", "error": error_msg})
+                trace.update(
+                    level="ERROR",
+                    status_message=error_msg,
+                    metadata={"status": "error", "error": error_msg},
+                )
             raise ValueError(error_msg)
         except Exception as e:
             error_msg = f"Error parsing workout with Gemini: {e}"
             if trace:
-                trace.update(metadata={"status": "error", "error": error_msg})
+                trace.update(
+                    level="ERROR",
+                    status_message=error_msg,
+                    metadata={"status": "error", "error": error_msg},
+                )
             raise ValueError(error_msg)
+        finally:
+            if trace:
+                trace.end()
 
     @staticmethod
     def _get_fallback_prompt() -> str:

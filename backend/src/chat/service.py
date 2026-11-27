@@ -45,6 +45,7 @@ from src.chat.schemas import (
     ConversationMessageCreate,
 )
 from src.core.config import settings
+from src.core.llm_tracing import get_langfuse_client, start_langfuse_trace
 from src.exercises.crud import (
     get_exercise_type_by_id,
     get_recent_exercises_by_type,
@@ -1245,13 +1246,7 @@ Routine creation policy:
         return self._llm_client
 
     def _get_langfuse_client(self) -> Optional[Langfuse]:
-        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
-            return Langfuse(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST,
-            )
-        return None
+        return get_langfuse_client()
 
     def _get_system_prompt(self) -> str:
         if self.langfuse:
@@ -1384,7 +1379,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         llm_client = self._get_llm_client()
         trace = None
         if self.langfuse:
-            trace = self.langfuse.trace(
+            trace = start_langfuse_trace(
+                self.langfuse,
                 name="fitness-chat-conversation",
                 user_id=str(self.user_id),
                 metadata={
@@ -1473,8 +1469,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
 
             if trace:
                 trace.update(metadata={"llm": llm_metadata})
-                generation = trace.generation(
+                trace.start_observation(
                     name="user-query-generation",
+                    as_type="generation",
                     input=[
                         {
                             "role": message.role,
@@ -1490,9 +1487,8 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                         for message in llm_messages
                     ],
                     model=llm_client.model_name,
-                )
-                if generation:
-                    generation.end(output=response_text or "(no content)")
+                    output=response_text or "(no content)",
+                ).end()
 
             if save_to_db and self.session and conversation:
                 for message in new_messages:
@@ -1525,7 +1521,11 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             }
         except Exception as exc:
             if trace:
-                trace.update(metadata={"status": "error", "error": str(exc)})
+                trace.update(
+                    level="ERROR",
+                    status_message=str(exc),
+                    metadata={"status": "error", "error": str(exc)},
+                )
 
             error_msg = str(exc)
             if self._is_provider_busy_error(error_msg):
@@ -1538,6 +1538,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
                 )
 
             raise ValueError(f"Error generating response with Gemini: {exc}")
+        finally:
+            if trace:
+                trace.end()
 
     async def save_uploaded_attachment(
         self,
