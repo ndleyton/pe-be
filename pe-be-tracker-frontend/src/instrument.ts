@@ -26,7 +26,20 @@ if (sentryEnabled) {
     dsn: config.sentryDsn,
     environment: config.environment,
     release: config.appVersion !== "unknown" ? config.appVersion : undefined,
-    sendDefaultPii: false,
+    // v11 collects everything when dataCollection is unset; turn off all of it to match v10 sendDefaultPii: false.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      graphQL: { document: false, variables: false },
+      genAI: { inputs: false, outputs: false },
+      mcp: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
     debug: config.isDevelopment,
     integrations: [
       Sentry.browserTracingIntegration(),
