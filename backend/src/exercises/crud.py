@@ -33,6 +33,7 @@ from src.exercises.intensity_units import (
     convert_intensity_value,
     normalize_intensity_for_storage,
 )
+from src.exercises.thumbnail_keys import determine_thumbnail_key
 
 
 def is_new_personal_best(
@@ -207,6 +208,26 @@ async def _replace_exercise_type_muscles(
                 is_primary=muscle_id == resolved_primary_muscle_id,
             )
         )
+
+
+async def _refresh_thumbnail_key(
+    session: AsyncSession, exercise_type: ExerciseType
+) -> None:
+    await session.flush()
+    rows = (
+        await session.execute(
+            select(MuscleGroup.name, ExerciseMuscle.is_primary)
+            .join(Muscle, Muscle.muscle_group_id == MuscleGroup.id)
+            .join(ExerciseMuscle, ExerciseMuscle.muscle_id == Muscle.id)
+            .where(ExerciseMuscle.exercise_type_id == exercise_type.id)
+        )
+    ).all()
+    exercise_type.thumbnail_key = determine_thumbnail_key(
+        exercise_name=exercise_type.name,
+        category=exercise_type.category,
+        muscle_group_names=[name for name, _ in rows],
+        primary_muscle_group_names=[name for name, is_primary in rows if is_primary],
+    )
 
 
 async def _hydrate_exercise_types_by_ids(
@@ -960,6 +981,7 @@ async def create_exercise_type(
             exercise_type_create.muscle_ids,
             primary_muscle_id=exercise_type_create.primary_muscle_id,
         )
+        await _refresh_thumbnail_key(session, exercise_type)
         await session.commit()
         await session.refresh(exercise_type)
 
@@ -1024,6 +1046,8 @@ async def update_exercise_type(
     )
 
     try:
+        # Flushes, so name conflicts surface here and get rolled back below.
+        await _refresh_thumbnail_key(session, exercise_type)
         await session.commit()
     except IntegrityError:
         await session.rollback()
