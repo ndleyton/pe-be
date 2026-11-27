@@ -1,6 +1,6 @@
 # RFC 0011: Zero-Downtime Backend Deploys
 
-- Status: Proposed
+- Status: Accepted (option A implemented)
 - Date: 2026-10-02
 - Owners: Backend
 
@@ -128,13 +128,24 @@ Adopt option A now.
 4. Before rollout, check the connection pool settings in `.env.production` against the budget above.
 5. Make sure systemd jobs that call `docker compose run` target a service name that still exists after the split.
 
+### Implementation notes
+
+- `backend/deploy/blue-green.sh` owns the color state: `idle` picks the color to deploy, `switch COLOR` validates it, writes `config/active-backend.env` (keeping the old value in `config/previous-backend.env`), runs `docker compose up -d --no-deps caddy` and then `caddy reload` with an explicit `ACTIVE_BACKEND`. If the switch fails, it resets the state to the upstream Caddy actually serves, read from its admin API. If that can't be read, it falls back to the old value, or to no recorded color on the first run. `wait-ready COLOR` polls `/health/ready` inside a container. `rollback` starts the previous color and switches only once it is ready. It leaves the current color running, and the operator runs `stop-inactive` after verifying ingress. `stop-inactive` stops whichever color is not active, and `run ARGS...` runs a one-off container of the active color.
+- Caddy bind-mounts `config/active-backend.env` and starts with `caddy run --envfile`, so a restart or reboot rereads the persisted color instead of the value from container creation. The script rewrites the file in place because a single-file bind mount would not see a renamed replacement. For the same reason the Caddyfile lives in `deploy/caddy/` and is mounted as a directory, so `caddy reload` reads the version rsync just delivered.
+- Caddy reads `backend/.env.caddy`, which the workflow filters down to `API_ORIGIN_DOMAIN`, `CADDY_TRUSTED_PROXIES` and `EDGE_*`. Sharing `.env.production` would change Compose's config hash on every commit (`OTEL_SERVICE_VERSION`) and recreate Caddy on every deploy. Postgres gets `backend/.env.db` (only `POSTGRES_*`) for the same reason, since the deploy's `up -d db` would otherwise restart the database under live traffic. The first deploy with this file recreates Postgres once.
+- Each color builds its own image (`<project>-backend-blue`, `<project>-backend-green`), so a failed build never replaces the image the live color or the systemd jobs use.
+- `deploy-vps.yml` fails before switching if the idle color does not pass `/health/ready` after 30 probes (about 90 seconds when probes fail fast), then stops it. If the post-switch ingress check fails, a rollback step switches Caddy back to the previous color, which is still running. It stops the failed color only after ingress passes again. Timer installation runs after verification, so a timer failure cannot skip the ingress check or the rollback. The previous color is stopped only after ingress passes.
+- First run: with no `config/active-backend.env`, the deploy starts `backend-blue` beside the legacy `pe-be-backend` container. The switch recreates Caddy once to pick up the new command and mount, which causes a brief edge blip. The legacy container is removed after ingress passes. That run has no automatic rollback target.
+- The systemd job units call `blue-green.sh run`, so they always use the active color's image.
+- Connection budget: the deploy writes no `DATABASE_POOL_*` overrides, so the defaults (5 + 10) give 30 connections during the overlap, within the ~45 budget. Recheck this if `.env.production` gains pool settings or jobs run during a deploy.
+
 For the `infrastructure/` branch: if it is kept, import the existing server (`terraform import hcloud_server.web_server <id>`) rather than creating a new one, and add `lifecycle { prevent_destroy = true }`. Changing `image` or `location` forces a replacement, which would wipe the local volumes.
 
 ## Risks and open questions
 
 - **Migrations:** A migration that breaks the old code will break the old color during the overlap. Schema changes must stay additive, as AGENTS.md requires.
 - **Caddy reload:** Reloading Caddy must not drop connections that are in flight. Verify this on staging or during a maintenance window.
-- **Scheduled jobs:** Systemd timers currently reference the `backend` service name and need to be audited.
+- **Scheduled jobs:** Resolved. The units now go through `blue-green.sh run` instead of the removed `backend` service.
 - **Server failure:** Option A does not protect against losing the server. Backups of the Postgres data and the file volumes remain the recovery path.
 - **Terraform state:** If Terraform is kept, its state is local and gitignored. Losing it loses track of the server, so consider a remote backend.
 

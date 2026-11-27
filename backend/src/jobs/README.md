@@ -184,7 +184,7 @@ Per RFC 0004, jobs here are intended to be triggered by external VPS scheduling,
 The hourly `pe-be-public-media-reconciliation.timer` is installed and verified by Deploy VPS, but discovery of new orphans defaults to disabled. Pending takedowns are retried on every scheduled run. Before enabling orphan scanning:
 
 1. Preserve a recoverable backup of the exercise image volume and R2 media; database dumps do not include media.
-2. Run `docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.reconcile_public_media --dry-run` on the VPS.
+2. Run `bash backend/deploy/blue-green.sh run python -m src.jobs.reconcile_public_media --dry-run` on the VPS.
 3. Review the logged candidate keys against production `images_url` and `reference_images_url` values, including absolute URLs and legacy formats. A plausible `orphans` count alone is insufficient. Resolve missed references before enabling deletion.
 4. Set the GitHub repository secret `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true` and redeploy. For manual installs, update the production env file used by Compose. This enables discovery and deletion of new orphans; pending retries do not require this flag.
 

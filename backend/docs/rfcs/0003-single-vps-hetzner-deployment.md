@@ -23,7 +23,7 @@ This repo already has most of the application packaging needed for a VPS deploym
 
 - backend Docker image in [`backend/Dockerfile`](../../Dockerfile)
 - a local-oriented Compose file in [`docker-compose.yml`](../../../docker-compose.yml)
-- new production deployment files in [`docker-compose.prod.yml`](../../../docker-compose.prod.yml), [`Caddyfile`](../../../Caddyfile), and [`backend/.env.production.template`](../../.env.production.template)
+- new production deployment files in [`docker-compose.prod.yml`](../../../docker-compose.prod.yml), [`Caddyfile`](../../../deploy/caddy/Caddyfile), and [`backend/.env.production.template`](../../.env.production.template)
 
 The current app auth flow is designed around a same-host public callback:
 
@@ -167,7 +167,7 @@ The production files added in this repo implement the VPS side as:
 See:
 
 - [`docker-compose.prod.yml`](../../../docker-compose.prod.yml)
-- [`Caddyfile`](../../../Caddyfile)
+- [`Caddyfile`](../../../deploy/caddy/Caddyfile)
 - [`backend/.env.production.template`](../../.env.production.template)
 
 ## Resource Expectations

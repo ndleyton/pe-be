@@ -64,7 +64,11 @@ Notes:
 ### Deployment
 
 - The frontend auto-deploys through Render's git integration when changes merge to `main`.
-- Backend releases use the manually dispatched `.github/workflows/deploy-vps.yml` during supervised maintenance windows. Container recreation can briefly interrupt requests; the GitHub runner remains active while the remote deployment runs.
+- Backend releases use the manually dispatched `.github/workflows/deploy-vps.yml` during supervised maintenance windows. The runner remains active while the remote deployment runs.
+- Backend deploys are blue-green on the single VPS (RFC 0011): `docker-compose.prod.yml` has `backend-blue` and `backend-green` (no `backend` service), and Caddy (`deploy/caddy/Caddyfile`, env from the filtered `backend/.env.caddy`; Postgres likewise reads `backend/.env.db`) proxies to `{$ACTIVE_BACKEND}:8000`. The active color lives in the deploy-managed `config/active-backend.env`; use `backend/deploy/blue-green.sh` (`active`, `idle`, `wait-ready COLOR`, `switch COLOR`, `rollback`, `stop-inactive`, `run ARGS...`) instead of hardcoding a color. The deploy starts the idle color, migrates, waits for `/health/ready`, switches Caddy, verifies ingress, then stops the old color. A build that never becomes ready fails the deploy without touching the live color.
+- Migrations run while the old color still serves, so schema changes must work with both the old and the new code.
+- One-off backend commands and systemd jobs go through `backend/deploy/blue-green.sh run ...` (it runs `docker compose run --rm -T <active color> ...`).
+- Both colors run at once during a deploy, so `2 × (DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW)` plus any concurrent job containers must stay under ~45 (Postgres `max_connections=50`). Defaults are 5 + 10, i.e. 30 during the overlap.
 - Deploy additive backend/API/schema changes before frontend changes that depend on them. Remove obsolete behavior only after callers have migrated; frontend and backend releases are independent.
 - Deployment must pass database readiness at `/health/ready` through origin HTTPS and `/api/v1/health/ready` through the frontend proxy. `/health` remains a database-independent liveness probe.
 
