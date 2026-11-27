@@ -3,8 +3,29 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 
+from fastapi import HTTPException, UploadFile, status
 from PIL import Image, ImageOps, UnidentifiedImageError
 from PIL.Image import DecompressionBombError
+
+
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+
+
+async def read_upload_file_limited(file: UploadFile, *, max_bytes: int) -> bytes:
+    data = bytearray()
+    while True:
+        remaining = max_bytes - len(data)
+        read_size = min(UPLOAD_READ_CHUNK_BYTES, max(remaining + 1, 1))
+        chunk = await file.read(read_size)
+        if not chunk:
+            break
+        if len(data) + len(chunk) > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image upload exceeds maximum size of {max_bytes} bytes",
+            )
+        data.extend(chunk)
+    return bytes(data)
 
 
 @dataclass(frozen=True)
@@ -73,8 +94,8 @@ def sanitize_image_upload(
                 data=output.getvalue(),
                 mime_type=detected_mime_type,
                 extension=_extension_for_mime_type(detected_mime_type),
-                width=width,
-                height=height,
+                width=image_to_save.width,
+                height=image_to_save.height,
             )
     except (UnidentifiedImageError, OSError, DecompressionBombError) as exc:
         raise ImageUploadValidationError("Uploaded file is not a valid image") from exc
