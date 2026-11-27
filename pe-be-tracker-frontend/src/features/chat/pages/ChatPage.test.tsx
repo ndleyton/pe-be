@@ -231,7 +231,7 @@ describe("ChatPage", () => {
 
   it("renders routine recommendation widgets from grounded chat events", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "I found a strong existing routine.",
         conversation_id: 12,
         events: [
@@ -255,7 +255,7 @@ describe("ChatPage", () => {
             ],
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
@@ -288,7 +288,7 @@ describe("ChatPage", () => {
 
   it("renders routine program recommendation widgets from grounded chat events", async () => {
     mockPost.mockResolvedValueOnce({
-      data: {
+      data: streamBody({
         message: "I found a strong existing program.",
         conversation_id: 12,
         events: [
@@ -313,7 +313,7 @@ describe("ChatPage", () => {
             ],
           },
         ],
-      },
+      }),
     });
 
     const user = userEvent.setup();
