@@ -239,8 +239,14 @@ jobs:
 
           cd "${DEPLOY_PATH}"
 
+          # Blue-green (RFC 0011): build and start the idle color while the active one
+          # keeps serving. With no recorded color yet (first run), the legacy
+          # pe-be-backend container keeps serving and blue is started.
+          idle=$(bash backend/deploy/blue-green.sh idle)
+          echo "Deploying to ${idle}"
+
           # Build the backend and edge images
-          docker compose -f docker-compose.prod.yml build backend caddy
+          docker compose -f docker-compose.prod.yml build "$idle" caddy
 
           # Ensure database is up and healthy
           docker compose -f docker-compose.prod.yml up -d db
@@ -277,25 +283,42 @@ jobs:
             rm -- "${snapshots[@]:0:${#snapshots[@]}-5}"
           fi
 
-          # Run migrations
-          docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+          # Run migrations with the new image. They must stay backwards-compatible:
+          # the active color keeps serving on the migrated schema until the switch.
+          docker compose -f docker-compose.prod.yml run --rm "$idle" alembic upgrade head
 
-          # Bring up backend and caddy
-          docker compose -f docker-compose.prod.yml up -d --force-recreate backend caddy
-          backend_created=$(date -u -d "$(docker inspect -f '{{.Created}}' pe-be-backend)" +%s)
+          # Start the idle color; Caddy still points at the active one.
+          docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate "$idle"
+          backend_created=$(date -u -d "$(docker inspect -f '{{.Created}}' "pe-be-${idle}")" +%s)
           if (( backend_created < deploy_started )); then
-            echo "Backend container was not recreated by this deploy" >&2
+            echo "${idle} container was not recreated by this deploy" >&2
             exit 1
           fi
 
+          # Wait for readiness. A crash-looping or unready build fails the deploy here,
+          # before Caddy is touched, so the active color keeps serving.
+          echo "Waiting for ${idle} to pass /health/ready..."
+          ready=0
+          for _ in $(seq 1 30); do
+            if docker compose -f docker-compose.prod.yml exec -T "$idle" \
+              curl -fsS --connect-timeout 2 --max-time 5 http://localhost:8000/health/ready; then
+              ready=1
+              break
+            fi
+            sleep 3
+          done
+          if (( ! ready )); then
+            echo "::error::${idle} never became ready; live traffic was not switched"
+            docker compose -f docker-compose.prod.yml logs --tail 100 "$idle" || true
+            docker compose -f docker-compose.prod.yml stop "$idle" || true
+            exit 1
+          fi
+
+          # Point Caddy at the new color. The previous color stays up until ingress is verified.
+          bash backend/deploy/blue-green.sh switch "$idle"
+
           # Show running containers
           docker compose -f docker-compose.prod.yml ps
-
-          # Health check: backend directly
-          echo "Checking backend health..."
-          docker compose -f docker-compose.prod.yml exec -T backend \
-            curl -fsS --retry 5 --retry-connrefused --retry-delay 3 \
-              --connect-timeout 5 --max-time 10 http://localhost:8000/health/ready
 
           install_systemd_unit() {
             local src="$1"
@@ -332,6 +355,7 @@ jobs:
           DEPLOYEOF
 
       - name: Verify origin and public API ingress
+        id: verify
         env:
           API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
@@ -359,6 +383,55 @@ jobs:
             trap - EXIT
           done
           echo "Deployment verified through origin TLS and public API proxy."
+
+      - name: Roll Caddy back to the previous color
+        if: failure() && steps.verify.outcome == 'failure'
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'ROLLBACKEOF'
+          main() {
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          if [[ ! -f config/previous-backend.env ]]; then
+            # First blue-green deploy: the legacy pe-be-backend container is still running.
+            echo "::error::No previous color recorded; restore the legacy backend manually"
+            exit 1
+          fi
+          previous=$(sed -n 's/^ACTIVE_BACKEND=//p' config/previous-backend.env)
+          docker compose -f docker-compose.prod.yml start "$previous"
+          bash backend/deploy/blue-green.sh switch "$previous"
+          }
+          main < /dev/null
+          ROLLBACKEOF
+
+      - name: Stop the previous backend color
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'STOPEOF'
+          main() {
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          active=$(bash backend/deploy/blue-green.sh active)
+          for color in backend-blue backend-green; do
+            if [[ "$color" != "$active" ]]; then
+              docker compose -f docker-compose.prod.yml stop "$color"
+            fi
+          done
+          # First blue-green deploy: retire the legacy single-container backend.
+          if docker inspect pe-be-backend >/dev/null 2>&1; then
+            docker stop pe-be-backend
+            docker rm pe-be-backend
+          fi
+          docker compose -f docker-compose.prod.yml ps
+          }
+          main < /dev/null
+          STOPEOF
 
       - name: Prune dangling images after verification
         env:

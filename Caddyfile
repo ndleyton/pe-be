@@ -77,6 +77,6 @@
             log_key
         }
 
-        reverse_proxy backend:8000
+        reverse_proxy {$ACTIVE_BACKEND}:8000
     }
 }

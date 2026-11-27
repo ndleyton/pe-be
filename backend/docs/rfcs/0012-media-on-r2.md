@@ -90,7 +90,7 @@ The Deploy VPS workflow reads the phase 1 media settings above from GitHub repos
 
 Deploy order:
 1. Deploy the code with `MEDIA_STORAGE_BACKEND=r2` and no `MEDIA_PUBLIC_BASE_URL`.
-2. Run the backfill with `docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.backfill_public_media`.
+2. Run the backfill with `bash backend/deploy/blue-green.sh run python -m src.jobs.backfill_public_media`.
 3. Spot-check a few keys with `curl`.
 4. Set both `MEDIA_PUBLIC_BASE_URL` and `MEDIA_PURGE_BASE_URL` to the same CDN URL and restart (or redeploy through Deploy VPS when using repository secrets).
 5. Keep orphan scanning disabled until a recoverable media backup exists and a production dry-run has been reviewed. Follow the [reconciliation activation steps](../../src/jobs/README.md#published-media-reconciliation), checking candidate keys against stored references before setting `JOB_PUBLIC_MEDIA_RECONCILIATION_ENABLED=true`.

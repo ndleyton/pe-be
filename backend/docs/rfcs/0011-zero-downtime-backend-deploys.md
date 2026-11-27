@@ -1,6 +1,6 @@
 # RFC 0011: Zero-Downtime Backend Deploys
 
-- Status: Proposed
+- Status: Accepted (option A implemented)
 - Date: 2026-10-02
 - Owners: Backend
 
@@ -128,13 +128,23 @@ Adopt option A now.
 4. Before rollout, check the connection pool settings in `.env.production` against the budget above.
 5. Make sure systemd jobs that call `docker compose run` target a service name that still exists after the split.
 
+### Implementation notes
+
+- `backend/deploy/blue-green.sh` owns the color state: `idle` picks the color to deploy, `switch COLOR` validates it, writes `config/active-backend.env` (keeping the old value in `config/previous-backend.env`), runs `docker compose up -d --no-deps caddy` and then `caddy reload` with an explicit `ACTIVE_BACKEND`, and `run ARGS...` runs a one-off container of the active color.
+- Caddy bind-mounts `config/active-backend.env` and starts with `caddy run --envfile`, so a restart or reboot rereads the persisted color instead of the value from container creation. The script rewrites the file in place because a single-file bind mount would not see a renamed replacement.
+- Each color builds its own image (`<project>-backend-blue`, `<project>-backend-green`), so a failed build never replaces the image the live color or the systemd jobs use.
+- `deploy-vps.yml` fails before switching if the idle color does not pass `/health/ready` after 30 probes (about 90 seconds when probes fail fast), then stops it. If the post-switch ingress check fails, a rollback step switches Caddy back to the previous color, which is still running. The previous color is stopped only after ingress passes.
+- First run: with no `config/active-backend.env`, the deploy starts `backend-blue` beside the legacy `pe-be-backend` container. The switch recreates Caddy once to pick up the new command and mount, which causes a brief edge blip. The legacy container is removed after ingress passes. That run has no automatic rollback target.
+- The systemd job units call `blue-green.sh run`, so they always use the active color's image.
+- Connection budget: the deploy writes no `DATABASE_POOL_*` overrides, so the defaults (5 + 10) give 30 connections during the overlap, within the ~45 budget. Recheck this if `.env.production` gains pool settings or jobs run during a deploy.
+
 For the `infrastructure/` branch: if it is kept, import the existing server (`terraform import hcloud_server.web_server <id>`) rather than creating a new one, and add `lifecycle { prevent_destroy = true }`. Changing `image` or `location` forces a replacement, which would wipe the local volumes.
 
 ## Risks and open questions
 
 - **Migrations:** A migration that breaks the old code will break the old color during the overlap. Schema changes must stay additive, as AGENTS.md requires.
 - **Caddy reload:** Reloading Caddy must not drop connections that are in flight. Verify this on staging or during a maintenance window.
-- **Scheduled jobs:** Systemd timers currently reference the `backend` service name and need to be audited.
+- **Scheduled jobs:** Resolved. The units now go through `blue-green.sh run` instead of the removed `backend` service.
 - **Server failure:** Option A does not protect against losing the server. Backups of the Postgres data and the file volumes remain the recovery path.
 - **Terraform state:** If Terraform is kept, its state is local and gitignored. Losing it loses track of the server, so consider a remote backend.
 

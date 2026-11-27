@@ -65,8 +65,8 @@ JOB_WORKOUT_PHOTO_CLEANUP_ENABLED=true
 Env flow for these jobs is:
 
 1. `systemd` starts the oneshot service from the detected app checkout.
-2. The service runs `docker compose -f docker-compose.prod.yml run ...`.
-3. Compose injects the configured job env vars into the ephemeral `backend` container from `backend/.env.production` via `docker-compose.prod.yml`.
+2. The service runs `backend/deploy/blue-green.sh run ...`, which reads the active color from `config/active-backend.env` and runs `docker compose -f docker-compose.prod.yml run --rm -T <backend-blue|backend-green> ...`.
+3. Compose injects the configured job env vars into the ephemeral backend container from `backend/.env.production` via `docker-compose.prod.yml`.
 4. The backend process reads those env vars through `src.core.config.Settings`.
 
 To disable the job without masking the timer:
@@ -101,10 +101,10 @@ Run the job manually through the same container path used by the service:
 
 ```bash
 cd /srv/pe-be  # or /home/deploy/apps/pe-be/pe-be on the current VPS
-docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.chat_attachment_cleanup
-docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.exercise_image_cleanup
-docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.close_stale_open_workouts
-docker compose -f docker-compose.prod.yml run --rm backend python -m src.jobs.workout_photo_cleanup
+bash backend/deploy/blue-green.sh run python -m src.jobs.chat_attachment_cleanup
+bash backend/deploy/blue-green.sh run python -m src.jobs.exercise_image_cleanup
+bash backend/deploy/blue-green.sh run python -m src.jobs.close_stale_open_workouts
+bash backend/deploy/blue-green.sh run python -m src.jobs.workout_photo_cleanup
 sudo systemctl start pe-be-postgres-backup.service
 ```
 

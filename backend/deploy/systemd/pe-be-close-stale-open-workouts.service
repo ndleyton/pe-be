@@ -8,4 +8,4 @@ Type=oneshot
 WorkingDirectory=/srv/pe-be
 EnvironmentFile=-/srv/pe-be/backend/.env.production
 TimeoutStartSec=300
-ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml run --rm -T backend python -m src.jobs.close_stale_open_workouts
+ExecStart=/usr/bin/bash /srv/pe-be/backend/deploy/blue-green.sh run python -m src.jobs.close_stale_open_workouts

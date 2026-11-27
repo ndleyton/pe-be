@@ -14,16 +14,19 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - backend
+      # Deploy-managed ACTIVE_BACKEND=backend-blue|backend-green; reread on every Caddy start.
+      - ./config/active-backend.env:/etc/caddy/active-backend.env:ro
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile", "--envfile", "/etc/caddy/active-backend.env"]
     networks:
       - edge
 
-  backend:
+  # Blue-green pair: deploys start the idle color, then Caddy switches to it.
+  # See backend/deploy/blue-green.sh and RFC 0011.
+  backend-blue: &backend
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pe-be-backend
+    container_name: pe-be-backend-blue
     restart: unless-stopped
     env_file:
       - ./backend/.env.production
@@ -39,6 +42,10 @@ services:
     networks:
       - edge
       - internal
+
+  backend-green:
+    <<: *backend
+    container_name: pe-be-backend-green
 
   db:
     image: postgres:17-alpine
