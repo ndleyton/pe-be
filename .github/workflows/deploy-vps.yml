@@ -190,6 +190,8 @@ jobs:
           IMAGE_URL_PREFIX=${{ secrets.IMAGE_URL_PREFIX }}
           ENVEOF
           printf '%s\n' "ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX=$ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX" >> backend/.env.production
+          # Caddy gets only its Caddyfile placeholders, so per-commit values don't recreate it.
+          grep -E '^(API_ORIGIN_DOMAIN|CADDY_TRUSTED_PROXIES|EDGE_[A-Z_]+)=' backend/.env.production > backend/.env.caddy
 
       - name: Prepare deployment directory on VPS
         env:
@@ -395,14 +397,7 @@ jobs:
           main() {
           set -euo pipefail
           cd "${DEPLOY_PATH}"
-          if [[ ! -f config/previous-backend.env ]]; then
-            # First blue-green deploy: the legacy pe-be-backend container is still running.
-            echo "::error::No previous color recorded; restore the legacy backend manually"
-            exit 1
-          fi
-          previous=$(sed -n 's/^ACTIVE_BACKEND=//p' config/previous-backend.env)
-          docker compose -f docker-compose.prod.yml start "$previous"
-          bash backend/deploy/blue-green.sh switch "$previous"
+          bash backend/deploy/blue-green.sh rollback
           }
           main < /dev/null
           ROLLBACKEOF
@@ -417,12 +412,7 @@ jobs:
           main() {
           set -euo pipefail
           cd "${DEPLOY_PATH}"
-          active=$(bash backend/deploy/blue-green.sh active)
-          for color in backend-blue backend-green; do
-            if [[ "$color" != "$active" ]]; then
-              docker compose -f docker-compose.prod.yml stop "$color"
-            fi
-          done
+          bash backend/deploy/blue-green.sh stop-inactive
           # First blue-green deploy: retire the legacy single-container backend.
           if docker inspect pe-be-backend >/dev/null 2>&1; then
             docker stop pe-be-backend

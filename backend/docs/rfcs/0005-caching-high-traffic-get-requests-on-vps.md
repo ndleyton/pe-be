@@ -36,7 +36,7 @@ The current deployment RFC and production Compose stack establish a simple singl
 
 - [`docker-compose.prod.yml`](../../../docker-compose.prod.yml) runs `caddy`, `backend`, and `db`
 - [`backend/run.sh`](../../run.sh) starts a single `uvicorn` process
-- [`Caddyfile`](../../../Caddyfile) currently handles TLS, headers, rate limiting, and reverse proxying
+- [`Caddyfile`](../../../deploy/caddy/Caddyfile) currently handles TLS, headers, rate limiting, and reverse proxying
 - scheduled jobs run via host `systemd`, not from inside the FastAPI process
 
 This matters because process-local caching is materially more attractive when there is only one backend process serving traffic.
@@ -244,7 +244,7 @@ Pros:
 
 Cons:
 
-- current [`Caddyfile`](../../../Caddyfile) does not include response caching
+- current [`Caddyfile`](../../../deploy/caddy/Caddyfile) does not include response caching
 - introducing proxy caching here would require extra Caddy customization or a different edge component
 - user-specific visibility still makes `/exercise-types` tricky
 - less natural place for app-aware invalidation
@@ -384,7 +384,7 @@ If we use an in-process cache helper library, add it explicitly to the backend d
 
 ### Caddy remains complementary
 
-[`Caddyfile`](../../../Caddyfile) already rate-limits public reads. Caching should complement that edge behavior, not replace it.
+[`Caddyfile`](../../../deploy/caddy/Caddyfile) already rate-limits public reads. Caching should complement that edge behavior, not replace it.
 
 This RFC does not require Caddy response caching in the first rollout.
 

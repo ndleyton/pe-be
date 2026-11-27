@@ -5,18 +5,21 @@ services:
       dockerfile: ./deploy/caddy/Dockerfile
     container_name: pe-be-caddy
     restart: unless-stopped
+    # Only Caddyfile placeholders: a shared file would change Compose's config hash
+    # (e.g. OTEL_SERVICE_VERSION) and recreate Caddy on every deploy.
     env_file:
-      - ./backend/.env.production
+      - ./backend/.env.caddy
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Directory mount: rsync replaces files by rename, which a single-file mount would not see.
+      - ./deploy/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
       # Deploy-managed ACTIVE_BACKEND=backend-blue|backend-green; reread on every Caddy start.
-      - ./config/active-backend.env:/etc/caddy/active-backend.env:ro
-    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile", "--envfile", "/etc/caddy/active-backend.env"]
+      - ./config/active-backend.env:/etc/caddy-state/active-backend.env:ro
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile", "--envfile", "/etc/caddy-state/active-backend.env"]
     networks:
       - edge
 
