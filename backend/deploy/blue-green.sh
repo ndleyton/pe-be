@@ -4,8 +4,9 @@
 #   blue-green.sh active          print the active color (exit 3 if none is recorded yet)
 #   blue-green.sh idle            print the color a deploy should start
 #   blue-green.sh switch COLOR    record COLOR as active and reload Caddy onto it
-#   blue-green.sh rollback        start the previous color, switch to it, stop the other
-#   blue-green.sh stop-inactive   stop whichever color is not active
+#   blue-green.sh wait-ready COLOR   wait until COLOR passes /health/ready
+#   blue-green.sh rollback        start the previous color and switch to it once ready
+#   blue-green.sh stop-inactive   stop whichever color is not active (after verifying ingress)
 #   blue-green.sh run ARGS...     docker compose run --rm -T <active color> ARGS...
 #
 # State lives in config/active-backend.env (ACTIVE_BACKEND=backend-blue|backend-green).
@@ -46,6 +47,28 @@ reload_caddy() {
   return 1
 }
 
+# Prints the color Caddy is proxying to right now, or nothing (legacy `backend`, or Caddy down).
+live_upstream() {
+  "${compose[@]}" exec -T caddy wget -qO- http://127.0.0.1:2019/config/apps/http 2>/dev/null \
+    | grep -oE '"dial":"backend-(blue|green):8000"' | head -n 1 | sed -E 's/.*"(backend-[a-z]+):8000"/\1/'
+}
+
+wait_ready() {
+  local color=$1 attempt
+  validate "$color"
+  echo "Waiting for ${color} to pass /health/ready..."
+  for attempt in $(seq 1 30); do
+    if "${compose[@]}" exec -T "$color" \
+      curl -fsS --connect-timeout 2 --max-time 5 http://localhost:8000/health/ready >/dev/null; then
+      echo "${color} is ready"
+      return 0
+    fi
+    (( attempt < 30 )) && sleep 3
+  done
+  echo "${color} never passed /health/ready" >&2
+  return 1
+}
+
 switch_to() {
   local target=$1 current=""
   validate "$target"
@@ -54,10 +77,19 @@ switch_to() {
   # Write in place: Caddy bind-mounts this single file, and a rename would hide the update.
   printf 'ACTIVE_BACKEND=%s\n' "$target" > "$state_file"
   if ! reload_caddy "$(read_color "$state_file")"; then
-    # Keep the state matching what Caddy still serves, so the next deploy's idle color
-    # is not the live one. shortcut: a Caddy recreated mid-switch already reads $target.
-    [[ -n "$current" ]] && printf 'ACTIVE_BACKEND=%s\n' "$current" > "$state_file"
-    echo "Caddy switch to ${target} failed; state left at '${current:-none}'" >&2
+    # Keep the state matching what Caddy really serves, so the next deploy's idle color is
+    # not the live one. A Caddy recreated mid-switch already reads $target from the file.
+    local live
+    live=$(live_upstream || true)
+    if [[ -n "$live" ]]; then
+      printf 'ACTIVE_BACKEND=%s\n' "$live" > "$state_file"
+    elif [[ -n "$current" ]]; then
+      printf 'ACTIVE_BACKEND=%s\n' "$current" > "$state_file"
+    else
+      # First run: the legacy backend still serves, so restore "no color recorded".
+      rm -f -- "$state_file"
+    fi
+    echo "Caddy switch to ${target} failed; state left at '${live:-${current:-none}}'" >&2
     exit 1
   fi
   if [[ -n "$current" && "$current" != "$target" ]]; then
@@ -99,8 +131,13 @@ case "$cmd" in
     fi
     previous=$(read_color "$previous_file")
     "${compose[@]}" start "$previous"
+    # The previous color may be stopped (Alembic runs before Uvicorn) or hold a failed build.
+    wait_ready "$previous" || { echo "::error::${previous} is not ready; Caddy was not switched"; exit 1; }
     switch_to "$previous"
-    stop_inactive
+    echo "Verify ingress, then run stop-inactive."
+    ;;
+  wait-ready)
+    wait_ready "${1:-}"
     ;;
   stop-inactive)
     stop_inactive
@@ -110,7 +147,7 @@ case "$cmd" in
     exec "${compose[@]}" run --rm -T "$active" "$@"
     ;;
   *)
-    sed -n '2,9p' "${BASH_SOURCE[0]}" >&2
+    sed -n '2,10p' "${BASH_SOURCE[0]}" >&2
     exit 2
     ;;
 esac

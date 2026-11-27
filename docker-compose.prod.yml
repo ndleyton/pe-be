@@ -55,7 +55,8 @@ services:
     container_name: pe-be-postgres
     restart: unless-stopped
     env_file:
-      - ./backend/.env.production
+      # Only POSTGRES_*: per-commit values would change the hash and recreate Postgres.
+      - ./backend/.env.db
     command:
       - postgres
       - -c

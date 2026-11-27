@@ -192,6 +192,8 @@ jobs:
           printf '%s\n' "ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX=$ADDITIONAL_CORS_ALLOWED_ORIGIN_REGEX" >> backend/.env.production
           # Caddy gets only its Caddyfile placeholders, so per-commit values don't recreate it.
           grep -E '^(API_ORIGIN_DOMAIN|CADDY_TRUSTED_PROXIES|EDGE_[A-Z_]+)=' backend/.env.production > backend/.env.caddy
+          # Same for Postgres, so a new commit does not recreate the database.
+          grep -E '^POSTGRES_(DB|USER|PASSWORD)=' backend/.env.production > backend/.env.db
 
       - name: Prepare deployment directory on VPS
         env:
@@ -299,17 +301,7 @@ jobs:
 
           # Wait for readiness. A crash-looping or unready build fails the deploy here,
           # before Caddy is touched, so the active color keeps serving.
-          echo "Waiting for ${idle} to pass /health/ready..."
-          ready=0
-          for _ in $(seq 1 30); do
-            if docker compose -f docker-compose.prod.yml exec -T "$idle" \
-              curl -fsS --connect-timeout 2 --max-time 5 http://localhost:8000/health/ready; then
-              ready=1
-              break
-            fi
-            sleep 3
-          done
-          if (( ! ready )); then
+          if ! bash backend/deploy/blue-green.sh wait-ready "$idle"; then
             echo "::error::${idle} never became ready; live traffic was not switched"
             docker compose -f docker-compose.prod.yml logs --tail 100 "$idle" || true
             docker compose -f docker-compose.prod.yml stop "$idle" || true
@@ -322,6 +314,72 @@ jobs:
           # Show running containers
           docker compose -f docker-compose.prod.yml ps
 
+          echo ""
+          echo "Switched to ${idle}; external ingress verification follows."
+          }
+          main < /dev/null
+          DEPLOYEOF
+
+      - name: Verify origin and public API ingress
+        id: verify
+        env:
+          API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: bash backend/deploy/verify-ingress.sh
+
+      - name: Roll Caddy back to the previous color
+        if: failure() && steps.verify.outcome == 'failure'
+        env:
+          API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'ROLLBACKEOF'
+          main() {
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          bash backend/deploy/blue-green.sh rollback
+          }
+          main < /dev/null
+          ROLLBACKEOF
+          # Stop the failed color only once the previous one is verified through ingress.
+          bash backend/deploy/verify-ingress.sh
+          ssh "${VPS_USER}@${VPS_HOST}" "cd '${DEPLOY_PATH}' && bash backend/deploy/blue-green.sh stop-inactive"
+
+      - name: Stop the previous backend color
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'STOPEOF'
+          main() {
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          bash backend/deploy/blue-green.sh stop-inactive
+          # First blue-green deploy: retire the legacy single-container backend.
+          if docker inspect pe-be-backend >/dev/null 2>&1; then
+            docker stop pe-be-backend
+            docker rm pe-be-backend
+          fi
+          docker compose -f docker-compose.prod.yml ps
+          }
+          main < /dev/null
+          STOPEOF
+
+      # After verification, so a timer failure cannot skip the ingress check or rollback.
+      - name: Install backend job timers
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'TIMERSEOF'
+          main() {
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
           install_systemd_unit() {
             local src="$1"
             local dest="/etc/systemd/system/$(basename "$src")"
@@ -350,78 +408,9 @@ jobs:
             sudo systemctl is-active "${timer}.timer"
           done
 
-          echo ""
-          echo "VPS updates complete; external ingress verification follows."
           }
           main < /dev/null
-          DEPLOYEOF
-
-      - name: Verify origin and public API ingress
-        id: verify
-        env:
-          API_ORIGIN_DOMAIN: ${{ secrets.API_ORIGIN_DOMAIN }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-        run: |
-          set -euo pipefail
-          : "${API_ORIGIN_DOMAIN:?API_ORIGIN_DOMAIN is required}"
-          : "${FRONTEND_URL:?FRONTEND_URL is required}"
-          [[ "$FRONTEND_URL" == https://* ]] || { echo "FRONTEND_URL must use HTTPS" >&2; exit 1; }
-          for endpoint in "https://${API_ORIGIN_DOMAIN}/health/ready" "${FRONTEND_URL%/}/api/v1/health/ready"; do
-            # Reject redirects and static-host SPA fallback pages.
-            response_file=$(mktemp)
-            trap 'rm -f -- "$response_file"' EXIT
-            status=$(curl --silent --show-error --fail --retry 5 --retry-connrefused \
-              --retry-delay 3 --connect-timeout 5 --max-time 10 \
-              --proto '=https' --output "$response_file" --write-out '%{http_code}' "$endpoint")
-            [[ "$status" == 200 ]] || { echo "Ingress returned HTTP $status" >&2; exit 1; }
-            python - "$response_file" <<'PYTHON'
-          import json
-          import sys
-          with open(sys.argv[1]) as response:
-              if json.load(response) != {"status": "ok"}:
-                  raise SystemExit("Ingress readiness check failed")
-          PYTHON
-            rm -f -- "$response_file"
-            trap - EXIT
-          done
-          echo "Deployment verified through origin TLS and public API proxy."
-
-      - name: Roll Caddy back to the previous color
-        if: failure() && steps.verify.outcome == 'failure'
-        env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-        run: |
-          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'ROLLBACKEOF'
-          main() {
-          set -euo pipefail
-          cd "${DEPLOY_PATH}"
-          bash backend/deploy/blue-green.sh rollback
-          }
-          main < /dev/null
-          ROLLBACKEOF
-
-      - name: Stop the previous backend color
-        env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-        run: |
-          ssh "${VPS_USER}@${VPS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'STOPEOF'
-          main() {
-          set -euo pipefail
-          cd "${DEPLOY_PATH}"
-          bash backend/deploy/blue-green.sh stop-inactive
-          # First blue-green deploy: retire the legacy single-container backend.
-          if docker inspect pe-be-backend >/dev/null 2>&1; then
-            docker stop pe-be-backend
-            docker rm pe-be-backend
-          fi
-          docker compose -f docker-compose.prod.yml ps
-          }
-          main < /dev/null
-          STOPEOF
+          TIMERSEOF
 
       - name: Prune dangling images after verification
         env:
