@@ -37,8 +37,6 @@ def create_app() -> FastAPI:
         "description": "Personal Exercise Tracker API with domain-driven architecture",
         "version": f"2.0.0-{settings.API_VERSION}",
     }
-    if settings.ENVIRONMENT == "production":
-        fastapi_kwargs["proxy_headers"] = True
 
     app = FastAPI(lifespan=mcp_lifespan, **fastapi_kwargs)
 
