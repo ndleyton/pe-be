@@ -346,6 +346,31 @@ def test_rank_recommendations_keeps_precise_score_for_gating():
     assert ranked[0].score > 0.78
 
 
+def test_rank_recommendations_ignores_filler_words_in_name_matches():
+    unrelated = {
+        "id": 7,
+        "name": "My Routine for the Day",
+        "description": None,
+        "visibility": "public",
+        "is_readonly": False,
+        "times_used": 0,
+        "exercise_names_preview": [],
+    }
+
+    assert rank_recommendations(
+        [unrelated],
+        RecommendationFilters(query="recommend a routine for the day"),
+        preview_key="exercise_names_preview",
+        limit=3,
+    ) == []
+    assert rank_recommendations(
+        [unrelated],
+        RecommendationFilters(query="something", days_per_week=3),
+        preview_key="exercise_names_preview",
+        limit=3,
+    ) == []
+
+
 @pytest.mark.asyncio
 @patch("src.chat.service.get_visible_programs_summary")
 async def test_recommend_existing_routine_programs_emits_grounded_event(

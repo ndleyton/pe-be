@@ -4,6 +4,13 @@ from typing import Any
 
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+# Filler and generic request words that would otherwise count as name/description matches.
+_STOPWORDS = frozenset(
+    "a an the for to of and or in on at with my me i you your some any can could "
+    "please recommend suggest give find show want need looking good best new "
+    "routine routines program programs plan plans workout workouts "
+    "day days week weeks per minute minutes".split()
+)
 
 _SPLIT_PHRASES = {
     "full body": ("full body", "total body"),
@@ -62,7 +69,7 @@ def _normalize(value: str | None) -> str:
 
 
 def _tokens(value: str | None) -> set[str]:
-    return set(_TOKEN_RE.findall((value or "").casefold()))
+    return set(_TOKEN_RE.findall((value or "").casefold())) - _STOPWORDS
 
 
 def _contains_any(normalized_text: str, phrases: tuple[str, ...]) -> bool:

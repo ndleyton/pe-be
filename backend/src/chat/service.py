@@ -827,7 +827,7 @@ class ChatService:
             )
 
             candidates = ", ".join(
-                f"{item.summary['name']} (id={item.summary['id']}, score={item.score})"
+                f"{item.summary['name']} (id={item.summary['id']}, score={item.score:.2f})"
                 for item in ranked
             )
             if ranked[0].score >= 0.75:
@@ -914,7 +914,7 @@ class ChatService:
             )
 
             candidates = ", ".join(
-                f"{item.summary['name']} (id={item.summary['id']}, score={item.score})"
+                f"{item.summary['name']} (id={item.summary['id']}, score={item.score:.2f})"
                 for item in ranked
             )
             if ranked[0].score >= 0.75:
