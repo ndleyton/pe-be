@@ -1657,7 +1657,9 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         deleted_count = 0
         for attachment in attachments:
             try:
-                cls._attachment_file_path(attachment.storage_key).unlink(missing_ok=True)
+                cls._attachment_file_path(attachment.storage_key).unlink(
+                    missing_ok=True
+                )
             except (ValueError, OSError):
                 logger.warning(
                     "Failed to remove stale chat attachment file attachment_id=%s",
