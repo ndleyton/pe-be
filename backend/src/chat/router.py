@@ -33,6 +33,7 @@ from src.chat.service import ChatService
 from src.core.config import settings
 from src.core.database import get_async_session
 from src.core.rate_limit import RateLimitExceededError, rate_limiter
+from src.shared.image_uploads import read_upload_file_limited
 from src.users.models import User
 from src.users.router import current_active_user
 
@@ -214,7 +215,9 @@ async def upload_chat_attachment(
         attachment = await chat_service.save_uploaded_attachment(
             filename=file.filename or "upload",
             content_type=file.content_type or "",
-            data=await file.read(),
+            data=await read_upload_file_limited(
+                file, max_bytes=settings.CHAT_ATTACHMENT_MAX_BYTES
+            ),
         )
         return ChatAttachmentUploadResponse(
             attachment_id=attachment.id,
@@ -230,6 +233,8 @@ async def upload_chat_attachment(
             detail="Too many attachment uploads. Please slow down.",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
@@ -249,13 +254,17 @@ async def download_chat_attachment(
         chat_service = ChatService(user_id=user.id, session=session)
         attachment = await chat_service.get_attachment(attachment_id)
         file_path = chat_service._attachment_file_path(attachment.storage_key)
-        if not file_path.exists():
+        if not file_path.is_file():
             raise HTTPException(status_code=404, detail="Attachment file not found")
 
         return FileResponse(
             path=file_path,
             media_type=attachment.mime_type,
             filename=attachment.original_filename,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "private, no-store",
+            },
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

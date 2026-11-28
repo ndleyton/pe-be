@@ -9,7 +9,6 @@ from typing import Any, ClassVar, Dict, List, Optional
 from uuid import uuid4
 
 from langfuse import Langfuse
-from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,6 +66,7 @@ from src.routines.schemas import (
     SetTemplateCreate,
 )
 from src.routines.service import routine_service
+from src.shared.image_uploads import sanitize_image_upload
 from src.workouts.crud import (
     get_latest_workout_for_user,
     get_workout_by_date,
@@ -1552,45 +1552,35 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not self.session:
             raise ValueError("Database session required for attachments")
 
-        if not data:
-            raise ValueError("Uploaded file is empty")
-
-        if len(data) > settings.CHAT_ATTACHMENT_MAX_BYTES:
-            raise ValueError("Uploaded file exceeds size limit")
-
-        declared_mime_type = (content_type or "").split(";")[0].strip().lower()
-        width, height, detected_mime_type = await asyncio.to_thread(
-            self._inspect_image, data
+        image = await asyncio.to_thread(
+            sanitize_image_upload,
+            data,
+            declared_mime_type=content_type,
+            allowed_mime_types=settings.CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
+            max_bytes=settings.CHAT_ATTACHMENT_MAX_BYTES,
+            max_pixels=16_000_000,
         )
-        if detected_mime_type not in settings.CHAT_ATTACHMENT_ALLOWED_MIME_TYPES:
-            raise ValueError("Unsupported image type")
-        if declared_mime_type and declared_mime_type != detected_mime_type:
-            raise ValueError("Uploaded file content does not match MIME type")
-
-        mime_type = detected_mime_type
-        suffix = Path(filename or "upload").suffix or self._suffix_for_mime_type(
-            mime_type
-        )
-        storage_key = f"{uuid4().hex}{suffix}"
-        storage_dir = self._attachment_storage_dir()
-        storage_dir.mkdir(parents=True, exist_ok=True)
-        file_path = storage_dir / storage_key
-        file_path.write_bytes(data)
-
+        storage_key = f"{uuid4().hex}.{image.extension}"
+        stem = Path(filename).stem or "upload"
+        suffix = f".{image.extension}"
+        original_filename = stem[: 255 - len(suffix)] + suffix
+        file_path = self._attachment_file_path(storage_key)
+        await asyncio.to_thread(file_path.parent.mkdir, parents=True, exist_ok=True)
         try:
+            await asyncio.to_thread(file_path.write_bytes, image.data)
             return await create_chat_attachment(
                 self.session,
                 user_id=self.user_id,
-                original_filename=filename or "upload",
+                original_filename=original_filename,
                 storage_key=storage_key,
-                mime_type=mime_type,
-                size_bytes=len(data),
-                sha256=hashlib.sha256(data).hexdigest(),
-                width=width,
-                height=height,
+                mime_type=image.mime_type,
+                size_bytes=len(image.data),
+                sha256=hashlib.sha256(image.data).hexdigest(),
+                width=image.width,
+                height=image.height,
             )
         except Exception:
-            file_path.unlink(missing_ok=True)
+            await asyncio.to_thread(file_path.unlink, missing_ok=True)
             raise
 
     async def get_attachment(self, attachment_id: int):
@@ -1664,12 +1654,13 @@ For workout logs, offer to help analyze performance and suggest improvements."""
         if not attachments:
             return 0
 
-        storage_dir = Path(settings.CHAT_ATTACHMENT_STORAGE_DIR).expanduser().resolve()
         deleted_count = 0
         for attachment in attachments:
             try:
-                (storage_dir / attachment.storage_key).unlink(missing_ok=True)
-            except OSError:
+                cls._attachment_file_path(attachment.storage_key).unlink(
+                    missing_ok=True
+                )
+            except (ValueError, OSError):
                 logger.warning(
                     "Failed to remove stale chat attachment file attachment_id=%s",
                     attachment.id,
@@ -1852,30 +1843,10 @@ For workout logs, offer to help analyze performance and suggest improvements."""
             )
         return normalized_messages
 
-    def _attachment_storage_dir(self) -> Path:
-        return Path(settings.CHAT_ATTACHMENT_STORAGE_DIR).expanduser().resolve()
-
-    def _attachment_file_path(self, storage_key: str) -> Path:
-        return self._attachment_storage_dir() / storage_key
-
-    def _inspect_image(self, data: bytes) -> tuple[int, int, str]:
-        try:
-            from io import BytesIO
-
-            with Image.open(BytesIO(data)) as image:
-                image.verify()
-            with Image.open(BytesIO(data)) as image:
-                mime_type = Image.MIME.get(image.format or "")
-                if not mime_type:
-                    raise ValueError("Unsupported image type")
-                width, height = image.size
-                return width, height, mime_type.lower()
-        except UnidentifiedImageError as exc:
-            raise ValueError("Uploaded file is not a valid image") from exc
-
-    def _suffix_for_mime_type(self, mime_type: str) -> str:
-        return {
-            "image/png": ".png",
-            "image/jpeg": ".jpg",
-            "image/webp": ".webp",
-        }.get(mime_type, ".bin")
+    @staticmethod
+    def _attachment_file_path(storage_key: str) -> Path:
+        storage_dir = Path(settings.CHAT_ATTACHMENT_STORAGE_DIR).expanduser().resolve()
+        file_path = storage_dir / storage_key
+        if storage_dir not in file_path.resolve().parents:
+            raise ValueError("Attachment file not found")
+        return file_path

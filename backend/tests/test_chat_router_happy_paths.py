@@ -181,7 +181,9 @@ async def test_chat_attachment_upload_and_download(
 
     upload_response = await async_client.post(
         "/api/v1/chat/attachments",
-        files={"file": ("pose.png", buffer.getvalue(), "image/png")},
+        files={
+            "file": ("pose.txt", buffer.getvalue() + b"camera trailer", "image/png")
+        },
     )
     assert upload_response.status_code == 200, upload_response.text
     payload = upload_response.json()
@@ -194,7 +196,45 @@ async def test_chat_attachment_upload_and_download(
     )
     assert download_response.status_code == 200, download_response.text
     assert download_response.headers["content-type"] == "image/png"
-    assert download_response.content
+    assert download_response.headers["x-content-type-options"] == "nosniff"
+    assert download_response.headers["cache-control"] == "private, no-store"
+    assert download_response.content == buffer.getvalue()
+    assert payload["filename"] == "pose.png"
+    assert payload["size_bytes"] == len(download_response.content)
+    (stored_file,) = tmp_path.iterdir()
+    assert stored_file.suffix == ".png"
+
+    # A stale storage link pointing outside the attachment directory must fail closed.
+    stored_file.unlink()
+    outside = tmp_path.parent / f"{tmp_path.name}-outside.png"
+    outside.write_bytes(buffer.getvalue())
+    stored_file.symlink_to(outside)
+    assert (await async_client.get(download_response.request.url)).status_code == 404
+
+
+async def test_chat_attachment_enforces_upload_limits(
+    async_client: AsyncClient, authenticated_user, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        "src.chat.service.settings.CHAT_ATTACHMENT_STORAGE_DIR", str(tmp_path)
+    )
+    buffer = BytesIO()
+    Image.new("RGB", (4097, 1)).save(buffer, format="PNG")
+    files = {"file": ("wide.png", buffer.getvalue(), "image/png")}
+    monkeypatch.setattr(
+        "src.chat.service.settings.CHAT_ATTACHMENT_MAX_BYTES", len(buffer.getvalue())
+    )
+    response = await async_client.post("/api/v1/chat/attachments", files=files)
+    assert response.status_code == 400
+    assert "dimensions" in response.json()["detail"]
+
+    monkeypatch.setattr(
+        "src.chat.service.settings.CHAT_ATTACHMENT_MAX_BYTES",
+        len(buffer.getvalue()) - 1,
+    )
+    response = await async_client.post("/api/v1/chat/attachments", files=files)
+    assert response.status_code == 413
+    assert not list(tmp_path.iterdir())
 
 
 async def test_chat_endpoint_creates_routine_and_returns_event(
